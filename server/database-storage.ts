@@ -3434,22 +3434,43 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTopContributors(periodType: string, limit?: number): Promise<(TopContributor & { user: User })[]> {
-    const query = db
+    // Fetch all (no DB-level limit so we can deduplicate first)
+    const results = await db
       .select()
       .from(topContributors)
       .leftJoin(users, eq(topContributors.userId, users.id))
       .where(eq(topContributors.periodType, periodType))
-      .orderBy(desc(topContributors.totalPoints));
+      .orderBy(desc(topContributors.achievedAt), desc(topContributors.totalPoints));
 
-    if (limit) {
-      query.limit(limit);
-    }
-
-    const results = await query;
-    return results.map(row => ({
+    const mapped = results.map(row => ({
       ...row.top_contributors,
       user: row.users!
     }));
+
+    // One winner per period — keep the first (highest points / most recent) entry per period
+    const seen = new Set<string>();
+    const deduplicated = mapped.filter(entry => {
+      if (seen.has(entry.period)) return false;
+      seen.add(entry.period);
+      return true;
+    });
+
+    // Sort by period descending (most recent first), then apply limit
+    deduplicated.sort((a, b) => b.period.localeCompare(a.period));
+    return limit ? deduplicated.slice(0, limit) : deduplicated;
+  }
+
+  async getTopContributorByPeriod(periodType: string, period: string, year: number): Promise<TopContributor | null> {
+    const [result] = await db
+      .select()
+      .from(topContributors)
+      .where(and(
+        eq(topContributors.periodType, periodType),
+        eq(topContributors.period, period),
+        eq(topContributors.year, year)
+      ))
+      .limit(1);
+    return result ?? null;
   }
 
   async getTopContributorsByPeriod(periodType: string, period: string, year: number): Promise<(TopContributor & { user: User })[]> {

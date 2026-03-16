@@ -384,6 +384,13 @@ export class LeaderboardService {
       }
 
       if (topContributor) {
+        // Skip if a winner has already been recorded for this period
+        const existing = await storage.getTopContributorsByPeriod(periodType, period, year);
+        if (existing.length > 0) {
+          console.log(`Top contributor for ${periodType} ${period} already recorded, skipping`);
+          return;
+        }
+
         // Store the top contributor in the topContributors table
         const contributorData: InsertTopContributor = {
           userId: topContributor.userId,

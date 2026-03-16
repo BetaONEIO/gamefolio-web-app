@@ -2712,16 +2712,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper to sign avatar URLs for leaderboard entries
+  const SENSITIVE_USER_FIELDS = [
+    'password', 'encryptedPrivateKey', 'twoFactorSecret', 'stripeCustomerId',
+    'stripeSubscriptionId', 'email', 'dateOfBirth', 'birthday', 'bannedReason',
+    'externalId', 'walletAddress', 'walletChain', 'encryptedPrivateKey',
+    'stripeCustomerId', 'stripeSubscriptionId',
+  ] as const;
+
   async function signLeaderboardAvatars<T extends { user: { avatarUrl?: string | null } }>(entries: T[]): Promise<T[]> {
     return Promise.all(
       entries.map(async (entry) => {
-        if (entry.user?.avatarUrl && entry.user.avatarUrl.includes('supabase.co/storage')) {
-          const signed = await supabaseStorage.convertToSignedUrl(entry.user.avatarUrl, 3600);
-          if (signed) {
-            return { ...entry, user: { ...entry.user, avatarUrl: signed } };
-          }
+        let userData = { ...entry.user };
+        // Strip sensitive fields
+        for (const field of SENSITIVE_USER_FIELDS) {
+          delete (userData as Record<string, unknown>)[field];
         }
-        return entry;
+        // Sign avatar URL if needed
+        if (userData.avatarUrl && userData.avatarUrl.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(userData.avatarUrl, 3600);
+          if (signed) userData.avatarUrl = signed;
+        }
+        return { ...entry, user: userData };
       })
     );
   }
