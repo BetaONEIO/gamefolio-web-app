@@ -2215,6 +2215,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           profileFontAnimation: userWithoutPassword.profileFontAnimation || 'none',
           canMintNfts: userWithoutPassword.canMintNfts || false,
           canSellNfts: userWithoutPassword.canSellNfts || false,
+          streamPlatform: userWithoutPassword.streamPlatform || null,
+          streamChannelName: userWithoutPassword.streamChannelName || null,
+          twitchVerified: userWithoutPassword.twitchVerified || false,
+          twitchUserId: userWithoutPassword.twitchUserId || null,
+          kickVerified: userWithoutPassword.kickVerified || false,
+          kickId: userWithoutPassword.kickId || null,
+          showLiveOverlay: userWithoutPassword.showLiveOverlay || false,
         });
       }
     } catch (error) {
@@ -2280,6 +2287,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           profileFontAnimation: fallbackWithoutPassword.profileFontAnimation || 'none',
           canMintNfts: fallbackWithoutPassword.canMintNfts || false,
           canSellNfts: fallbackWithoutPassword.canSellNfts || false,
+          streamPlatform: fallbackWithoutPassword.streamPlatform || null,
+          streamChannelName: fallbackWithoutPassword.streamChannelName || null,
+          twitchVerified: fallbackWithoutPassword.twitchVerified || false,
+          twitchUserId: fallbackWithoutPassword.twitchUserId || null,
+          kickVerified: fallbackWithoutPassword.kickVerified || false,
+          kickId: fallbackWithoutPassword.kickId || null,
+          showLiveOverlay: fallbackWithoutPassword.showLiveOverlay || false,
         });
       }
     } catch (fallbackError) {
