@@ -92,18 +92,18 @@ router.get('/auth/kick/callback', async (req: Request, res: Response) => {
   delete (req.session as any).kickOAuthUserId;
 
   if (error) {
-    return res.redirect('/settings?tab=streamer&kick_error=access_denied');
+    return res.redirect('/settings/profile?tab=streamer&kick_error=access_denied');
   }
 
   if (!code || !state || state !== storedState || !userId) {
-    return res.redirect('/settings?tab=streamer&kick_error=invalid_state');
+    return res.redirect('/settings/profile?tab=streamer&kick_error=invalid_state');
   }
 
   const clientId = process.env.KICK_CLIENT_ID;
   const clientSecret = process.env.KICK_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    return res.redirect('/settings?tab=streamer&kick_error=not_configured');
+    return res.redirect('/settings/profile?tab=streamer&kick_error=not_configured');
   }
 
   try {
@@ -135,7 +135,7 @@ router.get('/auth/kick/callback', async (req: Request, res: Response) => {
     const channelName = kickUser.slug ?? kickUser.username ?? kickUser.channel?.slug ?? '';
 
     if (!channelName) {
-      return res.redirect('/settings?tab=streamer&kick_error=no_channel');
+      return res.redirect('/settings/profile?tab=streamer&kick_error=no_channel');
     }
 
     // Save to DB – also set platform to kick
@@ -146,10 +146,10 @@ router.get('/auth/kick/callback', async (req: Request, res: Response) => {
       kickVerified: true,
     }).where(eq(users.id, userId));
 
-    return res.redirect('/settings?tab=streamer&kick_connected=true');
+    return res.redirect('/settings/profile?tab=streamer&kick_connected=true');
   } catch (err: any) {
     console.error('Kick OAuth callback error:', err?.response?.data || err.message);
-    return res.redirect('/settings?tab=streamer&kick_error=auth_failed');
+    return res.redirect('/settings/profile?tab=streamer&kick_error=auth_failed');
   }
 });
 
@@ -228,18 +228,18 @@ router.get('/auth/twitch-stream/callback', async (req: Request, res: Response) =
   delete (req.session as any).twitchOAuthUserId;
 
   if (error) {
-    return res.redirect('/settings?tab=streamer&twitch_error=access_denied');
+    return res.redirect('/settings/profile?tab=streamer&twitch_error=access_denied');
   }
 
   if (!code || !state || state !== storedState || !userId) {
-    return res.redirect('/settings?tab=streamer&twitch_error=invalid_state');
+    return res.redirect('/settings/profile?tab=streamer&twitch_error=invalid_state');
   }
 
   const clientId = process.env.TWITCH_CLIENT_ID;
   const clientSecret = process.env.TWITCH_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    return res.redirect('/settings?tab=streamer&twitch_error=not_configured');
+    return res.redirect('/settings/profile?tab=streamer&twitch_error=not_configured');
   }
 
   try {
@@ -270,7 +270,7 @@ router.get('/auth/twitch-stream/callback', async (req: Request, res: Response) =
 
     const twitchUser = profileRes.data.data?.[0];
     if (!twitchUser) {
-      return res.redirect('/settings?tab=streamer&twitch_error=no_user');
+      return res.redirect('/settings/profile?tab=streamer&twitch_error=no_user');
     }
 
     const twitchUserId = twitchUser.id;
@@ -284,10 +284,10 @@ router.get('/auth/twitch-stream/callback', async (req: Request, res: Response) =
       twitchVerified: true,
     }).where(eq(users.id, userId));
 
-    return res.redirect('/settings?tab=streamer&twitch_connected=true');
+    return res.redirect('/settings/profile?tab=streamer&twitch_connected=true');
   } catch (err: any) {
     console.error('Twitch OAuth callback error:', err?.response?.data || err.message);
-    return res.redirect('/settings?tab=streamer&twitch_error=auth_failed');
+    return res.redirect('/settings/profile?tab=streamer&twitch_error=auth_failed');
   }
 });
 
