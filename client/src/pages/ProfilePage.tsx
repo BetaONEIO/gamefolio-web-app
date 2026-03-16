@@ -1627,7 +1627,7 @@ const ProfilePage = () => {
                   size="mobile-profile"
                   borderIntensity="strong"
                   showAvatarBorderOverlay={true}
-                  showLiveOverlay={!!(profile?.showLiveOverlay && isStreamer && (profile?.twitchVerified || profile?.kickVerified))}
+                  showLiveOverlay={!!(isStreamer && (profile?.twitchVerified || profile?.kickVerified))}
                   className="h-full w-full"
                 />
               </div>
@@ -2061,7 +2061,7 @@ const ProfilePage = () => {
                   size="profile"
                   borderIntensity="strong"
                   showAvatarBorderOverlay={true}
-                  showLiveOverlay={!!(profile?.showLiveOverlay && isStreamer && (profile?.twitchVerified || profile?.kickVerified))}
+                  showLiveOverlay={!!(isStreamer && (profile?.twitchVerified || profile?.kickVerified))}
                 />
               </div>
               {/* Level Badge with Progress */}
