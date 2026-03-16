@@ -74,7 +74,6 @@ const ProfileHeader = ({
     refetchOnMount: 'always',
   });
 
-  // Get signed URLs for private bucket assets
   const { signedUrl: signedBannerUrl } = useSignedUrl(profile.bannerUrl);
   const { signedUrl: signedNameTagUrl } = useSignedUrl(nameTagData?.nameTag?.imageUrl);
 
@@ -83,7 +82,6 @@ const ProfileHeader = ({
       openDialog('general');
       return;
     }
-    
     if (onFollowClick) {
       onFollowClick();
     } else {
@@ -96,38 +94,40 @@ const ProfileHeader = ({
       openDialog('general');
       return;
     }
-    
     console.log('🎯 MESSAGE BUTTON CLICKED - Setting target user:', profile.username);
     window.location.href = `/messages?user=${profile.username}`;
   };
 
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
-  // Define banner style with theme-independent fallback
   const bannerStyle = {
-    backgroundColor: '#02172C', // Fixed neutral background, independent of theme
+    backgroundColor: '#02172C',
     backgroundImage: signedBannerUrl ? `url(${signedBannerUrl})` : undefined,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
   };
 
-  // Define button style with accent color
   const buttonStyle = {
     backgroundColor: profile.accentColor || undefined
   };
 
+  const memberSinceText = profile.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : null;
+
   return (
     <div className="w-full">
-      {/* Banner with overlapping profile picture */}
+      {/* Banner — fades into background at the bottom */}
       <div className="relative">
         <div 
           className="w-full h-64 relative"
           style={bannerStyle}
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/90"></div>
+          {/* Gradient overlay: transparent at top → fully opaque at bottom */}
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent from-30% via-background/60 to-background"></div>
         </div>
         
-        {/* Profile Image - Positioned halfway on banner */}
+        {/* Profile Image — positioned halfway over banner */}
         <div className="absolute left-8 bottom-0 transform translate-y-1/2">
           <div className="flex flex-col items-center">
             <CustomAvatar 
@@ -147,81 +147,38 @@ const ProfileHeader = ({
                 }
               } : undefined}
             />
-            
-            {/* Collections Tab */}
-            <Link href={`/${profile.username}/collections`}>
-              <div 
-                className="mt-3 px-4 py-1.5 rounded-lg cursor-pointer transition-opacity hover:opacity-80"
-                style={{
-                  background: 'linear-gradient(90deg, #4ade80, #22d3d3, #a78bfa, #38bdf8)',
-                  padding: '1px',
-                }}
-              >
-                <div className="bg-background rounded-lg px-4 py-1.5">
-                  <span className="text-sm font-medium text-foreground">Collection</span>
+
+            {/* Stats box — Uploads / Followers / Following only, with Collection button on top-right border */}
+            <div className="relative mt-3">
+              {/* Collection button pinned to top-right border of the stats box */}
+              <Link href={`/${profile.username}/collections`}>
+                <div
+                  className="absolute -top-3 -right-3 z-10 cursor-pointer transition-opacity hover:opacity-80"
+                  style={{
+                    background: 'linear-gradient(90deg, #4ade80, #22d3d3, #a78bfa, #38bdf8)',
+                    padding: '1px',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <div className="bg-background rounded-lg px-3 py-1">
+                    <span className="text-xs font-medium text-foreground">Collection</span>
+                  </div>
                 </div>
-              </div>
-            </Link>
-            
-            {/* Profile Stats underneath profile picture */}
-            <div className="flex space-x-4 text-xs mt-3 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border">
-              <div className="text-center">
-                <span className="font-bold block">{(profile._count?.clips || 0) + (profile._count?.screenshots || 0)}</span>
-                <span className="text-muted-foreground">Uploads</span>
-              </div>
-              <div className="text-center">
-                <span className="font-bold block">{profile._count?.followers || 0}</span>
-                <span className="text-muted-foreground">Followers</span>
-              </div>
-              <div className="text-center">
-                <span className="font-bold block">{profile._count?.following || 0}</span>
-                <span className="text-muted-foreground">Following</span>
-              </div>
-              <div className="text-center" data-testid="stat-likes-received">
-                <span className="font-bold block flex items-center gap-1 justify-center">
-                  <Heart className="w-3 h-3 text-red-500" />
-                  {profile._count?.likesReceived || 0}
-                </span>
-                <span className="text-muted-foreground">Likes</span>
-              </div>
-              <div className="text-center" data-testid="stat-fires-received">
-                <span className="font-bold block flex items-center gap-1 justify-center">
-                  <Flame className="w-3 h-3 text-orange-500" />
-                  {profile._count?.firesReceived || 0}
-                </span>
-                <span className="text-muted-foreground">Fires</span>
-              </div>
-              <div className="text-center" data-testid="stat-streak">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <span className="font-bold block flex items-center gap-1 justify-center">
-                        <Flame className="w-3 h-3 text-orange-500" />
-                        {profile.currentStreak || 0}
-                      </span>
-                      <span className="text-muted-foreground">Streak</span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="text-sm">Longest: {profile.longestStreak || 0} days</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <div className="text-center">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <span className="font-bold block flex items-center gap-1">
-                        <Trophy className="w-3 h-3 text-yellow-500" />
-                        {profile.level || 1}
-                      </span>
-                      <span className="text-muted-foreground">Level</span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="text-sm">{profile.totalXP || 0} Total XP</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+              </Link>
+
+              <div className="flex space-x-4 text-xs bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border">
+                <div className="text-center">
+                  <span className="font-bold block">{(profile._count?.clips || 0) + (profile._count?.screenshots || 0)}</span>
+                  <span className="text-muted-foreground">Uploads</span>
+                </div>
+                <div className="text-center">
+                  <span className="font-bold block">{profile._count?.followers || 0}</span>
+                  <span className="text-muted-foreground">Followers</span>
+                </div>
+                <div className="text-center">
+                  <span className="font-bold block">{profile._count?.following || 0}</span>
+                  <span className="text-muted-foreground">Following</span>
+                </div>
               </div>
             </div>
           </div>
@@ -231,19 +188,18 @@ const ProfileHeader = ({
       {/* Profile Header Content */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 pt-20 relative z-10">
         <div className="flex items-start justify-between">
-          {/* Left side: Profile info next to image */}
+          {/* Left side: Profile info */}
           <div className="flex items-start gap-6 flex-grow">
             {/* Spacer for profile image */}
             <div className="flex-shrink-0 w-32"></div>
 
             {/* Profile Info */}
-            <div className="space-y-2">
-              {/* Username with user type badge(s) */}
+            <div className="space-y-1">
+              {/* Display name + name tag */}
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl font-bold text-foreground">
                   {profile.displayName && profile.displayName.length > 12 ? profile.displayName.slice(0, 12) + '…' : profile.displayName}
                 </h1>
-                {/* Name Tag - next to username */}
                 {nameTagData?.nameTag && signedNameTagUrl && (
                   <TooltipProvider>
                     <Tooltip>
@@ -267,41 +223,48 @@ const ProfileHeader = ({
                     </Tooltip>
                   </TooltipProvider>
                 )}
-                {profile.userType && profile.showUserType !== false && (() => {
-                  const userTypes = profile.userType.split(',').map(t => t.trim()).filter(Boolean);
-                  const displayTypes = userTypes.slice(0, 2);
-                  
-                  return displayTypes.map((type, index) => {
-                    const config = userTypeConfig[type];
-                    if (!config) return null;
-                    const IconComponent = config.icon;
-                    return (
-                      <Badge 
-                        key={`${type}-${index}`}
-                        variant="outline" 
-                        className={`${config.color} border text-xs font-medium px-2 py-0.5`}
-                      >
-                        <IconComponent className="w-3 h-3 mr-1" />
-                        {config.label}
-                      </Badge>
-                    );
-                  });
-                })()}
               </div>
 
               {/* Handle */}
               <p className="text-sm text-muted-foreground">@{profile.username}</p>
 
-              {/* Bio */}
-              <div>
+              {/* User type badges */}
+              {profile.userType && profile.showUserType !== false && (() => {
+                const userTypes = profile.userType.split(',').map(t => t.trim()).filter(Boolean);
+                const displayTypes = userTypes.slice(0, 2);
+                return (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {displayTypes.map((type, index) => {
+                      const config = userTypeConfig[type];
+                      if (!config) return null;
+                      const IconComponent = config.icon;
+                      return (
+                        <Badge 
+                          key={`${type}-${index}`}
+                          variant="outline" 
+                          className={`${config.color} border text-xs font-medium px-2 py-0.5`}
+                        >
+                          <IconComponent className="w-3 h-3 mr-1" />
+                          {config.label}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
+              {/* Member since + bio — below the badges */}
+              {memberSinceText && (
+                <p className="text-xs text-muted-foreground">Member since {memberSinceText}</p>
+              )}
+              {profile.bio && (
                 <p className="text-sm text-muted-foreground">{profile.bio}</p>
-              </div>
+              )}
             </div>
           </div>
 
           {/* Right side: Action Buttons */}
           <div className="flex items-center gap-3 flex-shrink-0">
-            {/* Edit Profile Button for own profile, Follow Button for others */}
             {isCurrentUser ? (
               <Link href="/account/settings">
                 <Button
@@ -336,7 +299,6 @@ const ProfileHeader = ({
               </Button>
             )}
 
-            {/* Message Button or Share Button */}
             {!isCurrentUser ? (
               <Button 
                 variant="outline" 
