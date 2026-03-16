@@ -304,6 +304,139 @@ router.post('/auth/kick/disconnect', async (req: Request, res: Response) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Twitch  OAuth 2.0  (Authorization Code flow)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Required env vars:
+//   TWITCH_CLIENT_ID      – from dev.twitch.tv
+//   TWITCH_CLIENT_SECRET  – from dev.twitch.tv
+//
+// Redirect URI to add in your Twitch app:
+//   https://<your-domain>/api/auth/twitch-stream/callback
+//
+// (Note: using /twitch-stream/ to avoid collision with existing Twitch Games API routes)
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.get('/auth/twitch-stream/connect', (req: Request, res: Response) => {
+  if (!(req.user as any)?.id) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+
+  const clientId = process.env.TWITCH_CLIENT_ID;
+  if (!clientId) {
+    return res.status(503).json({ message: 'Twitch OAuth is not configured.' });
+  }
+
+  const state = crypto.randomBytes(16).toString('hex');
+  (req.session as any).twitchOAuthState = state;
+  (req.session as any).twitchOAuthUserId = (req.user as any).id;
+
+  req.session.save(() => {
+    const callbackUrl = `${getBaseUrl(req)}/api/auth/twitch-stream/callback`;
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: clientId,
+      redirect_uri: callbackUrl,
+      scope: 'user:read:email',
+      state,
+    });
+
+    res.redirect(`https://id.twitch.tv/oauth2/authorize?${params.toString()}`);
+  });
+});
+
+router.get('/auth/twitch-stream/callback', async (req: Request, res: Response) => {
+  const { code, state, error } = req.query;
+
+  const storedState = (req.session as any).twitchOAuthState;
+  const userId = (req.session as any).twitchOAuthUserId;
+
+  delete (req.session as any).twitchOAuthState;
+  delete (req.session as any).twitchOAuthUserId;
+
+  if (error) {
+    return res.redirect('/settings?tab=streamer&twitch_error=access_denied');
+  }
+
+  if (!code || !state || state !== storedState || !userId) {
+    return res.redirect('/settings?tab=streamer&twitch_error=invalid_state');
+  }
+
+  const clientId = process.env.TWITCH_CLIENT_ID;
+  const clientSecret = process.env.TWITCH_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    return res.redirect('/settings?tab=streamer&twitch_error=not_configured');
+  }
+
+  try {
+    const callbackUrl = `${getBaseUrl(req)}/api/auth/twitch-stream/callback`;
+
+    // Exchange code for access token
+    const tokenRes = await axios.post(
+      'https://id.twitch.tv/oauth2/token',
+      new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code: code as string,
+        grant_type: 'authorization_code',
+        redirect_uri: callbackUrl,
+      }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+
+    const accessToken = tokenRes.data.access_token;
+
+    // Fetch user profile from Twitch
+    const profileRes = await axios.get('https://api.twitch.tv/helix/users', {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Client-Id': clientId,
+      },
+    });
+
+    const twitchUser = profileRes.data.data?.[0];
+    if (!twitchUser) {
+      return res.redirect('/settings?tab=streamer&twitch_error=no_user');
+    }
+
+    const twitchUserId = twitchUser.id;
+    const channelName = twitchUser.login; // Twitch login = channel name (lowercase)
+
+    // Save to DB
+    await db.update(users).set({
+      streamPlatform: 'twitch',
+      streamChannelName: channelName,
+      twitchUserId,
+      twitchVerified: true,
+    }).where(eq(users.id, userId));
+
+    return res.redirect('/settings?tab=streamer&twitch_connected=true');
+  } catch (err: any) {
+    console.error('Twitch OAuth callback error:', err?.response?.data || err.message);
+    return res.redirect('/settings?tab=streamer&twitch_error=auth_failed');
+  }
+});
+
+router.post('/auth/twitch-stream/disconnect', async (req: Request, res: Response) => {
+  if (!(req.user as any)?.id) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+  try {
+    await db.update(users).set({
+      streamChannelName: null,
+      twitchUserId: null,
+      twitchVerified: false,
+    }).where(eq(users.id, (req.user as any).id));
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Twitch disconnect error:', err);
+    res.status(500).json({ message: 'Failed to disconnect Twitch' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Config check endpoint – lets the frontend know which OAuth providers are set up
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -311,6 +444,7 @@ router.get('/auth/social-oauth/config', (_req: Request, res: Response) => {
   res.json({
     twitter: !!process.env.TWITTER_CLIENT_ID,
     kick: !!process.env.KICK_CLIENT_ID,
+    twitch: !!process.env.TWITCH_CLIENT_ID,
   });
 });
 

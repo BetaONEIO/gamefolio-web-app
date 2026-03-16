@@ -64,6 +64,8 @@ export const users = pgTable("users", {
   streamChannelName: text("stream_channel_name"), // Channel username on the platform
   kickId: text("kick_id"),                  // Kick user ID (set when OAuth-connected)
   kickVerified: boolean("kick_verified").default(false), // Connected via OAuth
+  twitchUserId: text("twitch_user_id"),     // Twitch user ID (set when OAuth-connected)
+  twitchVerified: boolean("twitch_verified").default(false), // Connected via OAuth
   showLiveOverlay: boolean("show_live_overlay").default(false), // Show LIVE badge on avatar
   ageRange: text("age_range"), // Age range: 13-17, 18-24, 25-34, 35-44, 45-54, 55+
   // Authentication provider fields

@@ -365,6 +365,8 @@ export default function SettingsPage() {
   const [disconnectingTwitter, setDisconnectingTwitter] = useState(false);
   const [connectingKick, setConnectingKick] = useState(false);
   const [disconnectingKick, setDisconnectingKick] = useState(false);
+  const [connectingTwitch, setConnectingTwitch] = useState(false);
+  const [disconnectingTwitch, setDisconnectingTwitch] = useState(false);
   const [syncingAchievements, setSyncingAchievements] = useState(false);
   const [togglingAchievements, setTogglingAchievements] = useState(false);
   const [showXboxDisconnectDialog, setShowXboxDisconnectDialog] = useState(false);
@@ -949,7 +951,7 @@ export default function SettingsPage() {
     enabled: !!user,
   });
 
-  const { data: oauthConfig } = useQuery<{ twitter: boolean; kick: boolean }>({
+  const { data: oauthConfig } = useQuery<{ twitter: boolean; kick: boolean; twitch: boolean }>({
     queryKey: ['/api/auth/social-oauth/config'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     staleTime: 60000,
@@ -984,6 +986,20 @@ export default function SettingsPage() {
         no_channel: 'No Kick channel found on your account.',
       };
       toast({ title: "Kick connection failed", description: errMap[params.get('kick_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('twitch_connected') === 'true') {
+      refreshUser();
+      toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked.", duration: 4000 });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('twitch_error')) {
+      const errMap: Record<string, string> = {
+        access_denied: 'You cancelled the Twitch authorisation.',
+        invalid_state: 'Invalid OAuth state. Please try again.',
+        not_configured: 'Twitch OAuth is not configured on this server.',
+        auth_failed: 'Twitch authentication failed. Please try again.',
+        no_user: 'No Twitch user found on your account.',
+      };
+      toast({ title: "Twitch connection failed", description: errMap[params.get('twitch_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
       window.history.replaceState({}, '', window.location.pathname);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3808,6 +3824,60 @@ export default function SettingsPage() {
                     Channel Name
                   </Label>
 
+                  {/* Twitch OAuth connect option */}
+                  {streamPlatform === 'twitch' && isStreamingEnabled && oauthConfig?.twitch && (
+                    <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.twitchVerified ? 'border-purple-500/30 bg-purple-500/5' : 'border-slate-700 bg-slate-800/30'}`}>
+                      {(user as any)?.twitchVerified ? (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded bg-purple-500/20 flex items-center justify-center">
+                              <Check className="w-3.5 h-3.5 text-purple-400" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-purple-300">Twitch OAuth Verified</p>
+                              <p className="text-[11px] text-slate-400">@{(user as any)?.streamChannelName}</p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={disconnectingTwitch}
+                            className="h-7 px-2 text-xs text-slate-400 hover:text-red-400"
+                            onClick={async () => {
+                              setDisconnectingTwitch(true);
+                              try {
+                                await apiRequest('POST', '/api/auth/twitch-stream/disconnect');
+                                await refreshUser();
+                                setStreamChannelName('');
+                                toast({ title: 'Twitch disconnected', description: 'Your Twitch channel has been unlinked.', duration: 3000 });
+                              } catch {
+                                toast({ title: 'Failed to disconnect', description: 'Please try again.', variant: 'destructive' });
+                              } finally {
+                                setDisconnectingTwitch(false);
+                              }
+                            }}
+                          >
+                            {disconnectingTwitch ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Unlink className="w-3 h-3 mr-1" />}
+                            Disconnect
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-slate-400">Verify your Twitch channel via OAuth for a secure connection.</p>
+                          <Button
+                            size="sm"
+                            disabled={connectingTwitch}
+                            className="bg-[#9146FF] hover:bg-[#7d3de8] text-white font-semibold border-0 h-8 px-3 text-xs"
+                            onClick={() => { setConnectingTwitch(true); window.location.href = '/api/auth/twitch-stream/connect'; }}
+                          >
+                            {connectingTwitch ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+                            Connect with Twitch
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Kick OAuth connect option */}
                   {streamPlatform === 'kick' && isStreamingEnabled && oauthConfig?.kick && (
                     <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.kickVerified ? 'border-green-500/30 bg-green-500/5' : 'border-slate-700 bg-slate-800/30'}`}>
@@ -3862,8 +3932,9 @@ export default function SettingsPage() {
                     </div>
                   )}
 
-                  {/* Manual entry (always shown for Twitch, shown for Kick when not OAuth-verified or OAuth not configured) */}
-                  {(streamPlatform !== 'kick' || !(user as any)?.kickVerified) && (
+                  {/* Manual entry — shown when not OAuth-verified or OAuth not configured for the selected platform */}
+                  {((streamPlatform !== 'kick' || !(user as any)?.kickVerified) &&
+                    (streamPlatform !== 'twitch' || !(user as any)?.twitchVerified)) && (
                     <>
                       <Input
                         id="stream-channel"
