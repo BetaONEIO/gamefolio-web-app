@@ -1445,7 +1445,7 @@ const ProfilePage = () => {
 
       {/* Enhanced Banner with global theme colors */}
       <div 
-        className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 border-b-4 border-primary ${resolvedBannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
+        className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 ${resolvedBannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
         style={{
           ...bannerStyle,
           opacity: hideBanner ? 0 : 1,
@@ -1534,6 +1534,9 @@ const ProfilePage = () => {
         ></div>
         </>
         )}
+
+        {/* Bottom fade — merges banner into page background */}
+        <div className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to bottom, transparent, hsl(var(--background)))' }} />
       </div>
 
       {/* Share button - positioned on banner top right for mobile */}
@@ -1806,19 +1809,44 @@ const ProfilePage = () => {
             )}
           </div>
 
-          {/* Profile Info Card - Figma design */}
-          <div 
-            className="mx-4 mt-4 mb-1 rounded-2xl"
-            style={{
-              background: `${accentColor || '#00bba7'}0d`,
-              border: `1px solid ${accentColor || '#00bba7'}33`,
-            }}
-          >
-            <div className="p-4">
-              {profileSectionTab === 'stats' ? (
-                <>
-                  {/* Stats row */}
-                  <div className="flex gap-6 mb-3 mt-1">
+          {/* Member since + bio — below the streamer badge, outside the card */}
+          <div className="mx-4 mt-2 mb-1 space-y-0.5">
+            {profile.createdAt && (
+              <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>
+                MEMBER SINCE {new Date(profile.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }).toUpperCase()}
+              </span>
+            )}
+            {profile.bio && (
+              <p className="text-sm text-slate-300 pr-4">{profile.bio}</p>
+            )}
+          </div>
+
+          {/* Profile Info Card — stats only, Collection button on top-right border */}
+          <div className="relative mx-4 mt-4 mb-1">
+            {/* Collection button pinned to top-right border of the card */}
+            <button 
+              onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
+              className="absolute -top-3 -right-1 z-10 px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
+              style={{ 
+                background: profileSectionTab === 'collection'
+                  ? '#1a1a2e'
+                  : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                color: profileSectionTab === 'collection' ? '#ffffff' : '#0f172b',
+              }}
+            >
+              Collection
+            </button>
+
+            <div 
+              className="rounded-2xl"
+              style={{
+                background: `${accentColor || '#00bba7'}0d`,
+                border: `1px solid ${accentColor || '#00bba7'}33`,
+              }}
+            >
+              <div className="p-4">
+                {profileSectionTab === 'stats' ? (
+                  <div className="flex gap-6 mt-1">
                     <div className="flex flex-col">
                       <span className="font-black text-base text-white">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
                       <span className="text-[8px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>UPLOADS</span>
@@ -1832,48 +1860,15 @@ const ProfilePage = () => {
                       <span className="text-[8px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>FOLLOWING</span>
                     </div>
                   </div>
-
-                  {/* Member since date */}
-                  {profile.createdAt && (
-                    <div className="mb-2">
-                      <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>
-                        MEMBER SINCE {new Date(profile.createdAt).toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'long' 
-                        }).toUpperCase()}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Bio/description */}
-                  {profile.bio && (
-                    <p className="text-sm text-slate-300 mb-3 pr-4">{profile.bio}</p>
-                  )}
-                </>
-              ) : (
-                <div className="mb-3">
+                ) : (
                   <div className="flex items-center gap-2">
                     <Hexagon className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
                       {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
                     </span>
                   </div>
-                </div>
-              )}
-
-              {/* Collection toggle button */}
-              <button 
-                onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-                className="px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
-                style={{ 
-                  background: profileSectionTab === 'collection'
-                    ? '#1a1a2e'
-                    : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                  color: profileSectionTab === 'collection' ? '#ffffff' : '#0f172b',
-                }}
-              >
-                Collection
-              </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -2062,19 +2057,44 @@ const ProfilePage = () => {
             {/* Username */}
             <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
 
-            {/* Profile Info Card - Figma design */}
-            <div 
-              className="mt-4 rounded-2xl max-w-xl"
-              style={{
-                background: `${accentColor || '#00bba7'}0d`,
-                border: `1px solid ${accentColor || '#00bba7'}33`,
-              }}
-            >
-              <div className="p-5">
-                {profileSectionTab === 'stats' ? (
-                  <>
-                    {/* Stats - Uploads, Followers, Following */}
-                    <div className="flex gap-8 items-center mb-4">
+            {/* Member since + bio — below the streamer badge, outside the card */}
+            <div className="mt-2 mb-1 space-y-0.5">
+              {profile.createdAt && (
+                <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>
+                  Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+                </span>
+              )}
+              {profile.bio && (
+                <p className="text-sm text-slate-300 max-w-md">{profile.bio}</p>
+              )}
+            </div>
+
+            {/* Profile Info Card — stats only, Collection button on top-right border */}
+            <div className="relative mt-4 max-w-xl">
+              {/* Collection button pinned to top-right border */}
+              <button 
+                onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
+                className="absolute -top-3 -right-1 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
+                style={{ 
+                  background: profileSectionTab === 'collection'
+                    ? '#1a1a2e'
+                    : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                  color: profileSectionTab === 'collection' ? '#ffffff' : '#0f172b',
+                }}
+              >
+                Collection
+              </button>
+
+              <div 
+                className="rounded-2xl"
+                style={{
+                  background: `${accentColor || '#00bba7'}0d`,
+                  border: `1px solid ${accentColor || '#00bba7'}33`,
+                }}
+              >
+                <div className="p-5">
+                  {profileSectionTab === 'stats' ? (
+                    <div className="flex gap-8 items-center">
                       <div className="flex flex-col">
                         <span className="font-black text-xl text-white">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
                         <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>Uploads</span>
@@ -2088,48 +2108,15 @@ const ProfilePage = () => {
                         <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>Following</span>
                       </div>
                     </div>
-
-                    {/* Member since date */}
-                    {profile.createdAt && (
-                      <div className="mb-3">
-                        <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>
-                          Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
-                            year: 'numeric', 
-                            month: 'long' 
-                          })}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Bio/description */}
-                    {profile.bio && (
-                      <p className="text-sm text-slate-300 max-w-md mb-4">{profile.bio}</p>
-                    )}
-                  </>
-                ) : (
-                  <div className="mb-4">
+                  ) : (
                     <div className="flex items-center gap-2">
                       <Hexagon className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
                         {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
                       </span>
                     </div>
-                  </div>
-                )}
-
-                {/* Collection toggle button */}
-                <button 
-                  onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-                  className="px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
-                  style={{ 
-                    background: profileSectionTab === 'collection'
-                      ? '#1a1a2e'
-                      : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                    color: profileSectionTab === 'collection' ? '#ffffff' : '#0f172b',
-                  }}
-                >
-                  Collection
-                </button>
+                  )}
+                </div>
               </div>
             </div>
 
