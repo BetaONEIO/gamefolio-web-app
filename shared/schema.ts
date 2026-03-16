@@ -48,8 +48,6 @@ export const users = pgTable("users", {
   psnTrophyLevel: integer("psn_trophy_level"),
   psnTotalTrophies: integer("psn_total_trophies"),
   twitterUsername: text("twitter_username"),  // X/Twitter
-  twitterId: text("twitter_id"),             // X/Twitter user ID (set when OAuth-connected)
-  twitterVerified: boolean("twitter_verified").default(false), // Connected via OAuth
   youtubeUsername: text("youtube_username"),  // YouTube
   discordUsername: text("discord_username"),  // Discord
   epicUsername: text("epic_username"),        // Epic Games

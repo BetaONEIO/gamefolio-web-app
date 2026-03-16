@@ -361,8 +361,6 @@ export default function SettingsPage() {
   const [savingPlatform, setSavingPlatform] = useState(false);
   const [removingPlatform, setRemovingPlatform] = useState<PlatformKey | null>(null);
   const [connectingXbox, setConnectingXbox] = useState(false);
-  const [connectingTwitter, setConnectingTwitter] = useState(false);
-  const [disconnectingTwitter, setDisconnectingTwitter] = useState(false);
   const [connectingKick, setConnectingKick] = useState(false);
   const [disconnectingKick, setDisconnectingKick] = useState(false);
   const [connectingTwitch, setConnectingTwitch] = useState(false);
@@ -951,7 +949,7 @@ export default function SettingsPage() {
     enabled: !!user,
   });
 
-  const { data: oauthConfig } = useQuery<{ twitter: boolean; kick: boolean; twitch: boolean }>({
+  const { data: oauthConfig } = useQuery<{ kick: boolean; twitch: boolean }>({
     queryKey: ['/api/auth/social-oauth/config'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     staleTime: 60000,
@@ -960,20 +958,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get('twitter_connected') === 'true') {
-      refreshUser();
-      toast({ title: "Twitter connected!", description: "Your X (Twitter) account has been verified and linked.", duration: 4000 });
-      window.history.replaceState({}, '', window.location.pathname);
-    } else if (params.get('twitter_error')) {
-      const errMap: Record<string, string> = {
-        access_denied: 'You cancelled the Twitter authorisation.',
-        invalid_state: 'Invalid OAuth state. Please try again.',
-        not_configured: 'Twitter OAuth is not configured on this server.',
-        auth_failed: 'Twitter authentication failed. Please try again.',
-      };
-      toast({ title: "Twitter connection failed", description: errMap[params.get('twitter_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
-      window.history.replaceState({}, '', window.location.pathname);
-    } else if (params.get('kick_connected') === 'true') {
+    if (params.get('kick_connected') === 'true') {
       refreshUser();
       toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
       window.history.replaceState({}, '', window.location.pathname);
@@ -3238,51 +3223,6 @@ export default function SettingsPage() {
                               </Button>
                             </div>
                           </div>
-                        ) : selectedPlatform === 'twitterUsername' ? (
-                          <div className="space-y-3">
-                            {oauthConfig?.twitter ? (
-                              <>
-                                <p className="text-xs text-slate-400">Authenticate with X (Twitter) to securely verify and link your account.</p>
-                                <div className="flex gap-2 justify-end">
-                                  <Button variant="outline" size="sm" onClick={() => setShowAddPlatform(false)}>
-                                    Cancel
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => { setConnectingTwitter(true); window.location.href = '/api/auth/twitter/connect'; }}
-                                    disabled={connectingTwitter}
-                                    className="bg-black hover:bg-slate-900 text-white border border-slate-700"
-                                  >
-                                    {connectingTwitter ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <FaXTwitter className="w-4 h-4 mr-1" />}
-                                    Connect with X
-                                  </Button>
-                                </div>
-                                <div className="relative flex items-center gap-2">
-                                  <div className="flex-1 h-px bg-slate-700" />
-                                  <span className="text-[10px] text-slate-500 uppercase tracking-widest">or enter manually</span>
-                                  <div className="flex-1 h-px bg-slate-700" />
-                                </div>
-                              </>
-                            ) : (
-                              <p className="text-xs text-slate-400">Enter your X (Twitter) username below.</p>
-                            )}
-                            <Input
-                              placeholder="Enter your X username"
-                              value={platformHandle}
-                              onChange={(e) => setPlatformHandle(e.target.value)}
-                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPlatform(); } }}
-                              autoFocus={!oauthConfig?.twitter}
-                            />
-                            <div className="flex gap-2 justify-end">
-                              <Button variant="outline" size="sm" onClick={() => setShowAddPlatform(false)}>
-                                Cancel
-                              </Button>
-                              <Button size="sm" onClick={handleAddPlatform} disabled={!platformHandle.trim() || savingPlatform}>
-                                {savingPlatform ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />}
-                                Save
-                              </Button>
-                            </div>
-                          </div>
                         ) : (
                           <>
                             <Input
@@ -3318,15 +3258,12 @@ export default function SettingsPage() {
                     {connectedPlatforms.map((platform) => {
                       const isXboxVerified = platform.key === 'xboxUsername' && !!(user as any)?.xboxXuid;
                       const isPsnPlatform = platform.key === 'playstationUsername';
-                      const isTwitterPlatform = platform.key === 'twitterUsername';
-                      const isTwitterVerified = isTwitterPlatform && !!(user as any)?.twitterVerified;
                       return (
                         <div
                           key={platform.key}
                           className={`flex items-center gap-3 px-4 py-3 rounded-xl border bg-slate-800/30 ${
                             isXboxVerified ? 'border-[#107C10]/40 bg-[#107C10]/5'
                             : isPsnPlatform ? 'border-[#003791]/40 bg-[#003791]/5'
-                            : isTwitterVerified ? 'border-slate-400/30 bg-slate-800/50'
                             : 'border-slate-700/50'
                           }`}
                         >
@@ -3340,12 +3277,6 @@ export default function SettingsPage() {
                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#107C10]/20 text-[#4ade80] border border-[#107C10]/30">
                                   <Check className="w-2.5 h-2.5" />
                                   Verified
-                                </span>
-                              )}
-                              {isTwitterVerified && (
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-700/60 text-slate-300 border border-slate-600/40">
-                                  <Check className="w-2.5 h-2.5" />
-                                  OAuth Verified
                                 </span>
                               )}
                             </div>
@@ -3378,28 +3309,6 @@ export default function SettingsPage() {
                               }}
                             >
                               <Settings className="w-4 h-4" />
-                            </Button>
-                          ) : isTwitterPlatform ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-slate-500 hover:text-red-400"
-                              title="Disconnect Twitter"
-                              disabled={disconnectingTwitter}
-                              onClick={async () => {
-                                setDisconnectingTwitter(true);
-                                try {
-                                  await apiRequest('POST', '/api/auth/twitter/disconnect');
-                                  await refreshUser();
-                                  toast({ title: 'Twitter disconnected', description: 'Your X (Twitter) account has been unlinked.', duration: 3000 });
-                                } catch {
-                                  toast({ title: 'Failed to disconnect', description: 'Please try again.', variant: 'destructive' });
-                                } finally {
-                                  setDisconnectingTwitter(false);
-                                }
-                              }}
-                            >
-                              {disconnectingTwitter ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                             </Button>
                           ) : (
                             <Button
