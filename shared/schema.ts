@@ -48,6 +48,8 @@ export const users = pgTable("users", {
   psnTrophyLevel: integer("psn_trophy_level"),
   psnTotalTrophies: integer("psn_total_trophies"),
   twitterUsername: text("twitter_username"),  // X/Twitter
+  twitterId: text("twitter_id"),             // X/Twitter user ID (set when OAuth-connected)
+  twitterVerified: boolean("twitter_verified").default(false), // Connected via OAuth
   youtubeUsername: text("youtube_username"),  // YouTube
   discordUsername: text("discord_username"),  // Discord
   epicUsername: text("epic_username"),        // Epic Games
@@ -60,6 +62,8 @@ export const users = pgTable("users", {
   // Streamer settings
   streamPlatform: text("stream_platform"), // "twitch" or "kick"
   streamChannelName: text("stream_channel_name"), // Channel username on the platform
+  kickId: text("kick_id"),                  // Kick user ID (set when OAuth-connected)
+  kickVerified: boolean("kick_verified").default(false), // Connected via OAuth
   showLiveOverlay: boolean("show_live_overlay").default(false), // Show LIVE badge on avatar
   ageRange: text("age_range"), // Age range: 13-17, 18-24, 25-34, 35-44, 45-54, 55+
   // Authentication provider fields
