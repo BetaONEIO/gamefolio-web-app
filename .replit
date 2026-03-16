@@ -46,3 +46,9 @@ STRIPE_PRO_MONTHLY_PRICE_ID = "price_1Sy9xoDVcn8w8LmscNqJUGjn"
 STRIPE_PRO_YEARLY_PRICE_ID = "price_1Sy9ysDVcn8w8LmsHzCQUjbs"
 GFT_TOKEN_CONTRACT_ADDRESS = "0x2Db1fFAbbc41b8667B408a5F5e0E42bB6c6BA7f7"
 SKALE_NEBULA_RPC_URL = "https://testnet.skalenodes.com/v1/lanky-ill-funny-testnet"
+
+[userenv.development]
+APP_BASE_URL = "https://c9fa12a0-25f6-499c-85a1-3fdaf44e555f-00-2i2gmevrrbqn1.riker.replit.dev"
+
+[userenv.production]
+APP_BASE_URL = "https://app.gamefolio.com"
