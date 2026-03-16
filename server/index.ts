@@ -201,6 +201,18 @@ app.use((req, res, next) => {
         const baseUrl = getBaseUrl();
         const previewImageUrl = `${baseUrl}/api/social-preview/${username}`;
         const profileUrl = `${baseUrl}/profile/${username}`;
+
+        // Build rich description from user data
+        const userTypesArr = (profile.userType || '').split(',').map((t: string) => t.trim()).filter(Boolean);
+        const typeLabels: Record<string, string> = {
+          streamer: 'Streamer', gamer: 'Gamer', professional_gamer: 'Pro Gamer',
+          content_creator: 'Creator', indie_developer: 'Indie Dev', viewer: 'Viewer',
+          filthy_casual: 'Casual', doom_scroller: 'Doom Scroller'
+        };
+        const typePart = userTypesArr.map((t: string) => typeLabels[t] || t).slice(0, 2).join(' · ');
+        const ogDescription = profile.bio 
+          ? profile.bio 
+          : `${typePart ? typePart + ' · ' : ''}Check out ${profile.displayName || profile.username}'s gaming portfolio on Gamefolio!`;
         
         // Create HTML with Open Graph meta tags
         const html = `
@@ -214,7 +226,7 @@ app.use((req, res, next) => {
     <!-- Open Graph meta tags for social media -->
     <meta property="og:type" content="profile">
     <meta property="og:title" content="${profile.displayName || profile.username} - Gamefolio">
-    <meta property="og:description" content="${profile.bio || `Check out ${profile.displayName || profile.username}'s gaming portfolio on Gamefolio!`}">
+    <meta property="og:description" content="${ogDescription}">
     <meta property="og:url" content="${profileUrl}">
     <meta property="og:image" content="${previewImageUrl}">
     <meta property="og:image:width" content="1200">
@@ -224,12 +236,12 @@ app.use((req, res, next) => {
     <!-- Twitter Card meta tags -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="${profile.displayName || profile.username} - Gamefolio">
-    <meta name="twitter:description" content="${profile.bio || `Check out ${profile.displayName || profile.username}'s gaming portfolio on Gamefolio!`}">
+    <meta name="twitter:description" content="${ogDescription}">
     <meta name="twitter:image" content="${previewImageUrl}">
     
     <!-- LinkedIn meta tags -->
     <meta property="linkedin:title" content="${profile.displayName || profile.username} - Gamefolio">
-    <meta property="linkedin:description" content="${profile.bio || `Check out ${profile.displayName || profile.username}'s gaming portfolio on Gamefolio!`}">
+    <meta property="linkedin:description" content="${ogDescription}">
     <meta property="linkedin:image" content="${previewImageUrl}">
     
     <!-- Redirect to the actual app after a moment -->

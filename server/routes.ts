@@ -3467,7 +3467,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (user.bannerUrl) {
         try {
           console.log(`🖼️ Fetching banner from: ${user.bannerUrl}`);
-          const response = await fetch(user.bannerUrl);
+          let bannerFetchUrl = user.bannerUrl;
+          if (user.bannerUrl.includes('supabase')) {
+            const signed = await supabaseStorage.convertToSignedUrl(user.bannerUrl, 120);
+            if (signed) bannerFetchUrl = signed;
+          }
+          const response = await fetch(bannerFetchUrl);
           if (response.ok) {
             const bannerBuffer = Buffer.from(await response.arrayBuffer());
             const bannerImage = await sharp(bannerBuffer)
@@ -3492,10 +3497,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
         
       // Add profile picture if available - much larger and more prominent
+      let avatarLoaded = false;
       if (user.avatarUrl) {
         try {
           console.log(`👤 Fetching avatar from: ${user.avatarUrl}`);
-          const avatarResponse = await fetch(user.avatarUrl);
+          let avatarFetchUrl = user.avatarUrl;
+          if (user.avatarUrl.includes('supabase')) {
+            const signed = await supabaseStorage.convertToSignedUrl(user.avatarUrl, 120);
+            if (signed) avatarFetchUrl = signed;
+          }
+          const avatarResponse = await fetch(avatarFetchUrl);
           if (avatarResponse.ok) {
             const avatarBuffer = Buffer.from(await avatarResponse.arrayBuffer());
             const profilePicSize = 180; // Much larger profile picture
@@ -3527,6 +3538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .png()
               .toBuffer();
               
+            avatarLoaded = true;
             console.log(`✅ Avatar added successfully at position (${profileX}, ${profileY})`);
           } else {
             console.log(`❌ Avatar fetch failed with status: ${avatarResponse.status}`);
@@ -3579,6 +3591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create gamefolio-style profile layout using SVG to match the React component
       const displayName = user.displayName || user.username;
       const bio = user.bio || 'Ready to play any game!';
+      const accentColor = user.avatarBorderColor || user.accentColor || '#8b5cf6';
       
       // Calculate positions based on new layout
       const profileX = 100;
@@ -3589,7 +3602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <style>
-              .profile-border { fill: none; stroke: #8b5cf6; stroke-width: 6; }
+              .profile-border { fill: none; stroke: ${accentColor}; stroke-width: 6; }
               .username { fill: #ffffff; font-family: 'Arial', sans-serif; font-size: 48px; font-weight: bold; }
               .handle { fill: #9ca3af; font-family: 'Arial', sans-serif; font-size: 24px; }
               .bio-text { fill: #d1d5db; font-family: 'Arial', sans-serif; font-size: 20px; }
@@ -3600,8 +3613,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             </style>
           </defs>
           
-          <!-- Purple border around profile picture -->
+          <!-- Accent-colored border around profile picture -->
           <circle cx="${profileX + profilePicSize/2}" cy="${profileY + profilePicSize/2}" r="${profilePicSize/2 + 8}" class="profile-border"/>
+          
+          ${!avatarLoaded ? `
+          <!-- Initials fallback when no avatar photo -->
+          <circle cx="${profileX + profilePicSize/2}" cy="${profileY + profilePicSize/2}" r="${profilePicSize/2}" fill="${accentColor}22"/>
+          <text x="${profileX + profilePicSize/2}" y="${profileY + profilePicSize/2 + 20}" text-anchor="middle" fill="${accentColor}" font-family="Arial, sans-serif" font-size="60" font-weight="bold">${(user.displayName || user.username || '?').substring(0, 2).toUpperCase()}</text>
+          ` : ''}
           
           <!-- Profile info section - positioned to the right of profile picture -->
           <g transform="translate(${profileX + profilePicSize + 40}, ${profileY + 20})">
