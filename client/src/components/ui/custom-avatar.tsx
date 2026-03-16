@@ -269,6 +269,7 @@ interface CustomAvatarProps {
   borderIntensity?: "subtle" | "normal" | "strong";
   showAvatarBorderOverlay?: boolean;
   showLiveOverlay?: boolean;
+  isLive?: boolean;
   onNftClick?: (userId: number, tokenId: number, imageUrl: string, event: React.MouseEvent) => void;
   onClick?: (event: React.MouseEvent) => void;
 }
@@ -326,6 +327,7 @@ export const CustomAvatar = ({
   borderIntensity = "normal",
   showAvatarBorderOverlay = true,
   showLiveOverlay = false,
+  isLive: isLiveProp,
   onNftClick,
   onClick
 }: CustomAvatarProps) => {
@@ -333,8 +335,9 @@ export const CustomAvatar = ({
   const safeDisplayName = user?.displayName || user?.username || "?";
   const clipId = useMemo(() => `avatar-clip-${user?.id || 'default'}-${Math.random().toString(36).substr(2, 6)}`, [user?.id]);
 
-  const { data: liveStatus } = useLiveStatus(user?.id, showLiveOverlay);
-  const isActuallyLive = showLiveOverlay && !!(liveStatus?.isLive);
+  // Use hook only when isLive isn't provided directly as a prop
+  const { data: liveStatus } = useLiveStatus(user?.id, showLiveOverlay && isLiveProp === undefined);
+  const isActuallyLive = showLiveOverlay && (isLiveProp !== undefined ? isLiveProp : !!(liveStatus?.isLive));
   
   const hasNftProfile = !!(user?.nftProfileTokenId && user?.nftProfileImageUrl && (user?.activeProfilePicType === 'nft' || !user?.activeProfilePicType));
   const [showNftPopup, setShowNftPopup] = useState(false);
