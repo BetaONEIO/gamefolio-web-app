@@ -1816,8 +1816,59 @@ const ProfilePage = () => {
             </div>
           )}
 
-          {/* Platform tags and Social Links — above the stats card */}
-          {profileSectionTab === 'stats' && <div className="flex flex-wrap gap-1.5 mb-2 mt-2 pl-4 pr-8">
+          {/* Profile Info Card — stats only, Collection button on top-right border */}
+          <div className="relative mx-4 mt-2 mb-1">
+            {/* Collection button pinned to top-right border of the card */}
+            <button 
+              onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
+              className="absolute -top-3 -right-1 z-10 px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
+              style={{ 
+                background: profileSectionTab === 'collection'
+                  ? '#1a1a2e'
+                  : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                color: profileSectionTab === 'collection' ? '#ffffff' : '#0f172b',
+              }}
+            >
+              Collection
+            </button>
+
+            <div 
+              className="rounded-2xl"
+              style={{
+                background: `${accentColor || '#00bba7'}0d`,
+                border: `1px solid ${accentColor || '#00bba7'}33`,
+              }}
+            >
+              <div className="p-4">
+                {profileSectionTab === 'stats' ? (
+                  <div className="flex gap-6 mt-1">
+                    <div className="flex flex-col">
+                      <span className="font-black text-base text-white">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                      <span className="text-[8px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>UPLOADS</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-black text-base text-white">{Number(profile._count?.followers || 0)}</span>
+                      <span className="text-[8px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>FOLLOWERS</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-black text-base text-white">{Number(profile._count?.following || 0)}</span>
+                      <span className="text-[8px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>FOLLOWING</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Hexagon className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
+                      {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Platform tags and Social Links — below the stats card */}
+          {profileSectionTab === 'stats' && <div className="flex flex-wrap gap-1.5 mb-4 mt-2 pl-4 pr-8">
             {profile.steamUsername && (
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(27, 40, 56, 0.8)', color: '#FFFFFF' }}>
                 <SiSteam className="w-2.5 h-2.5" />
@@ -1903,57 +1954,6 @@ const ProfilePage = () => {
               </a>
             )}
           </div>}
-
-          {/* Profile Info Card — stats only, Collection button on top-right border */}
-          <div className="relative mx-4 mt-2 mb-1">
-            {/* Collection button pinned to top-right border of the card */}
-            <button 
-              onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-              className="absolute -top-3 -right-1 z-10 px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
-              style={{ 
-                background: profileSectionTab === 'collection'
-                  ? '#1a1a2e'
-                  : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                color: profileSectionTab === 'collection' ? '#ffffff' : '#0f172b',
-              }}
-            >
-              Collection
-            </button>
-
-            <div 
-              className="rounded-2xl"
-              style={{
-                background: `${accentColor || '#00bba7'}0d`,
-                border: `1px solid ${accentColor || '#00bba7'}33`,
-              }}
-            >
-              <div className="p-4">
-                {profileSectionTab === 'stats' ? (
-                  <div className="flex gap-6 mt-1">
-                    <div className="flex flex-col">
-                      <span className="font-black text-base text-white">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                      <span className="text-[8px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>UPLOADS</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-black text-base text-white">{Number(profile._count?.followers || 0)}</span>
-                      <span className="text-[8px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>FOLLOWERS</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-black text-base text-white">{Number(profile._count?.following || 0)}</span>
-                      <span className="text-[8px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>FOLLOWING</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Hexagon className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
-                      {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Desktop Layout - Vertical stacked on left */}
@@ -2057,9 +2057,60 @@ const ProfilePage = () => {
               <p className="text-sm text-slate-300 max-w-md mt-2">{profile.bio}</p>
             )}
 
-            {/* Platform Connections — above the stats card */}
+            {/* Profile Info Card — stats only, Collection button on top-right border */}
+            <div className="relative mt-4 max-w-xl">
+              {/* Collection button pinned to top-right border */}
+              <button 
+                onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
+                className="absolute -top-3 -right-1 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
+                style={{ 
+                  background: profileSectionTab === 'collection'
+                    ? '#1a1a2e'
+                    : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                  color: profileSectionTab === 'collection' ? '#ffffff' : '#0f172b',
+                }}
+              >
+                Collection
+              </button>
+
+              <div 
+                className="rounded-2xl"
+                style={{
+                  background: `${accentColor || '#00bba7'}0d`,
+                  border: `1px solid ${accentColor || '#00bba7'}33`,
+                }}
+              >
+                <div className="p-5">
+                  {profileSectionTab === 'stats' ? (
+                    <div className="flex gap-8 items-center">
+                      <div className="flex flex-col">
+                        <span className="font-black text-xl text-white">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                        <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>Uploads</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-black text-xl text-white">{Number(profile._count?.followers || 0)}</span>
+                        <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>Followers</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-black text-xl text-white">{Number(profile._count?.following || 0)}</span>
+                        <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>Following</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Hexagon className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
+                        {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Platform Connections — below the stats card */}
             {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
-              <div className="flex flex-wrap gap-2 mt-3">
+              <div className="flex flex-wrap gap-2 mt-4">
                 {profile.steamUsername && (
                     <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#1B2838', color: '#FFFFFF' }}>
                       <SiSteam className="w-3 h-3" />
@@ -2155,57 +2206,6 @@ const ProfilePage = () => {
                 )}
               </div>
             )}
-
-            {/* Profile Info Card — stats only, Collection button on top-right border */}
-            <div className="relative mt-4 max-w-xl">
-              {/* Collection button pinned to top-right border */}
-              <button 
-                onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-                className="absolute -top-3 -right-1 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
-                style={{ 
-                  background: profileSectionTab === 'collection'
-                    ? '#1a1a2e'
-                    : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                  color: profileSectionTab === 'collection' ? '#ffffff' : '#0f172b',
-                }}
-              >
-                Collection
-              </button>
-
-              <div 
-                className="rounded-2xl"
-                style={{
-                  background: `${accentColor || '#00bba7'}0d`,
-                  border: `1px solid ${accentColor || '#00bba7'}33`,
-                }}
-              >
-                <div className="p-5">
-                  {profileSectionTab === 'stats' ? (
-                    <div className="flex gap-8 items-center">
-                      <div className="flex flex-col">
-                        <span className="font-black text-xl text-white">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                        <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>Uploads</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-black text-xl text-white">{Number(profile._count?.followers || 0)}</span>
-                        <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>Followers</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-black text-xl text-white">{Number(profile._count?.following || 0)}</span>
-                        <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>Following</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Hexagon className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
-                        {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
 
 
             {/* Name Tag - positioned absolutely below banner and follow/message buttons, only show if nameTag exists and imageUrl is valid */}
