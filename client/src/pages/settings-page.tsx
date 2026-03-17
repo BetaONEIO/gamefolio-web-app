@@ -666,6 +666,8 @@ export default function SettingsPage() {
   // Track previous avatarUrl to detect successful uploads
   const prevAvatarUrl = React.useRef(user?.avatarUrl);
   const fontPreviewRef = React.useRef<HTMLDivElement>(null);
+  // Guard against query refreshes overwriting in-progress appearance edits
+  const hasPendingEdits = React.useRef(false);
 
   const scrollToFontPreview = () => {
     if (window.innerWidth < 768) {
@@ -700,13 +702,9 @@ export default function SettingsPage() {
           finalBannerUrl = user.bannerUrl || "";
         }
         
-        return {
-          displayName: user.displayName || "",
-          bio: user.bio || "",
+        const appearanceFields = hasPendingEdits.current ? {} : {
           backgroundColor: user.backgroundColor || "#0B2232",
           accentColor: user.accentColor || "#4ADE80",
-          bannerUrl: finalBannerUrl,
-          avatarUrl: user.avatarUrl || "",
           profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
           profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
           profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
@@ -717,11 +715,20 @@ export default function SettingsPage() {
           profileBackgroundDesktopX: (user as any)?.profileBackgroundDesktopX || "50",
           profileBackgroundDesktopY: (user as any)?.profileBackgroundDesktopY || "50",
           profileBackgroundDesktopZoom: (user as any)?.profileBackgroundDesktopZoom || "100",
-          hideBanner: (user as any)?.hideBanner || false,
           profileFont: (user as any)?.profileFont || "default",
           profileFontEffect: (user as any)?.profileFontEffect || "none",
           profileFontAnimation: (user as any)?.profileFontAnimation || "none",
           profileFontColor: (user as any)?.profileFontColor || "#FFFFFF",
+        };
+
+        return {
+          ...prev,
+          displayName: user.displayName || "",
+          bio: user.bio || "",
+          bannerUrl: finalBannerUrl,
+          avatarUrl: user.avatarUrl || "",
+          hideBanner: (user as any)?.hideBanner || false,
+          ...appearanceFields,
         };
       });
       
@@ -1016,6 +1023,9 @@ export default function SettingsPage() {
       return response.json();
     },
     onSuccess: (updatedUser) => {
+      // Save is complete — allow future user refreshes to sync appearance fields again
+      hasPendingEdits.current = false;
+
       // Direct cache update using functional updater to merge with existing cache
       // This preserves fields like selectedNameTagId that aren't returned in the PATCH response
       const cacheUpdater = (oldData: any) => {
@@ -1222,9 +1232,9 @@ export default function SettingsPage() {
   };
 
   const applyPresetTheme = (theme: typeof PRESET_THEMES[0]) => {
+    hasPendingEdits.current = true;
     setProfileData(prev => ({
       ...prev,
-      backgroundColor: theme.backgroundColor,
       accentColor: theme.accentColor
     }));
     
@@ -2192,14 +2202,14 @@ export default function SettingsPage() {
                         <div className="flex flex-col sm:flex-row gap-6 items-start">
                           <HexColorPicker
                             color={profileData.backgroundColor}
-                            onChange={(color) => setProfileData(prev => ({ ...prev, backgroundColor: color }))}
+                            onChange={(color) => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, backgroundColor: color })); }}
                           />
                           <div className="space-y-3 flex-1">
                             <div className="flex items-center gap-2">
                               <Label className="text-sm font-medium">Hex Code</Label>
                               <Input
                                 value={profileData.backgroundColor}
-                                onChange={(e) => setProfileData(prev => ({ ...prev, backgroundColor: e.target.value }))}
+                                onChange={(e) => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, backgroundColor: e.target.value })); }}
                                 className="w-32 font-mono text-sm"
                                 placeholder="#0B2232"
                               />
@@ -2230,6 +2240,7 @@ export default function SettingsPage() {
                               profileBackgroundDesktopY: desktopPos.positionY,
                               profileBackgroundDesktopZoom: desktopPos.zoom,
                             });
+                            hasPendingEdits.current = true;
                             setProfileData(prev => ({
                               ...prev,
                               profileBackgroundImageUrl: url,
@@ -2466,7 +2477,7 @@ export default function SettingsPage() {
                                     <button
                                       key={font.value}
                                       type="button"
-                                      onClick={() => { setProfileData(prev => ({ ...prev, profileFont: font.value })); scrollToFontPreview(); }}
+                                      onClick={() => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFont: font.value })); scrollToFontPreview(); }}
                                       className={`p-2 sm:p-4 rounded-lg border-2 text-left transition-all ${
                                         isSelected
                                           ? 'border-primary bg-primary/10'
@@ -2499,7 +2510,7 @@ export default function SettingsPage() {
                                     <button
                                       key={effect.value}
                                       type="button"
-                                      onClick={() => { setProfileData(prev => ({ ...prev, profileFontEffect: effect.value })); scrollToFontPreview(); }}
+                                      onClick={() => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFontEffect: effect.value })); scrollToFontPreview(); }}
                                       className={`p-3 rounded-lg border-2 text-center transition-all ${
                                         isSelected
                                           ? 'border-primary bg-primary/10'
@@ -2526,7 +2537,7 @@ export default function SettingsPage() {
                                     <button
                                       key={anim.value}
                                       type="button"
-                                      onClick={() => { setProfileData(prev => ({ ...prev, profileFontAnimation: anim.value })); scrollToFontPreview(); }}
+                                      onClick={() => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFontAnimation: anim.value })); scrollToFontPreview(); }}
                                       className={`p-3 rounded-lg border-2 text-center transition-all ${
                                         isSelected
                                           ? 'border-primary bg-primary/10'
@@ -2546,7 +2557,7 @@ export default function SettingsPage() {
                               <div className="flex flex-col items-center gap-4">
                                 <HexColorPicker
                                   color={profileData.profileFontColor}
-                                  onChange={(color) => { setProfileData(prev => ({ ...prev, profileFontColor: color })); scrollToFontPreview(); }}
+                                  onChange={(color) => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFontColor: color })); scrollToFontPreview(); }}
                                   style={{ width: '100%', maxWidth: '280px' }}
                                 />
                                 <div className="flex items-center gap-3 w-full max-w-xs">
@@ -2557,6 +2568,7 @@ export default function SettingsPage() {
                                     onChange={(e) => {
                                       const val = e.target.value;
                                       if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) {
+                                        hasPendingEdits.current = true;
                                         setProfileData(prev => ({ ...prev, profileFontColor: val }));
                                         if (val.length === 7) scrollToFontPreview();
                                       }
@@ -2567,7 +2579,7 @@ export default function SettingsPage() {
                                   />
                                   <button
                                     type="button"
-                                    onClick={() => { setProfileData(prev => ({ ...prev, profileFontColor: '#FFFFFF' })); scrollToFontPreview(); }}
+                                    onClick={() => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFontColor: '#FFFFFF' })); scrollToFontPreview(); }}
                                     className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 border border-border rounded"
                                   >
                                     Reset
@@ -2578,7 +2590,7 @@ export default function SettingsPage() {
                                     <button
                                       key={preset}
                                       type="button"
-                                      onClick={() => { setProfileData(prev => ({ ...prev, profileFontColor: preset })); scrollToFontPreview(); }}
+                                      onClick={() => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFontColor: preset })); scrollToFontPreview(); }}
                                       className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110"
                                       style={{ backgroundColor: preset, borderColor: profileData.profileFontColor === preset ? 'white' : 'transparent' }}
                                       title={preset}
