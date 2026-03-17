@@ -1204,6 +1204,7 @@ export default function SettingsPage() {
             profileBackgroundDesktopZoom: String(data.zoom),
           };
       await apiRequest("PATCH", `/api/users/${user?.id}`, patch);
+      hasPendingEdits.current = false;
       setProfileData(prev => ({ ...prev, ...patch }));
       setShowBgPositionPreview(false);
       setPendingBgImageUrl('');
@@ -1222,6 +1223,7 @@ export default function SettingsPage() {
   const handleRemoveBackgroundImage = async () => {
     try {
       await apiRequest("PATCH", `/api/users/${user?.id}`, { profileBackgroundImageUrl: "" });
+      hasPendingEdits.current = false;
       setProfileData(prev => ({ ...prev, profileBackgroundImageUrl: "" }));
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
@@ -2240,7 +2242,7 @@ export default function SettingsPage() {
                               profileBackgroundDesktopY: desktopPos.positionY,
                               profileBackgroundDesktopZoom: desktopPos.zoom,
                             });
-                            hasPendingEdits.current = true;
+                            hasPendingEdits.current = false;
                             setProfileData(prev => ({
                               ...prev,
                               profileBackgroundImageUrl: url,
