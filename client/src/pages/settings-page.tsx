@@ -285,7 +285,15 @@ const PRESET_THEMES = [
     name: "Pink Gamer Girl",
     backgroundColor: "#fce7f3",
     accentColor: "#ff2056",
-    gradientTopColor: "#4a0022"
+    gradientTopColor: "#4a0022",
+    primaryColor: "#4a0022"
+  },
+  {
+    name: "Zombie",
+    backgroundColor: "#0a0c0a",
+    accentColor: "#9ae600",
+    gradientTopColor: "#0d1a00",
+    primaryColor: "#0d1a00"
   }
 ];
 
@@ -1214,7 +1222,8 @@ export default function SettingsPage() {
     setProfileData(prev => ({
       ...prev,
       accentColor: theme.accentColor,
-      backgroundColor: theme.backgroundColor
+      backgroundColor: theme.backgroundColor,
+      ...(theme.primaryColor ? { primaryColor: theme.primaryColor } : {})
     }));
     
     setAvatarBorderColor(theme.accentColor);
