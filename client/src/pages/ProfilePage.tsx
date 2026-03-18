@@ -1257,6 +1257,17 @@ const ProfilePage = () => {
     ? { backgroundColor: 'rgba(255,255,255,0.7)', color: accentColor, border: `1px solid ${accentColor}80` }
     : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
 
+  const tabListStyle = isLightBackground ? {
+    background: 'rgba(255,255,255,0.37)',
+    border: '0.556px solid rgba(255,255,255,0.8)',
+    boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+  } : undefined;
+
+  const getTabStyle = (tabName: string) => ({
+    backgroundColor: activeTab === tabName ? accentColor : 'transparent',
+    color: activeTab === tabName ? '#ffffff' : isLightBackground ? '#1d293d' : undefined,
+  });
+
   const nameTagBgStyle = {
     background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}cc 100%)`,
     border: `1px solid ${accentColor}80`,
@@ -2514,17 +2525,19 @@ const ProfilePage = () => {
             const showLimits = isOwnProfile && !currentUser?.isPro;
             return (
           <TabsList 
-            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center rounded-full p-1 relative flex gap-0.5 bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
+            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center rounded-full p-1 relative flex gap-0.5 ${isLightBackground ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
+            style={tabListStyle}
           >
             <TabsTrigger 
               ref={clipsTabRef}
               value="clips" 
-              className={`relative rounded-full transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'clips' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+              className={`relative rounded-full transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={getTabStyle('clips')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
                 <span>Clips</span>
                 {showLimits && (
-                  <span className={`text-[10px] font-normal ${clipsCount >= 15 ? 'text-red-400' : activeTab === 'clips' ? 'text-white/70' : 'text-gray-500'}`}>
+                  <span className={`text-[10px] font-normal ${clipsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: clipsCount >= 15 ? undefined : activeTab === 'clips' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {clipsCount}/15
                   </span>
                 )}
@@ -2534,12 +2547,13 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={reelsTabRef}
               value="reels" 
-              className={`relative rounded-full transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'reels' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+              className={`relative rounded-full transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={getTabStyle('reels')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
                 <span>Reels</span>
                 {showLimits && (
-                  <span className={`text-[10px] font-normal ${reelsCount >= 15 ? 'text-red-400' : activeTab === 'reels' ? 'text-white/70' : 'text-gray-500'}`}>
+                  <span className={`text-[10px] font-normal ${reelsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: reelsCount >= 15 ? undefined : activeTab === 'reels' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {reelsCount}/15
                   </span>
                 )}
@@ -2549,12 +2563,13 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={screenshotsTabRef}
               value="screenshots" 
-              className={`relative rounded-full transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'screenshots' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+              className={`relative rounded-full transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={getTabStyle('screenshots')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
                 <span>Screenshots</span>
                 {showLimits && (
-                  <span className={`text-[10px] font-normal ${screenshotsCount >= 10 ? 'text-red-400' : activeTab === 'screenshots' ? 'text-white/70' : 'text-gray-500'}`}>
+                  <span className={`text-[10px] font-normal ${screenshotsCount >= 10 ? 'text-red-400' : ''}`} style={{ color: screenshotsCount >= 10 ? undefined : activeTab === 'screenshots' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {screenshotsCount}/10
                   </span>
                 )}
@@ -2564,7 +2579,8 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={favoritesTabRef}
               value="favorites" 
-              className={`relative rounded-full transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'favorites' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+              className={`relative rounded-full transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={getTabStyle('favorites')}
             >
               Favorites
             </TabsTrigger>
@@ -2572,7 +2588,8 @@ const ProfilePage = () => {
             {profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0 && (
               <TabsTrigger
                 value="achievements"
-                className={`relative rounded-full transition-all duration-200 flex-1 px-2 md:px-4 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'achievements' ? 'text-white !bg-[#107C10]' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+                className={`relative rounded-full transition-all duration-200 flex-1 px-2 md:px-4 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+                style={{ backgroundColor: activeTab === 'achievements' ? '#107C10' : 'transparent', color: activeTab === 'achievements' ? '#ffffff' : isLightBackground ? '#1d293d' : undefined }}
               >
                 <span className="flex items-center gap-1.5">
                   <FaXbox className="w-3 h-3 shrink-0" />
@@ -2584,7 +2601,8 @@ const ProfilePage = () => {
             {profile?.showPsnTrophies && Array.isArray(profile?.psnTrophyData) && profile.psnTrophyData.length > 0 && (
               <TabsTrigger
                 value="trophies"
-                className={`relative rounded-full transition-all duration-200 flex-1 px-2 md:px-4 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'trophies' ? 'text-white !bg-[#003791]' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+                className={`relative rounded-full transition-all duration-200 flex-1 px-2 md:px-4 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+                style={{ backgroundColor: activeTab === 'trophies' ? '#003791' : 'transparent', color: activeTab === 'trophies' ? '#ffffff' : isLightBackground ? '#1d293d' : undefined }}
               >
                 <span className="flex items-center gap-1.5">
                   <FaPlaystation className="w-3 h-3 shrink-0" />
