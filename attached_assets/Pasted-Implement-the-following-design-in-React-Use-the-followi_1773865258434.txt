@@ -1,0 +1,1546 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/ProfileReplicatedPink.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,900;0,400;0,700&display=swap";
+.ProfileReplicatedPink_247_1193 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_247_1194 {
+  background: #fce7f3;
+  flex: 1 0 0;
+  width: 100%;
+}
+.Container_247_1195 {
+  backdrop-filter: blur(6px);
+  background: #fff6;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 138.043px;
+  width: 431px;
+  padding: 23.993px 16.958px 16.007px 15.998px;
+  display: flex;
+}
+.Container_247_1196 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 15.9913px;
+  width: 72px;
+  height: 32px;
+  padding-right: 0.009px;
+  display: flex;
+}
+.Button_247_1197 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+  display: flex;
+}
+.Container_247_1198 {
+  flex: 1 0 0;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_247_1200 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  display: flex;
+}
+.Container_247_1201 {
+  flex: 1 0 0;
+  height: 32px;
+  overflow: hidden;
+}
+.Container_247_1203 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 11.9896px;
+  width: 188px;
+  height: 36px;
+  padding-right: 0.038px;
+  display: flex;
+}
+.Button_247_1204 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+  display: flex;
+}
+.Container_247_1205 {
+  flex: 1 0 0;
+  height: 24px;
+  overflow: hidden;
+}
+.G_247_1206 {
+  width: 19.994px;
+  height: 19.994px;
+}
+.Button_247_1209 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+  display: flex;
+}
+.Container_247_1210 {
+  flex: 1 0 0;
+  height: 24px;
+  overflow: hidden;
+}
+.G_247_1211 {
+  width: 19.994px;
+  height: 19.994px;
+}
+.Button_247_1215 {
+  background: #ff2056;
+  border-radius: 12px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 4.002px 3.998px 3.998px 4.002px;
+  display: flex;
+  box-shadow:
+    0 4px 6px -4px #ff205633,
+    0 10px 15px -3px #ff205633;
+}
+.Container_247_1216 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_247_1218 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 1.667px solid #ffa1ad;
+  border-radius: 12px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 36px;
+  padding: 1.667px 1.333px 1.333px 1.667px;
+  display: flex;
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px -1px #0000001a,
+    0 1px 3px #0000001a;
+}
+.Image_247_1219 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 33px;
+  height: 33px;
+}
+.Container_247_1220 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 24px;
+  height: 30px;
+  display: flex;
+}
+.Button_247_1221 {
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+  display: flex;
+}
+.Container_247_1222 {
+  flex: 1 0 0;
+  height: 24px;
+  overflow: hidden;
+}
+.G_247_1223 {
+  width: 17.995px;
+  height: 19.994px;
+}
+.Container_247_1226 {
+  box-sizing: border-box;
+  background: #ff2056;
+  border: 1.667px solid #fff;
+  border-radius: 18641400px;
+  justify-content: center;
+  align-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 1.997px 1.498px 1.003px 1.502px;
+  display: flex;
+}
+.generated_5_247_1227 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 12px;
+  display: inline-block;
+}
+.Container_247_1228 {
+  width: 431px;
+  height: 857px;
+}
+.Container_247_1229 {
+  width: 431px;
+  height: 222px;
+}
+.Container_247_1230 {
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 7.09723px;
+  width: 383px;
+  padding-right: 268.903px;
+  display: flex;
+}
+.Container_247_1231 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3.55382px;
+  height: 29px;
+  padding-right: 0.675px;
+  display: flex;
+}
+.Container_247_1232 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 28px;
+  padding: 1.111px 0 0.889px;
+  display: flex;
+}
+.Luna_247_1233 {
+  color: #1d293d;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1px;
+  width: 48px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_247_1234 {
+  flex-direction: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 29px;
+  padding: 2.222px 0 3.778px;
+  display: flex;
+}
+.generated__247_1235 {
+  color: #0f172b;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 20px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_247_1236 {
+  flex-direction: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 29px;
+  padding: 2.222px 0 3.778px;
+  display: flex;
+}
+.generated__247_1237 {
+  color: #0f172b;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 20px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_247_1238 {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_247_1240 {
+  align-items: center;
+  width: 383px;
+  height: 16px;
+  padding-right: 311.5px;
+  display: flex;
+}
+.LunaPlays_247_1241 {
+  color: #62748e;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 73px;
+  height: 16px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_247_1242 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 83.0295px;
+  width: 383px;
+  display: flex;
+}
+.Container_247_1243 {
+  align-items: center;
+  height: 25px;
+  padding-right: 248px;
+  display: flex;
+}
+.Container_247_1244 {
+  backdrop-filter: blur(4px);
+  box-sizing: border-box;
+  background: #fff9;
+  border: 0.556px solid #fda5d5;
+  border-radius: 18641400px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 5.99479px;
+  height: 25px;
+  padding: 4.549px 12.453px 4.451px 12.552px;
+  display: flex;
+  box-shadow:
+    0 1px 2px -1px #0000001a,
+    0 1px 3px #0000001a;
+}
+.Container_247_1245 {
+  width: 12px;
+  height: 12px;
+  overflow: hidden;
+}
+.Container_247_1247 {
+  justify-content: center;
+  align-items: center;
+  width: 92px;
+  height: 16px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.VerifiedStreamer_247_1248 {
+  color: #ff2056;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 97px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_247_1254 {
+  backdrop-filter: blur(8px);
+  box-sizing: border-box;
+  background: #fff6;
+  border: 0.556px solid #fffc;
+  border-radius: 24px;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 72px;
+  display: flex;
+  box-shadow:
+    0 1px 2px -1px #0000001a,
+    0 1px 3px #0000001a;
+}
+.Container_247_1255 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 31.9635px;
+  padding-right: 136.484px;
+  display: flex;
+}
+.Container_247_1256 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3.99133px;
+  height: 31px;
+  padding-bottom: 0.009px;
+  display: flex;
+}
+.Container_247_1257 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 16px;
+  padding-right: 9.5px;
+  display: flex;
+}
+.generated_142_247_1258 {
+  color: #1d293d;
+  font-feature-settings: "dlig" on;
+  width: 32px;
+  height: 20px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_247_1259 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 11px;
+  padding: 0.556px 0 1.444px;
+  display: flex;
+}
+.Uploads_247_1260 {
+  color: #ff637e;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  width: 44px;
+  height: 9px;
+  font-family: Plus Jakarta Sans;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 10.5px;
+  display: inline-block;
+}
+.Container_247_1261 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3.99133px;
+  height: 31px;
+  padding-bottom: 0.009px;
+  display: flex;
+}
+.Container_247_1262 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 16px;
+  padding-right: 12.5px;
+  display: flex;
+}
+._2k_247_1263 {
+  color: #1d293d;
+  font-feature-settings: "dlig" on;
+  width: 41px;
+  height: 20px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_247_1264 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 11px;
+  padding: 0.556px 0 1.444px;
+  display: flex;
+}
+.Followers_247_1265 {
+  color: #ff637e;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  width: 56px;
+  height: 9px;
+  font-family: Plus Jakarta Sans;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 10.5px;
+  display: inline-block;
+}
+.Container_247_1266 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3.99133px;
+  height: 31px;
+  padding-bottom: 0.009px;
+  display: flex;
+}
+.Container_247_1267 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 16px;
+  padding-right: 21.5px;
+  display: flex;
+}
+.generated_218_247_1268 {
+  color: #1d293d;
+  font-feature-settings: "dlig" on;
+  width: 32px;
+  height: 20px;
+  font-family: Plus Jakarta Sans;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_247_1269 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 11px;
+  padding: 0.556px 0 1.444px;
+  display: flex;
+}
+.Following_247_1270 {
+  color: #ff637e;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  width: 56px;
+  height: 9px;
+  font-family: Plus Jakarta Sans;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 10.5px;
+  display: inline-block;
+}
+.Container_247_1271 {
+  justify-content: center;
+  align-items: center;
+  width: 85px;
+  height: 16px;
+  display: flex;
+}
+.Container_247_1272 {
+  background: linear-gradient(270deg, #ff637e 0%, #f6339a 100%);
+  border-radius: 18641400px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 2.552px 9.503px 3.448px 9.497px;
+  display: flex;
+  box-shadow:
+    0 2px 4px -2px #0000001a,
+    0 4px 6px -1px #0000001a;
+}
+.Collection_247_1273 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  width: 66px;
+  height: 10px;
+  font-family: Plus Jakarta Sans;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 12px;
+  display: inline-block;
+}
+.Container_247_1249 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3.49133px;
+  width: 383px;
+  padding: 0 4.007px 0.509px 3.993px;
+  display: flex;
+}
+.Container_247_1250 {
+  align-items: center;
+  width: 375px;
+  height: 14px;
+  padding: 0.556px 213.5px 1.444px 0;
+  display: flex;
+}
+.MemberSinceJanuary_2024_247_1251 {
+  color: #ff637ecc;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 164px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_247_1252 {
+  align-items: center;
+  width: 375px;
+  height: 18px;
+  padding: 1.667px 8.5px 2.333px 0;
+  display: flex;
+}
+.LovesValorantPinkSetupsAndCozyGamesStaySweet_247_1253 {
+  color: #45556c;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.275px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 368px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 17.875px;
+  display: inline-block;
+}
+.Container_247_1274 {
+  justify-content: center;
+  align-items: center;
+  width: 431px;
+  height: 55px;
+  padding: 0 24.007px 0 23.993px;
+  display: flex;
+}
+.Container_247_1275 {
+  flex: 1 0 0;
+  align-items: center;
+  height: 55px;
+  padding-right: 255px;
+  display: flex;
+}
+.Container_247_1276 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 3.99304px;
+  height: 55px;
+  padding-bottom: 0.007px;
+  display: flex;
+}
+.Container_247_1277 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 50px;
+  height: 11px;
+  padding: 0.556px 0 1.444px;
+  display: flex;
+}
+.Nametag_247_1278 {
+  color: #90a1b9;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 2.1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 55px;
+  height: 9px;
+  font-family: Plus Jakarta Sans;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 10.5px;
+  display: inline-block;
+}
+.Container_247_1279 {
+  box-sizing: border-box;
+  background: linear-gradient(270deg, #ff637e 0%, #fb64b6 50%, #ff637e 100%);
+  border: 0.556px solid #ffffff80;
+  border-radius: 12px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 0.556px 0.444px 0.444px 0.556px;
+  display: flex;
+  overflow: hidden;
+  box-shadow:
+    0 4px 6px -4px #fda5d566,
+    0 10px 15px -3px #fda5d566;
+}
+.Container_247_1280 {
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 7.98784px;
+  width: 127px;
+  height: 39px;
+  padding: 7.448px 42.017px 7.552px 7.995px;
+  display: flex;
+}
+.Image_247_1281 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+}
+.Container_247_1282 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 45px;
+  height: 13px;
+  padding: 0.556px 0 2.444px;
+  display: flex;
+}
+.KawaiiPro_247_1283 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 50px;
+  height: 10px;
+  font-family: Plus Jakarta Sans;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 12px;
+  display: inline-block;
+}
+.Container_247_1284 {
+  justify-content: center;
+  align-items: center;
+  width: 431px;
+  padding: 0 16.002px 128px 15.998px;
+  display: flex;
+}
+.Container_247_1285 {
+  box-sizing: border-box;
+  background: #ffffff03;
+  border: 0.556px solid #fff;
+  border-radius: 16px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 399px;
+  height: 194px;
+  padding: 0.556px 1.444px 1.444px 0.556px;
+  display: flex;
+  overflow: hidden;
+  box-shadow:
+    0 8px 10px -6px #0000001a,
+    0 20px 25px -5px #0000001a;
+}
+.Container_247_1286 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 397px;
+  height: 192px;
+  display: flex;
+}
+.Image_247_1287 {
+  aspect-ratio: 122/59;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 397px;
+  height: 192px;
+}
+.Container_247_1288 {
+  background: linear-gradient(#0000 0% 50%, #0009 100%);
+  width: 397px;
+  height: 192px;
+}
+.Container_247_1289 {
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+  display: flex;
+}
+.Container_247_1290 {
+  box-sizing: border-box;
+  background: #ff2056;
+  border: 0.556px solid #fff3;
+  border-radius: 18641400px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 3.993px 4.007px 4.007px 3.993px;
+  display: flex;
+}
+.Container_247_1291 {
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+}
+.Container_247_1293 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 7.52951px;
+  width: 92px;
+  height: 16px;
+  display: flex;
+}
+.Container_247_1294 {
+  backdrop-filter: blur(6px);
+  background: #0006;
+  border-radius: 4px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 2.552px 5.505px 3.448px 5.495px;
+  display: flex;
+}
+._45_247_1295 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  width: 27px;
+  height: 10px;
+  font-family: Plus Jakarta Sans;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 12px;
+  display: inline-block;
+}
+.Container_247_1296 {
+  backdrop-filter: blur(6px);
+  background: #0006;
+  border-radius: 4px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1.49304px;
+  height: 16px;
+  padding: 1.997px 5.512px 1.003px 7.995px;
+  display: flex;
+}
+.Container_247_1297 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 10px;
+  height: 10px;
+  display: flex;
+  overflow: hidden;
+}
+._2k_247_1300 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  width: 22px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 12px;
+  display: inline-block;
+}
+.Container_247_1301 {
+  width: 208px;
+  height: 83px;
+}
+.Container_247_1302 {
+  justify-content: center;
+  align-items: center;
+  width: 208px;
+  height: 23px;
+  display: flex;
+}
+.NewPinkSetupReveal_247_1303 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 213px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 22.5px;
+  display: inline-block;
+}
+.Container_247_1304 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-end;
+  gap: 7.99479px;
+  padding-right: 110.005px;
+  display: flex;
+}
+.Container_247_1305 {
+  box-sizing: border-box;
+  border: 0.556px solid #fff3;
+  border-radius: 18641400px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 0.556px 0.444px 0.444px 0.556px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_247_1306 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 19px;
+  height: 19px;
+}
+.Container_247_1307 {
+  justify-content: center;
+  align-items: center;
+  width: 70px;
+  height: 16px;
+  display: flex;
+}
+.LunaPlays_247_1308 {
+  color: #ffffffe6;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 73px;
+  height: 16px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_247_1309 {
+  align-items: center;
+  width: 208px;
+  padding: 6.892px 162px 0.108px 0;
+  display: flex;
+}
+.Container_247_1310 {
+  backdrop-filter: blur(4px);
+  box-sizing: border-box;
+  background: #ff2056cc;
+  border: 0.556px solid #ff637e80;
+  border-radius: 4px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 46px;
+  height: 18px;
+  padding: 2.552px 5.95px 2.448px 6.05px;
+  display: flex;
+}
+.Vlogs_247_1311 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 34px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 12px;
+  display: inline-block;
+}
+.Container_247_1312 {
+  width: 431px;
+  height: 176px;
+}
+.Container_247_1313 {
+  width: 431px;
+  height: 176px;
+  overflow: hidden;
+}
+.Image_247_1314 {
+  aspect-ratio: 311/127;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 431px;
+  height: 176px;
+}
+.Container_247_1315 {
+  background: linear-gradient(#fce7f3 0%, #fce7f300 50% 100%);
+  width: 431px;
+  height: 176px;
+}
+.Container_247_1316 {
+  justify-content: center;
+  align-items: center;
+  width: 112px;
+  height: 112px;
+  display: flex;
+}
+.Container_247_1317 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  display: flex;
+}
+.Container_247_1318 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 2.778px solid #fff;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 112px;
+  height: 112px;
+  padding: 6.771px 6.229px 6.229px 6.771px;
+  display: flex;
+  overflow: hidden;
+  box-shadow:
+    0 8px 10px -6px #0000001a,
+    0 20px 25px -5px #0000001a;
+}
+.Container_247_1319 {
+  background: #fdf2f8;
+  border-radius: 16px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 99px;
+  height: 99px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_247_1320 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 99px;
+  height: 99px;
+}
+.Container_247_1321 {
+  box-sizing: border-box;
+  background: #00d492;
+  border: 1.667px solid #fff;
+  border-radius: 18641400px;
+  width: 12px;
+  height: 12px;
+}
+.Container_247_1322 {
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  display: flex;
+}
+.Container_247_1323 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 1.667px solid #fb64b6;
+  border-radius: 18641400px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 8.498px 9.243px 7.502px 9.757px;
+  display: flex;
+  box-shadow:
+    0 2px 4px -2px #0000001a,
+    0 4px 6px -1px #0000001a;
+}
+.Container_247_1324 {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 13px;
+  height: 16px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.generated_24_247_1325 {
+  color: #ff2056;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 18px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Navigation_247_1326 {
+  backdrop-filter: blur(12px);
+  box-sizing: border-box;
+  background: #fff9;
+  border-top: 0.556px solid #ffccd3;
+  width: 431px;
+  height: 87px;
+}
+.Container_247_1327 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3.98615px;
+  width: 27px;
+  padding-bottom: 0.014px;
+  display: flex;
+}
+.Container_247_1328 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_247_1330 {
+  justify-content: center;
+  align-items: center;
+  height: 14px;
+  padding: 0.556px 0 1.444px;
+  display: flex;
+}
+.Home_247_1331 {
+  color: #62748e;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.45px;
+  text-transform: uppercase;
+  width: 32px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_247_1332 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 3.98615px;
+  width: 39px;
+  padding-bottom: 0.014px;
+  display: flex;
+}
+.Container_247_1333 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_247_1335 {
+  justify-content: center;
+  align-items: center;
+  height: 14px;
+  padding: 0.556px 0 1.444px;
+  display: flex;
+}
+.Explore_247_1336 {
+  color: #62748e;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.45px;
+  text-transform: uppercase;
+  width: 44px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_247_1337 {
+  justify-content: center;
+  align-items: center;
+  width: 56px;
+  height: 56px;
+  display: flex;
+}
+.Container_247_1338 {
+  box-sizing: border-box;
+  background: #ff2056;
+  border: 3.889px solid #fff;
+  border-radius: 18641400px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 11.997px 12.003px 12.003px 11.997px;
+  display: flex;
+  box-shadow:
+    0 8px 10px -6px #ffa1ad,
+    0 20px 25px -5px #ffa1ad;
+}
+.Container_247_1339 {
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+}
+.Container_247_1341 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 3.98615px;
+  width: 43px;
+  padding-bottom: 0.014px;
+  display: flex;
+}
+.Container_247_1342 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_247_1344 {
+  justify-content: center;
+  align-items: center;
+  height: 14px;
+  padding: 0.556px 0 1.444px;
+  display: flex;
+}
+.Trending_247_1345 {
+  color: #62748e;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.45px;
+  text-transform: uppercase;
+  width: 48px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_247_1346 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3.98615px;
+  width: 35px;
+  height: 42px;
+  padding-bottom: 0.014px;
+  display: flex;
+}
+.Container_247_1347 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 2.99913px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_247_1350 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 14px;
+  padding: 0.556px 0 1.444px;
+  display: flex;
+}
+.Profile_247_1351 {
+  color: #ec003f;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.45px;
+  text-transform: uppercase;
+  width: 40px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+
+```
+
+---
+
+```src/components/assets/Container.tsx
+import React from 'react';
+export default function Container() {
+  return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fillRule="evenodd" clipRule="evenodd" d="M7.99756 5.99833C7.99756 3.78984 9.78789 1.99951 11.9964 1.99951C14.2049 1.99951 15.9952 3.78984 15.9952 5.99833C15.9952 8.20682 14.2049 9.99715 11.9964 9.99715C9.78789 9.99715 7.99756 8.20682 7.99756 5.99833Z" fill="#EC003F"/>
+<path fillRule="evenodd" clipRule="evenodd" d="M19.9944 17.4948C19.9944 19.9791 19.9944 21.9935 11.9967 21.9935C3.99902 21.9935 3.99902 19.9791 3.99902 17.4948C3.99902 15.0105 7.57998 12.9961 11.9967 12.9961C16.4134 12.9961 19.9944 15.0105 19.9944 17.4948Z" fill="#EC003F"/>
+</svg>
+;
+}
+```
+
+---
+
+```src/components/assets/G.tsx
+import React from 'react';
+export default function G() {
+  return <svg width="18" height="20" viewBox="0 0 18 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M16.1007 8.1135V7.37161C16.1007 3.30012 12.9185 0 8.99746 0C5.07646 0 1.8942 3.30012 1.8942 7.37161V8.1135C1.89547 8.9991 1.64274 9.86648 1.16599 10.6128L0 12.4281C-1.06391 14.0855 -0.251508 16.3386 1.59955 16.8626C6.43638 18.2324 11.5585 18.2324 16.3954 16.8626C18.2464 16.3386 19.0588 14.0855 17.9949 12.4291L16.8289 10.6139C16.3518 9.86765 16.0998 8.9992 16.1007 8.1135ZM16.1007 8.1135L16.0997 8.11456" stroke="#FF637E" strokeWidth="1.5785"/>
+<path d="M4.49902 16.9951C5.15383 18.7426 6.92032 19.9942 8.99772 19.9942C11.0751 19.9942 12.8416 18.7426 13.4964 16.9951" stroke="#FF637E" strokeWidth="1.49957" strokeLinecap="round"/>
+</svg>
+;
+}
+```
+
+---
+
+```src/components/ProfileReplicatedPink.tsx
+import React from 'react';
+import styles from '../styles/ProfileReplicatedPink.module.css';
+import Container from './assets/Container';
+import G from './assets/G';
+
+export default function ProfileReplicatedPink() {
+  return (
+    <div className={styles.ProfileReplicatedPink_247_1193}>
+      <div className={styles.Container_247_1194}>
+        <div className={styles.Container_247_1195}>
+          <div className={styles.Container_247_1196}>
+            <div className={styles.Button_247_1197}>
+              <div className={styles.Container_247_1198}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Container_247_1200}>
+              <div className={styles.Container_247_1201}>
+                <Container />
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_247_1203}>
+            <div className={styles.Button_247_1204}>
+              <div className={styles.Container_247_1205}>
+                <div className={styles.G_247_1206}>
+                  <G />
+                </div>
+              </div>
+            </div>
+            <div className={styles.Button_247_1209}>
+              <div className={styles.Container_247_1210}>
+                <div className={styles.G_247_1211}>
+                  <G />
+                </div>
+              </div>
+            </div>
+            <div className={styles.Button_247_1215}>
+              <div className={styles.Container_247_1216}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Container_247_1218}>
+              <div className={styles.Image_247_1219}></div>
+            </div>
+            <div className={styles.Container_247_1220}>
+              <div className={styles.Button_247_1221}>
+                <div className={styles.Container_247_1222}>
+                  <div className={styles.G_247_1223}>
+                    <G />
+                  </div>
+                </div>
+              </div>
+              <div className={styles.Container_247_1226}><span className={styles.generated_5_247_1227}>5</span></div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_247_1228}>
+          <div className={styles.Container_247_1229}>
+            <div className={styles.Container_247_1230}>
+              <div className={styles.Container_247_1231}>
+                <div className={styles.Container_247_1232}><span className={styles.Luna_247_1233}>Luna</span></div>
+                <div className={styles.Container_247_1234}><span className={styles.generated__247_1235}>&#x1F496;</span></div>
+                <div className={styles.Container_247_1236}><span className={styles.generated__247_1237}>&#x1F3AE;</span></div>
+              </div>
+              <div className={styles.Container_247_1238}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Container_247_1240}><span className={styles.LunaPlays_247_1241}>@LunaPlays</span></div>
+            <div className={styles.Container_247_1242}>
+              <div className={styles.Container_247_1243}>
+                <div className={styles.Container_247_1244}>
+                  <div className={styles.Container_247_1245}>
+                    <Container />
+                  </div>
+                  <div className={styles.Container_247_1247}><span className={styles.VerifiedStreamer_247_1248}>Verified Streamer</span></div>
+                </div>
+              </div>
+              <div className={styles.Container_247_1254}>
+                <div className={styles.Container_247_1255}>
+                  <div className={styles.Container_247_1256}>
+                    <div className={styles.Container_247_1257}><span className={styles.generated_142_247_1258}>142</span></div>
+                    <div className={styles.Container_247_1259}><span className={styles.Uploads_247_1260}>Uploads</span></div>
+                  </div>
+                  <div className={styles.Container_247_1261}>
+                    <div className={styles.Container_247_1262}><span className={styles._2k_247_1263}>5.2k</span></div>
+                    <div className={styles.Container_247_1264}><span className={styles.Followers_247_1265}>Followers</span></div>
+                  </div>
+                  <div className={styles.Container_247_1266}>
+                    <div className={styles.Container_247_1267}><span className={styles.generated_218_247_1268}>218</span></div>
+                    <div className={styles.Container_247_1269}><span className={styles.Following_247_1270}>Following</span></div>
+                  </div>
+                </div>
+                <div className={styles.Container_247_1271}>
+                  <div className={styles.Container_247_1272}><span className={styles.Collection_247_1273}>Collection</span></div>
+                </div>
+                <div className={styles.Container_247_1249}>
+                  <div className={styles.Container_247_1250}><span className={styles.MemberSinceJanuary_2024_247_1251}>Member since January 2024</span></div>
+                  <div className={styles.Container_247_1252}><span className={styles.LovesValorantPinkSetupsAndCozyGamesStaySweet_247_1253}>Loves Valorant, pink setups, and cozy games! &#x1F338;&#x2728; Stay sweet!</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_247_1274}>
+            <div className={styles.Container_247_1275}>
+              <div className={styles.Container_247_1276}>
+                <div className={styles.Container_247_1277}><span className={styles.Nametag_247_1278}>NAMETAG</span></div>
+                <div className={styles.Container_247_1279}>
+                  <div className={styles.Container_247_1280}>
+                    <div className={styles.Image_247_1281}></div>
+                    <div className={styles.Container_247_1282}><span className={styles.KawaiiPro_247_1283}>KAWAII PRO</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_247_1284}>
+            <div className={styles.Container_247_1285}>
+              <div className={styles.Container_247_1286}>
+                <div className={styles.Image_247_1287}></div>
+                <div className={styles.Container_247_1288}></div>
+                <div className={styles.Container_247_1289}>
+                  <div className={styles.Container_247_1290}>
+                    <div className={styles.Container_247_1291}>
+                      <Container />
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.Container_247_1293}>
+                  <div className={styles.Container_247_1294}><span className={styles._45_247_1295}>12:45</span></div>
+                  <div className={styles.Container_247_1296}>
+                    <div className={styles.Container_247_1297}>
+                      <Container />
+                    </div><span className={styles._2k_247_1300}>1.2k</span>
+                  </div>
+                </div>
+                <div className={styles.Container_247_1301}>
+                  <div className={styles.Container_247_1302}><span className={styles.NewPinkSetupReveal_247_1303}>New Pink Setup Reveal!</span></div>
+                  <div className={styles.Container_247_1304}>
+                    <div className={styles.Container_247_1305}>
+                      <div className={styles.Image_247_1306}></div>
+                    </div>
+                    <div className={styles.Container_247_1307}><span className={styles.LunaPlays_247_1308}>@LunaPlays</span></div>
+                  </div>
+                  <div className={styles.Container_247_1309}>
+                    <div className={styles.Container_247_1310}><span className={styles.Vlogs_247_1311}>Vlogs</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_247_1312}>
+            <div className={styles.Container_247_1313}>
+              <div className={styles.Image_247_1314}></div>
+              <div className={styles.Container_247_1315}></div>
+            </div>
+            <div className={styles.Container_247_1316}>
+              <div className={styles.Container_247_1317}>
+                <div className={styles.Container_247_1318}>
+                  <div className={styles.Container_247_1319}>
+                    <div className={styles.Image_247_1320}></div>
+                  </div>
+                </div>
+                <div className={styles.Container_247_1321}></div>
+                <div className={styles.Container_247_1322}>
+                  <div className={styles.Container_247_1323}>
+                    <div className={styles.Container_247_1324}><span className={styles.generated_24_247_1325}>24</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Navigation_247_1326}>
+          <div className={styles.Container_247_1327}>
+            <div className={styles.Container_247_1328}>
+              <Container />
+            </div>
+            <div className={styles.Container_247_1330}><span className={styles.Home_247_1331}>Home</span></div>
+          </div>
+          <div className={styles.Container_247_1332}>
+            <div className={styles.Container_247_1333}>
+              <Container />
+            </div>
+            <div className={styles.Container_247_1335}><span className={styles.Explore_247_1336}>Explore</span></div>
+          </div>
+          <div className={styles.Container_247_1337}>
+            <div className={styles.Container_247_1338}>
+              <div className={styles.Container_247_1339}>
+                <Container />
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_247_1341}>
+            <div className={styles.Container_247_1342}>
+              <Container />
+            </div>
+            <div className={styles.Container_247_1344}><span className={styles.Trending_247_1345}>Trending</span></div>
+          </div>
+          <div className={styles.Container_247_1346}>
+            <div className={styles.Container_247_1347}>
+              <Container />
+            </div>
+            <div className={styles.Container_247_1350}><span className={styles.Profile_247_1351}>Profile</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

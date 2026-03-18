@@ -282,34 +282,10 @@ const getCroppedImg = async (
 
 const PRESET_THEMES = [
   {
-    name: "Basic",
-    backgroundColor: "#0B2232",
-    accentColor: "#4ADE80"
-  },
-  {
-    name: "Purple Night",
-    backgroundColor: "#1e1b4b",
-    accentColor: "#a855f7"
-  },
-  {
-    name: "Golden Yellow",
-    backgroundColor: "#713f12",
-    accentColor: "#facc15"
-  },
-  {
-    name: "Rose Gold",
-    backgroundColor: "#4c1d4d",
-    accentColor: "#f472b6"
-  },
-  {
-    name: "Sunset Orange",
-    backgroundColor: "#431407",
-    accentColor: "#fb7185"
-  },
-  {
-    name: "Arctic Blue",
-    backgroundColor: "#0c4a6e",
-    accentColor: "#38bdf8"
+    name: "Pink Gamer Girl",
+    backgroundColor: "#fce7f3",
+    accentColor: "#ff2056",
+    gradientTopColor: "#4a0022"
   }
 ];
 
@@ -1237,7 +1213,8 @@ export default function SettingsPage() {
     hasPendingEdits.current = true;
     setProfileData(prev => ({
       ...prev,
-      accentColor: theme.accentColor
+      accentColor: theme.accentColor,
+      backgroundColor: theme.backgroundColor
     }));
     
     setAvatarBorderColor(theme.accentColor);
@@ -2149,7 +2126,7 @@ export default function SettingsPage() {
                       <CardContent>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {PRESET_THEMES.map((theme) => {
-                            const defaultThemeColor = '#0B2232';
+                            const topColor = theme.gradientTopColor || '#0B2232';
                             return (
                               <div
                                 key={theme.name}
@@ -2159,7 +2136,7 @@ export default function SettingsPage() {
                                 <div
                                   className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm"
                                   style={{ 
-                                    background: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
+                                    background: `linear-gradient(180deg, ${topColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
                                   }}
                                 >
                                   <div
