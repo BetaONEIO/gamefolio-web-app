@@ -1659,60 +1659,92 @@ const ProfilePage = () => {
           }
           .cyber-stats-card::before { top:-1px; left:-1px; border-top:1.667px solid #ffffff88; border-left:1.667px solid #ffffff88; }
           .cyber-stats-card::after  { bottom:-1px; right:-1px; border-bottom:1.667px solid #ffffff88; border-right:1.667px solid #ffffff88; }
-          .cyber-bg-mesh {
-            position:fixed;
-            inset:0;
-            pointer-events:none;
-            z-index:0;
-            background-image:
-              radial-gradient(circle, #00d3f228 1.5px, transparent 1.5px),
-              linear-gradient(45deg,  #00b8db1a 1px, transparent 1px),
-              linear-gradient(-45deg, #e12afb14 1px, transparent 1px);
-            background-size:48px 48px, 48px 48px, 48px 48px;
-            opacity: 0.9;
-          }
-          @keyframes cyberNodeTravel {
-            0%   { transform: translate(-48px, -48px); opacity:0; }
-            8%   { opacity:1; }
-            92%  { opacity:1; }
-            100% { transform: translate(48px, 48px); opacity:0; }
-          }
-          .cyber-node-pulse {
-            position:fixed;
-            inset:0;
-            pointer-events:none;
-            z-index:0;
-            background-image: radial-gradient(circle, #00d3f2 2.5px, #e12afb18 6px, transparent 8px);
-            background-size:48px 48px;
-            animation: cyberNodeTravel 5s linear infinite;
-            mask-image: linear-gradient(135deg, transparent 25%, rgba(0,0,0,0.9) 50%, transparent 75%);
-            -webkit-mask-image: linear-gradient(135deg, transparent 25%, rgba(0,0,0,0.9) 50%, transparent 75%);
-          }
-          @keyframes cyberScanSweep {
-            0%   { transform: rotate(20deg) translateX(-160%); }
-            100% { transform: rotate(20deg) translateX(160%); }
-          }
-          .cyber-scan-sweep {
-            position:fixed;
-            top:-50%;
-            left:0;
-            width:100%;
-            height:200%;
-            pointer-events:none;
-            z-index:0;
-            background: linear-gradient(
-              90deg,
-              transparent 0%,
-              transparent 42%,
-              #00d3f206 45%,
-              #00d3f255 48%,
-              #e12afbcc 50%,
-              #00d3f255 52%,
-              #00d3f206 55%,
-              transparent 58%,
-              transparent 100%
+          /* ── Glitch scanlines base ── */
+          .cyber-scanlines {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background: repeating-linear-gradient(
+              0deg,
+              transparent,
+              transparent 3px,
+              rgba(0,0,0,0.18) 3px,
+              rgba(0,0,0,0.18) 4px
             );
-            animation: cyberScanSweep 10s linear infinite;
+          }
+          /* ── RGB chromatic-aberration channels ── */
+          @keyframes cyberRGBR {
+            0%,79%  { transform:translate(0,0); opacity:0; }
+            80%     { transform:translate(7px,0); opacity:0.45; }
+            81%     { transform:translate(-4px,1px); opacity:0.3; }
+            82%     { transform:translate(0,0); opacity:0; }
+            91%     { transform:translate(5px,-1px); opacity:0.35; }
+            92%     { transform:translate(0,0); opacity:0; }
+            100%    { opacity:0; }
+          }
+          @keyframes cyberRGBB {
+            0%,79%  { transform:translate(0,0); opacity:0; }
+            80%     { transform:translate(-7px,0); opacity:0.45; }
+            81%     { transform:translate(4px,-1px); opacity:0.3; }
+            82%     { transform:translate(0,0); opacity:0; }
+            91%     { transform:translate(-5px,1px); opacity:0.35; }
+            92%     { transform:translate(0,0); opacity:0; }
+            100%    { opacity:0; }
+          }
+          .cyber-rgb-red {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              linear-gradient(180deg, transparent 15%, #ff004422 15.4%, transparent 15.8%),
+              linear-gradient(180deg, transparent 48%, #ff003318 48.5%, transparent 49%),
+              linear-gradient(180deg, transparent 72%, #ff005522 72.4%, transparent 72.8%);
+            mix-blend-mode: screen;
+            animation: cyberRGBR 8s step-start infinite;
+          }
+          .cyber-rgb-blue {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              linear-gradient(180deg, transparent 15%, #0055ff22 15.4%, transparent 15.8%),
+              linear-gradient(180deg, transparent 48%, #0033ff18 48.5%, transparent 49%),
+              linear-gradient(180deg, transparent 72%, #0077ff22 72.4%, transparent 72.8%);
+            mix-blend-mode: screen;
+            animation: cyberRGBB 8s step-start infinite;
+          }
+          /* ── Horizontal glitch tear lines ── */
+          @keyframes cyberGlitchTear {
+            0%,74%  { transform:translateX(0); opacity:0.55; }
+            75%     { transform:translateX(-12px); opacity:0.8; }
+            75.5%   { transform:translateX(9px);  opacity:0.7; }
+            76%     { transform:translateX(-6px);  opacity:0.6; }
+            76.5%   { transform:translateX(0);     opacity:0.55; }
+            88%     { transform:translateX(0);     opacity:0.55; }
+            88.5%   { transform:translateX(16px);  opacity:0.9; }
+            89%     { transform:translateX(-8px);  opacity:0.7; }
+            89.5%   { transform:translateX(4px);   opacity:0.6; }
+            90%     { transform:translateX(0);     opacity:0.55; }
+            100%    { transform:translateX(0);     opacity:0.55; }
+          }
+          .cyber-glitch-lines {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              linear-gradient(180deg, transparent 22%,   #00d3f214 22.25%, transparent 22.5%),
+              linear-gradient(180deg, transparent 41%,   #e12afb11 41.3%,  transparent 41.6%),
+              linear-gradient(180deg, transparent 63%,   #00d3f212 63.2%,  transparent 63.4%),
+              linear-gradient(180deg, transparent 85.5%, #e12afb14 85.8%,  transparent 86.1%);
+            animation: cyberGlitchTear 7s step-start infinite;
+          }
+          /* ── Digital interference noise ── */
+          @keyframes cyberInterference {
+            0%   { opacity:0.06; background-position: 0 0; }
+            25%  { opacity:0.09; background-position: 3px -2px; }
+            50%  { opacity:0.06; background-position: -2px 4px; }
+            75%  { opacity:0.08; background-position: 4px 1px; }
+            100% { opacity:0.06; background-position: 0 0; }
+          }
+          .cyber-interference {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background-image:
+              repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,211,242,0.08) 1px, rgba(0,211,242,0.08) 2px),
+              repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(225,42,251,0.05) 1px, rgba(225,42,251,0.05) 2px);
+            background-size: 4px 4px, 4px 4px;
+            animation: cyberInterference 0.15s step-start infinite;
           }
           .cyber-gradient-text {
             background: linear-gradient(270deg, #00d3f2 0%, #e12afb 100%);
@@ -1746,9 +1778,11 @@ const ProfilePage = () => {
           }
         `}</style>
       )}
-      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-bg-mesh" />}
-      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-node-pulse" />}
-      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-scan-sweep" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-scanlines" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-rgb-red" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-rgb-blue" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-glitch-lines" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-interference" />}
       {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">
         <React.Suspense fallback={null}>
@@ -2080,15 +2114,15 @@ const ProfilePage = () => {
                   <div className="flex gap-6 mt-1">
                     <div className="flex flex-col gap-1">
                       <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { backgroundColor: '#00d3f2e6', color: '#104e64', padding: '2px 6px', borderRadius: '0', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>UPLOADS</span>
+                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>UPLOADS</span>
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined }}>{Number(profile._count?.followers || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { backgroundColor: '#ed6affd9', color: '#721378', padding: '2px 6px', borderRadius: '0', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWERS</span>
+                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWERS</span>
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined }}>{Number(profile._count?.following || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { border: '0.556px solid #31415888', color: '#90a1b9', padding: '2px 6px', borderRadius: '0', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWING</span>
+                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWING</span>
                     </div>
                   </div>
                 ) : (
@@ -2312,16 +2346,16 @@ const ProfilePage = () => {
                       : isZombieTheme
                         ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
                         : isCyberpunkTheme
-                          ? 'linear-gradient(270deg, #00d3f2 0%, #e12afb 100%)'
+                          ? 'rgba(2,6,23,0.9)'
                           : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                  color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#020617' : '#0f172b',
-                  border: isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db44' : undefined,
+                  color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : '#0f172b',
+                  border: isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : undefined,
                   fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined,
                   letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : undefined,
                   fontWeight: isCyberpunkTheme ? '900' : undefined,
                 }}
               >
-                Collection
+                <span className={isCyberpunkTheme && profileSectionTab !== 'collection' ? 'cyber-gradient-text' : ''}>Collection</span>
               </button>
 
               <div 
@@ -2347,15 +2381,15 @@ const ProfilePage = () => {
                     <div className="flex gap-8 items-center">
                       <div className="flex flex-col gap-1">
                         <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { backgroundColor: '#00d3f2e6', color: '#104e64', padding: '2px 8px', borderRadius: '0', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Uploads</span>
+                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Uploads</span>
                       </div>
                       <div className="flex flex-col gap-1">
                         <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined }}>{Number(profile._count?.followers || 0)}</span>
-                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { backgroundColor: '#ed6affd9', color: '#721378', padding: '2px 8px', borderRadius: '0', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Followers</span>
+                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Followers</span>
                       </div>
                       <div className="flex flex-col gap-1">
                         <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined }}>{Number(profile._count?.following || 0)}</span>
-                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { border: '0.556px solid #31415888', color: '#90a1b9', padding: '2px 8px', borderRadius: '0', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Following</span>
+                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Following</span>
                       </div>
                     </div>
                   ) : (

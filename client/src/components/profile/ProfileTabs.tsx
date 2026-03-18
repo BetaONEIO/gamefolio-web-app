@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button";
 
 interface ProfileTabsProps {
   username: string;
+  isCyberpunkTheme?: boolean;
 }
 
-const ProfileTabs = ({ username }: ProfileTabsProps) => {
+const ProfileTabs = ({ username, isCyberpunkTheme = false }: ProfileTabsProps) => {
   const [activeTab, setActiveTab] = useState("clips");
   const queryClient = useQueryClient();
   
@@ -132,7 +133,15 @@ const ProfileTabs = ({ username }: ProfileTabsProps) => {
           />
           
           {/* Main curved rectangle border */}
-          <div className="relative flex items-center gap-1 px-2 py-1 rounded-xl border border-border/60 bg-background/50 backdrop-blur-sm">
+          <div 
+            className={`relative flex items-center gap-1 px-2 py-1 backdrop-blur-sm ${isCyberpunkTheme ? 'rounded-none border-0' : 'rounded-xl border border-border/60 bg-background/50'}`}
+            style={isCyberpunkTheme ? {
+              background: '#020617',
+              border: '1px solid #00b8db88',
+              boxShadow: '0 0 8px #00d3f244, inset 0 0 8px #00d3f211',
+              clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)',
+            } : undefined}
+          >
             {tabs.map((tab) => (
               <button
                 key={tab.id}
