@@ -1257,7 +1257,9 @@ const ProfilePage = () => {
 
   const platformBtnStyle = isLightBackground
     ? { backgroundColor: 'rgba(255,255,255,0.7)', color: accentColor, border: `1px solid ${accentColor}80` }
-    : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
+    : isZombieTheme
+      ? { backgroundColor: 'rgba(15, 28, 8, 0.9)', color: '#9ae600', border: '1px solid #9ae60066' }
+      : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
 
   const tabListStyle = isLightBackground ? {
     background: 'rgba(255,255,255,0.37)',
@@ -1268,6 +1270,7 @@ const ProfilePage = () => {
   const getTabStyle = (tabName: string) => ({
     backgroundColor: activeTab === tabName ? accentColor : 'transparent',
     color: activeTab === tabName ? '#ffffff' : isLightBackground ? accentColor : undefined,
+    ...(isZombieTheme ? { fontFamily: "'Creepster', cursive", letterSpacing: '2px', fontSize: '0.8rem' } : {}),
   });
 
   const nameTagBgStyle = isLightBackground ? {
@@ -1567,6 +1570,37 @@ const ProfilePage = () => {
         <div className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none" style={{ background: `linear-gradient(to bottom, transparent, ${backgroundColor})` }} />
       </div>
 
+      {/* Zombie theme animations */}
+      {isZombieTheme && (
+        <style>{`
+          @keyframes zombieFlicker {
+            0%,88%,92%,100% { opacity:1; filter:brightness(1); }
+            89% { opacity:0.55; filter:brightness(1.6) saturate(2); }
+            90%,91% { opacity:0.82; filter:brightness(0.75); }
+          }
+          @keyframes zombieDrip {
+            0% { height:0; opacity:0; border-radius:0 0 50% 50%; }
+            12% { height:5px; opacity:1; }
+            60% { height:28px; opacity:0.9; }
+            85% { height:36px; opacity:0.6; border-radius:0 0 40% 40%; }
+            100% { height:42px; opacity:0; }
+          }
+          @keyframes zombieGlow {
+            0%,100% { box-shadow:0 0 18px #9ae60055, 0 0 40px #9ae60022; }
+            50% { box-shadow:0 0 30px #9ae60099, 0 0 70px #9ae60044; }
+          }
+          .zombie-stats-card {
+            animation: zombieFlicker 8s infinite 1.5s, zombieGlow 3.5s ease-in-out infinite;
+          }
+          .zombie-drip {
+            position:absolute;
+            bottom:-1px;
+            background:linear-gradient(180deg,#7ccf00 0%,#9ae600 40%,#4a7a00cc 80%,transparent 100%);
+            border-radius:0 0 50% 50%;
+            animation: zombieDrip ease-in infinite;
+          }
+        `}</style>
+      )}
       {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">
         <React.Suspense fallback={null}>
@@ -1857,18 +1891,23 @@ const ProfilePage = () => {
               className="absolute -top-3 -right-1 z-10 px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
               style={{ 
                 background: profileSectionTab === 'collection'
-                  ? '#1a1a2e'
+                  ? (isZombieTheme ? '#0d1a00' : '#1a1a2e')
                   : isLightBackground
                     ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
-                    : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                color: profileSectionTab === 'collection' ? '#ffffff' : isLightBackground ? '#ffffff' : '#0f172b',
+                    : isZombieTheme
+                      ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
+                      : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : '#0f172b',
+                border: isZombieTheme ? '1px solid #9ae60066' : undefined,
+                fontFamily: isZombieTheme ? "'Creepster', cursive" : undefined,
+                letterSpacing: isZombieTheme ? '2px' : undefined,
               }}
             >
               Collection
             </button>
 
             <div 
-              className="rounded-2xl"
+              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''}`}
               style={isLightBackground ? {
                 background: 'rgba(255,255,255,0.37)',
                 border: '0.556px solid rgba(255,255,255,0.8)',
@@ -1908,6 +1947,21 @@ const ProfilePage = () => {
                 )}
               </div>
             </div>
+            {/* Zombie sludge drips */}
+            {isZombieTheme && (
+              <div className="absolute bottom-0 left-0 right-0 pointer-events-none" style={{ overflow: 'visible', zIndex: 10 }}>
+                {[
+                  { l: '8%',  delay: '0s',   dur: '3.2s', w: '7px' },
+                  { l: '22%', delay: '1.3s', dur: '2.8s', w: '9px' },
+                  { l: '37%', delay: '0.5s', dur: '3.6s', w: '6px' },
+                  { l: '54%', delay: '1.9s', dur: '2.6s', w: '8px' },
+                  { l: '68%', delay: '0.9s', dur: '3.1s', w: '7px' },
+                  { l: '82%', delay: '0.2s', dur: '2.9s', w: '10px' },
+                ].map((d, i) => (
+                  <div key={i} className="zombie-drip" style={{ left: d.l, width: d.w, animationDelay: d.delay, animationDuration: d.dur }} />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Platform tags and Social Links — below the stats card */}
@@ -2113,18 +2167,23 @@ const ProfilePage = () => {
                 className="absolute -top-3 -right-1 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
                 style={{ 
                   background: profileSectionTab === 'collection'
-                    ? '#1a1a2e'
+                    ? (isZombieTheme ? '#0d1a00' : '#1a1a2e')
                     : isLightBackground
                       ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
-                      : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                  color: profileSectionTab === 'collection' ? '#ffffff' : isLightBackground ? '#ffffff' : '#0f172b',
+                      : isZombieTheme
+                        ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
+                        : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                  color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : '#0f172b',
+                  border: isZombieTheme ? '1px solid #9ae60066' : undefined,
+                  fontFamily: isZombieTheme ? "'Creepster', cursive" : undefined,
+                  letterSpacing: isZombieTheme ? '2px' : undefined,
                 }}
               >
                 Collection
               </button>
 
               <div 
-                className="rounded-2xl"
+                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''}`}
                 style={isLightBackground ? {
                   background: 'rgba(255,255,255,0.37)',
                   border: '0.556px solid rgba(255,255,255,0.8)',
@@ -2164,6 +2223,21 @@ const ProfilePage = () => {
                   )}
                 </div>
               </div>
+              {/* Zombie sludge drips */}
+              {isZombieTheme && (
+                <div className="absolute bottom-0 left-0 right-0 pointer-events-none" style={{ overflow: 'visible', zIndex: 10 }}>
+                  {[
+                    { l: '8%',  delay: '0s',   dur: '3.2s', w: '7px' },
+                    { l: '22%', delay: '1.3s', dur: '2.8s', w: '9px' },
+                    { l: '37%', delay: '0.5s', dur: '3.6s', w: '6px' },
+                    { l: '54%', delay: '1.9s', dur: '2.6s', w: '8px' },
+                    { l: '68%', delay: '0.9s', dur: '3.1s', w: '7px' },
+                    { l: '82%', delay: '0.2s', dur: '2.9s', w: '10px' },
+                  ].map((d, i) => (
+                    <div key={i} className="zombie-drip" style={{ left: d.l, width: d.w, animationDelay: d.delay, animationDuration: d.dur }} />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Platform Connections — below the stats card */}
