@@ -1591,8 +1591,8 @@ const ProfilePage = () => {
             animation: zombieFlicker 8s infinite 1.5s, zombieGlow 3.5s ease-in-out infinite;
           }
           @keyframes zombieBgPulse {
-            0%,100% { opacity:0.18; }
-            50% { opacity:0.45; }
+            0%,100% { background-size:46px 46px; opacity:0.28; }
+            50%      { background-size:60px 60px; opacity:0.55; }
           }
           .zombie-bg-pulse {
             position:fixed;
@@ -1600,13 +1600,14 @@ const ProfilePage = () => {
             pointer-events:none;
             z-index:0;
             background-image:
-              repeating-linear-gradient(0deg, #9ae60028 0px, #9ae60028 1px, transparent 1px, transparent 48px),
-              repeating-linear-gradient(90deg, #9ae60028 0px, #9ae60028 1px, transparent 1px, transparent 48px);
+              linear-gradient(0deg, #9ae60032 1px, transparent 1px),
+              linear-gradient(90deg, #9ae60032 1px, transparent 1px);
+            background-size:46px 46px;
             animation: zombieBgPulse 4s ease-in-out infinite;
           }
         `}</style>
       )}
-      {isZombieTheme && <div className="zombie-bg-pulse" />}
+      {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-bg-pulse" />}
       {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">
         <React.Suspense fallback={null}>
