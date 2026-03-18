@@ -1268,7 +1268,10 @@ const ProfilePage = () => {
     color: activeTab === tabName ? '#ffffff' : isLightBackground ? accentColor : undefined,
   });
 
-  const nameTagBgStyle = {
+  const nameTagBgStyle = isLightBackground ? {
+    background: 'rgba(255,255,255,0.37)',
+    border: '0.556px solid rgba(255,255,255,0.8)',
+  } : {
     background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}cc 100%)`,
     border: `1px solid ${accentColor}80`,
   };
