@@ -1253,6 +1253,8 @@ const ProfilePage = () => {
     return (0.299 * r + 0.587 * g + 0.114 * b) > 0.5;
   })();
 
+  const isZombieTheme = !isLightBackground && accentColor?.toLowerCase() === '#9ae600';
+
   const platformBtnStyle = isLightBackground
     ? { backgroundColor: 'rgba(255,255,255,0.7)', color: accentColor, border: `1px solid ${accentColor}80` }
     : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
@@ -1871,6 +1873,10 @@ const ProfilePage = () => {
                 background: 'rgba(255,255,255,0.37)',
                 border: '0.556px solid rgba(255,255,255,0.8)',
                 boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+              } : isZombieTheme ? {
+                background: '#1a1d1a',
+                border: '1.667px solid #7ccf00',
+                boxShadow: '0 0 18px #9ae60055, 0 0 40px #9ae60022',
               } : {
                 background: `${accentColor || '#00bba7'}0d`,
                 border: `1px solid ${accentColor || '#00bba7'}33`,
@@ -1879,17 +1885,17 @@ const ProfilePage = () => {
               <div className="p-4">
                 {profileSectionTab === 'stats' ? (
                   <div className="flex gap-6 mt-1">
-                    <div className="flex flex-col">
-                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                      <span className="text-[8px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>UPLOADS</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff' }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>UPLOADS</span>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.followers || 0)}</span>
-                      <span className="text-[8px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>FOLLOWERS</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff' }}>{Number(profile._count?.followers || 0)}</span>
+                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWERS</span>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.following || 0)}</span>
-                      <span className="text-[8px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>FOLLOWING</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff' }}>{Number(profile._count?.following || 0)}</span>
+                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWING</span>
                     </div>
                   </div>
                 ) : (
@@ -2123,6 +2129,10 @@ const ProfilePage = () => {
                   background: 'rgba(255,255,255,0.37)',
                   border: '0.556px solid rgba(255,255,255,0.8)',
                   boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+                } : isZombieTheme ? {
+                  background: '#1a1d1a',
+                  border: '1.667px solid #7ccf00',
+                  boxShadow: '0 0 18px #9ae60055, 0 0 40px #9ae60022',
                 } : {
                   background: `${accentColor || '#00bba7'}0d`,
                   border: `1px solid ${accentColor || '#00bba7'}33`,
@@ -2131,17 +2141,17 @@ const ProfilePage = () => {
                 <div className="p-5">
                   {profileSectionTab === 'stats' ? (
                     <div className="flex gap-8 items-center">
-                      <div className="flex flex-col">
-                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                        <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>Uploads</span>
+                      <div className="flex flex-col gap-1">
+                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff' }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Uploads</span>
                       </div>
-                      <div className="flex flex-col">
-                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.followers || 0)}</span>
-                        <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>Followers</span>
+                      <div className="flex flex-col gap-1">
+                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff' }}>{Number(profile._count?.followers || 0)}</span>
+                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Followers</span>
                       </div>
-                      <div className="flex flex-col">
-                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.following || 0)}</span>
-                        <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>Following</span>
+                      <div className="flex flex-col gap-1">
+                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff' }}>{Number(profile._count?.following || 0)}</span>
+                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Following</span>
                       </div>
                     </div>
                   ) : (

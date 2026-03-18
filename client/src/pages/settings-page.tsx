@@ -282,6 +282,13 @@ const getCroppedImg = async (
 
 const PRESET_THEMES = [
   {
+    name: "None",
+    backgroundColor: "#0B2232",
+    accentColor: "#00d5be",
+    gradientTopColor: "#02172C",
+    primaryColor: "#02172C"
+  },
+  {
     name: "Pink Gamer Girl",
     backgroundColor: "#fce7f3",
     accentColor: "#ff2056",
