@@ -1404,11 +1404,20 @@ const ProfilePage = () => {
         position: 'relative',
         zIndex: 1
       } : { 
-        background: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
         position: 'relative',
         zIndex: 1
       }}
     >
+      {/* Fixed viewport-anchored background — prevents gradient from changing based on content height */}
+      {!profileBackgroundImageUrl && (
+        <div
+          className="fixed inset-0 pointer-events-none"
+          style={{
+            backgroundImage: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
+            zIndex: 0,
+          }}
+        />
+      )}
       {/* Dark overlay for background image readability */}
       {profileBackgroundImageUrl && (
         <div className="fixed inset-0 bg-black/50 pointer-events-none" style={{ zIndex: 0 }} />
