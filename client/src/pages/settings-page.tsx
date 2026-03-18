@@ -301,6 +301,13 @@ const PRESET_THEMES = [
     accentColor: "#9ae600",
     gradientTopColor: "#0d1a00",
     primaryColor: "#0d1a00"
+  },
+  {
+    name: "Cyberpunk",
+    backgroundColor: "#020617",
+    accentColor: "#00d3f2",
+    gradientTopColor: "#0a0e1a",
+    primaryColor: "#0a0e1a"
   }
 ];
 

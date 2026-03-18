@@ -1254,12 +1254,15 @@ const ProfilePage = () => {
   })();
 
   const isZombieTheme = !isLightBackground && accentColor?.toLowerCase() === '#9ae600';
+  const isCyberpunkTheme = !isLightBackground && accentColor?.toLowerCase() === '#00d3f2';
 
   const platformBtnStyle = isLightBackground
     ? { backgroundColor: 'rgba(255,255,255,0.7)', color: accentColor, border: `1px solid ${accentColor}80` }
     : isZombieTheme
       ? { backgroundColor: 'rgba(15, 28, 8, 0.9)', color: '#9ae600', border: '1px solid #9ae60066' }
-      : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
+      : isCyberpunkTheme
+        ? { backgroundColor: 'rgba(0,6,18,0.9)', color: '#00d3f2', border: '1px solid #00b8db55' }
+        : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
 
   const tabListStyle = isLightBackground ? {
     background: 'rgba(255,255,255,0.37)',
@@ -1271,6 +1274,7 @@ const ProfilePage = () => {
     backgroundColor: activeTab === tabName ? accentColor : 'transparent',
     color: activeTab === tabName ? '#ffffff' : isLightBackground ? accentColor : undefined,
     ...(isZombieTheme ? { fontFamily: "'Creepster', cursive", letterSpacing: '2px', fontSize: '0.8rem' } : {}),
+    ...(isCyberpunkTheme ? { fontFamily: "'Plus Jakarta Sans', sans-serif", letterSpacing: '2.5px', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase' as const } : {}),
   });
 
   const nameTagBgStyle = isLightBackground ? {
@@ -1280,6 +1284,10 @@ const ProfilePage = () => {
     background: '#1a1d1a',
     border: '1.667px solid #7ccf00',
     boxShadow: '0 0 12px #9ae60033',
+  } : isCyberpunkTheme ? {
+    background: '#020617',
+    border: '0.556px solid #00b8db66',
+    boxShadow: '0 0 14px #00d3f222',
   } : {
     background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}cc 100%)`,
     border: `1px solid ${accentColor}80`,
@@ -1631,6 +1639,67 @@ const ProfilePage = () => {
       )}
       {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-bg-pulse" />}
       {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-mesh-sweep" />}
+      {/* Cyberpunk theme animations */}
+      {isCyberpunkTheme && (
+        <style>{`
+          @keyframes cyberBorderGlow {
+            0%,100% { box-shadow:0 0 12px #00d3f266, 0 0 32px #00d3f222; border-color:#00b8db; }
+            50%      { box-shadow:0 0 14px #e12afb77, 0 0 36px #e12afb22; border-color:#e12afb; }
+          }
+          .cyber-stats-card {
+            position:relative;
+            animation: cyberBorderGlow 4s ease-in-out infinite;
+          }
+          .cyber-stats-card::before,.cyber-stats-card::after {
+            content:'';
+            position:absolute;
+            width:10px;
+            height:10px;
+            pointer-events:none;
+          }
+          .cyber-stats-card::before { top:-1px; left:-1px; border-top:1.667px solid #ffffff88; border-left:1.667px solid #ffffff88; }
+          .cyber-stats-card::after  { bottom:-1px; right:-1px; border-bottom:1.667px solid #ffffff88; border-right:1.667px solid #ffffff88; }
+          .cyber-bg-mesh {
+            position:fixed;
+            inset:0;
+            pointer-events:none;
+            z-index:0;
+            opacity:0.18;
+            background-image:
+              linear-gradient(0deg, #00b8db 1px, transparent 1px),
+              linear-gradient(90deg, #00b8db 1px, transparent 1px);
+            background-size:48px 48px;
+          }
+          @keyframes cyberScanSweep {
+            0%   { transform: rotate(15deg) translateX(-160%); }
+            100% { transform: rotate(15deg) translateX(160%); }
+          }
+          .cyber-scan-sweep {
+            position:fixed;
+            top:-50%;
+            left:0;
+            width:100%;
+            height:200%;
+            pointer-events:none;
+            z-index:0;
+            background: linear-gradient(
+              90deg,
+              transparent 0%,
+              transparent 43%,
+              #00d3f206 46%,
+              #00d3f260 49%,
+              #00d3f2cc 50%,
+              #00d3f260 51%,
+              #00d3f206 54%,
+              transparent 57%,
+              transparent 100%
+            );
+            animation: cyberScanSweep 9s linear infinite;
+          }
+        `}</style>
+      )}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-bg-mesh" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-scan-sweep" />}
       {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">
         <React.Suspense fallback={null}>
@@ -1921,23 +1990,26 @@ const ProfilePage = () => {
               className="absolute -top-3 -right-1 z-10 px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
               style={{ 
                 background: profileSectionTab === 'collection'
-                  ? (isZombieTheme ? '#0d1a00' : '#1a1a2e')
+                  ? (isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : '#1a1a2e')
                   : isLightBackground
                     ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
                     : isZombieTheme
                       ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
-                      : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : '#0f172b',
-                border: isZombieTheme ? '1px solid #9ae60066' : undefined,
-                fontFamily: isZombieTheme ? "'Creepster', cursive" : undefined,
-                letterSpacing: isZombieTheme ? '2px' : undefined,
+                      : isCyberpunkTheme
+                        ? 'linear-gradient(270deg, #00d3f2 0%, #e12afb 100%)'
+                        : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#020617' : '#0f172b',
+                border: isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db44' : undefined,
+                fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Plus Jakarta Sans', sans-serif" : undefined,
+                letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : undefined,
+                fontWeight: isCyberpunkTheme ? '900' : undefined,
               }}
             >
               Collection
             </button>
 
             <div 
-              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''}`}
+              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''}`}
               style={isLightBackground ? {
                 background: 'rgba(255,255,255,0.37)',
                 border: '0.556px solid rgba(255,255,255,0.8)',
@@ -1946,6 +2018,9 @@ const ProfilePage = () => {
                 background: '#1a1d1a',
                 border: '1.667px solid #7ccf00',
                 boxShadow: '0 0 18px #9ae60055, 0 0 40px #9ae60022',
+              } : isCyberpunkTheme ? {
+                background: '#020617',
+                border: '1px solid #00b8db',
               } : {
                 background: `${accentColor || '#00bba7'}0d`,
                 border: `1px solid ${accentColor || '#00bba7'}33`,
@@ -1955,16 +2030,16 @@ const ProfilePage = () => {
                 {profileSectionTab === 'stats' ? (
                   <div className="flex gap-6 mt-1">
                     <div className="flex flex-col gap-1">
-                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff' }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>UPLOADS</span>
+                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Plus Jakarta Sans', sans-serif" : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { backgroundColor: '#00d3f2e6', color: '#104e64', padding: '2px 6px', borderRadius: '0', letterSpacing: '1.6px', fontFamily: "'Plus Jakarta Sans', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>UPLOADS</span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff' }}>{Number(profile._count?.followers || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWERS</span>
+                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Plus Jakarta Sans', sans-serif" : undefined }}>{Number(profile._count?.followers || 0)}</span>
+                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { backgroundColor: '#ed6affd9', color: '#721378', padding: '2px 6px', borderRadius: '0', letterSpacing: '1.6px', fontFamily: "'Plus Jakarta Sans', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWERS</span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff' }}>{Number(profile._count?.following || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWING</span>
+                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Plus Jakarta Sans', sans-serif" : undefined }}>{Number(profile._count?.following || 0)}</span>
+                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { border: '0.556px solid #31415888', color: '#90a1b9', padding: '2px 6px', borderRadius: '0', letterSpacing: '1.6px', fontFamily: "'Plus Jakarta Sans', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWING</span>
                     </div>
                   </div>
                 ) : (
@@ -2182,23 +2257,26 @@ const ProfilePage = () => {
                 className="absolute -top-3 -right-1 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
                 style={{ 
                   background: profileSectionTab === 'collection'
-                    ? (isZombieTheme ? '#0d1a00' : '#1a1a2e')
+                    ? (isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : '#1a1a2e')
                     : isLightBackground
                       ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
                       : isZombieTheme
                         ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
-                        : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                  color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : '#0f172b',
-                  border: isZombieTheme ? '1px solid #9ae60066' : undefined,
-                  fontFamily: isZombieTheme ? "'Creepster', cursive" : undefined,
-                  letterSpacing: isZombieTheme ? '2px' : undefined,
+                        : isCyberpunkTheme
+                          ? 'linear-gradient(270deg, #00d3f2 0%, #e12afb 100%)'
+                          : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                  color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#020617' : '#0f172b',
+                  border: isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db44' : undefined,
+                  fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Plus Jakarta Sans', sans-serif" : undefined,
+                  letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : undefined,
+                  fontWeight: isCyberpunkTheme ? '900' : undefined,
                 }}
               >
                 Collection
               </button>
 
               <div 
-                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''}`}
+                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''}`}
                 style={isLightBackground ? {
                   background: 'rgba(255,255,255,0.37)',
                   border: '0.556px solid rgba(255,255,255,0.8)',
@@ -2207,6 +2285,9 @@ const ProfilePage = () => {
                   background: '#1a1d1a',
                   border: '1.667px solid #7ccf00',
                   boxShadow: '0 0 18px #9ae60055, 0 0 40px #9ae60022',
+                } : isCyberpunkTheme ? {
+                  background: '#020617',
+                  border: '1px solid #00b8db',
                 } : {
                   background: `${accentColor || '#00bba7'}0d`,
                   border: `1px solid ${accentColor || '#00bba7'}33`,
@@ -2216,16 +2297,16 @@ const ProfilePage = () => {
                   {profileSectionTab === 'stats' ? (
                     <div className="flex gap-8 items-center">
                       <div className="flex flex-col gap-1">
-                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff' }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Uploads</span>
+                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Plus Jakarta Sans', sans-serif" : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { backgroundColor: '#00d3f2e6', color: '#104e64', padding: '2px 8px', borderRadius: '0', letterSpacing: '1.6px', fontFamily: "'Plus Jakarta Sans', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Uploads</span>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff' }}>{Number(profile._count?.followers || 0)}</span>
-                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Followers</span>
+                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Plus Jakarta Sans', sans-serif" : undefined }}>{Number(profile._count?.followers || 0)}</span>
+                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { backgroundColor: '#ed6affd9', color: '#721378', padding: '2px 8px', borderRadius: '0', letterSpacing: '1.6px', fontFamily: "'Plus Jakarta Sans', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Followers</span>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff' }}>{Number(profile._count?.following || 0)}</span>
-                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Following</span>
+                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Plus Jakarta Sans', sans-serif" : undefined }}>{Number(profile._count?.following || 0)}</span>
+                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { border: '0.556px solid #31415888', color: '#90a1b9', padding: '2px 8px', borderRadius: '0', letterSpacing: '1.6px', fontFamily: "'Plus Jakarta Sans', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Following</span>
                       </div>
                     </div>
                   ) : (
