@@ -1661,8 +1661,8 @@ const ProfilePage = () => {
           .cyber-stats-card::after  { bottom:-1px; right:-1px; border-bottom:1.667px solid #ffffff88; border-right:1.667px solid #ffffff88; }
           /* ── Diamond mesh base ── */
           @keyframes cyberNodePulse {
-            0%,100% { opacity:0.18; }
-            50%      { opacity:0.32; }
+            0%,100% { opacity:0.18; transform:scale(1); }
+            50%      { opacity:0.32; transform:scale(1.012); }
           }
           .cyber-bg-mesh {
             position:fixed; inset:0; pointer-events:none; z-index:0;
