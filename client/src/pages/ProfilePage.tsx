@@ -1265,7 +1265,7 @@ const ProfilePage = () => {
 
   const getTabStyle = (tabName: string) => ({
     backgroundColor: activeTab === tabName ? accentColor : 'transparent',
-    color: activeTab === tabName ? '#ffffff' : isLightBackground ? '#1d293d' : undefined,
+    color: activeTab === tabName ? '#ffffff' : isLightBackground ? accentColor : undefined,
   });
 
   const nameTagBgStyle = {
@@ -1599,6 +1599,7 @@ const ProfilePage = () => {
                 variant="ghost"
                 size="sm"
                 className="p-2 h-10 w-10 rounded-full hover:bg-primary/10 bg-background/80 backdrop-blur-sm"
+                style={isLightBackground ? { color: accentColor, backgroundColor: `${accentColor}18`, border: `1px solid ${accentColor}50` } : undefined}
               >
                 <Share2 className="w-5 h-5" />
               </Button>
@@ -1785,7 +1786,7 @@ const ProfilePage = () => {
           {/* Username and Display Name - Left aligned on Mobile */}
           <div className="flex flex-col items-start gap-0.5 mb-2 mt-8 pl-4">
             <div className="flex items-center gap-2">
-              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, color: profileFontColor, fontSize: `${1.25 * profileFontScale}rem`, lineHeight: `${1.75 * profileFontScale}rem` }}>{profile.displayName}</h1>
+              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, color: isLightBackground ? accentColor : profileFontColor, fontSize: `${1.25 * profileFontScale}rem`, lineHeight: `${1.75 * profileFontScale}rem` }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
@@ -2043,7 +2044,7 @@ const ProfilePage = () => {
 
             {/* Display Name and Badges */}
             <div className="flex items-center gap-2 flex-wrap mt-8">
-              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, color: profileFontColor, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.displayName}</h1>
+              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, color: isLightBackground ? accentColor : profileFontColor, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
@@ -2386,6 +2387,7 @@ const ProfilePage = () => {
                           variant="outline"
                           size="default"
                           className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20 px-4 py-3"
+                          style={isLightBackground ? { color: accentColor, borderColor: accentColor, backgroundColor: `${accentColor}15` } : undefined}
                         >
                           <Share2 className="h-5 w-5" />
                         </Button>
@@ -2433,6 +2435,7 @@ const ProfilePage = () => {
                           variant="outline"
                           size="sm"
                           className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
+                          style={isLightBackground ? { color: accentColor, borderColor: accentColor, backgroundColor: `${accentColor}15` } : undefined}
                         >
                           <Share2 className="h-4 w-4" />
                         </Button>
@@ -2535,7 +2538,7 @@ const ProfilePage = () => {
               style={getTabStyle('clips')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span>Clips</span>
+                <span className="font-black uppercase tracking-[0.5px]">Clips</span>
                 {showLimits && (
                   <span className={`text-[10px] font-normal ${clipsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: clipsCount >= 15 ? undefined : activeTab === 'clips' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {clipsCount}/15
@@ -2551,7 +2554,7 @@ const ProfilePage = () => {
               style={getTabStyle('reels')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span>Reels</span>
+                <span className="font-black uppercase tracking-[0.5px]">Reels</span>
                 {showLimits && (
                   <span className={`text-[10px] font-normal ${reelsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: reelsCount >= 15 ? undefined : activeTab === 'reels' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {reelsCount}/15
@@ -2567,7 +2570,7 @@ const ProfilePage = () => {
               style={getTabStyle('screenshots')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span>Screenshots</span>
+                <span className="font-black uppercase tracking-[0.5px]">Screenshots</span>
                 {showLimits && (
                   <span className={`text-[10px] font-normal ${screenshotsCount >= 10 ? 'text-red-400' : ''}`} style={{ color: screenshotsCount >= 10 ? undefined : activeTab === 'screenshots' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {screenshotsCount}/10
@@ -2582,7 +2585,7 @@ const ProfilePage = () => {
               className={`relative rounded-full transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
               style={getTabStyle('favorites')}
             >
-              Favorites
+              <span className="font-black uppercase tracking-[0.5px]">Favorites</span>
             </TabsTrigger>
 
             {profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0 && (
