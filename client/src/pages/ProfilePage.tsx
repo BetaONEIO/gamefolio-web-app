@@ -1949,7 +1949,10 @@ const ProfilePage = () => {
                     }}
                   />
                 </div>
-                <span className="text-[10px] text-white/40 mt-1 uppercase tracking-widest hover:text-white/60 transition-colors">Nametag</span>
+                <span
+                  className="text-[10px] mt-1 uppercase tracking-widest transition-colors"
+                  style={isCyberpunkTheme ? { background: 'linear-gradient(270deg,#00d3f2,#e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontFamily: "'Orbitron', sans-serif", letterSpacing: '1.4px' } : { color: 'rgba(255,255,255,0.4)' }}
+                >Nametag</span>
               </div>
             </div>
           )}
@@ -2031,7 +2034,10 @@ const ProfilePage = () => {
                       }}
                     />
                   </div>
-                  <span className="text-[10px] text-white/40 mt-1 uppercase tracking-widest hover:text-white/60 transition-colors">Nametag</span>
+                  <span
+                    className="text-[10px] mt-1 uppercase tracking-widest transition-colors"
+                    style={isCyberpunkTheme ? { background: 'linear-gradient(270deg,#00d3f2,#e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontFamily: "'Orbitron', sans-serif", letterSpacing: '1.4px' } : { color: 'rgba(255,255,255,0.4)' }}
+                  >Nametag</span>
                 </div>
               )}
             </div>
@@ -2567,8 +2573,9 @@ const ProfilePage = () => {
                   />
                 </div>
                 <span 
-                  className="text-xs text-white/40 mt-3 uppercase tracking-widest cursor-pointer hover:text-white/60 transition-colors"
+                  className="text-xs mt-3 uppercase tracking-widest cursor-pointer transition-colors"
                   onClick={() => setNameTagPreviewOpen(true)}
+                  style={isCyberpunkTheme ? { background: 'linear-gradient(270deg,#00d3f2,#e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontFamily: "'Orbitron', sans-serif", letterSpacing: '1.4px' } : { color: 'rgba(255,255,255,0.4)' }}
                 >Nametag</span>
               </div>
             )}
