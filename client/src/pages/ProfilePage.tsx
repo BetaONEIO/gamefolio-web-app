@@ -1659,21 +1659,34 @@ const ProfilePage = () => {
           }
           .cyber-stats-card::before { top:-1px; left:-1px; border-top:1.667px solid #ffffff88; border-left:1.667px solid #ffffff88; }
           .cyber-stats-card::after  { bottom:-1px; right:-1px; border-bottom:1.667px solid #ffffff88; border-right:1.667px solid #ffffff88; }
-          @keyframes cyberNodePulse {
-            0%,100% { opacity:0.22; }
-            50%      { opacity:0.65; }
-          }
           .cyber-bg-mesh {
             position:fixed;
             inset:0;
             pointer-events:none;
             z-index:0;
             background-image:
-              radial-gradient(circle, #00d3f2 1.5px, transparent 1.5px),
-              linear-gradient(45deg,  #00b8db22 1px, transparent 1px),
-              linear-gradient(-45deg, #e12afb18 1px, transparent 1px);
+              radial-gradient(circle, #00d3f228 1.5px, transparent 1.5px),
+              linear-gradient(45deg,  #00b8db1a 1px, transparent 1px),
+              linear-gradient(-45deg, #e12afb14 1px, transparent 1px);
             background-size:48px 48px, 48px 48px, 48px 48px;
-            animation: cyberNodePulse 4s ease-in-out infinite;
+            opacity: 0.9;
+          }
+          @keyframes cyberNodeTravel {
+            0%   { transform: translate(-48px, -48px); opacity:0; }
+            8%   { opacity:1; }
+            92%  { opacity:1; }
+            100% { transform: translate(48px, 48px); opacity:0; }
+          }
+          .cyber-node-pulse {
+            position:fixed;
+            inset:0;
+            pointer-events:none;
+            z-index:0;
+            background-image: radial-gradient(circle, #00d3f2 2.5px, #e12afb18 6px, transparent 8px);
+            background-size:48px 48px;
+            animation: cyberNodeTravel 5s linear infinite;
+            mask-image: linear-gradient(135deg, transparent 25%, rgba(0,0,0,0.9) 50%, transparent 75%);
+            -webkit-mask-image: linear-gradient(135deg, transparent 25%, rgba(0,0,0,0.9) 50%, transparent 75%);
           }
           @keyframes cyberScanSweep {
             0%   { transform: rotate(20deg) translateX(-160%); }
@@ -1713,8 +1726,12 @@ const ProfilePage = () => {
             -webkit-text-fill-color: transparent;
             background-clip: text;
           }
+          @keyframes cyberIconColorCycle {
+            0%,100% { color: #00d3f2; filter: drop-shadow(0 0 3px #00d3f277); }
+            50%      { color: #e12afb; filter: drop-shadow(0 0 3px #e12afb77); }
+          }
           .cyber-platform-section svg {
-            filter: drop-shadow(0 0 3px #00d3f277);
+            animation: cyberIconColorCycle 4s ease-in-out infinite;
           }
           @keyframes cyberTabGlow {
             0%,100% { box-shadow:0 0 8px #00d3f244, inset 0 0 8px #00d3f211; border-color:#00b8db88; }
@@ -1730,6 +1747,7 @@ const ProfilePage = () => {
         `}</style>
       )}
       {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-bg-mesh" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-node-pulse" />}
       {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-scan-sweep" />}
       {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">
@@ -2027,16 +2045,16 @@ const ProfilePage = () => {
                     : isZombieTheme
                       ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
                       : isCyberpunkTheme
-                        ? 'linear-gradient(270deg, #00d3f2 0%, #e12afb 100%)'
+                        ? 'rgba(2,6,23,0.9)'
                         : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#020617' : '#0f172b',
-                border: isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db44' : undefined,
+                color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : '#0f172b',
+                border: isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : undefined,
                 fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined,
                 letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : undefined,
                 fontWeight: isCyberpunkTheme ? '900' : undefined,
               }}
             >
-              Collection
+              <span className={isCyberpunkTheme && profileSectionTab !== 'collection' ? 'cyber-gradient-text' : ''}>Collection</span>
             </button>
 
             <div 
