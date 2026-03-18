@@ -1276,6 +1276,10 @@ const ProfilePage = () => {
   const nameTagBgStyle = isLightBackground ? {
     background: 'rgba(255,255,255,0.37)',
     border: '0.556px solid rgba(255,255,255,0.8)',
+  } : isZombieTheme ? {
+    background: '#1a1d1a',
+    border: '1.667px solid #7ccf00',
+    boxShadow: '0 0 12px #9ae60033',
   } : {
     background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}cc 100%)`,
     border: `1px solid ${accentColor}80`,
@@ -1578,13 +1582,7 @@ const ProfilePage = () => {
             89% { opacity:0.55; filter:brightness(1.6) saturate(2); }
             90%,91% { opacity:0.82; filter:brightness(0.75); }
           }
-          @keyframes zombieDrip {
-            0% { height:0; opacity:0; border-radius:0 0 50% 50%; }
-            12% { height:5px; opacity:1; }
-            60% { height:28px; opacity:0.9; }
-            85% { height:36px; opacity:0.6; border-radius:0 0 40% 40%; }
-            100% { height:42px; opacity:0; }
-          }
+
           @keyframes zombieGlow {
             0%,100% { box-shadow:0 0 18px #9ae60055, 0 0 40px #9ae60022; }
             50% { box-shadow:0 0 30px #9ae60099, 0 0 70px #9ae60044; }
@@ -1592,27 +1590,19 @@ const ProfilePage = () => {
           .zombie-stats-card {
             animation: zombieFlicker 8s infinite 1.5s, zombieGlow 3.5s ease-in-out infinite;
           }
-          .zombie-drip {
-            position:absolute;
-            bottom:-1px;
-            background:linear-gradient(180deg,#7ccf00 0%,#9ae600 40%,#4a7a00cc 80%,transparent 100%);
-            border-radius:0 0 50% 50%;
-            animation: zombieDrip ease-in infinite;
-          }
           @keyframes zombieBgPulse {
-            0%,100% { opacity:0.04; }
-            50% { opacity:0.22; }
+            0%,100% { opacity:0.18; }
+            50% { opacity:0.45; }
           }
           .zombie-bg-pulse {
             position:fixed;
             inset:0;
             pointer-events:none;
             z-index:0;
-            background:
-              radial-gradient(ellipse 80% 60% at 50% 100%, #3d6e00 0%, #9ae60018 40%, transparent 70%),
-              radial-gradient(ellipse 50% 40% at 20% 80%, #4a7a0033 0%, transparent 60%),
-              radial-gradient(ellipse 50% 40% at 80% 60%, #5a8a0022 0%, transparent 60%);
-            animation: zombieBgPulse 5s ease-in-out infinite;
+            background-image:
+              repeating-linear-gradient(0deg, #9ae60028 0px, #9ae60028 1px, transparent 1px, transparent 48px),
+              repeating-linear-gradient(90deg, #9ae60028 0px, #9ae60028 1px, transparent 1px, transparent 48px);
+            animation: zombieBgPulse 4s ease-in-out infinite;
           }
         `}</style>
       )}
@@ -1963,21 +1953,6 @@ const ProfilePage = () => {
                 )}
               </div>
             </div>
-            {/* Zombie sludge drips */}
-            {isZombieTheme && (
-              <div className="absolute bottom-0 left-0 right-0 pointer-events-none" style={{ overflow: 'visible', zIndex: 10 }}>
-                {[
-                  { l: '8%',  delay: '0s',   dur: '3.2s', w: '7px' },
-                  { l: '22%', delay: '1.3s', dur: '2.8s', w: '9px' },
-                  { l: '37%', delay: '0.5s', dur: '3.6s', w: '6px' },
-                  { l: '54%', delay: '1.9s', dur: '2.6s', w: '8px' },
-                  { l: '68%', delay: '0.9s', dur: '3.1s', w: '7px' },
-                  { l: '82%', delay: '0.2s', dur: '2.9s', w: '10px' },
-                ].map((d, i) => (
-                  <div key={i} className="zombie-drip" style={{ left: d.l, width: d.w, animationDelay: d.delay, animationDuration: d.dur }} />
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Platform tags and Social Links — below the stats card */}
@@ -2239,21 +2214,6 @@ const ProfilePage = () => {
                   )}
                 </div>
               </div>
-              {/* Zombie sludge drips */}
-              {isZombieTheme && (
-                <div className="absolute bottom-0 left-0 right-0 pointer-events-none" style={{ overflow: 'visible', zIndex: 10 }}>
-                  {[
-                    { l: '8%',  delay: '0s',   dur: '3.2s', w: '7px' },
-                    { l: '22%', delay: '1.3s', dur: '2.8s', w: '9px' },
-                    { l: '37%', delay: '0.5s', dur: '3.6s', w: '6px' },
-                    { l: '54%', delay: '1.9s', dur: '2.6s', w: '8px' },
-                    { l: '68%', delay: '0.9s', dur: '3.1s', w: '7px' },
-                    { l: '82%', delay: '0.2s', dur: '2.9s', w: '10px' },
-                  ].map((d, i) => (
-                    <div key={i} className="zombie-drip" style={{ left: d.l, width: d.w, animationDelay: d.delay, animationDuration: d.dur }} />
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Platform Connections — below the stats card */}
