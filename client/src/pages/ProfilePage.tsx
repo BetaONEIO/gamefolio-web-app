@@ -1590,24 +1590,47 @@ const ProfilePage = () => {
           .zombie-stats-card {
             animation: zombieFlicker 8s infinite 1.5s, zombieGlow 3.5s ease-in-out infinite;
           }
-          @keyframes zombieBgPulse {
-            0%,100% { background-size:46px 46px; opacity:0.28; }
-            50%      { background-size:60px 60px; opacity:0.55; }
-          }
           .zombie-bg-pulse {
             position:fixed;
             inset:0;
             pointer-events:none;
             z-index:0;
+            opacity:0.35;
             background-image:
-              linear-gradient(0deg, #9ae60032 1px, transparent 1px),
-              linear-gradient(90deg, #9ae60032 1px, transparent 1px);
-            background-size:46px 46px;
-            animation: zombieBgPulse 4s ease-in-out infinite;
+              linear-gradient(0deg, #9ae60038 1px, transparent 1px),
+              linear-gradient(90deg, #9ae60038 1px, transparent 1px);
+            background-size:48px 48px;
+          }
+          @keyframes zombieMeshSweep {
+            0%   { transform: rotate(20deg) translateX(-160%); }
+            100% { transform: rotate(20deg) translateX(160%); }
+          }
+          .zombie-mesh-sweep {
+            position:fixed;
+            top:-50%;
+            left:0;
+            width:100%;
+            height:200%;
+            pointer-events:none;
+            z-index:0;
+            background: linear-gradient(
+              90deg,
+              transparent 0%,
+              transparent 42%,
+              #9ae60008 46%,
+              #9ae60055 49%,
+              #9ae600bb 50%,
+              #9ae60055 51%,
+              #9ae60008 54%,
+              transparent 58%,
+              transparent 100%
+            );
+            animation: zombieMeshSweep 7s ease-in-out infinite;
           }
         `}</style>
       )}
       {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-bg-pulse" />}
+      {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-mesh-sweep" />}
       {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">
         <React.Suspense fallback={null}>
