@@ -1659,6 +1659,38 @@ const ProfilePage = () => {
           }
           .cyber-stats-card::before { top:-1px; left:-1px; border-top:1.667px solid #ffffff88; border-left:1.667px solid #ffffff88; }
           .cyber-stats-card::after  { bottom:-1px; right:-1px; border-bottom:1.667px solid #ffffff88; border-right:1.667px solid #ffffff88; }
+          /* ── Diamond mesh base ── */
+          @keyframes cyberNodePulse {
+            0%,100% { opacity:0.18; }
+            50%      { opacity:0.32; }
+          }
+          .cyber-bg-mesh {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background-image:
+              radial-gradient(circle, #00d3f228 1.5px, transparent 1.5px),
+              linear-gradient(45deg,  #00b8db1a 1px, transparent 1px),
+              linear-gradient(-45deg, #e12afb14 1px, transparent 1px);
+            background-size:48px 48px, 48px 48px, 48px 48px;
+            animation: cyberNodePulse 4s ease-in-out infinite;
+          }
+          /* ── Diagonal scan sweep (cyan→magenta) ── */
+          @keyframes cyberScanSweep {
+            0%   { transform: rotate(15deg) translateX(-160%); }
+            100% { transform: rotate(15deg) translateX(160%); }
+          }
+          .cyber-scan-sweep {
+            position:fixed; top:-50%; left:0; width:100%; height:200%;
+            pointer-events:none; z-index:0;
+            background: linear-gradient(
+              90deg,
+              transparent 0%, transparent 44%,
+              #00d3f206 46%, #00d3f255 48%,
+              #e12afbcc 50%,
+              #00d3f255 52%, #00d3f206 54%,
+              transparent 56%, transparent 100%
+            );
+            animation: cyberScanSweep 9s linear infinite;
+          }
           /* ── Glitch scanlines base ── */
           .cyber-scanlines {
             position:fixed; inset:0; pointer-events:none; z-index:0;
@@ -1778,6 +1810,8 @@ const ProfilePage = () => {
           }
         `}</style>
       )}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-bg-mesh" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-scan-sweep" />}
       {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-scanlines" />}
       {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-rgb-red" />}
       {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-rgb-blue" />}
@@ -2121,7 +2155,7 @@ const ProfilePage = () => {
                       <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWERS</span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined }}>{Number(profile._count?.following || 0)}</span>
+                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined }}>{Number(profile._count?.following || 0)}</span>
                       <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWING</span>
                     </div>
                   </div>
@@ -2388,7 +2422,7 @@ const ProfilePage = () => {
                         <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Followers</span>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined }}>{Number(profile._count?.following || 0)}</span>
+                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined }}>{Number(profile._count?.following || 0)}</span>
                         <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Following</span>
                       </div>
                     </div>

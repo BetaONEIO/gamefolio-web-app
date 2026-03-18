@@ -118,6 +118,15 @@ const ProfileTabs = ({ username, isCyberpunkTheme = false }: ProfileTabsProps) =
 
   return (
     <div>
+      {isCyberpunkTheme && (
+        <style>{`
+          @keyframes profileTabsCyberGlow {
+            0%,100% { box-shadow:0 0 8px #00d3f244, inset 0 0 8px #00d3f211; border-color:#00b8db88; }
+            50%      { box-shadow:0 0 14px #e12afb55, inset 0 0 10px #e12afb11; border-color:#e12afb88; }
+          }
+          .profile-tabs-cyber-border { animation: profileTabsCyberGlow 4s ease-in-out infinite; }
+        `}</style>
+      )}
       {/* Curved fading line with tabs */}
       <div className="relative py-4">
         {/* Curved line container with fading ends */}
@@ -134,11 +143,10 @@ const ProfileTabs = ({ username, isCyberpunkTheme = false }: ProfileTabsProps) =
           
           {/* Main curved rectangle border */}
           <div 
-            className={`relative flex items-center gap-1 px-2 py-1 backdrop-blur-sm ${isCyberpunkTheme ? 'rounded-none border-0' : 'rounded-xl border border-border/60 bg-background/50'}`}
+            className={`relative flex items-center gap-1 px-2 py-1 backdrop-blur-sm ${isCyberpunkTheme ? 'rounded-none border-0 profile-tabs-cyber-border' : 'rounded-xl border border-border/60 bg-background/50'}`}
             style={isCyberpunkTheme ? {
               background: '#020617',
               border: '1px solid #00b8db88',
-              boxShadow: '0 0 8px #00d3f244, inset 0 0 8px #00d3f211',
               clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)',
             } : undefined}
           >
