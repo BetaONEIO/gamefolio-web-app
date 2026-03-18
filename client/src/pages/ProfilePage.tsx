@@ -1243,6 +1243,15 @@ const ProfilePage = () => {
   const accentColor = profile.accentColor || '#4ADE80';
   const backgroundColor = profile.backgroundColor || '#0B2232';
   const cardColor = profile.cardColor || '#1E3A8A';
+
+  const isLightBackground = (() => {
+    const hex = backgroundColor.replace('#', '');
+    if (hex.length !== 6) return false;
+    const r = parseInt(hex.substring(0, 2), 16) / 255;
+    const g = parseInt(hex.substring(2, 4), 16) / 255;
+    const b = parseInt(hex.substring(4, 6), 16) / 255;
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 0.5;
+  })();
   const profileBackgroundImageUrl = bgImageSignedUrl || (profile as any).profileBackgroundImageUrl || '';
   const isMobileViewport = window.innerWidth <= 768;
   const profileBackgroundPosX = isMobileViewport
@@ -1787,7 +1796,12 @@ const ProfilePage = () => {
                         key={`${type}-${index}`}
                         variant="outline" 
                         className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px]"
-                        style={{
+                        style={isLightBackground ? {
+                          backgroundColor: 'rgba(255,255,255,0.6)',
+                          color: accentColor || '#ff2056',
+                          borderColor: '#fda5d5',
+                          boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+                        } : {
                           backgroundColor: `${accentColor || '#00bba7'}1a`,
                           color: accentColor || '#00d5be',
                           borderColor: `${accentColor || '#00bba7'}66`,
@@ -1806,7 +1820,7 @@ const ProfilePage = () => {
           {/* Bio — below the streamer badge, outside the card */}
           {profile.bio && (
             <div className="mx-4 mt-2 mb-1">
-              <p className="text-sm text-slate-300 pr-4">{profile.bio}</p>
+              <p className={`text-sm pr-4 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>{profile.bio}</p>
             </div>
           )}
 
@@ -1819,8 +1833,10 @@ const ProfilePage = () => {
               style={{ 
                 background: profileSectionTab === 'collection'
                   ? '#1a1a2e'
-                  : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                color: profileSectionTab === 'collection' ? '#ffffff' : '#0f172b',
+                  : isLightBackground
+                    ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
+                    : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                color: profileSectionTab === 'collection' ? '#ffffff' : isLightBackground ? '#ffffff' : '#0f172b',
               }}
             >
               Collection
@@ -1828,7 +1844,11 @@ const ProfilePage = () => {
 
             <div 
               className="rounded-2xl"
-              style={{
+              style={isLightBackground ? {
+                background: 'rgba(255,255,255,0.37)',
+                border: '0.556px solid rgba(255,255,255,0.8)',
+                boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+              } : {
                 background: `${accentColor || '#00bba7'}0d`,
                 border: `1px solid ${accentColor || '#00bba7'}33`,
               }}
@@ -1837,15 +1857,15 @@ const ProfilePage = () => {
                 {profileSectionTab === 'stats' ? (
                   <div className="flex gap-6 mt-1">
                     <div className="flex flex-col">
-                      <span className="font-black text-base text-white">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
                       <span className="text-[8px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>UPLOADS</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-black text-base text-white">{Number(profile._count?.followers || 0)}</span>
+                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.followers || 0)}</span>
                       <span className="text-[8px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>FOLLOWERS</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-black text-base text-white">{Number(profile._count?.following || 0)}</span>
+                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.following || 0)}</span>
                       <span className="text-[8px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>FOLLOWING</span>
                     </div>
                   </div>
@@ -2029,7 +2049,12 @@ const ProfilePage = () => {
                       key={`${type}-${index}`}
                       variant="outline" 
                       className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px]"
-                      style={{
+                      style={isLightBackground ? {
+                        backgroundColor: 'rgba(255,255,255,0.6)',
+                        color: accentColor || '#ff2056',
+                        borderColor: '#fda5d5',
+                        boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+                      } : {
                         backgroundColor: `${accentColor || '#00bba7'}1a`,
                         color: accentColor || '#00d5be',
                         borderColor: `${accentColor || '#00bba7'}66`,
@@ -2048,7 +2073,7 @@ const ProfilePage = () => {
 
             {/* Bio — below the streamer badge, outside the card */}
             {profile.bio && (
-              <p className="text-sm text-slate-300 max-w-md mt-2">{profile.bio}</p>
+              <p className={`text-sm max-w-md mt-2 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>{profile.bio}</p>
             )}
 
             {/* Profile Info Card — stats only, Collection button on top-right border */}
@@ -2060,8 +2085,10 @@ const ProfilePage = () => {
                 style={{ 
                   background: profileSectionTab === 'collection'
                     ? '#1a1a2e'
-                    : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                  color: profileSectionTab === 'collection' ? '#ffffff' : '#0f172b',
+                    : isLightBackground
+                      ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
+                      : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                  color: profileSectionTab === 'collection' ? '#ffffff' : isLightBackground ? '#ffffff' : '#0f172b',
                 }}
               >
                 Collection
@@ -2069,7 +2096,11 @@ const ProfilePage = () => {
 
               <div 
                 className="rounded-2xl"
-                style={{
+                style={isLightBackground ? {
+                  background: 'rgba(255,255,255,0.37)',
+                  border: '0.556px solid rgba(255,255,255,0.8)',
+                  boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+                } : {
                   background: `${accentColor || '#00bba7'}0d`,
                   border: `1px solid ${accentColor || '#00bba7'}33`,
                 }}
@@ -2078,15 +2109,15 @@ const ProfilePage = () => {
                   {profileSectionTab === 'stats' ? (
                     <div className="flex gap-8 items-center">
                       <div className="flex flex-col">
-                        <span className="font-black text-xl text-white">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
                         <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>Uploads</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-black text-xl text-white">{Number(profile._count?.followers || 0)}</span>
+                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.followers || 0)}</span>
                         <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>Followers</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-black text-xl text-white">{Number(profile._count?.following || 0)}</span>
+                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.following || 0)}</span>
                         <span className="text-[9px] uppercase tracking-[0.8px] font-black" style={{ color: accentColor || '#00d5be' }}>Following</span>
                       </div>
                     </div>
