@@ -1599,8 +1599,24 @@ const ProfilePage = () => {
             border-radius:0 0 50% 50%;
             animation: zombieDrip ease-in infinite;
           }
+          @keyframes zombieBgPulse {
+            0%,100% { opacity:0.04; }
+            50% { opacity:0.22; }
+          }
+          .zombie-bg-pulse {
+            position:fixed;
+            inset:0;
+            pointer-events:none;
+            z-index:0;
+            background:
+              radial-gradient(ellipse 80% 60% at 50% 100%, #3d6e00 0%, #9ae60018 40%, transparent 70%),
+              radial-gradient(ellipse 50% 40% at 20% 80%, #4a7a0033 0%, transparent 60%),
+              radial-gradient(ellipse 50% 40% at 80% 60%, #5a8a0022 0%, transparent 60%);
+            animation: zombieBgPulse 5s ease-in-out infinite;
+          }
         `}</style>
       )}
+      {isZombieTheme && <div className="zombie-bg-pulse" />}
       {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">
         <React.Suspense fallback={null}>
