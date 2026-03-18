@@ -1427,7 +1427,7 @@ const ProfilePage = () => {
         position: 'relative',
         zIndex: 1
       } : { 
-        backgroundImage: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 400px, ${backgroundColor} 100%)`,
+        background: isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 400px, ${backgroundColor} 100%)`,
         position: 'relative',
         zIndex: 1
       }}
