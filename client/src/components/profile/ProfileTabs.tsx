@@ -160,10 +160,14 @@ const ProfileTabs = ({ username, isCyberpunkTheme = false }: ProfileTabsProps) =
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
                 onClick={() => setActiveTab(tab.id)}
+                style={isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2px', fontSize: '0.65rem', fontWeight: '900' } : undefined}
               >
                 <span className="flex items-center gap-2">
                   {tab.icon}
-                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span
+                    className="hidden sm:inline"
+                    style={isCyberpunkTheme ? { background: 'linear-gradient(270deg,#00d3f2,#e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } : undefined}
+                  >{tab.label}</span>
                 </span>
               </button>
             ))}
@@ -173,10 +177,14 @@ const ProfileTabs = ({ username, isCyberpunkTheme = false }: ProfileTabsProps) =
               variant="outline"
               size="sm"
               className="ml-2 rounded-lg border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
+              style={isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2px', fontSize: '0.65rem', fontWeight: '900', borderColor: '#00b8db66' } : undefined}
               onClick={() => setActiveTab("collection")}
             >
               <FolderOpen className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Collection</span>
+              <span
+                className="hidden sm:inline"
+                style={isCyberpunkTheme ? { background: 'linear-gradient(270deg,#00d3f2,#e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } : undefined}
+              >Collection</span>
             </Button>
           </div>
           

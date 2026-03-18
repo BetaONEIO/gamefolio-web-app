@@ -2128,7 +2128,7 @@ const ProfilePage = () => {
                 fontWeight: isCyberpunkTheme ? '900' : undefined,
               }}
             >
-              <span className={isCyberpunkTheme && profileSectionTab !== 'collection' ? 'cyber-gradient-text' : ''}>Collection</span>
+              <span className={isCyberpunkTheme ? 'cyber-gradient-text' : ''}>Collection</span>
             </button>
 
             <div 
@@ -2395,7 +2395,7 @@ const ProfilePage = () => {
                   fontWeight: isCyberpunkTheme ? '900' : undefined,
                 }}
               >
-                <span className={isCyberpunkTheme && profileSectionTab !== 'collection' ? 'cyber-gradient-text' : ''}>Collection</span>
+                <span className={isCyberpunkTheme ? 'cyber-gradient-text' : ''}>Collection</span>
               </button>
 
               <div 
@@ -2830,7 +2830,7 @@ const ProfilePage = () => {
               style={getTabStyle('clips')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme && activeTab !== 'clips' ? 'cyber-gradient-text' : ''}`}>Clips</span>
+                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : ''}`}>Clips</span>
                 {showLimits && (
                   <span className={`text-[10px] font-normal ${clipsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: clipsCount >= 15 ? undefined : activeTab === 'clips' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {clipsCount}/15
@@ -2846,7 +2846,7 @@ const ProfilePage = () => {
               style={getTabStyle('reels')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme && activeTab !== 'reels' ? 'cyber-gradient-text' : ''}`}>Reels</span>
+                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : ''}`}>Reels</span>
                 {showLimits && (
                   <span className={`text-[10px] font-normal ${reelsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: reelsCount >= 15 ? undefined : activeTab === 'reels' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {reelsCount}/15
@@ -2862,7 +2862,7 @@ const ProfilePage = () => {
               style={getTabStyle('screenshots')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme && activeTab !== 'screenshots' ? 'cyber-gradient-text' : ''}`}>Screenshots</span>
+                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : ''}`}>Screenshots</span>
                 {showLimits && (
                   <span className={`text-[10px] font-normal ${screenshotsCount >= 10 ? 'text-red-400' : ''}`} style={{ color: screenshotsCount >= 10 ? undefined : activeTab === 'screenshots' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {screenshotsCount}/10
@@ -2877,7 +2877,7 @@ const ProfilePage = () => {
               className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
               style={getTabStyle('favorites')}
             >
-              <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme && activeTab !== 'favorites' ? 'cyber-gradient-text' : ''}`}>Favorites</span>
+              <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : ''}`}>Favorites</span>
             </TabsTrigger>
 
             {profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0 && (
