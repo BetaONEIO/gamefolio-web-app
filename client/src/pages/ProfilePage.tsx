@@ -1798,7 +1798,7 @@ const ProfilePage = () => {
                         className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px]"
                         style={isLightBackground ? {
                           backgroundColor: 'rgba(255,255,255,0.6)',
-                          color: accentColor || '#ff2056',
+                          color: '#ff2056',
                           borderColor: '#fda5d5',
                           boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
                         } : {
@@ -2051,7 +2051,7 @@ const ProfilePage = () => {
                       className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px]"
                       style={isLightBackground ? {
                         backgroundColor: 'rgba(255,255,255,0.6)',
-                        color: accentColor || '#ff2056',
+                        color: '#ff2056',
                         borderColor: '#fda5d5',
                         boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
                       } : {
