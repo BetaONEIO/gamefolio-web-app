@@ -1677,7 +1677,7 @@ const ProfilePage = () => {
                       width: '120px',
                       height: '28px',
                       ...nameTagBgStyle,
-                      boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
+                      ...(isLightBackground ? {} : { boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)' })
                     }}
                   />
                   <img 
@@ -2263,7 +2263,7 @@ const ProfilePage = () => {
                     width: '351px',
                     height: '109px',
                     ...nameTagBgStyle,
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+                    ...(isLightBackground ? {} : { boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' })
                   }}
                 >
                   <img 
