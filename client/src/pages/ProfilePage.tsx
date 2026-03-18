@@ -1802,7 +1802,7 @@ const ProfilePage = () => {
                 size="lg" 
               />
             </div>
-            <span className="text-sm text-white/60 font-normal">@{profile.username}</span>
+            <span className="text-sm font-normal" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.6)' }}>@{profile.username}</span>
             {/* User type badges on their own line */}
             {profile.userType && profile.showUserType !== false && (
               <div className="flex items-center gap-2 flex-wrap mt-3 mb-2">
@@ -2092,7 +2092,7 @@ const ProfilePage = () => {
             </div>
 
             {/* Username */}
-            <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
+            <span className="text-base font-normal mt-1" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.7)' }}>@{profile.username}</span>
 
             {/* Bio — below the streamer badge, outside the card */}
             {profile.bio && (
