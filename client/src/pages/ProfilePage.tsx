@@ -1001,12 +1001,6 @@ const ProfilePage = () => {
   const screenshotsTabRef = useRef<HTMLButtonElement>(null);
   const favoritesTabRef = useRef<HTMLButtonElement>(null);
 
-  // Screenshot carousel
-  const screenshotsScrollRef = useRef<HTMLDivElement>(null);
-  const [screenshotsDragging, setScreenshotsDragging] = useState(false);
-  const [screenshotsDragStart, setScreenshotsDragStart] = useState(0);
-  const [screenshotsScrollStart, setScreenshotsScrollStart] = useState(0);
-
   // Calculate tab positions using percentage-based approach
   const getTabPosition = (tabName: string) => {
     const tabIndex = ['clips', 'reels', 'screenshots', 'favorites'].indexOf(tabName);
@@ -1404,20 +1398,11 @@ const ProfilePage = () => {
         position: 'relative',
         zIndex: 1
       } : { 
+        backgroundImage: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 400px, ${backgroundColor} 100%)`,
         position: 'relative',
         zIndex: 1
       }}
     >
-      {/* Fixed viewport-anchored background — prevents gradient from changing based on content height */}
-      {!profileBackgroundImageUrl && (
-        <div
-          className="fixed inset-0 pointer-events-none"
-          style={{
-            backgroundImage: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
-            zIndex: 0,
-          }}
-        />
-      )}
       {/* Dark overlay for background image readability */}
       {profileBackgroundImageUrl && (
         <div className="fixed inset-0 bg-black/50 pointer-events-none" style={{ zIndex: 0 }} />
@@ -2940,46 +2925,13 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : isLoadingScreenshots ? (
-              <div className="flex gap-5 overflow-hidden pb-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="flex-shrink-0 w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px]">
-                    <Skeleton className="aspect-video w-full rounded-xl" />
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <Skeleton key={i} className="aspect-video w-full rounded-xl" />
                 ))}
               </div>
             ) : screenshots && screenshots.length > 0 ? (
-              <div className="relative">
-                <button
-                  onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft -= 480; } }}
-                  className="absolute -left-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft += 480; } }}
-                  className="absolute -right-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
-                <div
-                  ref={screenshotsScrollRef}
-                  className={`flex gap-5 overflow-x-auto scrollbar-hide pb-4 select-none ${screenshotsDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-                  style={{ scrollBehavior: screenshotsDragging ? 'auto' : 'smooth' }}
-                  onMouseDown={(e) => {
-                    if (!screenshotsScrollRef.current) return;
-                    setScreenshotsDragging(true);
-                    setScreenshotsDragStart(e.clientX);
-                    setScreenshotsScrollStart(screenshotsScrollRef.current.scrollLeft);
-                    e.preventDefault();
-                  }}
-                  onMouseMove={(e) => {
-                    if (!screenshotsDragging || !screenshotsScrollRef.current) return;
-                    e.preventDefault();
-                    screenshotsScrollRef.current.scrollLeft = screenshotsScrollStart - (e.clientX - screenshotsDragStart);
-                  }}
-                  onMouseUp={() => setScreenshotsDragging(false)}
-                  onMouseLeave={() => setScreenshotsDragging(false)}
-                >
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {[...screenshots]
                     .sort((a, b) => {
                       if (a.pinnedAt && !b.pinnedAt) return -1;
@@ -2992,7 +2944,7 @@ const ProfilePage = () => {
                     return (
                       <div
                         key={`screenshot-${screenshot.id}`}
-                        className="flex-shrink-0 w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px] relative group"
+                        className="relative group"
                       >
                         {isPinned && !isOwnProfile && (
                           <div className="absolute top-1.5 left-1.5 z-10 bg-primary/90 text-primary-foreground p-1 rounded-md">
@@ -3033,7 +2985,6 @@ const ProfilePage = () => {
                     );
                   })}
                 </div>
-              </div>
             ) : (
               <div className="py-12 text-center">
                 <h3 className="text-lg font-medium mb-2">No screenshots yet</h3>
