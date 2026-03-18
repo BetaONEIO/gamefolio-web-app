@@ -1252,6 +1252,15 @@ const ProfilePage = () => {
     const b = parseInt(hex.substring(4, 6), 16) / 255;
     return (0.299 * r + 0.587 * g + 0.114 * b) > 0.5;
   })();
+
+  const platformBtnStyle = isLightBackground
+    ? { backgroundColor: 'rgba(255,255,255,0.7)', color: accentColor, border: `1px solid ${accentColor}80` }
+    : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
+
+  const nameTagBgStyle = {
+    background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}cc 100%)`,
+    border: `1px solid ${accentColor}80`,
+  };
   const profileBackgroundImageUrl = bgImageSignedUrl || (profile as any).profileBackgroundImageUrl || '';
   const isMobileViewport = window.innerWidth <= 768;
   const profileBackgroundPosX = isMobileViewport
@@ -1539,7 +1548,7 @@ const ProfilePage = () => {
         )}
 
         {/* Bottom fade — merges banner into page background */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to bottom, transparent, hsl(var(--background)))' }} />
+        <div className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none" style={{ background: `linear-gradient(to bottom, transparent, ${backgroundColor})` }} />
       </div>
 
       {/* Share button - positioned on banner top right for mobile */}
@@ -1652,8 +1661,7 @@ const ProfilePage = () => {
                     style={{
                       width: '120px',
                       height: '28px',
-                      background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
-                      border: '1px solid rgba(148, 163, 184, 0.2)',
+                      ...nameTagBgStyle,
                       boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
                     }}
                   />
@@ -1884,37 +1892,37 @@ const ProfilePage = () => {
           {/* Platform tags and Social Links — below the stats card */}
           {profileSectionTab === 'stats' && <div className="flex flex-wrap gap-1.5 mb-4 mt-2 pl-4 pr-8">
             {profile.steamUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(27, 40, 56, 0.8)', color: '#FFFFFF' }}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
                 <SiSteam className="w-2.5 h-2.5" />
                 <span>{profile.steamUsername}</span>
               </div>
             )}
             {profile.nintendoUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(230, 0, 18, 0.8)', color: '#FFFFFF' }}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
                 <SiNintendo className="w-2.5 h-2.5" />
                 <span>{profile.nintendoUsername}</span>
               </div>
             )}
             {profile.xboxUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(16, 124, 16, 0.8)', color: '#FFFFFF' }}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
                 <FaXbox className="w-2.5 h-2.5" />
                 <span>{profile.xboxUsername}</span>
               </div>
             )}
             {profile.playstationUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(0, 55, 145, 0.8)', color: '#FFFFFF' }}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
                 <SiPlaystation className="w-2.5 h-2.5" />
                 <span>{profile.playstationUsername}</span>
               </div>
             )}
             {profile.epicUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(49, 49, 49, 0.8)', color: '#FFFFFF' }}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
                 <SiEpicgames className="w-2.5 h-2.5" />
                 <span>{profile.epicUsername}</span>
               </div>
             )}
             {profile.discordUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(88, 101, 242, 0.8)', color: '#FFFFFF' }}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
                 <SiDiscord className="w-2.5 h-2.5" />
                 <span>{profile.discordUsername}</span>
               </div>
@@ -1925,7 +1933,7 @@ const ProfilePage = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                style={{ backgroundColor: 'rgba(29, 161, 242, 0.8)', color: '#FFFFFF' }}
+                style={platformBtnStyle}
               >
                 <FaXTwitter className="w-2.5 h-2.5" />
                 <span>{profile.twitterUsername}</span>
@@ -1937,7 +1945,7 @@ const ProfilePage = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                style={{ backgroundColor: 'rgba(255, 0, 0, 0.8)', color: '#FFFFFF' }}
+                style={platformBtnStyle}
               >
                 <FaYoutube className="w-2.5 h-2.5" />
                 <span>{profile.youtubeUsername}</span>
@@ -1949,7 +1957,7 @@ const ProfilePage = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                style={{ backgroundColor: 'rgba(228, 64, 95, 0.8)', color: '#FFFFFF' }}
+                style={platformBtnStyle}
               >
                 <FaInstagram className="w-2.5 h-2.5" />
                 <span>{profile.instagramUsername}</span>
@@ -1961,7 +1969,7 @@ const ProfilePage = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                style={{ backgroundColor: 'rgba(24, 119, 242, 0.8)', color: '#FFFFFF' }}
+                style={platformBtnStyle}
               >
                 <FaFacebook className="w-2.5 h-2.5" />
                 <span>{profile.facebookUsername}</span>
@@ -2137,93 +2145,84 @@ const ProfilePage = () => {
             {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
               <div className="flex flex-wrap gap-2 mt-4">
                 {profile.steamUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#1B2838', color: '#FFFFFF' }}>
-                      <SiSteam className="w-3 h-3" />
-                      <span>{profile.steamUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.xboxUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#107C10', color: '#FFFFFF' }}>
-                      <FaXbox className="w-3 h-3" />
-                      <span>{profile.xboxUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.playstationUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#003087', color: '#FFFFFF' }}>
-                      <SiPlaystation className="w-3 h-3" />
-                      <span>{profile.playstationUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.discordUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#5865F2', color: '#FFFFFF' }}>
-                      <SiDiscord className="w-3 h-3" />
-                      <span>{profile.discordUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.epicUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#000000', color: '#FFFFFF' }}>
-                      <SiEpicgames className="w-3 h-3" />
-                      <span>{profile.epicUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.nintendoUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#E60012', color: '#FFFFFF' }}>
-                      <SiNintendo className="w-3 h-3" />
-                      <span>{profile.nintendoUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.twitterUsername && (
-                    <a 
-                      href={`https://twitter.com/${profile.twitterUsername}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                      style={{ backgroundColor: '#1DA1F2', color: '#FFFFFF' }}
-                    >
-                      <FaXTwitter className="w-3 h-3" />
-                      <span>{profile.twitterUsername}</span>
-                    </a>
-                  )}
-
-                  {profile.youtubeUsername && (
-                    <a 
-                      href={`https://youtube.com/@${profile.youtubeUsername}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                      style={{ backgroundColor: '#FF0000', color: '#FFFFFF' }}
-                    >
-                      <FaYoutube className="w-3 h-3" />
-                      <span>{profile.youtubeUsername}</span>
-                    </a>
-                  )}
-
-                  {profile.instagramUsername && (
-                    <a 
-                      href={`https://instagram.com/${profile.instagramUsername}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                      style={{ backgroundColor: '#E4405F', color: '#FFFFFF' }}
-                    >
-                      <FaInstagram className="w-3 h-3" />
-                      <span>{profile.instagramUsername}</span>
-                    </a>
-                  )}
-
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                    <SiSteam className="w-3 h-3" />
+                    <span>{profile.steamUsername}</span>
+                  </div>
+                )}
+                {profile.xboxUsername && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                    <FaXbox className="w-3 h-3" />
+                    <span>{profile.xboxUsername}</span>
+                  </div>
+                )}
+                {profile.playstationUsername && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                    <SiPlaystation className="w-3 h-3" />
+                    <span>{profile.playstationUsername}</span>
+                  </div>
+                )}
+                {profile.discordUsername && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                    <SiDiscord className="w-3 h-3" />
+                    <span>{profile.discordUsername}</span>
+                  </div>
+                )}
+                {profile.epicUsername && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                    <SiEpicgames className="w-3 h-3" />
+                    <span>{profile.epicUsername}</span>
+                  </div>
+                )}
+                {profile.nintendoUsername && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                    <SiNintendo className="w-3 h-3" />
+                    <span>{profile.nintendoUsername}</span>
+                  </div>
+                )}
+                {profile.twitterUsername && (
+                  <a 
+                    href={`https://twitter.com/${profile.twitterUsername}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
+                    style={platformBtnStyle}
+                  >
+                    <FaXTwitter className="w-3 h-3" />
+                    <span>{profile.twitterUsername}</span>
+                  </a>
+                )}
+                {profile.youtubeUsername && (
+                  <a 
+                    href={`https://youtube.com/@${profile.youtubeUsername}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
+                    style={platformBtnStyle}
+                  >
+                    <FaYoutube className="w-3 h-3" />
+                    <span>{profile.youtubeUsername}</span>
+                  </a>
+                )}
+                {profile.instagramUsername && (
+                  <a 
+                    href={`https://instagram.com/${profile.instagramUsername}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
+                    style={platformBtnStyle}
+                  >
+                    <FaInstagram className="w-3 h-3" />
+                    <span>{profile.instagramUsername}</span>
+                  </a>
+                )}
                 {profile.facebookUsername && (
                   <a 
                     href={`https://facebook.com/${profile.facebookUsername}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                    style={{ backgroundColor: '#1877F2', color: '#FFFFFF' }}
+                    style={platformBtnStyle}
                   >
                     <FaFacebook className="w-3 h-3" />
                     <span>{profile.facebookUsername}</span>
@@ -2248,8 +2247,7 @@ const ProfilePage = () => {
                   style={{
                     width: '351px',
                     height: '109px',
-                    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
-                    border: '1px solid rgba(148, 163, 184, 0.2)',
+                    ...nameTagBgStyle,
                     boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
                   }}
                 >
