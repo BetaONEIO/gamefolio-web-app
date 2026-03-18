@@ -1602,7 +1602,7 @@ const ProfilePage = () => {
                 variant="ghost"
                 size="sm"
                 className="p-2 h-10 w-10 rounded-full hover:bg-primary/10 bg-background/80 backdrop-blur-sm"
-                style={isLightBackground ? { color: accentColor, backgroundColor: `${accentColor}18`, border: `1px solid ${accentColor}50` } : undefined}
+                style={isLightBackground ? { color: accentColor, background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
               >
                 <Share2 className="w-5 h-5" />
               </Button>
@@ -2390,7 +2390,7 @@ const ProfilePage = () => {
                           variant="outline"
                           size="default"
                           className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20 px-4 py-3"
-                          style={isLightBackground ? { color: accentColor, borderColor: accentColor, backgroundColor: `${accentColor}15` } : undefined}
+                          style={isLightBackground ? { color: accentColor, background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
                         >
                           <Share2 className="h-5 w-5" />
                         </Button>
@@ -2438,7 +2438,7 @@ const ProfilePage = () => {
                           variant="outline"
                           size="sm"
                           className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
-                          style={isLightBackground ? { color: accentColor, borderColor: accentColor, backgroundColor: `${accentColor}15` } : undefined}
+                          style={isLightBackground ? { color: accentColor, background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
                         >
                           <Share2 className="h-4 w-4" />
                         </Button>
