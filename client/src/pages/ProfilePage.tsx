@@ -1440,7 +1440,6 @@ const ProfilePage = () => {
     return 0.2126 * toLinear(rgb.r) + 0.7152 * toLinear(rgb.g) + 0.0722 * toLinear(rgb.b);
   };
 
-  const isLightBackground = getRelativeLuminance(backgroundColor) > 0.179;
   const statsTextColor = isLightBackground ? '#111827' : '#FFFFFF';
   const statsLabelColor = isLightBackground ? '#374151' : (accentColor || 'hsl(var(--primary))');
 
