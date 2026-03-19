@@ -45,7 +45,9 @@ import {
   Pin,
   Hexagon,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -55,7 +57,7 @@ import {
   SiEpicgames,
   SiNintendo
 } from "react-icons/si";
-import { FaXbox, FaYoutube, FaInstagram, FaFacebook } from "react-icons/fa";
+import { FaXbox, FaPlaystation, FaYoutube, FaInstagram, FaFacebook } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 import {
   Dialog,
@@ -236,6 +238,7 @@ const ProfilePage = () => {
 
   // Profile theme scope ref for dynamic styling
   const profileThemeScopeRef = useRef<HTMLDivElement>(null);
+  const neoCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Screenshot lightbox state
   const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null);
@@ -616,7 +619,7 @@ const ProfilePage = () => {
   const getInitialTab = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
-    if (tabParam && ['clips', 'reels', 'screenshots', 'favorites'].includes(tabParam)) {
+    if (tabParam && ['clips', 'reels', 'screenshots', 'favorites', 'achievements'].includes(tabParam)) {
       return tabParam;
     }
     return "clips";
@@ -652,7 +655,7 @@ const ProfilePage = () => {
     const handlePopState = () => {
       const urlParams = new URLSearchParams(window.location.search);
       const tabParam = urlParams.get('tab');
-      if (tabParam && ['clips', 'reels', 'screenshots', 'favorites'].includes(tabParam)) {
+      if (tabParam && ['clips', 'reels', 'screenshots', 'favorites', 'achievements'].includes(tabParam)) {
         setActiveTab(tabParam);
       } else {
         setActiveTab('clips');
@@ -801,6 +804,48 @@ const ProfilePage = () => {
       return () => clearInterval(interval);
     }
   }, [currentUser?.username, username, queryClient]);
+
+  // NEO theme: matrix rain canvas animation
+  // Must be before early returns to satisfy Rules of Hooks
+  const _neoAccent = (profile as any)?.accentColor?.toLowerCase();
+  const _neoBgImg = bgImageSignedUrl || (profile as any)?.profileBackgroundImageUrl || '';
+  const _isNeoActive = _neoAccent === '#00ff41' && !_neoBgImg;
+  useEffect(() => {
+    if (!_isNeoActive) return;
+    const canvas = neoCanvasRef.current;
+    if (!canvas) return;
+    const setSize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    setSize();
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const fontSize = 14;
+    let columns = Math.floor(canvas.width / fontSize);
+    let drops: number[] = Array.from({ length: columns }, () => Math.floor(Math.random() * -canvas.height / fontSize));
+    let animFrame: number;
+    const draw = () => {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < drops.length; i++) {
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        const y = drops[i] * fontSize;
+        ctx.fillStyle = drops[i] % 9 === 0 ? '#ccffcc' : (drops[i] % 4 === 0 ? '#55ff77' : '#00ff41');
+        ctx.font = `${fontSize}px "JetBrains Mono", monospace`;
+        ctx.fillText(char, i * fontSize, y);
+        if (y > canvas.height && Math.random() > 0.975) drops[i] = 0;
+        drops[i]++;
+      }
+      animFrame = requestAnimationFrame(draw);
+    };
+    draw();
+    const handleResize = () => {
+      setSize();
+      columns = Math.floor(canvas.width / fontSize);
+      drops = Array.from({ length: columns }, () => Math.floor(Math.random() * -canvas.height / fontSize));
+    };
+    window.addEventListener('resize', handleResize);
+    return () => { cancelAnimationFrame(animFrame); window.removeEventListener('resize', handleResize); };
+  }, [_isNeoActive]);
 
   // Follow mutation
   const followMutation = useMutation({
@@ -998,12 +1043,6 @@ const ProfilePage = () => {
   const reelsTabRef = useRef<HTMLButtonElement>(null);
   const screenshotsTabRef = useRef<HTMLButtonElement>(null);
   const favoritesTabRef = useRef<HTMLButtonElement>(null);
-
-  // Screenshot carousel
-  const screenshotsScrollRef = useRef<HTMLDivElement>(null);
-  const [screenshotsDragging, setScreenshotsDragging] = useState(false);
-  const [screenshotsDragStart, setScreenshotsDragStart] = useState(0);
-  const [screenshotsScrollStart, setScreenshotsScrollStart] = useState(0);
 
   // Calculate tab positions using percentage-based approach
   const getTabPosition = (tabName: string) => {
@@ -1247,6 +1286,63 @@ const ProfilePage = () => {
   const accentColor = profile.accentColor || '#4ADE80';
   const backgroundColor = profile.backgroundColor || '#0B2232';
   const cardColor = profile.cardColor || '#1E3A8A';
+
+  const isLightBackground = (() => {
+    const hex = backgroundColor.replace('#', '');
+    if (hex.length !== 6) return false;
+    const r = parseInt(hex.substring(0, 2), 16) / 255;
+    const g = parseInt(hex.substring(2, 4), 16) / 255;
+    const b = parseInt(hex.substring(4, 6), 16) / 255;
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 0.5;
+  })();
+
+  const isZombieTheme = !isLightBackground && accentColor?.toLowerCase() === '#9ae600';
+  const isCyberpunkTheme = !isLightBackground && accentColor?.toLowerCase() === '#00d3f2';
+  const isNeoTheme = !isLightBackground && accentColor?.toLowerCase() === '#00ff41';
+
+  const platformBtnStyle = isLightBackground
+    ? { backgroundColor: 'rgba(255,255,255,0.7)', color: accentColor, border: `1px solid ${accentColor}80` }
+    : isZombieTheme
+      ? { backgroundColor: 'rgba(15, 28, 8, 0.9)', color: '#9ae600', border: '1px solid #9ae60066' }
+      : isCyberpunkTheme
+        ? { backgroundColor: 'rgba(0,6,18,0.9)', color: '#00d3f2', border: '1px solid #00b8db55', fontFamily: "'Orbitron', sans-serif", fontSize: '0.6rem', letterSpacing: '0.8px', borderRadius: '2px' }
+        : isNeoTheme
+          ? { backgroundColor: 'rgba(0,8,0,0.9)', color: '#00ff41', border: '1px solid #00ff4155', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.65rem', letterSpacing: '0.5px', borderRadius: '2px' }
+          : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
+
+  const tabListStyle = isLightBackground ? {
+    background: 'rgba(255,255,255,0.37)',
+    border: '0.556px solid rgba(255,255,255,0.8)',
+    boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+  } : undefined;
+
+  const getTabStyle = (tabName: string) => ({
+    backgroundColor: activeTab === tabName ? accentColor : 'transparent',
+    color: activeTab === tabName ? '#ffffff' : isLightBackground ? accentColor : undefined,
+    ...(isZombieTheme ? { fontFamily: "'Creepster', cursive", letterSpacing: '2px', fontSize: '0.8rem' } : {}),
+    ...(isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2.5px', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase' as const } : {}),
+    ...(isNeoTheme ? { fontFamily: "'JetBrains Mono', monospace", letterSpacing: '1.5px', fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase' as const } : {}),
+  });
+
+  const nameTagBgStyle = isLightBackground ? {
+    background: 'rgba(255,255,255,0.37)',
+    border: '0.556px solid rgba(255,255,255,0.8)',
+  } : isZombieTheme ? {
+    background: '#1a1d1a',
+    border: '1.667px solid #7ccf00',
+    boxShadow: '0 0 12px #9ae60033',
+  } : isCyberpunkTheme ? {
+    background: '#020617',
+    border: '0.556px solid #00b8db66',
+    boxShadow: '0 0 14px #00d3f222',
+  } : isNeoTheme ? {
+    background: '#000800',
+    border: '0.556px solid #00ff4166',
+    boxShadow: '0 0 12px #00ff4122',
+  } : {
+    background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}cc 100%)`,
+    border: `1px solid ${accentColor}80`,
+  };
   const profileBackgroundImageUrl = bgImageSignedUrl || (profile as any).profileBackgroundImageUrl || '';
   const isMobileViewport = window.innerWidth <= 768;
   const profileBackgroundPosX = isMobileViewport
@@ -1361,7 +1457,7 @@ const ProfilePage = () => {
 
   const bgRgb = hexToRgb(backgroundColor);
   const accentRgb = hexToRgb(accentColor);
-  const defaultThemeColor = '#0B2232';
+  const defaultThemeColor = profile.primaryColor || '#0B2232';
 
   // Debug: Log the actual colors being used
   console.log('Profile colors:', { accentColor, backgroundColor, bgRgb, accentRgb });
@@ -1405,6 +1501,14 @@ const ProfilePage = () => {
   return (
     <>
     {selectedProfileNftDetail}
+    {isNeoTheme && !profileBackgroundImageUrl && (
+      <div style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 0, pointerEvents: 'none' }} />
+    )}
+    {isNeoTheme && !profileBackgroundImageUrl && (
+      <canvas ref={neoCanvasRef} className="neo-canvas" />
+    )}
+    {isNeoTheme && !profileBackgroundImageUrl && <div className="neo-vignette" />}
+    {isNeoTheme && !profileBackgroundImageUrl && <div className="neo-scanline" />}
     <div 
       className="min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope" 
       ref={profileThemeScopeRef}
@@ -1415,6 +1519,8 @@ const ProfilePage = () => {
         backgroundAttachment: 'fixed',
         position: 'relative',
         zIndex: 1
+      } : { 
+        background: isNeoTheme ? 'transparent' : (isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 400px, ${backgroundColor} 100%)`),
       } : (profile as any).profileBackgroundGradient !== false ? {
         background: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
         position: 'relative',
@@ -1461,7 +1567,7 @@ const ProfilePage = () => {
 
       {/* Enhanced Banner with global theme colors */}
       <div 
-        className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 border-b-4 border-primary ${resolvedBannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
+        className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 ${resolvedBannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
         style={{
           ...bannerStyle,
           opacity: hideBanner ? 0 : 1,
@@ -1550,8 +1656,355 @@ const ProfilePage = () => {
         ></div>
         </>
         )}
+
+        {/* Bottom fade — merges banner into page background */}
+        <div className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none" style={{ background: `linear-gradient(to bottom, transparent, ${backgroundColor})` }} />
       </div>
 
+      {/* Zombie theme animations */}
+      {isZombieTheme && (
+        <style>{`
+          @keyframes zombieFlicker {
+            0%,88%,92%,100% { opacity:1; filter:brightness(1); }
+            89% { opacity:0.55; filter:brightness(1.6) saturate(2); }
+            90%,91% { opacity:0.82; filter:brightness(0.75); }
+          }
+
+          @keyframes zombieGlow {
+            0%,100% { box-shadow:0 0 18px #9ae60055, 0 0 40px #9ae60022; }
+            50% { box-shadow:0 0 30px #9ae60099, 0 0 70px #9ae60044; }
+          }
+          .zombie-stats-card {
+            animation: zombieFlicker 8s infinite 1.5s, zombieGlow 3.5s ease-in-out infinite;
+          }
+          /* ── Zombie fog layers ── */
+          @keyframes zombieFogDrift1 {
+            0%   { transform: translate(0%,    0%); }
+            25%  { transform: translate(7%,   -5%); }
+            50%  { transform: translate(3%,    8%); }
+            75%  { transform: translate(-6%,   4%); }
+            100% { transform: translate(0%,    0%); }
+          }
+          @keyframes zombieFogDrift2 {
+            0%   { transform: translate(0%,    0%); }
+            33%  { transform: translate(-9%,   6%); }
+            66%  { transform: translate(6%,   -8%); }
+            100% { transform: translate(0%,    0%); }
+          }
+          @keyframes zombieFogDrift3 {
+            0%   { transform: translate(0%,    0%); }
+            50%  { transform: translate(5%,    7%); }
+            100% { transform: translate(0%,    0%); }
+          }
+          .zombie-fog-1 {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              radial-gradient(ellipse 70% 50% at 20% 30%, #1a2e0a88 0%, transparent 70%),
+              radial-gradient(ellipse 50% 60% at 80% 70%, #0d1a0577 0%, transparent 70%),
+              radial-gradient(ellipse 80% 40% at 50% 90%, #9ae60020 0%, transparent 60%);
+            animation: zombieFogDrift1 28s ease-in-out infinite;
+          }
+          .zombie-fog-2 {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              radial-gradient(ellipse 60% 70% at 72% 18%, #9ae60016 0%, transparent 65%),
+              radial-gradient(ellipse 45% 55% at 10% 78%, #1a2e0a66 0%, transparent 70%),
+              radial-gradient(ellipse 90% 35% at 38% 52%, #0d1a0544 0%, transparent 60%);
+            animation: zombieFogDrift2 35s ease-in-out infinite;
+          }
+          .zombie-fog-3 {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              radial-gradient(ellipse 55% 80% at 85% 42%, #9ae60012 0%, transparent 68%),
+              radial-gradient(ellipse 75% 45% at 14% 58%, #1a2e0a55 0%, transparent 65%);
+            animation: zombieFogDrift3 44s ease-in-out infinite;
+          }
+          .zombie-bg-pulse {
+            position:fixed;
+            inset:0;
+            pointer-events:none;
+            z-index:0;
+            opacity:0.35;
+            background-image:
+              linear-gradient(0deg, #9ae60038 1px, transparent 1px),
+              linear-gradient(90deg, #9ae60038 1px, transparent 1px);
+            background-size:48px 48px;
+          }
+          @keyframes zombieMeshSweep {
+            0%   { transform: rotate(20deg) translateX(-160%); }
+            100% { transform: rotate(20deg) translateX(160%); }
+          }
+          .zombie-mesh-sweep {
+            position:fixed;
+            top:-50%;
+            left:0;
+            width:100%;
+            height:200%;
+            pointer-events:none;
+            z-index:0;
+            background: linear-gradient(
+              90deg,
+              transparent 0%,
+              transparent 42%,
+              #9ae60008 46%,
+              #9ae60055 49%,
+              #9ae600bb 50%,
+              #9ae60055 51%,
+              #9ae60008 54%,
+              transparent 58%,
+              transparent 100%
+            );
+            animation: zombieMeshSweep 7s ease-in-out infinite;
+          }
+        `}</style>
+      )}
+      {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-fog-1" />}
+      {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-fog-2" />}
+      {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-fog-3" />}
+      {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-bg-pulse" />}
+      {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-mesh-sweep" />}
+      {/* Cyberpunk theme animations */}
+      {isCyberpunkTheme && (
+        <style>{`
+          @keyframes cyberBorderGlow {
+            0%,100% { box-shadow:0 0 12px #00d3f266, 0 0 32px #00d3f222; border-color:#00b8db; }
+            50%      { box-shadow:0 0 14px #e12afb77, 0 0 36px #e12afb22; border-color:#e12afb; }
+          }
+          .cyber-stats-card {
+            position:relative;
+            animation: cyberBorderGlow 4s ease-in-out infinite;
+          }
+          .cyber-stats-card::before,.cyber-stats-card::after {
+            content:'';
+            position:absolute;
+            width:10px;
+            height:10px;
+            pointer-events:none;
+          }
+          .cyber-stats-card::before { top:-1px; left:-1px; border-top:1.667px solid #ffffff88; border-left:1.667px solid #ffffff88; }
+          .cyber-stats-card::after  { bottom:-1px; right:-1px; border-bottom:1.667px solid #ffffff88; border-right:1.667px solid #ffffff88; }
+          /* ── Diamond mesh base ── */
+          @keyframes cyberNodePulse {
+            0%,100% { opacity:0.18; transform:scale(1); }
+            50%      { opacity:0.32; transform:scale(1.012); }
+          }
+          .cyber-bg-mesh {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background-image:
+              radial-gradient(circle, #00d3f228 1.5px, transparent 1.5px),
+              linear-gradient(45deg,  #00b8db1a 1px, transparent 1px),
+              linear-gradient(-45deg, #e12afb14 1px, transparent 1px);
+            background-size:48px 48px, 48px 48px, 48px 48px;
+            animation: cyberNodePulse 4s ease-in-out infinite;
+          }
+          /* ── Diagonal scan sweep (cyan→magenta) ── */
+          @keyframes cyberScanSweep {
+            0%   { transform: rotate(15deg) translateX(-160%); }
+            100% { transform: rotate(15deg) translateX(160%); }
+          }
+          .cyber-scan-sweep {
+            position:fixed; top:-50%; left:0; width:100%; height:200%;
+            pointer-events:none; z-index:0;
+            background: linear-gradient(
+              90deg,
+              transparent 0%, transparent 44%,
+              #00d3f206 46%, #00d3f255 48%,
+              #e12afbcc 50%,
+              #00d3f255 52%, #00d3f206 54%,
+              transparent 56%, transparent 100%
+            );
+            animation: cyberScanSweep 9s linear infinite;
+          }
+          /* ── Glitch scanlines base ── */
+          .cyber-scanlines {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background: repeating-linear-gradient(
+              0deg,
+              transparent,
+              transparent 3px,
+              rgba(0,0,0,0.18) 3px,
+              rgba(0,0,0,0.18) 4px
+            );
+          }
+          /* ── RGB chromatic-aberration channels ── */
+          @keyframes cyberRGBR {
+            0%,79%  { transform:translate(0,0); opacity:0; }
+            80%     { transform:translate(7px,0); opacity:0.45; }
+            81%     { transform:translate(-4px,1px); opacity:0.3; }
+            82%     { transform:translate(0,0); opacity:0; }
+            91%     { transform:translate(5px,-1px); opacity:0.35; }
+            92%     { transform:translate(0,0); opacity:0; }
+            100%    { opacity:0; }
+          }
+          @keyframes cyberRGBB {
+            0%,79%  { transform:translate(0,0); opacity:0; }
+            80%     { transform:translate(-7px,0); opacity:0.45; }
+            81%     { transform:translate(4px,-1px); opacity:0.3; }
+            82%     { transform:translate(0,0); opacity:0; }
+            91%     { transform:translate(-5px,1px); opacity:0.35; }
+            92%     { transform:translate(0,0); opacity:0; }
+            100%    { opacity:0; }
+          }
+          .cyber-rgb-red {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              linear-gradient(180deg, transparent 15%, #ff004422 15.4%, transparent 15.8%),
+              linear-gradient(180deg, transparent 48%, #ff003318 48.5%, transparent 49%),
+              linear-gradient(180deg, transparent 72%, #ff005522 72.4%, transparent 72.8%);
+            mix-blend-mode: screen;
+            animation: cyberRGBR 8s step-start infinite;
+          }
+          .cyber-rgb-blue {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              linear-gradient(180deg, transparent 15%, #0055ff22 15.4%, transparent 15.8%),
+              linear-gradient(180deg, transparent 48%, #0033ff18 48.5%, transparent 49%),
+              linear-gradient(180deg, transparent 72%, #0077ff22 72.4%, transparent 72.8%);
+            mix-blend-mode: screen;
+            animation: cyberRGBB 8s step-start infinite;
+          }
+          /* ── Horizontal glitch tear lines ── */
+          @keyframes cyberGlitchTear {
+            0%,74%  { transform:translateX(0); opacity:0.55; }
+            75%     { transform:translateX(-12px); opacity:0.8; }
+            75.5%   { transform:translateX(9px);  opacity:0.7; }
+            76%     { transform:translateX(-6px);  opacity:0.6; }
+            76.5%   { transform:translateX(0);     opacity:0.55; }
+            88%     { transform:translateX(0);     opacity:0.55; }
+            88.5%   { transform:translateX(16px);  opacity:0.9; }
+            89%     { transform:translateX(-8px);  opacity:0.7; }
+            89.5%   { transform:translateX(4px);   opacity:0.6; }
+            90%     { transform:translateX(0);     opacity:0.55; }
+            100%    { transform:translateX(0);     opacity:0.55; }
+          }
+          .cyber-glitch-lines {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              linear-gradient(180deg, transparent 22%,   #00d3f214 22.25%, transparent 22.5%),
+              linear-gradient(180deg, transparent 41%,   #e12afb11 41.3%,  transparent 41.6%),
+              linear-gradient(180deg, transparent 63%,   #00d3f212 63.2%,  transparent 63.4%),
+              linear-gradient(180deg, transparent 85.5%, #e12afb14 85.8%,  transparent 86.1%);
+            animation: cyberGlitchTear 7s step-start infinite;
+          }
+          /* ── Digital interference noise ── */
+          @keyframes cyberInterference {
+            0%   { opacity:0.06; background-position: 0 0; }
+            25%  { opacity:0.09; background-position: 3px -2px; }
+            50%  { opacity:0.06; background-position: -2px 4px; }
+            75%  { opacity:0.08; background-position: 4px 1px; }
+            100% { opacity:0.06; background-position: 0 0; }
+          }
+          .cyber-interference {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background-image:
+              repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,211,242,0.08) 1px, rgba(0,211,242,0.08) 2px),
+              repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(225,42,251,0.05) 1px, rgba(225,42,251,0.05) 2px);
+            background-size: 4px 4px, 4px 4px;
+            animation: cyberInterference 0.15s step-start infinite;
+          }
+          .cyber-gradient-text {
+            background: linear-gradient(270deg, #00d3f2 0%, #e12afb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+          }
+          .cyber-platform-section span {
+            background: linear-gradient(270deg, #00d3f2 0%, #e12afb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+          }
+          @keyframes cyberIconColorCycle {
+            0%,100% { color: #00d3f2; filter: drop-shadow(0 0 3px #00d3f277); }
+            50%      { color: #e12afb; filter: drop-shadow(0 0 3px #e12afb77); }
+          }
+          .cyber-platform-section svg {
+            animation: cyberIconColorCycle 4s ease-in-out infinite;
+          }
+          @keyframes cyberTabGlow {
+            0%,100% { box-shadow:0 0 8px #00d3f244, inset 0 0 8px #00d3f211; border-color:#00b8db88; }
+            50%      { box-shadow:0 0 14px #e12afb55, inset 0 0 10px #e12afb11; border-color:#e12afb88; }
+          }
+          .cyber-tab-list {
+            background: #020617 !important;
+            border: 1px solid #00b8db88 !important;
+            border-radius: 4px !important;
+            animation: cyberTabGlow 4s ease-in-out infinite;
+            clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+          }
+        `}</style>
+      )}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-bg-mesh" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-scan-sweep" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-scanlines" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-rgb-red" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-rgb-blue" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-glitch-lines" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-interference" />}
+      {/* NEO / Matrix theme */}
+      {isNeoTheme && (
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+          @keyframes neoGlow {
+            0%,100% { box-shadow: 0 0 8px #00ff4144, 0 0 24px #00ff4111; border-color: #00ff4188; }
+            50%      { box-shadow: 0 0 16px #00ff4177, 0 0 40px #00ff4122; border-color: #00ff41cc; }
+          }
+          @keyframes neoScanline {
+            0%   { transform: translateY(-100%); }
+            100% { transform: translateY(100vh); }
+          }
+          @keyframes neoFlicker {
+            0%,100% { opacity: 1; }
+            92%     { opacity: 1; }
+            93%     { opacity: 0.85; }
+            94%     { opacity: 1; }
+            96%     { opacity: 0.9; }
+            97%     { opacity: 1; }
+          }
+          .neo-canvas {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            opacity: 0.18;
+            animation: neoFlicker 8s step-start infinite;
+          }
+          .neo-vignette {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background: radial-gradient(ellipse 85% 85% at 50% 50%, transparent 55%, rgba(0,0,0,0.72) 100%);
+          }
+          .neo-scanline {
+            position: fixed; left: 0; width: 100%; height: 2px; pointer-events: none; z-index: 0;
+            background: linear-gradient(180deg, transparent 0%, #00ff4122 50%, transparent 100%);
+            animation: neoScanline 6s linear infinite;
+          }
+          .neo-stats-card {
+            animation: neoGlow 3s ease-in-out infinite;
+          }
+          .neo-tab-list {
+            background: #000800 !important;
+            border: 1px solid #00ff4177 !important;
+            border-radius: 2px !important;
+            animation: neoGlow 3s ease-in-out infinite;
+          }
+          .neo-gradient-text {
+            background: linear-gradient(90deg, #00ff41 0%, #88ffaa 50%, #00ff41 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: neoTextShift 4s linear infinite;
+          }
+          @keyframes neoTextShift {
+            0%   { background-position: 0% center; }
+            100% { background-position: 200% center; }
+          }
+          .neo-platform-section span {
+            color: #00ff41;
+          }
+          .neo-platform-section svg {
+            color: #00ff41;
+            filter: drop-shadow(0 0 4px #00ff4188);
+          }
+        `}</style>
+      )}
       {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">
         <React.Suspense fallback={null}>
@@ -1589,6 +2042,7 @@ const ProfilePage = () => {
                 variant="ghost"
                 size="sm"
                 className="p-2 h-10 w-10 rounded-full hover:bg-primary/10 bg-background/80 backdrop-blur-sm"
+                style={isLightBackground ? { color: accentColor, background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
               >
                 <Share2 className="w-5 h-5" />
               </Button>
@@ -1662,9 +2116,8 @@ const ProfilePage = () => {
                     style={{
                       width: '120px',
                       height: '28px',
-                      background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
-                      border: '1px solid rgba(148, 163, 184, 0.2)',
-                      boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
+                      ...nameTagBgStyle,
+                      ...(isLightBackground ? {} : { boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)' })
                     }}
                   />
                   <img 
@@ -1684,7 +2137,10 @@ const ProfilePage = () => {
                     }}
                   />
                 </div>
-                <span className="text-[10px] text-white/40 mt-1 uppercase tracking-widest hover:text-white/60 transition-colors">Nametag</span>
+                <span
+                  className="text-[10px] mt-1 uppercase tracking-widest transition-colors"
+                  style={isCyberpunkTheme ? { background: 'linear-gradient(270deg,#00d3f2,#e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontFamily: "'Orbitron', sans-serif", letterSpacing: '1.4px' } : { color: 'rgba(255,255,255,0.4)' }}
+                >Nametag</span>
               </div>
             </div>
           )}
@@ -1766,7 +2222,10 @@ const ProfilePage = () => {
                       }}
                     />
                   </div>
-                  <span className="text-[10px] text-white/40 mt-1 uppercase tracking-widest hover:text-white/60 transition-colors">Nametag</span>
+                  <span
+                    className="text-[10px] mt-1 uppercase tracking-widest transition-colors"
+                    style={isCyberpunkTheme ? { background: 'linear-gradient(270deg,#00d3f2,#e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontFamily: "'Orbitron', sans-serif", letterSpacing: '1.4px' } : { color: 'rgba(255,255,255,0.4)' }}
+                  >Nametag</span>
                 </div>
               )}
             </div>
@@ -1776,7 +2235,7 @@ const ProfilePage = () => {
           {/* Username and Display Name - Left aligned on Mobile */}
           <div className="flex flex-col items-start gap-0.5 mb-2 mt-8 pl-4">
             <div className="flex items-center gap-2">
-              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, color: profileFontColor, fontSize: `${1.25 * profileFontScale}rem`, lineHeight: `${1.75 * profileFontScale}rem` }}>{profile.displayName}</h1>
+              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, color: isLightBackground ? accentColor : profileFontColor, fontSize: `${1.25 * profileFontScale}rem`, lineHeight: `${1.75 * profileFontScale}rem` }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
@@ -1789,7 +2248,7 @@ const ProfilePage = () => {
                 size="lg" 
               />
             </div>
-            <span className="text-sm text-white/60 font-normal">@{profile.username}</span>
+            <span className="text-sm font-normal" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.6)' }}>@{profile.username}</span>
             {/* User type badges on their own line */}
             {profile.userType && profile.showUserType !== false && (
               <div className="flex items-center gap-2 flex-wrap mt-3 mb-2">
@@ -1805,14 +2264,19 @@ const ProfilePage = () => {
                       <Badge 
                         key={`${type}-${index}`}
                         variant="outline" 
-                        className="border text-xs font-medium px-2 py-0.5"
-                        style={{
-                          backgroundColor: `${accentColor}20`,
-                          color: accentColor,
-                          borderColor: `${accentColor}50`,
+                        className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px]"
+                        style={isLightBackground ? {
+                          backgroundColor: 'rgba(255,255,255,0.6)',
+                          color: '#ff2056',
+                          border: '0.556px solid #fda5d5',
+                          boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+                        } : {
+                          backgroundColor: `${accentColor || '#00bba7'}1a`,
+                          color: accentColor || '#00d5be',
+                          borderColor: `${accentColor || '#00bba7'}66`,
                         }}
                       >
-                        <IconComponent className="w-3 h-3 mr-1" />
+                        <IconComponent className="w-3 h-3 mr-1.5" />
                         {config.label}
                       </Badge>
                     );
@@ -1822,6 +2286,34 @@ const ProfilePage = () => {
             )}
           </div>
 
+          {/* Bio — below the streamer badge, outside the card */}
+          {profile.bio && (
+            <div className="mx-4 mt-2 mb-1">
+              <p className={`text-sm pr-4 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>{profile.bio}</p>
+            </div>
+          )}
+
+          {/* Profile Info Card — stats only, Collection button on top-right border */}
+          <div className="relative mx-4 mt-2 mb-1">
+            {/* Collection button pinned to top-right border of the card */}
+            <button 
+              onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
+              className="absolute -top-3 -right-1 z-10 px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
+              style={{ 
+                background: profileSectionTab === 'collection'
+                  ? (isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : '#1a1a2e')
+                  : isLightBackground
+                    ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
+                    : isZombieTheme
+                      ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
+                      : isCyberpunkTheme
+                        ? 'rgba(2,6,23,0.9)'
+                        : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : '#0f172b',
+                border: isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : undefined,
+                fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined,
+                letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : undefined,
+                fontWeight: isCyberpunkTheme ? '900' : undefined,
           {/* L-shaped fading border container for profile info */}
           <div
             className="relative mt-4 mb-1 mx-4 rounded-lg transition-all duration-300"
@@ -1844,44 +2336,44 @@ const ProfilePage = () => {
                 background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, transparent 100%)`,
               }}
             >
-              {/* Collection button at the end of top line */}
-              <button 
-                onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-                className="px-3 py-1 text-xs font-semibold rounded-full hover:opacity-90 hover:scale-105 transition-all"
-                style={{ 
-                  position: 'absolute',
-                  top: '-12px',
-                  right: '0px',
-                  background: profileSectionTab === 'collection'
-                    ? '#1a1a2e'
-                    : 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
-                  color: profileSectionTab === 'collection' ? '#ffffff' : '#1f2937',
-                  border: '2px solid transparent',
-                  backgroundClip: 'padding-box',
-                }}
-              >
-                <span 
-                  className="absolute inset-0 rounded-full pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
-                    padding: '2px',
-                    mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                    maskComposite: 'xor',
-                    WebkitMaskComposite: 'xor',
-                    opacity: profileSectionTab === 'collection' ? 1 : 0,
-                  }}
-                />
-                Collection
-              </button>
-            </div>
-            
-            {/* Left vertical line - fades downward */}
+              <span className={isCyberpunkTheme ? 'cyber-gradient-text' : ''}>Collection</span>
+            </button>
+
             <div 
-              className="absolute top-3 -left-4 w-[2px]"
-              style={{
-                height: 'calc(100% - 12px)',
-                background: `linear-gradient(180deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, transparent 100%)`,
+              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''}`}
+              style={isLightBackground ? {
+                background: 'rgba(255,255,255,0.37)',
+                border: '0.556px solid rgba(255,255,255,0.8)',
+                boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+              } : isZombieTheme ? {
+                background: '#1a1d1a',
+                border: '1.667px solid #7ccf00',
+                boxShadow: '0 0 18px #9ae60055, 0 0 40px #9ae60022',
+              } : isCyberpunkTheme ? {
+                background: '#020617',
+                border: '1px solid #00b8db',
+              } : {
+                background: `${accentColor || '#00bba7'}0d`,
+                border: `1px solid ${accentColor || '#00bba7'}33`,
               }}
+            >
+              <div className="p-4">
+                {profileSectionTab === 'stats' ? (
+                  <div className="flex gap-6 mt-1">
+                    <div className="flex flex-col gap-1">
+                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>UPLOADS</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined }}>{Number(profile._count?.followers || 0)}</span>
+                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWERS</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined }}>{Number(profile._count?.following || 0)}</span>
+                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWING</span>
+                    </div>
+                  </div>
+                ) : (
             />
 
             {/* Content */}
@@ -1925,11 +2417,98 @@ const ProfilePage = () => {
                       {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
                     </span>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
 
+          {/* Platform tags and Social Links — below the stats card */}
+          {profileSectionTab === 'stats' && <div className={`flex flex-wrap gap-1.5 mb-4 mt-2 pl-4 pr-8 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''}`}>
+            {profile.steamUsername && (
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
+                <SiSteam className="w-2.5 h-2.5" />
+                <span>{profile.steamUsername}</span>
+              </div>
+            )}
+            {profile.nintendoUsername && (
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
+                <SiNintendo className="w-2.5 h-2.5" />
+                <span>{profile.nintendoUsername}</span>
+              </div>
+            )}
+            {profile.xboxUsername && (
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
+                <FaXbox className="w-2.5 h-2.5" />
+                <span>{profile.xboxUsername}</span>
+              </div>
+            )}
+            {profile.playstationUsername && (
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
+                <SiPlaystation className="w-2.5 h-2.5" />
+                <span>{profile.playstationUsername}</span>
+              </div>
+            )}
+            {profile.epicUsername && (
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
+                <SiEpicgames className="w-2.5 h-2.5" />
+                <span>{profile.epicUsername}</span>
+              </div>
+            )}
+            {profile.discordUsername && (
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
+                <SiDiscord className="w-2.5 h-2.5" />
+                <span>{profile.discordUsername}</span>
+              </div>
+            )}
+            {profile.twitterUsername && (
+              <a 
+                href={`https://twitter.com/${profile.twitterUsername}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
+                style={platformBtnStyle}
+              >
+                <FaXTwitter className="w-2.5 h-2.5" />
+                <span>{profile.twitterUsername}</span>
+              </a>
+            )}
+            {profile.youtubeUsername && (
+              <a 
+                href={`https://youtube.com/@${profile.youtubeUsername}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
+                style={platformBtnStyle}
+              >
+                <FaYoutube className="w-2.5 h-2.5" />
+                <span>{profile.youtubeUsername}</span>
+              </a>
+            )}
+            {profile.instagramUsername && (
+              <a 
+                href={`https://instagram.com/${profile.instagramUsername}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
+                style={platformBtnStyle}
+              >
+                <FaInstagram className="w-2.5 h-2.5" />
+                <span>{profile.instagramUsername}</span>
+              </a>
+            )}
+            {profile.facebookUsername && (
+              <a 
+                href={`https://facebook.com/${profile.facebookUsername}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
+                style={platformBtnStyle}
+              >
+                <FaFacebook className="w-2.5 h-2.5" />
+                <span>{profile.facebookUsername}</span>
+              </a>
+            )}
+          </div>}
           {/* Bio - rendered outside the L-shaped container so it never overlaps */}
           {profileSectionTab === 'stats' && profile.bio && (
             <p className="text-sm text-foreground/90 mt-4 mb-3 px-4 break-words">{profile.bio}</p>
@@ -2080,7 +2659,7 @@ const ProfilePage = () => {
 
             {/* Display Name and Badges */}
             <div className="flex items-center gap-2 flex-wrap mt-8">
-              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, color: profileFontColor, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.displayName}</h1>
+              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, color: isLightBackground ? accentColor : profileFontColor, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
@@ -2104,14 +2683,19 @@ const ProfilePage = () => {
                     <Badge 
                       key={`${type}-${index}`}
                       variant="outline" 
-                      className="border text-xs font-medium px-2 py-0.5"
-                      style={{
-                        backgroundColor: `${accentColor}20`,
-                        color: accentColor,
-                        borderColor: `${accentColor}50`,
+                      className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px]"
+                      style={isLightBackground ? {
+                        backgroundColor: 'rgba(255,255,255,0.6)',
+                        color: '#ff2056',
+                        border: '0.556px solid #fda5d5',
+                        boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+                      } : {
+                        backgroundColor: `${accentColor || '#00bba7'}1a`,
+                        color: accentColor || '#00d5be',
+                        borderColor: `${accentColor || '#00bba7'}66`,
                       }}
                     >
-                      <IconComponent className="w-3 h-3 mr-1" />
+                      <IconComponent className="w-3 h-3 mr-1.5" />
                       {config.label}
                     </Badge>
                   );
@@ -2120,8 +2704,34 @@ const ProfilePage = () => {
             </div>
 
             {/* Username */}
-            <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
+            <span className="text-base font-normal mt-1" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.7)' }}>@{profile.username}</span>
 
+            {/* Bio — below the streamer badge, outside the card */}
+            {profile.bio && (
+              <p className={`text-sm max-w-md mt-2 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>{profile.bio}</p>
+            )}
+
+            {/* Profile Info Card — stats only, Collection button on top-right border */}
+            <div className="relative mt-4 max-w-xl">
+              {/* Collection button pinned to top-right border */}
+              <button 
+                onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
+                className="absolute -top-3 -right-1 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
+                style={{ 
+                  background: profileSectionTab === 'collection'
+                    ? (isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : '#1a1a2e')
+                    : isLightBackground
+                      ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
+                      : isZombieTheme
+                        ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
+                        : isCyberpunkTheme
+                          ? 'rgba(2,6,23,0.9)'
+                          : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                  color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : '#0f172b',
+                  border: isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : undefined,
+                  fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined,
+                  letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : undefined,
+                  fontWeight: isCyberpunkTheme ? '900' : undefined,
             {/* L-shaped fading border with curved corner and button */}
             <div
               className="relative mt-4 rounded-lg transition-all duration-300"
@@ -2152,45 +2762,44 @@ const ProfilePage = () => {
                   boxShadow: `0 0 12px 2px ${accentColor || 'hsl(var(--primary))'}50, 0 2px 8px ${accentColor || 'hsl(var(--primary))'}30`,
                 }}
               >
-                {/* Collection button at the end of top line */}
-                <button 
-                  onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-                  className="px-4 py-1.5 text-sm font-semibold rounded-full hover:opacity-90 hover:scale-105"
-                  style={{ 
-                    position: 'absolute',
-                    top: '-14px',
-                    right: '0px',
-                    background: profileSectionTab === 'collection'
-                      ? '#1a1a2e'
-                      : 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
-                    color: profileSectionTab === 'collection' ? '#ffffff' : '#1f2937',
-                    border: '2px solid transparent',
-                    backgroundClip: 'padding-box',
-                  }}
-                >
-                  <span 
-                    className="absolute inset-0 rounded-full pointer-events-none"
-                    style={{
-                      background: 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
-                      padding: '2px',
-                      mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                      maskComposite: 'xor',
-                      WebkitMaskComposite: 'xor',
-                      opacity: profileSectionTab === 'collection' ? 1 : 0,
-                    }}
-                  />
-                  Collection
-                </button>
-              </div>
-              
-              {/* Left vertical line - starts after curved corner with inner glow */}
+                <span className={isCyberpunkTheme ? 'cyber-gradient-text' : ''}>Collection</span>
+              </button>
+
               <div 
-                className="absolute top-4 left-0 w-[2px]"
-                style={{
-                  height: '120px',
-                  background: `linear-gradient(180deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 50%, transparent 100%)`,
-                  boxShadow: `0 0 12px 2px ${accentColor || 'hsl(var(--primary))'}50, 2px 0 8px ${accentColor || 'hsl(var(--primary))'}30`,
+                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''}`}
+                style={isLightBackground ? {
+                  background: 'rgba(255,255,255,0.37)',
+                  border: '0.556px solid rgba(255,255,255,0.8)',
+                  boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+                } : isZombieTheme ? {
+                  background: '#1a1d1a',
+                  border: '1.667px solid #7ccf00',
+                  boxShadow: '0 0 18px #9ae60055, 0 0 40px #9ae60022',
+                } : isCyberpunkTheme ? {
+                  background: '#020617',
+                  border: '1px solid #00b8db',
+                } : {
+                  background: `${accentColor || '#00bba7'}0d`,
+                  border: `1px solid ${accentColor || '#00bba7'}33`,
                 }}
+              >
+                <div className="p-5">
+                  {profileSectionTab === 'stats' ? (
+                    <div className="flex gap-8 items-center">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Uploads</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined }}>{Number(profile._count?.followers || 0)}</span>
+                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Followers</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined }}>{Number(profile._count?.following || 0)}</span>
+                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Following</span>
+                      </div>
+                    </div>
+                  ) : (
               />
               
               {/* Content aligned with username above */}
@@ -2238,102 +2847,93 @@ const ProfilePage = () => {
                         {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
                       </span>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Platform Connections - hidden when collection tab is active */}
+            {/* Platform Connections — below the stats card */}
             {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
-              <div className="flex flex-wrap gap-2 mt-4">
+              <div className={`flex flex-wrap gap-2 mt-4 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''}`}>
                 {profile.steamUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#1B2838', color: '#FFFFFF' }}>
-                      <SiSteam className="w-3 h-3" />
-                      <span>{profile.steamUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.xboxUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#107C10', color: '#FFFFFF' }}>
-                      <FaXbox className="w-3 h-3" />
-                      <span>{profile.xboxUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.playstationUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#003087', color: '#FFFFFF' }}>
-                      <SiPlaystation className="w-3 h-3" />
-                      <span>{profile.playstationUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.discordUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#5865F2', color: '#FFFFFF' }}>
-                      <SiDiscord className="w-3 h-3" />
-                      <span>{profile.discordUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.epicUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#000000', color: '#FFFFFF' }}>
-                      <SiEpicgames className="w-3 h-3" />
-                      <span>{profile.epicUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.nintendoUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#E60012', color: '#FFFFFF' }}>
-                      <SiNintendo className="w-3 h-3" />
-                      <span>{profile.nintendoUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.twitterUsername && (
-                    <a 
-                      href={`https://twitter.com/${profile.twitterUsername}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                      style={{ backgroundColor: '#1DA1F2', color: '#FFFFFF' }}
-                    >
-                      <FaXTwitter className="w-3 h-3" />
-                      <span>{profile.twitterUsername}</span>
-                    </a>
-                  )}
-
-                  {profile.youtubeUsername && (
-                    <a 
-                      href={`https://youtube.com/@${profile.youtubeUsername}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                      style={{ backgroundColor: '#FF0000', color: '#FFFFFF' }}
-                    >
-                      <FaYoutube className="w-3 h-3" />
-                      <span>{profile.youtubeUsername}</span>
-                    </a>
-                  )}
-
-                  {profile.instagramUsername && (
-                    <a 
-                      href={`https://instagram.com/${profile.instagramUsername}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                      style={{ backgroundColor: '#E4405F', color: '#FFFFFF' }}
-                    >
-                      <FaInstagram className="w-3 h-3" />
-                      <span>{profile.instagramUsername}</span>
-                    </a>
-                  )}
-
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                    <SiSteam className="w-3 h-3" />
+                    <span>{profile.steamUsername}</span>
+                  </div>
+                )}
+                {profile.xboxUsername && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                    <FaXbox className="w-3 h-3" />
+                    <span>{profile.xboxUsername}</span>
+                  </div>
+                )}
+                {profile.playstationUsername && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                    <SiPlaystation className="w-3 h-3" />
+                    <span>{profile.playstationUsername}</span>
+                  </div>
+                )}
+                {profile.discordUsername && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                    <SiDiscord className="w-3 h-3" />
+                    <span>{profile.discordUsername}</span>
+                  </div>
+                )}
+                {profile.epicUsername && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                    <SiEpicgames className="w-3 h-3" />
+                    <span>{profile.epicUsername}</span>
+                  </div>
+                )}
+                {profile.nintendoUsername && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                    <SiNintendo className="w-3 h-3" />
+                    <span>{profile.nintendoUsername}</span>
+                  </div>
+                )}
+                {profile.twitterUsername && (
+                  <a 
+                    href={`https://twitter.com/${profile.twitterUsername}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
+                    style={platformBtnStyle}
+                  >
+                    <FaXTwitter className="w-3 h-3" />
+                    <span>{profile.twitterUsername}</span>
+                  </a>
+                )}
+                {profile.youtubeUsername && (
+                  <a 
+                    href={`https://youtube.com/@${profile.youtubeUsername}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
+                    style={platformBtnStyle}
+                  >
+                    <FaYoutube className="w-3 h-3" />
+                    <span>{profile.youtubeUsername}</span>
+                  </a>
+                )}
+                {profile.instagramUsername && (
+                  <a 
+                    href={`https://instagram.com/${profile.instagramUsername}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
+                    style={platformBtnStyle}
+                  >
+                    <FaInstagram className="w-3 h-3" />
+                    <span>{profile.instagramUsername}</span>
+                  </a>
+                )}
                 {profile.facebookUsername && (
                   <a 
                     href={`https://facebook.com/${profile.facebookUsername}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                    style={{ backgroundColor: '#1877F2', color: '#FFFFFF' }}
+                    style={platformBtnStyle}
                   >
                     <FaFacebook className="w-3 h-3" />
                     <span>{profile.facebookUsername}</span>
@@ -2341,6 +2941,7 @@ const ProfilePage = () => {
                 )}
               </div>
             )}
+
 
             {/* Name Tag - positioned absolutely below banner and follow/message buttons, only show if nameTag exists and imageUrl is valid */}
             {nameTagData?.nameTag && nameTagSignedUrl && (
@@ -2357,9 +2958,8 @@ const ProfilePage = () => {
                   style={{
                     width: '351px',
                     height: '109px',
-                    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
-                    border: '1px solid rgba(148, 163, 184, 0.2)',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+                    ...nameTagBgStyle,
+                    ...(isLightBackground ? {} : { boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' })
                   }}
                 >
                   <img 
@@ -2381,8 +2981,9 @@ const ProfilePage = () => {
                   />
                 </div>
                 <span 
-                  className="text-xs text-white/40 mt-3 uppercase tracking-widest cursor-pointer hover:text-white/60 transition-colors"
+                  className="text-xs mt-3 uppercase tracking-widest cursor-pointer transition-colors"
                   onClick={() => setNameTagPreviewOpen(true)}
+                  style={isCyberpunkTheme ? { background: 'linear-gradient(270deg,#00d3f2,#e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontFamily: "'Orbitron', sans-serif", letterSpacing: '1.4px' } : { color: 'rgba(255,255,255,0.4)' }}
                 >Nametag</span>
               </div>
             )}
@@ -2486,6 +3087,7 @@ const ProfilePage = () => {
                           variant="outline"
                           size="default"
                           className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20 px-4 py-3"
+                          style={isLightBackground ? { color: accentColor, background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
                         >
                           <Share2 className="h-5 w-5" />
                         </Button>
@@ -2533,6 +3135,7 @@ const ProfilePage = () => {
                           variant="outline"
                           size="sm"
                           className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
+                          style={isLightBackground ? { color: accentColor, background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
                         >
                           <Share2 className="h-4 w-4" />
                         </Button>
@@ -2549,16 +3152,51 @@ const ProfilePage = () => {
         <div className="h-0 md:h-[12px]"></div>
 
         {/* Enhanced Tabs section with rounded container style */}
-        <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-2 md:mt-8">
+        <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-2 md:mt-8 relative z-20">
         {profileSectionTab === 'collection' ? (
           <div className="w-full">
             <div 
-              className="w-full max-w-lg lg:max-w-full mx-auto justify-center rounded-full h-11 md:h-12 p-1 relative flex gap-0.5 bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg"
+              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
+              style={isZombieTheme ? { background: '#1a1d1a' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
             >
-              <div className="relative rounded-full h-9 md:h-10 flex-1 flex items-center justify-center px-3 md:px-5 text-sm font-semibold text-white !bg-primary gap-2">
-                <Hexagon className="w-4 h-4" />
-                NFTs
-                {profileNftData && <span className="text-xs opacity-80">({profileNftData.nfts.filter(n => !n.sold).length})</span>}
+              <div
+                className={`relative h-9 md:h-10 flex-1 flex items-center justify-center px-3 md:px-5 text-sm font-semibold gap-2 ${isCyberpunkTheme ? 'rounded-none' : 'rounded-full'}`}
+                style={isCyberpunkTheme ? {
+                  background: 'rgba(0,211,242,0.12)',
+                  borderBottom: '2px solid #00d3f2',
+                  color: 'transparent',
+                  fontFamily: "'Orbitron', sans-serif",
+                  letterSpacing: '2.5px',
+                  fontSize: '0.7rem',
+                  fontWeight: '900',
+                } : isZombieTheme ? {
+                  background: 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)',
+                  color: '#9ae600',
+                  fontFamily: "'Creepster', cursive",
+                  letterSpacing: '2px',
+                } : isNeoTheme ? {
+                  background: 'rgba(0,20,0,0.85)',
+                  borderBottom: '2px solid #00ff41',
+                  color: 'transparent',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  letterSpacing: '2px',
+                  fontSize: '0.72rem',
+                  fontWeight: '700',
+                } : isLightBackground ? {
+                  background: 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)',
+                  color: '#ffffff',
+                } : {
+                  background: `hsl(var(--primary))`,
+                  color: '#ffffff',
+                }}
+              >
+                <Hexagon className={`w-4 h-4 ${isCyberpunkTheme ? 'text-[#00d3f2]' : isZombieTheme ? 'text-[#9ae600]' : isNeoTheme ? 'text-[#00ff41]' : ''}`} />
+                <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>NFTs</span>
+                {profileNftData && (
+                  <span className={`text-xs opacity-80 ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>
+                    ({profileNftData.nfts.filter(n => !n.sold).length})
+                  </span>
+                )}
               </div>
             </div>
             <div className="pt-4 px-1 md:px-4">
@@ -2625,17 +3263,19 @@ const ProfilePage = () => {
             const showLimits = isOwnProfile && !currentUser?.isPro;
             return (
           <TabsList 
-            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center rounded-full p-1 relative flex gap-0.5 bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
+            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
+            style={tabListStyle}
           >
             <TabsTrigger 
               ref={clipsTabRef}
               value="clips" 
-              className={`relative rounded-full transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'clips' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={getTabStyle('clips')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span>Clips</span>
+                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>Clips</span>
                 {showLimits && (
-                  <span className={`text-[10px] font-normal ${clipsCount >= 15 ? 'text-red-400' : activeTab === 'clips' ? 'text-white/70' : 'text-gray-500'}`}>
+                  <span className={`text-[10px] font-normal ${clipsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: clipsCount >= 15 ? undefined : activeTab === 'clips' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {clipsCount}/15
                   </span>
                 )}
@@ -2645,12 +3285,13 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={reelsTabRef}
               value="reels" 
-              className={`relative rounded-full transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'reels' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={getTabStyle('reels')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span>Reels</span>
+                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>Reels</span>
                 {showLimits && (
-                  <span className={`text-[10px] font-normal ${reelsCount >= 15 ? 'text-red-400' : activeTab === 'reels' ? 'text-white/70' : 'text-gray-500'}`}>
+                  <span className={`text-[10px] font-normal ${reelsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: reelsCount >= 15 ? undefined : activeTab === 'reels' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {reelsCount}/15
                   </span>
                 )}
@@ -2660,12 +3301,13 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={screenshotsTabRef}
               value="screenshots" 
-              className={`relative rounded-full transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'screenshots' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+              className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={getTabStyle('screenshots')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span>Screenshots</span>
+                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>Screenshots</span>
                 {showLimits && (
-                  <span className={`text-[10px] font-normal ${screenshotsCount >= 10 ? 'text-red-400' : activeTab === 'screenshots' ? 'text-white/70' : 'text-gray-500'}`}>
+                  <span className={`text-[10px] font-normal ${screenshotsCount >= 10 ? 'text-red-400' : ''}`} style={{ color: screenshotsCount >= 10 ? undefined : activeTab === 'screenshots' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {screenshotsCount}/10
                   </span>
                 )}
@@ -2675,10 +3317,37 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={favoritesTabRef}
               value="favorites" 
-              className={`relative rounded-full transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'favorites' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={getTabStyle('favorites')}
             >
-              Favorites
+              <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>Favorites</span>
             </TabsTrigger>
+
+            {profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0 && (
+              <TabsTrigger
+                value="achievements"
+                className={`relative rounded-full transition-all duration-200 flex-1 px-2 md:px-4 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+                style={{ backgroundColor: activeTab === 'achievements' ? '#107C10' : 'transparent', color: activeTab === 'achievements' ? '#ffffff' : isLightBackground ? '#1d293d' : undefined }}
+              >
+                <span className="flex items-center gap-1.5">
+                  <FaXbox className="w-3 h-3 shrink-0" />
+                  <span className="hidden sm:inline">Achievements</span>
+                </span>
+              </TabsTrigger>
+            )}
+
+            {profile?.showPsnTrophies && Array.isArray(profile?.psnTrophyData) && profile.psnTrophyData.length > 0 && (
+              <TabsTrigger
+                value="trophies"
+                className={`relative rounded-full transition-all duration-200 flex-1 px-2 md:px-4 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+                style={{ backgroundColor: activeTab === 'trophies' ? '#003791' : 'transparent', color: activeTab === 'trophies' ? '#ffffff' : isLightBackground ? '#1d293d' : undefined }}
+              >
+                <span className="flex items-center gap-1.5">
+                  <FaPlaystation className="w-3 h-3 shrink-0" />
+                  <span className="hidden sm:inline">Trophies</span>
+                </span>
+              </TabsTrigger>
+            )}
           </TabsList>
             );
           })()}
@@ -3041,46 +3710,13 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : isLoadingScreenshots ? (
-              <div className="flex gap-5 overflow-hidden pb-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="flex-shrink-0 w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px]">
-                    <Skeleton className="aspect-video w-full rounded-xl" />
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <Skeleton key={i} className="aspect-video w-full rounded-xl" />
                 ))}
               </div>
             ) : screenshots && screenshots.length > 0 ? (
-              <div className="relative">
-                <button
-                  onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft -= 480; } }}
-                  className="absolute -left-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft += 480; } }}
-                  className="absolute -right-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
-                <div
-                  ref={screenshotsScrollRef}
-                  className={`flex gap-5 overflow-x-auto scrollbar-hide pb-4 select-none ${screenshotsDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-                  style={{ scrollBehavior: screenshotsDragging ? 'auto' : 'smooth' }}
-                  onMouseDown={(e) => {
-                    if (!screenshotsScrollRef.current) return;
-                    setScreenshotsDragging(true);
-                    setScreenshotsDragStart(e.clientX);
-                    setScreenshotsScrollStart(screenshotsScrollRef.current.scrollLeft);
-                    e.preventDefault();
-                  }}
-                  onMouseMove={(e) => {
-                    if (!screenshotsDragging || !screenshotsScrollRef.current) return;
-                    e.preventDefault();
-                    screenshotsScrollRef.current.scrollLeft = screenshotsScrollStart - (e.clientX - screenshotsDragStart);
-                  }}
-                  onMouseUp={() => setScreenshotsDragging(false)}
-                  onMouseLeave={() => setScreenshotsDragging(false)}
-                >
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {[...screenshots]
                     .sort((a, b) => {
                       if (a.pinnedAt && !b.pinnedAt) return -1;
@@ -3090,11 +3726,18 @@ const ProfilePage = () => {
                     .map((screenshot) => {
                     const isHighlighted = highlightedContent?.type === 'screenshot' && highlightedContent.id === screenshot.id.toString();
                     const isPinned = !!screenshot.pinnedAt;
+                    const isPendingGameApproval = isOwnProfile && screenshot.game?.isApproved === false;
                     return (
                       <div
                         key={`screenshot-${screenshot.id}`}
-                        className="flex-shrink-0 w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px] relative group"
+                        className="relative group"
                       >
+                        {isPendingGameApproval && (
+                          <div className="absolute bottom-1.5 left-1.5 z-10 flex items-center gap-1 bg-amber-500/90 text-white text-xs px-1.5 py-0.5 rounded">
+                            <Clock className="w-2.5 h-2.5 shrink-0" />
+                            <span>Pending approval</span>
+                          </div>
+                        )}
                         {isPinned && !isOwnProfile && (
                           <div className="absolute top-1.5 left-1.5 z-10 bg-primary/90 text-primary-foreground p-1 rounded-md">
                             <Pin className="w-2.5 h-2.5" />
@@ -3134,7 +3777,6 @@ const ProfilePage = () => {
                     );
                   })}
                 </div>
-              </div>
             ) : (
               <div className="py-12 text-center">
                 <h3 className="text-lg font-medium mb-2">No screenshots yet</h3>
@@ -3322,6 +3964,251 @@ const ProfilePage = () => {
             )}
           </TabsContent>
 
+          {/* Achievements Tab */}
+          {profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0 && (
+            <TabsContent value="achievements" className="pt-4 px-1 md:px-4">
+              {(() => {
+                const allGames = profile.xboxAchievements;
+                const visibleGames = allGames.slice(0, 10);
+                const totalEarned = (profile as any).xboxTotalAchievements
+                  ?? allGames.reduce((sum: number, g: any) => sum + (g.achievement?.currentAchievements ?? g.earnedAchievements ?? 0), 0);
+                const totalGS = (profile as any).xboxGamerscore
+                  ?? allGames.reduce((sum: number, g: any) => sum + (g.achievement?.currentGamerscore ?? g.currentGamerscore ?? 0), 0);
+
+                return (
+                  <div className="rounded-xl border border-[#107C10]/30 bg-[#107C10]/5 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-[#107C10]/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FaXbox className="w-4 h-4 text-[#107C10]" />
+                        <span className="text-sm font-semibold text-slate-200">Xbox Achievements</span>
+                        <span className="text-xs text-slate-400 ml-auto">
+                          10 most recent games
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <div className="flex items-center gap-1.5">
+                          <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                          <span className="text-xs text-slate-300">
+                            <span className="font-semibold text-slate-100">{totalEarned.toLocaleString()}</span>
+                            <span className="text-slate-400"> achievements</span>
+                          </span>
+                        </div>
+                        {totalGS > 0 && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-[#107C10]">G</span>
+                            <span className="text-xs text-slate-300">
+                              <span className="font-semibold text-slate-100">{totalGS.toLocaleString()}</span>
+                              <span className="text-slate-400"> gamerscore</span>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="divide-y divide-slate-700/40">
+                      {visibleGames.map((item: any, idx: number) => {
+                        const name = item.name || item.modernTitleId || item.titleId || `Game ${idx + 1}`;
+                        const rawImageUrl = item.displayImage || item.titleImageUrl || item.imageUrl || null;
+                        const imageUrl = rawImageUrl ? rawImageUrl.replace(/^http:\/\//, 'https://') : null;
+                        const earnedCount = item.achievement?.currentAchievements ?? item.earnedAchievements ?? null;
+                        const totalCount = item.achievement?.totalAchievements ?? item.totalAchievements ?? null;
+                        const gamerscore = item.achievement?.currentGamerscore ?? item.currentGamerscore ?? null;
+                        const maxGamerscore = item.achievement?.totalGamerscore ?? item.maxGamerscore ?? null;
+                        const pct = item.achievement?.progressPercentage != null
+                          ? Math.round(item.achievement.progressPercentage)
+                          : (earnedCount !== null && totalCount !== null && totalCount > 0
+                            ? Math.round((earnedCount / totalCount) * 100)
+                            : null);
+                        const lastPlayedRaw = item.titleHistory?.lastTimePlayed || item.lastUnlock || item.lastPlayed || null;
+                        const lastPlayed = lastPlayedRaw ? new Date(lastPlayedRaw) : null;
+                        const lastPlayedStr = lastPlayed && !isNaN(lastPlayed.getTime())
+                          ? lastPlayed.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                          : null;
+
+                        return (
+                          <div key={idx} className="flex items-center gap-4 px-4 py-3">
+                            {imageUrl ? (
+                              <img src={imageUrl} alt={name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0 bg-slate-900" />
+                            ) : (
+                              <div className="w-12 h-12 rounded-lg bg-slate-900 flex items-center justify-center flex-shrink-0">
+                                <Trophy className="w-5 h-5 text-amber-400" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-slate-200 truncate">{name}</span>
+                                {pct === 100 && (
+                                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#107C10]/20 text-[#107C10] flex-shrink-0">COMPLETE</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                                {earnedCount !== null && totalCount !== null && (
+                                  <span className="text-xs text-slate-400">
+                                    <span className="text-slate-200 font-medium">{earnedCount}</span> / {totalCount} achievements
+                                  </span>
+                                )}
+                                {gamerscore !== null && (
+                                  <span className="text-xs text-amber-400 font-medium">
+                                    {gamerscore.toLocaleString()}G
+                                  </span>
+                                )}
+                                {lastPlayedStr && (
+                                  <span className="text-xs text-slate-500">Last played {lastPlayedStr}</span>
+                                )}
+                              </div>
+                              {pct !== null && (
+                                <div className="mt-1.5 w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-[#107C10] rounded-full transition-all"
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            {pct !== null && (
+                              <div className="flex-shrink-0 text-right min-w-[2.5rem]">
+                                <span className="text-sm font-semibold text-slate-200">{pct}%</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+            </TabsContent>
+          )}
+
+          {/* Trophies Tab (PlayStation) */}
+          {profile?.showPsnTrophies && Array.isArray(profile?.psnTrophyData) && profile.psnTrophyData.length > 0 && (
+            <TabsContent value="trophies" className="pt-4 px-1 md:px-4">
+              {(() => {
+                const data = profile.psnTrophyData[0];
+                const earned = data?.earnedTrophies ?? {};
+                const recentGames: any[] = data?.recentGames ?? [];
+                const trophyLevel = (profile as any).psnTrophyLevel ?? data?.trophyLevel ?? null;
+                const totalTrophies = (profile as any).psnTotalTrophies ?? null;
+
+                return (
+                  <div className="rounded-xl border border-[#003791]/30 bg-[#003791]/5 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-[#003791]/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FaPlaystation className="w-4 h-4 text-[#003791]" />
+                        <span className="text-sm font-semibold text-slate-200">PlayStation Trophies</span>
+                        {recentGames.length > 0 && (
+                          <span className="text-xs text-slate-400 ml-auto">
+                            {recentGames.length} recent {recentGames.length === 1 ? 'game' : 'games'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 flex-wrap">
+                        {trophyLevel !== null && (
+                          <div className="flex items-center gap-1.5">
+                            <Trophy className="w-3.5 h-3.5 text-[#003791]" />
+                            <span className="text-xs text-slate-300">
+                              <span className="text-slate-400">Level </span>
+                              <span className="font-semibold text-slate-100">{trophyLevel}</span>
+                            </span>
+                          </div>
+                        )}
+                        {totalTrophies !== null && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-slate-300">
+                              <span className="font-semibold text-slate-100">{totalTrophies.toLocaleString()}</span>
+                              <span className="text-slate-400"> total trophies</span>
+                            </span>
+                          </div>
+                        )}
+                        {earned.platinum > 0 && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-bold text-[#b0b0d0]">🏆</span>
+                            <span className="text-xs text-slate-300">
+                              <span className="font-semibold text-slate-100">{earned.platinum}</span>
+                              <span className="text-slate-400"> plat</span>
+                            </span>
+                          </div>
+                        )}
+                        {earned.gold > 0 && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-slate-300">
+                              <span className="font-semibold text-amber-400">{earned.gold}</span>
+                              <span className="text-slate-400"> gold</span>
+                            </span>
+                          </div>
+                        )}
+                        {earned.silver > 0 && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-slate-300">
+                              <span className="font-semibold text-slate-300">{earned.silver}</span>
+                              <span className="text-slate-400"> silver</span>
+                            </span>
+                          </div>
+                        )}
+                        {earned.bronze > 0 && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-slate-300">
+                              <span className="font-semibold text-amber-700">{earned.bronze}</span>
+                              <span className="text-slate-400"> bronze</span>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {recentGames.length > 0 && (
+                      <div className="divide-y divide-slate-700/40">
+                        {recentGames.map((game: any, idx: number) => {
+                          const name = game.name || game.titleId || `Game ${idx + 1}`;
+                          const rawImageUrl = game.imageUrl || null;
+                          const imageUrl = rawImageUrl ? rawImageUrl.replace(/^http:\/\//, 'https://') : null;
+                          const lastPlayedRaw = game.lastPlayedDateTime || null;
+                          const lastPlayed = lastPlayedRaw ? new Date(lastPlayedRaw) : null;
+                          const lastPlayedStr = lastPlayed && !isNaN(lastPlayed.getTime())
+                            ? lastPlayed.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                            : null;
+                          const playCount = game.playCount ?? null;
+                          const category = game.category || null;
+                          const isPlatinum = false;
+
+                          return (
+                            <div key={idx} className="flex items-center gap-4 px-4 py-3">
+                              {imageUrl ? (
+                                <img src={imageUrl} alt={name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0 bg-slate-900" />
+                              ) : (
+                                <div className="w-12 h-12 rounded-lg bg-slate-900 flex items-center justify-center flex-shrink-0">
+                                  <FaPlaystation className="w-5 h-5 text-[#003791]" />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-slate-200 truncate">{name}</span>
+                                  {category && (
+                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#003791]/20 text-[#6699cc] flex-shrink-0">
+                                      {category === 'ps5_native_game' ? 'PS5' : category === 'ps4_game' ? 'PS4' : category.toUpperCase()}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                                  {playCount !== null && (
+                                    <span className="text-xs text-slate-400">
+                                      <span className="text-slate-300 font-medium">{playCount}</span> {playCount === 1 ? 'play' : 'plays'}
+                                    </span>
+                                  )}
+                                  {lastPlayedStr && (
+                                    <span className="text-xs text-slate-500">Last played {lastPlayedStr}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </TabsContent>
+          )}
+
           {/* About Tab */}
           <TabsContent value="about" className="pt-6">
             <div className="max-w-2xl">
@@ -3330,17 +4217,6 @@ const ProfilePage = () => {
                   <h3 className="text-lg font-medium mb-2">About {profile.displayName}</h3>
                   <p className="text-muted-foreground">
                     {profile.bio || `${profile.displayName} hasn't added a bio yet.`}
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium mb-2">Member Since</h3>
-                  <p className="text-muted-foreground">
-                    {new Date(profile.createdAt).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
                   </p>
                 </div>
 

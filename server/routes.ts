@@ -23,7 +23,7 @@ import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
 import { eq, sql } from "drizzle-orm";
 import { db } from "./db";
-import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars } from "@shared/schema";
+import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings } from "@shared/schema";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -1146,6 +1146,515 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Xbox OAuth token exchange route — exchanges auth code for Xbox Live profile
+  app.post("/api/auth/xbox/token", async (req, res) => {
+    try {
+      const { code, redirectUri } = req.body;
+
+      if (!code || !redirectUri) {
+        return res.status(400).json({ message: "Missing authorization code or redirect URI" });
+      }
+
+      const clientId = process.env.VITE_MICROSOFT_CLIENT_ID;
+      const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+
+      if (!clientId || !clientSecret) {
+        return res.status(500).json({ message: "Xbox authentication is not configured on the server" });
+      }
+
+      // Step 1: Exchange the Microsoft auth code for an access token using client secret
+      const tokenParams = new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      });
+
+      const msTokenResponse = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: tokenParams.toString(),
+      });
+
+      if (!msTokenResponse.ok) {
+        const errorText = await msTokenResponse.text().catch(() => 'Unknown');
+        console.error("Microsoft token exchange error:", msTokenResponse.status, errorText);
+        throw new Error('Failed to exchange authorization code with Microsoft');
+      }
+
+      const msTokenData = await msTokenResponse.json();
+      const accessToken = msTokenData.access_token;
+
+      // Step 2: Exchange Microsoft access token for an Xbox Live (XBL) user token
+      const xblResponse = await fetch('https://user.auth.xboxlive.com/user/authenticate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          Properties: {
+            AuthMethod: 'RPS',
+            SiteName: 'user.auth.xboxlive.com',
+            RpsTicket: `d=${accessToken}`,
+          },
+          RelyingParty: 'http://auth.xboxlive.com',
+          TokenType: 'JWT',
+        }),
+      });
+
+      if (!xblResponse.ok) {
+        const errorText = await xblResponse.text().catch(() => 'Unknown');
+        console.error("XBL token error:", xblResponse.status, errorText);
+        throw new Error('Failed to authenticate with Xbox Live');
+      }
+
+      const xblData = await xblResponse.json();
+      const xblToken = xblData.Token;
+
+      // Step 3: Exchange XBL token for an XSTS token (contains gamertag + XUID)
+      const xstsResponse = await fetch('https://xsts.auth.xboxlive.com/xsts/authorize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          Properties: {
+            SandboxId: 'RETAIL',
+            UserTokens: [xblToken],
+          },
+          RelyingParty: 'http://xboxlive.com',
+          TokenType: 'JWT',
+        }),
+      });
+
+      if (!xstsResponse.ok) {
+        const errorText = await xstsResponse.text().catch(() => 'Unknown');
+        console.error("XSTS token error:", xstsResponse.status, errorText);
+        throw new Error('Failed to get Xbox Secure Token');
+      }
+
+      const xstsData = await xstsResponse.json();
+      const claims = xstsData.DisplayClaims?.xui?.[0];
+
+      if (!claims) {
+        throw new Error('Could not retrieve Xbox profile information');
+      }
+
+      const xuid = claims.xid;
+      const gamertag = claims.gtg;
+      const gamerpic = claims.gpd || undefined;
+
+      if (!xuid || !gamertag) {
+        console.error("XSTS response missing required fields:", JSON.stringify(xstsData));
+        throw new Error('Could not retrieve Xbox gamertag or XUID');
+      }
+
+      res.status(200).json({ xuid, gamertag, gamerpic });
+
+    } catch (error) {
+      console.error("Xbox token exchange error:", error);
+      res.status(500).json({ message: "Failed to authenticate with Xbox" });
+    }
+  });
+
+  // Xbox authentication route — create or log in a user from their Xbox profile
+  app.post("/api/auth/xbox", async (req, res) => {
+    try {
+      const { xuid, gamertag, gamerpic } = req.body;
+
+      if (!xuid || !gamertag) {
+        return res.status(400).json({ message: "Missing required Xbox auth data" });
+      }
+
+      // Check if user already exists by their Xbox XUID
+      let user = await storage.getUserByExternalId?.(xuid, "xbox");
+
+      if (!user) {
+        // New user — create account from their Xbox profile
+        const timestamp = Date.now().toString().slice(-6);
+        const tempUsername = `temp_xbox_${xuid.substring(0, 8)}_${timestamp}`;
+        const avatarUrl = gamerpic || "/attached_assets/gamefolio social logo 3d circle web.png";
+
+        user = await storage.createUser({
+          username: tempUsername.toLowerCase(),
+          displayName: gamertag,
+          email: `${xuid}@xbox.placeholder`,
+          password: xuid, // Placeholder — Xbox users won't use password login
+          emailVerified: true,
+          avatarUrl,
+          bannerUrl: "/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg",
+          authProvider: "xbox",
+          externalId: xuid,
+          xboxUsername: gamertag,
+          xboxXuid: xuid,
+          userType: null,
+          ageRange: null
+        });
+
+        // Send new user notification to admin
+        try {
+          await EmailService.sendNewUserNotification({
+            username: user.username,
+            email: user.email,
+            displayName: user.displayName,
+            authProvider: 'xbox'
+          });
+        } catch (error) {
+          console.error('Failed to send new user notification:', error);
+        }
+
+        req.login(user as any, async (err) => {
+          if (err) {
+            console.error("Xbox login error:", err);
+            return res.status(500).json({ message: "Login failed" });
+          }
+
+          let streakInfo;
+          try {
+            streakInfo = await StreakService.updateLoginStreak(user!.id);
+          } catch (error) {
+            console.error("Error updating login streak:", error);
+          }
+
+          const updatedUser = await storage.getUserById(user!.id);
+          const userToReturn = updatedUser || user;
+
+          res.status(200).json({
+            ...userToReturn,
+            needsOnboarding: true,
+            isNewXboxUser: true,
+            ...(streakInfo && {
+              streakInfo: {
+                currentStreak: streakInfo.currentStreak,
+                bonusAwarded: streakInfo.bonusAwarded,
+                dailyXP: streakInfo.dailyXP,
+                longestStreak: userToReturn.longestStreak || 0,
+                nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
+                message: streakInfo.message,
+                isNewMilestone: streakInfo.isNewMilestone
+              }
+            })
+          });
+        });
+      } else {
+        // Existing user
+        const needsOnboarding = !user.userType || user.username.startsWith('temp_');
+
+        // Update gamertag / xuid / avatar if changed
+        const needsXboxUpdate = (gamertag && user.xboxUsername !== gamertag) || !user.xboxXuid;
+        if (needsXboxUpdate) {
+          user = await storage.updateUser(user.id, { xboxUsername: gamertag, xboxXuid: xuid }) || user;
+        }
+
+        req.login(user as any, async (err) => {
+          if (err) {
+            console.error("Xbox login error:", err);
+            return res.status(500).json({ message: "Login failed" });
+          }
+
+          let streakInfo;
+          try {
+            streakInfo = await StreakService.updateLoginStreak(user!.id);
+          } catch (error) {
+            console.error("Error updating login streak:", error);
+          }
+
+          const updatedUser = await storage.getUserById(user!.id);
+          const userToReturn = updatedUser || user;
+
+          res.status(200).json({
+            ...userToReturn,
+            needsOnboarding,
+            ...(streakInfo && {
+              streakInfo: {
+                currentStreak: streakInfo.currentStreak,
+                bonusAwarded: streakInfo.bonusAwarded,
+                dailyXP: streakInfo.dailyXP,
+                longestStreak: userToReturn.longestStreak || 0,
+                nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
+                message: streakInfo.message,
+                isNewMilestone: streakInfo.isNewMilestone
+              }
+            })
+          });
+        });
+      }
+    } catch (error) {
+      console.error("Xbox auth error:", error);
+      handleValidationError(error, res);
+    }
+  });
+
+  // Xbox Connect — link an Xbox account to an already-logged-in user via xbl.io
+  app.post("/api/xbox/connect", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { xuid, gamertag, gamerpic } = req.body;
+
+      if (!xuid || !gamertag) {
+        return res.status(400).json({ message: "Missing required Xbox account data" });
+      }
+
+      const userId = (req.user as any).id;
+
+      // Check if this Xbox account is already linked to a different user
+      const existingUser = await storage.getUserByExternalId?.(xuid, "xbox");
+      if (existingUser && existingUser.id !== userId) {
+        return res.status(409).json({ message: "This Xbox account is already connected to another Gamefolio profile" });
+      }
+
+      const updated = await storage.updateUser(userId, {
+        xboxUsername: gamertag,
+        xboxXuid: xuid,
+        ...(gamerpic && !existingUser ? { avatarUrl: gamerpic } : {}),
+      });
+
+      res.status(200).json({ success: true, xboxUsername: gamertag, xboxXuid: xuid });
+    } catch (error) {
+      console.error("Xbox connect error:", error);
+      res.status(500).json({ message: "Failed to link Xbox account" });
+    }
+  });
+
+  // Xbox Disconnect — revoke access and clear all Xbox data
+  app.post("/api/xbox/disconnect", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const userId = (req.user as any).id;
+      await storage.updateUser(userId, {
+        xboxUsername: null,
+        xboxXuid: null,
+        showXboxAchievements: false,
+        xboxAchievements: null,
+        xboxAchievementsLastSync: null,
+      });
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Xbox disconnect error:", error);
+      res.status(500).json({ message: "Failed to disconnect Xbox account" });
+    }
+  });
+
+  // Xbox Achievements — sync from xbl.io
+  app.post("/api/xbox/achievements/sync", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const user = await storage.getUserById((req.user as any).id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user.xboxXuid) return res.status(400).json({ message: "No Xbox account linked. Please connect your Xbox account first." });
+
+      const xblApiKey = process.env.XBL_API_KEY;
+      if (!xblApiKey) return res.status(500).json({ message: "Xbox integration is not configured" });
+
+      const axiosResponse = await axios.get(`https://xbl.io/api/v2/achievements/player/${user.xboxXuid}`, {
+        headers: {
+          'x-authorization': xblApiKey,
+          'Accept': 'application/json',
+          'Accept-Language': 'en-US',
+        },
+        validateStatus: null,
+      });
+
+      if (axiosResponse.status < 200 || axiosResponse.status >= 300) {
+        console.error("xbl.io achievements error:", axiosResponse.status, JSON.stringify(axiosResponse.data));
+        return res.status(502).json({ message: "Failed to fetch achievements from Xbox Live" });
+      }
+
+      const data = axiosResponse.data as any;
+      const allTitles = data.titles || data.achievements || data.data || [];
+      const achievements = allTitles.slice(0, 100);
+
+      // Tally true totals across ALL games before slicing
+      const totalAchievementsEarned = allTitles.reduce((sum: number, t: any) => {
+        return sum + (t.achievement?.currentAchievements ?? t.earnedAchievements ?? t.currentAchievements ?? 0);
+      }, 0);
+
+      const totalGamerscoreEarned = allTitles.reduce((sum: number, t: any) => {
+        return sum + (t.achievement?.currentGamerscore ?? t.currentGamerscore ?? 0);
+      }, 0);
+
+      await storage.updateUser(user.id, {
+        xboxAchievements: achievements,
+        xboxAchievementsLastSync: new Date(),
+        xboxTotalAchievements: totalAchievementsEarned,
+        xboxGamerscore: totalGamerscoreEarned > 0 ? totalGamerscoreEarned : null,
+      });
+
+      res.json({ achievements, syncedAt: new Date().toISOString(), gamerscore: totalGamerscoreEarned, totalAchievements: totalAchievementsEarned });
+    } catch (error) {
+      console.error("Xbox achievements sync error:", error);
+      res.status(500).json({ message: "Failed to sync achievements" });
+    }
+  });
+
+  // Xbox Achievements — toggle display on profile
+  app.post("/api/xbox/achievements/toggle", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { show } = req.body;
+      const user = await storage.getUserById((req.user as any).id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const updated = await storage.updateUser(user.id, { showXboxAchievements: !!show });
+      res.json({ showXboxAchievements: updated?.showXboxAchievements });
+    } catch (error) {
+      console.error("Xbox achievements toggle error:", error);
+      res.status(500).json({ message: "Failed to update achievement display setting" });
+    }
+  });
+
+  // PSN helpers — store/retrieve refresh token from server_settings
+  async function getPsnRefreshToken(): Promise<string | null> {
+    try {
+      const rows = await db.select().from(serverSettings).where(eq(serverSettings.key, "psn_refresh_token"));
+      return rows[0]?.value ?? null;
+    } catch { return null; }
+  }
+
+  async function setPsnRefreshToken(token: string): Promise<void> {
+    try {
+      await db.insert(serverSettings).values({ key: "psn_refresh_token", value: token, updatedAt: new Date() })
+        .onConflictDoUpdate({ target: serverSettings.key, set: { value: token, updatedAt: new Date() } });
+    } catch (e) {
+      console.error("Failed to save PSN refresh token:", e);
+    }
+  }
+
+  // PSN Trophy Sync
+  app.post("/api/psn/trophies/sync", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const user = await storage.getUserById((req.user as any).id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user.playstationUsername) return res.status(400).json({ message: "No PlayStation ID saved. Please add your PSN ID first." });
+
+      const {
+        exchangeNpssoForCode,
+        exchangeCodeForAccessToken,
+        exchangeRefreshTokenForAuthTokens,
+        getProfileFromUserName,
+        getUserPlayedGames,
+      } = await import("psn-api");
+
+      let accessToken: string;
+
+      // Try refresh token first (self-renewing — no manual rotation needed)
+      const storedRefreshToken = await getPsnRefreshToken();
+      if (storedRefreshToken) {
+        try {
+          const tokens = await exchangeRefreshTokenForAuthTokens(storedRefreshToken);
+          accessToken = tokens.accessToken;
+          // Save the new refresh token — keeps the chain alive indefinitely
+          if (tokens.refreshToken) await setPsnRefreshToken(tokens.refreshToken);
+        } catch (refreshErr: any) {
+          console.warn("PSN refresh token expired, falling back to NPSSO:", refreshErr?.message);
+          // Fall through to NPSSO below
+          accessToken = "";
+        }
+      } else {
+        accessToken = "";
+      }
+
+      // Fall back to NPSSO (one-time bootstrap)
+      if (!accessToken) {
+        const npsso = process.env.PSN_NPSSO_TOKEN;
+        if (!npsso) {
+          return res.status(503).json({
+            message: "PSN is not configured. Please add a PSN_NPSSO_TOKEN secret to get started. After the first sync, it will self-renew automatically.",
+          });
+        }
+        try {
+          const code = await exchangeNpssoForCode(npsso);
+          const tokens = await exchangeCodeForAccessToken(code);
+          accessToken = tokens.accessToken;
+          if (tokens.refreshToken) await setPsnRefreshToken(tokens.refreshToken);
+        } catch (authErr: any) {
+          console.error("PSN NPSSO auth error:", authErr?.message || authErr);
+          return res.status(503).json({ message: "Failed to authenticate with PSN. The NPSSO token may be expired — please update it in your secrets." });
+        }
+      }
+
+      let profile: any;
+      try {
+        profile = await getProfileFromUserName({ accessToken }, user.playstationUsername);
+      } catch (lookupErr: any) {
+        const msg = lookupErr?.message || "";
+        if (msg.includes("not found") || msg.includes("404") || msg.includes("2105023")) {
+          return res.status(404).json({ message: `Could not find PSN user "${user.playstationUsername}". Check the PSN ID is correct and the profile is public.` });
+        }
+        throw lookupErr;
+      }
+
+      const accountId: string = profile?.profile?.accountId;
+      if (!accountId) {
+        return res.status(404).json({ message: `Could not find PSN user "${user.playstationUsername}". Check the PSN ID is correct and the profile is public.` });
+      }
+
+      const trophySummaryData = profile?.profile?.trophySummary ?? null;
+      const trophyLevel: number | null = trophySummaryData?.level ?? null;
+      const earnedTrophies = trophySummaryData?.earnedTrophies ?? {};
+      const totalTrophies = (
+        (earnedTrophies.platinum ?? 0) +
+        (earnedTrophies.gold ?? 0) +
+        (earnedTrophies.silver ?? 0) +
+        (earnedTrophies.bronze ?? 0)
+      ) || null;
+
+      let recentGames: any[] = [];
+      try {
+        const gamesResult = await getUserPlayedGames({ accessToken }, accountId, { limit: 12, categories: "ps4_game,ps5_native_game" });
+        recentGames = gamesResult?.titles ?? [];
+      } catch (gamesErr: any) {
+        console.warn("PSN recent games unavailable:", gamesErr?.message || gamesErr);
+      }
+
+      const trophyData = {
+        earnedTrophies,
+        trophyLevel,
+        recentGames: recentGames.slice(0, 10).map((g: any) => ({
+          titleId: g.titleId,
+          name: g.name,
+          imageUrl: g.imageUrl,
+          category: g.category,
+          playCount: g.playCount,
+          lastPlayedDateTime: g.lastPlayedDateTime,
+        })),
+      };
+
+      await storage.updateUser(user.id, {
+        psnTrophyData: [trophyData],
+        psnTrophiesLastSync: new Date(),
+        psnTrophyLevel: trophyLevel,
+        psnTotalTrophies: totalTrophies,
+      });
+
+      res.json({
+        success: true,
+        trophyLevel,
+        totalTrophies,
+        earnedTrophies,
+        recentGames: trophyData.recentGames,
+        syncedAt: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("PSN sync error:", error?.message || error);
+      res.status(500).json({ message: "Failed to fetch PSN data. Please try again later." });
+    }
+  });
+
+  // PSN Trophies — toggle display on profile
+  app.post("/api/psn/trophies/toggle", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { show } = req.body;
+      const user = await storage.getUserById((req.user as any).id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const updated = await storage.updateUser(user.id, { showPsnTrophies: !!show });
+      res.json({ showPsnTrophies: updated?.showPsnTrophies });
+    } catch (error) {
+      console.error("PSN trophies toggle error:", error);
+      res.status(500).json({ message: "Failed to update trophy display setting" });
+    }
+  });
+
   // Register route
   app.post("/api/register", async (req, res) => {
     try {
@@ -1699,7 +2208,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gfTokenBalance: userWithoutPassword.gfTokenBalance || 0,
           steamUsername: userWithoutPassword.steamUsername || null,
           xboxUsername: userWithoutPassword.xboxUsername || null,
+          xboxXuid: userWithoutPassword.xboxXuid || null,
+          showXboxAchievements: userWithoutPassword.showXboxAchievements || false,
+          xboxAchievements: userWithoutPassword.xboxAchievements || null,
+          xboxAchievementsLastSync: userWithoutPassword.xboxAchievementsLastSync || null,
+          xboxGamerscore: userWithoutPassword.xboxGamerscore || null,
+          xboxTotalAchievements: userWithoutPassword.xboxTotalAchievements || null,
           playstationUsername: userWithoutPassword.playstationUsername || null,
+          psnTrophyData: userWithoutPassword.psnTrophyData || null,
+          psnTrophiesLastSync: userWithoutPassword.psnTrophiesLastSync || null,
+          showPsnTrophies: userWithoutPassword.showPsnTrophies || false,
+          psnTrophyLevel: userWithoutPassword.psnTrophyLevel || null,
+          psnTotalTrophies: userWithoutPassword.psnTotalTrophies || null,
           discordUsername: userWithoutPassword.discordUsername || null,
           epicUsername: userWithoutPassword.epicUsername || null,
           nintendoUsername: userWithoutPassword.nintendoUsername || null,
@@ -1756,7 +2276,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gfTokenBalance: fallbackWithoutPassword.gfTokenBalance || 0,
           steamUsername: fallbackWithoutPassword.steamUsername || null,
           xboxUsername: fallbackWithoutPassword.xboxUsername || null,
+          xboxXuid: fallbackWithoutPassword.xboxXuid || null,
+          showXboxAchievements: fallbackWithoutPassword.showXboxAchievements || false,
+          xboxAchievements: fallbackWithoutPassword.xboxAchievements || null,
+          xboxAchievementsLastSync: fallbackWithoutPassword.xboxAchievementsLastSync || null,
           playstationUsername: fallbackWithoutPassword.playstationUsername || null,
+          psnTrophyData: fallbackWithoutPassword.psnTrophyData || null,
+          psnTrophiesLastSync: fallbackWithoutPassword.psnTrophiesLastSync || null,
+          showPsnTrophies: fallbackWithoutPassword.showPsnTrophies || false,
+          psnTrophyLevel: fallbackWithoutPassword.psnTrophyLevel || null,
+          psnTotalTrophies: fallbackWithoutPassword.psnTotalTrophies || null,
           discordUsername: fallbackWithoutPassword.discordUsername || null,
           epicUsername: fallbackWithoutPassword.epicUsername || null,
           nintendoUsername: fallbackWithoutPassword.nintendoUsername || null,
@@ -1809,6 +2338,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       gfTokenBalance: userWithoutPassword.gfTokenBalance || 0,
       steamUsername: userWithoutPassword.steamUsername || null,
       xboxUsername: userWithoutPassword.xboxUsername || null,
+      xboxXuid: userWithoutPassword.xboxXuid || null,
+      showXboxAchievements: userWithoutPassword.showXboxAchievements || false,
+      xboxAchievements: userWithoutPassword.xboxAchievements || null,
+      xboxAchievementsLastSync: userWithoutPassword.xboxAchievementsLastSync || null,
+      xboxGamerscore: userWithoutPassword.xboxGamerscore || null,
+      xboxTotalAchievements: userWithoutPassword.xboxTotalAchievements || null,
       playstationUsername: userWithoutPassword.playstationUsername || null,
       discordUsername: userWithoutPassword.discordUsername || null,
       epicUsername: userWithoutPassword.epicUsername || null,
@@ -3567,7 +4102,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get actual clips from database for all users including demo
-      const clips = await storage.getClipsByUserId(user.id);
+      let clips = await storage.getClipsByUserId(user.id);
+
+      // For non-owners, hide clips associated with unapproved custom games
+      if (!isOwnProfile) {
+        clips = clips.filter((c) => !c.game || c.game.isApproved !== false);
+      }
 
       // For demo user, also include the demo clips if no real clips exist
       if (req.params.username === "demo" && clips.length === 0) {
@@ -3681,6 +4221,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error deleting admin game:", err);
       res.status(500).json({ message: "Error deleting game" });
+    }
+  });
+
+  // Admin: Get pending (unapproved) custom games
+  app.get("/api/admin/games/pending", adminMiddleware, async (req, res) => {
+    try {
+      const pendingGames = await storage.getPendingGames();
+      res.json(pendingGames);
+    } catch (err) {
+      console.error("Error fetching pending games:", err);
+      res.status(500).json({ message: "Error fetching pending games" });
+    }
+  });
+
+  // Admin: Approve a custom game
+  app.patch("/api/admin/games/:id/approve", adminMiddleware, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid game ID" });
+
+      const game = await storage.approveGame(id);
+      if (!game) return res.status(404).json({ message: "Game not found" });
+      res.json(game);
+    } catch (err) {
+      console.error("Error approving game:", err);
+      res.status(500).json({ message: "Error approving game" });
+    }
+  });
+
+  // Admin: Reject a custom game (keeps it permanently unapproved so content stays hidden)
+  app.patch("/api/admin/games/:id/reject", adminMiddleware, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid game ID" });
+
+      const rejected = await storage.rejectGame(id);
+      if (!rejected) return res.status(404).json({ message: "Game not found" });
+      res.json({ message: "Game rejected — content remains hidden. Use delete to fully remove the game." });
+    } catch (err) {
+      console.error("Error rejecting game:", err);
+      res.status(500).json({ message: "Error rejecting game" });
     }
   });
 
@@ -4598,10 +5179,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let existingGame = await storage.getGameByName(req.body.gameName);
 
           if (!existingGame) {
-            // Create a default game
+            // Create a user-supplied game (not from Twitch) — requires admin approval
             existingGame = await storage.createGame({
               name: req.body.gameName,
               imageUrl: "",
+              isUserAdded: true,
+              isApproved: false,
             });
           }
 
@@ -8067,11 +8650,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Found existing game by name: ${gameName} (ID: ${existingGame.id})`);
           game = existingGame;
         } else {
-          console.log(`Creating new game with ID ${gameId}: ${gameName}`);
+          console.log(`Creating new user-supplied game with ID ${gameId}: ${gameName}`);
           try {
             game = await storage.createGame({
               name: gameName,
-              imageUrl: gameImageUrl || null
+              imageUrl: gameImageUrl || null,
+              isUserAdded: true,
+              isApproved: false,
             });
           } catch (createError: any) {
             // Handle race condition where game was created by another request
@@ -8217,7 +8802,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "This profile is private. Please log in and follow the user to see their content." });
       }
 
-      const screenshots = await storage.getScreenshotsByUserId(userId);
+      let screenshots = await storage.getScreenshotsByUserId(userId);
+
+      // For non-owners, hide screenshots associated with unapproved custom games
+      if (!isOwnProfile) {
+        const gameIds = [...new Set(screenshots.map((s) => s.gameId).filter((id): id is number => id !== null))];
+        if (gameIds.length > 0) {
+          const allGames = await storage.getAllGames();
+          const unapprovedGameIds = new Set(allGames.filter((g) => g.isApproved === false).map((g) => g.id));
+          screenshots = screenshots.filter((s) => !s.gameId || !unapprovedGameIds.has(s.gameId));
+        }
+      }
+
       res.json(screenshots);
     } catch (err) {
       console.error("Error fetching user screenshots:", err);

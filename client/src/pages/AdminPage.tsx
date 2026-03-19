@@ -1166,7 +1166,174 @@ import {
   HelpCircle,
   Package,
   ChevronDown,
+  Clock,
 } from "lucide-react";
+
+interface PendingGame {
+  id: number;
+  name: string;
+  imageUrl: string | null;
+  isUserAdded: boolean;
+  isApproved: boolean;
+  createdAt: string;
+  contentCount: number;
+  submittedBy?: { id: number; username: string; displayName: string; avatarUrl: string | null } | null;
+}
+
+const PendingGamesSection = () => {
+  const { toast } = useToast();
+
+  const { data: pendingGames = [], isLoading, refetch } = useQuery<PendingGame[]>({
+    queryKey: ["/api/admin/games/pending"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/games/pending", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch pending games");
+      return res.json();
+    },
+  });
+
+  const handleApprove = async (game: PendingGame) => {
+    try {
+      const res = await fetch(`/api/admin/games/${game.id}/approve`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to approve game");
+      toast({ title: "Game approved", description: `"${game.name}" is now live and its content is publicly visible.` });
+      refetch();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleReject = async (game: PendingGame) => {
+    try {
+      const res = await fetch(`/api/admin/games/${game.id}/reject`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to reject game");
+      toast({ title: "Game rejected", description: `"${game.name}" has been permanently denied. Its content remains hidden from public feeds.` });
+      refetch();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center text-muted-foreground">Loading pending games...</CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="border-amber-500/30">
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-amber-500" />
+            Pending Game Approvals
+            {pendingGames.length > 0 && (
+              <Badge variant="secondary" className="bg-amber-500/20 text-amber-500 border-amber-500/30">
+                {pendingGames.length}
+              </Badge>
+            )}
+          </CardTitle>
+        </div>
+        <CardDescription>
+          Custom games added by users that need review before their content becomes publicly visible.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {pendingGames.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No pending games — all custom games have been reviewed.
+          </div>
+        ) : (
+          <div className="rounded-md border overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[60px]">Image</TableHead>
+                  <TableHead>Game Name</TableHead>
+                  <TableHead>Submitted By</TableHead>
+                  <TableHead>Content</TableHead>
+                  <TableHead>Added</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pendingGames.map((game) => (
+                  <TableRow key={game.id}>
+                    <TableCell>
+                      <div className="h-10 w-10 rounded overflow-hidden bg-muted flex items-center justify-center">
+                        {game.imageUrl ? (
+                          <img
+                            src={game.imageUrl}
+                            alt={game.name}
+                            className="h-full w-full object-contain p-1"
+                            onError={(e) => { (e.target as HTMLImageElement).src = '/favicon.png'; }}
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">N/A</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">{game.name}</TableCell>
+                    <TableCell>
+                      {game.submittedBy ? (
+                        <div className="flex items-center gap-2">
+                          {game.submittedBy.avatarUrl && (
+                            <img src={game.submittedBy.avatarUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
+                          )}
+                          <span className="text-sm">@{game.submittedBy.username}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Unknown</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {game.contentCount} {game.contentCount === 1 ? "item" : "items"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {new Date(game.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-green-600 border-green-600/40 hover:bg-green-600/10"
+                          onClick={() => handleApprove(game)}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                          onClick={() => handleReject(game)}
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Reject
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 const AdminGamesTab = () => {
   const { toast } = useToast();
@@ -6173,6 +6340,7 @@ const AdminPage = () => {
 
         {/* Games Management Tab */}
         <TabsContent value="games" className="space-y-4">
+          <PendingGamesSection />
           <AdminGamesTab />
         </TabsContent>
       </Tabs>

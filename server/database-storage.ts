@@ -199,6 +199,13 @@ export class DatabaseStorage implements IStorage {
     return user || null;
   }
 
+  async getUserByExternalId(externalId: string, authProvider: string): Promise<User | null> {
+    const [user] = await db.select().from(users).where(
+      sql`${users.externalId} = ${externalId} AND ${users.authProvider} = ${authProvider}`
+    );
+    return user || null;
+  }
+
   async createUser(userData: InsertUser): Promise<User> {
     try {
       // CRITICAL SECURITY: Hash password before storing
@@ -497,6 +504,94 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getPendingGames(): Promise<Array<Game & { submittedBy?: { id: number; username: string; displayName: string; avatarUrl: string | null } | null; contentCount: number }>> {
+    try {
+      const pendingGames = await db
+        .select()
+        .from(games)
+        .where(and(
+          eq(games.isUserAdded, true),
+          eq(games.isApproved, false),
+          eq(games.showContactBanner, true)
+        ))
+        .orderBy(desc(games.createdAt));
+
+      const result = [];
+      for (const game of pendingGames) {
+        const clipsCount = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(clips)
+          .where(eq(clips.gameId, game.id));
+        const screenshotsCount = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(screenshots)
+          .where(eq(screenshots.gameId, game.id));
+
+        const contentCount = parseInt(clipsCount[0]?.count?.toString() || '0') +
+          parseInt(screenshotsCount[0]?.count?.toString() || '0');
+
+        // Try to find submitter from clips first, then screenshots
+        let firstUserId: number | null = null;
+        const firstClip = await db
+          .select({ userId: clips.userId })
+          .from(clips)
+          .where(eq(clips.gameId, game.id))
+          .limit(1);
+        if (firstClip.length > 0) {
+          firstUserId = firstClip[0].userId;
+        } else {
+          const firstScreenshot = await db
+            .select({ userId: screenshots.userId })
+            .from(screenshots)
+            .where(eq(screenshots.gameId, game.id))
+            .limit(1);
+          if (firstScreenshot.length > 0) {
+            firstUserId = firstScreenshot[0].userId;
+          }
+        }
+
+        let submittedBy = null;
+        if (firstUserId !== null) {
+          const [submitter] = await db
+            .select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl })
+            .from(users)
+            .where(eq(users.id, firstUserId));
+          submittedBy = submitter || null;
+        }
+
+        result.push({ ...game, submittedBy, contentCount });
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Error getting pending games:", error);
+      return [];
+    }
+  }
+
+  async approveGame(id: number): Promise<Game | null> {
+    const [game] = await db
+      .update(games)
+      .set({ isApproved: true })
+      .where(eq(games.id, id))
+      .returning();
+    return game || null;
+  }
+
+  async rejectGame(id: number): Promise<boolean> {
+    // Rejection permanently marks the game as denied (isApproved stays false).
+    // showContactBanner is set to false to distinguish rejected games from new pending ones,
+    // so the admin queue only surfaces games that haven't been reviewed yet.
+    // All linked clips/screenshots remain hidden since every public query filters
+    // out content associated with is_approved=false games.
+    const result = await db
+      .update(games)
+      .set({ isApproved: false, showContactBanner: false })
+      .where(eq(games.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
   // Clip operations
   async getClip(id: number): Promise<Clip | null> {
     const [clip] = await db.select().from(clips).where(eq(clips.id, id));
@@ -522,6 +617,7 @@ export class DatabaseStorage implements IStorage {
             name: games.name,
             imageUrl: games.imageUrl,
             twitchId: games.twitchId,
+            isApproved: games.isApproved,
             createdAt: games.createdAt,
           }
         })
@@ -680,6 +776,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getClipsByGameId(gameId: number, limit: number = 4): Promise<ClipWithUser[]> {
+    // Verify the game is approved before returning its clips publicly
+    const [game] = await db.select({ isApproved: games.isApproved }).from(games).where(eq(games.id, gameId));
+    if (game && game.isApproved === false) {
+      return [];
+    }
+
     // Get clips for a specific game
     const gameClips = await db
       .select()
@@ -702,10 +804,14 @@ export class DatabaseStorage implements IStorage {
 
   async getClipsByHashtag(hashtag: string): Promise<ClipWithUser[]> {
     // Search for clips that have the hashtag in their tags array using ANY operator
+    // Exclude clips tied to unapproved custom games
     const hashtagClips = await db
       .select()
       .from(clips)
-      .where(sql`${hashtag} = ANY(${clips.tags})`)
+      .where(and(
+        sql`${hashtag} = ANY(${clips.tags})`,
+        sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
+      ))
       .orderBy(desc(clips.createdAt), desc(clips.id));
 
     // Get full clip details with user info
@@ -747,16 +853,22 @@ export class DatabaseStorage implements IStorage {
         dateFilter = null; // No date filter, just order by recency
     }
 
+    const approvedGamesFilter = or(
+      sql`${clips.gameId} IS NULL`,
+      sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
+    );
+
     const clipIds = dateFilter 
       ? await db
           .select()
           .from(clips)
-          .where(gt(clips.createdAt, dateFilter))
+          .where(and(gt(clips.createdAt, dateFilter), approvedGamesFilter))
           .orderBy(desc(clips.createdAt), desc(clips.id))
           .limit(limit)
       : await db
           .select()
           .from(clips)
+          .where(approvedGamesFilter)
           .orderBy(desc(clips.createdAt), desc(clips.id))
           .limit(limit);
 
@@ -820,6 +932,11 @@ export class DatabaseStorage implements IStorage {
             eq(users.isPrivate, false), // Public accounts
             currentUserId ? eq(users.id, currentUserId) : sql`false`, // User's own content
             currentUserId ? sql`exists (select 1 from follows f where f.following_id = ${users.id} and f.follower_id = ${currentUserId})` : sql`false` // Current user follows this private account
+          ),
+          // Only show content for approved games (or no game)
+          or(
+            sql`${clips.gameId} IS NULL`,
+            sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
           )
         )
       )
@@ -913,7 +1030,9 @@ export class DatabaseStorage implements IStorage {
               eq(users.isPrivate, true),
               eq(follows.followerId, currentUserId) // Current user follows this private account
             ) : sql`false` // If no current user, don't show any private content
-          )
+          ),
+          // Only show content for approved games (or no game)
+          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
         )
       )
       .groupBy(clips.id, users.id, games.id)
@@ -978,7 +1097,9 @@ export class DatabaseStorage implements IStorage {
               eq(users.isPrivate, true),
               eq(follows.followerId, currentUserId) // Current user follows this private account
             ) : sql`false` // If no current user, don't show any private content
-          )
+          ),
+          // Only show content for approved games (or no game)
+          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
         )
       )
       .groupBy(clips.id, users.id, games.id)
@@ -1336,6 +1457,11 @@ export class DatabaseStorage implements IStorage {
     const isHashtag = query.startsWith('#');
     const searchTerm = isHashtag ? query.slice(1).toLowerCase() : query.toLowerCase();
 
+    const approvedFilter = or(
+      sql`${clips.gameId} IS NULL`,
+      sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
+    );
+
     let matchingClips;
 
     if (isHashtag) {
@@ -1346,7 +1472,8 @@ export class DatabaseStorage implements IStorage {
         .where(
           and(
             eq(clips.videoType, 'clip'),
-            sql`EXISTS (SELECT 1 FROM unnest(${clips.tags}) AS tag WHERE LOWER(tag) = ${searchTerm})`
+            sql`EXISTS (SELECT 1 FROM unnest(${clips.tags}) AS tag WHERE LOWER(tag) = ${searchTerm})`,
+            approvedFilter
           )
         );
     } else {
@@ -1360,7 +1487,8 @@ export class DatabaseStorage implements IStorage {
             or(
               ilike(clips.title, `%${query}%`),
               ilike(clips.description, `%${query}%`)
-            )
+            ),
+            approvedFilter
           )
         );
     }
@@ -1381,6 +1509,11 @@ export class DatabaseStorage implements IStorage {
     const isHashtag = query.startsWith('#');
     const searchTerm = isHashtag ? query.slice(1).toLowerCase() : query.toLowerCase();
 
+    const approvedFilter = or(
+      sql`${clips.gameId} IS NULL`,
+      sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
+    );
+
     let matchingReels;
 
     if (isHashtag) {
@@ -1391,7 +1524,8 @@ export class DatabaseStorage implements IStorage {
         .where(
           and(
             eq(clips.videoType, 'reel'),
-            sql`EXISTS (SELECT 1 FROM unnest(${clips.tags}) AS tag WHERE LOWER(tag) = ${searchTerm})`
+            sql`EXISTS (SELECT 1 FROM unnest(${clips.tags}) AS tag WHERE LOWER(tag) = ${searchTerm})`,
+            approvedFilter
           )
         );
     } else {
@@ -1405,7 +1539,8 @@ export class DatabaseStorage implements IStorage {
             or(
               ilike(clips.title, `%${query}%`),
               ilike(clips.description, `%${query}%`)
-            )
+            ),
+            approvedFilter
           )
         );
     }
@@ -1438,6 +1573,11 @@ export class DatabaseStorage implements IStorage {
       );
     }
 
+    const approvedFilter = or(
+      sql`${screenshots.gameId} IS NULL`,
+      sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${screenshots.gameId} AND g.is_approved = false)`
+    );
+
     const results = await db
       .select({
         screenshot: screenshots,
@@ -1450,7 +1590,7 @@ export class DatabaseStorage implements IStorage {
       .from(screenshots)
       .leftJoin(users, eq(screenshots.userId, users.id))
       .leftJoin(games, eq(screenshots.gameId, games.id))
-      .where(whereClause)
+      .where(and(whereClause, approvedFilter))
       .orderBy(desc(screenshots.createdAt), desc(screenshots.id))
       .limit(20);
 
@@ -1731,7 +1871,7 @@ export class DatabaseStorage implements IStorage {
   async getAllClips(limit: number = 10, offset: number = 0, currentUserId?: number): Promise<ClipWithUser[]> {
     console.log('getAllClips: currentUserId =', currentUserId);
     
-    // CRITICAL FIX: Show ALL clips including orphaned ones for admin moderation
+    // Show clips excluding those linked to unapproved custom games (public feed safety)
     const allClipsData = await db
       .select({
         clip: clips,
@@ -1753,7 +1893,10 @@ export class DatabaseStorage implements IStorage {
       .from(clips)
       .leftJoin(users, eq(clips.userId, users.id))
       .leftJoin(games, eq(clips.gameId, games.id))
-      .where(eq(clips.videoType, 'clip'))
+      .where(and(
+        eq(clips.videoType, 'clip'),
+        sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
+      ))
       .orderBy(desc(clips.createdAt), desc(clips.id))
       .limit(limit)
       .offset(offset);
@@ -1867,6 +2010,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getScreenshotsByGameId(gameId: number, limit: number = 20): Promise<Screenshot[]> {
+    // Verify the game is approved before returning its screenshots publicly
+    const [game] = await db.select({ isApproved: games.isApproved }).from(games).where(eq(games.id, gameId));
+    if (game && game.isApproved === false) {
+      return [];
+    }
+
     return await db
       .select()
       .from(screenshots)
@@ -2915,7 +3064,8 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           dateFilter ? gt(screenshots.createdAt, dateFilter) : undefined,
-          gameId ? eq(screenshots.gameId, gameId) : undefined
+          gameId ? eq(screenshots.gameId, gameId) : undefined,
+          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${screenshots.gameId} AND g.is_approved = false)`
         )
       )
       .orderBy(desc(screenshots.views), desc(screenshots.createdAt), desc(screenshots.id))
@@ -4019,6 +4169,12 @@ export class DatabaseStorage implements IStorage {
         .from(screenshots)
         .leftJoin(users, eq(screenshots.userId, users.id))
         .leftJoin(games, eq(screenshots.gameId, games.id))
+        .where(
+          or(
+            sql`${screenshots.gameId} IS NULL`,
+            sql`${games.is_approved} IS NULL OR ${games.is_approved} = true`
+          )
+        )
         .orderBy(desc(screenshots.createdAt), desc(screenshots.id)) // Stable pagination with tie-breaker
         .limit(limit)
         .offset(offset);

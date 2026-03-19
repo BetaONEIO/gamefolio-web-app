@@ -237,6 +237,16 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
       metadata: { userId: String(userId), plan, paymentIntentId },
     });
 
+    const activeStatuses = ['active', 'trialing'];
+    if (!activeStatuses.includes(subscription.status)) {
+      console.warn(`⚠️ Subscription ${subscription.id} created with non-active status: ${subscription.status} — not granting Pro to user ${userId}`);
+      return res.status(402).json({
+        error: 'Subscription is not active',
+        status: subscription.status,
+        message: 'Your payment did not complete successfully. Please try again.',
+      });
+    }
+
     await db.update(users).set({
       isPro: true,
       proSubscriptionType: plan,

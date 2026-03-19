@@ -1,0 +1,11 @@
+country	GB	www.playstation.com	/	2026-03-04T22:08:13.904Z	9		✓				Medium	
+demdex	60843354048753991791792522471995637926	.demdex.net	/	2026-07-29T10:22:55.353Z	44		✓	None			Medium	
+eucookiepreference	reject	.playstation.com	/	2026-03-06T23:04:21.000Z	24		✓				Medium	
+isSignedIn	true	.playstation.com	/	2026-04-03T10:12:49.659Z	14		✓	Lax			Medium	
+OptanonAlertBoxClosed	2026-03-04T10:08:17.212Z	.playstation.com	/	2027-03-04T10:08:17.000Z	45			Lax			Medium	
+OptanonConsent	isGpcEnabled=0&datestamp=Wed+Mar+04+2026+10%3A14%3A21+GMT%2B0000+(Greenwich+Mean+Time)&version=202601.2.0&browserGpcFlag=0&isIABGlobal=false&hosts=&consentId=763c0a16-9851-4642-905a-5657c6cb0ba0&interactionCount=1&isAnonUser=1&prevHadToken=0&landingPath=NotLandingPage&groups=C0002%3A0%2CC0004%3A0%2CC0003%3A0%2CC0001%3A1%2CSEU21%3A0&intType=2&crTime=1772618897773&geolocation=GB%3BENG&AwaitingReconsent=false	.playstation.com	/	2027-03-04T10:14:21.000Z	423			Lax			Medium	
+pdccws_p	s%3AXSr_TDYij77QP-DAV-rfb3tSghoFLdQv.WAR3gt4jTLkLpWIa2mcEzUHAnRmWwMbt1i3iVaVJQj0	.playstation.com	/	2026-04-03T10:12:50.568Z	88	✓	✓	Lax			Medium	
+pdcsi	%7B%22psPlusSubscription%22%3A%7B%22psPlusTier%22%3A%22TIER_30%22%2C%22status%22%3A%22SUBSCRIBED%22%2C%22duration%22%3A%2212%20MONTH%22%2C%22flag%22%3A%22%22%2C%22isTrial%22%3Afalse%2C%22isPsPlusMember%22%3Atrue%7D%2C%22ubisoftPlusSubscription%22%3A%7B%22status%22%3A%22NEVER%22%2C%22active%22%3Afalse%2C%22eligibleForTrial%22%3Afalse%7D%2C%22gtaPlusSubscription%22%3A%7B%22status%22%3A%22NEVER%22%2C%22active%22%3Afalse%2C%22eligibleForTrial%22%3Afalse%7D%7D	.playstation.com	/	2026-04-03T10:12:49.659Z	464		✓	Lax			Medium	
+pdcws2	%7B%22personalizedads%22%3A%22enabled%22%2C%22personalizedrecommendations%22%3A%22enabled%22%2C%22personalizedmedia%22%3A%22enabled%22%2C%22personalizedmaster%22%3A%22enabled%22%7D	.playstation.com	/	2026-04-03T10:12:49.659Z	186		✓	Lax			Medium	
+session	d806bd509e4912ae7acde98ba5a9b745e1e3dcaef4b2e238bd5015aa49580d95	.playstation.com	/	2026-04-03T10:12:50.506Z	71		✓				Medium	
+userinfo	56463064ee1bddb3d154d32777f98bf6b70ac2b35bb5f3429506979f2b308a3e	.playstation.com	/	2026-04-03T10:12:50.506Z	72		✓				Medium	

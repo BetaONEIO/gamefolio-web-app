@@ -278,10 +278,12 @@ platformAuthRouter.get('/xbox/callback', async (req: Request, res: Response) => 
     });
 
     const xboxUsername = profileResponse.data.gamertag;
+    const xboxXuid = profileResponse.data.xuid || profileResponse.data.id;
 
-    // Update user's Xbox username
+    // Update user's Xbox username and XUID
     await storage.updateUser(stateData.userId, {
       xboxUsername: xboxUsername,
+      ...(xboxXuid && { xboxXuid }),
     });
 
     // Clean up state

@@ -37,7 +37,18 @@ export const users = pgTable("users", {
   // Platform connections
   steamUsername: text("steam_username"),
   xboxUsername: text("xbox_username"),
+  xboxXuid: text("xbox_xuid"),
+  showXboxAchievements: boolean("show_xbox_achievements").default(false),
+  xboxAchievements: json("xbox_achievements").$type<any[]>(),
+  xboxAchievementsLastSync: timestamp("xbox_achievements_last_sync"),
+  xboxGamerscore: integer("xbox_gamerscore"),
+  xboxTotalAchievements: integer("xbox_total_achievements"),
   playstationUsername: text("playstation_username"),
+  psnTrophyData: json("psn_trophy_data").$type<any[]>(),
+  psnTrophiesLastSync: timestamp("psn_trophies_last_sync"),
+  showPsnTrophies: boolean("show_psn_trophies").default(false),
+  psnTrophyLevel: integer("psn_trophy_level"),
+  psnTotalTrophies: integer("psn_total_trophies"),
   twitterUsername: text("twitter_username"),  // X/Twitter
   youtubeUsername: text("youtube_username"),  // YouTube
   discordUsername: text("discord_username"),  // Discord
@@ -119,6 +130,7 @@ export const games = pgTable("games", {
   imageUrl: text("image_url"),
   twitchId: text("twitch_id"),
   isUserAdded: boolean("is_user_added").default(false).notNull(),
+  isApproved: boolean("is_approved").default(true).notNull(),
   showContactBanner: boolean("show_contact_banner").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -1225,7 +1237,10 @@ export type InsertUserBlock = z.infer<typeof insertUserBlockSchema>;
 export type ProfileBanner = typeof profileBanners.$inferSelect;
 export type InsertProfileBanner = z.infer<typeof insertProfileBannerSchema>;
 
-export type Screenshot = typeof screenshots.$inferSelect;
+export type Screenshot = typeof screenshots.$inferSelect & {
+  game?: Game | null;
+  _count?: { likes: number; reactions: number; comments: number };
+};
 export type InsertScreenshot = z.infer<typeof insertScreenshotSchema>;
 
 export type Badge = typeof badges.$inferSelect;
@@ -1514,4 +1529,11 @@ export const userStakingHistory = pgTable("user_staking_history", {
 
 export type UserStaking = typeof userStaking.$inferSelect;
 export type UserStakingHistory = typeof userStakingHistory.$inferSelect;
+
+export const serverSettings = pgTable("server_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export type ServerSetting = typeof serverSettings.$inferSelect;
 export type XpSetting = typeof xpSettings.$inferSelect;

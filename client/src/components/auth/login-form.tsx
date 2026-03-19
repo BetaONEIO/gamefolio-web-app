@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { GoogleAuthButton } from "./GoogleAuthButton";
 import { DiscordAuthButton } from "./DiscordAuthButton";
+import { XboxAuthButton } from "./XboxAuthButton";
 import { FieldError } from "@/components/ui/field-error";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -145,6 +146,7 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
       <div className="space-y-3">
         <GoogleAuthButton disabled={isLoading} />
         <DiscordAuthButton disabled={isLoading} />
+        <XboxAuthButton disabled={isLoading} />
       </div>
     </form>
   );

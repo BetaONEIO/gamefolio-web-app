@@ -66,6 +66,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | null>;
   getUsersByUsernames(usernames: string[]): Promise<User[]>; // For bulk username validation
   getUserByEmail(email: string): Promise<User | null>;
+  getUserByExternalId?(externalId: string, authProvider: string): Promise<User | null>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<User>): Promise<User | null>;
   updateUserType(id: number, userType: string): Promise<User | null>;
@@ -109,6 +110,9 @@ export interface IStorage {
   deleteGame(id: number): Promise<boolean>;
   getAllGames(): Promise<Game[]>;
   getTrendingGames(limit?: number): Promise<Game[]>;
+  getPendingGames(): Promise<Array<Game & { submittedBy?: { id: number; username: string; displayName: string; avatarUrl: string | null } | null; contentCount: number }>>;
+  approveGame(id: number): Promise<Game | null>;
+  rejectGame(id: number): Promise<boolean>;
 
   // Clip operations
   getClip(id: number): Promise<Clip | null>;

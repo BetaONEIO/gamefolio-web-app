@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMobile } from "@/hooks/use-mobile";
 import { useLocation, Link } from "wouter";
-import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -10,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink } from "lucide-react";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -28,6 +27,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord } from 'react-icons/fa';
+import { connectXboxAccount, isXboxConfigValid } from '@/lib/xbox';
 import { FaXTwitter } from 'react-icons/fa6';
 import { SiEpicgames, SiNintendo } from 'react-icons/si';
 import Cropper from "react-easy-crop";
@@ -281,34 +281,39 @@ const getCroppedImg = async (
 
 const PRESET_THEMES = [
   {
-    name: "Basic",
+    name: "None",
     backgroundColor: "#0B2232",
-    accentColor: "#4ADE80"
+    accentColor: "#00d5be",
+    gradientTopColor: "#02172C",
+    primaryColor: "#02172C"
   },
   {
-    name: "Purple Night",
-    backgroundColor: "#1e1b4b",
-    accentColor: "#a855f7"
+    name: "Pink Gamer Girl",
+    backgroundColor: "#fce7f3",
+    accentColor: "#ff2056",
+    gradientTopColor: "#4a0022",
+    primaryColor: "#4a0022"
   },
   {
-    name: "Golden Yellow",
-    backgroundColor: "#713f12",
-    accentColor: "#facc15"
+    name: "Zombie",
+    backgroundColor: "#0a0c0a",
+    accentColor: "#9ae600",
+    gradientTopColor: "#0d1a00",
+    primaryColor: "#0d1a00"
   },
   {
-    name: "Rose Gold",
-    backgroundColor: "#4c1d4d",
-    accentColor: "#f472b6"
+    name: "Cyberpunk",
+    backgroundColor: "#020617",
+    accentColor: "#00d3f2",
+    gradientTopColor: "#0a0e1a",
+    primaryColor: "#0a0e1a"
   },
   {
-    name: "Sunset Orange",
-    backgroundColor: "#431407",
-    accentColor: "#fb7185"
-  },
-  {
-    name: "Arctic Blue",
-    backgroundColor: "#0c4a6e",
-    accentColor: "#38bdf8"
+    name: "NEO",
+    backgroundColor: "#000000",
+    accentColor: "#00ff41",
+    gradientTopColor: "#000800",
+    primaryColor: "#000800"
   }
 ];
 
@@ -345,7 +350,7 @@ const PLATFORM_DEFINITIONS = [
 type PlatformKey = typeof PLATFORM_DEFINITIONS[number]["key"];
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -359,6 +364,17 @@ export default function SettingsPage() {
   const [platformHandle, setPlatformHandle] = useState('');
   const [savingPlatform, setSavingPlatform] = useState(false);
   const [removingPlatform, setRemovingPlatform] = useState<PlatformKey | null>(null);
+  const [connectingXbox, setConnectingXbox] = useState(false);
+  const [syncingAchievements, setSyncingAchievements] = useState(false);
+  const [togglingAchievements, setTogglingAchievements] = useState(false);
+  const [showXboxDisconnectDialog, setShowXboxDisconnectDialog] = useState(false);
+  const [disconnectingXbox, setDisconnectingXbox] = useState(false);
+  const xboxConfigRef = useRef<HTMLDivElement>(null);
+  const [syncingPsnTrophies, setSyncingPsnTrophies] = useState(false);
+  const [togglingPsnTrophies, setTogglingPsnTrophies] = useState(false);
+  const [showPsnDisconnectDialog, setShowPsnDisconnectDialog] = useState(false);
+  const [disconnectingPsn, setDisconnectingPsn] = useState(false);
+  const psnConfigRef = useRef<HTMLDivElement>(null);
 
   const getPlatformIcon = (iconKey: string) => {
     switch (iconKey) {
@@ -381,11 +397,8 @@ export default function SettingsPage() {
     if (!user || !selectedPlatform || !platformHandle.trim()) return;
     setSavingPlatform(true);
     try {
-      await updateProfile.mutateAsync({
-        userId: user.id,
-        userData: { [selectedPlatform]: platformHandle.trim() }
-      });
-      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      await apiRequest("PATCH", `/api/users/${user.id}`, { [selectedPlatform]: platformHandle.trim() });
+      await refreshUser();
       toast({ title: "Platform added", description: "Your platform connection has been saved.", duration: 3000 });
       setShowAddPlatform(false);
       setSelectedPlatform(null);
@@ -401,16 +414,154 @@ export default function SettingsPage() {
     if (!user) return;
     setRemovingPlatform(key);
     try {
-      await updateProfile.mutateAsync({
-        userId: user.id,
-        userData: { [key]: null }
-      });
-      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      if (key === 'xboxUsername') {
+        await apiRequest("POST", "/api/xbox/disconnect", {});
+      } else {
+        await apiRequest("PATCH", `/api/users/${user.id}`, { [key]: null });
+      }
+      await refreshUser();
       toast({ title: "Platform removed", description: "Your platform connection has been removed.", duration: 3000 });
     } catch (error) {
       toast({ title: "Failed to remove platform", description: "Please try again.", variant: "destructive" });
     } finally {
       setRemovingPlatform(null);
+    }
+  };
+
+  const handleXboxDisconnect = async () => {
+    setDisconnectingXbox(true);
+    try {
+      await apiRequest("POST", "/api/xbox/disconnect", {});
+      await refreshUser();
+      setShowXboxDisconnectDialog(false);
+      toast({ title: "Xbox disconnected", description: "Your Xbox account has been disconnected and achievement data cleared.", duration: 3000 });
+    } catch (error) {
+      toast({ title: "Failed to disconnect", description: "Could not disconnect your Xbox account. Please try again.", variant: "destructive" });
+    } finally {
+      setDisconnectingXbox(false);
+    }
+  };
+
+  const handleSyncAchievements = async () => {
+    setSyncingAchievements(true);
+    try {
+      const res = await fetch("/api/xbox/achievements/sync", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Sync failed");
+      await refreshUser();
+      toast({ title: "Achievements synced", description: `Pulled in ${data.achievements?.length || 0} game${data.achievements?.length !== 1 ? 's' : ''} with achievements from Xbox Live.`, duration: 4000 });
+    } catch (error: any) {
+      toast({ title: "Sync failed", description: error.message || "Could not fetch achievements. Please try again.", variant: "destructive" });
+    } finally {
+      setSyncingAchievements(false);
+    }
+  };
+
+  const handleToggleAchievements = async (show: boolean) => {
+    setTogglingAchievements(true);
+    try {
+      const res = await fetch("/api/xbox/achievements/toggle", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ show }),
+      });
+      if (!res.ok) throw new Error("Toggle failed");
+      await refreshUser();
+      toast({ title: show ? "Achievements shown on profile" : "Achievements hidden from profile", duration: 3000 });
+    } catch (error) {
+      toast({ title: "Failed to update setting", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setTogglingAchievements(false);
+    }
+  };
+
+  const handleSyncPsnTrophies = async () => {
+    setSyncingPsnTrophies(true);
+    try {
+      const res = await fetch("/api/psn/trophies/sync", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Sync failed");
+
+      // Directly update the query cache with the sync response data so the UI
+      // reflects the new state immediately, without waiting for a secondary fetch.
+      const cachedUser = queryClient.getQueryData<any>(["/api/user"]);
+      if (cachedUser) {
+        const newTrophyData = [{
+          earnedTrophies: data.earnedTrophies ?? {},
+          trophyLevel: data.trophyLevel ?? null,
+          recentGames: data.recentGames ?? [],
+        }];
+        queryClient.setQueryData(["/api/user"], {
+          ...cachedUser,
+          psnTrophyData: newTrophyData,
+          psnTrophiesLastSync: data.syncedAt,
+          psnTrophyLevel: data.trophyLevel ?? null,
+          psnTotalTrophies: data.totalTrophies ?? null,
+        });
+      } else {
+        await refreshUser();
+      }
+
+      const total = data.totalTrophies ?? 0;
+      const games = data.recentGames?.length ?? 0;
+      toast({
+        title: "PSN data synced",
+        description: `Pulled ${total} trophy${total !== 1 ? 'ies' : 'y'} across all games${games > 0 ? ` · ${games} recent game${games !== 1 ? 's' : ''}` : ''}.`,
+        duration: 4000,
+      });
+    } catch (error: any) {
+      toast({ title: "Sync failed", description: error.message || "Could not fetch PSN data. Please try again.", variant: "destructive" });
+    } finally {
+      setSyncingPsnTrophies(false);
+    }
+  };
+
+  const handleTogglePsnTrophies = async (show: boolean) => {
+    setTogglingPsnTrophies(true);
+    try {
+      const res = await fetch("/api/psn/trophies/toggle", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ show }),
+      });
+      if (!res.ok) throw new Error("Toggle failed");
+      await refreshUser();
+      toast({ title: show ? "Trophies shown on profile" : "Trophies hidden from profile", duration: 3000 });
+    } catch (error) {
+      toast({ title: "Failed to update setting", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setTogglingPsnTrophies(false);
+    }
+  };
+
+  const handlePsnDisconnect = async () => {
+    setDisconnectingPsn(true);
+    try {
+      await apiRequest("PATCH", `/api/users/${user!.id}`, {
+        playstationUsername: null,
+        psnTrophyData: null,
+        psnTrophiesLastSync: null,
+        showPsnTrophies: false,
+        psnTrophyLevel: null,
+        psnTotalTrophies: null,
+      });
+      await refreshUser();
+      setShowPsnDisconnectDialog(false);
+      toast({ title: "PlayStation disconnected", description: "Your PSN account and trophy data have been removed.", duration: 3000 });
+    } catch (error) {
+      toast({ title: "Failed to disconnect", description: "Could not disconnect your PSN account. Please try again.", variant: "destructive" });
+    } finally {
+      setDisconnectingPsn(false);
     }
   };
 
@@ -521,6 +672,8 @@ export default function SettingsPage() {
   // Track previous avatarUrl to detect successful uploads
   const prevAvatarUrl = React.useRef(user?.avatarUrl);
   const fontPreviewRef = React.useRef<HTMLDivElement>(null);
+  // Guard against query refreshes overwriting in-progress appearance edits
+  const hasPendingEdits = React.useRef(false);
 
   // Track the last values synced FROM the server so we can tell whether the user
   // has made local changes. If prev[field] still equals the last-synced server
@@ -585,6 +738,24 @@ export default function SettingsPage() {
         } else {
           finalBannerUrl = user.bannerUrl || "";
         }
+        
+        const appearanceFields = hasPendingEdits.current ? {} : {
+          backgroundColor: user.backgroundColor || "#0B2232",
+          accentColor: user.accentColor || "#4ADE80",
+          profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
+          profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
+          profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
+          profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || "",
+          profileBackgroundPositionX: (user as any)?.profileBackgroundPositionX || "50",
+          profileBackgroundPositionY: (user as any)?.profileBackgroundPositionY || "50",
+          profileBackgroundZoom: (user as any)?.profileBackgroundZoom || "100",
+          profileBackgroundDesktopX: (user as any)?.profileBackgroundDesktopX || "50",
+          profileBackgroundDesktopY: (user as any)?.profileBackgroundDesktopY || "50",
+          profileBackgroundDesktopZoom: (user as any)?.profileBackgroundDesktopZoom || "100",
+          profileFont: (user as any)?.profileFont || "default",
+          profileFontEffect: (user as any)?.profileFontEffect || "none",
+          profileFontAnimation: (user as any)?.profileFontAnimation || "none",
+          profileFontColor: (user as any)?.profileFontColor || "#FFFFFF",
 
         // For appearance/font/background fields: only sync from server if the user
         // hasn't made a local change. We detect a local change by comparing prev
@@ -663,6 +834,16 @@ export default function SettingsPage() {
           profileFontEffect:            pick(prev.profileFontEffect,         newFontEffect, synced.profileFontEffect),
           profileFontAnimation:         pick(prev.profileFontAnimation,      newFontAnim,   synced.profileFontAnimation),
           profileFontColor:             pick(prev.profileFontColor,          newFontColor,  synced.profileFontColor),
+        };
+
+        return {
+          ...prev,
+          displayName: user.displayName || "",
+          bio: user.bio || "",
+          bannerUrl: finalBannerUrl,
+          avatarUrl: user.avatarUrl || "",
+          hideBanner: (user as any)?.hideBanner || false,
+          ...appearanceFields,
         };
       });
       
@@ -968,6 +1149,9 @@ export default function SettingsPage() {
       return response.json();
     },
     onSuccess: (updatedUser) => {
+      // Save is complete — allow future user refreshes to sync appearance fields again
+      hasPendingEdits.current = false;
+
       // Direct cache update using functional updater to merge with existing cache
       // This preserves fields like selectedNameTagId that aren't returned in the PATCH response
       const cacheUpdater = (oldData: any) => {
@@ -1144,6 +1328,7 @@ export default function SettingsPage() {
             profileBackgroundDesktopZoom: String(data.zoom),
           };
       await apiRequest("PATCH", `/api/users/${user?.id}`, patch);
+      hasPendingEdits.current = false;
       setProfileData(prev => ({ ...prev, ...patch }));
       setShowBgPositionPreview(false);
       setPendingBgImageUrl('');
@@ -1162,6 +1347,7 @@ export default function SettingsPage() {
   const handleRemoveBackgroundImage = async () => {
     try {
       await apiRequest("PATCH", `/api/users/${user?.id}`, { profileBackgroundImageUrl: "" });
+      hasPendingEdits.current = false;
       setProfileData(prev => ({ ...prev, profileBackgroundImageUrl: "" }));
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
@@ -1172,6 +1358,12 @@ export default function SettingsPage() {
   };
 
   const applyPresetTheme = (theme: typeof PRESET_THEMES[0]) => {
+    hasPendingEdits.current = true;
+    setProfileData(prev => ({
+      ...prev,
+      accentColor: theme.accentColor,
+      backgroundColor: theme.backgroundColor,
+      ...(theme.primaryColor ? { primaryColor: theme.primaryColor } : {})
     // Themes only affect the accent colour — background colour and image are
     // independent and must not be overwritten by a theme selection.
     setProfileData(prev => ({
@@ -2086,6 +2278,7 @@ export default function SettingsPage() {
                       <CardContent>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {PRESET_THEMES.map((theme) => {
+                            const topColor = theme.gradientTopColor || '#0B2232';
                             const defaultThemeColor = '#0B2232';
                             const isActive = profileData.accentColor === theme.accentColor;
                             return (
@@ -2101,7 +2294,7 @@ export default function SettingsPage() {
                                 <div
                                   className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm relative"
                                   style={{ 
-                                    background: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
+                                    background: `linear-gradient(180deg, ${topColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
                                   }}
                                 >
                                   <div
@@ -2154,14 +2347,14 @@ export default function SettingsPage() {
                         <div className="flex flex-col sm:flex-row gap-6 items-start">
                           <HexColorPicker
                             color={profileData.backgroundColor}
-                            onChange={(color) => setProfileData(prev => ({ ...prev, backgroundColor: color }))}
+                            onChange={(color) => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, backgroundColor: color })); }}
                           />
                           <div className="space-y-3 flex-1">
                             <div className="flex items-center gap-2">
                               <Label className="text-sm font-medium">Hex Code</Label>
                               <Input
                                 value={profileData.backgroundColor}
-                                onChange={(e) => setProfileData(prev => ({ ...prev, backgroundColor: e.target.value }))}
+                                onChange={(e) => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, backgroundColor: e.target.value })); }}
                                 className="w-32 font-mono text-sm"
                                 placeholder="#0B2232"
                               />
@@ -2202,6 +2395,7 @@ export default function SettingsPage() {
                               profileBackgroundDesktopY: String(desktopPos.positionY),
                               profileBackgroundDesktopZoom: String(desktopPos.zoom),
                             });
+                            hasPendingEdits.current = false;
                             setProfileData(prev => ({
                               ...prev,
                               profileBackgroundImageUrl: url,
@@ -2438,7 +2632,7 @@ export default function SettingsPage() {
                                     <button
                                       key={font.value}
                                       type="button"
-                                      onClick={() => { setProfileData(prev => ({ ...prev, profileFont: font.value })); scrollToFontPreview(); }}
+                                      onClick={() => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFont: font.value })); scrollToFontPreview(); }}
                                       className={`p-2 sm:p-4 rounded-lg border-2 text-left transition-all ${
                                         isSelected
                                           ? 'border-primary bg-primary/10'
@@ -2471,7 +2665,7 @@ export default function SettingsPage() {
                                     <button
                                       key={effect.value}
                                       type="button"
-                                      onClick={() => { setProfileData(prev => ({ ...prev, profileFontEffect: effect.value })); scrollToFontPreview(); }}
+                                      onClick={() => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFontEffect: effect.value })); scrollToFontPreview(); }}
                                       className={`p-3 rounded-lg border-2 text-center transition-all ${
                                         isSelected
                                           ? 'border-primary bg-primary/10'
@@ -2498,7 +2692,7 @@ export default function SettingsPage() {
                                     <button
                                       key={anim.value}
                                       type="button"
-                                      onClick={() => { setProfileData(prev => ({ ...prev, profileFontAnimation: anim.value })); scrollToFontPreview(); }}
+                                      onClick={() => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFontAnimation: anim.value })); scrollToFontPreview(); }}
                                       className={`p-3 rounded-lg border-2 text-center transition-all ${
                                         isSelected
                                           ? 'border-primary bg-primary/10'
@@ -2518,7 +2712,7 @@ export default function SettingsPage() {
                               <div className="flex flex-col items-center gap-4">
                                 <HexColorPicker
                                   color={profileData.profileFontColor}
-                                  onChange={(color) => { setProfileData(prev => ({ ...prev, profileFontColor: color })); scrollToFontPreview(); }}
+                                  onChange={(color) => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFontColor: color })); scrollToFontPreview(); }}
                                   style={{ width: '100%', maxWidth: '280px' }}
                                 />
                                 <div className="flex items-center gap-3 w-full max-w-xs">
@@ -2529,6 +2723,7 @@ export default function SettingsPage() {
                                     onChange={(e) => {
                                       const val = e.target.value;
                                       if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) {
+                                        hasPendingEdits.current = true;
                                         setProfileData(prev => ({ ...prev, profileFontColor: val }));
                                         if (val.length === 7) scrollToFontPreview();
                                       }
@@ -2539,7 +2734,7 @@ export default function SettingsPage() {
                                   />
                                   <button
                                     type="button"
-                                    onClick={() => { setProfileData(prev => ({ ...prev, profileFontColor: '#FFFFFF' })); scrollToFontPreview(); }}
+                                    onClick={() => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFontColor: '#FFFFFF' })); scrollToFontPreview(); }}
                                     className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 border border-border rounded"
                                   >
                                     Reset
@@ -2550,7 +2745,7 @@ export default function SettingsPage() {
                                     <button
                                       key={preset}
                                       type="button"
-                                      onClick={() => { setProfileData(prev => ({ ...prev, profileFontColor: preset })); scrollToFontPreview(); }}
+                                      onClick={() => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFontColor: preset })); scrollToFontPreview(); }}
                                       className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110"
                                       style={{ backgroundColor: preset, borderColor: profileData.profileFontColor === preset ? 'white' : 'transparent' }}
                                       title={preset}
@@ -3075,26 +3270,60 @@ export default function SettingsPage() {
                             Change
                           </button>
                         </div>
-                        <Input
-                          placeholder={PLATFORM_DEFINITIONS.find(p => p.key === selectedPlatform)?.placeholder || 'Enter your username'}
-                          value={platformHandle}
-                          onChange={(e) => setPlatformHandle(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPlatform(); } }}
-                          autoFocus
-                        />
-                        <div className="flex gap-2 justify-end">
-                          <Button variant="outline" size="sm" onClick={() => setShowAddPlatform(false)}>
-                            Cancel
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={handleAddPlatform}
-                            disabled={!platformHandle.trim() || savingPlatform}
-                          >
-                            {savingPlatform ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />}
-                            Save
-                          </Button>
-                        </div>
+                        {selectedPlatform === 'xboxUsername' ? (
+                          <div className="space-y-2">
+                            <p className="text-xs text-slate-400">Sign in with Microsoft to securely link your Xbox account and verify your gamertag.</p>
+                            <div className="flex gap-2 justify-end">
+                              <Button variant="outline" size="sm" onClick={() => setShowAddPlatform(false)}>
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={async () => {
+                                  if (!isXboxConfigValid) {
+                                    toast({ title: "Xbox not configured", description: "Xbox authentication is not set up yet.", variant: "destructive" });
+                                    return;
+                                  }
+                                  setConnectingXbox(true);
+                                  try {
+                                    await connectXboxAccount();
+                                  } catch (err: any) {
+                                    setConnectingXbox(false);
+                                    toast({ title: "Error", description: err.message || "Failed to start Xbox connection.", variant: "destructive" });
+                                  }
+                                }}
+                                disabled={connectingXbox}
+                                className="bg-[#107C10] hover:bg-[#0d6b0d] text-white border-0"
+                              >
+                                {connectingXbox ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <FaXbox className="w-4 h-4 mr-1" />}
+                                Connect with Xbox
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <Input
+                              placeholder={PLATFORM_DEFINITIONS.find(p => p.key === selectedPlatform)?.placeholder || 'Enter your username'}
+                              value={platformHandle}
+                              onChange={(e) => setPlatformHandle(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPlatform(); } }}
+                              autoFocus
+                            />
+                            <div className="flex gap-2 justify-end">
+                              <Button variant="outline" size="sm" onClick={() => setShowAddPlatform(false)}>
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={handleAddPlatform}
+                                disabled={!platformHandle.trim() || savingPlatform}
+                              >
+                                {savingPlatform ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />}
+                                Save
+                              </Button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -3103,37 +3332,75 @@ export default function SettingsPage() {
                 {/* Connected Platforms List */}
                 {connectedPlatforms.length > 0 ? (
                   <div className="space-y-2">
-                    {connectedPlatforms.map((platform) => (
-                      <div
-                        key={platform.key}
-                        className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-700/50 bg-slate-800/30"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
-                          {getPlatformIcon(platform.icon)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-slate-200">{platform.label}</div>
-                          <div className="text-xs text-slate-400 truncate">{user?.[platform.key]}</div>
-                        </div>
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          <Check className="w-3 h-3" />
-                          Connected
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-slate-500 hover:text-red-400"
-                          onClick={() => handleRemovePlatform(platform.key)}
-                          disabled={removingPlatform === platform.key}
+                    {connectedPlatforms.map((platform) => {
+                      const isXboxVerified = platform.key === 'xboxUsername' && !!(user as any)?.xboxXuid;
+                      const isPsnPlatform = platform.key === 'playstationUsername';
+                      return (
+                        <div
+                          key={platform.key}
+                          className={`flex items-center gap-3 px-4 py-3 rounded-xl border bg-slate-800/30 ${isXboxVerified ? 'border-[#107C10]/40 bg-[#107C10]/5' : isPsnPlatform ? 'border-[#003791]/40 bg-[#003791]/5' : 'border-slate-700/50'}`}
                         >
-                          {removingPlatform === platform.key ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                          <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
+                            {getPlatformIcon(platform.icon)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm font-medium text-slate-200">{platform.label}</div>
+                              {isXboxVerified && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#107C10]/20 text-[#4ade80] border border-[#107C10]/30">
+                                  <Check className="w-2.5 h-2.5" />
+                                  Verified
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-400 truncate">{user?.[platform.key]}</div>
+                          </div>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <Check className="w-3 h-3" />
+                            Connected
+                          </span>
+                          {platform.key === 'xboxUsername' ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-slate-400 hover:text-[#107C10]"
+                              title="Configure Xbox"
+                              onClick={() => {
+                                xboxConfigRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }}
+                            >
+                              <Settings className="w-4 h-4" />
+                            </Button>
+                          ) : isPsnPlatform ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-slate-400 hover:text-[#003791]"
+                              title="Configure PlayStation"
+                              onClick={() => {
+                                psnConfigRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }}
+                            >
+                              <Settings className="w-4 h-4" />
+                            </Button>
                           ) : (
-                            <Trash2 className="w-4 h-4" />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-slate-500 hover:text-red-400"
+                              onClick={() => handleRemovePlatform(platform.key)}
+                              disabled={removingPlatform === platform.key}
+                            >
+                              {removingPlatform === platform.key ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </Button>
                           )}
-                        </Button>
-                      </div>
-                    ))}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : !showAddPlatform ? (
                   <div className="text-center py-8 space-y-3">
@@ -3157,6 +3424,315 @@ export default function SettingsPage() {
                 ) : null}
               </CardContent>
             </Card>
+
+            {/* Xbox Configuration Panel */}
+            {user?.xboxUsername && (
+              <div ref={xboxConfigRef}>
+              <Card className="mt-4">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-[#107C10]/15 flex items-center justify-center flex-shrink-0">
+                      <FaXbox className="w-5 h-5 text-[#107C10]" />
+                    </div>
+                    <div className="flex-1">
+                      <CardTitle className="text-base">Xbox Configure</CardTitle>
+                      <CardDescription className="mt-0.5 text-xs">
+                        Manage your Xbox achievements display and account connection.
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Sync Button */}
+                  <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                    <div>
+                      <div className="text-sm font-medium text-slate-200">Sync Achievements</div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        {user?.xboxAchievementsLastSync
+                          ? `Last synced ${new Date(user.xboxAchievementsLastSync).toLocaleDateString()}`
+                          : "Not yet synced"}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleSyncAchievements}
+                      disabled={syncingAchievements}
+                      className="gap-1.5 border-[#107C10]/40 text-[#107C10] hover:bg-[#107C10]/10"
+                    >
+                      {syncingAchievements ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
+                      {syncingAchievements ? "Syncing..." : "Sync Now"}
+                    </Button>
+                  </div>
+
+                  {/* Toggle Display on Profile */}
+                  <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                    <div>
+                      <div className="text-sm font-medium text-slate-200">Show on Profile</div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        Display your Xbox achievements on your public profile page
+                      </div>
+                    </div>
+                    <Switch
+                      checked={!!user?.showXboxAchievements}
+                      disabled={togglingAchievements || !user?.xboxAchievements}
+                      onCheckedChange={handleToggleAchievements}
+                    />
+                  </div>
+                  {!user?.xboxAchievements && (
+                    <p className="text-xs text-slate-500 px-1">Sync your achievements first before enabling profile display.</p>
+                  )}
+
+                  {/* Preview of achievement count */}
+                  {user?.xboxAchievements && Array.isArray(user.xboxAchievements) && user.xboxAchievements.length > 0 && (
+                    <div className="flex items-center gap-2 px-1">
+                      <Trophy className="w-4 h-4 text-amber-400" />
+                      <span className="text-xs text-slate-400">
+                        {user.xboxAchievements.length} game{user.xboxAchievements.length !== 1 ? 's' : ''} with achievements synced
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Disconnect Xbox */}
+                  <div className="flex items-center justify-between rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3">
+                    <div>
+                      <div className="text-sm font-medium text-slate-200">Disconnect Xbox</div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        Remove your Xbox account and clear all achievement data
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowXboxDisconnectDialog(true)}
+                      className="gap-1.5 border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                    >
+                      <Unlink className="w-4 h-4" />
+                      Disconnect
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              </div>
+            )}
+
+            {/* Xbox Disconnect Confirmation Dialog */}
+            <AlertDialog open={showXboxDisconnectDialog} onOpenChange={setShowXboxDisconnectDialog}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Disconnect Xbox Account?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove your Xbox account link and delete all synced achievement data from your profile. Your achievements will no longer appear publicly. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={disconnectingXbox}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleXboxDisconnect}
+                    disabled={disconnectingXbox}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {disconnectingXbox ? (
+                      <><Loader2 className="w-4 h-4 animate-spin mr-1" />Disconnecting...</>
+                    ) : (
+                      "Yes, Disconnect"
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            {/* PlayStation Configuration Panel */}
+            {user?.playstationUsername && (
+              <div ref={psnConfigRef}>
+              <Card className="mt-4">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-[#003791]/15 flex items-center justify-center flex-shrink-0">
+                      <FaPlaystation className="w-5 h-5 text-[#003791]" />
+                    </div>
+                    <div className="flex-1">
+                      <CardTitle className="text-base">PlayStation Configure</CardTitle>
+                      <CardDescription className="mt-0.5 text-xs">
+                        Manage your PSN trophy display and account connection.
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Sync Button */}
+                  <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                    <div>
+                      <div className="text-sm font-medium text-slate-200">Sync Trophies & Games</div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        {(user as any)?.psnTrophiesLastSync
+                          ? `Last synced ${new Date((user as any).psnTrophiesLastSync).toLocaleDateString()}`
+                          : "Not yet synced"}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleSyncPsnTrophies}
+                      disabled={syncingPsnTrophies}
+                      className="gap-1.5 border-[#003791]/40 text-[#003791] hover:bg-[#003791]/10"
+                    >
+                      {syncingPsnTrophies ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
+                      {syncingPsnTrophies ? "Syncing..." : "Sync Now"}
+                    </Button>
+                  </div>
+
+                  {/* Trophy summary preview */}
+                  {(user as any)?.psnTrophyData && Array.isArray((user as any).psnTrophyData) && (user as any).psnTrophyData.length > 0 && (() => {
+                    const data = (user as any).psnTrophyData[0];
+                    const earned = data?.earnedTrophies ?? {};
+                    const games = data?.recentGames ?? [];
+                    return (
+                      <div className="space-y-3">
+                        {/* Trophy counts */}
+                        <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3 space-y-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Trophy className="w-4 h-4 text-amber-400" />
+                            <span className="text-sm font-medium text-slate-200">Trophy Summary</span>
+                            {(user as any)?.psnTrophyLevel && (
+                              <span className="ml-auto text-xs text-slate-400">Trophy Level {(user as any).psnTrophyLevel}</span>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-4 gap-2 text-center">
+                            <div className="rounded-lg bg-slate-900/60 px-2 py-2">
+                              <div className="text-base font-bold text-yellow-300">{earned.platinum ?? 0}</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5">Platinum</div>
+                            </div>
+                            <div className="rounded-lg bg-slate-900/60 px-2 py-2">
+                              <div className="text-base font-bold text-yellow-400">{earned.gold ?? 0}</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5">Gold</div>
+                            </div>
+                            <div className="rounded-lg bg-slate-900/60 px-2 py-2">
+                              <div className="text-base font-bold text-slate-300">{earned.silver ?? 0}</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5">Silver</div>
+                            </div>
+                            <div className="rounded-lg bg-slate-900/60 px-2 py-2">
+                              <div className="text-base font-bold text-amber-600">{earned.bronze ?? 0}</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5">Bronze</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Recent games */}
+                        {games.length > 0 && (
+                          <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3 space-y-2">
+                            <div className="text-sm font-medium text-slate-200 mb-2">Recent Games</div>
+                            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                              {games.map((game: any, idx: number) => (
+                                <div key={game.titleId ?? idx} className="flex items-center gap-3">
+                                  {game.imageUrl ? (
+                                    <img
+                                      src={game.imageUrl}
+                                      alt={game.name}
+                                      className="w-9 h-9 rounded-lg object-cover flex-shrink-0 bg-slate-700"
+                                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                    />
+                                  ) : (
+                                    <div className="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0">
+                                      <Gamepad2 className="w-4 h-4 text-slate-500" />
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-xs font-medium text-slate-200 truncate">{game.name}</div>
+                                    {game.lastPlayedDateTime && (
+                                      <div className="text-[10px] text-slate-500 mt-0.5">
+                                        {new Date(game.lastPlayedDateTime).toLocaleDateString()}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {games.length === 0 && (
+                          <p className="text-xs text-slate-500 px-1">No recent game data available. This may be due to privacy settings on the PSN account.</p>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {!(user as any)?.psnTrophyData && (
+                    <p className="text-xs text-slate-500 px-1">Sync your trophies first to see your data and enable profile display.</p>
+                  )}
+
+                  {/* Toggle Display on Profile */}
+                  <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                    <div>
+                      <div className="text-sm font-medium text-slate-200">Show on Profile</div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        Display your PSN trophies on your public profile page
+                      </div>
+                    </div>
+                    <Switch
+                      checked={!!(user as any)?.showPsnTrophies}
+                      disabled={togglingPsnTrophies || !(user as any)?.psnTrophyData}
+                      onCheckedChange={handleTogglePsnTrophies}
+                    />
+                  </div>
+
+                  {/* Disconnect PlayStation */}
+                  <div className="flex items-center justify-between rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3">
+                    <div>
+                      <div className="text-sm font-medium text-slate-200">Disconnect PlayStation</div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        Remove your PSN ID and clear all trophy data
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowPsnDisconnectDialog(true)}
+                      className="gap-1.5 border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                    >
+                      <Unlink className="w-4 h-4" />
+                      Disconnect
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              </div>
+            )}
+
+            {/* PlayStation Disconnect Confirmation Dialog */}
+            <AlertDialog open={showPsnDisconnectDialog} onOpenChange={setShowPsnDisconnectDialog}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Disconnect PlayStation Account?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove your PSN ID and delete all synced trophy data from your profile. Your trophies will no longer appear publicly. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={disconnectingPsn}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handlePsnDisconnect}
+                    disabled={disconnectingPsn}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {disconnectingPsn ? (
+                      <><Loader2 className="w-4 h-4 animate-spin mr-1" />Disconnecting...</>
+                    ) : (
+                      "Yes, Disconnect"
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </TabsContent>
         </Tabs>
 

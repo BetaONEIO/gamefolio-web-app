@@ -823,6 +823,159 @@ router.post('/auth/mobile/discord', async (req: Request, res: Response) => {
 });
 
 /**
+ * Initiate Xbox Live OAuth for mobile app (Rork)
+ * Returns the Microsoft OAuth URL that the mobile app should open in a browser
+ * GET /api/auth/mobile/xbox/init
+ */
+router.get('/auth/mobile/xbox/init', (req: Request, res: Response) => {
+  const baseUrl = process.env.SITE_URL || `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  const redirectUri = `${baseUrl}/api/auth/mobile/xbox/callback`;
+
+  const microsoftClientId = process.env.VITE_MICROSOFT_CLIENT_ID;
+
+  if (!microsoftClientId) {
+    return res.status(500).json({ message: 'Xbox (Microsoft) client ID not configured' });
+  }
+
+  const state = generateSecureCode();
+  oauthStateStore.set(state, { createdAt: Date.now(), platform: 'xbox' });
+
+  const authUrl = `https://login.live.com/oauth20_authorize.srf?` +
+    `client_id=${microsoftClientId}&` +
+    `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+    `response_type=code&` +
+    `scope=${encodeURIComponent('Xboxlive.signin Xboxlive.offline_access')}&` +
+    `state=${state}`;
+
+  res.json({ authUrl, redirectUri, state });
+});
+
+/**
+ * Xbox Live OAuth callback for mobile app (Rork)
+ * Exchanges auth code via xbl.io, creates/finds user, redirects with a one-time auth code
+ * Mobile app exchanges that code via POST /api/auth/mobile/exchange
+ * GET /api/auth/mobile/xbox/callback
+ */
+router.get('/auth/mobile/xbox/callback', async (req: Request, res: Response) => {
+  try {
+    const { code, error: oauthError, state } = req.query;
+
+    if (oauthError) {
+      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent(String(oauthError))}`);
+    }
+
+    if (!code) {
+      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('No authorization code received')}`);
+    }
+
+    if (!state || !oauthStateStore.has(String(state))) {
+      console.error('Invalid or missing Xbox OAuth state parameter');
+      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Invalid authentication state')}`);
+    }
+
+    const stateData = oauthStateStore.get(String(state));
+    oauthStateStore.delete(String(state));
+
+    if (stateData?.platform !== 'xbox') {
+      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Invalid authentication state')}`);
+    }
+
+    const xblApiKey = process.env.XBL_API_KEY;
+    if (!xblApiKey) {
+      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Xbox authentication not configured on server')}`);
+    }
+
+    const baseUrl = process.env.SITE_URL || `https://${process.env.REPLIT_DEV_DOMAIN}`;
+    const redirectUri = `${baseUrl}/api/auth/mobile/xbox/callback`;
+
+    // Exchange the Microsoft auth code for Xbox Live profile via xbl.io
+    const xblResponse = await fetch('https://xbl.io/api/v2/auth/oauth', {
+      method: 'POST',
+      headers: {
+        'x-authorization': xblApiKey,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ code: String(code), redirect_uri: redirectUri })
+    });
+
+    if (!xblResponse.ok) {
+      const errorText = await xblResponse.text().catch(() => 'Unknown error');
+      console.error('xbl.io mobile token exchange error:', xblResponse.status, errorText);
+      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Failed to exchange authorization code with Xbox Live')}`);
+    }
+
+    const xblData = await xblResponse.json();
+
+    const xuid = xblData.xuid || xblData.data?.xuid;
+    const gamertag = xblData.gamertag || xblData.data?.gamertag || xblData.settings?.find((s: any) => s.id === 'Gamertag')?.value;
+    const gamerpic = xblData.displayPicRaw || xblData.data?.displayPicRaw || xblData.settings?.find((s: any) => s.id === 'GameDisplayPicRaw')?.value;
+
+    if (!xuid || !gamertag) {
+      console.error('xbl.io mobile response missing required fields:', JSON.stringify(xblData));
+      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Could not retrieve Xbox profile information')}`);
+    }
+
+    // Find or create user
+    let user = await storage.getUserByExternalId?.(xuid, 'xbox');
+    let isNewUser = false;
+
+    if (!user) {
+      isNewUser = true;
+      const timestamp = Date.now().toString().slice(-6);
+      const tempUsername = `temp_xbox_${xuid.substring(0, 8)}_${timestamp}`;
+      const avatarUrl = gamerpic || '/attached_assets/gamefolio social logo 3d circle web.png';
+
+      user = await storage.createUser({
+        username: tempUsername.toLowerCase(),
+        displayName: gamertag,
+        email: `${xuid}@xbox.placeholder`,
+        password: '',
+        emailVerified: true,
+        avatarUrl,
+        bannerUrl: '/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg',
+        authProvider: 'xbox',
+        externalId: xuid,
+        xboxUsername: gamertag,
+        userType: null,
+        ageRange: null
+      });
+    } else {
+      // Update gamertag if changed
+      if (gamertag && user.xboxUsername !== gamertag) {
+        user = await storage.updateUser(user.id, { xboxUsername: gamertag }) || user;
+      }
+    }
+
+    const needsOnboarding = !user.userType || user.username.startsWith('temp_');
+
+    // Update login streak
+    try {
+      await StreakService.updateLoginStreak(user.id);
+    } catch (error) {
+      console.error('Error updating Xbox user login streak:', error);
+    }
+
+    // Generate JWT tokens and store with a one-time auth code
+    const tokens = JWTService.generateTokenPair(user);
+    const authCode = generateSecureCode();
+    mobileAuthCodes.set(authCode, {
+      createdAt: Date.now(),
+      tokens,
+      userId: user.id,
+      needsOnboarding,
+      isNewUser
+    });
+
+    return res.redirect(`${RORK_APP_SCHEME}auth/callback?code=${authCode}`);
+
+  } catch (error) {
+    console.error('Mobile Xbox callback error:', error);
+    return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Xbox authentication failed')}`);
+  }
+});
+
+/**
  * Exchange one-time auth code for tokens
  * Mobile app calls this after receiving the auth code from the callback redirect
  * This is more secure than putting tokens directly in the redirect URL
