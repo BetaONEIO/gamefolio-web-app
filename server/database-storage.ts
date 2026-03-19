@@ -526,18 +526,32 @@ export class DatabaseStorage implements IStorage {
         const contentCount = parseInt(clipsCount[0]?.count?.toString() || '0') +
           parseInt(screenshotsCount[0]?.count?.toString() || '0');
 
-        const firstContent = await db
+        // Try to find submitter from clips first, then screenshots
+        let firstUserId: number | null = null;
+        const firstClip = await db
           .select({ userId: clips.userId })
           .from(clips)
           .where(eq(clips.gameId, game.id))
           .limit(1);
+        if (firstClip.length > 0) {
+          firstUserId = firstClip[0].userId;
+        } else {
+          const firstScreenshot = await db
+            .select({ userId: screenshots.userId })
+            .from(screenshots)
+            .where(eq(screenshots.gameId, game.id))
+            .limit(1);
+          if (firstScreenshot.length > 0) {
+            firstUserId = firstScreenshot[0].userId;
+          }
+        }
 
         let submittedBy = null;
-        if (firstContent.length > 0) {
+        if (firstUserId !== null) {
           const [submitter] = await db
             .select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl })
             .from(users)
-            .where(eq(users.id, firstContent[0].userId));
+            .where(eq(users.id, firstUserId));
           submittedBy = submitter || null;
         }
 
@@ -751,6 +765,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getClipsByGameId(gameId: number, limit: number = 4): Promise<ClipWithUser[]> {
+    // Verify the game is approved before returning its clips publicly
+    const [game] = await db.select({ isApproved: games.isApproved }).from(games).where(eq(games.id, gameId));
+    if (game && game.isApproved === false) {
+      return [];
+    }
+
     // Get clips for a specific game
     const gameClips = await db
       .select()
@@ -1842,7 +1862,7 @@ export class DatabaseStorage implements IStorage {
   async getAllClips(limit: number = 10, offset: number = 0, currentUserId?: number): Promise<ClipWithUser[]> {
     console.log('getAllClips: currentUserId =', currentUserId);
     
-    // CRITICAL FIX: Show ALL clips including orphaned ones for admin moderation
+    // Show clips excluding those linked to unapproved custom games (public feed safety)
     const allClipsData = await db
       .select({
         clip: clips,
@@ -1864,7 +1884,10 @@ export class DatabaseStorage implements IStorage {
       .from(clips)
       .leftJoin(users, eq(clips.userId, users.id))
       .leftJoin(games, eq(clips.gameId, games.id))
-      .where(eq(clips.videoType, 'clip'))
+      .where(and(
+        eq(clips.videoType, 'clip'),
+        sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
+      ))
       .orderBy(desc(clips.createdAt), desc(clips.id))
       .limit(limit)
       .offset(offset);
@@ -1978,6 +2001,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getScreenshotsByGameId(gameId: number, limit: number = 20): Promise<Screenshot[]> {
+    // Verify the game is approved before returning its screenshots publicly
+    const [game] = await db.select({ isApproved: games.isApproved }).from(games).where(eq(games.id, gameId));
+    if (game && game.isApproved === false) {
+      return [];
+    }
+
     return await db
       .select()
       .from(screenshots)

@@ -4081,7 +4081,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get actual clips from database for all users including demo
-      const clips = await storage.getClipsByUserId(user.id);
+      let clips = await storage.getClipsByUserId(user.id);
+
+      // For non-owners, hide clips associated with unapproved custom games
+      if (!isOwnProfile) {
+        clips = clips.filter((c: any) => !c.game || c.game.isApproved !== false);
+      }
 
       // For demo user, also include the demo clips if no real clips exist
       if (req.params.username === "demo" && clips.length === 0) {
@@ -8640,7 +8645,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "This profile is private. Please log in and follow the user to see their content." });
       }
 
-      const screenshots = await storage.getScreenshotsByUserId(userId);
+      let screenshots = await storage.getScreenshotsByUserId(userId);
+
+      // For non-owners, hide screenshots associated with unapproved custom games
+      if (!isOwnProfile) {
+        const gameIds = [...new Set(screenshots.map((s: any) => s.gameId).filter(Boolean))] as number[];
+        if (gameIds.length > 0) {
+          const allGames = await storage.getAllGames();
+          const unapprovedGameIds = new Set(allGames.filter((g: any) => g.isApproved === false).map((g: any) => g.id));
+          screenshots = screenshots.filter((s: any) => !s.gameId || !unapprovedGameIds.has(s.gameId));
+        }
+      }
+
       res.json(screenshots);
     } catch (err) {
       console.error("Error fetching user screenshots:", err);
