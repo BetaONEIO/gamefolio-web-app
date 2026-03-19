@@ -4229,15 +4229,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin: Reject (delete) a custom game and unlink its content
-  app.delete("/api/admin/games/:id/reject", adminMiddleware, async (req, res) => {
+  // Admin: Reject a custom game (keeps it permanently unapproved so content stays hidden)
+  app.patch("/api/admin/games/:id/reject", adminMiddleware, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid game ID" });
 
-      const deleted = await storage.rejectGame(id);
-      if (!deleted) return res.status(404).json({ message: "Game not found" });
-      res.json({ message: "Game rejected and removed" });
+      const rejected = await storage.rejectGame(id);
+      if (!rejected) return res.status(404).json({ message: "Game not found" });
+      res.json({ message: "Game rejected — content remains hidden. Use delete to fully remove the game." });
     } catch (err) {
       console.error("Error rejecting game:", err);
       res.status(500).json({ message: "Error rejecting game" });

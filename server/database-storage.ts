@@ -509,7 +509,11 @@ export class DatabaseStorage implements IStorage {
       const pendingGames = await db
         .select()
         .from(games)
-        .where(and(eq(games.isUserAdded, true), eq(games.isApproved, false)))
+        .where(and(
+          eq(games.isUserAdded, true),
+          eq(games.isApproved, false),
+          eq(games.showContactBanner, true)
+        ))
         .orderBy(desc(games.createdAt));
 
       const result = [];
@@ -575,9 +579,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async rejectGame(id: number): Promise<boolean> {
-    await db.update(clips).set({ gameId: null }).where(eq(clips.gameId, id));
-    await db.update(screenshots).set({ gameId: null }).where(eq(screenshots.gameId, id));
-    const result = await db.delete(games).where(eq(games.id, id)).returning();
+    // Rejection permanently marks the game as denied (isApproved stays false).
+    // showContactBanner is set to false to distinguish rejected games from new pending ones,
+    // so the admin queue only surfaces games that haven't been reviewed yet.
+    // All linked clips/screenshots remain hidden since every public query filters
+    // out content associated with is_approved=false games.
+    const result = await db
+      .update(games)
+      .set({ isApproved: false, showContactBanner: false })
+      .where(eq(games.id, id))
+      .returning();
     return result.length > 0;
   }
 

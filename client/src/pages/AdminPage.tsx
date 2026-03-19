@@ -1209,11 +1209,11 @@ const PendingGamesSection = () => {
   const handleReject = async (game: PendingGame) => {
     try {
       const res = await fetch(`/api/admin/games/${game.id}/reject`, {
-        method: "DELETE",
+        method: "PATCH",
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to reject game");
-      toast({ title: "Game rejected", description: `"${game.name}" has been removed. Any linked content now has no game association.` });
+      toast({ title: "Game rejected", description: `"${game.name}" has been permanently denied. Its content remains hidden from public feeds.` });
       refetch();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
