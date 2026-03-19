@@ -2856,8 +2856,8 @@ const ProfilePage = () => {
                         {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
                       </span>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
 
