@@ -2737,6 +2737,10 @@ const ProfilePage = () => {
                   fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined,
                   letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : undefined,
                   fontWeight: isCyberpunkTheme ? '900' : undefined,
+                }}>
+                  <span className={isCyberpunkTheme ? 'cyber-gradient-text' : ''}>Collection</span>
+              </button>
+
             {/* L-shaped fading border with curved corner and button */}
             <div
               className="relative mt-4 rounded-lg transition-all duration-300"
@@ -2760,15 +2764,13 @@ const ProfilePage = () => {
               
               {/* Top horizontal line - extends far right and fades with inner glow */}
               <div 
-                className="absolute top-0 left-4 h-[2px] flex items-center"
+                className="absolute top-0 left-4 h-[2px]"
                 style={{
                   width: '550px',
                   background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 40%, transparent 100%)`,
                   boxShadow: `0 0 12px 2px ${accentColor || 'hsl(var(--primary))'}50, 0 2px 8px ${accentColor || 'hsl(var(--primary))'}30`,
                 }}
-              >
-                <span className={isCyberpunkTheme ? 'cyber-gradient-text' : ''}>Collection</span>
-              </button>
+              />
 
               <div 
                 className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''}`}
@@ -2804,10 +2806,12 @@ const ProfilePage = () => {
                         <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Following</span>
                       </div>
                     </div>
-                  ) : (
-              />
-              
-              {/* Content aligned with username above */}
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            {/* Content aligned with username above */}
               <div className="pl-8 pt-4" style={{ minHeight: '120px' }}>
                 {profileSectionTab === 'stats' ? (
                   <>
