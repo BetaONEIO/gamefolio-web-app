@@ -44,3 +44,7 @@ integrations = ["stripe:2.0.0"]
 [userenv.shared]
 SKALE_NEBULA_RPC_URL = "https://skale-base.skalenodes.com/v1/base"
 GFT_TOKEN_CONTRACT_ADDRESS = "0xe45BeC5A80e6E32852393e77206eAf83160A90AE"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 120000
