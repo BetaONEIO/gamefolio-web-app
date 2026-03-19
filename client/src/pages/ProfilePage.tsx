@@ -1598,6 +1598,48 @@ const ProfilePage = () => {
           .zombie-stats-card {
             animation: zombieFlicker 8s infinite 1.5s, zombieGlow 3.5s ease-in-out infinite;
           }
+          /* ── Zombie fog layers ── */
+          @keyframes zombieFogDrift1 {
+            0%   { transform: translate(0%,    0%); }
+            25%  { transform: translate(7%,   -5%); }
+            50%  { transform: translate(3%,    8%); }
+            75%  { transform: translate(-6%,   4%); }
+            100% { transform: translate(0%,    0%); }
+          }
+          @keyframes zombieFogDrift2 {
+            0%   { transform: translate(0%,    0%); }
+            33%  { transform: translate(-9%,   6%); }
+            66%  { transform: translate(6%,   -8%); }
+            100% { transform: translate(0%,    0%); }
+          }
+          @keyframes zombieFogDrift3 {
+            0%   { transform: translate(0%,    0%); }
+            50%  { transform: translate(5%,    7%); }
+            100% { transform: translate(0%,    0%); }
+          }
+          .zombie-fog-1 {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              radial-gradient(ellipse 70% 50% at 20% 30%, #1a2e0a88 0%, transparent 70%),
+              radial-gradient(ellipse 50% 60% at 80% 70%, #0d1a0577 0%, transparent 70%),
+              radial-gradient(ellipse 80% 40% at 50% 90%, #9ae60020 0%, transparent 60%);
+            animation: zombieFogDrift1 28s ease-in-out infinite;
+          }
+          .zombie-fog-2 {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              radial-gradient(ellipse 60% 70% at 72% 18%, #9ae60016 0%, transparent 65%),
+              radial-gradient(ellipse 45% 55% at 10% 78%, #1a2e0a66 0%, transparent 70%),
+              radial-gradient(ellipse 90% 35% at 38% 52%, #0d1a0544 0%, transparent 60%);
+            animation: zombieFogDrift2 35s ease-in-out infinite;
+          }
+          .zombie-fog-3 {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              radial-gradient(ellipse 55% 80% at 85% 42%, #9ae60012 0%, transparent 68%),
+              radial-gradient(ellipse 75% 45% at 14% 58%, #1a2e0a55 0%, transparent 65%);
+            animation: zombieFogDrift3 44s ease-in-out infinite;
+          }
           .zombie-bg-pulse {
             position:fixed;
             inset:0;
@@ -1637,6 +1679,9 @@ const ProfilePage = () => {
           }
         `}</style>
       )}
+      {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-fog-1" />}
+      {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-fog-2" />}
+      {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-fog-3" />}
       {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-bg-pulse" />}
       {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-mesh-sweep" />}
       {/* Cyberpunk theme animations */}
