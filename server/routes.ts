@@ -4198,6 +4198,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Get pending (unapproved) custom games
+  app.get("/api/admin/games/pending", adminMiddleware, async (req, res) => {
+    try {
+      const pendingGames = await storage.getPendingGames();
+      res.json(pendingGames);
+    } catch (err) {
+      console.error("Error fetching pending games:", err);
+      res.status(500).json({ message: "Error fetching pending games" });
+    }
+  });
+
+  // Admin: Approve a custom game
+  app.patch("/api/admin/games/:id/approve", adminMiddleware, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid game ID" });
+
+      const game = await storage.approveGame(id);
+      if (!game) return res.status(404).json({ message: "Game not found" });
+      res.json(game);
+    } catch (err) {
+      console.error("Error approving game:", err);
+      res.status(500).json({ message: "Error approving game" });
+    }
+  });
+
+  // Admin: Reject (delete) a custom game and unlink its content
+  app.delete("/api/admin/games/:id/reject", adminMiddleware, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid game ID" });
+
+      const deleted = await storage.rejectGame(id);
+      if (!deleted) return res.status(404).json({ message: "Game not found" });
+      res.json({ message: "Game rejected and removed" });
+    } catch (err) {
+      console.error("Error rejecting game:", err);
+      res.status(500).json({ message: "Error rejecting game" });
+    }
+  });
+
   // Get or create game by slug (for Twitch games that don't exist in database yet)
   app.get("/api/games/slug/:slug", async (req, res) => {
     try {

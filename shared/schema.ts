@@ -127,6 +127,7 @@ export const games = pgTable("games", {
   imageUrl: text("image_url"),
   twitchId: text("twitch_id"),
   isUserAdded: boolean("is_user_added").default(false).notNull(),
+  isApproved: boolean("is_approved").default(true).notNull(),
   showContactBanner: boolean("show_contact_banner").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

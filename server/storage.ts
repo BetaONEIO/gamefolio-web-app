@@ -110,6 +110,9 @@ export interface IStorage {
   deleteGame(id: number): Promise<boolean>;
   getAllGames(): Promise<Game[]>;
   getTrendingGames(limit?: number): Promise<Game[]>;
+  getPendingGames(): Promise<Array<Game & { submittedBy?: { id: number; username: string; displayName: string; avatarUrl: string | null } | null; contentCount: number }>>;
+  approveGame(id: number): Promise<Game | null>;
+  rejectGame(id: number): Promise<boolean>;
 
   // Clip operations
   getClip(id: number): Promise<Clip | null>;
