@@ -2315,30 +2315,32 @@ const ProfilePage = () => {
                 fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined,
                 letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : undefined,
                 fontWeight: isCyberpunkTheme ? '900' : undefined,
-          {/* L-shaped fading border container for profile info */}
-          <div
-            className="relative mt-4 mb-1 mx-4 rounded-lg transition-all duration-300"
-          >
-            {/* Curved corner piece */}
-            <div 
-              className="absolute top-0 -left-4 w-3 h-3 pointer-events-none"
-              style={{
-                borderLeft: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
-                borderTop: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
-                borderTopLeftRadius: '10px',
-              }}
-            />
-            
-            {/* Top horizontal line - fades to right with Collection button */}
-            <div 
-              className="absolute top-0 -left-1 h-[2px] flex items-center"
-              style={{
-                width: 'calc(100% + 4px)',
-                background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, transparent 100%)`,
-              }}
-            >
-              <span className={isCyberpunkTheme ? 'cyber-gradient-text' : ''}>Collection</span>
+              }}>
+                <span className={isCyberpunkTheme ? 'cyber-gradient-text' : ''}>Collection</span>
             </button>
+
+            {/* L-shaped fading border container for profile info */}
+            <div
+              className="relative mt-4 rounded-lg transition-all duration-300"
+            >
+              {/* Curved corner piece */}
+              <div 
+                className="absolute top-0 -left-4 w-3 h-3 pointer-events-none"
+                style={{
+                  borderLeft: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
+                  borderTop: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
+                  borderTopLeftRadius: '10px',
+                }}
+              />
+              
+              {/* Top horizontal line - fades to right with Collection button */}
+              <div 
+                className="absolute top-0 -left-1 h-[2px]"
+                style={{
+                  width: 'calc(100% + 4px)',
+                  background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, transparent 100%)`,
+                }}
+              />
 
             <div 
               className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''}`}
