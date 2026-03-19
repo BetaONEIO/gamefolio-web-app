@@ -2789,16 +2789,43 @@ const ProfilePage = () => {
         <div className="h-0 md:h-[12px]"></div>
 
         {/* Enhanced Tabs section with rounded container style */}
-        <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-2 md:mt-8">
+        <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-2 md:mt-8 relative z-20">
         {profileSectionTab === 'collection' ? (
           <div className="w-full">
             <div 
-              className="w-full max-w-lg lg:max-w-full mx-auto justify-center rounded-full h-11 md:h-12 p-1 relative flex gap-0.5 bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg"
+              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
+              style={isZombieTheme ? { background: '#1a1d1a' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
             >
-              <div className="relative rounded-full h-9 md:h-10 flex-1 flex items-center justify-center px-3 md:px-5 text-sm font-semibold text-white !bg-primary gap-2">
-                <Hexagon className="w-4 h-4" />
-                NFTs
-                {profileNftData && <span className="text-xs opacity-80">({profileNftData.nfts.filter(n => !n.sold).length})</span>}
+              <div
+                className={`relative h-9 md:h-10 flex-1 flex items-center justify-center px-3 md:px-5 text-sm font-semibold gap-2 ${isCyberpunkTheme ? 'rounded-none' : 'rounded-full'}`}
+                style={isCyberpunkTheme ? {
+                  background: 'rgba(0,211,242,0.12)',
+                  borderBottom: '2px solid #00d3f2',
+                  color: 'transparent',
+                  fontFamily: "'Orbitron', sans-serif",
+                  letterSpacing: '2.5px',
+                  fontSize: '0.7rem',
+                  fontWeight: '900',
+                } : isZombieTheme ? {
+                  background: 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)',
+                  color: '#9ae600',
+                  fontFamily: "'Creepster', cursive",
+                  letterSpacing: '2px',
+                } : isLightBackground ? {
+                  background: 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)',
+                  color: '#ffffff',
+                } : {
+                  background: `hsl(var(--primary))`,
+                  color: '#ffffff',
+                }}
+              >
+                <Hexagon className={`w-4 h-4 ${isCyberpunkTheme ? 'text-[#00d3f2]' : isZombieTheme ? 'text-[#9ae600]' : ''}`} />
+                <span className={isCyberpunkTheme ? 'cyber-gradient-text' : ''}>NFTs</span>
+                {profileNftData && (
+                  <span className={`text-xs opacity-80 ${isCyberpunkTheme ? 'cyber-gradient-text' : ''}`}>
+                    ({profileNftData.nfts.filter(n => !n.sold).length})
+                  </span>
+                )}
               </div>
             </div>
             <div className="pt-4 px-1 md:px-4">
