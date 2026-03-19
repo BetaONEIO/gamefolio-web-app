@@ -1618,7 +1618,7 @@ const ProfilePage = () => {
             100% { transform: translate(0%,    0%); }
           }
           .zombie-fog-1 {
-            position:fixed; inset:0; pointer-events:none; z-index:25;
+            position:fixed; inset:0; pointer-events:none; z-index:0;
             background:
               radial-gradient(ellipse 70% 50% at 20% 30%, #1a2e0a88 0%, transparent 70%),
               radial-gradient(ellipse 50% 60% at 80% 70%, #0d1a0577 0%, transparent 70%),
@@ -1626,7 +1626,7 @@ const ProfilePage = () => {
             animation: zombieFogDrift1 28s ease-in-out infinite;
           }
           .zombie-fog-2 {
-            position:fixed; inset:0; pointer-events:none; z-index:25;
+            position:fixed; inset:0; pointer-events:none; z-index:0;
             background:
               radial-gradient(ellipse 60% 70% at 72% 18%, #9ae60016 0%, transparent 65%),
               radial-gradient(ellipse 45% 55% at 10% 78%, #1a2e0a66 0%, transparent 70%),
@@ -1634,7 +1634,7 @@ const ProfilePage = () => {
             animation: zombieFogDrift2 35s ease-in-out infinite;
           }
           .zombie-fog-3 {
-            position:fixed; inset:0; pointer-events:none; z-index:25;
+            position:fixed; inset:0; pointer-events:none; z-index:0;
             background:
               radial-gradient(ellipse 55% 80% at 85% 42%, #9ae60012 0%, transparent 68%),
               radial-gradient(ellipse 75% 45% at 14% 58%, #1a2e0a55 0%, transparent 65%);
@@ -1644,7 +1644,7 @@ const ProfilePage = () => {
             position:fixed;
             inset:0;
             pointer-events:none;
-            z-index:25;
+            z-index:0;
             opacity:0.35;
             background-image:
               linear-gradient(0deg, #9ae60038 1px, transparent 1px),
@@ -1662,7 +1662,7 @@ const ProfilePage = () => {
             width:100%;
             height:200%;
             pointer-events:none;
-            z-index:25;
+            z-index:0;
             background: linear-gradient(
               90deg,
               transparent 0%,
@@ -1710,7 +1710,7 @@ const ProfilePage = () => {
             50%      { opacity:0.32; transform:scale(1.012); }
           }
           .cyber-bg-mesh {
-            position:fixed; inset:0; pointer-events:none; z-index:25;
+            position:fixed; inset:0; pointer-events:none; z-index:0;
             background-image:
               radial-gradient(circle, #00d3f228 1.5px, transparent 1.5px),
               linear-gradient(45deg,  #00b8db1a 1px, transparent 1px),
@@ -1725,7 +1725,7 @@ const ProfilePage = () => {
           }
           .cyber-scan-sweep {
             position:fixed; top:-50%; left:0; width:100%; height:200%;
-            pointer-events:none; z-index:25;
+            pointer-events:none; z-index:0;
             background: linear-gradient(
               90deg,
               transparent 0%, transparent 44%,
@@ -1738,7 +1738,7 @@ const ProfilePage = () => {
           }
           /* ── Glitch scanlines base ── */
           .cyber-scanlines {
-            position:fixed; inset:0; pointer-events:none; z-index:25;
+            position:fixed; inset:0; pointer-events:none; z-index:0;
             background: repeating-linear-gradient(
               0deg,
               transparent,
@@ -1767,7 +1767,7 @@ const ProfilePage = () => {
             100%    { opacity:0; }
           }
           .cyber-rgb-red {
-            position:fixed; inset:0; pointer-events:none; z-index:25;
+            position:fixed; inset:0; pointer-events:none; z-index:0;
             background:
               linear-gradient(180deg, transparent 15%, #ff004422 15.4%, transparent 15.8%),
               linear-gradient(180deg, transparent 48%, #ff003318 48.5%, transparent 49%),
@@ -1776,7 +1776,7 @@ const ProfilePage = () => {
             animation: cyberRGBR 8s step-start infinite;
           }
           .cyber-rgb-blue {
-            position:fixed; inset:0; pointer-events:none; z-index:25;
+            position:fixed; inset:0; pointer-events:none; z-index:0;
             background:
               linear-gradient(180deg, transparent 15%, #0055ff22 15.4%, transparent 15.8%),
               linear-gradient(180deg, transparent 48%, #0033ff18 48.5%, transparent 49%),
@@ -1799,7 +1799,7 @@ const ProfilePage = () => {
             100%    { transform:translateX(0);     opacity:0.55; }
           }
           .cyber-glitch-lines {
-            position:fixed; inset:0; pointer-events:none; z-index:25;
+            position:fixed; inset:0; pointer-events:none; z-index:0;
             background:
               linear-gradient(180deg, transparent 22%,   #00d3f214 22.25%, transparent 22.5%),
               linear-gradient(180deg, transparent 41%,   #e12afb11 41.3%,  transparent 41.6%),
@@ -1816,7 +1816,7 @@ const ProfilePage = () => {
             100% { opacity:0.06; background-position: 0 0; }
           }
           .cyber-interference {
-            position:fixed; inset:0; pointer-events:none; z-index:25;
+            position:fixed; inset:0; pointer-events:none; z-index:0;
             background-image:
               repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,211,242,0.08) 1px, rgba(0,211,242,0.08) 2px),
               repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(225,42,251,0.05) 1px, rgba(225,42,251,0.05) 2px);
@@ -2793,57 +2793,12 @@ const ProfilePage = () => {
         {profileSectionTab === 'collection' ? (
           <div className="w-full">
             <div 
-              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'rounded-none' : 'rounded-full'}`}
-              style={isCyberpunkTheme ? {
-                background: '#020617',
-                border: '1px solid #00b8db',
-                boxShadow: '0 0 14px #00d3f244',
-                clipPath: 'polygon(14px 0%, 100% 0%, calc(100% - 14px) 100%, 0% 100%)',
-              } : isZombieTheme ? {
-                background: '#0d1a00',
-                border: '1.5px solid #7ccf00',
-                boxShadow: '0 0 16px #9ae60044',
-              } : isLightBackground ? {
-                background: 'rgba(255,255,255,0.5)',
-                border: `1px solid ${accentColor}55`,
-              } : {
-                background: 'hsl(220,20%,12%)',
-                border: '1px solid hsl(220,15%,25%)',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
-              }}
+              className="w-full max-w-lg lg:max-w-full mx-auto justify-center rounded-full h-11 md:h-12 p-1 relative flex gap-0.5 bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg"
             >
-              <div
-                className={`relative h-9 md:h-10 flex-1 flex items-center justify-center px-3 md:px-5 text-sm font-semibold gap-2 ${isCyberpunkTheme ? 'rounded-none' : 'rounded-full'}`}
-                style={isCyberpunkTheme ? {
-                  background: 'transparent',
-                  clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)',
-                } : isZombieTheme ? {
-                  background: 'linear-gradient(90deg, #1a3300 0%, #2d5200 100%)',
-                  borderRadius: '9999px',
-                } : {
-                  backgroundColor: accentColor || 'hsl(var(--primary))',
-                  borderRadius: '9999px',
-                }}
-              >
-                {isCyberpunkTheme ? (
-                  <>
-                    <Hexagon className="w-4 h-4" style={{ color: '#00d3f2' }} />
-                    <span style={{ background: 'linear-gradient(270deg,#00d3f2,#e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontFamily: "'Orbitron', sans-serif", letterSpacing: '2px', fontWeight: '900', fontSize: '0.7rem' }}>NFTs</span>
-                    {profileNftData && <span className="text-xs opacity-80" style={{ WebkitTextFillColor: '#00d3f288', fontFamily: "'Orbitron', sans-serif" }}>({profileNftData.nfts.filter(n => !n.sold).length})</span>}
-                  </>
-                ) : isZombieTheme ? (
-                  <>
-                    <Hexagon className="w-4 h-4" style={{ color: '#9ae600' }} />
-                    <span style={{ color: '#9ae600', fontFamily: "'Creepster', cursive", letterSpacing: '2px', fontSize: '0.9rem' }}>NFTs</span>
-                    {profileNftData && <span className="text-xs opacity-80" style={{ color: '#9ae60099' }}>({profileNftData.nfts.filter(n => !n.sold).length})</span>}
-                  </>
-                ) : (
-                  <>
-                    <Hexagon className="w-4 h-4 text-white" />
-                    <span className="text-white">NFTs</span>
-                    {profileNftData && <span className="text-xs text-white/70">({profileNftData.nfts.filter(n => !n.sold).length})</span>}
-                  </>
-                )}
+              <div className="relative rounded-full h-9 md:h-10 flex-1 flex items-center justify-center px-3 md:px-5 text-sm font-semibold text-white !bg-primary gap-2">
+                <Hexagon className="w-4 h-4" />
+                NFTs
+                {profileNftData && <span className="text-xs opacity-80">({profileNftData.nfts.filter(n => !n.sold).length})</span>}
               </div>
             </div>
             <div className="pt-4 px-1 md:px-4">
