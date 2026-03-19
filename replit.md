@@ -3,6 +3,26 @@
 ## Overview
 Gamefolio is a comprehensive gaming portfolio and social platform for gamers to showcase clips, build portfolios, connect, and compete. It aims to provide a robust, secure, and engaging environment with content sharing, real-time messaging, and moderation, along with a unique GF Token economy for NFTs and a subscription model for premium features. The project envisions significant market potential by integrating Web3 gaming elements and fostering a vibrant gaming community.
 
+## Blockchain Configuration (SKALE Base Mainnet)
+- Chain: SKALE Base Mainnet, Chain ID `1187947933`
+- RPC URL: `https://skale-base.skalenodes.com/v1/base`
+- Explorer: `https://base.explorer.mainnet.skalenodes.com`
+- GFT Token: `0xe45BeC5A80e6E32852393e77206eAf83160A90AE`
+- NFT Contract: `0x6Ca4376A68907A404981e7701055813F9cE13FB3`
+- NFT Base URI: `ipfs://bafybeigkn2gvxtosshac47qq72gwtfdwfbfigsk4tbsggzceurjv3qhmmi/`
+- Staking Contract: `0x40D7D0bA396eB920BD7f88ac58B4fA768eb52f2D`
+- Sale Contract: not yet deployed (empty string)
+- Source of truth: `shared/contracts.ts` exports `SKALE_BASE_MAINNET`; `SKALE_NEBULA_TESTNET` is aliased to it for backwards compatibility
+- Sequence wallet configured with custom chain via `wagmiConfig` (bypasses built-in chain registry)
+
+## Stripe Configuration (Live/Mainnet)
+- Stripe is configured for **live mode** using `STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY` secrets
+- Webhook signature verification reads from `STRIPE_WEBHOOK_SECRET` env secret first (preferred), then falls back to the Replit Stripe connector
+- The Replit Stripe connector (`ccfg_stripe_01K611P4YQR0SZM11XFRQJC44Y`) was not connected — use `STRIPE_WEBHOOK_SECRET` directly instead
+- Webhook endpoint path: `/api/stripe/webhook`
+- Events required: `checkout.session.completed`, `payment_intent.succeeded`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.deleted`
+- Pro subscription price IDs are auto-provisioned in Stripe on first use (no env var needed)
+
 ## User Preferences
 - Focus on using only authentic Supabase data sources
 - Maintain scalable, cloud-first architecture
@@ -67,7 +87,7 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 - **Streak System**: Tracks consecutive daily logins. Awards 10 XP per daily login. Streaks reset if a day is missed. Milestone bonuses every 5 days (day 5, 10, 15, etc.) with scaling XP (25→50→100→200→500→1000). Persistent in-app notifications created for each streak event (type: 'streak'). Admin panel has independent user search for streak management.
 - **Admin Panel**: Comprehensive tools for user management, content moderation, and system synchronization. Includes an "Assets" tab for managing assets across 4 Supabase storage buckets (`gamefolio-backgrounds`, `gamefolio-profile-borders`, `gamefolio-name-tags`, `gamefolio-assets`). Assets can be assigned to Lootbox rewards or Store items with configurable rarity, win probability, and pricing. APIs: `/api/admin/assets/assignments` (view assignments), `/api/admin/assets/assign` (assign/update), `/api/admin/assets/unassign` (remove). Hero banner section: 16/7 aspect ratio previews matching homepage layout (gradient overlay, left-aligned text), image upload validation (10MB max, landscape orientation, min 1200×400px), backend Sharp processing (resize to 1920×820px max, optimized progressive JPEG), recommended specs guidance in upload areas.
 - **Multi-game Support**: Integration with Twitch API for game data and automatic game creation. Users can also add custom games not found on Twitch via the GameSelector during upload. Custom games use the Gamefolio logo as their thumbnail, appear on the Explore page alongside Twitch games (interleaved near the top), and their game pages display a "Is this your game? Contact us" banner with a mailto link to support@gamefolio.com. Schema: `games.is_user_added` boolean column, `games.show_contact_banner` boolean column (admin-toggleable to hide the banner after a developer contacts the team). API: `POST /api/games/custom` creates user-added games. Explore page search checks local DB games before Twitch API.
-- **GF Token Economy**: In-app currency for NFT purchases. GFT can only be obtained via Stripe purchases (no starting balance, no lootbox rewards). Off-chain balance management only (no on-chain transfers — treasury wallet key does not match the wallet holding tokens). **GF Token Contract**: `0x9c4aC24c7bb36AA3772ccd5aCBCB48a20A1704B7` on SKALE Nebula Testnet. **Owner/Treasury Wallet**: `0x3acd790Bc2338e7bEf21f4F053596f050ADf1Def`.
+- **GF Token Economy (Fully On-Chain)**: All GFT token balances and transactions go through SKALE Base Mainnet. Balance displays use `useTokenBalance()` hook (live on-chain read). GFT is obtained via Stripe purchases (transferred on-chain to user's wallet) or Crossmint fiat-to-crypto flow. All store purchases (name tags, borders, verification badges, NFT catalog, marketplace) transfer GFT on-chain via `transferGfTokens()` → treasury wallet. Staking (stake/unstake/claim) is fully on-chain. The legacy `gfTokenBalance` DB column is no longer written to for any spending/earning flow. **GF Token Contract**: `0xe45BeC5A80e6E32852393e77206eAf83160A90AE` on SKALE Base Mainnet. **Treasury Wallet**: reads from `TREASURY_PRIVATE_KEY` env secret.
 - **NFT Marketplace**: Store for purchasing NFT avatars with GF tokens, with balance checks and wallet requirements.
 - **Simplified Wallet Creation**: Server-side wallet generation using ethers.js (no OTP required). Wallets auto-created when verified users visit the wallet page or complete onboarding. Uses `useAutoWallet` hook for instant creation. **Private keys are encrypted (AES-256-GCM) using `WALLET_ENCRYPTION_KEY` secret and stored in `encrypted_private_key` column.** Server-side signing enabled for approve/mint via `/api/mint/approve`, `/api/mint/mint`, `/api/mint/regenerate-wallet`. Legacy wallets (without stored keys) can be regenerated via the mint page.
 - **Stripe Elements Payment Integration**: Custom white-label card entry screen for GFT token purchases using Stripe Elements (`@stripe/react-stripe-js`). No Stripe branding visible. Flow: BuyGFTScreen → ReviewOrderScreen → CardEntryScreen → BuyGFTResultScreen. Components: `CardEntryScreen` with CardNumberElement, CardExpiryElement, CardCvcElement. Backend: `/api/stripe/config` for publishable key, `/api/gf/create-payment-intent` for PaymentIntent creation. Webhook handles `payment_intent.succeeded` for token delivery. **Stripe keys are stored as secrets (`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`) and read directly from environment variables** (not via Replit connector).

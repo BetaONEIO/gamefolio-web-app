@@ -68,10 +68,7 @@ export default function StakingPage() {
       if (!effectiveAddress) return;
       setIsLoadingBalance(true);
       try {
-        if (useServerSigning) {
-          // Use in-app GFT balance for server-side wallet (treasury-backed staking)
-          setTokenBalance(String(user?.gfTokenBalance || 0));
-        } else if (publicClient) {
+        if (publicClient) {
           const balance = await publicClient.readContract({
             address: GF_TOKEN_ADDRESS,
             abi: GF_TOKEN_ABI,
@@ -87,7 +84,7 @@ export default function StakingPage() {
       }
     }
     fetchBalance();
-  }, [effectiveAddress, publicClient, useServerSigning, user?.gfTokenBalance]);
+  }, [effectiveAddress, publicClient]);
 
   const handleMaxClick = () => setStakeAmount(tokenBalance);
   const handleMaxUnstake = () => setUnstakeAmount(parseFloat(stakePosition?.staked || "0").toString());

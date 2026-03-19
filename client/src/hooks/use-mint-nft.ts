@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWalletClient } from 'wagmi';
-import { parseUnits, formatUnits, maxUint256, type Address, decodeEventLog } from 'viem';
+import { parseUnits, type Address } from 'viem';
 import { useWallet } from './use-wallet';
 import { useToast } from './use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -9,8 +9,6 @@ import {
   GF_TOKEN_ABI,
   NFT_CONTRACT_ADDRESS,
   NFT_ABI,
-  MINT_SALE_ADDRESS,
-  MINT_SALE_ABI,
   MINT_CONFIG,
 } from '../../../shared/contracts';
 
@@ -34,6 +32,7 @@ export function useMintNFT(fallbackAddress?: string | null) {
   const [mintTxState, setMintTxState] = useState<MintTxState>('idle');
   const [mintResult, setMintResult] = useState<MintResult | null>(null);
   const [onChainBalance, setOnChainBalance] = useState<bigint>(BigInt(0));
+  const [balanceLoaded, setBalanceLoaded] = useState(false);
   const [totalMinted, setTotalMinted] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [needsWalletRegeneration, setNeedsWalletRegeneration] = useState(false);
@@ -44,25 +43,10 @@ export function useMintNFT(fallbackAddress?: string | null) {
   const [onChainPriceRaw, setOnChainPriceRaw] = useState<bigint | null>(null);
 
   const fetchContractConfig = useCallback(async () => {
-    if (!publicClient) return;
-    try {
-      const [priceRaw, maxTx] = await Promise.all([
-        publicClient.readContract({
-          address: MINT_SALE_ADDRESS as Address,
-          abi: MINT_SALE_ABI,
-          functionName: 'pricePerMint',
-        }) as Promise<bigint>,
-        publicClient.readContract({
-          address: MINT_SALE_ADDRESS as Address,
-          abi: MINT_SALE_ABI,
-          functionName: 'maxPerTx',
-        }) as Promise<bigint>,
-      ]);
-
-      setOnChainPriceRaw(priceRaw);
-      setOnChainPricePerMint(Number(formatUnits(priceRaw, 18)));
-      setOnChainMaxPerTx(Number(maxTx));
-
+    setOnChainPricePerMint(MINT_CONFIG.pricePerMint);
+    setOnChainMaxPerTx(MINT_CONFIG.maxPerTx);
+    setOnChainPriceRaw(parseUnits(String(MINT_CONFIG.pricePerMint), 18));
+    if (publicClient) {
       try {
         const maxSupply = await publicClient.readContract({
           address: NFT_CONTRACT_ADDRESS as Address,
@@ -73,34 +57,14 @@ export function useMintNFT(fallbackAddress?: string | null) {
       } catch {
         setOnChainMaxSupply(MINT_CONFIG.maxSupply);
       }
-    } catch (err) {
-      console.error('Error fetching on-chain config:', err);
+    } else {
+      setOnChainMaxSupply(MINT_CONFIG.maxSupply);
     }
   }, [publicClient]);
 
   const checkAllowance = useCallback(async () => {
-    if (!effectiveAddress || !publicClient) {
-      setAllowanceState('none');
-      return;
-    }
-    try {
-      setAllowanceState('checking');
-      const allowance = await publicClient.readContract({
-        address: GF_TOKEN_ADDRESS as Address,
-        abi: GF_TOKEN_ABI,
-        functionName: 'allowance',
-        args: [effectiveAddress as Address, MINT_SALE_ADDRESS as Address],
-      }) as bigint;
-
-      const requiredAmount = onChainPriceRaw
-        ? onChainPriceRaw * BigInt(onChainMaxPerTx)
-        : parseUnits(String(onChainPricePerMint * onChainMaxPerTx), 18);
-      setAllowanceState(allowance >= requiredAmount ? 'approved' : 'none');
-    } catch (err) {
-      console.error('Error checking allowance:', err);
-      setAllowanceState('none');
-    }
-  }, [effectiveAddress, publicClient, onChainPriceRaw, onChainPricePerMint, onChainMaxPerTx]);
+    setAllowanceState('approved');
+  }, []);
 
   const fetchOnChainData = useCallback(async () => {
     if (!publicClient) return;
@@ -115,15 +79,18 @@ export function useMintNFT(fallbackAddress?: string | null) {
         : BigInt(0);
 
       setOnChainBalance(balance);
+      setBalanceLoaded(true);
 
       try {
-        const nftBalanceTotal = await publicClient.readContract({
-          address: NFT_CONTRACT_ADDRESS as Address,
-          abi: NFT_ABI,
-          functionName: 'balanceOf',
-          args: [MINT_SALE_ADDRESS as Address],
-        });
-        void nftBalanceTotal;
+        if (effectiveAddress) {
+          const nftBalanceTotal = await publicClient.readContract({
+            address: NFT_CONTRACT_ADDRESS as Address,
+            abi: NFT_ABI,
+            functionName: 'balanceOf',
+            args: [effectiveAddress as Address],
+          });
+          void nftBalanceTotal;
+        }
       } catch {}
 
       setTotalMinted(0);
@@ -260,7 +227,16 @@ export function useMintNFT(fallbackAddress?: string | null) {
         return null;
       }
 
-      const message = err?.message || 'Mint transaction failed';
+      const rawMessage = err?.message || '';
+      const lowerMsg = rawMessage.toLowerCase();
+      let message: string;
+      if (lowerMsg.includes('insufficient funds') || lowerMsg.includes('transfer amount exceeds balance') || lowerMsg.includes('insufficient balance') || lowerMsg.includes('exceeds balance')) {
+        message = `You don't have enough GFT tokens to mint. Please top up your wallet and try again.`;
+      } else if (lowerMsg.includes('user rejected') || lowerMsg.includes('user denied')) {
+        message = 'Transaction was cancelled.';
+      } else {
+        message = 'Mint transaction failed. Please try again.';
+      }
       setError(message);
       toast({
         title: 'Mint Failed',
@@ -272,135 +248,12 @@ export function useMintNFT(fallbackAddress?: string | null) {
   }, [toast, fetchOnChainData, handleServerError]);
 
   const approve = useCallback(async () => {
-    if (useServerSigning) {
-      return serverApprove();
-    }
-
-    if (!walletClient || !walletAddress) {
-      toast({
-        title: 'Wallet not connected',
-        description: 'Please connect your wallet first',
-        variant: 'destructive',
-      });
-      return false;
-    }
-
-    try {
-      setAllowanceState('approving');
-      setError(null);
-
-      const hash = await walletClient.writeContract({
-        address: GF_TOKEN_ADDRESS as Address,
-        abi: GF_TOKEN_ABI,
-        functionName: 'approve',
-        args: [MINT_SALE_ADDRESS as Address, maxUint256],
-      });
-
-      await publicClient.waitForTransactionReceipt({ hash });
-      setAllowanceState('approved');
-      toast({
-        title: 'Allowance Approved',
-        description: 'GFT spending has been enabled for the mint contract',
-      });
-      return true;
-    } catch (err: any) {
-      console.error('Approval error:', err);
-      setAllowanceState('none');
-      const message = err?.shortMessage || err?.message || 'Approval transaction failed';
-      setError(message);
-      toast({
-        title: 'Approval Failed',
-        description: message,
-        variant: 'destructive',
-      });
-      return false;
-    }
-  }, [walletClient, walletAddress, publicClient, toast, useServerSigning, serverApprove]);
+    return serverApprove();
+  }, [serverApprove]);
 
   const mint = useCallback(async (quantity: number): Promise<MintResult | null> => {
-    if (useServerSigning) {
-      return serverMint(quantity);
-    }
-
-    if (!walletClient || !walletAddress) {
-      toast({
-        title: 'Wallet not connected',
-        description: 'Please connect your wallet first',
-        variant: 'destructive',
-      });
-      return null;
-    }
-
-    if (quantity < 1 || quantity > onChainMaxPerTx) {
-      toast({
-        title: 'Invalid quantity',
-        description: `You can mint between 1 and ${onChainMaxPerTx} NFTs per transaction`,
-        variant: 'destructive',
-      });
-      return null;
-    }
-
-    try {
-      setMintTxState('sending');
-      setError(null);
-
-      const hash = await walletClient.writeContract({
-        address: MINT_SALE_ADDRESS as Address,
-        abi: MINT_SALE_ABI,
-        functionName: 'buy',
-        args: [BigInt(quantity)],
-      });
-
-      setMintTxState('confirming');
-
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-
-      const tokenIds: number[] = [];
-      for (const log of receipt.logs) {
-        try {
-          const decoded = decodeEventLog({
-            abi: [
-              {
-                anonymous: false,
-                inputs: [
-                  { indexed: true, name: 'from', type: 'address' },
-                  { indexed: true, name: 'to', type: 'address' },
-                  { indexed: true, name: 'tokenId', type: 'uint256' },
-                ],
-                name: 'Transfer',
-                type: 'event',
-              },
-            ],
-            data: log.data,
-            topics: log.topics,
-          });
-          if (decoded.eventName === 'Transfer') {
-            tokenIds.push(Number((decoded.args as any).tokenId));
-          }
-        } catch {
-        }
-      }
-
-      const result: MintResult = { txHash: hash, tokenIds };
-      setMintResult(result);
-      setMintTxState('confirmed');
-
-      await fetchOnChainData();
-
-      return result;
-    } catch (err: any) {
-      console.error('Mint error:', err);
-      setMintTxState('error');
-      const message = err?.shortMessage || err?.message || 'Mint transaction failed';
-      setError(message);
-      toast({
-        title: 'Mint Failed',
-        description: message,
-        variant: 'destructive',
-      });
-      return null;
-    }
-  }, [walletClient, walletAddress, publicClient, toast, fetchOnChainData, onChainMaxPerTx, useServerSigning, serverMint]);
+    return serverMint(quantity);
+  }, [serverMint]);
 
   const regenerateWallet = useCallback(async (): Promise<boolean> => {
     try {
@@ -439,6 +292,7 @@ export function useMintNFT(fallbackAddress?: string | null) {
     mintTxState,
     mintResult,
     onChainBalance,
+    balanceLoaded,
     totalMinted,
     error,
     approve,

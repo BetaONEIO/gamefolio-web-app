@@ -8,6 +8,7 @@ import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import { useState } from "react";
 import { NameTagCheckoutDialog } from "./NameTagCheckoutDialog";
 import { useAuth } from "@/hooks/use-auth";
+import { useTokenBalance } from "@/hooks/use-token";
 
 interface NameTag {
   id: number;
@@ -55,7 +56,9 @@ export function NameTagDetailDialog({
 }: NameTagDetailDialogProps) {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const { user } = useAuth();
-  
+  const { balance: tokenBalanceStr } = useTokenBalance();
+  const onChainBalance = parseFloat(tokenBalanceStr || '0');
+
   if (!nameTag) return null;
 
   const handleClose = () => {
@@ -277,7 +280,7 @@ export function NameTagDetailDialog({
         onOpenChange={setCheckoutOpen}
         onConfirm={handleConfirmPurchase}
         isPurchasing={isPurchasing}
-        gfBalance={user?.gfTokenBalance || 0}
+        gfBalance={onChainBalance}
       />
     </Dialog>
   );

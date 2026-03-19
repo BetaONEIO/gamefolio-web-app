@@ -1,13 +1,44 @@
-import { createPublicClient, http, encodeFunctionData, getAddress, type Address, type Abi } from 'viem';
+import { createPublicClient, createWalletClient, http, parseEther, type Address, type Abi } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { SKALE_NEBULA_TESTNET } from '../shared/contracts';
+import { SKALE_BASE_MAINNET } from '../shared/contracts';
 
-const RPC_URL = SKALE_NEBULA_TESTNET.rpcUrls.default.http[0];
+const RPC_URL = SKALE_BASE_MAINNET.rpcUrls.default.http[0];
+
+const SFUEL_THRESHOLD = parseEther('0.01');
+const SFUEL_DISTRIBUTION_AMOUNT = parseEther('0.1');
 
 const publicClient = createPublicClient({
-  chain: SKALE_NEBULA_TESTNET,
+  chain: SKALE_BASE_MAINNET,
   transport: http(RPC_URL),
 });
+
+function getTreasuryWalletClient() {
+  const privateKey = process.env.TREASURY_PRIVATE_KEY;
+  if (!privateKey) throw new Error('TREASURY_PRIVATE_KEY not configured');
+  const formattedKey = privateKey.startsWith('0x') ? privateKey as `0x${string}` : `0x${privateKey}` as `0x${string}`;
+  const account = privateKeyToAccount(formattedKey);
+  return createWalletClient({
+    account,
+    chain: SKALE_BASE_MAINNET,
+    transport: http(RPC_URL),
+  });
+}
+
+async function ensureSFuel(address: Address): Promise<void> {
+  const balance = await publicClient.getBalance({ address });
+  if (balance >= SFUEL_THRESHOLD) return;
+
+  console.log(`[sFUEL] Wallet ${address} has ${balance} sFUEL — distributing from treasury...`);
+  const treasuryClient = getTreasuryWalletClient();
+  const gasPrice = await publicClient.getGasPrice();
+  const hash = await treasuryClient.sendTransaction({
+    to: address,
+    value: SFUEL_DISTRIBUTION_AMOUNT,
+    gasPrice,
+  });
+  await publicClient.waitForTransactionReceipt({ hash, timeout: 30_000 });
+  console.log(`[sFUEL] Distributed to ${address}. TX: ${hash}`);
+}
 
 export async function writeContractWithPoW({
   encryptedPrivateKey,
@@ -23,53 +54,29 @@ export async function writeContractWithPoW({
   args: readonly unknown[];
 }): Promise<`0x${string}`> {
   const { decryptPrivateKey } = await import('./wallet-crypto');
-  const { mineGasForTransactionAsync } = await import('@eidolon-labs/gasless');
 
   const privateKey = decryptPrivateKey(encryptedPrivateKey);
   const formattedKey = privateKey.startsWith('0x')
     ? (privateKey as `0x${string}`)
     : (`0x${privateKey}` as `0x${string}`);
   const account = privateKeyToAccount(formattedKey);
-  const checksumAddress = getAddress(account.address);
 
-  const data = encodeFunctionData({
+  await ensureSFuel(account.address);
+
+  const walletClient = createWalletClient({
+    account,
+    chain: SKALE_BASE_MAINNET,
+    transport: http(RPC_URL),
+  });
+
+  const gasPrice = await publicClient.getGasPrice();
+
+  const hash = await walletClient.writeContract({
+    address: contractAddress,
     abi: abi as Abi,
     functionName,
     args: args as unknown[],
-  });
-
-  const nonce = await publicClient.getTransactionCount({ address: checksumAddress });
-
-  let gasLimit: number;
-  try {
-    const gasEstimate = await publicClient.estimateGas({
-      account: checksumAddress,
-      to: contractAddress,
-      data,
-    });
-    gasLimit = Number(gasEstimate) + 50000;
-  } catch {
-    gasLimit = 300000;
-  }
-
-  const { gasPrice: magicGasPrice } = await mineGasForTransactionAsync(
-    gasLimit,
-    checksumAddress,
-    nonce,
-  );
-
-  const signedTx = await account.signTransaction({
-    to: contractAddress,
-    data,
-    nonce,
-    gasPrice: BigInt(magicGasPrice),
-    gas: BigInt(gasLimit),
-    chainId: SKALE_NEBULA_TESTNET.id,
-    type: 'legacy' as const,
-  });
-
-  const hash = await publicClient.sendRawTransaction({
-    serializedTransaction: signedTx,
+    gasPrice,
   });
 
   return hash;
@@ -88,52 +95,27 @@ export async function writeContractWithPoWFromRawKey({
   functionName: string;
   args: readonly unknown[];
 }): Promise<`0x${string}`> {
-  const { mineGasForTransactionAsync } = await import('@eidolon-labs/gasless');
-
   const formattedKey = privateKeyRaw.startsWith('0x')
     ? (privateKeyRaw as `0x${string}`)
     : (`0x${privateKeyRaw}` as `0x${string}`);
   const account = privateKeyToAccount(formattedKey);
-  const checksumAddress = getAddress(account.address);
 
-  const data = encodeFunctionData({
+  await ensureSFuel(account.address);
+
+  const walletClient = createWalletClient({
+    account,
+    chain: SKALE_BASE_MAINNET,
+    transport: http(RPC_URL),
+  });
+
+  const gasPrice = await publicClient.getGasPrice();
+
+  const hash = await walletClient.writeContract({
+    address: contractAddress,
     abi: abi as Abi,
     functionName,
     args: args as unknown[],
-  });
-
-  const nonce = await publicClient.getTransactionCount({ address: checksumAddress });
-
-  let gasLimit: number;
-  try {
-    const gasEstimate = await publicClient.estimateGas({
-      account: checksumAddress,
-      to: contractAddress,
-      data,
-    });
-    gasLimit = Number(gasEstimate) + 50000;
-  } catch {
-    gasLimit = 300000;
-  }
-
-  const { gasPrice: magicGasPrice } = await mineGasForTransactionAsync(
-    gasLimit,
-    checksumAddress,
-    nonce,
-  );
-
-  const signedTx = await account.signTransaction({
-    to: contractAddress,
-    data,
-    nonce,
-    gasPrice: BigInt(magicGasPrice),
-    gas: BigInt(gasLimit),
-    chainId: SKALE_NEBULA_TESTNET.id,
-    type: 'legacy' as const,
-  });
-
-  const hash = await publicClient.sendRawTransaction({
-    serializedTransaction: signedTx,
+    gasPrice,
   });
 
   return hash;

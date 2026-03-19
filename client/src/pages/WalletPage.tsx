@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useStaking } from "@/hooks/use-staking";
+import { useTokenBalance } from "@/hooks/use-token";
 import { usePurchaseGFT } from "@/hooks/use-purchase-gft";
 import { useAutoWallet } from "@/hooks/use-auto-wallet";
 import BuyGFTokenDialog from "@/components/BuyGFTokenDialog";
@@ -42,8 +43,9 @@ export default function WalletPage() {
   const [showStakingHub, setShowStakingHub] = useState(false);
   const [purchaseAmount, setPurchaseAmount] = useState(0);
   const [gftAmount, setGftAmount] = useState(0);
-  const userGftBalance = user?.gfTokenBalance || 0;
-  const { stakedAmount, earnedRewards, estimatedApy, stake, unstake, claimRewards, isStaking, stakeHistory } = useStaking();
+  const { data: tokenBalanceData } = useTokenBalance();
+  const userGftBalance = parseFloat(tokenBalanceData?.balance || '0');
+  const { stakedAmount, earnedRewards, estimatedApy, stake, unstake, claimRewards, isStaking, isClaiming, stakeHistory } = useStaking();
   const { createOrder, isCreatingOrder, checkOrderStatus, refreshBalances } = usePurchaseGFT();
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
@@ -167,16 +169,6 @@ export default function WalletPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
-        <div 
-          className="w-full px-4 py-2.5 text-center text-sm font-medium"
-          style={{ 
-            background: 'linear-gradient(90deg, rgba(234, 179, 8, 0.15) 0%, rgba(234, 179, 8, 0.25) 50%, rgba(234, 179, 8, 0.15) 100%)',
-            color: '#fbbf24',
-            borderBottom: '1px solid rgba(234, 179, 8, 0.3)'
-          }}
-        >
-          This app is currently in Beta and running on TestNet. Tokens and assets have no real-world value.
-        </div>
         <div className="container mx-auto px-4 py-4 md:px-6 md:py-6 max-w-6xl">
           <div className="mb-8">
             <Link href="/">
@@ -227,6 +219,7 @@ export default function WalletPage() {
         onStake={stake}
         onUnstake={unstake}
         onClaimRewards={claimRewards}
+        isClaiming={isClaiming}
       />
     );
   }
@@ -313,16 +306,6 @@ export default function WalletPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div 
-        className="w-full px-4 py-2.5 text-center text-sm font-medium"
-        style={{ 
-          background: 'linear-gradient(90deg, rgba(234, 179, 8, 0.15) 0%, rgba(234, 179, 8, 0.25) 50%, rgba(234, 179, 8, 0.15) 100%)',
-          color: '#fbbf24',
-          borderBottom: '1px solid rgba(234, 179, 8, 0.3)'
-        }}
-      >
-        This app is currently in Beta and running on TestNet. Tokens and assets have no real-world value.
-      </div>
       <div className="container mx-auto px-4 py-4 md:px-6 md:py-6 max-w-6xl">
         <div className="mb-8">
           <Link href="/">

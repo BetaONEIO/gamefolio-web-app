@@ -16,9 +16,9 @@ const publicClient = createPublicClient({
 const router = Router();
 
 function getTreasuryAddress(): string {
-  const privateKey = process.env.TREASURY_WALLET_PRIVATE_KEY;
+  const privateKey = process.env.TREASURY_PRIVATE_KEY;
   if (!privateKey) {
-    throw new Error('TREASURY_WALLET_PRIVATE_KEY not configured');
+    throw new Error('TREASURY_PRIVATE_KEY not configured');
   }
   const formattedKey = privateKey.startsWith('0x') ? privateKey as `0x${string}` : `0x${privateKey}` as `0x${string}`;
   const account = privateKeyToAccount(formattedKey);

@@ -1,12 +1,12 @@
-export const GF_TOKEN_ADDRESS = "0x9c4aC24c7bb36AA3772ccd5aCBCB48a20a1704B7" as const;
+export const GF_TOKEN_ADDRESS = "0xe45BeC5A80e6E32852393e77206eAf83160A90AE" as const;
 
-export const NFT_CONTRACT_ADDRESS = "0x246624993603fbd8C3Cc60920878D0DF5c764Fb4" as const;
+export const NFT_CONTRACT_ADDRESS = "0x6Ca4376A68907A404981e7701055813F9cE13FB3" as const;
 
-export const MINT_SALE_ADDRESS = "0xC9Cd5a4c22096183b14c0877fC1C16468f94EA28" as const;
+export const MINT_SALE_ADDRESS = "" as const;
 
-export const SKALE_NEBULA_TESTNET = {
-  id: 37084624,
-  name: 'SKALE Nebula Hub Testnet',
+export const SKALE_BASE_MAINNET = {
+  id: 1187947933,
+  name: 'SKALE Base Mainnet',
   nativeCurrency: {
     decimals: 18,
     name: 'sFUEL',
@@ -14,20 +14,21 @@ export const SKALE_NEBULA_TESTNET = {
   },
   rpcUrls: {
     default: {
-      http: ['https://testnet.skalenodes.com/v1/lanky-ill-funny-testnet'],
+      http: ['https://skale-base.skalenodes.com/v1/base'],
     },
     public: {
-      http: ['https://testnet.skalenodes.com/v1/lanky-ill-funny-testnet'],
+      http: ['https://skale-base.skalenodes.com/v1/base'],
     },
   },
   blockExplorers: {
     default: {
       name: 'SKALE Explorer',
-      url: 'https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com',
+      url: 'https://skale-base-explorer.skalenodes.com',
     },
   },
-  testnet: true,
 } as const;
+
+export const SKALE_NEBULA_TESTNET = SKALE_BASE_MAINNET;
 
 export const GF_TOKEN_ABI = [
   {
@@ -219,6 +220,16 @@ export const MINT_SALE_ABI = [
 
 export const NFT_ABI = [
   {
+    "inputs": [
+      {"internalType": "address", "name": "to", "type": "address"},
+      {"internalType": "uint256", "name": "quantity", "type": "uint256"}
+    ],
+    "name": "mint",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
     "name": "tokenURI",
     "outputs": [{"internalType": "string", "name": "", "type": "string"}],
@@ -254,6 +265,17 @@ export const NFT_ABI = [
     "type": "function"
   },
   {
+    "inputs": [
+      {"internalType": "address", "name": "from", "type": "address"},
+      {"internalType": "address", "name": "to", "type": "address"},
+      {"internalType": "uint256", "name": "tokenId", "type": "uint256"}
+    ],
+    "name": "safeTransferFrom",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {"indexed": true, "internalType": "address", "name": "from", "type": "address"},
@@ -269,10 +291,10 @@ export const MINT_CONFIG = {
   pricePerMint: 500,
   maxPerTx: 5,
   maxSupply: 10000,
-  baseURI: "ipfs://bafybeiasmj6gw6hh53br2qwnpdvwozs3uhhaxrjdz6wnlzupptiqfdn7um/",
+  baseURI: "ipfs://bafybeigkn2gvxtosshac47qq72gwtfdwfbfigsk4tbsggzceurjv3qhmmi/",
 } as const;
 
-export const GF_STAKING_ADDRESS = "0x52D214f32584C7a7F08C7014F24C02ba38Fc7dD6" as const;
+export const GF_STAKING_ADDRESS = "0x40D7D0bA396eB920BD7f88ac58B4fA768eb52f2D" as const;
 
 export const GF_STAKING_ABI = [
   {

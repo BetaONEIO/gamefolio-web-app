@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, Share2, Image } from "lucide-react";
+import { ArrowLeft, ExternalLink, Share2, Image, Hexagon } from "lucide-react";
 import { useState } from "react";
 import QuickSellScreen from "./QuickSellScreen";
 import { useToast } from "@/hooks/use-toast";
@@ -34,8 +34,8 @@ interface MintedNftDetailScreenProps {
   listingActive?: boolean;
 }
 
-const NFT_CONTRACT_ADDRESS = "0x246624993603fbd8C3Cc60920878D0DF5c764Fb4";
-const SKALE_EXPLORER_BASE_URL = "https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com";
+const NFT_CONTRACT_ADDRESS = "0x6Ca4376A68907A404981e7701055813F9cE13FB3";
+const SKALE_EXPLORER_BASE_URL = "https://skale-base-explorer.skalenodes.com";
 
 function getTokenIdPadded(id: number): string {
   return `#${String(id).padStart(3, "0")}`;
@@ -127,7 +127,7 @@ export default function MintedNftDetailScreen({
       <QuickSellScreen
         nft={nft}
         txHash={txHash}
-        canSell={!!user?.canSellNfts}
+        canSell={true}
         onClose={() => setShowQuickSell(false)}
         onSold={(result) => {
           setSold(true);
@@ -204,8 +204,10 @@ export default function MintedNftDetailScreen({
                     className={`w-full h-full object-cover transition-all duration-300 ${sold ? "grayscale brightness-50" : ""}`}
                   />
                 ) : (
-                  <div className="w-full h-full bg-[#1e293b] flex items-center justify-center">
-                    <div className="w-12 h-12 rounded-full border-2 border-[#4ade80]/30 border-t-[#4ade80] animate-spin" />
+                  <div className="w-full h-full bg-[#1e293b] flex flex-col items-center justify-center p-8 text-center">
+                    <Hexagon className="w-16 h-16 text-slate-600 mb-4" />
+                    <p className="text-slate-400 text-sm font-medium">Image still indexing on IPFS</p>
+                    <p className="text-slate-500 text-xs mt-1">This can take a few minutes for newly minted items</p>
                   </div>
                 )}
                 {sold && (
@@ -384,10 +386,10 @@ export default function MintedNftDetailScreen({
               ) : isOwner ? (
                 <>
                   <button
-                    onClick={user?.canSellNfts ? () => setShowQuickSell(true) : undefined}
-                    disabled={!user?.canSellNfts || isNftProfilePic}
+                    onClick={() => setShowQuickSell(true)}
+                    disabled={isNftProfilePic}
                     className={`h-[52px] rounded-xl flex items-center justify-center gap-2 ${
-                      user?.canSellNfts && !isNftProfilePic
+                      !isNftProfilePic
                         ? "bg-[#1e293b] hover:bg-[#334155] cursor-pointer"
                         : "bg-[#1e293b] opacity-50 cursor-not-allowed"
                     }`}
@@ -397,11 +399,15 @@ export default function MintedNftDetailScreen({
                     </svg>
                     <span className="text-sm font-bold text-[#f8fafc] leading-5">Quick Sell</span>
                   </button>
-                  {!user?.canSellNfts && (
-                    <p className="text-sm md:text-base text-amber-400 text-center max-w-md mt-3">Currently disabled on Beta! We will be on Mainnet soon!</p>
-                  )}
                 </>
-              ) : null}
+              ) : (
+                <button
+                  disabled
+                  className="h-[52px] rounded-xl bg-[#1e293b] flex items-center justify-center gap-2 cursor-not-allowed opacity-50"
+                >
+                  <span className="text-sm font-bold text-[#94a3b8] leading-5">Quick Sell</span>
+                </button>
+              )}
             </div>
 
             <div className="flex flex-col gap-4 pt-2">

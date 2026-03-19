@@ -264,14 +264,14 @@ export default function CollectionPage() {
   });
 
   if (selectedNft) {
-    const { score } = getNftRarity(selectedNft);
+    const { label: rarityLabel, score: rarityScore } = getNftRarity(selectedNft);
     return (
       <MintedNftDetailScreen
         nft={{
           id: selectedNft.tokenId,
           name: selectedNft.name,
           imageUrl: selectedNft.image || '',
-          rarity: score,
+          rarity: rarityScore,
           attributes: selectedNft.attributes?.map(a => ({
             trait_type: a.trait_type,
             value: String(a.value),

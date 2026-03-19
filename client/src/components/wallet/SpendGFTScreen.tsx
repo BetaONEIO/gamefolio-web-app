@@ -7,8 +7,6 @@ interface SpendGFTScreenProps {
   availableBalance?: number;
 }
 
-const GFT_TO_GBP = 0.01;
-
 interface FeaturedDeal {
   id: string;
   name: string;
@@ -42,8 +40,6 @@ export default function SpendGFTScreen({
   onViewNFTs,
   availableBalance = 540.0,
 }: SpendGFTScreenProps) {
-  const gbpValue = (availableBalance * GFT_TO_GBP).toFixed(2);
-
   return (
     <div
       className="flex flex-col min-h-screen w-full"
@@ -97,9 +93,6 @@ export default function SpendGFTScreen({
             </span>
           </div>
 
-          <span className="text-lg" style={{ color: "#94a3b8" }}>
-            ≈ £{gbpValue} GBP
-          </span>
         </div>
       </div>
 

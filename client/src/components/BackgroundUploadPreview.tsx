@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { ArrowLeft, Smartphone, Monitor } from 'lucide-react';
+import { ArrowLeft, Smartphone, Monitor, ZoomIn, ZoomOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export interface CropPos { positionX: number; positionY: number; zoom: number; }
@@ -12,7 +13,6 @@ interface BackgroundUploadPreviewProps {
   onCancel?: () => void;
 }
 
-const OVERFLOW_PADDING = 40;
 const MOBILE_ASPECT = 9 / 16;
 const DESKTOP_ASPECT = 16 / 9;
 const MAX_RESIZE_PX = 2048;
@@ -50,10 +50,12 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
   const [showEditor, setShowEditor] = useState(false);
 
   const [mobileState, setMobileState] = useState<CropState>({ pos: { x: 0, y: 0 }, scale: 1, minScale: 1 });
+  const [mobileZoomPct, setMobileZoomPct] = useState(0);
   const mobileStageRef = useRef<HTMLDivElement>(null);
   const [mobileStageDims, setMobileStageDims] = useState({ w: 0, h: 0 });
 
   const [desktopState, setDesktopState] = useState<CropState>({ pos: { x: 0, y: 0 }, scale: 1, minScale: 1 });
+  const [desktopZoomPct, setDesktopZoomPct] = useState(0);
   const desktopStageRef = useRef<HTMLDivElement>(null);
   const [desktopStageDims, setDesktopStageDims] = useState({ w: 0, h: 0 });
 
@@ -117,12 +119,13 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
     return Math.max(cW / natW, cH / natH);
   }, []);
 
-  // Mobile: init scale to cover the crop box exactly (= minScale), matching CSS object-fit: cover
+  // Mobile: init scale to cover the crop box exactly
   useEffect(() => {
     if (!showEditor || mobileStageDims.w === 0 || imageNaturalSize.w === 0) return;
     const cW = mobileStageDims.w;
     const cH = mobileStageDims.h > 0 ? mobileStageDims.h : Math.round(cW / MOBILE_ASPECT);
     const fit = computeMinScale(imageNaturalSize.w, imageNaturalSize.h, cW, cH);
+    setMobileZoomPct(0);
     setMobileState({ pos: { x: 0, y: 0 }, scale: fit, minScale: fit });
   }, [showEditor, mobileStageDims, imageNaturalSize, computeMinScale]);
 
@@ -132,6 +135,7 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
     const cW = desktopStageDims.w;
     const cH = Math.round(cW / DESKTOP_ASPECT);
     const fit = computeMinScale(imageNaturalSize.w, imageNaturalSize.h, cW, cH);
+    setDesktopZoomPct(0);
     setDesktopState({ pos: { x: 0, y: 0 }, scale: fit, minScale: fit });
   }, [showEditor, desktopStageDims, imageNaturalSize, computeMinScale]);
 
@@ -196,9 +200,29 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
     onCancel?.();
   }, [onCancel]);
 
+  const handleMobileZoomChange = useCallback((vals: number[]) => {
+    const pct = vals[0];
+    setMobileZoomPct(pct);
+    setMobileState(prev => {
+      const newScale = prev.minScale * (1 + pct / 100);
+      const cW = mobileStageDims.w > 0 ? mobileStageDims.w : 300;
+      const cH = mobileStageDims.h > 0 ? mobileStageDims.h : Math.round(cW / MOBILE_ASPECT);
+      return { ...prev, scale: newScale, pos: clampPosition(prev.pos.x, prev.pos.y, newScale, imageNaturalSize.w, imageNaturalSize.h, cW, cH) };
+    });
+  }, [mobileStageDims, imageNaturalSize, clampPosition]);
+
+  const handleDesktopZoomChange = useCallback((vals: number[]) => {
+    const pct = vals[0];
+    setDesktopZoomPct(pct);
+    setDesktopState(prev => {
+      const newScale = prev.minScale * (1 + pct / 100);
+      const cW = desktopStageDims.w > 0 ? desktopStageDims.w : 320;
+      const cH = Math.round(cW / DESKTOP_ASPECT);
+      return { ...prev, scale: newScale, pos: clampPosition(prev.pos.x, prev.pos.y, newScale, imageNaturalSize.w, imageNaturalSize.h, cW, cH) };
+    });
+  }, [desktopStageDims, imageNaturalSize, clampPosition]);
+
   // Convert editor drag position → CSS object-position percentages
-  // Uses overflow-based formula so values match CSS object-fit: cover behaviour exactly.
-  // When the image aspect exactly matches the crop (overflow = 0), default to 50% centre.
   const calcCropPos = (state: CropState, natW: number, natH: number, cW: number, cH: number): CropPos => {
     const scaledW = natW * state.scale;
     const scaledH = natH * state.scale;
@@ -214,9 +238,19 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
     const mCW = mobileStageDims.w > 0 ? mobileStageDims.w : 300;
     const mCH = mobileStageDims.h > 0 ? mobileStageDims.h : Math.round(mCW / MOBILE_ASPECT);
     const mobilePos = calcCropPos(mobileState, imageNaturalSize.w, imageNaturalSize.h, mCW, mCH);
-    const dCW = desktopStageDims.w > 0 ? desktopStageDims.w : 320;
-    const dCH = Math.round(dCW / DESKTOP_ASPECT);
-    const desktopPos = calcCropPos(desktopState, imageNaturalSize.w, imageNaturalSize.h, dCW, dCH);
+
+    let desktopPos: CropPos;
+    if (desktopStageDims.w > 0) {
+      // Desktop tab was visited — use its crop state
+      const dCW = desktopStageDims.w;
+      const dCH = Math.round(dCW / DESKTOP_ASPECT);
+      desktopPos = calcCropPos(desktopState, imageNaturalSize.w, imageNaturalSize.h, dCW, dCH);
+    } else {
+      // Desktop tab was never opened — fall back to the mobile crop values
+      // so the profile doesn't silently reset to 50/50
+      desktopPos = { ...mobilePos };
+    }
+
     onUpload(uploadedUrl, mobilePos, desktopPos);
     handleCancel();
   }, [uploadedUrl, mobileState, desktopState, mobileStageDims, desktopStageDims, imageNaturalSize, onUpload, handleCancel]);
@@ -287,14 +321,6 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
     () => desktopState.pos, () => desktopState.scale, setDesktopState
   );
 
-  const mobileCropH = mobileStageDims.h > 0 ? mobileStageDims.h : 400;
-  const mobileCropW = Math.round(mobileCropH * MOBILE_ASPECT);
-  const mobileStageW = mobileCropW + OVERFLOW_PADDING * 2;
-
-  const desktopCropW = desktopStageDims.w > 0 ? desktopStageDims.w : 320;
-  const desktopCropH = Math.round(desktopCropW / DESKTOP_ASPECT);
-  const desktopStageH = desktopCropH + OVERFLOW_PADDING * 2;
-
   if (phase === 'selecting') {
     return <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileInputChange} className="hidden" />;
   }
@@ -308,6 +334,7 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
           <DialogTitle className="sr-only">Edit background image</DialogTitle>
           <DialogDescription className="sr-only">Drag to position your background image for mobile and desktop, then click Apply.</DialogDescription>
 
+          {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="flex items-center gap-3">
               <button onClick={handleCancel} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -329,6 +356,7 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
 
           {phase === 'editing' && (
             <>
+              {/* Tab bar */}
               <div className="flex border-b">
                 {isMobileViewport ? (
                   <>
@@ -369,73 +397,155 @@ export function BackgroundUploadPreview({ onUpload, onCancel }: BackgroundUpload
                 )}
               </div>
 
+              {/* ── MOBILE crop ── */}
               {activeTab === 'mobile' && (
-                <div className="bg-black flex items-center justify-center" style={{ height: '72svh' }}>
-                  <div
-                    ref={mobileStageRef}
-                    className="relative overflow-hidden select-none cursor-move"
-                    style={{ height: '100%', aspectRatio: '9/16' }}
-                    onMouseDown={showEditor ? handleMobileMouseDown : undefined}
-                    onTouchStart={showEditor ? handleMobileTouchStart : undefined}
-                  >
-                    {showEditor && (
-                      <img
-                        src={previewUrl!}
-                        alt="Mobile background preview"
-                        className="pointer-events-none absolute"
-                        style={{
-                          left: '50%', top: '50%', maxWidth: 'none',
-                          width: imageNaturalSize.w, height: imageNaturalSize.h,
-                          transform: `translate(calc(-50% + ${mobileState.pos.x}px), calc(-50% + ${mobileState.pos.y}px)) scale(${mobileState.scale})`,
-                          transformOrigin: 'center center',
-                        }}
-                        draggable={false}
-                      />
-                    )}
-                  </div>
-                </div>
-              )}
+                <div className="bg-black flex flex-col">
+                  <div className="flex items-center justify-center" style={{ height: '65svh' }}>
+                    <div
+                      ref={mobileStageRef}
+                      className="relative overflow-hidden select-none cursor-move"
+                      style={{ height: '100%', aspectRatio: '9/16' }}
+                      onMouseDown={showEditor ? handleMobileMouseDown : undefined}
+                      onTouchStart={showEditor ? handleMobileTouchStart : undefined}
+                    >
+                      {showEditor && (
+                        <img
+                          src={previewUrl!}
+                          alt="Mobile background preview"
+                          className="pointer-events-none absolute"
+                          style={{
+                            left: '50%', top: '50%', maxWidth: 'none',
+                            width: imageNaturalSize.w, height: imageNaturalSize.h,
+                            transform: `translate(calc(-50% + ${mobileState.pos.x}px), calc(-50% + ${mobileState.pos.y}px)) scale(${mobileState.scale})`,
+                            transformOrigin: 'center center',
+                          }}
+                          draggable={false}
+                        />
+                      )}
 
-              {activeTab === 'desktop' && (
-                <div
-                  className="relative overflow-hidden bg-black select-none w-full"
-                  style={{ height: desktopStageH > 80 ? desktopStageH : 260, cursor: isMobileViewport ? 'not-allowed' : 'move' }}
-                >
-                  <div
-                    ref={desktopStageRef}
-                    className="absolute left-0 right-0"
-                    style={{ top: OVERFLOW_PADDING, height: desktopCropH > 0 ? desktopCropH : 200 }}
-                    onMouseDown={showEditor && !isMobileViewport ? handleDesktopMouseDown : undefined}
-                    onTouchStart={showEditor && !isMobileViewport ? handleDesktopTouchStart : undefined}
-                  >
-                    {showEditor && (
-                      <img
-                        src={previewUrl!}
-                        alt="Desktop background preview"
-                        className="pointer-events-none absolute"
-                        style={{
-                          left: '50%', top: '50%', maxWidth: 'none',
-                          width: imageNaturalSize.w, height: imageNaturalSize.h,
-                          transform: `translate(calc(-50% + ${desktopState.pos.x}px), calc(-50% + ${desktopState.pos.y}px)) scale(${desktopState.scale})`,
-                          transformOrigin: 'center center',
-                        }}
-                        draggable={false}
-                      />
-                    )}
+                      {/* Dark overlay matching profile's bg-black/50 */}
+                      {showEditor && (
+                        <div className="absolute inset-0 bg-black/50 pointer-events-none" />
+                      )}
+
+                      {/* Profile chrome ghost — mobile layout */}
+                      {showEditor && (
+                        <div className="absolute inset-0 pointer-events-none flex flex-col justify-end pb-16 px-5">
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="w-16 h-16 rounded-full bg-white/25 border-4 border-white/40" />
+                            <div className="h-4 w-28 bg-white/30 rounded-full" />
+                            <div className="h-3 w-44 bg-white/20 rounded-full" />
+                            <div className="h-8 w-24 bg-white/25 rounded-full" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
+                  {/* Zoom slider */}
                   {showEditor && (
-                    <>
-                      <div className="absolute left-0 right-0 top-0 pointer-events-none bg-black/60" style={{ height: OVERFLOW_PADDING }} />
-                      <div className="absolute left-0 right-0 bottom-0 pointer-events-none bg-black/60" style={{ height: OVERFLOW_PADDING }} />
-                      <div className="absolute left-0 right-0 pointer-events-none" style={{ top: OVERFLOW_PADDING, height: desktopCropH > 0 ? desktopCropH : 200, border: '2px solid #1d9bf0', boxSizing: 'border-box' }} />
-                    </>
-                  )}
-                  {isMobileViewport && (
-                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-10 pointer-events-none">
-                      <p className="text-white text-sm text-center px-6">Open on a desktop device to set the desktop crop</p>
+                    <div className="flex items-center gap-3 px-4 py-2.5 bg-black/95 border-t border-white/10">
+                      <ZoomOut className="h-4 w-4 text-white/60 flex-shrink-0" />
+                      <Slider
+                        value={[mobileZoomPct]}
+                        min={0} max={100} step={1}
+                        onValueChange={handleMobileZoomChange}
+                        className="flex-1"
+                      />
+                      <ZoomIn className="h-4 w-4 text-white/60 flex-shrink-0" />
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* ── DESKTOP crop ── */}
+              {activeTab === 'desktop' && (
+                <div className="w-full bg-black flex flex-col">
+                  <div className="w-full overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                    {/* Stage fills the full 16:9 area — exactly what the visitor sees */}
+                    <div
+                      ref={desktopStageRef}
+                      className="relative w-full h-full overflow-hidden select-none"
+                      style={{ cursor: isMobileViewport ? 'not-allowed' : (showEditor ? 'move' : 'default') }}
+                      onMouseDown={showEditor && !isMobileViewport ? handleDesktopMouseDown : undefined}
+                      onTouchStart={showEditor && !isMobileViewport ? handleDesktopTouchStart : undefined}
+                    >
+                      {showEditor && (
+                        <img
+                          src={previewUrl!}
+                          alt="Desktop background preview"
+                          className="pointer-events-none absolute"
+                          style={{
+                            left: '50%', top: '50%', maxWidth: 'none',
+                            width: imageNaturalSize.w, height: imageNaturalSize.h,
+                            transform: `translate(calc(-50% + ${desktopState.pos.x}px), calc(-50% + ${desktopState.pos.y}px)) scale(${desktopState.scale})`,
+                            transformOrigin: 'center center',
+                          }}
+                          draggable={false}
+                        />
+                      )}
+
+                      {/* Dark overlay matching profile's fixed bg-black/50 */}
+                      {showEditor && (
+                        <div className="absolute inset-0 bg-black/50 pointer-events-none" />
+                      )}
+
+                      {/* Profile chrome ghost — desktop layout */}
+                      {showEditor && !isMobileViewport && (
+                        <div className="absolute inset-0 pointer-events-none flex flex-col justify-end pb-8 px-10">
+                          {/* Faint banner strip at top */}
+                          <div className="absolute top-0 left-0 right-0 h-[28%] bg-white/5 border-b border-white/10" />
+                          {/* Avatar + info row */}
+                          <div className="flex items-end gap-5 mb-2">
+                            <div className="w-20 h-20 rounded-full bg-white/25 border-4 border-white/40 flex-shrink-0" />
+                            <div className="flex flex-col gap-2 mb-1">
+                              <div className="h-5 w-36 bg-white/30 rounded-full" />
+                              <div className="h-3 w-52 bg-white/20 rounded-full" />
+                            </div>
+                            <div className="ml-auto mb-1 flex gap-2">
+                              <div className="h-8 w-20 bg-white/25 rounded-full" />
+                              <div className="h-8 w-8 bg-white/20 rounded-full" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Drag hint label */}
+                      {showEditor && !isMobileViewport && (
+                        <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-black/60 text-white/70 text-xs px-3 py-1 rounded-full pointer-events-none select-none">
+                          Zoom in then drag to reposition
+                        </div>
+                      )}
+
+                      {isMobileViewport && (
+                        <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-10 pointer-events-none">
+                          <p className="text-white text-sm text-center px-6">Open on a desktop device to set the desktop crop</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {/* Zoom slider */}
+                  {showEditor && !isMobileViewport && (
+                    <div className="flex items-center gap-3 px-4 py-2.5 bg-black/95 border-t border-white/10">
+                      <ZoomOut className="h-4 w-4 text-white/60 flex-shrink-0" />
+                      <Slider
+                        value={[desktopZoomPct]}
+                        min={0} max={100} step={1}
+                        onValueChange={handleDesktopZoomChange}
+                        className="flex-1"
+                      />
+                      <ZoomIn className="h-4 w-4 text-white/60 flex-shrink-0" />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Hint text below the editor */}
+              {showEditor && (
+                <p className="text-xs text-muted-foreground text-center py-2 px-4">
+                  {activeTab === 'desktop'
+                    ? 'Zoom in and drag to choose which part of the image shows on your desktop profile.'
+                    : 'Zoom in and drag to choose which part of the image shows on your mobile profile.'}
+                </p>
               )}
             </>
           )}

@@ -354,6 +354,7 @@ export default function SettingsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  useTheme();
   const { customerInfo, refreshCustomerInfo } = useRevenueCat();
   
   const updateProfile = useUpdateProfile();
@@ -620,6 +621,8 @@ export default function SettingsPage() {
     profileBackgroundDesktopY: (user as any)?.profileBackgroundDesktopY || "50",
     profileBackgroundDesktopZoom: (user as any)?.profileBackgroundDesktopZoom || "100",
     hideBanner: (user as any)?.hideBanner || false,
+    statsGlassEffect: (user as any)?.statsGlassEffect || false,
+    profileBackgroundGradient: (user as any)?.profileBackgroundGradient !== false,
     profileFont: (user as any)?.profileFont || "default",
     profileFontEffect: (user as any)?.profileFontEffect || "none",
     profileFontAnimation: (user as any)?.profileFontAnimation || "none",
@@ -672,6 +675,37 @@ export default function SettingsPage() {
   // Guard against query refreshes overwriting in-progress appearance edits
   const hasPendingEdits = React.useRef(false);
 
+  // Track the last values synced FROM the server so we can tell whether the user
+  // has made local changes. If prev[field] still equals the last-synced server
+  // value the user hasn't touched it — safe to update. If they differ, the user
+  // has an unsaved edit in flight and we must preserve it.
+  const lastSyncedBorder = React.useRef({
+    avatarBorderColor: user?.avatarBorderColor || '#4ADE80',
+    selectedBorderId:  user?.selectedAvatarBorderId ?? -1,
+  });
+
+  const lastSyncedAppearance = React.useRef({
+    backgroundColor: user?.backgroundColor || "#0B2232",
+    accentColor: user?.accentColor || "#4ADE80",
+    profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
+    profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
+    profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
+    profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || "",
+    profileBackgroundPositionX: (user as any)?.profileBackgroundPositionX || "50",
+    profileBackgroundPositionY: (user as any)?.profileBackgroundPositionY || "50",
+    profileBackgroundZoom: (user as any)?.profileBackgroundZoom || "100",
+    profileBackgroundDesktopX: (user as any)?.profileBackgroundDesktopX || "50",
+    profileBackgroundDesktopY: (user as any)?.profileBackgroundDesktopY || "50",
+    profileBackgroundDesktopZoom: (user as any)?.profileBackgroundDesktopZoom || "100",
+    hideBanner: (user as any)?.hideBanner || false,
+    statsGlassEffect: (user as any)?.statsGlassEffect || false,
+    profileBackgroundGradient: (user as any)?.profileBackgroundGradient !== false,
+    profileFont: (user as any)?.profileFont || "default",
+    profileFontEffect: (user as any)?.profileFontEffect || "none",
+    profileFontAnimation: (user as any)?.profileFontAnimation || "none",
+    profileFontColor: (user as any)?.profileFontColor || "#FFFFFF",
+  });
+
   const scrollToFontPreview = () => {
     if (window.innerWidth < 768) {
       fontPreviewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -722,6 +756,84 @@ export default function SettingsPage() {
           profileFontEffect: (user as any)?.profileFontEffect || "none",
           profileFontAnimation: (user as any)?.profileFontAnimation || "none",
           profileFontColor: (user as any)?.profileFontColor || "#FFFFFF",
+
+        // For appearance/font/background fields: only sync from server if the user
+        // hasn't made a local change. We detect a local change by comparing prev
+        // against the last value we synced from the server. If they still match the
+        // user hasn't touched the field so it is safe to update; otherwise preserve
+        // the in-flight edit.
+        const synced = lastSyncedAppearance.current;
+        const pick = <T,>(prevVal: T, serverVal: T, lastVal: T): T =>
+          prevVal === lastVal ? serverVal : prevVal;
+
+        const newBgColor       = user.backgroundColor || "#0B2232";
+        const newAccent        = user.accentColor || "#4ADE80";
+        const newBgType        = (user as any)?.profileBackgroundType || "solid";
+        const newBgTheme       = (user as any)?.profileBackgroundTheme || "default";
+        const newBgAnim        = (user as any)?.profileBackgroundAnimation || "none";
+        const newBgImageUrl    = (user as any)?.profileBackgroundImageUrl || "";
+        const newBgPosX        = (user as any)?.profileBackgroundPositionX || "50";
+        const newBgPosY        = (user as any)?.profileBackgroundPositionY || "50";
+        const newBgZoom        = (user as any)?.profileBackgroundZoom || "100";
+        const newBgDeskX       = (user as any)?.profileBackgroundDesktopX || "50";
+        const newBgDeskY       = (user as any)?.profileBackgroundDesktopY || "50";
+        const newBgDeskZoom    = (user as any)?.profileBackgroundDesktopZoom || "100";
+        const newHideBanner      = (user as any)?.hideBanner || false;
+        const newStatsGlass      = (user as any)?.statsGlassEffect || false;
+        const newBgGradient      = (user as any)?.profileBackgroundGradient !== false;
+        const newFont            = (user as any)?.profileFont || "default";
+        const newFontEffect    = (user as any)?.profileFontEffect || "none";
+        const newFontAnim      = (user as any)?.profileFontAnimation || "none";
+        const newFontColor     = (user as any)?.profileFontColor || "#FFFFFF";
+
+        // Update the ref so the next comparison has the right baseline
+        lastSyncedAppearance.current = {
+          backgroundColor: newBgColor,
+          accentColor: newAccent,
+          profileBackgroundType: newBgType,
+          profileBackgroundTheme: newBgTheme,
+          profileBackgroundAnimation: newBgAnim,
+          profileBackgroundImageUrl: newBgImageUrl,
+          profileBackgroundPositionX: newBgPosX,
+          profileBackgroundPositionY: newBgPosY,
+          profileBackgroundZoom: newBgZoom,
+          profileBackgroundDesktopX: newBgDeskX,
+          profileBackgroundDesktopY: newBgDeskY,
+          profileBackgroundDesktopZoom: newBgDeskZoom,
+          hideBanner: newHideBanner,
+          statsGlassEffect: newStatsGlass,
+          profileBackgroundGradient: newBgGradient,
+          profileFont: newFont,
+          profileFontEffect: newFontEffect,
+          profileFontAnimation: newFontAnim,
+          profileFontColor: newFontColor,
+        };
+
+        return {
+          displayName: user.displayName || "",
+          bio: user.bio || "",
+          avatarUrl: user.avatarUrl || "",
+          bannerUrl: finalBannerUrl,
+          // Appearance/font/background — preserve pending user edits
+          backgroundColor:              pick(prev.backgroundColor,           newBgColor,    synced.backgroundColor),
+          accentColor:                  pick(prev.accentColor,               newAccent,     synced.accentColor),
+          profileBackgroundType:        pick(prev.profileBackgroundType,     newBgType,     synced.profileBackgroundType),
+          profileBackgroundTheme:       pick(prev.profileBackgroundTheme,    newBgTheme,    synced.profileBackgroundTheme),
+          profileBackgroundAnimation:   pick(prev.profileBackgroundAnimation,newBgAnim,     synced.profileBackgroundAnimation),
+          profileBackgroundImageUrl:    pick(prev.profileBackgroundImageUrl, newBgImageUrl, synced.profileBackgroundImageUrl),
+          profileBackgroundPositionX:   pick(prev.profileBackgroundPositionX,newBgPosX,    synced.profileBackgroundPositionX),
+          profileBackgroundPositionY:   pick(prev.profileBackgroundPositionY,newBgPosY,    synced.profileBackgroundPositionY),
+          profileBackgroundZoom:        pick(prev.profileBackgroundZoom,     newBgZoom,     synced.profileBackgroundZoom),
+          profileBackgroundDesktopX:    pick(prev.profileBackgroundDesktopX, newBgDeskX,   synced.profileBackgroundDesktopX),
+          profileBackgroundDesktopY:    pick(prev.profileBackgroundDesktopY, newBgDeskY,   synced.profileBackgroundDesktopY),
+          profileBackgroundDesktopZoom: pick(prev.profileBackgroundDesktopZoom, newBgDeskZoom, synced.profileBackgroundDesktopZoom),
+          hideBanner:                   pick(prev.hideBanner,                newHideBanner,   synced.hideBanner),
+          statsGlassEffect:             pick(prev.statsGlassEffect,          newStatsGlass,   synced.statsGlassEffect),
+          profileBackgroundGradient:    pick(prev.profileBackgroundGradient, newBgGradient,   synced.profileBackgroundGradient),
+          profileFont:                  pick(prev.profileFont,               newFont,         synced.profileFont),
+          profileFontEffect:            pick(prev.profileFontEffect,         newFontEffect, synced.profileFontEffect),
+          profileFontAnimation:         pick(prev.profileFontAnimation,      newFontAnim,   synced.profileFontAnimation),
+          profileFontColor:             pick(prev.profileFontColor,          newFontColor,  synced.profileFontColor),
         };
 
         return {
@@ -779,6 +891,8 @@ export default function SettingsPage() {
     profileData.profileFontEffect !== ((user as any)?.profileFontEffect || "none") ||
     profileData.profileFontAnimation !== ((user as any)?.profileFontAnimation || "none") ||
     profileData.profileFontColor !== ((user as any)?.profileFontColor || "#FFFFFF") ||
+    profileData.statsGlassEffect !== ((user as any)?.statsGlassEffect || false) ||
+    profileData.profileBackgroundGradient !== ((user as any)?.profileBackgroundGradient !== false) ||
     avatarFile !== null ||
     selectedPreviousAvatar !== null ||
     avatarBorderColor !== (user?.avatarBorderColor || '#4ADE80') ||
@@ -994,13 +1108,22 @@ export default function SettingsPage() {
   // Border colour picker visibility
   const [showBorderColorPicker, setShowBorderColorPicker] = useState(false);
   
-  // Update selected border when user data loads
+  // Update selected border when user data loads, but preserve any pending local
+  // changes using the same dirty-state pattern as lastSyncedAppearance.
   useEffect(() => {
     if (user?.selectedAvatarBorderId !== undefined) {
-      setSelectedBorderId(user.selectedAvatarBorderId ?? -1);
+      const newId = user.selectedAvatarBorderId ?? -1;
+      setSelectedBorderId(prev =>
+        prev === lastSyncedBorder.current.selectedBorderId ? newId : prev
+      );
+      lastSyncedBorder.current.selectedBorderId = newId;
     }
     if (user?.avatarBorderColor) {
-      setAvatarBorderColor(user.avatarBorderColor);
+      const newColor = user.avatarBorderColor;
+      setAvatarBorderColor(prev =>
+        prev === lastSyncedBorder.current.avatarBorderColor ? newColor : prev
+      );
+      lastSyncedBorder.current.avatarBorderColor = newColor;
     }
   }, [user?.selectedAvatarBorderId, user?.avatarBorderColor]);
   
@@ -1241,9 +1364,12 @@ export default function SettingsPage() {
       accentColor: theme.accentColor,
       backgroundColor: theme.backgroundColor,
       ...(theme.primaryColor ? { primaryColor: theme.primaryColor } : {})
+    // Themes only affect the accent colour — background colour and image are
+    // independent and must not be overwritten by a theme selection.
+    setProfileData(prev => ({
+      ...prev,
+      accentColor: theme.accentColor
     }));
-    
-    setAvatarBorderColor(theme.accentColor);
     
     toast({
       title: "Theme Selected",
@@ -2153,14 +2279,20 @@ export default function SettingsPage() {
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {PRESET_THEMES.map((theme) => {
                             const topColor = theme.gradientTopColor || '#0B2232';
+                            const defaultThemeColor = '#0B2232';
+                            const isActive = profileData.accentColor === theme.accentColor;
                             return (
                               <div
                                 key={theme.name}
-                                className="cursor-pointer rounded-lg border-2 border-transparent hover:border-primary/50 transition-colors"
+                                className="cursor-pointer rounded-lg border-2 transition-all"
+                                style={{
+                                  borderColor: isActive ? theme.accentColor : 'transparent',
+                                  boxShadow: isActive ? `0 0 10px ${theme.accentColor}50` : 'none',
+                                }}
                                 onClick={() => applyPresetTheme(theme)}
                               >
                                 <div
-                                  className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm"
+                                  className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm relative"
                                   style={{ 
                                     background: `linear-gradient(180deg, ${topColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
                                   }}
@@ -2169,6 +2301,14 @@ export default function SettingsPage() {
                                     className="w-8 h-8 rounded-full border-2 border-white"
                                     style={{ backgroundColor: theme.accentColor }}
                                   />
+                                  {isActive && (
+                                    <div
+                                      className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
+                                      style={{ backgroundColor: theme.accentColor }}
+                                    >
+                                      <Check className="w-3 h-3 text-white" />
+                                    </div>
+                                  )}
                                 </div>
                                 <p className="text-center mt-2 text-sm font-medium">{theme.name}</p>
                               </div>
@@ -2220,12 +2360,22 @@ export default function SettingsPage() {
                               />
                             </div>
                             <div
-                              className="w-full h-24 rounded-lg border border-border"
-                              style={{ backgroundColor: profileData.backgroundColor }}
+                              className="w-full h-24 rounded-lg border border-border overflow-hidden"
+                              style={profileData.profileBackgroundGradient
+                                ? { background: `linear-gradient(180deg, #0B2232 0%, ${profileData.backgroundColor} 60%, ${profileData.backgroundColor} 100%)` }
+                                : { backgroundColor: profileData.backgroundColor }
+                              }
                             />
-                            <p className="text-xs text-muted-foreground">
-                              This color will be used as the background gradient on your profile.
-                            </p>
+                            <div className="flex items-center justify-between pt-1">
+                              <div>
+                                <p className="text-sm font-medium">Background Gradient</p>
+                                <p className="text-xs text-muted-foreground">Blend from dark to your chosen colour.</p>
+                              </div>
+                              <Switch
+                                checked={profileData.profileBackgroundGradient}
+                                onCheckedChange={(val) => setProfileData(prev => ({ ...prev, profileBackgroundGradient: val }))}
+                              />
+                            </div>
                           </div>
                         </div>
                       </CardContent>
@@ -2238,23 +2388,23 @@ export default function SettingsPage() {
                           try {
                             await apiRequest("PATCH", `/api/users/${user?.id}`, {
                               profileBackgroundImageUrl: url,
-                              profileBackgroundPositionX: mobilePos.positionX,
-                              profileBackgroundPositionY: mobilePos.positionY,
-                              profileBackgroundZoom: mobilePos.zoom,
-                              profileBackgroundDesktopX: desktopPos.positionX,
-                              profileBackgroundDesktopY: desktopPos.positionY,
-                              profileBackgroundDesktopZoom: desktopPos.zoom,
+                              profileBackgroundPositionX: String(mobilePos.positionX),
+                              profileBackgroundPositionY: String(mobilePos.positionY),
+                              profileBackgroundZoom: String(mobilePos.zoom),
+                              profileBackgroundDesktopX: String(desktopPos.positionX),
+                              profileBackgroundDesktopY: String(desktopPos.positionY),
+                              profileBackgroundDesktopZoom: String(desktopPos.zoom),
                             });
                             hasPendingEdits.current = false;
                             setProfileData(prev => ({
                               ...prev,
                               profileBackgroundImageUrl: url,
-                              profileBackgroundPositionX: mobilePos.positionX,
-                              profileBackgroundPositionY: mobilePos.positionY,
-                              profileBackgroundZoom: mobilePos.zoom,
-                              profileBackgroundDesktopX: desktopPos.positionX,
-                              profileBackgroundDesktopY: desktopPos.positionY,
-                              profileBackgroundDesktopZoom: desktopPos.zoom,
+                              profileBackgroundPositionX: String(mobilePos.positionX),
+                              profileBackgroundPositionY: String(mobilePos.positionY),
+                              profileBackgroundZoom: String(mobilePos.zoom),
+                              profileBackgroundDesktopX: String(desktopPos.positionX),
+                              profileBackgroundDesktopY: String(desktopPos.positionY),
+                              profileBackgroundDesktopZoom: String(desktopPos.zoom),
                             }));
                             queryClient.invalidateQueries({ queryKey: ['/api/user'] });
                             queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
@@ -2344,7 +2494,7 @@ export default function SettingsPage() {
                                         src={signedBgImageUrl || profileData.profileBackgroundImageUrl}
                                         alt="Mobile background preview"
                                         className="w-full h-full object-cover"
-                                        style={{ objectPosition: `${profileData.profileBackgroundPositionX || 50}% ${profileData.profileBackgroundPositionY || 50}%` }}
+                                        style={{ objectPosition: `${profileData.profileBackgroundPositionX ?? 50}% ${profileData.profileBackgroundPositionY ?? 50}%` }}
                                       />
                                       <div className="absolute top-2 left-2">
                                         <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
@@ -2366,7 +2516,7 @@ export default function SettingsPage() {
                                         src={signedBgImageUrl || profileData.profileBackgroundImageUrl}
                                         alt="Desktop background preview"
                                         className="w-full h-full object-cover"
-                                        style={{ objectPosition: `${profileData.profileBackgroundDesktopX || 50}% ${profileData.profileBackgroundDesktopY || 50}%` }}
+                                        style={{ objectPosition: `${profileData.profileBackgroundDesktopX ?? 50}% ${profileData.profileBackgroundDesktopY ?? 50}%` }}
                                       />
                                       <div className="absolute top-2 left-2">
                                         <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">

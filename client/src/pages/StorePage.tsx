@@ -26,6 +26,7 @@ import { BorderDetailDialog } from "@/components/store/BorderDetailDialog";
 import { VerificationBadgeDetailDialog } from "@/components/store/VerificationBadgeDetailDialog";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import { useAccount, useWalletClient, usePublicClient, useChainId } from "wagmi";
+import { useOpenConnectModal } from "@0xsequence/connect";
 import { useLocation } from "wouter";
 import {
   Dialog as WalletDialog,
@@ -55,6 +56,7 @@ import nft15 from "@assets/15_1762777399666.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useTokenBalance } from "@/hooks/use-token";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 
 const rarityGradients: Record<string, string> = {
@@ -210,6 +212,8 @@ export default function StorePage() {
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const chainId = useChainId();
+  const { setOpenConnectModal } = useOpenConnectModal();
+  const { data: tokenBalance } = useTokenBalance();
 
   const [brokenNameTagImages, setBrokenNameTagImages] = useState<Set<number>>(new Set());
   const [brokenBorderImages, setBrokenBorderImages] = useState<Set<number>>(new Set());
@@ -264,28 +268,6 @@ export default function StorePage() {
     },
   });
 
-  const purchaseNameTagMutation = useMutation({
-    mutationFn: async (nameTagId: number) => {
-      const response = await apiRequest("POST", "/api/store/purchase-name-tag", { nameTagId });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to purchase name tag");
-      }
-      return response.json();
-    },
-    onSuccess: (data: any) => {
-      toast({ title: "Name Tag Purchased!", description: data.message });
-      queryClient.invalidateQueries({ queryKey: ["/api/store/name-tags"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user/name-tags"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      setPurchasingNameTagId(null);
-    },
-    onError: (error: Error) => {
-      toast({ title: "Purchase Failed", description: error.message, variant: "destructive" });
-      setPurchasingNameTagId(null);
-    },
-  });
-
   interface StoreBorder {
     id: number;
     name: string;
@@ -297,29 +279,6 @@ export default function StorePage() {
     proOnly: boolean;
     shape?: string;
   }
-
-  const purchaseBorderMutation = useMutation({
-    mutationFn: async (borderId: number) => {
-      const response = await apiRequest("POST", "/api/store/purchase-border", { borderId });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to purchase border");
-      }
-      return response.json();
-    },
-    onSuccess: (data: any) => {
-      toast({ title: "Border Purchased!", description: data.message });
-      queryClient.invalidateQueries({ queryKey: ["/api/store/borders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user/avatar-borders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      setPurchasingBorderId(null);
-      setBorderDialogOpen(false);
-    },
-    onError: (error: Error) => {
-      toast({ title: "Purchase Failed", description: error.message, variant: "destructive" });
-      setPurchasingBorderId(null);
-    },
-  });
 
   const hasNftProfile = !!(user?.nftProfileTokenId && user?.nftProfileImageUrl);
   const borderShapeFilter = hasNftProfile ? 'square' : 'circle';
@@ -355,27 +314,73 @@ export default function StorePage() {
 
   const [buyingTokenId, setBuyingTokenId] = useState<number | null>(null);
 
-  const buyMarketplaceNftMutation = useMutation({
-    mutationFn: async ({ tokenId, sellerId }: { tokenId: number; sellerId: number }) => {
-      const response = await apiRequest("POST", "/api/marketplace/buy", { tokenId, sellerId });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to purchase NFT");
+  const handleBuyMarketplaceNft = async ({ tokenId, sellerId }: { tokenId: number; sellerId: number }) => {
+    if (!user) {
+      openModal();
+      return;
+    }
+    if (!isConnected || !walletClient || !publicClient) {
+      setOpenConnectModal(true);
+      return;
+    }
+    if (chainId !== SKALE_CHAIN_ID) {
+      toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+      return;
+    }
+    setBuyingTokenId(tokenId);
+    try {
+      const intentRes = await fetch("/api/marketplace/buy-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ tokenId, sellerId }),
+      });
+      if (!intentRes.ok) {
+        const error = await intentRes.json();
+        throw new Error(error.error || "Failed to create purchase intent");
       }
-      return response.json();
-    },
-    onSuccess: (data: any) => {
-      toast({ title: "NFT Purchased!", description: data.message });
+      const { price, treasuryAddress } = await intentRes.json();
+
+      toast({ title: "Confirm transaction", description: `Sending ${price} GFT tokens...` });
+      const amountRaw = parseUnits(String(price), GF_DECIMALS);
+      const txHash = await walletClient.writeContract({
+        address: GF_TOKEN_ADDRESS,
+        abi: GF_TOKEN_ABI,
+        functionName: "transfer",
+        args: [treasuryAddress as Address, amountRaw],
+      });
+
+      toast({ title: "Verifying purchase...", description: "Please wait while we confirm your transaction" });
+      await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
+
+      const verifyRes = await fetch("/api/marketplace/verify-buy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ tokenId, sellerId, txHash }),
+      });
+      if (!verifyRes.ok) {
+        const error = await verifyRes.json();
+        throw new Error(error.error || "Failed to verify purchase");
+      }
+      const result = await verifyRes.json();
+      toast({ title: "NFT Purchased!", description: result.message });
       queryClient.invalidateQueries({ queryKey: ["/api/marketplace/listings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/nfts/owned"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/token/balance"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    } catch (error: any) {
+      let description = error.message || "Transaction failed";
+      if (error.message?.includes("user rejected") || error.message?.includes("User rejected")) {
+        description = "Transaction was cancelled";
+      } else if (error.message?.includes("insufficient")) {
+        description = "Insufficient GFT balance";
+      }
+      toast({ title: "Purchase Failed", description, variant: "destructive" });
+    } finally {
       setBuyingTokenId(null);
-    },
-    onError: (error: Error) => {
-      toast({ title: "Purchase Failed", description: error.message, variant: "destructive" });
-      setBuyingTokenId(null);
-    },
-  });
+    }
+  };
 
   const { openModal } = useAuthModal();
 
@@ -386,8 +391,7 @@ export default function StorePage() {
     }
 
     if (!isConnected || !walletClient || !publicClient) {
-      toast({ title: "Wallet not connected", description: "Please connect your wallet first", variant: "destructive" });
-      setWalletRedirectOpen(true);
+      setOpenConnectModal(true);
       return;
     }
 
@@ -447,6 +451,8 @@ export default function StorePage() {
       toast({ title: "Item unlocked!", description: `You now own ${item.name}` });
       refetchOwned();
       queryClient.invalidateQueries({ queryKey: ["/api/store/owned"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/token/balance"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
 
     } catch (error: any) {
       let description = error.message || "Transaction failed";
@@ -458,6 +464,123 @@ export default function StorePage() {
       toast({ title: "Purchase failed", description, variant: "destructive" });
     } finally {
       setPurchasingItemId(null);
+    }
+  };
+
+  const handlePurchaseNameTagOnChain = async (nameTagId: number) => {
+    if (!user) { openModal(); return; }
+    if (!isConnected || !walletClient || !publicClient) {
+      setOpenConnectModal(true);
+      return;
+    }
+    if (chainId !== SKALE_CHAIN_ID) {
+      toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+      return;
+    }
+    setPurchasingNameTagId(nameTagId);
+    try {
+      const intentRes = await fetch("/api/store/name-tag-purchase-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ nameTagId }),
+      });
+      if (!intentRes.ok) {
+        const error = await intentRes.json();
+        throw new Error(error.error || "Failed to create purchase intent");
+      }
+      const { gfCost, treasuryAddress } = await intentRes.json();
+      toast({ title: "Confirm transaction", description: `Sending ${gfCost} GF tokens...` });
+      const amountRaw = parseUnits(String(gfCost), GF_DECIMALS);
+      const txHash = await walletClient.writeContract({
+        address: GF_TOKEN_ADDRESS,
+        abi: GF_TOKEN_ABI,
+        functionName: "transfer",
+        args: [treasuryAddress as Address, amountRaw],
+      });
+      toast({ title: "Verifying purchase...", description: "Please wait while we confirm your transaction" });
+      await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
+      const verifyRes = await fetch("/api/store/verify-name-tag-purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ nameTagId, txHash, gfCost }),
+      });
+      if (!verifyRes.ok) throw new Error("Failed to verify purchase");
+      const result = await verifyRes.json();
+      toast({ title: "Name tag unlocked!", description: result.message || "You now own this name tag" });
+      queryClient.invalidateQueries({ queryKey: ["/api/store/name-tags"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/name-tags"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/token/balance"] });
+    } catch (error: any) {
+      let description = error.message || "Transaction failed";
+      if (error.message?.includes("user rejected") || error.message?.includes("User rejected")) {
+        description = "Transaction was cancelled";
+      } else if (error.message?.includes("insufficient")) {
+        description = "Insufficient GF token balance";
+      }
+      toast({ title: "Purchase failed", description, variant: "destructive" });
+    } finally {
+      setPurchasingNameTagId(null);
+    }
+  };
+
+  const handlePurchaseBorderOnChain = async (borderId: number) => {
+    if (!user) { openModal(); return; }
+    if (!isConnected || !walletClient || !publicClient) {
+      setOpenConnectModal(true);
+      return;
+    }
+    if (chainId !== SKALE_CHAIN_ID) {
+      toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+      return;
+    }
+    setPurchasingBorderId(borderId);
+    try {
+      const intentRes = await fetch("/api/store/border-purchase-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ borderId }),
+      });
+      if (!intentRes.ok) {
+        const error = await intentRes.json();
+        throw new Error(error.error || "Failed to create purchase intent");
+      }
+      const { gfCost, treasuryAddress } = await intentRes.json();
+      toast({ title: "Confirm transaction", description: `Sending ${gfCost} GF tokens...` });
+      const amountRaw = parseUnits(String(gfCost), GF_DECIMALS);
+      const txHash = await walletClient.writeContract({
+        address: GF_TOKEN_ADDRESS,
+        abi: GF_TOKEN_ABI,
+        functionName: "transfer",
+        args: [treasuryAddress as Address, amountRaw],
+      });
+      toast({ title: "Verifying purchase...", description: "Please wait while we confirm your transaction" });
+      await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
+      const verifyRes = await fetch("/api/store/verify-border-purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ borderId, txHash, gfCost }),
+      });
+      if (!verifyRes.ok) throw new Error("Failed to verify purchase");
+      const result = await verifyRes.json();
+      toast({ title: "Border unlocked!", description: result.message || "You now own this border" });
+      queryClient.invalidateQueries({ queryKey: ["/api/store/borders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/avatar-borders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/token/balance"] });
+      setBorderDialogOpen(false);
+    } catch (error: any) {
+      let description = error.message || "Transaction failed";
+      if (error.message?.includes("user rejected") || error.message?.includes("User rejected")) {
+        description = "Transaction was cancelled";
+      } else if (error.message?.includes("insufficient")) {
+        description = "Insufficient GF token balance";
+      }
+      toast({ title: "Purchase failed", description, variant: "destructive" });
+    } finally {
+      setPurchasingBorderId(null);
     }
   };
 
@@ -738,7 +861,7 @@ export default function StorePage() {
   const availableIds = new Set(availableCatalog?.map((n: { id: number }) => n.id) || gamefolioNFTs.map(n => n.id));
   const availableNFTs = gamefolioNFTs.filter(nft => availableIds.has(nft.id));
 
-  const gfBalance = user?.gfTokenBalance || 0;
+  const gfBalance = parseFloat(tokenBalance?.balance || '0');
 
   const handleBuyNFT = (nft: NFT) => {
     setSelectedNFT(nft);
@@ -969,7 +1092,7 @@ export default function StorePage() {
               </h2>
               <div className="flex items-center gap-2 bg-gray-800/80 rounded-xl px-3 py-2">
                 <img src={gfTokenLogo} alt="GF" className="w-5 h-5" />
-                <span className="text-sm font-bold text-white">{user?.gfTokenBalance || 0}</span>
+                <span className="text-sm font-bold text-white">{gfBalance.toLocaleString()}</span>
                 <span className="text-xs text-gray-400">GF</span>
               </div>
             </div>
@@ -1408,63 +1531,120 @@ export default function StorePage() {
               {/* Marketplace Listings */}
               {storeTab === "nft" && marketplaceData && marketplaceData.listings.length > 0 && accessFilter !== "pro" && (
               <>
-              <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
-                <Tag className="h-4 w-4 text-orange-400" />
-                Marketplace
-                <Badge className="bg-orange-600/30 text-[10px] px-1.5 py-0.5 text-orange-300 ml-1">
-                  Player Listed
-                </Badge>
-              </h3>
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 mb-8">
-                {marketplaceData.listings.map((listing: MarketplaceListing) => (
-                  <div
-                    key={`marketplace-${listing.token_id}-${listing.user_id}`}
-                    className="rounded-2xl overflow-hidden bg-slate-900 transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(249,115,22,0.3)]"
-                  >
-                    <div className="relative aspect-square overflow-hidden">
-                      <MarketplaceNftImage tokenId={listing.token_id} />
-                      <div className="absolute top-2 left-2 bg-orange-500/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
-                        Resale
-                      </div>
-                      <div className="absolute top-2 right-2 backdrop-blur-md bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5">
-                        <span className="text-[10px] font-bold text-green-400">#{listing.token_id}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="p-3 pt-2">
-                      <h3 className="font-bold text-sm text-slate-50 truncate">Genesis #{listing.token_id}</h3>
-                      <p className="text-[11px] text-slate-400 mt-0.5">by {listing.display_name || listing.username}</p>
-                      
-                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800">
-                        <div className="flex items-center gap-1">
-                          <img src={gfTokenLogo} alt="GF" className="w-3.5 h-3.5" />
-                          <span className="text-sm font-bold text-orange-400">{listing.listed_price}</span>
+              {/* Platform store listings */}
+              {marketplaceData.listings.filter((l: MarketplaceListing) => l.username === 'GamefolioStore').length > 0 && (
+                <>
+                <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-green-400" />
+                  Official Store
+                  <Badge className="bg-green-600/30 text-[10px] px-1.5 py-0.5 text-green-300 ml-1">
+                    Genesis Guardians
+                  </Badge>
+                </h3>
+                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 mb-8">
+                  {marketplaceData.listings.filter((l: MarketplaceListing) => l.username === 'GamefolioStore').map((listing: MarketplaceListing) => (
+                    <div
+                      key={`store-${listing.token_id}`}
+                      className="rounded-2xl overflow-hidden bg-slate-900 transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(74,222,128,0.3)]"
+                    >
+                      <div className="relative aspect-square overflow-hidden">
+                        <MarketplaceNftImage tokenId={listing.token_id} />
+                        <div className="absolute top-2 left-2 bg-green-500/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+                          Official
                         </div>
-                        <Button
-                          size="sm"
-                          disabled={buyingTokenId === listing.token_id || listing.user_id === user?.id}
-                          className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-[10px] h-7 px-3 rounded-xl disabled:opacity-50"
-                          onClick={() => {
-                            setBuyingTokenId(listing.token_id);
-                            buyMarketplaceNftMutation.mutate({ tokenId: listing.token_id, sellerId: listing.user_id });
-                          }}
-                        >
-                          {buyingTokenId === listing.token_id ? (
-                            <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                          ) : listing.user_id === user?.id ? (
-                            "Your listing"
-                          ) : (
-                            <>
-                              <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
-                              Buy
-                            </>
-                          )}
-                        </Button>
+                        <div className="absolute top-2 right-2 backdrop-blur-md bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5">
+                          <span className="text-[10px] font-bold text-green-400">#{listing.token_id}</span>
+                        </div>
+                      </div>
+                      <div className="p-3 pt-2">
+                        <h3 className="font-bold text-sm text-slate-50 truncate">Genesis #{listing.token_id}</h3>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Gamefolio Official Store</p>
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800">
+                          <div className="flex items-center gap-1">
+                            <img src={gfTokenLogo} alt="GF" className="w-3.5 h-3.5" />
+                            <span className="text-sm font-bold text-green-400">{listing.listed_price}</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            disabled={buyingTokenId === listing.token_id}
+                            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-[10px] h-7 px-3 rounded-xl disabled:opacity-50"
+                            onClick={() => handleBuyMarketplaceNft({ tokenId: listing.token_id, sellerId: listing.user_id })}
+                          >
+                            {buyingTokenId === listing.token_id ? (
+                              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                            ) : (
+                              <>
+                                <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
+                                Buy
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+                </>
+              )}
+
+              {/* Player marketplace listings */}
+              {marketplaceData.listings.filter((l: MarketplaceListing) => l.username !== 'GamefolioStore').length > 0 && (
+                <>
+                <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-orange-400" />
+                  Marketplace
+                  <Badge className="bg-orange-600/30 text-[10px] px-1.5 py-0.5 text-orange-300 ml-1">
+                    Player Listed
+                  </Badge>
+                </h3>
+                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 mb-8">
+                  {marketplaceData.listings.filter((l: MarketplaceListing) => l.username !== 'GamefolioStore').map((listing: MarketplaceListing) => (
+                    <div
+                      key={`marketplace-${listing.token_id}-${listing.user_id}`}
+                      className="rounded-2xl overflow-hidden bg-slate-900 transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(249,115,22,0.3)]"
+                    >
+                      <div className="relative aspect-square overflow-hidden">
+                        <MarketplaceNftImage tokenId={listing.token_id} />
+                        <div className="absolute top-2 left-2 bg-orange-500/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+                          Resale
+                        </div>
+                        <div className="absolute top-2 right-2 backdrop-blur-md bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5">
+                          <span className="text-[10px] font-bold text-green-400">#{listing.token_id}</span>
+                        </div>
+                      </div>
+                      <div className="p-3 pt-2">
+                        <h3 className="font-bold text-sm text-slate-50 truncate">Genesis #{listing.token_id}</h3>
+                        <p className="text-[11px] text-slate-400 mt-0.5">by {listing.display_name || listing.username}</p>
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800">
+                          <div className="flex items-center gap-1">
+                            <img src={gfTokenLogo} alt="GF" className="w-3.5 h-3.5" />
+                            <span className="text-sm font-bold text-orange-400">{listing.listed_price}</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            disabled={buyingTokenId === listing.token_id || listing.user_id === user?.id}
+                            className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-[10px] h-7 px-3 rounded-xl disabled:opacity-50"
+                            onClick={() => handleBuyMarketplaceNft({ tokenId: listing.token_id, sellerId: listing.user_id })}
+                          >
+                            {buyingTokenId === listing.token_id ? (
+                              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                            ) : listing.user_id === user?.id ? (
+                              "Your listing"
+                            ) : (
+                              <>
+                                <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
+                                Buy
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                </>
+              )}
+              
               </>
               )}
 
@@ -1700,12 +1880,7 @@ export default function StorePage() {
                             className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white text-[10px] h-6 px-2"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (!user) {
-                                toast({ title: "Login required", description: "Please log in to purchase name tags", variant: "destructive" });
-                                return;
-                              }
-                              setPurchasingNameTagId(tag.id);
-                              purchaseNameTagMutation.mutate(tag.id);
+                              handlePurchaseNameTagOnChain(tag.id);
                             }}
                             disabled={isPurchasing}
                           >
@@ -1913,13 +2088,9 @@ export default function StorePage() {
               <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center" data-testid="heading-sell-coming-soon">
                 Sell Your NFTs
               </h3>
-              {user?.canSellNfts ? (
+              {user?.canSellNfts && (
                 <p className="text-sm md:text-base text-[#4ade80] text-center max-w-md" data-testid="text-sell-description">
                   Go to your collection to quick-sell any NFT you own.
-                </p>
-              ) : (
-                <p className="text-sm md:text-base text-amber-400 text-center max-w-md" data-testid="text-sell-description">
-                  Selling currently disabled on Beta! We will be on Mainnet soon!
                 </p>
               )}
               <Link href="/collection">
@@ -1933,31 +2104,18 @@ export default function StorePage() {
           {/* Mint NFT Section */}
           {activeTab === "mint" && (
             <div className="flex flex-col items-center justify-center min-h-[50vh] md:min-h-[60vh] px-4">
-              <Sparkles className={`h-16 w-16 md:h-20 md:w-20 mb-4 ${user?.canMintNfts ? 'text-[#4ade80]' : 'text-[#94a3b8] opacity-50'}`} />
+              <Sparkles className="h-16 w-16 md:h-20 md:w-20 mb-4 text-[#4ade80]" />
               <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center text-[#94a3b8]" data-testid="heading-mint-coming-soon">
                 Mint Your Own NFT
               </h3>
-              {user?.canMintNfts ? (
-                <>
-                  <p className="text-sm md:text-base text-[#4ade80] text-center max-w-md" data-testid="text-mint-description">
-                    You have access to the NFT minting page.
-                  </p>
-                  <Link href="/mint">
-                    <Button className="mt-6 bg-[#4ade80] text-[#022c22] hover:bg-[#22c55e]" size="sm" data-testid="button-start-minting">
-                      Start Minting
-                    </Button>
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm md:text-base text-amber-400 text-center max-w-md" data-testid="text-mint-description">
-                    Minting currently disabled on Beta! We will be on Mainnet soon!
-                  </p>
-                  <Button className="mt-6 bg-[#1e293b] text-[#94a3b8] cursor-not-allowed opacity-50" size="sm" disabled data-testid="button-start-minting">
-                    Start Minting
-                  </Button>
-                </>
-              )}
+              <p className="text-sm md:text-base text-[#4ade80] text-center max-w-md" data-testid="text-mint-description">
+                Create and mint your own NFTs on the blockchain.
+              </p>
+              <Link href="/mint-nft">
+                <Button className="mt-6 bg-[#4ade80] text-[#022c22] hover:bg-[#22c55e]" size="sm" data-testid="button-start-minting">
+                  Start Minting
+                </Button>
+              </Link>
             </div>
           )}
 
@@ -2089,12 +2247,7 @@ export default function StorePage() {
         open={nameTagDialogOpen}
         onOpenChange={setNameTagDialogOpen}
         onPurchase={(id) => {
-          if (!user) {
-            toast({ title: "Login required", description: "Please log in to purchase name tags", variant: "destructive" });
-            return;
-          }
-          setPurchasingNameTagId(id);
-          purchaseNameTagMutation.mutate(id);
+          handlePurchaseNameTagOnChain(id);
         }}
         isPurchasing={purchasingNameTagId === selectedNameTag?.id}
         brokenImage={selectedNameTag ? brokenNameTagImages.has(selectedNameTag.id) : false}
@@ -2142,12 +2295,7 @@ export default function StorePage() {
         open={borderDialogOpen}
         onOpenChange={setBorderDialogOpen}
         onPurchase={(id) => {
-          if (!user) {
-            toast({ title: "Login required", description: "Please log in to purchase borders", variant: "destructive" });
-            return;
-          }
-          setPurchasingBorderId(id);
-          purchaseBorderMutation.mutate(id);
+          handlePurchaseBorderOnChain(id);
         }}
         isPurchasing={purchasingBorderId === selectedBorder?.id}
         brokenImage={selectedBorder ? brokenBorderImages.has(selectedBorder.id) : false}

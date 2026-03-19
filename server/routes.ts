@@ -58,6 +58,7 @@ import supportRouter from "./routes/support";
 import { reportsRouter } from "./routes/reports";
 import mintNftRouter from "./routes/mint-nft";
 import quickSellRouter from "./routes/quick-sell";
+import adminNftSeedRouter from "./routes/admin-nft-seed";
 import { twitchApi } from "./services/twitch-api";
 import { VideoProcessor } from "./video-processor";
 import sharp from "sharp";
@@ -74,10 +75,29 @@ import { supabaseStorage } from "./supabase-storage";
 import { contentFilterService } from "./services/content-filter";
 import { addPlayButtonOverlay } from "./og-thumbnail";
 import { getTokenBalance, getTokenInfo } from "./blockchain";
+import { transferGfTokens } from "./gf-token-service";
+import { writeContractWithPoW } from "./skale-pow";
+import { createPublicClient, http, parseUnits, decodeEventLog, type Address as ViemAddress } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { GF_TOKEN_ADDRESS as NFT_GF_TOKEN_ADDRESS, GF_TOKEN_ABI as NFT_GF_TOKEN_ABI, SKALE_NEBULA_TESTNET as NFT_SKALE_CHAIN } from "../shared/contracts";
 import { TwoFactorService } from "./services/two-factor-service";
 
 // Import upload middlewares from upload router
 import multer from "multer";
+
+const nftPublicClient = createPublicClient({
+  chain: NFT_SKALE_CHAIN,
+  transport: http(NFT_SKALE_CHAIN.rpcUrls.default.http[0]),
+});
+
+function getNftTreasuryAddress(): string {
+  const privateKey = process.env.TREASURY_PRIVATE_KEY;
+  if (!privateKey) throw new Error('TREASURY_PRIVATE_KEY not configured');
+  const formattedKey = privateKey.startsWith('0x') ? privateKey as `0x${string}` : `0x${privateKey}` as `0x${string}`;
+  return privateKeyToAccount(formattedKey).address;
+}
+
+const NFT_GF_DECIMALS = 18;
 
 // Rate limiting disabled - users can like/react freely
 
@@ -2215,6 +2235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           profileFontAnimation: userWithoutPassword.profileFontAnimation || 'none',
           canMintNfts: userWithoutPassword.canMintNfts || false,
           canSellNfts: userWithoutPassword.canSellNfts || false,
+          ...(streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0 ? { streakInfo } : {}),
         });
       }
     } catch (error) {
@@ -3804,7 +3825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "profileBackgroundType", "profileBackgroundTheme", "profileBackgroundAnimation", "profileBackgroundImageUrl",
         "profileBackgroundPositionX", "profileBackgroundPositionY",
         "profileBackgroundZoom", "profileBackgroundDesktopX", "profileBackgroundDesktopY", "profileBackgroundDesktopZoom",
-        "hideBanner",
+        "hideBanner", "statsGlassEffect", "profileBackgroundGradient",
         "steamUsername", "xboxUsername", "playstationUsername",
         "discordUsername", "epicUsername", "twitchUsername", "youtubeUsername",
         "twitterUsername", "instagramUsername", "facebookUsername", "nintendoUsername",
@@ -7739,7 +7760,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Purchase a name tag with GF tokens (off-chain balance)
+  // On-chain name tag purchase: step 1 — create intent
+  app.post("/api/store/name-tag-purchase-intent", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { nameTagId } = req.body;
+      if (!nameTagId) return res.status(400).json({ error: "nameTagId is required" });
+
+      const nameTag = await storage.getNameTag(nameTagId);
+      if (!nameTag) return res.status(404).json({ error: "Name tag not found" });
+      if (!nameTag.availableInStore || !nameTag.isActive) return res.status(400).json({ error: "Not available for purchase" });
+      if (nameTag.isDefault) return res.status(400).json({ error: "This name tag is free for everyone" });
+
+      const baseCost = nameTag.gfCost || 0;
+      if (baseCost <= 0) return res.status(400).json({ error: "This name tag has no price set" });
+
+      const hasUnlocked = await storage.userHasUnlockedNameTag(req.user.id, nameTagId);
+      if (hasUnlocked) return res.status(400).json({ error: "You already own this name tag" });
+
+      const user = await storage.getUserById(req.user.id);
+      if (!user || !user.walletAddress) return res.status(400).json({ error: "Wallet address required" });
+
+      const gfCost = user.isPro ? Math.floor(baseCost * 0.8) : baseCost;
+      const treasuryAddress = getNftTreasuryAddress();
+
+      return res.json({ nameTagId, gfCost, treasuryAddress, discountApplied: user.isPro, originalPrice: baseCost });
+    } catch (err) {
+      console.error("Name tag purchase intent error:", err);
+      return res.status(500).json({ error: "Failed to create purchase intent" });
+    }
+  });
+
+  // On-chain name tag purchase: step 2 — verify tx and unlock
+  app.post("/api/store/verify-name-tag-purchase", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { nameTagId, txHash, gfCost } = req.body;
+      if (!nameTagId || !txHash || gfCost === undefined) return res.status(400).json({ error: "nameTagId, txHash, and gfCost are required" });
+
+      const user = await storage.getUserById(req.user.id);
+      if (!user || !user.walletAddress) return res.status(400).json({ error: "Wallet address required" });
+
+      const hasUnlocked = await storage.userHasUnlockedNameTag(req.user.id, nameTagId);
+      if (hasUnlocked) return res.json({ success: true, message: "Already owned" });
+
+      const receipt = await nftPublicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
+      if (receipt.status !== 'success') return res.status(400).json({ error: 'Transaction failed on-chain' });
+
+      const treasuryAddress = getNftTreasuryAddress().toLowerCase();
+      const buyerAddress = (user.walletAddress as string).toLowerCase();
+      const expectedAmount = parseUnits(String(gfCost), NFT_GF_DECIMALS);
+
+      let validTransfer = false;
+      for (const log of receipt.logs) {
+        if (log.address.toLowerCase() !== NFT_GF_TOKEN_ADDRESS.toLowerCase()) continue;
+        try {
+          const decoded = decodeEventLog({ abi: NFT_GF_TOKEN_ABI, data: log.data, topics: log.topics });
+          if (decoded.eventName === 'Transfer') {
+            const { from, to, value } = decoded.args as { from: string; to: string; value: bigint };
+            if (from.toLowerCase() === buyerAddress && to.toLowerCase() === treasuryAddress && value >= expectedAmount) {
+              validTransfer = true;
+              break;
+            }
+          }
+        } catch { continue; }
+      }
+
+      if (!validTransfer) return res.status(400).json({ error: 'Invalid transfer: amount, sender, or recipient mismatch' });
+
+      const nameTag = await storage.getNameTag(nameTagId);
+      await storage.unlockNameTagForUser(req.user.id, nameTagId);
+
+      return res.json({
+        success: true,
+        message: `Successfully purchased "${nameTag?.name}"!`,
+        txHash,
+      });
+    } catch (err) {
+      console.error("Verify name tag purchase error:", err);
+      return res.status(500).json({ error: "Failed to verify purchase" });
+    }
+  });
+
+  // Legacy name tag purchase (deprecated — kept for compatibility)
   app.post("/api/store/purchase-name-tag", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.sendStatus(401);
@@ -7769,13 +7872,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "This name tag has no price set" });
       }
 
-      // Check if user already owns it
       const hasUnlocked = await storage.userHasUnlockedNameTag(req.user.id, nameTagId);
       if (hasUnlocked) {
         return res.status(400).json({ message: "You already own this name tag" });
       }
 
-      // Check user's GF token balance
       const user = await storage.getUserById(req.user.id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -7783,23 +7884,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const cost = user.isPro ? Math.floor(baseCost * 0.8) : baseCost;
 
-      const balance = user.gfTokenBalance || 0;
-      if (balance < cost) {
-        return res.status(400).json({ message: `Insufficient GF tokens. Need ${cost} GF, you have ${balance} GF` });
-      }
-
-      // Deduct GF tokens and unlock the name tag
-      await db.update(users)
-        .set({ gfTokenBalance: sql`COALESCE(${users.gfTokenBalance}, 0) - ${cost}` })
-        .where(eq(users.id, req.user.id));
-
       await storage.unlockNameTagForUser(req.user.id, nameTagId);
 
       res.json({ 
         success: true, 
         message: `Successfully purchased "${nameTag.name}"!` + (user.isPro ? ` (20% Pro discount applied!)` : ''),
         nameTag,
-        newBalance: balance - cost,
         discountApplied: user.isPro,
         originalPrice: baseCost,
         finalPrice: cost,
@@ -7914,6 +8004,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // On-chain border purchase: step 1 — create intent
+  app.post("/api/store/border-purchase-intent", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { borderId } = req.body;
+      if (!borderId) return res.status(400).json({ error: "borderId is required" });
+
+      const user = await storage.getUserById(req.user.id);
+      if (!user) return res.status(404).json({ error: "User not found" });
+      if (!user.walletAddress) return res.status(400).json({ error: "Wallet address required" });
+      if (!user.isPro) return res.status(403).json({ error: "Profile borders are a Pro-only feature. Upgrade to Pro to use borders!" });
+
+      const border = await storage.getProfileBorder(borderId);
+      if (!border) return res.status(404).json({ error: "Border not found" });
+      if (!border.availableInStore || !border.isActive) return res.status(400).json({ error: "Not available for purchase" });
+      if (border.isDefault) return res.status(400).json({ error: "This border is free for everyone" });
+
+      const gfCost = border.gfCost || 0;
+      if (gfCost <= 0) return res.status(400).json({ error: "This border has no price set" });
+
+      const hasUnlocked = await storage.userHasUnlockedBorder(req.user.id, borderId);
+      if (hasUnlocked) return res.status(400).json({ error: "You already own this border" });
+
+      const treasuryAddress = getNftTreasuryAddress();
+      return res.json({ borderId, gfCost, treasuryAddress });
+    } catch (err) {
+      console.error("Border purchase intent error:", err);
+      return res.status(500).json({ error: "Failed to create purchase intent" });
+    }
+  });
+
+  // On-chain border purchase: step 2 — verify tx and unlock
+  app.post("/api/store/verify-border-purchase", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { borderId, txHash, gfCost } = req.body;
+      if (!borderId || !txHash || gfCost === undefined) return res.status(400).json({ error: "borderId, txHash, and gfCost are required" });
+
+      const user = await storage.getUserById(req.user.id);
+      if (!user || !user.walletAddress) return res.status(400).json({ error: "Wallet address required" });
+
+      const hasUnlocked = await storage.userHasUnlockedBorder(req.user.id, borderId);
+      if (hasUnlocked) return res.json({ success: true, message: "Already owned" });
+
+      const receipt = await nftPublicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
+      if (receipt.status !== 'success') return res.status(400).json({ error: 'Transaction failed on-chain' });
+
+      const treasuryAddress = getNftTreasuryAddress().toLowerCase();
+      const buyerAddress = (user.walletAddress as string).toLowerCase();
+      const expectedAmount = parseUnits(String(gfCost), NFT_GF_DECIMALS);
+
+      let validTransfer = false;
+      for (const log of receipt.logs) {
+        if (log.address.toLowerCase() !== NFT_GF_TOKEN_ADDRESS.toLowerCase()) continue;
+        try {
+          const decoded = decodeEventLog({ abi: NFT_GF_TOKEN_ABI, data: log.data, topics: log.topics });
+          if (decoded.eventName === 'Transfer') {
+            const { from, to, value } = decoded.args as { from: string; to: string; value: bigint };
+            if (from.toLowerCase() === buyerAddress && to.toLowerCase() === treasuryAddress && value >= expectedAmount) {
+              validTransfer = true;
+              break;
+            }
+          }
+        } catch { continue; }
+      }
+
+      if (!validTransfer) return res.status(400).json({ error: 'Invalid transfer: amount, sender, or recipient mismatch' });
+
+      const border = await storage.getProfileBorder(borderId);
+      await storage.unlockBorderForUser(req.user.id, borderId);
+
+      return res.json({
+        success: true,
+        message: `Successfully purchased "${border?.name}"!`,
+        txHash,
+      });
+    } catch (err) {
+      console.error("Verify border purchase error:", err);
+      return res.status(500).json({ error: "Failed to verify purchase" });
+    }
+  });
+
+  // Legacy border purchase (deprecated — kept for compatibility)
   app.post("/api/store/purchase-border", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.sendStatus(401);
@@ -7957,22 +8130,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "You already own this border" });
       }
 
-      const balance = user.gfTokenBalance || 0;
-      if (balance < cost) {
-        return res.status(400).json({ message: `Insufficient GF tokens. Need ${cost} GF, you have ${balance} GF` });
-      }
-
-      await db.update(users)
-        .set({ gfTokenBalance: sql`COALESCE(${users.gfTokenBalance}, 0) - ${cost}` })
-        .where(eq(users.id, req.user.id));
-
       await storage.unlockBorderForUser(req.user.id, borderId);
 
       res.json({
         success: true,
         message: `Successfully purchased "${border.name}"!`,
         border,
-        newBalance: balance - cost,
       });
     } catch (err) {
       console.error("Error purchasing border:", err);
@@ -8239,22 +8402,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "You already own this verification badge" });
       }
 
-      const balance = user.gfTokenBalance || 0;
-      if (balance < cost) {
-        return res.status(400).json({ message: `Insufficient GF tokens. Need ${cost} GF, you have ${balance} GF` });
-      }
-
-      await db.update(users)
-        .set({ gfTokenBalance: sql`COALESCE(${users.gfTokenBalance}, 0) - ${cost}` })
-        .where(eq(users.id, req.user.id));
-
       await storage.unlockVerificationBadgeForUser(req.user.id, badgeId);
 
       res.json({
         success: true,
         message: `Successfully purchased "${badge.name}"!`,
         badge,
-        newBalance: balance - cost,
       });
     } catch (err) {
       console.error("Error purchasing verification badge:", err);
@@ -9318,6 +9471,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Mount quick sell routes
   app.use(quickSellRouter);
+  app.use(adminNftSeedRouter);
 
   // Desktop app video upload endpoint - combines upload and processing in one step
   // Expected by desktop app: POST /api/videos/upload with multipart/form-data
@@ -10617,8 +10771,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Purchase NFT with GF tokens
-  app.post("/api/nft/purchase", authMiddleware, async (req, res) => {
+  // NFT purchase intent (returns cost and treasury address)
+  app.post("/api/nft/purchase-intent", authMiddleware, async (req, res) => {
     try {
       const userId = req.user!.id;
       const { nftId } = req.body;
@@ -10627,17 +10781,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid NFT ID" });
       }
 
-      // Look up NFT price from server-side catalog (prevents price manipulation)
       const nft = NFT_CATALOG.find(n => n.id === nftId);
-      if (!nft) {
-        return res.status(404).json({ message: "NFT not found" });
-      }
+      if (!nft) return res.status(404).json({ message: "NFT not found" });
+      if (!nft.forSale) return res.status(400).json({ message: "NFT is not for sale" });
 
-      if (!nft.forSale) {
-        return res.status(400).json({ message: "NFT is not for sale" });
-      }
-
-      // Check if this NFT has already been purchased by someone
       const existingPurchase = await db.execute(
         sql`SELECT id FROM store_nft_purchases WHERE nft_catalog_id = ${nftId} LIMIT 1`
       );
@@ -10647,53 +10794,180 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // Check if user has a wallet
+      if (!user) return res.status(404).json({ message: "User not found" });
       if (!user.walletAddress) {
         return res.status(400).json({ message: "Wallet required to purchase NFTs" });
       }
 
-      // Check if user has enough GF tokens (use server-side price)
-      const currentBalance = user.gfTokenBalance || 0;
-      if (currentBalance < nft.price) {
-        return res.status(400).json({ 
-          message: "Insufficient GF token balance",
-          currentBalance,
-          required: nft.price
-        });
+      const treasuryAddress = getNftTreasuryAddress();
+      return res.json({ gfCost: nft.price, treasuryAddress });
+    } catch (error) {
+      console.error("Error creating NFT purchase intent:", error);
+      res.status(500).json({ error: "Failed to create purchase intent" });
+    }
+  });
+
+  // Verify NFT purchase after on-chain transfer
+  app.post("/api/nft/verify-purchase", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { nftId, txHash } = req.body;
+
+      if (!nftId || typeof nftId !== 'number' || !txHash) {
+        return res.status(400).json({ message: "nftId and txHash are required" });
       }
 
-      // Deduct GF tokens
-      const newBalance = currentBalance - nft.price;
-      await storage.updateUser(userId, {
-        gfTokenBalance: newBalance
-      });
+      const nft = NFT_CATALOG.find(n => n.id === nftId);
+      if (!nft) return res.status(404).json({ message: "NFT not found" });
+      if (!nft.forSale) return res.status(400).json({ message: "NFT is not for sale" });
 
-      // Record the store NFT purchase (marks it as sold/unavailable)
+      const existingPurchase = await db.execute(
+        sql`SELECT id FROM store_nft_purchases WHERE nft_catalog_id = ${nftId} LIMIT 1`
+      );
+      const existingRows = (existingPurchase as any).rows || existingPurchase || [];
+      if (existingRows.length > 0) {
+        return res.status(400).json({ message: "This NFT has already been sold" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user?.walletAddress) {
+        return res.status(400).json({ message: "Wallet required to purchase NFTs" });
+      }
+
+      const treasuryAddress = getNftTreasuryAddress().toLowerCase();
+      const expectedAmount = parseUnits(String(nft.price), NFT_GF_DECIMALS);
+      const receipt = await nftPublicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
+
+      if (receipt.status !== 'success') {
+        return res.status(400).json({ message: "Transaction failed on-chain" });
+      }
+
+      let validTransfer = false;
+      for (const log of receipt.logs) {
+        if (log.address.toLowerCase() !== NFT_GF_TOKEN_ADDRESS.toLowerCase()) continue;
+        try {
+          const decoded = decodeEventLog({ abi: NFT_GF_TOKEN_ABI, data: log.data, topics: log.topics });
+          if (decoded.eventName === 'Transfer') {
+            const { from, to, value } = decoded.args as { from: ViemAddress; to: ViemAddress; value: bigint };
+            if (
+              from.toLowerCase() === user.walletAddress.toLowerCase() &&
+              to.toLowerCase() === treasuryAddress &&
+              value >= expectedAmount
+            ) {
+              validTransfer = true;
+              break;
+            }
+          }
+        } catch { continue; }
+      }
+
+      if (!validTransfer) {
+        return res.status(400).json({ message: "Invalid transfer: amount, sender, or recipient mismatch" });
+      }
+
       await db.execute(
         sql`INSERT INTO store_nft_purchases (nft_catalog_id, buyer_user_id, price_paid) VALUES (${nftId}, ${userId}, ${nft.price})`
       );
-
-      // Add the NFT to the buyer's wallet (user_nfts table)
       await db.execute(
-        sql`INSERT INTO user_nfts (user_id, token_id, tx_hash) VALUES (${userId}, ${nftId}, ${'store_purchase_' + Date.now()}) ON CONFLICT (user_id, token_id) DO NOTHING`
+        sql`INSERT INTO user_nfts (user_id, token_id, tx_hash) VALUES (${userId}, ${nftId}, ${txHash}) ON CONFLICT (user_id, token_id) DO NOTHING`
       );
 
-      res.json({
-        success: true,
-        message: "NFT purchased successfully",
-        nftId,
-        nftName: nft.name,
-        pricePaid: nft.price,
-        newBalance,
-        transactionId: `store_purchase_${Date.now()}_${nftId}`
-      });
+      console.log(`[NFT Purchase] User ${userId} purchased NFT #${nftId} for ${nft.price} GFT (tx: ${txHash})`);
+      res.json({ success: true, message: "NFT purchased successfully", nftId, nftName: nft.name, pricePaid: nft.price });
     } catch (error) {
-      console.error("Error purchasing NFT:", error);
-      res.status(500).json({ error: "Failed to purchase NFT" });
+      console.error("Error verifying NFT purchase:", error);
+      res.status(500).json({ error: "Failed to verify purchase" });
+    }
+  });
+
+  // Server-side NFT purchase (signs transaction using user's stored encrypted private key)
+  app.post("/api/nft/server-purchase", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { nftId } = req.body;
+
+      if (!nftId || typeof nftId !== 'number') {
+        return res.status(400).json({ message: "Invalid NFT ID" });
+      }
+
+      const nft = NFT_CATALOG.find(n => n.id === nftId);
+      if (!nft) return res.status(404).json({ message: "NFT not found" });
+      if (!nft.forSale) return res.status(400).json({ message: "NFT is not for sale" });
+
+      const existingPurchase = await db.execute(
+        sql`SELECT id FROM store_nft_purchases WHERE nft_catalog_id = ${nftId} LIMIT 1`
+      );
+      const existingRows = (existingPurchase as any).rows || existingPurchase || [];
+      if (existingRows.length > 0) {
+        return res.status(400).json({ message: "This NFT has already been sold" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user.walletAddress || !user.encryptedPrivateKey) {
+        return res.status(400).json({ message: "No server-side wallet available", code: "NO_WALLET" });
+      }
+
+      const onChainBalance = await getTokenBalance(user.walletAddress);
+      if (parseFloat(onChainBalance) < nft.price) {
+        return res.status(400).json({
+          message: `Insufficient GFT balance. Have: ${parseFloat(onChainBalance).toFixed(2)} GFT, Need: ${nft.price} GFT`,
+          code: "INSUFFICIENT_BALANCE",
+        });
+      }
+
+      const treasuryAddress = getNftTreasuryAddress();
+      const amountRaw = parseUnits(String(nft.price), NFT_GF_DECIMALS);
+
+      console.log(`[NFT Server Purchase] User ${userId} purchasing NFT #${nftId} for ${nft.price} GFT`);
+      const txHash = await writeContractWithPoW({
+        encryptedPrivateKey: user.encryptedPrivateKey,
+        contractAddress: NFT_GF_TOKEN_ADDRESS as ViemAddress,
+        abi: NFT_GF_TOKEN_ABI,
+        functionName: "transfer",
+        args: [treasuryAddress as ViemAddress, amountRaw],
+      });
+
+      const receipt = await nftPublicClient.waitForTransactionReceipt({ hash: txHash, timeout: 60_000 });
+      if (receipt.status !== 'success') {
+        return res.status(400).json({ message: "Transfer transaction reverted on-chain", txHash });
+      }
+
+      let validTransfer = false;
+      for (const log of receipt.logs) {
+        if (log.address.toLowerCase() !== NFT_GF_TOKEN_ADDRESS.toLowerCase()) continue;
+        try {
+          const decoded = decodeEventLog({ abi: NFT_GF_TOKEN_ABI, data: log.data, topics: log.topics });
+          if (decoded.eventName === 'Transfer') {
+            const { from, to, value } = decoded.args as { from: ViemAddress; to: ViemAddress; value: bigint };
+            if (
+              from.toLowerCase() === user.walletAddress.toLowerCase() &&
+              to.toLowerCase() === treasuryAddress.toLowerCase() &&
+              value >= amountRaw
+            ) {
+              validTransfer = true;
+              break;
+            }
+          }
+        } catch { continue; }
+      }
+
+      if (!validTransfer) {
+        return res.status(400).json({ message: "Transfer event not found in receipt", txHash });
+      }
+
+      await db.execute(
+        sql`INSERT INTO store_nft_purchases (nft_catalog_id, buyer_user_id, price_paid) VALUES (${nftId}, ${userId}, ${nft.price})`
+      );
+      await db.execute(
+        sql`INSERT INTO user_nfts (user_id, token_id, tx_hash) VALUES (${userId}, ${nftId}, ${txHash}) ON CONFLICT (user_id, token_id) DO NOTHING`
+      );
+
+      console.log(`[NFT Server Purchase] User ${userId} purchased NFT #${nftId} for ${nft.price} GFT (tx: ${txHash})`);
+      return res.json({ success: true, txHash, nftId, nftName: nft.name, pricePaid: nft.price });
+    } catch (error: any) {
+      console.error("[NFT Server Purchase] Error:", error);
+      return res.status(500).json({ error: error.message || "Failed to process purchase" });
     }
   });
 
@@ -10947,25 +11221,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Order amount validation failed" });
       }
 
-      // Get user and update balance
+      // Get user and deliver tokens on-chain
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      const currentBalance = user.gfTokenBalance || 0;
-      const newBalance = currentBalance + gfTokenAmount;
+      if (!user.walletAddress) {
+        return res.status(400).json({ message: "User has no wallet address for on-chain delivery" });
+      }
 
-      await storage.updateUser(userId, {
-        gfTokenBalance: newBalance
-      });
+      const transferResult = await transferGfTokens(user.walletAddress, gfTokenAmount);
+      if (!transferResult.success) {
+        console.error(`❌ On-chain GFT delivery failed for user ${userId}: ${transferResult.error}`);
+        return res.status(500).json({ message: `On-chain transfer failed: ${transferResult.error}` });
+      }
 
-      console.log(`✅ GF Tokens Delivered: User ${userId} received ${gfTokenAmount} GF (Order: ${orderId})`);
+      console.log(`✅ GF Tokens Delivered On-Chain: User ${userId} received ${gfTokenAmount} GF (Order: ${orderId}, TxHash: ${transferResult.txHash})`);
 
       res.json({
         success: true,
         amount: gfTokenAmount,
-        newBalance,
+        txHash: transferResult.txHash,
         orderId
       });
     } catch (error) {

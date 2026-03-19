@@ -1430,6 +1430,20 @@ const ProfilePage = () => {
     } : null;
   };
 
+  const getRelativeLuminance = (hex: string): number => {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return 0;
+    const toLinear = (c: number) => {
+      const s = c / 255;
+      return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * toLinear(rgb.r) + 0.7152 * toLinear(rgb.g) + 0.0722 * toLinear(rgb.b);
+  };
+
+  const isLightBackground = getRelativeLuminance(backgroundColor) > 0.179;
+  const statsTextColor = isLightBackground ? '#111827' : '#FFFFFF';
+  const statsLabelColor = isLightBackground ? '#374151' : (accentColor || 'hsl(var(--primary))');
+
   // Darken a hex color by a percentage
   const darkenColor = (hex: string, percent: number) => {
     const rgb = hexToRgb(hex);
@@ -1507,6 +1521,12 @@ const ProfilePage = () => {
         zIndex: 1
       } : { 
         background: isNeoTheme ? 'transparent' : (isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 400px, ${backgroundColor} 100%)`),
+      } : (profile as any).profileBackgroundGradient !== false ? {
+        background: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
+        position: 'relative',
+        zIndex: 1
+      } : {
+        backgroundColor: backgroundColor,
         position: 'relative',
         zIndex: 1
       }}
@@ -2294,6 +2314,26 @@ const ProfilePage = () => {
                 fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined,
                 letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : undefined,
                 fontWeight: isCyberpunkTheme ? '900' : undefined,
+          {/* L-shaped fading border container for profile info */}
+          <div
+            className="relative mt-4 mb-1 mx-4 rounded-lg transition-all duration-300"
+          >
+            {/* Curved corner piece */}
+            <div 
+              className="absolute top-0 -left-4 w-3 h-3 pointer-events-none"
+              style={{
+                borderLeft: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
+                borderTop: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
+                borderTopLeftRadius: '10px',
+              }}
+            />
+            
+            {/* Top horizontal line - fades to right with Collection button */}
+            <div 
+              className="absolute top-0 -left-1 h-[2px] flex items-center"
+              style={{
+                width: 'calc(100% + 4px)',
+                background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, transparent 100%)`,
               }}
             >
               <span className={isCyberpunkTheme ? 'cyber-gradient-text' : ''}>Collection</span>
@@ -2334,6 +2374,43 @@ const ProfilePage = () => {
                     </div>
                   </div>
                 ) : (
+            />
+
+            {/* Content */}
+            <div className="pl-0 pt-4 pb-4 pr-4">
+              {profileSectionTab === 'stats' ? (
+                <>
+                  {/* Stats - Horizontal row with uppercase labels */}
+                  <div className="flex gap-4 mb-2 mt-2 items-start">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-sm" style={{ color: statsTextColor }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>UPLOADS</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-sm" style={{ color: statsTextColor }}>{Number(profile._count?.followers || 0)}</span>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>FOLLOWERS</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-sm" style={{ color: statsTextColor }}>{Number(profile._count?.following || 0)}</span>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>FOLLOWING</span>
+                    </div>
+                  </div>
+
+                  {/* Member since date - uppercase */}
+                  {profile.createdAt && (
+                    <div className="mb-2">
+                      <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>
+                        MEMBER SINCE {new Date(profile.createdAt).toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'long' 
+                        }).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+
+                </>
+              ) : (
+                <div className="mt-2">
                   <div className="flex items-center gap-2">
                     <Hexagon className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
@@ -2432,6 +2509,100 @@ const ProfilePage = () => {
               </a>
             )}
           </div>}
+          {/* Bio - rendered outside the L-shaped container so it never overlaps */}
+          {profileSectionTab === 'stats' && profile.bio && (
+            <p className="text-sm text-foreground/90 mt-4 mb-3 px-4 break-words">{profile.bio}</p>
+          )}
+
+          {/* Social linked accounts - rendered outside the L-shaped container, always below bio */}
+          {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
+            <div className="flex flex-wrap gap-1.5 px-4 pb-4">
+              {profile.steamUsername && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(27, 40, 56, 0.8)', color: '#FFFFFF' }}>
+                  <SiSteam className="w-2.5 h-2.5" />
+                  <span>{profile.steamUsername}</span>
+                </div>
+              )}
+              {profile.nintendoUsername && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(230, 0, 18, 0.8)', color: '#FFFFFF' }}>
+                  <SiNintendo className="w-2.5 h-2.5" />
+                  <span>{profile.nintendoUsername}</span>
+                </div>
+              )}
+              {profile.xboxUsername && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(16, 124, 16, 0.8)', color: '#FFFFFF' }}>
+                  <FaXbox className="w-2.5 h-2.5" />
+                  <span>{profile.xboxUsername}</span>
+                </div>
+              )}
+              {profile.playstationUsername && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(0, 55, 145, 0.8)', color: '#FFFFFF' }}>
+                  <SiPlaystation className="w-2.5 h-2.5" />
+                  <span>{profile.playstationUsername}</span>
+                </div>
+              )}
+              {profile.epicUsername && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(49, 49, 49, 0.8)', color: '#FFFFFF' }}>
+                  <SiEpicgames className="w-2.5 h-2.5" />
+                  <span>{profile.epicUsername}</span>
+                </div>
+              )}
+              {profile.discordUsername && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(88, 101, 242, 0.8)', color: '#FFFFFF' }}>
+                  <SiDiscord className="w-2.5 h-2.5" />
+                  <span>{profile.discordUsername}</span>
+                </div>
+              )}
+              {profile.twitterUsername && (
+                <a
+                  href={`https://twitter.com/${profile.twitterUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: 'rgba(29, 161, 242, 0.8)', color: '#FFFFFF' }}
+                >
+                  <FaXTwitter className="w-2.5 h-2.5" />
+                  <span>{profile.twitterUsername}</span>
+                </a>
+              )}
+              {profile.youtubeUsername && (
+                <a
+                  href={`https://youtube.com/@${profile.youtubeUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: 'rgba(255, 0, 0, 0.8)', color: '#FFFFFF' }}
+                >
+                  <FaYoutube className="w-2.5 h-2.5" />
+                  <span>{profile.youtubeUsername}</span>
+                </a>
+              )}
+              {profile.instagramUsername && (
+                <a
+                  href={`https://instagram.com/${profile.instagramUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: 'rgba(228, 64, 95, 0.8)', color: '#FFFFFF' }}
+                >
+                  <FaInstagram className="w-2.5 h-2.5" />
+                  <span>{profile.instagramUsername}</span>
+                </a>
+              )}
+              {profile.facebookUsername && (
+                <a
+                  href={`https://facebook.com/${profile.facebookUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: 'rgba(24, 119, 242, 0.8)', color: '#FFFFFF' }}
+                >
+                  <FaFacebook className="w-2.5 h-2.5" />
+                  <span>{profile.facebookUsername}</span>
+                </a>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Desktop Layout - Vertical stacked on left */}
@@ -2561,6 +2732,34 @@ const ProfilePage = () => {
                   fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined,
                   letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : undefined,
                   fontWeight: isCyberpunkTheme ? '900' : undefined,
+            {/* L-shaped fading border with curved corner and button */}
+            <div
+              className="relative mt-4 rounded-lg transition-all duration-300"
+              style={{
+                marginLeft: '-32px',
+                height: '140px',
+                width: '100%',
+                maxWidth: '600px',
+              }}
+            >
+              {/* Curved corner piece with glow */}
+              <div 
+                className="absolute top-0 left-0 w-4 h-4 pointer-events-none"
+                style={{
+                  borderLeft: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
+                  borderTop: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
+                  borderTopLeftRadius: '12px',
+                  filter: `drop-shadow(0 0 6px ${accentColor || 'hsl(var(--primary))'})`,
+                }}
+              />
+              
+              {/* Top horizontal line - extends far right and fades with inner glow */}
+              <div 
+                className="absolute top-0 left-4 h-[2px] flex items-center"
+                style={{
+                  width: '550px',
+                  background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 40%, transparent 100%)`,
+                  boxShadow: `0 0 12px 2px ${accentColor || 'hsl(var(--primary))'}50, 0 2px 8px ${accentColor || 'hsl(var(--primary))'}30`,
                 }}
               >
                 <span className={isCyberpunkTheme ? 'cyber-gradient-text' : ''}>Collection</span>
@@ -2601,6 +2800,47 @@ const ProfilePage = () => {
                       </div>
                     </div>
                   ) : (
+              />
+              
+              {/* Content aligned with username above */}
+              <div className="pl-8 pt-4" style={{ minHeight: '120px' }}>
+                {profileSectionTab === 'stats' ? (
+                  <>
+                    {/* Stats - Uploads, Followers, Following */}
+                    <div className="flex gap-6 items-center">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-lg" style={{ color: statsTextColor }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                        <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>Uploads</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-lg" style={{ color: statsTextColor }}>{Number(profile._count?.followers || 0)}</span>
+                        <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>Followers</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-lg" style={{ color: statsTextColor }}>{Number(profile._count?.following || 0)}</span>
+                        <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>Following</span>
+                      </div>
+                    </div>
+
+                    {/* Member since date */}
+                    {profile.createdAt && (
+                      <div className="mt-3">
+                        <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>
+                          Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'long' 
+                          })}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Bio/description */}
+                    {profile.bio && (
+                      <p className="mt-3 text-base text-foreground/90 max-w-xl">{profile.bio}</p>
+                    )}
+                  </>
+                ) : (
+                  <div className="mt-4">
                     <div className="flex items-center gap-2">
                       <Hexagon className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>

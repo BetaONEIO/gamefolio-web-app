@@ -144,6 +144,10 @@ export function NotificationBell() {
       queryClient.setQueryData(['/api/notifications/unread-count'], 0);
       return { previous };
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
+    },
     onError: (_err, _vars, context: any) => {
       queryClient.setQueryData(['/api/notifications'], context?.previous);
       queryClient.setQueryData(['/api/notifications/unread-count'], (context?.previous as any[])?.filter((n: any) => !n.isRead).length ?? 0);

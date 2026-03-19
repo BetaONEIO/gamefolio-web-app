@@ -37,6 +37,7 @@ export default function MintNFTPage() {
     mintTxState,
     mintResult,
     onChainBalance,
+    balanceLoaded,
     totalMinted,
     approve,
     mint,
@@ -83,8 +84,8 @@ export default function MintNFTPage() {
   const allowanceApproved = allowanceState === 'approved';
   const isApproving = allowanceState === 'approving';
   const isCheckingAllowance = allowanceState === 'checking';
-  const canMint = isConnected && quantity <= maxPerTx && allowanceApproved && (useServerSigning || onChainBalanceFormatted >= mintPrice);
-  const hasInsufficientBalance = !useServerSigning && onChainBalanceFormatted < mintPrice;
+  const hasInsufficientBalance = isConnected && balanceLoaded && onChainBalanceFormatted < mintPrice;
+  const canMint = isConnected && balanceLoaded && quantity <= maxPerTx && allowanceApproved && onChainBalanceFormatted >= mintPrice;
 
   const handleEnableAllowance = async () => {
     if (!isConnected) {
@@ -696,9 +697,13 @@ export default function MintNFTPage() {
                     <span className="text-[10px] font-bold text-[#94a3b8] uppercase">
                       Your Balance
                     </span>
-                    <span className="text-sm font-bold text-[#f8fafc]">
-                      {onChainBalanceFormatted.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT
-                    </span>
+                    {!balanceLoaded ? (
+                      <span className="text-sm font-bold text-[#94a3b8]">Loading...</span>
+                    ) : (
+                      <span className={`text-sm font-bold ${hasInsufficientBalance ? 'text-[#ef4444]' : 'text-[#f8fafc]'}`}>
+                        {onChainBalanceFormatted.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -786,21 +791,8 @@ export default function MintNFTPage() {
               </div>
             </div>
 
-            {!user?.canMintNfts && (
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 flex gap-3">
-                <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-bold text-[#f8fafc]">Minting Disabled</span>
-                  <span className="text-xs text-[#94a3b8] leading-[19.5px]">
-                    Minting currently disabled on Beta! We will be on Mainnet soon!
-                  </span>
-                </div>
-              </div>
-            )}
-
             <div className="flex flex-col gap-4">
-              {user?.canMintNfts ? (
-                <button
+              <button
                   onClick={handleMint}
                   disabled={!canMint || mintState === "processing"}
                   className={`w-full h-[68px] rounded-2xl text-xl font-bold flex items-center justify-center gap-2.5 transition-all ${
@@ -810,24 +802,16 @@ export default function MintNFTPage() {
                   }`}
                 >
                   <Sparkles className="h-6 w-6" />
-                  {mintState === "processing" ? "Minting..." : "Mint NFT"}
+                  {mintState === "processing"
+                    ? "Minting..."
+                    : hasInsufficientBalance
+                    ? "Insufficient GFT Balance"
+                    : !balanceLoaded
+                    ? "Loading..."
+                    : "Mint NFT"}
                 </button>
-              ) : (
-                <button
-                  disabled
-                  className="w-full h-[68px] rounded-2xl bg-[#1e293b] text-[#94a3b8] text-xl font-bold flex items-center justify-center gap-2.5 cursor-not-allowed opacity-50"
-                >
-                  <Sparkles className="h-6 w-6" />
-                  Mint NFT
-                </button>
-              )}
             </div>
 
-            {!user?.canMintNfts && (
-              <p className="text-[10px] text-amber-400/70 text-center px-4 leading-[16.25px]">
-                Minting currently disabled on Beta! We will be on Mainnet soon!
-              </p>
-            )}
           </div>
         </div>
       </main>

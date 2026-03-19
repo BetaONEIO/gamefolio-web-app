@@ -11,8 +11,6 @@ interface ConfirmStakeScreenProps {
   apy?: number;
 }
 
-const GFT_TO_GBP = 0.01;
-
 type StakeFlowStep = "confirm" | "processing" | "success" | "error";
 
 export default function ConfirmStakeScreen({
@@ -30,7 +28,6 @@ export default function ConfirmStakeScreen({
 
   const numericAmount = parseFloat(amount) || 0;
   const newTotalBalance = currentStake + numericAmount;
-  const newTotalGBP = newTotalBalance * GFT_TO_GBP;
 
   const handleMaxClick = () => {
     setAmount(availableBalance.toString());
@@ -232,9 +229,6 @@ export default function ConfirmStakeScreen({
               <div className="flex flex-col items-end gap-0.5">
                 <span className="text-xl font-bold" style={{ color: "#4ade80" }}>
                   {newTotalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT
-                </span>
-                <span className="text-[10px]" style={{ color: "#94a3b8" }}>
-                  ≈ £{newTotalGBP.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GBP
                 </span>
               </div>
             </div>

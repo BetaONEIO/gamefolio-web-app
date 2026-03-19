@@ -1,10 +1,11 @@
 import { createConfig } from "@0xsequence/connect";
+import { http } from "viem";
 import { defineChain } from "viem";
 import { SKALE_CHAIN_ID, SKALE_RPC_URL, SKALE_EXPLORER_BASE_URL } from "../../../config/web3";
 
-export const skaleNebulaTestnet = defineChain({
+export const skaleBaseMainnet = defineChain({
   id: SKALE_CHAIN_ID,
-  name: "SKALE Nebula Hub Testnet",
+  name: "SKALE Base Mainnet",
   nativeCurrency: {
     decimals: 18,
     name: "sFUEL",
@@ -16,8 +17,9 @@ export const skaleNebulaTestnet = defineChain({
   blockExplorers: {
     default: { name: "SKALE Explorer", url: SKALE_EXPLORER_BASE_URL },
   },
-  testnet: true,
 });
+
+export const skaleNebulaTestnet = skaleBaseMainnet;
 
 const projectAccessKey = import.meta.env.VITE_SEQUENCE_PROJECT_ACCESS_KEY || "";
 const waasConfigKey = import.meta.env.VITE_SEQUENCE_WAAS_CONFIG_KEY || "";
@@ -38,9 +40,14 @@ export const sequenceConfig = createConfig("waas", {
     logoUrl: "/logo.png",
   },
   appName: "Gamefolio",
-  chainIds: [SKALE_CHAIN_ID],
   defaultChainId: SKALE_CHAIN_ID,
   waasConfigKey,
   guest: true,
   email: true,
+  wagmiConfig: {
+    chains: [skaleBaseMainnet],
+    transports: {
+      [SKALE_CHAIN_ID]: http(SKALE_RPC_URL),
+    },
+  } as any,
 });

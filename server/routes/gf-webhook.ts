@@ -11,6 +11,10 @@ import Stripe from 'stripe';
 const router = Router();
 
 async function getWebhookSecret(): Promise<string> {
+  if (process.env.STRIPE_WEBHOOK_SECRET) {
+    return process.env.STRIPE_WEBHOOK_SECRET;
+  }
+
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? 'repl ' + process.env.REPL_IDENTITY
@@ -19,7 +23,7 @@ async function getWebhookSecret(): Promise<string> {
       : null;
 
   if (!xReplitToken || !hostname) {
-    throw new Error('Replit connector credentials not available');
+    throw new Error('STRIPE_WEBHOOK_SECRET is not set and Replit connector credentials are not available');
   }
 
   const isProduction = process.env.REPLIT_DEPLOYMENT === '1';
@@ -41,7 +45,7 @@ async function getWebhookSecret(): Promise<string> {
   const connectionSettings = data.items?.[0];
   
   if (!connectionSettings?.settings?.webhook_secret) {
-    throw new Error('Stripe webhook secret not found');
+    throw new Error('Stripe webhook secret not found in connector or environment');
   }
 
   return connectionSettings.settings.webhook_secret;
@@ -85,20 +89,6 @@ async function processGfOrderDelivery(sessionId: string, paymentIntentId?: strin
     stripePaymentIntentId: paymentIntentId || undefined 
   });
   console.log(`[GF Webhook] Order ${order.id} marked as paid`);
-
-  if (order.status !== 'credited') {
-    try {
-      const [currentUser] = await db.select({ gfTokenBalance: users.gfTokenBalance }).from(users).where(eq(users.id, order.userId!));
-      if (currentUser) {
-        await db.update(users)
-          .set({ gfTokenBalance: currentUser.gfTokenBalance + order.gfAmount })
-          .where(eq(users.id, order.userId!));
-        console.log(`[GF Webhook] Credited ${order.gfAmount} GFT to user ${order.userId} (off-chain)`);
-      }
-    } catch (balanceError: any) {
-      console.error(`[GF Webhook] Failed to credit off-chain balance for order ${order.id}:`, balanceError);
-    }
-  }
 
   if (!order.walletAddress) {
     await updateOrderStatus(order.id, 'credited', { 
