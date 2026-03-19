@@ -65,7 +65,7 @@ export function ThemeProvider({
   const [accentColor, setAccentColorState] = useState<string>(() => {
     try {
       if (typeof window !== "undefined") {
-        return localStorage.getItem("gf.theme.accent") || "#4ADE80";
+        localStorage.removeItem("gf.theme.accent");
       }
     } catch {
     }
