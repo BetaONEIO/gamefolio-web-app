@@ -1487,6 +1487,14 @@ const ProfilePage = () => {
   return (
     <>
     {selectedProfileNftDetail}
+    {isNeoTheme && !profileBackgroundImageUrl && (
+      <div style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 0, pointerEvents: 'none' }} />
+    )}
+    {isNeoTheme && !profileBackgroundImageUrl && (
+      <canvas ref={neoCanvasRef} className="neo-canvas" />
+    )}
+    {isNeoTheme && !profileBackgroundImageUrl && <div className="neo-vignette" />}
+    {isNeoTheme && !profileBackgroundImageUrl && <div className="neo-scanline" />}
     <div 
       className="min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope" 
       ref={profileThemeScopeRef}
@@ -1498,7 +1506,7 @@ const ProfilePage = () => {
         position: 'relative',
         zIndex: 1
       } : { 
-        background: isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 400px, ${backgroundColor} 100%)`,
+        background: isNeoTheme ? 'transparent' : (isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 400px, ${backgroundColor} 100%)`),
         position: 'relative',
         zIndex: 1
       }}
@@ -1977,11 +1985,6 @@ const ProfilePage = () => {
           }
         `}</style>
       )}
-      {isNeoTheme && !profileBackgroundImageUrl && (
-        <canvas ref={neoCanvasRef} className="neo-canvas" />
-      )}
-      {isNeoTheme && !profileBackgroundImageUrl && <div className="neo-vignette" />}
-      {isNeoTheme && !profileBackgroundImageUrl && <div className="neo-scanline" />}
       {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">
         <React.Suspense fallback={null}>
