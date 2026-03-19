@@ -307,6 +307,13 @@ const PRESET_THEMES = [
     accentColor: "#00d3f2",
     gradientTopColor: "#0a0e1a",
     primaryColor: "#0a0e1a"
+  },
+  {
+    name: "NEO",
+    backgroundColor: "#000000",
+    accentColor: "#00ff41",
+    gradientTopColor: "#000800",
+    primaryColor: "#000800"
   }
 ];
 

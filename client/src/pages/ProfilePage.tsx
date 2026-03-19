@@ -238,6 +238,7 @@ const ProfilePage = () => {
 
   // Profile theme scope ref for dynamic styling
   const profileThemeScopeRef = useRef<HTMLDivElement>(null);
+  const neoCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Screenshot lightbox state
   const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null);
@@ -804,6 +805,48 @@ const ProfilePage = () => {
     }
   }, [currentUser?.username, username, queryClient]);
 
+  // NEO theme: matrix rain canvas animation
+  // Must be before early returns to satisfy Rules of Hooks
+  const _neoAccent = (profile as any)?.accentColor?.toLowerCase();
+  const _neoBgImg = bgImageSignedUrl || (profile as any)?.profileBackgroundImageUrl || '';
+  const _isNeoActive = _neoAccent === '#00ff41' && !_neoBgImg;
+  useEffect(() => {
+    if (!_isNeoActive) return;
+    const canvas = neoCanvasRef.current;
+    if (!canvas) return;
+    const setSize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    setSize();
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const fontSize = 14;
+    let columns = Math.floor(canvas.width / fontSize);
+    let drops: number[] = Array.from({ length: columns }, () => Math.floor(Math.random() * -canvas.height / fontSize));
+    let animFrame: number;
+    const draw = () => {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < drops.length; i++) {
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        const y = drops[i] * fontSize;
+        ctx.fillStyle = drops[i] % 9 === 0 ? '#ccffcc' : (drops[i] % 4 === 0 ? '#55ff77' : '#00ff41');
+        ctx.font = `${fontSize}px "JetBrains Mono", monospace`;
+        ctx.fillText(char, i * fontSize, y);
+        if (y > canvas.height && Math.random() > 0.975) drops[i] = 0;
+        drops[i]++;
+      }
+      animFrame = requestAnimationFrame(draw);
+    };
+    draw();
+    const handleResize = () => {
+      setSize();
+      columns = Math.floor(canvas.width / fontSize);
+      drops = Array.from({ length: columns }, () => Math.floor(Math.random() * -canvas.height / fontSize));
+    };
+    window.addEventListener('resize', handleResize);
+    return () => { cancelAnimationFrame(animFrame); window.removeEventListener('resize', handleResize); };
+  }, [_isNeoActive]);
+
   // Follow mutation
   const followMutation = useMutation({
     mutationFn: async ({ currentFollowStatus }: { currentFollowStatus: 'following' | 'requested' | 'not_following' }) => {
@@ -1255,6 +1298,7 @@ const ProfilePage = () => {
 
   const isZombieTheme = !isLightBackground && accentColor?.toLowerCase() === '#9ae600';
   const isCyberpunkTheme = !isLightBackground && accentColor?.toLowerCase() === '#00d3f2';
+  const isNeoTheme = !isLightBackground && accentColor?.toLowerCase() === '#00ff41';
 
   const platformBtnStyle = isLightBackground
     ? { backgroundColor: 'rgba(255,255,255,0.7)', color: accentColor, border: `1px solid ${accentColor}80` }
@@ -1262,7 +1306,9 @@ const ProfilePage = () => {
       ? { backgroundColor: 'rgba(15, 28, 8, 0.9)', color: '#9ae600', border: '1px solid #9ae60066' }
       : isCyberpunkTheme
         ? { backgroundColor: 'rgba(0,6,18,0.9)', color: '#00d3f2', border: '1px solid #00b8db55', fontFamily: "'Orbitron', sans-serif", fontSize: '0.6rem', letterSpacing: '0.8px', borderRadius: '2px' }
-        : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
+        : isNeoTheme
+          ? { backgroundColor: 'rgba(0,8,0,0.9)', color: '#00ff41', border: '1px solid #00ff4155', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.65rem', letterSpacing: '0.5px', borderRadius: '2px' }
+          : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
 
   const tabListStyle = isLightBackground ? {
     background: 'rgba(255,255,255,0.37)',
@@ -1275,6 +1321,7 @@ const ProfilePage = () => {
     color: activeTab === tabName ? '#ffffff' : isLightBackground ? accentColor : undefined,
     ...(isZombieTheme ? { fontFamily: "'Creepster', cursive", letterSpacing: '2px', fontSize: '0.8rem' } : {}),
     ...(isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2.5px', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase' as const } : {}),
+    ...(isNeoTheme ? { fontFamily: "'JetBrains Mono', monospace", letterSpacing: '1.5px', fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase' as const } : {}),
   });
 
   const nameTagBgStyle = isLightBackground ? {
@@ -1288,6 +1335,10 @@ const ProfilePage = () => {
     background: '#020617',
     border: '0.556px solid #00b8db66',
     boxShadow: '0 0 14px #00d3f222',
+  } : isNeoTheme ? {
+    background: '#000800',
+    border: '0.556px solid #00ff4166',
+    boxShadow: '0 0 12px #00ff4122',
   } : {
     background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}cc 100%)`,
     border: `1px solid ${accentColor}80`,
@@ -1862,6 +1913,75 @@ const ProfilePage = () => {
       {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-rgb-blue" />}
       {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-glitch-lines" />}
       {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-interference" />}
+      {/* NEO / Matrix theme */}
+      {isNeoTheme && (
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+          @keyframes neoGlow {
+            0%,100% { box-shadow: 0 0 8px #00ff4144, 0 0 24px #00ff4111; border-color: #00ff4188; }
+            50%      { box-shadow: 0 0 16px #00ff4177, 0 0 40px #00ff4122; border-color: #00ff41cc; }
+          }
+          @keyframes neoScanline {
+            0%   { transform: translateY(-100%); }
+            100% { transform: translateY(100vh); }
+          }
+          @keyframes neoFlicker {
+            0%,100% { opacity: 1; }
+            92%     { opacity: 1; }
+            93%     { opacity: 0.85; }
+            94%     { opacity: 1; }
+            96%     { opacity: 0.9; }
+            97%     { opacity: 1; }
+          }
+          .neo-canvas {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            opacity: 0.18;
+            animation: neoFlicker 8s step-start infinite;
+          }
+          .neo-vignette {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background: radial-gradient(ellipse 85% 85% at 50% 50%, transparent 55%, rgba(0,0,0,0.72) 100%);
+          }
+          .neo-scanline {
+            position: fixed; left: 0; width: 100%; height: 2px; pointer-events: none; z-index: 0;
+            background: linear-gradient(180deg, transparent 0%, #00ff4122 50%, transparent 100%);
+            animation: neoScanline 6s linear infinite;
+          }
+          .neo-stats-card {
+            animation: neoGlow 3s ease-in-out infinite;
+          }
+          .neo-tab-list {
+            background: #000800 !important;
+            border: 1px solid #00ff4177 !important;
+            border-radius: 2px !important;
+            animation: neoGlow 3s ease-in-out infinite;
+          }
+          .neo-gradient-text {
+            background: linear-gradient(90deg, #00ff41 0%, #88ffaa 50%, #00ff41 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: neoTextShift 4s linear infinite;
+          }
+          @keyframes neoTextShift {
+            0%   { background-position: 0% center; }
+            100% { background-position: 200% center; }
+          }
+          .neo-platform-section span {
+            color: #00ff41;
+          }
+          .neo-platform-section svg {
+            color: #00ff41;
+            filter: drop-shadow(0 0 4px #00ff4188);
+          }
+        `}</style>
+      )}
+      {isNeoTheme && !profileBackgroundImageUrl && (
+        <canvas ref={neoCanvasRef} className="neo-canvas" />
+      )}
+      {isNeoTheme && !profileBackgroundImageUrl && <div className="neo-vignette" />}
+      {isNeoTheme && !profileBackgroundImageUrl && <div className="neo-scanline" />}
       {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">
         <React.Suspense fallback={null}>
@@ -2177,7 +2297,7 @@ const ProfilePage = () => {
             </button>
 
             <div 
-              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''}`}
+              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''}`}
               style={isLightBackground ? {
                 background: 'rgba(255,255,255,0.37)',
                 border: '0.556px solid rgba(255,255,255,0.8)',
@@ -2223,7 +2343,7 @@ const ProfilePage = () => {
           </div>
 
           {/* Platform tags and Social Links — below the stats card */}
-          {profileSectionTab === 'stats' && <div className={`flex flex-wrap gap-1.5 mb-4 mt-2 pl-4 pr-8 ${isCyberpunkTheme ? 'cyber-platform-section' : ''}`}>
+          {profileSectionTab === 'stats' && <div className={`flex flex-wrap gap-1.5 mb-4 mt-2 pl-4 pr-8 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''}`}>
             {profile.steamUsername && (
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
                 <SiSteam className="w-2.5 h-2.5" />
@@ -2444,7 +2564,7 @@ const ProfilePage = () => {
               </button>
 
               <div 
-                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''}`}
+                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''}`}
                 style={isLightBackground ? {
                   background: 'rgba(255,255,255,0.37)',
                   border: '0.556px solid rgba(255,255,255,0.8)',
@@ -2491,7 +2611,7 @@ const ProfilePage = () => {
 
             {/* Platform Connections — below the stats card */}
             {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
-              <div className={`flex flex-wrap gap-2 mt-4 ${isCyberpunkTheme ? 'cyber-platform-section' : ''}`}>
+              <div className={`flex flex-wrap gap-2 mt-4 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''}`}>
                 {profile.steamUsername && (
                   <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
                     <SiSteam className="w-3 h-3" />
@@ -2793,7 +2913,7 @@ const ProfilePage = () => {
         {profileSectionTab === 'collection' ? (
           <div className="w-full">
             <div 
-              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
+              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
               style={isZombieTheme ? { background: '#1a1d1a' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
             >
               <div
@@ -2811,6 +2931,14 @@ const ProfilePage = () => {
                   color: '#9ae600',
                   fontFamily: "'Creepster', cursive",
                   letterSpacing: '2px',
+                } : isNeoTheme ? {
+                  background: 'rgba(0,20,0,0.85)',
+                  borderBottom: '2px solid #00ff41',
+                  color: 'transparent',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  letterSpacing: '2px',
+                  fontSize: '0.72rem',
+                  fontWeight: '700',
                 } : isLightBackground ? {
                   background: 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)',
                   color: '#ffffff',
@@ -2819,10 +2947,10 @@ const ProfilePage = () => {
                   color: '#ffffff',
                 }}
               >
-                <Hexagon className={`w-4 h-4 ${isCyberpunkTheme ? 'text-[#00d3f2]' : isZombieTheme ? 'text-[#9ae600]' : ''}`} />
-                <span className={isCyberpunkTheme ? 'cyber-gradient-text' : ''}>NFTs</span>
+                <Hexagon className={`w-4 h-4 ${isCyberpunkTheme ? 'text-[#00d3f2]' : isZombieTheme ? 'text-[#9ae600]' : isNeoTheme ? 'text-[#00ff41]' : ''}`} />
+                <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>NFTs</span>
                 {profileNftData && (
-                  <span className={`text-xs opacity-80 ${isCyberpunkTheme ? 'cyber-gradient-text' : ''}`}>
+                  <span className={`text-xs opacity-80 ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>
                     ({profileNftData.nfts.filter(n => !n.sold).length})
                   </span>
                 )}
@@ -2892,17 +3020,17 @@ const ProfilePage = () => {
             const showLimits = isOwnProfile && !currentUser?.isPro;
             return (
           <TabsList 
-            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
+            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
             style={tabListStyle}
           >
             <TabsTrigger 
               ref={clipsTabRef}
               value="clips" 
-              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
               style={getTabStyle('clips')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : ''}`}>Clips</span>
+                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>Clips</span>
                 {showLimits && (
                   <span className={`text-[10px] font-normal ${clipsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: clipsCount >= 15 ? undefined : activeTab === 'clips' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {clipsCount}/15
@@ -2914,11 +3042,11 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={reelsTabRef}
               value="reels" 
-              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
               style={getTabStyle('reels')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : ''}`}>Reels</span>
+                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>Reels</span>
                 {showLimits && (
                   <span className={`text-[10px] font-normal ${reelsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: reelsCount >= 15 ? undefined : activeTab === 'reels' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {reelsCount}/15
@@ -2930,11 +3058,11 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={screenshotsTabRef}
               value="screenshots" 
-              className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${isCyberpunkTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
               style={getTabStyle('screenshots')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : ''}`}>Screenshots</span>
+                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>Screenshots</span>
                 {showLimits && (
                   <span className={`text-[10px] font-normal ${screenshotsCount >= 10 ? 'text-red-400' : ''}`} style={{ color: screenshotsCount >= 10 ? undefined : activeTab === 'screenshots' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {screenshotsCount}/10
@@ -2946,10 +3074,10 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={favoritesTabRef}
               value="favorites" 
-              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
               style={getTabStyle('favorites')}
             >
-              <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : ''}`}>Favorites</span>
+              <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>Favorites</span>
             </TabsTrigger>
 
             {profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0 && (
