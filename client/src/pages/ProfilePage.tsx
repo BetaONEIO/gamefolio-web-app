@@ -2376,8 +2376,9 @@ const ProfilePage = () => {
                       <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWING</span>
                     </div>
                   </div>
-                ) : (
-            />
+                ) : null}
+              </div>
+            </div>
 
             {/* Content */}
             <div className="pl-0 pt-4 pb-4 pr-4">
