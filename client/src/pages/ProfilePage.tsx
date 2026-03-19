@@ -1518,10 +1518,12 @@ const ProfilePage = () => {
         backgroundAttachment: 'fixed',
         position: 'relative',
         zIndex: 1
-      } : { 
-        background: isNeoTheme ? 'transparent' : (isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 400px, ${backgroundColor} 100%)`),
+      } : isNeoTheme ? {
+        background: 'transparent',
+        position: 'relative',
+        zIndex: 1
       } : (profile as any).profileBackgroundGradient !== false ? {
-        background: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
+        background: isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
         position: 'relative',
         zIndex: 1
       } : {
