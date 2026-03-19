@@ -2,7 +2,7 @@ import { ClipWithUser } from "@shared/schema";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 import { formatDuration } from "@/lib/constants";
-import { Play, Eye } from "lucide-react";
+import { Play, Eye, Clock } from "lucide-react";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import QuickShareButton from "@/components/clips/QuickShareButton";
 import { Link, useLocation } from "wouter";
@@ -110,6 +110,14 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
               onClick={handleGameClick}
             >
               {clip.game.name}
+            </div>
+          )}
+
+          {/* Pending game approval badge */}
+          {clip.game && clip.game.isApproved === false && (
+            <div className="flex items-center gap-1 mt-1 text-amber-400 text-xs">
+              <Clock className="h-3 w-3 shrink-0" />
+              <span>Pending game approval</span>
             </div>
           )}
           

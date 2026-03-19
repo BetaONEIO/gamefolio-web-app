@@ -4085,7 +4085,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // For non-owners, hide clips associated with unapproved custom games
       if (!isOwnProfile) {
-        clips = clips.filter((c: any) => !c.game || c.game.isApproved !== false);
+        clips = clips.filter((c) => !c.game || c.game.isApproved !== false);
       }
 
       // For demo user, also include the demo clips if no real clips exist
@@ -8649,11 +8649,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // For non-owners, hide screenshots associated with unapproved custom games
       if (!isOwnProfile) {
-        const gameIds = [...new Set(screenshots.map((s: any) => s.gameId).filter(Boolean))] as number[];
+        const gameIds = [...new Set(screenshots.map((s) => s.gameId).filter((id): id is number => id !== null))];
         if (gameIds.length > 0) {
           const allGames = await storage.getAllGames();
-          const unapprovedGameIds = new Set(allGames.filter((g: any) => g.isApproved === false).map((g: any) => g.id));
-          screenshots = screenshots.filter((s: any) => !s.gameId || !unapprovedGameIds.has(s.gameId));
+          const unapprovedGameIds = new Set(allGames.filter((g) => g.isApproved === false).map((g) => g.id));
+          screenshots = screenshots.filter((s) => !s.gameId || !unapprovedGameIds.has(s.gameId));
         }
       }
 

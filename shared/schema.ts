@@ -1234,7 +1234,10 @@ export type InsertUserBlock = z.infer<typeof insertUserBlockSchema>;
 export type ProfileBanner = typeof profileBanners.$inferSelect;
 export type InsertProfileBanner = z.infer<typeof insertProfileBannerSchema>;
 
-export type Screenshot = typeof screenshots.$inferSelect;
+export type Screenshot = typeof screenshots.$inferSelect & {
+  game?: Game | null;
+  _count?: { likes: number; reactions: number; comments: number };
+};
 export type InsertScreenshot = z.infer<typeof insertScreenshotSchema>;
 
 export type Badge = typeof badges.$inferSelect;

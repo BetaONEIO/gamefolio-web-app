@@ -3486,11 +3486,18 @@ const ProfilePage = () => {
                     .map((screenshot) => {
                     const isHighlighted = highlightedContent?.type === 'screenshot' && highlightedContent.id === screenshot.id.toString();
                     const isPinned = !!screenshot.pinnedAt;
+                    const isPendingGameApproval = isOwnProfile && screenshot.game?.isApproved === false;
                     return (
                       <div
                         key={`screenshot-${screenshot.id}`}
                         className="relative group"
                       >
+                        {isPendingGameApproval && (
+                          <div className="absolute bottom-1.5 left-1.5 z-10 flex items-center gap-1 bg-amber-500/90 text-white text-xs px-1.5 py-0.5 rounded">
+                            <Clock className="w-2.5 h-2.5 shrink-0" />
+                            <span>Pending approval</span>
+                          </div>
+                        )}
                         {isPinned && !isOwnProfile && (
                           <div className="absolute top-1.5 left-1.5 z-10 bg-primary/90 text-primary-foreground p-1 rounded-md">
                             <Pin className="w-2.5 h-2.5" />
