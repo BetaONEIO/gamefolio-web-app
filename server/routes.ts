@@ -5158,10 +5158,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let existingGame = await storage.getGameByName(req.body.gameName);
 
           if (!existingGame) {
-            // Create a default game
+            // Create a user-supplied game (not from Twitch) — requires admin approval
             existingGame = await storage.createGame({
               name: req.body.gameName,
               imageUrl: "",
+              isUserAdded: true,
+              isApproved: false,
             });
           }
 
@@ -8495,11 +8497,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Found existing game by name: ${gameName} (ID: ${existingGame.id})`);
           game = existingGame;
         } else {
-          console.log(`Creating new game with ID ${gameId}: ${gameName}`);
+          console.log(`Creating new user-supplied game with ID ${gameId}: ${gameName}`);
           try {
             game = await storage.createGame({
               name: gameName,
-              imageUrl: gameImageUrl || null
+              imageUrl: gameImageUrl || null,
+              isUserAdded: true,
+              isApproved: false,
             });
           } catch (createError: any) {
             // Handle race condition where game was created by another request

@@ -804,10 +804,14 @@ export class DatabaseStorage implements IStorage {
 
   async getClipsByHashtag(hashtag: string): Promise<ClipWithUser[]> {
     // Search for clips that have the hashtag in their tags array using ANY operator
+    // Exclude clips tied to unapproved custom games
     const hashtagClips = await db
       .select()
       .from(clips)
-      .where(sql`${hashtag} = ANY(${clips.tags})`)
+      .where(and(
+        sql`${hashtag} = ANY(${clips.tags})`,
+        sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
+      ))
       .orderBy(desc(clips.createdAt), desc(clips.id));
 
     // Get full clip details with user info
@@ -1028,10 +1032,7 @@ export class DatabaseStorage implements IStorage {
             ) : sql`false` // If no current user, don't show any private content
           ),
           // Only show content for approved games (or no game)
-          or(
-            sql`${clips.gameId} IS NULL`,
-            sql`${games.is_approved} IS NULL OR ${games.is_approved} = true`
-          )
+          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
         )
       )
       .groupBy(clips.id, users.id, games.id)
@@ -1098,10 +1099,7 @@ export class DatabaseStorage implements IStorage {
             ) : sql`false` // If no current user, don't show any private content
           ),
           // Only show content for approved games (or no game)
-          or(
-            sql`${clips.gameId} IS NULL`,
-            sql`${games.is_approved} IS NULL OR ${games.is_approved} = true`
-          )
+          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
         )
       )
       .groupBy(clips.id, users.id, games.id)
