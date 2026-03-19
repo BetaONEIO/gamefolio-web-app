@@ -3055,7 +3055,8 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           dateFilter ? gt(screenshots.createdAt, dateFilter) : undefined,
-          gameId ? eq(screenshots.gameId, gameId) : undefined
+          gameId ? eq(screenshots.gameId, gameId) : undefined,
+          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${screenshots.gameId} AND g.is_approved = false)`
         )
       )
       .orderBy(desc(screenshots.views), desc(screenshots.createdAt), desc(screenshots.id))
