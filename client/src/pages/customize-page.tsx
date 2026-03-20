@@ -82,6 +82,12 @@ const PRESET_THEMES = [
     accentColor: "#c27aff",
     backgroundColor: "#1e053a",
     cardColor: "#59168b"
+  },
+  {
+    name: "Mac",
+    accentColor: "#0066ff",
+    backgroundColor: "#f0f0f2",
+    cardColor: "#ffffff"
   }
 ];
 

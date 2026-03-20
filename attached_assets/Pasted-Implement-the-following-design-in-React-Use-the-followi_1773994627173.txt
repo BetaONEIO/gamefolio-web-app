@@ -1,0 +1,1117 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/CartoonGamefolio.module.css
+@import "https://fonts.googleapis.com/css?family=Bricolage+Grotesque:0,800&display=swap";
+.CartoonGamefolio_281_1054 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_281_1055 {
+  background: #fffaec;
+  flex: 1 0 0;
+  width: 100%;
+  height: 1238px;
+  overflow: hidden;
+}
+.Container_281_1056 {
+  width: 430px;
+  height: 836px;
+}
+.Container_281_1057 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 430px;
+  padding: 0 32px;
+  display: flex;
+}
+.Container_281_1058 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 11.5244px;
+  height: 48px;
+  padding-right: 66.875px;
+  display: flex;
+}
+.Container_281_1059 {
+  justify-content: center;
+  align-items: center;
+  width: 256px;
+  height: 53px;
+  display: flex;
+}
+.BusterBot_281_1060 {
+  color: #1d1d1f;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  flex-shrink: 0;
+  width: 262px;
+  height: 62px;
+  font-family: Bricolage Grotesque;
+  font-size: 48px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 48px;
+  display: inline-block;
+}
+.Container_281_1061 {
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+}
+.Container_281_1063 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 366px;
+  height: 75px;
+  display: flex;
+}
+.JustASillyBotInA_281_1064 {
+  color: #000c;
+  font-feature-settings: "dlig" on;
+  width: 188px;
+  height: 24px;
+  font-family: Bricolage Grotesque;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 25px;
+  display: inline-block;
+}
+.Container_281_1065 {
+  justify-content: center;
+  align-items: center;
+  width: 140px;
+  height: 24px;
+  display: flex;
+}
+.CartoonWorld_281_1066 {
+  color: #ff5e5e;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 145px;
+  height: 24px;
+  font-family: Bricolage Grotesque;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 25px;
+  display: inline-block;
+}
+.SmashingHighScoresAndEating_281_1067 {
+  color: #000c;
+  font-feature-settings: "dlig" on;
+  width: 358px;
+  height: 49px;
+  font-family: Bricolage Grotesque;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 25px;
+  display: inline-block;
+}
+.Container_281_1068 {
+  justify-content: center;
+  align-items: center;
+  width: 163px;
+  height: 24px;
+  display: flex;
+}
+.DigitalCupcakes_281_1069 {
+  color: #5ac8fa;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 168px;
+  height: 24px;
+  font-family: Bricolage Grotesque;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 25px;
+  display: inline-block;
+}
+.generated__281_1070 {
+  color: #000c;
+  font-feature-settings: "dlig" on;
+  width: 35px;
+  height: 24px;
+  font-family: Bricolage Grotesque;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 25px;
+  display: inline-block;
+}
+.Container_281_1071 {
+  justify-content: center;
+  align-items: center;
+  width: 430px;
+  height: 153px;
+  padding: 0 24px;
+  display: flex;
+}
+.Container_281_1072 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 4px solid #000;
+  border-radius: 40px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  height: 153px;
+  padding: 44px 20px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 8px 8px #000;
+}
+.Container_281_1073 {
+  box-sizing: border-box;
+  border-right: 4px solid #000;
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6.12244px;
+  width: 114px;
+  height: 65px;
+  padding: 0 25.194px 0 21.806px;
+  display: flex;
+}
+.Container_281_1074 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 43px;
+  display: flex;
+}
+.k_281_1075 {
+  color: #3498db;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.9px;
+  width: 72px;
+  height: 46px;
+  font-family: Bricolage Grotesque;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 40px;
+  display: inline-block;
+}
+.Container_281_1076 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 39px;
+  height: 17px;
+  padding: 1.5px 0 2.5px;
+  display: flex;
+}
+.Fans_281_1077 {
+  color: #0006;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 2.2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 44px;
+  height: 13px;
+  font-family: Bricolage Grotesque;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_281_1078 {
+  box-sizing: border-box;
+  border-right: 4px solid #000;
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5.61853px;
+  width: 114px;
+  height: 65px;
+  padding: 0 26.457px 0 22.543px;
+  display: flex;
+}
+.Container_281_1079 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 44px;
+  display: flex;
+}
+._2k_281_1080 {
+  color: #e74c3c;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.9px;
+  width: 71px;
+  height: 47px;
+  font-family: Bricolage Grotesque;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 40px;
+  display: inline-block;
+}
+.Container_281_1081 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 44px;
+  height: 17px;
+  padding: 1.5px 0 2.5px;
+  display: flex;
+}
+.Level_281_1082 {
+  color: #0006;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 2.2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 49px;
+  height: 13px;
+  font-family: Bricolage Grotesque;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_281_1083 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6.7522px;
+  width: 114px;
+  height: 65px;
+  padding: 0 12.616px 0 13.384px;
+  display: flex;
+}
+.Container_281_1084 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 42px;
+  display: flex;
+}
+.generated_999_281_1085 {
+  color: #27ae60;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.9px;
+  width: 93px;
+  height: 45px;
+  font-family: Bricolage Grotesque;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 40px;
+  display: inline-block;
+}
+.Container_281_1086 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 49px;
+  height: 17px;
+  padding: 1.5px 0 2.5px;
+  display: flex;
+}
+.Cakes_281_1087 {
+  color: #0006;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 2.2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 54px;
+  height: 13px;
+  font-family: Bricolage Grotesque;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_281_1088 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+  width: 430px;
+  padding: 0 24px 160px;
+  display: flex;
+}
+.Container_281_1089 {
+  align-items: center;
+  width: 382px;
+  height: 36px;
+  padding: 0 76px 0 8px;
+  display: flex;
+}
+.Container_281_1090 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 31.7031px;
+  height: 36px;
+  padding-right: 0.266px;
+  display: flex;
+}
+.Button_281_1091 {
+  box-sizing: border-box;
+  border-bottom: 4px solid gold;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 36px;
+  padding: 2px 0 10px;
+  display: flex;
+}
+.Clips_281_1092 {
+  color: #1d1d1f;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.5px;
+  width: 52px;
+  height: 24px;
+  font-family: Bricolage Grotesque;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 28px;
+  display: inline-block;
+}
+.Button_281_1093 {
+  justify-content: center;
+  align-items: center;
+  width: 52px;
+  height: 32px;
+  padding: 2px 0 6px;
+  display: flex;
+}
+.Reels_281_1094 {
+  color: #0000004d;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
+  width: 57px;
+  height: 24px;
+  font-family: Bricolage Grotesque;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 28px;
+  display: inline-block;
+}
+.Button_281_1095 {
+  justify-content: center;
+  align-items: center;
+  width: 60px;
+  height: 32px;
+  padding: 2px 0 6px;
+  display: flex;
+}
+.Snaps_281_1096 {
+  color: #0000004d;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
+  width: 65px;
+  height: 24px;
+  font-family: Bricolage Grotesque;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 28px;
+  display: inline-block;
+}
+.Button_281_1097 {
+  justify-content: center;
+  align-items: center;
+  width: 44px;
+  height: 32px;
+  padding: 2px 0 6px;
+  display: flex;
+}
+.Favs_281_1098 {
+  color: #0000004d;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
+  width: 49px;
+  height: 24px;
+  font-family: Bricolage Grotesque;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_281_1099 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 19px;
+  width: 382px;
+  height: 239px;
+  display: flex;
+}
+.Container_281_1100 {
+  box-sizing: border-box;
+  background: gold;
+  border: 4px solid #000;
+  border-radius: 40px;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 184px;
+  height: 242px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 8px 8px #000;
+}
+.Image_281_1101 {
+  aspect-ratio: 86/115;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 175px;
+  height: 234px;
+}
+.Container_281_1102 {
+  background: linear-gradient(#0000 0% 50%, #000c 100%);
+  width: 175px;
+  height: 234px;
+}
+.Container_281_1103 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: center;
+  gap: 7.0974px;
+  width: 88px;
+  padding: 0.826px 0 0.174px;
+  display: flex;
+}
+.Container_281_1104 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 41px;
+  padding: 10.173px 9.827px 9.827px 10.173px;
+  display: flex;
+  box-shadow: 2px 2px #000;
+}
+.Container_281_1105 {
+  width: 21px;
+  height: 21px;
+  overflow: hidden;
+}
+.Container_281_1107 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 29px;
+  padding: 3px 0;
+  display: flex;
+}
+._5M_281_1108 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 45px;
+  height: 23px;
+  font-family: Bricolage Grotesque;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_281_1109 {
+  box-sizing: border-box;
+  background: #5ac8fa;
+  border: 4px solid #000;
+  border-radius: 40px;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 184px;
+  height: 242px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 8px 8px #000;
+}
+.Image_281_1110 {
+  aspect-ratio: 86/115;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 175px;
+  height: 234px;
+}
+.Container_281_1111 {
+  background: linear-gradient(#0000 0% 50%, #000c 100%);
+  width: 175px;
+  height: 234px;
+}
+.Container_281_1112 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: center;
+  gap: 7.0974px;
+  width: 94px;
+  padding-bottom: 1px;
+  display: flex;
+}
+.Container_281_1113 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 41px;
+  padding: 10.173px 9.827px 9.827px 10.173px;
+  display: flex;
+  box-shadow: 2px 2px #000;
+}
+.Container_281_1114 {
+  width: 21px;
+  height: 21px;
+  overflow: hidden;
+}
+.Container_281_1116 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 46px;
+  height: 29px;
+  padding: 3px 0;
+  display: flex;
+}
+.k_281_1117 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 51px;
+  height: 23px;
+  font-family: Bricolage Grotesque;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_281_1118 {
+  width: 430px;
+  height: 224px;
+}
+.Container_281_1119 {
+  box-sizing: border-box;
+  background: gold;
+  border: 4px solid #000;
+  border-radius: 40px;
+  justify-content: center;
+  align-items: center;
+  width: 382px;
+  height: 224px;
+  padding: 4px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 8px 8px #000;
+}
+.Image_281_1120 {
+  aspect-ratio: 187/108;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 374px;
+  height: 216px;
+}
+.Container_281_1121 {
+  width: 128px;
+  height: 128px;
+}
+.Container_281_1122 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 4px solid #000;
+  border-radius: 32px;
+  justify-content: center;
+  align-items: center;
+  width: 133px;
+  height: 133px;
+  padding: 8.274px 8.726px 8.726px 8.274px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 8px 8px #000;
+}
+.Image_281_1123 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  border-radius: 24px;
+  flex-shrink: 0;
+  width: 116px;
+  height: 116px;
+}
+.Container_281_1124 {
+  box-sizing: border-box;
+  background: #ff5e5e;
+  border: 4px solid #000;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 9.488px 9.512px 9.512px 9.488px;
+  display: flex;
+  box-shadow: 4px 4px #000;
+}
+.Container_281_1125 {
+  flex-shrink: 0;
+  width: 29px;
+  height: 29px;
+  overflow: hidden;
+}
+.Container_281_1127 {
+  justify-content: center;
+  align-items: center;
+  width: 57px;
+  height: 57px;
+  display: flex;
+}
+.Container_281_1128 {
+  flex: 1 0 0;
+  height: 57px;
+  overflow: hidden;
+}
+.Container_281_1133 {
+  justify-content: center;
+  align-items: center;
+  width: 48px;
+  height: 48px;
+  display: flex;
+}
+.Container_281_1134 {
+  flex: 1 0 0;
+  height: 48px;
+  overflow: hidden;
+}
+.Header_281_1137 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 65px;
+  width: 430px;
+  padding: 32px 24px 16px;
+  display: flex;
+}
+.Container_281_1138 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 9.9552px;
+  width: 209px;
+  height: 48px;
+  display: flex;
+}
+.Container_281_1139 {
+  box-sizing: border-box;
+  background: #5ac8fa;
+  border: 4px solid #000;
+  border-radius: 16px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 51px;
+  height: 51px;
+  padding: 10.51px 10.49px 10.49px 10.51px;
+  display: flex;
+  box-shadow: 4px 4px #000;
+}
+.Container_281_1140 {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  overflow: hidden;
+}
+.Container_281_1142 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 149px;
+  height: 35px;
+  padding: 1.5px 0;
+  display: flex;
+}
+.ToonVerse_281_1143 {
+  color: #1d1d1f;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.6px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 154px;
+  height: 32px;
+  font-family: Bricolage Grotesque;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_281_1144 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 9.6228px;
+  height: 48px;
+  display: flex;
+}
+.Button_281_1145 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 4px solid #000;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 48px;
+  padding: 12px;
+  display: flex;
+  box-shadow: 4px 4px #000;
+}
+.Container_281_1146 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_281_1148 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 4px solid #000;
+  border-radius: 16777200px;
+  justify-content: center;
+  align-items: center;
+  width: 53px;
+  height: 53px;
+  padding: 4.396px 4.604px 4.604px 4.396px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 4px 4px #000;
+}
+.Image_281_1149 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+}
+.Container_281_1150 {
+  justify-content: center;
+  align-items: center;
+  width: 382px;
+  height: 80px;
+  display: flex;
+}
+.Navigation_281_1151 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 4px solid #000;
+  border-radius: 40px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  display: flex;
+  box-shadow: 8px 8px #000;
+}
+.Button_281_1152 {
+  justify-content: center;
+  align-items: center;
+  width: 66px;
+  height: 36px;
+  padding: 0 15.25px 0 14.75px;
+  display: flex;
+}
+.Container_281_1153 {
+  flex: 1 0 0;
+  height: 36px;
+  overflow: hidden;
+}
+.Button_281_1155 {
+  justify-content: center;
+  align-items: center;
+  width: 66px;
+  height: 32px;
+  padding: 0 17.25px 0 16.75px;
+  display: flex;
+}
+.Container_281_1156 {
+  flex: 1 0 0;
+  height: 32px;
+  overflow: hidden;
+}
+.Button_281_1158 {
+  justify-content: center;
+  align-items: center;
+  width: 66px;
+  height: 32px;
+  padding: 0 17.25px 0 16.75px;
+  display: flex;
+}
+.Container_281_1159 {
+  flex: 1 0 0;
+  height: 32px;
+  overflow: hidden;
+}
+.Button_281_1161 {
+  justify-content: center;
+  align-items: center;
+  width: 66px;
+  height: 40px;
+  padding: 0 13.25px 0 12.75px;
+  display: flex;
+}
+.Container_281_1162 {
+  box-sizing: border-box;
+  border: 2px solid #000;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 2px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_281_1163 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 36px;
+  height: 36px;
+}
+.Button_281_1164 {
+  justify-content: center;
+  align-items: center;
+  width: 80px;
+  height: 80px;
+  display: flex;
+}
+.Container_281_1165 {
+  box-sizing: border-box;
+  background: gold;
+  border: 4px solid #000;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  display: flex;
+  box-shadow: 4px 4px #000;
+}
+.Container_281_1166 {
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+}
+
+```
+
+---
+
+```src/components/assets/Container.tsx
+import React from 'react';
+export default function Container() {
+  return <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fillRule="evenodd" clipRule="evenodd" d="M22 26H12C11.4333 26 10.9587 25.808 10.576 25.424C10.1933 25.04 10.0013 24.5653 10 24C9.99867 23.4347 10.1907 22.96 10.576 22.576C10.9613 22.192 11.436 22 12 22H22V12C22 11.4333 22.192 10.9587 22.576 10.576C22.96 10.1933 23.4347 10.0013 24 10C24.5653 9.99867 25.0407 10.1907 25.426 10.576C25.8113 10.9613 26.0027 11.436 26 12V22H36C36.5667 22 37.042 22.192 37.426 22.576C37.81 22.96 38.0013 23.4347 38 24C37.9987 24.5653 37.8067 25.0407 37.424 25.426C37.0413 25.8113 36.5667 26.0027 36 26H26V36C26 36.5667 25.808 37.042 25.424 37.426C25.04 37.81 24.5653 38.0013 24 38C23.4347 37.9987 22.96 37.8067 22.576 37.424C22.192 37.0413 22 36.5667 22 36V26Z" fill="black"/>
+</svg>
+;
+}
+```
+
+---
+
+```src/components/CartoonGamefolio.tsx
+import React from 'react';
+import styles from '../styles/CartoonGamefolio.module.css';
+import Container from './assets/Container';
+
+export default function CartoonGamefolio() {
+  return (
+    <div className={styles.CartoonGamefolio_281_1054}>
+      <div className={styles.Container_281_1055}>
+        <div className={styles.Container_281_1056}>
+          <div className={styles.Container_281_1057}>
+            <div className={styles.Container_281_1058}>
+              <div className={styles.Container_281_1059}><span className={styles.BusterBot_281_1060}>Buster_Bot</span></div>
+              <div className={styles.Container_281_1061}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Container_281_1063}><span className={styles.JustASillyBotInA_281_1064}>Just a silly bot in a</span>
+              <div className={styles.Container_281_1065}><span className={styles.CartoonWorld_281_1066}>cartoon world</span></div><span className={styles.SmashingHighScoresAndEating_281_1067}>! &#x1F36D; Smashing high scores and eating</span>
+              <div className={styles.Container_281_1068}><span className={styles.DigitalCupcakes_281_1069}>digital cupcakes</span></div><span className={styles.generated__281_1070}>. &#x1F680;</span>
+            </div>
+          </div>
+          <div className={styles.Container_281_1071}>
+            <div className={styles.Container_281_1072}>
+              <div className={styles.Container_281_1073}>
+                <div className={styles.Container_281_1074}><span className={styles.k_281_1075}>85k</span></div>
+                <div className={styles.Container_281_1076}><span className={styles.Fans_281_1077}>Fans</span></div>
+              </div>
+              <div className={styles.Container_281_1078}>
+                <div className={styles.Container_281_1079}><span className={styles._2k_281_1080}>1.2k</span></div>
+                <div className={styles.Container_281_1081}><span className={styles.Level_281_1082}>Level</span></div>
+              </div>
+              <div className={styles.Container_281_1083}>
+                <div className={styles.Container_281_1084}><span className={styles.generated_999_281_1085}>999+</span></div>
+                <div className={styles.Container_281_1086}><span className={styles.Cakes_281_1087}>Cakes</span></div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_281_1088}>
+            <div className={styles.Container_281_1089}>
+              <div className={styles.Container_281_1090}>
+                <div className={styles.Button_281_1091}><span className={styles.Clips_281_1092}>Clips</span></div>
+                <div className={styles.Button_281_1093}><span className={styles.Reels_281_1094}>Reels</span></div>
+                <div className={styles.Button_281_1095}><span className={styles.Snaps_281_1096}>Snaps</span></div>
+                <div className={styles.Button_281_1097}><span className={styles.Favs_281_1098}>Favs</span></div>
+              </div>
+            </div>
+            <div className={styles.Container_281_1099}>
+              <div className={styles.Container_281_1100}>
+                <div className={styles.Image_281_1101}></div>
+                <div className={styles.Container_281_1102}></div>
+                <div className={styles.Container_281_1103}>
+                  <div className={styles.Container_281_1104}>
+                    <div className={styles.Container_281_1105}>
+                      <Container />
+                    </div>
+                  </div>
+                  <div className={styles.Container_281_1107}><span className={styles._5M_281_1108}>1.5M</span></div>
+                </div>
+              </div>
+              <div className={styles.Container_281_1109}>
+                <div className={styles.Image_281_1110}></div>
+                <div className={styles.Container_281_1111}></div>
+                <div className={styles.Container_281_1112}>
+                  <div className={styles.Container_281_1113}>
+                    <div className={styles.Container_281_1114}>
+                      <Container />
+                    </div>
+                  </div>
+                  <div className={styles.Container_281_1116}><span className={styles.k_281_1117}>842k</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_281_1118}>
+            <div className={styles.Container_281_1119}>
+              <div className={styles.Image_281_1120}></div>
+            </div>
+            <div className={styles.Container_281_1121}>
+              <div className={styles.Container_281_1122}>
+                <div className={styles.Image_281_1123}></div>
+              </div>
+              <div className={styles.Container_281_1124}>
+                <div className={styles.Container_281_1125}>
+                  <Container />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_281_1127}>
+          <div className={styles.Container_281_1128}></div>
+        </div>
+        <div className={styles.Container_281_1133}>
+          <div className={styles.Container_281_1134}></div>
+        </div>
+        <div className={styles.Header_281_1137}>
+          <div className={styles.Container_281_1138}>
+            <div className={styles.Container_281_1139}>
+              <div className={styles.Container_281_1140}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Container_281_1142}><span className={styles.ToonVerse_281_1143}>TOON-VERSE</span></div>
+          </div>
+          <div className={styles.Container_281_1144}>
+            <div className={styles.Button_281_1145}>
+              <div className={styles.Container_281_1146}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Container_281_1148}>
+              <div className={styles.Image_281_1149}></div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_281_1150}>
+          <div className={styles.Navigation_281_1151}>
+            <div className={styles.Button_281_1152}>
+              <div className={styles.Container_281_1153}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Button_281_1155}>
+              <div className={styles.Container_281_1156}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Button_281_1158}>
+              <div className={styles.Container_281_1159}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Button_281_1161}>
+              <div className={styles.Container_281_1162}>
+                <div className={styles.Image_281_1163}></div>
+              </div>
+            </div>
+            <div className={styles.Button_281_1164}>
+              <div className={styles.Container_281_1165}>
+                <div className={styles.Container_281_1166}>
+                  <Container />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
