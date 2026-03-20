@@ -88,6 +88,12 @@ const PRESET_THEMES = [
     accentColor: "#0066ff",
     backgroundColor: "#f0f0f2",
     cardColor: "#ffffff"
+  },
+  {
+    name: "Cartoon",
+    accentColor: "#ff5e5e",
+    backgroundColor: "#fffaec",
+    cardColor: "#ffffff"
   }
 ];
 
