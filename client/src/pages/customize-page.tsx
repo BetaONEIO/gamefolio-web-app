@@ -76,6 +76,12 @@ const PRESET_THEMES = [
     accentColor: "#0ea5e9",
     backgroundColor: "#f0f9ff",
     cardColor: "#dbeafe"
+  },
+  {
+    name: "Gothic",
+    accentColor: "#c27aff",
+    backgroundColor: "#1e053a",
+    cardColor: "#59168b"
   }
 ];
 
