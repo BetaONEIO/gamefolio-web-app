@@ -1335,6 +1335,42 @@ const ProfilePage = () => {
       ? platformBtnStyle
       : { backgroundColor: '#000000', color: '#ffffff', border: '1.5px solid #000000', borderRadius: '9999px' };
 
+  const shareButtonStyle = isWatermelonTheme ? {
+    color: '#1d3932',
+    background: '#ffb3c1',
+    border: '3px solid #1d3932',
+  } : isLightBackground ? {
+    color: accentColor,
+    background: 'rgba(255,255,255,0.37)',
+    border: '0.556px solid rgba(255,255,255,0.8)',
+  } : isZombieTheme ? {
+    color: '#9ae600',
+    background: 'rgba(15,28,8,0.8)',
+    border: '1px solid #9ae60099',
+  } : isCyberpunkTheme ? {
+    color: '#00d3f2',
+    background: 'rgba(0,6,18,0.8)',
+    border: '1px solid #00d3f299',
+    boxShadow: '0 0 10px #00d3f244',
+  } : isNeoTheme ? {
+    color: '#00ff41',
+    background: 'rgba(0,8,0,0.8)',
+    border: '1px solid #00ff4199',
+    boxShadow: '0 0 10px #00ff4144',
+  } : isBlocksTheme ? {
+    color: '#4ade80',
+    background: 'rgba(26,26,26,0.9)',
+    border: '2px solid #4ade8099',
+  } : isForestTheme ? {
+    color: '#e8d5b7',
+    background: 'rgba(14,45,28,0.85)',
+    border: '1px solid rgba(164,118,66,0.5)',
+  } : {
+    color: accentColor || 'hsl(var(--primary))',
+    background: 'rgba(0,0,0,0.5)',
+    border: `1px solid ${accentColor ? accentColor + '80' : 'rgba(255,255,255,0.2)'}`,
+  };
+
   const tabListStyle = isWatermelonTheme ? {
     background: '#ffb3c1',
     border: '5px solid #1d3932',
@@ -1344,6 +1380,11 @@ const ProfilePage = () => {
     background: 'rgba(255,255,255,0.37)',
     border: '0.556px solid rgba(255,255,255,0.8)',
     boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+  } : isZombieTheme ? {
+    background: 'rgba(15,28,8,0.9)',
+    border: '1px solid #9ae60044',
+    borderRadius: '9999px',
+    padding: '4px 8px',
   } : isForestTheme ? {
     background: 'rgba(10,35,20,0.88)',
     border: '1.5px solid rgba(164,118,66,0.45)',
@@ -2228,8 +2269,8 @@ const ProfilePage = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="p-2 h-10 w-10 rounded-full hover:bg-primary/10 bg-background/80 backdrop-blur-sm"
-                style={isLightBackground ? { color: accentColor, background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
+                className="p-2 h-10 w-10 rounded-full hover:opacity-90 backdrop-blur-sm"
+                style={shareButtonStyle}
               >
                 <Share2 className="w-5 h-5" />
               </Button>
@@ -2568,13 +2609,13 @@ const ProfilePage = () => {
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 mt-1">
-                    <Hexagon className="w-4 h-4" style={{ color: isBlocksTheme ? '#a855f7' : isWatermelonTheme ? '#0d1a12' : undefined }} />
+                    <Hexagon className="w-4 h-4" style={{ color: isBlocksTheme ? '#a855f7' : isWatermelonTheme ? '#0d1a12' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isForestTheme ? '#4ade80' : undefined }} />
                     {isBlocksTheme ? (
                       <span style={{ backgroundColor: '#a855f7', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' }}>
                         {profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs OWNED
                       </span>
                     ) : (
-                      <span className="text-sm" style={{ color: isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#1a1a1a' : accentColor || 'hsl(var(--primary))' }}>
+                      <span className="text-sm" style={{ color: isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#1a1a1a' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : accentColor || 'hsl(var(--primary))' }}>
                         {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
                       </span>
                     )}
@@ -2962,13 +3003,13 @@ const ProfilePage = () => {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <Hexagon className="w-4 h-4" style={{ color: isBlocksTheme ? '#a855f7' : isWatermelonTheme ? '#0d1a12' : undefined }} />
+                      <Hexagon className="w-4 h-4" style={{ color: isBlocksTheme ? '#a855f7' : isWatermelonTheme ? '#0d1a12' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isForestTheme ? '#4ade80' : undefined }} />
                       {isBlocksTheme ? (
                         <span style={{ backgroundColor: '#a855f7', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' }}>
                           {profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs OWNED
                         </span>
                       ) : (
-                        <span className="text-sm" style={{ color: isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#1a1a1a' : accentColor || 'hsl(var(--primary))' }}>
+                        <span className="text-sm" style={{ color: isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#1a1a1a' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : accentColor || 'hsl(var(--primary))' }}>
                           {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
                         </span>
                       )}
@@ -3218,12 +3259,7 @@ const ProfilePage = () => {
                           variant="outline"
                           size="default"
                           className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg px-4 py-3"
-                          style={{
-                            borderColor: accentColor || 'hsl(var(--primary))',
-                            color: accentColor || 'hsl(var(--primary))',
-                            backgroundColor: isLightBackground ? 'rgba(255,255,255,0.37)' : 'transparent',
-                            ...(isCyberpunkTheme && { boxShadow: `0 0 10px ${accentColor}44` }),
-                          }}
+                          style={shareButtonStyle}
                         >
                           <Share2 className="h-5 w-5" />
                         </Button>
@@ -3271,11 +3307,7 @@ const ProfilePage = () => {
                           variant="outline"
                           size="sm"
                           className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                          style={{
-                            borderColor: accentColor || 'hsl(var(--primary))',
-                            color: accentColor || 'hsl(var(--primary))',
-                            backgroundColor: isLightBackground ? 'rgba(255,255,255,0.37)' : 'transparent',
-                          }}
+                          style={shareButtonStyle}
                         >
                           <Share2 className="h-4 w-4" />
                         </Button>
@@ -3417,7 +3449,7 @@ const ProfilePage = () => {
             const showLimits = isOwnProfile && !currentUser?.isPro;
             return (
           <TabsList 
-            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : isForestTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
+            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : isForestTheme ? '' : isZombieTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
             style={tabListStyle}
           >
             <TabsTrigger 
