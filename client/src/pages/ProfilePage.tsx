@@ -1397,12 +1397,11 @@ const ProfilePage = () => {
     borderRadius: '9999px',
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
   } : isCartoonTheme ? {
-    background: 'transparent',
-    border: 'none',
-    borderRadius: '0',
-    boxShadow: 'none',
-    borderBottom: '2px solid rgba(0,0,0,0.08)',
-    padding: '0 4px',
+    background: '#ffffff',
+    border: '3px solid #1d1d1f',
+    borderRadius: '12px',
+    boxShadow: '4px 4px 0 #1d1d1f',
+    padding: '2px 4px',
   } : isLightBackground ? {
     background: 'rgba(255,255,255,0.37)',
     border: '0.556px solid rgba(255,255,255,0.8)',
