@@ -94,6 +94,12 @@ const PRESET_THEMES = [
     accentColor: "#ff5e5e",
     backgroundColor: "#fffaec",
     cardColor: "#ffffff"
+  },
+  {
+    name: "Bubble Tea",
+    accentColor: "#ff8904",
+    backgroundColor: "#fefce8",
+    cardColor: "#ffedd4"
   }
 ];
 

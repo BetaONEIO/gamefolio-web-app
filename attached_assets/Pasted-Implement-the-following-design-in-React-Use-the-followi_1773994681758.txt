@@ -1,0 +1,612 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/BobaTeaProfile.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,900;0,500&display=swap";
+.BobaTeaProfile_276_219 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_276_220 {
+  background: #fefce8;
+  flex: 1 0 0;
+  width: 100%;
+}
+.Container_276_221 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 334px;
+  padding: 24px 16px 16px;
+  display: flex;
+}
+.Container_276_222 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_276_224 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 2px solid #ffedd4;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 2px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_276_225 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+}
+.Container_276_226 {
+  width: 430px;
+  height: 852px;
+}
+.Container_276_227 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  width: 430px;
+  padding: 0 24px;
+  display: flex;
+}
+.Container_276_228 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 7.04688px;
+  height: 32px;
+  padding-right: 218.953px;
+  display: flex;
+}
+.Container_276_229 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.BobaGamer_276_230 {
+  color: #7e2a0cb3;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  width: 137px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_276_231 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.G_276_232 {
+  width: 13.5px;
+  height: 17.25px;
+}
+.Container_276_238 {
+  align-items: center;
+  width: 382px;
+  height: 15px;
+  padding: 1px 248.5px 1px 0;
+  display: flex;
+}
+.ExtraPearlsPlease_276_239 {
+  color: #ff8904;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 136px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_276_240 {
+  justify-content: center;
+  align-items: center;
+  width: 430px;
+  height: 96px;
+  padding: 0 16px;
+  display: flex;
+}
+.Container_276_241 {
+  box-sizing: border-box;
+  background: linear-gradient(#fffbeb 0%, #ffedd4 100%);
+  border: 2px solid #fff;
+  border-radius: 24px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 96px;
+  display: flex;
+  overflow: hidden;
+  box-shadow:
+    0 8px 10px -6px #ffedd480,
+    0 20px 25px -5px #ffedd480;
+}
+.Container_276_242 {
+  width: 44px;
+  height: 12px;
+}
+.Container_276_243,
+.Container_276_244,
+.Container_276_245 {
+  background: #1d293d99;
+  border-radius: 16777200px;
+  width: 12px;
+  height: 12px;
+}
+.Container_276_246 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 39.5313px;
+  height: 44px;
+  padding-right: 105.688px;
+  display: flex;
+}
+.Container_276_247 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  height: 44px;
+  display: flex;
+}
+.Container_276_248 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 28px;
+  padding: 1px 16.5px 1px 0;
+  display: flex;
+}
+.generated_45_276_249 {
+  color: #7e2a0cb3;
+  font-feature-settings: "dlig" on;
+  width: 31px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_276_250 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 12px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.Uploads_276_251 {
+  color: #ff8904;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  width: 50px;
+  height: 11px;
+  font-family: Plus Jakarta Sans;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 12px;
+  display: inline-block;
+}
+.Container_276_252 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  height: 44px;
+  display: flex;
+}
+.Container_276_253 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 28px;
+  padding: 1px 16.5px 1px 0;
+  display: flex;
+}
+.generated_890_276_254 {
+  color: #7e2a0cb3;
+  font-feature-settings: "dlig" on;
+  width: 44px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_276_255 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 12px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.Followers_276_256 {
+  color: #ff8904;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  width: 63px;
+  height: 11px;
+  font-family: Plus Jakarta Sans;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 12px;
+  display: inline-block;
+}
+.Container_276_257 {
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  height: 44px;
+  display: flex;
+}
+.Container_276_258 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 28px;
+  padding: 1px 20.5px 1px 0;
+  display: flex;
+}
+.generated_120_276_259 {
+  color: #7e2a0cb3;
+  font-feature-settings: "dlig" on;
+  width: 40px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_276_260 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 12px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.Following_276_261 {
+  color: #ff8904;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  width: 63px;
+  height: 11px;
+  font-family: Plus Jakarta Sans;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 12px;
+  display: inline-block;
+}
+.Container_276_262 {
+  justify-content: center;
+  align-items: center;
+  width: 430px;
+  padding: 0 16px 128px;
+  display: flex;
+}
+.Container_276_263 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #fff7ed;
+  border-radius: 24px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 398px;
+  height: 82px;
+  padding: 25px;
+  display: flex;
+}
+.Container_276_264 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 348px;
+  height: 32px;
+  padding: 0.5px 21.141px 0.5px 21.859px;
+  display: flex;
+}
+.GamingIsBetterWithAColdBobaTeaCurrentlyPlayingValorantChillSims_276_265 {
+  color: #7e2a0c99;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 305px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_276_266 {
+  width: 430px;
+  height: 176px;
+}
+.Container_276_267 {
+  width: 430px;
+  height: 176px;
+  overflow: hidden;
+}
+.Image_276_268 {
+  aspect-ratio: 215/88;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 430px;
+  height: 176px;
+}
+.Container_276_269 {
+  background: linear-gradient(#fefce8 0%, #fefce800 50% 100%);
+  width: 430px;
+  height: 176px;
+}
+.Container_276_270 {
+  justify-content: center;
+  align-items: center;
+  width: 112px;
+  height: 112px;
+  display: flex;
+}
+.Container_276_271 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 4px solid #fff;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 112px;
+  padding: 8px;
+  display: flex;
+  overflow: hidden;
+  box-shadow:
+    0 4px 6px -4px #ffedd4,
+    0 10px 15px -3px #ffedd4;
+}
+.Container_276_272 {
+  background: #fff7ed;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 96px;
+  height: 96px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_276_273 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 96px;
+  height: 96px;
+}
+.Navigation_276_274 {
+  backdrop-filter: blur(12px);
+  box-sizing: border-box;
+  background: #fffc;
+  border-top: 1px solid #ffedd4;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 55.5px;
+  padding: 17px 32px 32px;
+  display: flex;
+}
+.Container_276_275,
+.Container_276_277 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_276_279 {
+  background: #ff8904;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 10px;
+  display: flex;
+  box-shadow:
+    0 4px 6px -4px #ffd6a7,
+    0 10px 15px -3px #ffd6a7;
+}
+.Container_276_280 {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+}
+.Container_276_282 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_276_284 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  overflow: hidden;
+}
+
+```
+
+---
+
+```src/components/assets/Container.tsx
+import React from 'react';
+export default function Container() {
+  return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fillRule="evenodd" clipRule="evenodd" d="M8 6C8 3.79086 9.79086 2 12 2C14.2091 2 16 3.79086 16 6C16 8.20914 14.2091 10 12 10C9.79086 10 8 8.20914 8 6Z" fill="#7E2A0C"/>
+<path fillRule="evenodd" clipRule="evenodd" d="M20 17.5C20 19.985 20 22 12 22C4 22 4 19.985 4 17.5C4 15.015 7.582 13 12 13C16.418 13 20 15.015 20 17.5Z" fill="#7E2A0C"/>
+</svg>
+;
+}
+```
+
+---
+
+```src/components/assets/G.tsx
+import React from 'react';
+export default function G() {
+  return <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fillRule="evenodd" clipRule="evenodd" d="M0.15 3L0.375 3.1875H13.125L13.35 3L13.5 1.5L13.35 1.3125H0.15L0 1.5L0.15 3Z" fill="#B4DBFF"/>
+<path d="M0 0.75H13.5" stroke="#A0C9FF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+<path fillRule="evenodd" clipRule="evenodd" d="M0.149902 3L1.4999 16.5C1.5569 16.9222 1.8749 17.25 2.2499 17.25H11.2499C11.6249 17.25 11.9272 16.9537 11.9999 16.5L13.3499 3H0.149902Z" fill="#EB9C5B"/>
+<path fillRule="evenodd" clipRule="evenodd" d="M7.5 1.5H6V3H7.5V1.5Z" fill="#9679BB"/>
+<path fillRule="evenodd" clipRule="evenodd" d="M7.5 0H6V1.5H7.5V0Z" fill="#BCA4EB"/>
+</svg>
+;
+}
+```
+
+---
+
+```src/components/BobaTeaProfile.tsx
+import React from 'react';
+import styles from '../styles/BobaTeaProfile.module.css';
+import Container from './assets/Container';
+import G from './assets/G';
+
+export default function BobaTeaProfile() {
+  return (
+    <div className={styles.BobaTeaProfile_276_219}>
+      <div className={styles.Container_276_220}>
+        <div className={styles.Container_276_221}>
+          <div className={styles.Container_276_222}>
+            <Container />
+          </div>
+          <div className={styles.Container_276_224}>
+            <div className={styles.Image_276_225}></div>
+          </div>
+        </div>
+        <div className={styles.Container_276_226}>
+          <div className={styles.Container_276_227}>
+            <div className={styles.Container_276_228}>
+              <div className={styles.Container_276_229}><span className={styles.BobaGamer_276_230}>BobaGamer</span></div>
+              <div className={styles.Container_276_231}>
+                <div className={styles.G_276_232}>
+                  <G />
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_276_238}><span className={styles.ExtraPearlsPlease_276_239}>Extra Pearls Please</span></div>
+          </div>
+          <div className={styles.Container_276_240}>
+            <div className={styles.Container_276_241}>
+              <div className={styles.Container_276_242}>
+                <div className={styles.Container_276_243}></div>
+                <div className={styles.Container_276_244}></div>
+                <div className={styles.Container_276_245}></div>
+              </div>
+              <div className={styles.Container_276_246}>
+                <div className={styles.Container_276_247}>
+                  <div className={styles.Container_276_248}><span className={styles.generated_45_276_249}>45</span></div>
+                  <div className={styles.Container_276_250}><span className={styles.Uploads_276_251}>Uploads</span></div>
+                </div>
+                <div className={styles.Container_276_252}>
+                  <div className={styles.Container_276_253}><span className={styles.generated_890_276_254}>890</span></div>
+                  <div className={styles.Container_276_255}><span className={styles.Followers_276_256}>Followers</span></div>
+                </div>
+                <div className={styles.Container_276_257}>
+                  <div className={styles.Container_276_258}><span className={styles.generated_120_276_259}>120</span></div>
+                  <div className={styles.Container_276_260}><span className={styles.Following_276_261}>Following</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_276_262}>
+            <div className={styles.Container_276_263}>
+              <div className={styles.Container_276_264}><span className={styles.GamingIsBetterWithAColdBobaTeaCurrentlyPlayingValorantChillSims_276_265}>&#x22;Gaming is better with a cold boba tea. &#x1F9CB;&#x2728; Currently playing: Valorant &#x26; Chill Sims.&#x22;</span></div>
+            </div>
+          </div>
+          <div className={styles.Container_276_266}>
+            <div className={styles.Container_276_267}>
+              <div className={styles.Image_276_268}></div>
+              <div className={styles.Container_276_269}></div>
+            </div>
+            <div className={styles.Container_276_270}>
+              <div className={styles.Container_276_271}>
+                <div className={styles.Container_276_272}>
+                  <div className={styles.Image_276_273}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Navigation_276_274}>
+          <div className={styles.Container_276_275}>
+            <Container />
+          </div>
+          <div className={styles.Container_276_277}>
+            <Container />
+          </div>
+          <div className={styles.Container_276_279}>
+            <div className={styles.Container_276_280}>
+              <Container />
+            </div>
+          </div>
+          <div className={styles.Container_276_282}>
+            <Container />
+          </div>
+          <div className={styles.Container_276_284}>
+            <Container />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
