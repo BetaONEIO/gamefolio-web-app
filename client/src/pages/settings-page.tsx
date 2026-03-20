@@ -315,6 +315,62 @@ const PRESET_THEMES = [
     accentColor: "#00ff41",
     gradientTopColor: "#000800",
     primaryColor: "#000800"
+  },
+  {
+    name: "Blocks",
+    backgroundColor: "#1a1a1a",
+    accentColor: "#4ade80",
+    gradientTopColor: "#2d2d2d",
+    primaryColor: "#2d2d2d"
+  },
+  {
+    name: "Watermelon",
+    backgroundColor: "#ff4d6d",
+    accentColor: "#4ade80",
+    gradientTopColor: "#1d3932",
+    primaryColor: "#1d3932"
+  },
+  {
+    name: "Forest",
+    backgroundColor: "#0a2f1f",
+    accentColor: "#4ade80",
+    gradientTopColor: "#e8d5b7",
+    primaryColor: "#e8d5b7"
+  },
+  {
+    name: "Ice",
+    backgroundColor: "#f0f9ff",
+    accentColor: "#0ea5e9",
+    gradientTopColor: "#dbeafe",
+    primaryColor: "#dbeafe"
+  },
+  {
+    name: "Gothic",
+    backgroundColor: "#1e053a",
+    accentColor: "#c27aff",
+    gradientTopColor: "#59168b",
+    primaryColor: "#59168b"
+  },
+  {
+    name: "Mac",
+    backgroundColor: "#f0f0f2",
+    accentColor: "#0066ff",
+    gradientTopColor: "#ffffff",
+    primaryColor: "#ffffff"
+  },
+  {
+    name: "Cartoon",
+    backgroundColor: "#fffaec",
+    accentColor: "#ff5e5e",
+    gradientTopColor: "#ffffff",
+    primaryColor: "#ffffff"
+  },
+  {
+    name: "Bubble Tea",
+    backgroundColor: "#fefce8",
+    accentColor: "#ff8904",
+    gradientTopColor: "#ffedd4",
+    primaryColor: "#ffedd4"
   }
 ];
 
