@@ -70,6 +70,12 @@ const PRESET_THEMES = [
     accentColor: "#4ade80",
     backgroundColor: "#0a2f1f",
     cardColor: "#e8d5b7"
+  },
+  {
+    name: "Ice",
+    accentColor: "#0ea5e9",
+    backgroundColor: "#f0f9ff",
+    cardColor: "#dbeafe"
   }
 ];
 
