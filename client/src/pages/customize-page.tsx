@@ -52,6 +52,12 @@ const PRESET_THEMES = [
     accentColor: "#FF69B4",
     backgroundColor: "#1E1E2E",
     cardColor: "#2D2D44"
+  },
+  {
+    name: "Blocks",
+    accentColor: "#4ade80",
+    backgroundColor: "#1a1a1a",
+    cardColor: "#2d2d2d"
   }
 ];
 
