@@ -1,0 +1,1343 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/MinecraftGamefolio.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,900;0,700&display=swap";
+.MinecraftGamefolio_278_408 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_278_409 {
+  background: #1a1a1a;
+  flex: 1 0 0;
+  width: 100%;
+  height: 1492px;
+  overflow: hidden;
+}
+.Container_278_410,
+.Container_278_411 {
+  width: 430px;
+  height: 932px;
+}
+.Container_278_412 {
+  box-sizing: border-box;
+  border-bottom: 8px solid #2d2d2d;
+  width: 430px;
+  height: 208px;
+  overflow: hidden;
+}
+.Image_278_413 {
+  aspect-ratio: 43/20;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 430px;
+  height: 200px;
+}
+.Container_278_414 {
+  background: linear-gradient(#1a1a1a 0%, #1a1a1a00 50% 100%);
+  width: 430px;
+  height: 200px;
+}
+.Container_278_415 {
+  justify-content: center;
+  align-items: center;
+  width: 159px;
+  height: 31px;
+  display: flex;
+}
+.Container_278_416 {
+  backdrop-filter: blur(4px);
+  box-sizing: border-box;
+  background: #0009;
+  border: 4px solid #fff;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 9px 13.5px;
+  display: flex;
+  box-shadow: 4px 4px #000;
+}
+.ModeCreativeRgb_278_417 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 132px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_278_418 {
+  width: 430px;
+  height: 1244px;
+}
+.Container_278_419 {
+  width: 382px;
+  height: 112px;
+}
+.Container_278_420 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 11.4844px;
+  width: 184px;
+  padding-right: 0.516px;
+  display: flex;
+}
+.Button_278_421 {
+  box-sizing: border-box;
+  background: #4ade80;
+  border: 4px solid #166534;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 48px;
+  padding: 15px 25.5px;
+  display: flex;
+  box-shadow: 4px 4px #000;
+}
+.JoinRealm_278_422 {
+  color: #064e3b;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 77px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 20px;
+  display: inline-block;
+}
+.Button_278_423 {
+  box-sizing: border-box;
+  background: #ff4d4d;
+  border: 4px solid #8b0000;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 12px;
+  display: flex;
+  box-shadow: 4px 4px #000;
+}
+.Container_278_424 {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_278_426 {
+  width: 112px;
+  height: 112px;
+}
+.Container_278_427 {
+  box-sizing: border-box;
+  background: #2d2d2d;
+  border: 4px solid #ff4d4d;
+  justify-content: center;
+  align-items: center;
+  width: 112px;
+  height: 112px;
+  padding: 8px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 6px 6px #000;
+}
+.Container_278_428 {
+  background: #292524;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 96px;
+  height: 96px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_278_429 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 96px;
+  height: 96px;
+}
+.Container_278_430 {
+  box-sizing: border-box;
+  background: #fbbf24;
+  border: 4px solid #2d2d2d;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 8px;
+  display: flex;
+  box-shadow: 3px 3px #000;
+}
+.Container_278_431 {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+}
+.Container_278_433 {
+  width: 382px;
+  height: 118px;
+}
+.Container_278_434 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 11.6563px;
+  padding-right: 111.344px;
+  display: flex;
+}
+.Container_278_435 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 36px;
+  display: flex;
+}
+.StevePro99_278_436 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.75px;
+  width: 190px;
+  height: 38px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 36px;
+  display: inline-block;
+}
+.Container_278_437 {
+  box-sizing: border-box;
+  background: #60a5fa;
+  border: 2px solid #1e40af;
+  justify-content: center;
+  align-items: center;
+  width: 74px;
+  height: 26px;
+  padding: 7px 7.5px;
+  display: flex;
+}
+.RgbMaster_278_438 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.45px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 59px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_278_439 {
+  align-items: center;
+  height: 16px;
+  padding: 0.5px 186.5px 0.5px 0;
+  display: inline-flex;
+}
+.Lv_84MultiBlockBuilder_278_440 {
+  color: #60a5fa;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  width: 198px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_278_441 {
+  align-items: center;
+  height: 46px;
+  padding: 2.5px 34.5px 2.5px 0;
+  display: inline-flex;
+}
+.MasterOfThePrimaryBlocksRedstoneGrassDiamondsBuildingAWorldOfColor_278_442 {
+  color: #d6d3d1;
+  font-feature-settings: "dlig" on;
+  width: 311px;
+  height: 41px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.Container_278_443 {
+  box-sizing: border-box;
+  background: #2d2d2d;
+  border: 4px solid #fff3;
+  justify-content: center;
+  align-items: center;
+  width: 382px;
+  height: 148px;
+  padding: 4px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 8px 8px #000;
+}
+.Container_278_444 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 374px;
+  height: 140px;
+  padding: 24px 0;
+  display: flex;
+}
+.Container_278_445 {
+  box-sizing: border-box;
+  border-right: 4px solid #0003;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 126px;
+  height: 92px;
+  display: flex;
+}
+.Container_278_446 {
+  box-sizing: border-box;
+  background: #ff4d4d;
+  border: 2px solid #8b0000;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+  box-shadow: 3px 3px #8b0000;
+}
+.Container_278_447 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_278_449 {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 28px;
+  padding: 1px 0;
+  display: flex;
+}
+.generated_84_278_450 {
+  color: #ff4d4d;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1px;
+  flex-shrink: 0;
+  width: 29px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_278_451 {
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 14px;
+  padding: 1px 0;
+  display: flex;
+}
+.Level_278_452 {
+  color: #a6a09b;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 37px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_278_453 {
+  box-sizing: border-box;
+  border-right: 4px solid #0003;
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 126px;
+  height: 92px;
+  display: flex;
+}
+.Container_278_454 {
+  box-sizing: border-box;
+  background: #60a5fa;
+  border: 2px solid #1e40af;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+  box-shadow: 3px 3px #1e40af;
+}
+.Container_278_455 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_278_457 {
+  justify-content: center;
+  align-items: center;
+  width: 49px;
+  height: 28px;
+  padding: 1px 0;
+  display: flex;
+}
+._451_278_458 {
+  color: #60a5fa;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1px;
+  flex-shrink: 0;
+  width: 54px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_278_459 {
+  justify-content: center;
+  align-items: center;
+  width: 59px;
+  height: 14px;
+  padding: 1px 0;
+  display: flex;
+}
+.Diamonds_278_460 {
+  color: #a6a09b;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 64px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_278_461 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 122px;
+  height: 92px;
+  display: flex;
+}
+.Container_278_462 {
+  box-sizing: border-box;
+  background: #4ade80;
+  border: 2px solid #166534;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+  box-shadow: 3px 3px #166534;
+}
+.Container_278_463 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_278_465 {
+  justify-content: center;
+  align-items: center;
+  width: 29px;
+  height: 28px;
+  padding: 1px 0;
+  display: flex;
+}
+.k_278_466 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1px;
+  flex-shrink: 0;
+  width: 34px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_278_467 {
+  justify-content: center;
+  align-items: center;
+  width: 20px;
+  height: 14px;
+  padding: 1px 0;
+  display: flex;
+}
+.Exp_278_468 {
+  color: #a6a09b;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 25px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_278_469 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+  width: 382px;
+  height: 755px;
+  display: flex;
+}
+.Container_278_470 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 40px;
+  padding-right: 109px;
+  display: flex;
+}
+.Container_278_471 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  display: flex;
+}
+.Container_278_472 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 2px solid #000;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+  box-shadow: 3px 3px #000;
+}
+.Container_278_473 {
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_278_476 {
+  justify-content: center;
+  align-items: center;
+  width: 221px;
+  height: 28px;
+  padding: 1px 0;
+  display: flex;
+}
+.PrimaryAchievements_278_477 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 226px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 28px;
+  display: inline-block;
+}
+.Container_278_478 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 23.5px;
+  height: 691px;
+  padding-bottom: 47.5px;
+  display: flex;
+}
+.Container_278_479 {
+  box-sizing: border-box;
+  background: #2d2d2d;
+  border: 4px solid #ff4d4d;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  height: 310px;
+  padding: 4px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 6px 6px #8b0000;
+}
+.Container_278_480 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 374px;
+  height: 192px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_278_481 {
+  aspect-ratio: 187/96;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 374px;
+  height: 192px;
+}
+.Container_278_482 {
+  background: linear-gradient(#8b000000 0% 50%, #8b000066 100%);
+  width: 374px;
+  height: 192px;
+}
+.Container_278_483 {
+  justify-content: center;
+  align-items: center;
+  width: 129px;
+  height: 26px;
+  display: flex;
+}
+.Container_278_484 {
+  box-sizing: border-box;
+  background: #ff4d4d;
+  border: 2px solid #fff6;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 7px 11.5px;
+  display: flex;
+}
+.RedstoneMaster_278_485 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  width: 106px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_278_486 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 374px;
+  height: 110px;
+  display: flex;
+}
+.Container_278_487 {
+  align-items: center;
+  height: 23px;
+  padding-right: 81.5px;
+  display: inline-flex;
+}
+.The_100AutomatedFarm_278_488 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.45px;
+  text-transform: uppercase;
+  width: 255px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 22.5px;
+  display: inline-block;
+}
+.Container_278_489 {
+  align-items: center;
+  height: 15px;
+  padding: 1px 197.5px 1px 0;
+  display: inline-flex;
+}
+.RedstoneLevelMax_278_490 {
+  color: #ff4d4d;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 139px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_278_491 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 15.8359px;
+  height: 16px;
+  padding-right: 213.164px;
+  display: flex;
+}
+.Container_278_492 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4.5px;
+  height: 16px;
+  display: flex;
+}
+.Container_278_493 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 16px;
+  display: flex;
+  overflow: hidden;
+}
+._5k_278_496 {
+  color: #fffc;
+  font-feature-settings: "dlig" on;
+  width: 37px;
+  height: 16px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_278_497 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4.5px;
+  height: 16px;
+  display: flex;
+}
+.Container_278_498 {
+  flex: 1 0 0;
+  height: 16px;
+  overflow: hidden;
+}
+._2k_278_500 {
+  color: #fffc;
+  font-feature-settings: "dlig" on;
+  width: 30px;
+  height: 16px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_278_501 {
+  box-sizing: border-box;
+  background: #2d2d2d;
+  border: 4px solid #60a5fa;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  height: 310px;
+  padding: 4px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 6px 6px #1e40af;
+}
+.Container_278_502 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 374px;
+  height: 192px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_278_503 {
+  aspect-ratio: 187/96;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 374px;
+  height: 192px;
+}
+.Container_278_504 {
+  background: linear-gradient(#1e40af00 0% 50%, #1e40af66 100%);
+  width: 374px;
+  height: 192px;
+}
+.Container_278_505 {
+  justify-content: center;
+  align-items: center;
+  width: 123px;
+  height: 26px;
+  display: flex;
+}
+.Container_278_506 {
+  box-sizing: border-box;
+  background: #60a5fa;
+  border: 2px solid #fff6;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 7px 11.5px;
+  display: flex;
+}
+.OceanExplorer_278_507 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  width: 100px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_278_508 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 374px;
+  height: 110px;
+  display: flex;
+}
+.Container_278_509 {
+  align-items: center;
+  height: 23px;
+  padding-right: 114.5px;
+  display: inline-flex;
+}
+.TheDeepBlueKingdom_278_510 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.45px;
+  text-transform: uppercase;
+  width: 222px;
+  height: 23px;
+  font-family: Plus Jakarta Sans;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 22.5px;
+  display: inline-block;
+}
+.Container_278_511 {
+  align-items: center;
+  height: 15px;
+  padding: 1px 190.5px 1px 0;
+  display: inline-flex;
+}
+.TimeUnderwater_50h_278_512 {
+  color: #60a5fa;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 146px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_278_513 {
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 15.2734px;
+  width: 334px;
+  height: 16px;
+  padding-right: 218.727px;
+  display: flex;
+}
+.Container_278_514 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4.5px;
+  height: 16px;
+  display: flex;
+}
+.Container_278_515 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 16px;
+  display: flex;
+  overflow: hidden;
+}
+._1k_278_518 {
+  color: #fffc;
+  font-feature-settings: "dlig" on;
+  width: 32px;
+  height: 16px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_278_519 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4.5px;
+  height: 16px;
+  display: flex;
+}
+.Container_278_520 {
+  flex: 1 0 0;
+  height: 16px;
+  overflow: hidden;
+}
+._4k_278_522 {
+  color: #fffc;
+  font-feature-settings: "dlig" on;
+  width: 30px;
+  height: 16px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Navigation_278_523 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  width: 382px;
+  display: flex;
+}
+.Container_278_524 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #1a1a1af2;
+  border: 4px solid #fff;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  height: 86px;
+  padding: 8px;
+  display: flex;
+  box-shadow: 0 10px 30px #000c;
+}
+.Button_278_525 {
+  box-sizing: border-box;
+  background: #ff4d4d;
+  border: 2px solid #ffffff4d;
+  justify-content: center;
+  align-items: center;
+  width: 70px;
+  height: 70px;
+  padding: 23px;
+  display: flex;
+}
+.Container_278_526 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Button_278_528 {
+  box-sizing: border-box;
+  background: #4ade80;
+  border: 2px solid #ffffff4d;
+  justify-content: center;
+  align-items: center;
+  width: 70px;
+  height: 70px;
+  padding: 23px;
+  display: flex;
+}
+.Container_278_529 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Button_278_531 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 2px solid #0003;
+  justify-content: center;
+  align-items: center;
+  width: 70px;
+  height: 70px;
+  padding: 23px;
+  display: flex;
+}
+.Container_278_532 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Button_278_534 {
+  box-sizing: border-box;
+  background: #60a5fa;
+  border: 2px solid #ffffff4d;
+  justify-content: center;
+  align-items: center;
+  width: 70px;
+  height: 70px;
+  padding: 23px;
+  display: flex;
+}
+.Container_278_535 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Button_278_537 {
+  box-sizing: border-box;
+  background: #fbbf24;
+  border: 2px solid #ffffff4d;
+  justify-content: center;
+  align-items: center;
+  width: 70px;
+  height: 70px;
+  padding: 23px;
+  display: flex;
+}
+.Container_278_538 {
+  box-sizing: border-box;
+  background: #2d2d2d;
+  border: 1px solid #00000080;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 1px;
+  display: flex;
+}
+.Image_278_539 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+}
+.Container_278_540 {
+  box-sizing: border-box;
+  background: #000;
+  border: 2px solid #2d2d2d;
+  border-radius: 8px;
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: -0.601563px;
+  height: 12px;
+  padding: 2px 39.508px 2px 2px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_278_541 {
+  background: #ff4d4d;
+  width: 114px;
+  height: 8px;
+}
+.Container_278_542 {
+  background: #4ade80;
+  width: 171px;
+  height: 8px;
+  box-shadow: 0 0 10px #4ade80;
+}
+.Container_278_543 {
+  background: #60a5fa;
+  width: 57px;
+  height: 8px;
+}
+
+```
+
+---
+
+```src/components/assets/Container.tsx
+import React from 'react';
+export default function Container() {
+  return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fillRule="evenodd" clipRule="evenodd" d="M3.172 5.172C2 6.343 2 8.229 2 12C2 15.771 2 17.657 3.172 18.828C4.344 19.999 6.229 20 10 20H14C17.771 20 19.657 20 20.828 18.828C21.999 17.656 22 15.771 22 12C22 8.229 22 6.343 20.828 5.172C19.656 4.001 17.771 4 14 4H10C6.229 4 4.343 4 3.172 5.172ZM18.576 7.52C18.841 7.83815 18.798 8.31084 18.48 8.576L16.284 10.406C15.397 11.146 14.679 11.744 14.044 12.152C13.384 12.577 12.741 12.845 12 12.845C11.259 12.845 10.616 12.576 9.955 12.152C9.321 11.744 8.603 11.145 7.716 10.407L5.52 8.577C5.20161 8.3119 5.1584 7.83889 5.4235 7.5205C5.6886 7.20211 6.16161 7.1589 6.48 7.424L8.64 9.223C9.573 10 10.22 10.538 10.768 10.89C11.297 11.23 11.656 11.345 12.001 11.345C12.346 11.345 12.705 11.231 13.234 10.89C13.781 10.538 14.429 10 15.362 9.223L17.521 7.423C17.8394 7.15827 18.3111 7.20169 18.576 7.52Z" fill="white"/>
+</svg>
+;
+}
+```
+
+---
+
+```src/components/MinecraftGamefolio.tsx
+import React from 'react';
+import styles from '../styles/MinecraftGamefolio.module.css';
+import Container from './assets/Container';
+
+export default function MinecraftGamefolio() {
+  return (
+    <div className={styles.MinecraftGamefolio_278_408}>
+      <div className={styles.Container_278_409}>
+        <div className={styles.Container_278_410}></div>
+        <div className={styles.Container_278_411}>
+          <div className={styles.Container_278_412}>
+            <div className={styles.Image_278_413}></div>
+            <div className={styles.Container_278_414}></div>
+            <div className={styles.Container_278_415}>
+              <div className={styles.Container_278_416}><span className={styles.ModeCreativeRgb_278_417}>Mode: Creative RGB</span></div>
+            </div>
+          </div>
+          <div className={styles.Container_278_418}>
+            <div className={styles.Container_278_419}>
+              <div className={styles.Container_278_420}>
+                <div className={styles.Button_278_421}><span className={styles.JoinRealm_278_422}>Join Realm</span></div>
+                <div className={styles.Button_278_423}>
+                  <div className={styles.Container_278_424}>
+                    <Container />
+                  </div>
+                </div>
+              </div>
+              <div className={styles.Container_278_426}>
+                <div className={styles.Container_278_427}>
+                  <div className={styles.Container_278_428}>
+                    <div className={styles.Image_278_429}></div>
+                  </div>
+                </div>
+                <div className={styles.Container_278_430}>
+                  <div className={styles.Container_278_431}>
+                    <Container />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_278_433}>
+              <div className={styles.Container_278_434}>
+                <div className={styles.Container_278_435}><span className={styles.StevePro99_278_436}>Steve_Pro99</span></div>
+                <div className={styles.Container_278_437}><span className={styles.RgbMaster_278_438}>RGB Master</span></div>
+              </div>
+              <div className={styles.Container_278_439}><span className={styles.Lv_84MultiBlockBuilder_278_440}>Lv. 84 Multi-Block Builder</span></div>
+              <div className={styles.Container_278_441}><span className={styles.MasterOfThePrimaryBlocksRedstoneGrassDiamondsBuildingAWorldOfColor_278_442}>Master of the primary blocks. &#x2764;&#xFE0F; Redstone, &#x1F49A; Grass, &#x1F499; Diamonds. Building a world of color.</span></div>
+            </div>
+            <div className={styles.Container_278_443}>
+              <div className={styles.Container_278_444}>
+                <div className={styles.Container_278_445}>
+                  <div className={styles.Container_278_446}>
+                    <div className={styles.Container_278_447}>
+                      <Container />
+                    </div>
+                  </div>
+                  <div className={styles.Container_278_449}><span className={styles.generated_84_278_450}>84</span></div>
+                  <div className={styles.Container_278_451}><span className={styles.Level_278_452}>Level</span></div>
+                </div>
+                <div className={styles.Container_278_453}>
+                  <div className={styles.Container_278_454}>
+                    <div className={styles.Container_278_455}>
+                      <Container />
+                    </div>
+                  </div>
+                  <div className={styles.Container_278_457}><span className={styles._451_278_458}>2,451</span></div>
+                  <div className={styles.Container_278_459}><span className={styles.Diamonds_278_460}>Diamonds</span></div>
+                </div>
+                <div className={styles.Container_278_461}>
+                  <div className={styles.Container_278_462}>
+                    <div className={styles.Container_278_463}>
+                      <Container />
+                    </div>
+                  </div>
+                  <div className={styles.Container_278_465}><span className={styles.k_278_466}>12k</span></div>
+                  <div className={styles.Container_278_467}><span className={styles.Exp_278_468}>Exp</span></div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_278_469}>
+              <div className={styles.Container_278_470}>
+                <div className={styles.Container_278_471}>
+                  <div className={styles.Container_278_472}>
+                    <div className={styles.Container_278_473}>
+                      <Container />
+                    </div>
+                  </div>
+                  <div className={styles.Container_278_476}><span className={styles.PrimaryAchievements_278_477}>Primary Achievements</span></div>
+                </div>
+              </div>
+              <div className={styles.Container_278_478}>
+                <div className={styles.Container_278_479}>
+                  <div className={styles.Container_278_480}>
+                    <div className={styles.Image_278_481}></div>
+                    <div className={styles.Container_278_482}></div>
+                    <div className={styles.Container_278_483}>
+                      <div className={styles.Container_278_484}><span className={styles.RedstoneMaster_278_485}>Redstone Master</span></div>
+                    </div>
+                  </div>
+                  <div className={styles.Container_278_486}>
+                    <div className={styles.Container_278_487}><span className={styles.The_100AutomatedFarm_278_488}>The 100% Automated Farm</span></div>
+                    <div className={styles.Container_278_489}><span className={styles.RedstoneLevelMax_278_490}>Redstone Level: Max</span></div>
+                    <div className={styles.Container_278_491}>
+                      <div className={styles.Container_278_492}>
+                        <div className={styles.Container_278_493}>
+                          <Container />
+                        </div><span className={styles._5k_278_496}>42.5k</span>
+                      </div>
+                      <div className={styles.Container_278_497}>
+                        <div className={styles.Container_278_498}>
+                          <Container />
+                        </div><span className={styles._2k_278_500}>8.2k</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.Container_278_501}>
+                  <div className={styles.Container_278_502}>
+                    <div className={styles.Image_278_503}></div>
+                    <div className={styles.Container_278_504}></div>
+                    <div className={styles.Container_278_505}>
+                      <div className={styles.Container_278_506}><span className={styles.OceanExplorer_278_507}>Ocean Explorer</span></div>
+                    </div>
+                  </div>
+                  <div className={styles.Container_278_508}>
+                    <div className={styles.Container_278_509}><span className={styles.TheDeepBlueKingdom_278_510}>The Deep Blue Kingdom</span></div>
+                    <div className={styles.Container_278_511}><span className={styles.TimeUnderwater_50h_278_512}>Time Underwater: 50h</span></div>
+                    <div className={styles.Container_278_513}>
+                      <div className={styles.Container_278_514}>
+                        <div className={styles.Container_278_515}>
+                          <Container />
+                        </div><span className={styles._1k_278_518}>18.1k</span>
+                      </div>
+                      <div className={styles.Container_278_519}>
+                        <div className={styles.Container_278_520}>
+                          <Container />
+                        </div><span className={styles._4k_278_522}>5.4k</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Navigation_278_523}>
+          <div className={styles.Container_278_524}>
+            <div className={styles.Button_278_525}>
+              <div className={styles.Container_278_526}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Button_278_528}>
+              <div className={styles.Container_278_529}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Button_278_531}>
+              <div className={styles.Container_278_532}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Button_278_534}>
+              <div className={styles.Container_278_535}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Button_278_537}>
+              <div className={styles.Container_278_538}>
+                <div className={styles.Image_278_539}></div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_278_540}>
+            <div className={styles.Container_278_541}></div>
+            <div className={styles.Container_278_542}></div>
+            <div className={styles.Container_278_543}></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
