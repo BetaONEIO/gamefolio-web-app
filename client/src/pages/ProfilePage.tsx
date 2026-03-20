@@ -2687,36 +2687,15 @@ const ProfilePage = () => {
                   <span className={isCyberpunkTheme ? 'cyber-gradient-text' : ''}>Collection</span>
               </button>
 
-            {/* L-shaped fading border with curved corner and button */}
+            {/* Stats card */}
             <div
               className="relative mt-4 rounded-lg transition-all duration-300"
               style={{
                 marginLeft: '-32px',
-                height: '140px',
                 width: '100%',
                 maxWidth: '600px',
               }}
             >
-              {/* Curved corner piece with glow */}
-              <div 
-                className="absolute top-0 left-0 w-4 h-4 pointer-events-none"
-                style={{
-                  borderLeft: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
-                  borderTop: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
-                  borderTopLeftRadius: '12px',
-                  filter: `drop-shadow(0 0 6px ${accentColor || 'hsl(var(--primary))'})`,
-                }}
-              />
-              
-              {/* Top horizontal line - extends far right and fades with inner glow */}
-              <div 
-                className="absolute top-0 left-4 h-[2px]"
-                style={{
-                  width: '550px',
-                  background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 40%, transparent 100%)`,
-                  boxShadow: `0 0 12px 2px ${accentColor || 'hsl(var(--primary))'}50, 0 2px 8px ${accentColor || 'hsl(var(--primary))'}30`,
-                }}
-              />
 
               <div 
                 className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''}`}
@@ -2757,54 +2736,18 @@ const ProfilePage = () => {
               </div>
             </div>
 
-            {/* Content aligned with username above */}
-              <div className="pl-8 pt-4" style={{ minHeight: '120px' }}>
-                {profileSectionTab === 'stats' ? (
-                  <>
-                    {/* Stats - Uploads, Followers, Following */}
-                    <div className="flex gap-6 items-center">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-lg" style={{ color: statsTextColor }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                        <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>Uploads</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-lg" style={{ color: statsTextColor }}>{Number(profile._count?.followers || 0)}</span>
-                        <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>Followers</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-lg" style={{ color: statsTextColor }}>{Number(profile._count?.following || 0)}</span>
-                        <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>Following</span>
-                      </div>
-                    </div>
-
-                    {/* Member since date */}
-                    {profile.createdAt && (
-                      <div className="mt-3">
-                        <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>
-                          Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
-                            year: 'numeric', 
-                            month: 'long' 
-                          })}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Bio/description */}
-                    {profile.bio && (
-                      <p className="mt-3 text-base text-foreground/90 max-w-xl">{profile.bio}</p>
-                    )}
-                  </>
-                ) : (
-                  <div className="mt-4">
-                    <div className="flex items-center gap-2">
-                      <Hexagon className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
-                        {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
-                      </span>
-                    </div>
+            {profileSectionTab !== 'stats' && (
+              <div className="pl-8 pt-4">
+                <div className="mt-4">
+                  <div className="flex items-center gap-2">
+                    <Hexagon className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
+                      {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
+                    </span>
                   </div>
-                )}
+                </div>
               </div>
+            )}
             </div>
 
             {/* Platform Connections — below the stats card */}
