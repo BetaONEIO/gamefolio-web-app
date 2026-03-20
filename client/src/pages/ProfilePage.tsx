@@ -1309,6 +1309,10 @@ const ProfilePage = () => {
 
   const platformBtnStyle = isWatermelonTheme
     ? { backgroundColor: '#ffb3c1', color: '#0d1a12', border: '3px solid #1d3932', borderRadius: '9999px' }
+    : isCartoonTheme
+    ? { backgroundColor: '#ffffff', color: '#1d1d1f', border: '3px solid #1d1d1f', borderRadius: '9999px', boxShadow: '3px 3px 0 #1d1d1f', fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: '800' }
+    : isMacTheme
+    ? { backgroundColor: 'rgba(0,122,255,0.08)', color: '#007aff', border: '1px solid rgba(0,122,255,0.3)', borderRadius: '8px' }
     : isLightBackground
     ? { backgroundColor: 'rgba(255,255,255,0.7)', color: accentColor, border: `1px solid ${accentColor}80` }
     : isZombieTheme
@@ -1321,27 +1325,33 @@ const ProfilePage = () => {
             ? { backgroundColor: 'rgba(26,26,26,0.95)', color: '#4ade80', border: '2px solid #4ade8066', fontFamily: "'Press Start 2P', monospace", fontSize: '0.55rem', letterSpacing: '0.5px', borderRadius: '2px' }
             : isForestTheme
               ? { backgroundColor: 'rgba(232,213,183,0.85)', color: '#6B3A1F', border: '1px solid #c4a88266', borderRadius: '6px' }
-              : isMacTheme
-              ? { backgroundColor: 'rgba(0,122,255,0.08)', color: '#007aff', border: '1px solid rgba(0,122,255,0.3)', borderRadius: '8px' }
               : isGothicTheme
               ? { backgroundColor: 'rgba(20,2,50,0.85)', color: '#c27aff', border: '1px solid #c27aff44', borderRadius: '9999px', boxShadow: '0 0 8px #c27aff22' }
-              : isCartoonTheme
-              ? { backgroundColor: '#ffffff', color: '#1d1d1f', border: '3px solid #1d1d1f', borderRadius: '9999px', boxShadow: '3px 3px 0 #1d1d1f', fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: '800' }
               : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
 
   const socialOutlineStyle = isWatermelonTheme
     ? { backgroundColor: '#ffffff', color: '#1d3932', border: '3px solid #1d3932', borderRadius: '9999px' }
+    : isCartoonTheme
+    ? platformBtnStyle
+    : isMacTheme
+    ? platformBtnStyle
     : isLightBackground
     ? { backgroundColor: 'rgba(255,255,255,0.9)', color: '#000000', border: '1.5px solid rgba(0,0,0,0.5)', borderRadius: '9999px' }
-    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isMacTheme || isGothicTheme || isCartoonTheme)
+    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme)
       ? platformBtnStyle
       : { backgroundColor: '#ffffff', color: '#000000', border: '1.5px solid #000000', borderRadius: '9999px' };
 
   const xButtonSolidStyle = isWatermelonTheme
     ? { backgroundColor: '#1d3932', color: '#ffffff', border: '3px solid #1d3932', borderRadius: '9999px' }
+    : isCartoonTheme
+    ? platformBtnStyle
+    : isMacTheme
+    ? platformBtnStyle
+    : isGothicTheme
+    ? platformBtnStyle
     : isLightBackground
     ? { backgroundColor: '#000000', color: '#ffffff', border: '1.5px solid #000000', borderRadius: '9999px' }
-    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isMacTheme)
+    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme)
       ? platformBtnStyle
       : { backgroundColor: '#000000', color: '#ffffff', border: '1.5px solid #000000', borderRadius: '9999px' };
 
