@@ -1298,6 +1298,7 @@ const ProfilePage = () => {
     return (0.299 * r + 0.587 * g + 0.114 * b) > 0.5;
   })();
 
+  const isGothicTheme = !isLightBackground && accentColor?.toLowerCase() === '#c27aff' && backgroundColor?.toLowerCase() === '#1e053a';
   const isZombieTheme = !isLightBackground && accentColor?.toLowerCase() === '#9ae600';
   const isCyberpunkTheme = !isLightBackground && accentColor?.toLowerCase() === '#00d3f2';
   const isNeoTheme = !isLightBackground && accentColor?.toLowerCase() === '#00ff41';
@@ -1309,6 +1310,8 @@ const ProfilePage = () => {
     ? { backgroundColor: '#ffb3c1', color: '#0d1a12', border: '3px solid #1d3932', borderRadius: '9999px' }
     : isMacTheme
     ? { backgroundColor: 'rgba(0,102,255,0.08)', color: '#0066ff', border: '1px solid rgba(0,102,255,0.3)', borderRadius: '8px' }
+    : isGothicTheme
+    ? { backgroundColor: 'rgba(60, 5, 100, 0.55)', color: '#c27aff', border: '1px solid rgba(194,122,255,0.35)', borderRadius: '8px', boxShadow: '0 0 8px rgba(194,122,255,0.15)' }
     : isLightBackground
     ? { backgroundColor: 'rgba(255,255,255,0.7)', color: accentColor, border: `1px solid ${accentColor}80` }
     : isZombieTheme
@@ -1329,7 +1332,7 @@ const ProfilePage = () => {
     ? platformBtnStyle
     : isLightBackground
     ? { backgroundColor: 'rgba(255,255,255,0.9)', color: '#000000', border: '1.5px solid rgba(0,0,0,0.5)', borderRadius: '9999px' }
-    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme)
+    : (isGothicTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme)
       ? platformBtnStyle
       : { backgroundColor: '#ffffff', color: '#000000', border: '1.5px solid #000000', borderRadius: '9999px' };
 
@@ -1392,6 +1395,11 @@ const ProfilePage = () => {
     border: '1px solid #bdbdbd',
     borderRadius: '9999px',
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
+  } : isGothicTheme ? {
+    background: 'rgba(30, 3, 55, 0.88)',
+    border: '1px solid rgba(194,122,255,0.28)',
+    borderRadius: '9999px',
+    boxShadow: '0 4px 24px rgba(140,0,255,0.25), inset 0 1px 0 rgba(194,122,255,0.15)',
   } : isLightBackground ? {
     background: 'rgba(255,255,255,0.37)',
     border: '0.556px solid rgba(255,255,255,0.8)',
@@ -3503,7 +3511,7 @@ const ProfilePage = () => {
               style={getTabStyle('clips')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'clips' ? '#1a1a1a' : '#ef4444' } : undefined}>{isZombieTheme ? '👻 ' : ''}Clips</span>
+                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'clips' ? '#1a1a1a' : '#ef4444' } : undefined}>{(isZombieTheme || isGothicTheme) ? '👻 ' : ''}Clips</span>
                 {showLimits && (
                   <span className={`text-[10px] font-normal ${clipsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: clipsCount >= 15 ? undefined : isMacTheme ? (activeTab === 'clips' ? '#555' : '#888') : activeTab === 'clips' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {clipsCount}/15
@@ -3519,7 +3527,7 @@ const ProfilePage = () => {
               style={getTabStyle('reels')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'reels' ? '#1a1a1a' : '#3b82f6' } : undefined}>{isZombieTheme ? '👻 ' : ''}Reels</span>
+                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'reels' ? '#1a1a1a' : '#3b82f6' } : undefined}>{(isZombieTheme || isGothicTheme) ? '👻 ' : ''}Reels</span>
                 {showLimits && (
                   <span className={`text-[10px] font-normal ${reelsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: reelsCount >= 15 ? undefined : isMacTheme ? (activeTab === 'reels' ? '#555' : '#888') : activeTab === 'reels' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {reelsCount}/15
@@ -3535,7 +3543,7 @@ const ProfilePage = () => {
               style={getTabStyle('screenshots')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'screenshots' ? '#1a1a1a' : '#4ade80' } : undefined}>{isZombieTheme ? '👻 ' : ''}Screenshots</span>
+                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'screenshots' ? '#1a1a1a' : '#4ade80' } : undefined}>{(isZombieTheme || isGothicTheme) ? '👻 ' : ''}Screenshots</span>
                 {showLimits && (
                   <span className={`text-[10px] font-normal ${screenshotsCount >= 10 ? 'text-red-400' : ''}`} style={{ color: screenshotsCount >= 10 ? undefined : isMacTheme ? (activeTab === 'screenshots' ? '#555' : '#888') : activeTab === 'screenshots' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {screenshotsCount}/10
@@ -3550,7 +3558,7 @@ const ProfilePage = () => {
               className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
               style={getTabStyle('favorites')}
             >
-              <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'favorites' ? '#1a1a1a' : '#facc15' } : undefined}>{isZombieTheme ? '👻 ' : ''}Favorites</span>
+              <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'favorites' ? '#1a1a1a' : '#facc15' } : undefined}>{(isZombieTheme || isGothicTheme) ? '👻 ' : ''}Favorites</span>
             </TabsTrigger>
 
             {profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0 && (
