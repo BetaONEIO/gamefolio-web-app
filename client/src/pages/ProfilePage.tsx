@@ -2339,6 +2339,10 @@ const ProfilePage = () => {
               } : isCyberpunkTheme ? {
                 background: '#020617',
                 border: '1px solid #00b8db',
+              } : isNeoTheme ? {
+                background: '#001a00',
+                border: '1px solid #00ff4177',
+                boxShadow: '0 0 16px #00ff4122, 0 0 40px #00ff4111',
               } : {
                 background: `${accentColor || '#00bba7'}0d`,
                 border: `1px solid ${accentColor || '#00bba7'}33`,
@@ -2707,6 +2711,10 @@ const ProfilePage = () => {
                 } : isCyberpunkTheme ? {
                   background: '#020617',
                   border: '1px solid #00b8db',
+                } : isNeoTheme ? {
+                  background: '#001a00',
+                  border: '1px solid #00ff4177',
+                  boxShadow: '0 0 16px #00ff4122, 0 0 40px #00ff4111',
                 } : {
                   background: `${accentColor || '#00bba7'}0d`,
                   border: `1px solid ${accentColor || '#00bba7'}33`,
