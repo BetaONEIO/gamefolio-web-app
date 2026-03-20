@@ -20,7 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { NFTPurchaseDialog } from "@/components/store/NFTPurchaseDialog";
 import { NameTagDetailDialog } from "@/components/store/NameTagDetailDialog";
 import { BorderDetailDialog } from "@/components/store/BorderDetailDialog";
 import { VerificationBadgeDetailDialog } from "@/components/store/VerificationBadgeDetailDialog";
@@ -38,21 +37,6 @@ import {
 } from "@/components/ui/dialog";
 import { parseUnits, type Address } from "viem";
 import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from "@shared/contracts";
-import nft1 from "@assets/1_1762777399632.png";
-import nft2 from "@assets/2_1762777399661.png";
-import nft3 from "@assets/3_1762777399661.png";
-import nft4 from "@assets/4_1762777399662.png";
-import nft5 from "@assets/5_1762777399662.png";
-import nft6 from "@assets/6_1762777399663.png";
-import nft7 from "@assets/7_1762777399663.png";
-import nft8 from "@assets/8_1762777399663.png";
-import nft9 from "@assets/9_1762777399664.png";
-import nft10 from "@assets/10_1762777399664.png";
-import nft11 from "@assets/11_1762777399665.png";
-import nft12 from "@assets/12_1762777399665.png";
-import nft13 from "@assets/13_1762777399665.png";
-import nft14 from "@assets/14_1762777399666.png";
-import nft15 from "@assets/15_1762777399666.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -117,43 +101,12 @@ interface OwnedItem extends StoreItem {
   txHash: string | null;
 }
 
-interface NFT {
-  id: number;
-  name: string;
-  image: string;
-  price: number;
-  priceGBP: number;
-  description: string;
-  forSale: boolean;
-  rarity: string;
-  currentBid: number;
-  owner: string;
-}
-
 const GF_DECIMALS = 18;
 const SKALE_CHAIN_ID = SKALE_NEBULA_TESTNET.id;
 
-const nftImageMap: Record<string, string> = {
-  "/assets/nft1.png": nft1,
-  "/assets/nft2.png": nft2,
-  "/assets/nft3.png": nft3,
-  "/assets/nft4.png": nft4,
-  "/assets/nft5.png": nft5,
-  "/assets/nft6.png": nft6,
-  "/assets/nft7.png": nft7,
-  "/assets/nft8.png": nft8,
-  "/assets/nft9.png": nft9,
-  "/assets/nft10.png": nft10,
-  "/assets/nft11.png": nft11,
-  "/assets/nft12.png": nft12,
-  "/assets/nft13.png": nft13,
-  "/assets/nft14.png": nft14,
-  "/assets/nft15.png": nft15,
-};
-
 function resolveStoreImage(imagePath: string | null): string {
   if (!imagePath) return gfTokenLogo;
-  return nftImageMap[imagePath] || imagePath;
+  return imagePath;
 }
 
 function MarketplaceNftImage({ tokenId }: { tokenId: number }) {
@@ -196,8 +149,6 @@ export default function StorePage() {
   const [priceFilter, setPriceFilter] = useState<string>("all");
   const [mintFilter, setMintFilter] = useState<string>("all");
   const [accessFilter, setAccessFilter] = useState<string>("all");
-  const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null);
-  const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
   const [purchasingItemId, setPurchasingItemId] = useState<number | null>(null);
   const [selectedNameTag, setSelectedNameTag] = useState<any>(null);
   const [nameTagDialogOpen, setNameTagDialogOpen] = useState(false);
@@ -665,208 +616,8 @@ export default function StorePage() {
     }
   };
 
-  // Gamefolio NFT Collection data with exclusive character avatars
-  const gamefolioNFTs = [
-    {
-      id: 1,
-      name: "Cyber Pilot #001",
-      image: nft1,
-      price: 250,
-      priceGBP: 2.50,
-      description: "Elite cyber pilot with advanced tech helmet and signature yellow jacket",
-      forSale: true,
-      rarity: "epic",
-      currentBid: 220,
-      owner: "GameMaster",
-    },
-    {
-      id: 2,
-      name: "Divine Guardian #002",
-      image: nft2,
-      price: 800,
-      priceGBP: 8.00,
-      description: "Blessed guardian with golden halo and pure spirit",
-      forSale: true,
-      rarity: "legendary",
-      currentBid: 750,
-      owner: "AngelicWarrior",
-    },
-    {
-      id: 3,
-      name: "Street Samurai #003",
-      image: nft3,
-      price: 550,
-      priceGBP: 5.50,
-      description: "Tattooed warrior with deadly precision and street style",
-      forSale: true,
-      rarity: "legendary",
-      currentBid: 500,
-      owner: "BladeMaster",
-    },
-    {
-      id: 4,
-      name: "Urban Rogue #004",
-      image: nft4,
-      price: 350,
-      priceGBP: 3.50,
-      description: "Mysterious rogue with ice-blue shades and urban aesthetic",
-      forSale: true,
-      rarity: "rare",
-      currentBid: 320,
-      owner: "ShadowRunner",
-    },
-    {
-      id: 5,
-      name: "Matrix Assassin #005",
-      image: nft5,
-      price: 700,
-      priceGBP: 7.00,
-      description: "Digital assassin mastering the code matrix",
-      forSale: true,
-      rarity: "legendary",
-      currentBid: 650,
-      owner: "CodeBreaker",
-    },
-    {
-      id: 6,
-      name: "Golden Warrior #006",
-      image: nft6,
-      price: 600,
-      priceGBP: 6.00,
-      description: "Legendary warrior wielding the sacred blade of light",
-      forSale: true,
-      rarity: "legendary",
-      currentBid: 550,
-      owner: "KnightCommander",
-    },
-    {
-      id: 7,
-      name: "Cyber Ronin #007",
-      image: nft7,
-      price: 650,
-      priceGBP: 6.50,
-      description: "Futuristic ronin with laser-edge katana",
-      forSale: true,
-      rarity: "legendary",
-      currentBid: 600,
-      owner: "DigitalSamurai",
-    },
-    {
-      id: 8,
-      name: "Desert Wanderer #008",
-      image: nft8,
-      price: 400,
-      priceGBP: 4.00,
-      description: "Nomadic survivor with crystalline blade",
-      forSale: true,
-      rarity: "epic",
-      currentBid: 375,
-      owner: "SandStrider",
-    },
-    {
-      id: 9,
-      name: "Space Mercenary #009",
-      image: nft9,
-      price: 500,
-      priceGBP: 5.00,
-      description: "Battle-hardened merc from the outer rim",
-      forSale: true,
-      rarity: "epic",
-      currentBid: 450,
-      owner: "StarHunter",
-    },
-    {
-      id: 10,
-      name: "Crystal Knight #010",
-      image: nft10,
-      price: 750,
-      priceGBP: 7.50,
-      description: "Cosmic knight wielding the ethereal crystal blade",
-      forSale: true,
-      rarity: "legendary",
-      currentBid: 700,
-      owner: "GalacticGuardian",
-    },
-    {
-      id: 11,
-      name: "Retro Explorer #011",
-      image: nft11,
-      price: 300,
-      priceGBP: 3.00,
-      description: "Classic adventurer with 3D vision and frontier spirit",
-      forSale: true,
-      rarity: "rare",
-      currentBid: 275,
-      owner: "VintageHero",
-    },
-    {
-      id: 12,
-      name: "Eastern Mystic #012",
-      image: nft12,
-      price: 450,
-      priceGBP: 4.50,
-      description: "Wise wanderer from the ancient lands",
-      forSale: true,
-      rarity: "epic",
-      currentBid: 425,
-      owner: "ZenMaster",
-    },
-    {
-      id: 13,
-      name: "Digital Miner #013",
-      image: nft13,
-      price: 350,
-      priceGBP: 3.50,
-      description: "VR-enabled miner extracting digital resources",
-      forSale: true,
-      rarity: "rare",
-      currentBid: 320,
-      owner: "CryptoDigger",
-    },
-    {
-      id: 14,
-      name: "Tech Operative #014",
-      image: nft14,
-      price: 420,
-      priceGBP: 4.20,
-      description: "Tactical agent with next-gen plasma weaponry",
-      forSale: true,
-      rarity: "epic",
-      currentBid: 390,
-      owner: "AgentX",
-    },
-    {
-      id: 15,
-      name: "Royal Outlaw #015",
-      image: nft15,
-      price: 900,
-      priceGBP: 9.00,
-      description: "Crowned rebel leading the resistance with style",
-      forSale: true,
-      rarity: "legendary",
-      currentBid: 850,
-      owner: "RogueKing",
-    },
-  ];
-
-  const { data: availableCatalog } = useQuery<{ id: number }[]>({
-    queryKey: ['/api/nft/store-catalog'],
-    queryFn: async () => {
-      const response = await fetch('/api/nft/store-catalog', { credentials: 'include' });
-      if (!response.ok) return [];
-      return response.json();
-    },
-  });
-
-  const availableIds = new Set(availableCatalog?.map((n: { id: number }) => n.id) || gamefolioNFTs.map(n => n.id));
-  const availableNFTs = gamefolioNFTs.filter(nft => availableIds.has(nft.id));
-
   const gfBalance = parseFloat(tokenBalance?.balance || '0');
 
-  const handleBuyNFT = (nft: NFT) => {
-    setSelectedNFT(nft);
-    setPurchaseDialogOpen(true);
-  };
 
   const [storeTab, setStoreTab] = useState<"nft" | "nametags" | "borders" | "badges">("nft");
   const [showFilters, setShowFilters] = useState(false);
@@ -1432,203 +1183,65 @@ export default function StorePage() {
                 </div>
               </div>
 
-              {/* NFT Collection Grid */}
-              {storeTab === "nft" && accessFilter !== "pro" && (
+              {/* NFT Listings */}
+              {storeTab === "nft" && marketplaceData && marketplaceData.listings.length > 0 && accessFilter !== "pro" && (
               <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[#4ade80]" />
                 NFT Avatars
               </h3>
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 mb-8">
-                {availableNFTs
-                  .filter((nft) => {
-                    if (rarityFilter !== "all" && nft.rarity.toLowerCase() !== rarityFilter.toLowerCase()) {
-                      return false;
-                    }
-                    if (priceFilter !== "all") {
-                      if (priceFilter === "low" && nft.price > 300) return false;
-                      if (priceFilter === "medium" && (nft.price < 300 || nft.price > 500)) return false;
-                      if (priceFilter === "high" && nft.price < 500) return false;
-                    }
-                    if (mintFilter !== "all") {
-                      if (mintFilter === "1-100" && nft.id > 100) return false;
-                      if (mintFilter === "101-500" && (nft.id < 101 || nft.id > 500)) return false;
-                      if (mintFilter === "500+" && nft.id < 500) return false;
-                    }
-                    return true;
-                  })
-                  .map((nft) => (
-                  <Card
-                    key={nft.id}
-                    className="bg-gray-800/50 border-0 overflow-hidden transition-all hover:shadow-lg hover:shadow-[#4ade80]/20 cursor-pointer"
-                    onClick={() => handleBuyNFT(nft)}
-                  >
-                    <div className="relative aspect-[3/4] overflow-hidden">
-                      <img
-                        src={nft.image}
-                        alt={nft.name}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                      />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleWatchlist(nft);
-                        }}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
-                      >
-                        {watchlist?.some((w: any) => w.nftId === nft.id) ? (
-                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="url(#heartGradient)" stroke="none">
-                            <defs>
-                              <linearGradient id="heartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stopColor="#4ade80" />
-                                <stop offset="100%" stopColor="#22c55e" />
-                              </linearGradient>
-                            </defs>
-                            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
-                          </svg>
+                {marketplaceData.listings.map((listing: MarketplaceListing) => {
+                  const isOfficial = listing.username === 'GamefolioStore';
+                  return (
+                    <div
+                      key={`nft-${listing.token_id}-${listing.user_id}`}
+                      className={`rounded-2xl overflow-hidden bg-slate-900 transition-all duration-200 hover:scale-[1.03] ${
+                        isOfficial
+                          ? 'hover:shadow-[0_0_20px_rgba(74,222,128,0.3)]'
+                          : 'hover:shadow-[0_0_20px_rgba(249,115,22,0.3)]'
+                      }`}
+                    >
+                      <div className="relative aspect-square overflow-hidden">
+                        <MarketplaceNftImage tokenId={listing.token_id} />
+                        {isOfficial ? (
+                          <div className="absolute top-2 left-2 bg-green-500/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+                            Official
+                          </div>
                         ) : (
-                          <Heart className="h-4 w-4 text-white" />
+                          <div className="absolute top-2 left-2 bg-orange-500/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+                            Resale
+                          </div>
                         )}
-                      </button>
-                    </div>
-                    
-                    <div className="p-2 space-y-1.5">
-                      <div>
-                        <h3 className="font-semibold text-xs line-clamp-1">{nft.name}</h3>
-                        <p className="text-[10px] text-gray-400">by {nft.owner}</p>
-                        <Badge className={`mt-1 text-[10px] px-1.5 py-0.5 text-white capitalize ${
-                          nft.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500 to-amber-600" :
-                          nft.rarity === "epic" ? "bg-gradient-to-r from-purple-500 to-pink-600" :
-                          nft.rarity === "rare" ? "bg-gradient-to-r from-green-500 to-emerald-600" : "bg-gray-600"
-                        }`}>
-                          {nft.rarity}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex items-center justify-between pt-1.5 border-t border-gray-700">
-                        <div>
-                          <p className="text-[9px] text-gray-500">Price</p>
-                          <div className="flex items-center gap-0.5">
-                            <img src={gfTokenLogo} alt="GF" className="w-3 h-3" />
-                            <span className="text-xs font-bold text-[#4ade80]">{nft.price}</span>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          className="bg-gradient-to-r from-[#4ade80] to-[#22c55e] hover:from-[#22c55e] hover:to-[#16a34a] text-white text-[10px] h-6 px-2"
-                        >
-                          <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
-                          Buy
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-              </>
-              )}
-
-              {/* Marketplace Listings */}
-              {storeTab === "nft" && marketplaceData && marketplaceData.listings.length > 0 && accessFilter !== "pro" && (
-              <>
-              {/* Platform store listings */}
-              {marketplaceData.listings.filter((l: MarketplaceListing) => l.username === 'GamefolioStore').length > 0 && (
-                <>
-                <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
-                  <Tag className="h-4 w-4 text-green-400" />
-                  Official Store
-                  <Badge className="bg-green-600/30 text-[10px] px-1.5 py-0.5 text-green-300 ml-1">
-                    Genesis Guardians
-                  </Badge>
-                </h3>
-                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 mb-8">
-                  {marketplaceData.listings.filter((l: MarketplaceListing) => l.username === 'GamefolioStore').map((listing: MarketplaceListing) => (
-                    <div
-                      key={`store-${listing.token_id}`}
-                      className="rounded-2xl overflow-hidden bg-slate-900 transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(74,222,128,0.3)]"
-                    >
-                      <div className="relative aspect-square overflow-hidden">
-                        <MarketplaceNftImage tokenId={listing.token_id} />
-                        <div className="absolute top-2 left-2 bg-green-500/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
-                          Official
-                        </div>
                         <div className="absolute top-2 right-2 backdrop-blur-md bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5">
                           <span className="text-[10px] font-bold text-green-400">#{listing.token_id}</span>
                         </div>
                       </div>
                       <div className="p-3 pt-2">
                         <h3 className="font-bold text-sm text-slate-50 truncate">Genesis #{listing.token_id}</h3>
-                        <p className="text-[11px] text-slate-400 mt-0.5">Gamefolio Official Store</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {isOfficial ? 'Gamefolio Official' : `by ${listing.display_name || listing.username}`}
+                        </p>
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800">
                           <div className="flex items-center gap-1">
                             <img src={gfTokenLogo} alt="GF" className="w-3.5 h-3.5" />
-                            <span className="text-sm font-bold text-green-400">{listing.listed_price}</span>
+                            <span className={`text-sm font-bold ${isOfficial ? 'text-green-400' : 'text-orange-400'}`}>
+                              {listing.listed_price}
+                            </span>
                           </div>
                           <Button
                             size="sm"
-                            disabled={buyingTokenId === listing.token_id}
-                            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-[10px] h-7 px-3 rounded-xl disabled:opacity-50"
+                            disabled={buyingTokenId === listing.token_id || (!isOfficial && listing.user_id === user?.id)}
+                            className={`text-white text-[10px] h-7 px-3 rounded-xl disabled:opacity-50 ${
+                              isOfficial
+                                ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
+                                : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600'
+                            }`}
                             onClick={() => handleBuyMarketplaceNft({ tokenId: listing.token_id, sellerId: listing.user_id })}
                           >
                             {buyingTokenId === listing.token_id ? (
                               <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                            ) : (
-                              <>
-                                <ShoppingCart className="h-2.5 w-2.5 mr-0.5" />
-                                Buy
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                </>
-              )}
-
-              {/* Player marketplace listings */}
-              {marketplaceData.listings.filter((l: MarketplaceListing) => l.username !== 'GamefolioStore').length > 0 && (
-                <>
-                <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
-                  <Tag className="h-4 w-4 text-orange-400" />
-                  Marketplace
-                  <Badge className="bg-orange-600/30 text-[10px] px-1.5 py-0.5 text-orange-300 ml-1">
-                    Player Listed
-                  </Badge>
-                </h3>
-                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 mb-8">
-                  {marketplaceData.listings.filter((l: MarketplaceListing) => l.username !== 'GamefolioStore').map((listing: MarketplaceListing) => (
-                    <div
-                      key={`marketplace-${listing.token_id}-${listing.user_id}`}
-                      className="rounded-2xl overflow-hidden bg-slate-900 transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(249,115,22,0.3)]"
-                    >
-                      <div className="relative aspect-square overflow-hidden">
-                        <MarketplaceNftImage tokenId={listing.token_id} />
-                        <div className="absolute top-2 left-2 bg-orange-500/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
-                          Resale
-                        </div>
-                        <div className="absolute top-2 right-2 backdrop-blur-md bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5">
-                          <span className="text-[10px] font-bold text-green-400">#{listing.token_id}</span>
-                        </div>
-                      </div>
-                      <div className="p-3 pt-2">
-                        <h3 className="font-bold text-sm text-slate-50 truncate">Genesis #{listing.token_id}</h3>
-                        <p className="text-[11px] text-slate-400 mt-0.5">by {listing.display_name || listing.username}</p>
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800">
-                          <div className="flex items-center gap-1">
-                            <img src={gfTokenLogo} alt="GF" className="w-3.5 h-3.5" />
-                            <span className="text-sm font-bold text-orange-400">{listing.listed_price}</span>
-                          </div>
-                          <Button
-                            size="sm"
-                            disabled={buyingTokenId === listing.token_id || listing.user_id === user?.id}
-                            className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-[10px] h-7 px-3 rounded-xl disabled:opacity-50"
-                            onClick={() => handleBuyMarketplaceNft({ tokenId: listing.token_id, sellerId: listing.user_id })}
-                          >
-                            {buyingTokenId === listing.token_id ? (
-                              <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                            ) : listing.user_id === user?.id ? (
+                            ) : !isOfficial && listing.user_id === user?.id ? (
                               "Your listing"
                             ) : (
                               <>
@@ -1640,11 +1253,9 @@ export default function StorePage() {
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-                </>
-              )}
-              
+                  );
+                })}
+              </div>
               </>
               )}
 
@@ -2229,17 +1840,6 @@ export default function StorePage() {
           )}
         </main>
       </div>
-
-      {/* NFT Purchase Dialog */}
-      <NFTPurchaseDialog
-        nft={selectedNFT}
-        open={purchaseDialogOpen}
-        onOpenChange={setPurchaseDialogOpen}
-        onPurchaseComplete={() => {
-          queryClient.invalidateQueries({ queryKey: ['/api/nft/store-catalog'] });
-          queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-        }}
-      />
 
       {/* Name Tag Detail Dialog */}
       <NameTagDetailDialog
