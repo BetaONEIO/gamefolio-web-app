@@ -28,6 +28,7 @@ import { z } from "zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord } from 'react-icons/fa';
 import { connectXboxAccount, isXboxConfigValid } from '@/lib/xbox';
+import { useTheme } from '@/hooks/use-theme';
 import { FaXTwitter } from 'react-icons/fa6';
 import { SiEpicgames, SiNintendo } from 'react-icons/si';
 import Cropper from "react-easy-crop";
