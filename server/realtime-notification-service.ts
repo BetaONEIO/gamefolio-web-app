@@ -11,13 +11,14 @@ export class RealtimeNotificationService {
   private connectedUsers = new Map<number, Set<AuthenticatedWebSocket>>();
 
   constructor(server: Server) {
-    this.wss = new WebSocketServer({ 
-      server,
-      path: '/api/ws/notifications',
-      verifyClient: (info: { req: any }) => {
-        // Basic URL parsing to check if it's the notifications endpoint
-        const { pathname } = parse(info.req.url || '');
-        return pathname === '/api/ws/notifications';
+    this.wss = new WebSocketServer({ noServer: true });
+
+    server.on('upgrade', (req, socket, head) => {
+      const { pathname } = parse(req.url || '');
+      if (pathname === '/api/ws/notifications') {
+        this.wss.handleUpgrade(req, socket as any, head, (ws) => {
+          this.wss.emit('connection', ws, req);
+        });
       }
     });
 
