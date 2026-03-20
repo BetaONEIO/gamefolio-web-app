@@ -1289,7 +1289,7 @@ const ProfilePage = () => {
 
   const isMacTheme = accentColor?.toLowerCase() === '#0066ff' && backgroundColor?.toLowerCase() === '#f0f0f2';
 
-  const isLightBackground = !isMacTheme && (() => {
+  const isLightBackground = (() => {
     const hex = backgroundColor.replace('#', '');
     if (hex.length !== 6) return false;
     const r = parseInt(hex.substring(0, 2), 16) / 255;
@@ -1385,6 +1385,11 @@ const ProfilePage = () => {
     border: '5px solid #1d3932',
     borderRadius: '9999px',
     padding: '4px 8px',
+  } : isMacTheme ? {
+    background: 'linear-gradient(180deg, #ebebeb 0%, #d6d6d6 100%)',
+    border: '1px solid #bdbdbd',
+    borderRadius: '9999px',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
   } : isLightBackground ? {
     background: 'rgba(255,255,255,0.37)',
     border: '0.556px solid rgba(255,255,255,0.8)',
@@ -1399,11 +1404,6 @@ const ProfilePage = () => {
     border: '1.5px solid rgba(164,118,66,0.45)',
     borderRadius: '9999px',
     padding: '4px 8px',
-  } : isMacTheme ? {
-    background: 'linear-gradient(180deg, #ebebeb 0%, #d6d6d6 100%)',
-    border: '1px solid #bdbdbd',
-    borderRadius: '9999px',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
   } : undefined;
 
   const blocksTabColors: Record<string, string> = {
@@ -1643,11 +1643,6 @@ const ProfilePage = () => {
         backgroundColor: '#0a2f1f',
         position: 'relative',
         zIndex: 1
-      } : isMacTheme ? {
-        backgroundColor: '#1c2333',
-        position: 'relative',
-        zIndex: 1,
-        minHeight: '100vh',
       } : (profile as any).profileBackgroundGradient !== false ? {
         background: isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
         position: 'relative',
@@ -1725,10 +1720,9 @@ const ProfilePage = () => {
         className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 ${resolvedBannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
         style={{
           ...bannerStyle,
-          opacity: (hideBanner || isMacTheme) ? 0 : 1,
-          pointerEvents: (hideBanner || isMacTheme) ? 'none' : undefined,
+          opacity: hideBanner ? 0 : 1,
+          pointerEvents: hideBanner ? 'none' : undefined,
           transition: 'opacity 0.5s ease',
-          ...(isMacTheme ? { height: 0, minHeight: 0, padding: 0, margin: 0 } : {}),
         }}
         onClick={() => {
           if (resolvedBannerUrl && profile?.displayName && profile?.username) {
@@ -2285,73 +2279,6 @@ const ProfilePage = () => {
           }
         `}</style>
       )}
-      {/* Mac Theme CSS */}
-      {isMacTheme && (
-        <style>{`
-          .mac-profile-content {
-            color: #1a1a1a;
-          }
-          /* Override all white inline text colors inside the Mac window */
-          .mac-profile-content span,
-          .mac-profile-content p,
-          .mac-profile-content h1,
-          .mac-profile-content h2,
-          .mac-profile-content h3,
-          .mac-profile-content label,
-          .mac-profile-content div {
-            --mac-text: #1a1a1a;
-          }
-          .mac-profile-content .text-slate-300 {
-            color: #6b7280 !important;
-          }
-          .mac-profile-content .text-muted-foreground {
-            color: #6b7280 !important;
-          }
-          .mac-profile-content .text-foreground\/70 {
-            color: #6b7280 !important;
-          }
-          .mac-profile-content .text-slate-100 {
-            color: #1a1a1a !important;
-          }
-          /* Stat numbers and labels — force dark text */
-          .mac-profile-content .font-black.text-base,
-          .mac-profile-content .font-black.text-xl,
-          .mac-profile-content .font-black.text-2xl {
-            color: #1a1a1a !important;
-          }
-          .mac-profile-content .text-\\[8px\\],
-          .mac-profile-content .text-\\[9px\\] {
-            color: #007aff !important;
-          }
-          /* Bio text */
-          .mac-profile-content .text-sm.max-w-md {
-            color: #4a4a4a !important;
-          }
-          /* Small role/badge text */
-          .mac-profile-content [class*="text-xs"] {
-            color: #6b7280 !important;
-          }
-          /* Tab triggers inactive */
-          .mac-profile-content [role="tab"][data-state="inactive"],
-          .mac-profile-content [role="tab"][data-state="inactive"] * {
-            color: #3a3a3a !important;
-          }
-          /* Tab triggers active */
-          .mac-profile-content [role="tab"][data-state="active"],
-          .mac-profile-content [role="tab"][data-state="active"] * {
-            color: #ffffff !important;
-          }
-          /* NFT card text */
-          .mac-profile-content .nft-card-title,
-          .mac-profile-content .nft-card-text {
-            color: #1a1a1a !important;
-          }
-          /* Bottom window padding area */
-          .mac-profile-content .mac-window-bottom {
-            padding-bottom: 24px;
-          }
-        `}</style>
-      )}
       {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">
         <React.Suspense fallback={null}>
@@ -2398,50 +2325,15 @@ const ProfilePage = () => {
         </React.Suspense>
       </div>
 
-      {/* Mac Theme – window title bar (sits directly above the profile content box) */}
-      {isMacTheme && (
-        <div style={{
-          maxWidth: '680px',
-          margin: '32px auto 0',
-          borderRadius: '12px 12px 0 0',
-          background: 'linear-gradient(180deg, #e0e0e0 0%, #d0d0d0 100%)',
-          height: '36px',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 12px',
-          position: 'relative',
-          borderBottom: '1px solid #b8b8b8',
-          boxShadow: '0 -2px 12px rgba(0,0,0,0.35)',
-        }}>
-          <div style={{ display: 'flex', gap: '7px', alignItems: 'center' }}>
-            <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#ff5f57', border: '0.5px solid rgba(0,0,0,0.12)' }} />
-            <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#febc2e', border: '0.5px solid rgba(0,0,0,0.12)' }} />
-            <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#28c840', border: '0.5px solid rgba(0,0,0,0.12)' }} />
-          </div>
-          <span style={{
-            position: 'absolute', left: '50%', transform: 'translateX(-50%)',
-            fontSize: '13px', fontWeight: 500, color: '#3a3a3a', pointerEvents: 'none',
-          }}>User Profile</span>
-        </div>
-      )}
-
       {/* Profile Info - positioned below banner with overlapping profile picture */}
       <div
-        className={`max-w-[98%] md:max-w-[90%] mx-auto relative z-20${isMacTheme ? ' mac-profile-content' : ''}`}
-        style={isMacTheme ? {
-          maxWidth: '680px',
-          background: '#ffffff',
-          borderRadius: '0 0 12px 12px',
-          boxShadow: '0 22px 60px rgba(0,0,0,0.6)',
-          overflow: 'hidden',
-          paddingBottom: '24px',
-        } : undefined}
+        className="max-w-[98%] md:max-w-[90%] mx-auto relative z-20"
       >
 
         {/* Mobile Layout - Left-aligned like reference design */}
-        <div className="block md:hidden pb-6 relative" style={{ marginTop: isMacTheme ? '0px' : '-80px', paddingTop: '0px' }}>
-          {/* Profile Picture - Left aligned on Mobile (centered for Mac theme) */}
-          <div className={`flex mb-2 ${isMacTheme ? 'justify-center pt-8' : 'justify-start pl-4'}`}>
+        <div className="block md:hidden pb-6 relative" style={{ marginTop: '-80px', paddingTop: '0px' }}>
+          {/* Profile Picture - Left aligned on Mobile */}
+          <div className="flex mb-2 justify-start pl-4">
             {/* Explicit dimensions to ensure circular glow renders correctly - matches profile avatar sizes */}
             <div className="relative h-28 w-28">
               {/* Circular glow removed on mobile per user request */}
@@ -2962,7 +2854,7 @@ const ProfilePage = () => {
         </div>
 
         {/* Desktop Layout - Vertical stacked on left */}
-        <div className="hidden md:flex flex-row pb-4 relative max-w-[90%] mx-auto" style={{ marginTop: isMacTheme ? '24px' : '-112px' }}>
+        <div className="hidden md:flex flex-row pb-4 relative max-w-[90%] mx-auto" style={{ marginTop: '-112px' }}>
           {/* Left side - Profile info stacked vertically */}
           <div className="flex flex-col">
             {/* Profile Picture positioned to overlap banner - explicit dimensions to ensure circular glow renders correctly */}
