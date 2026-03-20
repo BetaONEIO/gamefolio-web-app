@@ -1519,8 +1519,8 @@ const ProfilePage = () => {
     border: '1px solid #c27aff55',
     boxShadow: '0 0 12px #c27aff33',
   } : {
-    background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}cc 100%)`,
-    border: `1px solid ${accentColor}80`,
+    background: 'rgba(30,30,30,0.85)',
+    border: '1px solid rgba(255,255,255,0.12)',
   };
   const profileBackgroundImageUrl = bgImageSignedUrl || (profile as any).profileBackgroundImageUrl || '';
   const isMobileViewport = window.innerWidth <= 768;
