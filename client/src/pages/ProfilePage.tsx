@@ -1524,7 +1524,7 @@ const ProfilePage = () => {
     {isNeoTheme && !profileBackgroundImageUrl && <div className="neo-vignette" />}
     {isNeoTheme && !profileBackgroundImageUrl && <div className="neo-scanline" />}
     <div 
-      className="min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope" 
+      className={`min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope${isBlocksTheme && !profileBackgroundImageUrl ? ' blocks-bg' : ''}`}
       ref={profileThemeScopeRef}
       style={profileBackgroundImageUrl ? {
         backgroundImage: `url(${profileBackgroundImageUrl})`,
@@ -1535,6 +1535,10 @@ const ProfilePage = () => {
         zIndex: 1
       } : isNeoTheme ? {
         background: 'transparent',
+        position: 'relative',
+        zIndex: 1
+      } : isBlocksTheme ? {
+        background: '#87ceeb',
         position: 'relative',
         zIndex: 1
       } : (profile as any).profileBackgroundGradient !== false ? {
@@ -2054,6 +2058,57 @@ const ProfilePage = () => {
           }
           .blocks-platform-section svg {
             color: #4ade80;
+          }
+          .blocks-bg::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background-image:
+              linear-gradient(white, white),
+              linear-gradient(white, white),
+              linear-gradient(white, white),
+              linear-gradient(#5ea832, #5ea832),
+              linear-gradient(#8b5e3c, #8b5e3c),
+              linear-gradient(#6b4a2e, #6b4a2e),
+              linear-gradient(180deg, #5ba3d0 0%, #87ceeb 55%, #b4daf5 100%);
+            background-size:
+              96px 32px,
+              72px 24px,
+              80px 28px,
+              100% 16px,
+              100% 32px,
+              100% 16px,
+              100% 100%;
+            background-position:
+              8% 12%,
+              52% 6%,
+              80% 20%,
+              0 calc(100% - 48px),
+              0 calc(100% - 32px),
+              0 calc(100% - 16px),
+              0 0;
+            background-repeat: no-repeat;
+          }
+          .blocks-nft-header {
+            background: #2a2a2a !important;
+            border: 3px solid #a855f7 !important;
+            border-radius: 4px !important;
+            box-shadow: 6px 6px 0 #000 !important;
+          }
+          .blocks-nft-card {
+            border: 3px solid #000 !important;
+            border-radius: 4px !important;
+            box-shadow: 4px 4px 0 #000 !important;
+            transition: box-shadow 0.1s, transform 0.1s !important;
+          }
+          .blocks-nft-card:hover {
+            box-shadow: 6px 6px 0 #000 !important;
+            transform: translate(-2px, -2px) !important;
+          }
+          .image-rendering-pixelated {
+            image-rendering: pixelated;
           }
         `}</style>
       )}
@@ -3143,11 +3198,11 @@ const ProfilePage = () => {
         {profileSectionTab === 'collection' ? (
           <div className="w-full">
             <div 
-              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
-              style={isZombieTheme ? { background: '#1a1d1a' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
+              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-nft-header' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
+              style={isBlocksTheme ? undefined : isZombieTheme ? { background: '#1a1d1a' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
             >
               <div
-                className={`relative h-9 md:h-10 flex-1 flex items-center justify-center px-3 md:px-5 text-sm font-semibold gap-2 ${isCyberpunkTheme ? 'rounded-none' : 'rounded-full'}`}
+                className={`relative h-9 md:h-10 flex-1 flex items-center justify-center px-3 md:px-5 text-sm font-semibold gap-2 ${isCyberpunkTheme ? 'rounded-none' : isBlocksTheme ? 'rounded-none' : 'rounded-full'}`}
                 style={isCyberpunkTheme ? {
                   background: 'rgba(0,211,242,0.12)',
                   borderBottom: '2px solid #00d3f2',
@@ -3156,6 +3211,12 @@ const ProfilePage = () => {
                   letterSpacing: '2.5px',
                   fontSize: '0.7rem',
                   fontWeight: '900',
+                } : isBlocksTheme ? {
+                  background: 'transparent',
+                  color: '#a855f7',
+                  fontFamily: "'Press Start 2P', monospace",
+                  fontSize: '0.6rem',
+                  letterSpacing: '1px',
                 } : isZombieTheme ? {
                   background: 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)',
                   color: '#9ae600',
@@ -3177,7 +3238,7 @@ const ProfilePage = () => {
                   color: '#ffffff',
                 }}
               >
-                <Hexagon className={`w-4 h-4 ${isCyberpunkTheme ? 'text-[#00d3f2]' : isZombieTheme ? 'text-[#9ae600]' : isNeoTheme ? 'text-[#00ff41]' : ''}`} />
+                <Hexagon className={`w-4 h-4 ${isCyberpunkTheme ? 'text-[#00d3f2]' : isBlocksTheme ? 'text-[#a855f7]' : isZombieTheme ? 'text-[#9ae600]' : isNeoTheme ? 'text-[#00ff41]' : ''}`} />
                 <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>NFTs</span>
                 {profileNftData && (
                   <span className={`text-xs opacity-80 ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>
@@ -3201,26 +3262,26 @@ const ProfilePage = () => {
                     return (
                       <div
                         key={nft.tokenId}
-                        className={`rounded-2xl overflow-hidden cursor-pointer transition-all duration-200 hover:scale-[1.03] ${styles.bg} ${styles.glow}`}
+                        className={`overflow-hidden cursor-pointer ${isBlocksTheme ? 'blocks-nft-card bg-[#1a1a1a]' : `rounded-2xl transition-all duration-200 hover:scale-[1.03] ${styles.bg} ${styles.glow}`}`}
                         onClick={() => setSelectedProfileNft(nft)}
                       >
                         <div className="aspect-square overflow-hidden">
                           {nft.image ? (
-                            <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
+                            <img src={nft.image} alt={nft.name} className={`w-full h-full object-cover${isBlocksTheme ? ' image-rendering-pixelated' : ''}`} />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-slate-800">
-                              <Hexagon className="w-10 h-10 text-slate-600" />
+                              <Hexagon className={`w-10 h-10 ${isBlocksTheme ? 'text-[#a855f7]' : 'text-slate-600'}`} />
                             </div>
                           )}
                         </div>
                         <div className="p-3 pt-2">
-                          <h3 className={`text-sm font-bold truncate ${styles.nameColor}`}>{nft.name}</h3>
+                          <h3 className={`text-sm font-bold truncate ${isBlocksTheme ? 'text-[#a855f7]' : styles.nameColor}`} style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.55rem' } : undefined}>{nft.name}</h3>
                           <div className="flex items-center justify-between mt-1">
                             <div className="flex items-center gap-1.5">
-                              <div className={`w-2 h-2 rounded-full ${styles.dotColor}`} />
-                              <span className={`text-[11px] uppercase tracking-tight ${styles.textStyle}`}>{rarity}</span>
+                              <div className={`w-2 h-2 ${isBlocksTheme ? 'rounded-none bg-[#a855f7]' : `rounded-full ${styles.dotColor}`}`} />
+                              <span className={`text-[11px] uppercase tracking-tight ${isBlocksTheme ? 'text-[#4ade80]' : styles.textStyle}`} style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.45rem' } : undefined}>{rarity}</span>
                             </div>
-                            <span className="text-[11px] text-slate-500 font-medium">#{nft.tokenId}</span>
+                            <span className={`text-[11px] font-medium ${isBlocksTheme ? 'text-[#4ade80]' : 'text-slate-500'}`} style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.45rem' } : undefined}>#{nft.tokenId}</span>
                           </div>
                         </div>
                       </div>
@@ -3229,9 +3290,9 @@ const ProfilePage = () => {
                 </div>
               ) : (
                 <div className="py-12 text-center">
-                  <Hexagon className="w-12 h-12 mx-auto mb-3 text-slate-600" />
-                  <p className="text-base text-foreground/70 font-medium">No NFTs yet</p>
-                  {isOwnProfile && <p className="text-sm text-muted-foreground mt-1">Mint your first NFT from the store</p>}
+                  <Hexagon className={`w-12 h-12 mx-auto mb-3 ${isBlocksTheme ? 'text-[#a855f7]' : 'text-slate-600'}`} />
+                  <p className="text-base text-foreground/70 font-medium" style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.6rem', color: '#a855f7' } : undefined}>No NFTs yet</p>
+                  {isOwnProfile && <p className="text-sm text-muted-foreground mt-1" style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.5rem', color: '#4ade80' } : undefined}>Mint your first NFT from the store</p>}
                 </div>
               )}
             </div>
