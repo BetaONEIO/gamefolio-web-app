@@ -1319,9 +1319,15 @@ const ProfilePage = () => {
     boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
   } : undefined;
 
+  const blocksTabColors: Record<string, string> = {
+    clips: '#ef4444',
+    reels: '#3b82f6',
+    screenshots: '#4ade80',
+    favorites: '#facc15',
+  };
   const getTabStyle = (tabName: string) => ({
-    backgroundColor: activeTab === tabName ? accentColor : 'transparent',
-    color: activeTab === tabName ? '#ffffff' : isLightBackground ? accentColor : undefined,
+    backgroundColor: activeTab === tabName ? (isBlocksTheme ? (blocksTabColors[tabName] || accentColor) : accentColor) : 'transparent',
+    color: activeTab === tabName ? (isBlocksTheme ? '#1a1a1a' : '#ffffff') : isLightBackground ? accentColor : undefined,
     ...(isZombieTheme ? { fontFamily: "'Creepster', cursive", letterSpacing: '2px', fontSize: '0.8rem' } : {}),
     ...(isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2.5px', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase' as const } : {}),
     ...(isNeoTheme ? { fontFamily: "'JetBrains Mono', monospace", letterSpacing: '1.5px', fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase' as const } : {}),
@@ -2411,10 +2417,16 @@ const ProfilePage = () => {
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 mt-1">
-                    <Hexagon className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
-                      {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
-                    </span>
+                    <Hexagon className="w-4 h-4" style={{ color: isBlocksTheme ? '#a855f7' : undefined }} />
+                    {isBlocksTheme ? (
+                      <span style={{ backgroundColor: '#a855f7', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px' }}>
+                        {profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs OWNED
+                      </span>
+                    ) : (
+                      <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
+                        {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
@@ -2789,10 +2801,16 @@ const ProfilePage = () => {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <Hexagon className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
-                        {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
-                      </span>
+                      <Hexagon className="w-4 h-4" style={{ color: isBlocksTheme ? '#a855f7' : undefined }} />
+                      {isBlocksTheme ? (
+                        <span style={{ backgroundColor: '#a855f7', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px' }}>
+                          {profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs OWNED
+                        </span>
+                      ) : (
+                        <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
+                          {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -3234,7 +3252,7 @@ const ProfilePage = () => {
               style={getTabStyle('clips')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>Clips</span>
+                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'clips' ? '#1a1a1a' : '#ef4444' } : undefined}>Clips</span>
                 {showLimits && (
                   <span className={`text-[10px] font-normal ${clipsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: clipsCount >= 15 ? undefined : activeTab === 'clips' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {clipsCount}/15
@@ -3250,7 +3268,7 @@ const ProfilePage = () => {
               style={getTabStyle('reels')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>Reels</span>
+                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'reels' ? '#1a1a1a' : '#3b82f6' } : undefined}>Reels</span>
                 {showLimits && (
                   <span className={`text-[10px] font-normal ${reelsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: reelsCount >= 15 ? undefined : activeTab === 'reels' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {reelsCount}/15
@@ -3266,7 +3284,7 @@ const ProfilePage = () => {
               style={getTabStyle('screenshots')}
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
-                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>Screenshots</span>
+                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'screenshots' ? '#1a1a1a' : '#4ade80' } : undefined}>Screenshots</span>
                 {showLimits && (
                   <span className={`text-[10px] font-normal ${screenshotsCount >= 10 ? 'text-red-400' : ''}`} style={{ color: screenshotsCount >= 10 ? undefined : activeTab === 'screenshots' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                     {screenshotsCount}/10
@@ -3281,7 +3299,7 @@ const ProfilePage = () => {
               className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
               style={getTabStyle('favorites')}
             >
-              <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>Favorites</span>
+              <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'favorites' ? '#1a1a1a' : '#facc15' } : undefined}>Favorites</span>
             </TabsTrigger>
 
             {profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0 && (
