@@ -2333,7 +2333,7 @@ export default function SettingsPage() {
                           {PRESET_THEMES.map((theme) => {
                             const topColor = theme.gradientTopColor || '#0B2232';
                             const defaultThemeColor = '#0B2232';
-                            const isActive = profileData.accentColor === theme.accentColor;
+                            const isActive = profileData.accentColor === theme.accentColor && profileData.backgroundColor === theme.backgroundColor;
                             return (
                               <div
                                 key={theme.name}
