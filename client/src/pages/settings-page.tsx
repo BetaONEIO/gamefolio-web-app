@@ -756,6 +756,7 @@ export default function SettingsPage() {
           profileFontEffect: (user as any)?.profileFontEffect || "none",
           profileFontAnimation: (user as any)?.profileFontAnimation || "none",
           profileFontColor: (user as any)?.profileFontColor || "#FFFFFF",
+        };
 
         // For appearance/font/background fields: only sync from server if the user
         // hasn't made a local change. We detect a local change by comparing prev
