@@ -2302,21 +2302,23 @@ const ProfilePage = () => {
               className="absolute -top-3 -right-1 z-10 px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
               style={{ 
                 background: profileSectionTab === 'collection'
-                  ? (isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : '#1a1a2e')
+                  ? (isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : '#1a1a2e')
                   : isLightBackground
                     ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
                     : isZombieTheme
                       ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
                       : isCyberpunkTheme
                         ? 'rgba(2,6,23,0.9)'
-                        : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : '#0f172b',
-                border: isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : undefined,
-                fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined,
-                letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : undefined,
-                fontWeight: isCyberpunkTheme ? '900' : undefined,
+                        : isNeoTheme
+                          ? 'linear-gradient(180deg, #003300 0%, #001400 100%)'
+                          : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : '#0f172b',
+                border: isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : undefined,
+                fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : undefined,
+                letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : isNeoTheme ? '1.5px' : undefined,
+                fontWeight: isCyberpunkTheme ? '900' : isNeoTheme ? '700' : undefined,
               }}>
-                <span className={isCyberpunkTheme ? 'cyber-gradient-text' : ''}>Collection</span>
+                <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>Collection</span>
             </button>
 
             {/* Stats card container */}
@@ -2664,21 +2666,23 @@ const ProfilePage = () => {
                 className="absolute -top-3 -right-1 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
                 style={{ 
                   background: profileSectionTab === 'collection'
-                    ? (isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : '#1a1a2e')
+                    ? (isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : '#1a1a2e')
                     : isLightBackground
                       ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
                       : isZombieTheme
                         ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
                         : isCyberpunkTheme
                           ? 'rgba(2,6,23,0.9)'
-                          : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                  color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : '#0f172b',
-                  border: isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : undefined,
-                  fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : undefined,
-                  letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : undefined,
-                  fontWeight: isCyberpunkTheme ? '900' : undefined,
+                          : isNeoTheme
+                            ? 'linear-gradient(180deg, #003300 0%, #001400 100%)'
+                            : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                  color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : '#0f172b',
+                  border: isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : undefined,
+                  fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : undefined,
+                  letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : isNeoTheme ? '1.5px' : undefined,
+                  fontWeight: isCyberpunkTheme ? '900' : isNeoTheme ? '700' : undefined,
                 }}>
-                  <span className={isCyberpunkTheme ? 'cyber-gradient-text' : ''}>Collection</span>
+                  <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>Collection</span>
               </button>
 
             {/* Stats card */}
