@@ -1430,10 +1430,16 @@ const ProfilePage = () => {
     screenshots: '#4ade80',
     favorites: '#facc15',
   };
+  const cartoonTabColors: Record<string, string> = {
+    clips: '#ff5e5e',
+    reels: '#3498db',
+    screenshots: '#27ae60',
+    favorites: '#f39c12',
+  };
   const getTabStyle = (tabName: string) => ({
     backgroundColor: isCartoonTheme ? 'transparent' : activeTab === tabName ? (isBlocksTheme ? (blocksTabColors[tabName] || accentColor) : isForestTheme ? '#e8d5b7' : isMacTheme ? accentColor : accentColor) : 'transparent',
-    color: isCartoonTheme ? (activeTab === tabName ? '#1d1d1f' : 'rgba(0,0,0,0.3)') : activeTab === tabName ? (isBlocksTheme ? '#1a1a1a' : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#5C3317' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#c4a882' : isLightBackground ? accentColor : undefined,
-    ...(isCartoonTheme ? { fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: '800', letterSpacing: '-0.5px', fontSize: '1.1rem', borderBottom: activeTab === tabName ? '4px solid gold' : '4px solid transparent', borderRadius: '0', paddingBottom: '6px' } : {}),
+    color: isCartoonTheme ? (activeTab === tabName ? (cartoonTabColors[tabName] || '#1d1d1f') : 'rgba(0,0,0,0.25)') : activeTab === tabName ? (isBlocksTheme ? '#1a1a1a' : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#5C3317' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#c4a882' : isLightBackground ? accentColor : undefined,
+    ...(isCartoonTheme ? { fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: '800', letterSpacing: '-0.5px', fontSize: '1.1rem', borderBottom: activeTab === tabName ? `4px solid ${cartoonTabColors[tabName] || 'gold'}` : '4px solid transparent', borderRadius: '0', paddingBottom: '6px' } : {}),
     ...(isZombieTheme ? { fontFamily: "'Creepster', cursive", letterSpacing: '2px', fontSize: '0.8rem' } : {}),
     ...(isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2.5px', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase' as const } : {}),
     ...(isNeoTheme ? { fontFamily: "'JetBrains Mono', monospace", letterSpacing: '1.5px', fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase' as const } : {}),
@@ -3458,8 +3464,8 @@ const ProfilePage = () => {
         {profileSectionTab === 'collection' ? (
           <div className="w-full">
             <div 
-              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-nft-header' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : isMacTheme ? 'rounded-full' : isGothicTheme ? 'rounded-2xl' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
-              style={isBlocksTheme ? undefined : isWatermelonTheme ? { background: '#ffb3c1', border: '5px solid #1d3932', borderRadius: '9999px' } : isZombieTheme ? { background: '#1a1d1a' } : isMacTheme ? { background: 'linear-gradient(180deg, #ebebeb 0%, #d6d6d6 100%)', border: '1px solid #bdbdbd', borderRadius: '9999px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)', position: 'relative' } : isGothicTheme ? { background: 'rgba(15,2,38,0.92)', border: '1px solid #c27aff33', borderRadius: '16px', boxShadow: '0 0 18px #c27aff15' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
+              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-nft-header' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : isMacTheme ? 'rounded-full' : isGothicTheme ? 'rounded-2xl' : isCartoonTheme ? 'rounded-xl' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
+              style={isBlocksTheme ? undefined : isWatermelonTheme ? { background: '#ffb3c1', border: '5px solid #1d3932', borderRadius: '9999px' } : isZombieTheme ? { background: '#1a1d1a' } : isMacTheme ? { background: 'linear-gradient(180deg, #ebebeb 0%, #d6d6d6 100%)', border: '1px solid #bdbdbd', borderRadius: '9999px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)', position: 'relative' } : isGothicTheme ? { background: 'rgba(15,2,38,0.92)', border: '1px solid #c27aff33', borderRadius: '16px', boxShadow: '0 0 18px #c27aff15' } : isCartoonTheme ? { background: '#ffffff', border: '3px solid #1d1d1f', borderRadius: '12px', boxShadow: '4px 4px 0 #1d1d1f' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
             >
               {isMacTheme && (
                 <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6, alignItems: 'center', zIndex: 2 }}>
@@ -3469,7 +3475,7 @@ const ProfilePage = () => {
                 </div>
               )}
               <div
-                className={`relative h-9 md:h-10 flex-1 flex items-center justify-center px-3 md:px-5 text-sm font-semibold gap-2 ${isCyberpunkTheme ? 'rounded-none' : isBlocksTheme ? 'rounded-none' : 'rounded-full'}`}
+                className={`relative h-9 md:h-10 flex-1 flex items-center justify-center px-3 md:px-5 text-sm font-semibold gap-2 ${isCyberpunkTheme ? 'rounded-none' : isBlocksTheme ? 'rounded-none' : isCartoonTheme ? 'rounded-lg' : 'rounded-full'}`}
                 style={isCyberpunkTheme ? {
                   background: 'rgba(0,211,242,0.12)',
                   borderBottom: '2px solid #00d3f2',
@@ -3521,6 +3527,13 @@ const ProfilePage = () => {
                   fontWeight: '700',
                   borderRadius: '12px',
                   boxShadow: '0 0 10px #c27aff22',
+                } : isCartoonTheme ? {
+                  background: 'transparent',
+                  color: '#a855f7',
+                  fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif",
+                  fontWeight: '800',
+                  fontSize: '0.95rem',
+                  letterSpacing: '-0.5px',
                 } : isLightBackground ? {
                   background: 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)',
                   color: '#ffffff',
