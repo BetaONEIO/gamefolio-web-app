@@ -58,6 +58,12 @@ const PRESET_THEMES = [
     accentColor: "#4ade80",
     backgroundColor: "#1a1a1a",
     cardColor: "#2d2d2d"
+  },
+  {
+    name: "Watermelon",
+    accentColor: "#4ade80",
+    backgroundColor: "#ff4d6d",
+    cardColor: "#1d3932"
   }
 ];
 

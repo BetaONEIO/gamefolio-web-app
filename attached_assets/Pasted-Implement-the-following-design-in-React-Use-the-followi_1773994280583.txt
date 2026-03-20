@@ -1,0 +1,1064 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/WatermelonGamefolio.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,900;0,500&display=swap";
+.WatermelonGamefolio_277_288 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_277_289 {
+  background: #ff4d6d;
+  flex: 1 0 0;
+  width: 100%;
+  height: 1101px;
+  overflow: hidden;
+}
+.Container_277_290 {
+  width: 430px;
+  height: 932px;
+}
+.Container_277_291 {
+  box-sizing: border-box;
+  border-bottom: 8px solid #1d3932;
+  width: 430px;
+  height: 224px;
+  overflow: hidden;
+}
+.Image_277_292 {
+  aspect-ratio: 213/107;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 430px;
+  height: 216px;
+}
+.Container_277_293 {
+  background: linear-gradient(#ff4d6d 0%, #ff4d6d00 50% 100%);
+  width: 430px;
+  height: 216px;
+}
+.Container_277_294 {
+  justify-content: center;
+  align-items: center;
+  width: 136px;
+  height: 25px;
+  display: flex;
+}
+.Container_277_295 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #0006;
+  border: 1px solid #fff3;
+  border-radius: 16777200px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4.5px;
+  padding: 5px 11.5px 5px 13px;
+  display: flex;
+}
+.Container_277_296 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 12px;
+  height: 12px;
+  display: flex;
+  overflow: hidden;
+}
+.SweetSummer_277_299 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 95px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_277_300 {
+  width: 430px;
+  height: 829px;
+}
+.Container_277_301 {
+  width: 382px;
+  height: 112px;
+}
+.Container_277_302 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 7.21875px;
+  width: 139px;
+  height: 44px;
+  padding-right: 0.781px;
+  display: flex;
+}
+.Button_277_303 {
+  background: #1d3932;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 44px;
+  padding: 13px 17.5px;
+  display: flex;
+  box-shadow:
+    0 4px 6px -4px #86104366,
+    0 10px 15px -3px #86104366;
+}
+.Follow_277_304 {
+  color: #4ade80;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 52px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 20px;
+  display: inline-block;
+}
+.Button_277_305 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 2px solid #1d3932;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 44px;
+  padding: 12px;
+  display: flex;
+  box-shadow:
+    0 4px 6px -4px #0000001a,
+    0 10px 15px -3px #0000001a;
+}
+.Container_277_306 {
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_277_308 {
+  width: 112px;
+  height: 112px;
+}
+.Container_277_309 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 6px solid #1d3932;
+  border-radius: 16777200px;
+  justify-content: center;
+  align-items: center;
+  width: 112px;
+  height: 112px;
+  padding: 10px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px #0006;
+}
+.Container_277_310 {
+  background: #ff4d6d;
+  border-radius: 16777200px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 92px;
+  height: 92px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_277_311 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 92px;
+  height: 92px;
+}
+.Container_277_312 {
+  box-sizing: border-box;
+  background: #4ade80;
+  border: 4px solid #1d3932;
+  border-radius: 16777200px;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 7px;
+  display: flex;
+}
+.Container_277_313 {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  overflow: hidden;
+}
+.Container_277_315 {
+  width: 382px;
+  height: 118px;
+}
+.Container_277_316 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 7.63281px;
+  padding-right: 96.367px;
+  display: flex;
+}
+.Container_277_317 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 36px;
+  display: flex;
+}
+.MelonMage_277_318 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.75px;
+  width: 192px;
+  height: 38px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 36px;
+  display: inline-block;
+}
+.Container_277_319 {
+  background: #4ade80;
+  border-radius: 12px;
+  justify-content: center;
+  align-items: center;
+  width: 91px;
+  height: 22px;
+  padding: 5px 7.5px;
+  display: flex;
+  box-shadow:
+    0 1px 2px -1px #0000001a,
+    0 1px 3px #0000001a;
+}
+.PremiumSliced_277_320 {
+  color: #1d3932;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.45px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 76px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_277_321 {
+  align-items: center;
+  width: 382px;
+  height: 16px;
+  padding: 0.5px 282.5px 0.5px 0;
+  display: flex;
+}
+.MelonMage_277_322 {
+  color: #1d3932;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 102px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_277_323 {
+  align-items: center;
+  height: 46px;
+  padding: 2.5px 23px 2.5px 0;
+  display: inline-flex;
+}
+.CompetitiveFruitSlicingChampionKeepingThingsFreshAndJuicySince_98_277_324 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  width: 360px;
+  height: 41px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.Container_277_325 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+  width: 382px;
+  display: flex;
+}
+.Container_277_326 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 137.25px;
+  height: 40px;
+  display: flex;
+}
+.Container_277_327 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  display: flex;
+}
+.Container_277_328 {
+  background: #1d3932;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+  box-shadow:
+    0 4px 6px -4px #0000001a,
+    0 10px 15px -3px #0000001a;
+}
+.Container_277_329 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_277_331 {
+  justify-content: center;
+  align-items: center;
+  width: 103px;
+  height: 28px;
+  padding: 1px 0;
+  display: flex;
+}
+.JuicyClips_277_332 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 108px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 28px;
+  display: inline-block;
+}
+.Button_277_333 {
+  justify-content: center;
+  align-items: center;
+  width: 90px;
+  height: 16px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.BrowseAll_277_334 {
+  color: #1d3932;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 95px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_277_335 {
+  justify-content: center;
+  align-items: center;
+  height: 335px;
+  padding-bottom: 48px;
+  display: flex;
+}
+.Container_277_336 {
+  box-sizing: border-box;
+  background: #1d3932;
+  border: 6px solid #fff;
+  border-radius: 40px;
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 382px;
+  height: 287px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px #00000040;
+}
+.Image_277_337 {
+  aspect-ratio: 74/55;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 370px;
+  height: 275px;
+}
+.Container_277_338 {
+  background: linear-gradient(#1d393200 0% 50%, #1d3932e6 100%);
+  width: 370px;
+  height: 275px;
+}
+.Container_277_339 {
+  justify-content: center;
+  align-items: center;
+  width: 112px;
+  height: 29px;
+  display: flex;
+}
+.Container_277_340 {
+  box-sizing: border-box;
+  background: #ff4d6d;
+  border: 1px solid #fff3;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 14.5px;
+  display: flex;
+  box-shadow:
+    0 4px 6px -4px #0000001a,
+    0 10px 15px -3px #0000001a;
+}
+.TheSlasher_277_341 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 83px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_277_342 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  width: 322px;
+  display: flex;
+}
+.Container_277_343 {
+  align-items: center;
+  height: 25px;
+  padding-right: 115.5px;
+  display: flex;
+}
+.PerfectRindCut_277_344 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  width: 209px;
+  height: 26px;
+  font-family: Plus Jakarta Sans;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 25px;
+  display: inline-block;
+}
+.Container_277_345 {
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 15.1406px;
+  height: 16px;
+  padding-right: 213.859px;
+  display: flex;
+}
+.Container_277_346 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4.5px;
+  height: 16px;
+  display: flex;
+}
+.Container_277_347 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 16px;
+  display: flex;
+  overflow: hidden;
+}
+.k_277_350 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  width: 26px;
+  height: 16px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_277_351 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4.5px;
+  height: 16px;
+  display: flex;
+}
+.Container_277_352 {
+  flex: 1 0 0;
+  height: 16px;
+  overflow: hidden;
+}
+._2k_277_354 {
+  color: #4ade80;
+  font-feature-settings: "dlig" on;
+  width: 29px;
+  height: 16px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_277_355 {
+  box-sizing: border-box;
+  background: #ffb3c1;
+  border: 6px solid #1d3932;
+  border-radius: 40px;
+  width: 382px;
+  height: 109px;
+  overflow: hidden;
+  box-shadow: 0 15px #1d3932;
+}
+.Container_277_356 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  width: 120px;
+  padding: 0 35.711px 0 35.289px;
+  display: flex;
+}
+.Container_277_357 {
+  justify-content: center;
+  align-items: center;
+  width: 49px;
+  height: 32px;
+  padding: 0.5px 0;
+  display: flex;
+}
+._9k_277_358 {
+  color: #000;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  flex-shrink: 0;
+  width: 54px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_277_359 {
+  justify-content: center;
+  align-items: center;
+  width: 38px;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+.Seeds_277_360 {
+  color: #1d3932;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 43px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_277_361 {
+  background: #1d393233;
+  border-radius: 16777200px;
+  width: 6px;
+  height: 40px;
+}
+.Container_277_362 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  width: 120px;
+  padding: 0 39.781px 0 39.219px;
+  display: flex;
+}
+.Container_277_363 {
+  justify-content: center;
+  align-items: center;
+  width: 36px;
+  height: 32px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.generated_312_277_364 {
+  color: #000;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  flex-shrink: 0;
+  width: 41px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_277_365 {
+  justify-content: center;
+  align-items: center;
+  width: 41px;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+.Slices_277_366 {
+  color: #1d3932;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 46px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_277_367 {
+  background: #1d393233;
+  border-radius: 16777200px;
+  width: 6px;
+  height: 40px;
+}
+.Container_277_368 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  width: 120px;
+  padding: 0 38.008px 0 37.992px;
+  display: flex;
+}
+.Container_277_369 {
+  justify-content: center;
+  align-items: center;
+  width: 44px;
+  height: 32px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.m_277_370 {
+  color: #000;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  flex-shrink: 0;
+  width: 49px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_277_371 {
+  justify-content: center;
+  align-items: center;
+  width: 33px;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+.Juice_277_372 {
+  color: #1d3932;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 38px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_277_373 {
+  justify-content: center;
+  align-items: center;
+  width: 38px;
+  height: 38px;
+  display: flex;
+}
+.Container_277_374 {
+  flex: 1 0 0;
+  height: 38px;
+  overflow: hidden;
+}
+.Container_277_376 {
+  width: 615px;
+  height: 1002px;
+}
+.Container_277_377,
+.Container_277_379,
+.Container_277_381,
+.Container_277_383,
+.Container_277_385,
+.Container_277_387 {
+  width: 29px;
+  height: 29px;
+  overflow: hidden;
+}
+.Navigation_277_389 {
+  backdrop-filter: blur(12px);
+  box-sizing: border-box;
+  background: #1d3932f2;
+  border-top: 6px solid #4ade80;
+  width: 430px;
+  height: 106px;
+}
+.Button_277_390 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  width: 28px;
+  display: flex;
+}
+.Container_277_391 {
+  height: 28px;
+  overflow: hidden;
+}
+.Container_277_393 {
+  background: #ff4d6d;
+  border-radius: 16777200px;
+  width: 6px;
+  height: 6px;
+  box-shadow: 0 0 10px #ff4d6d;
+}
+.Button_277_394 {
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  display: flex;
+}
+.Container_277_395 {
+  flex: 1 0 0;
+  height: 28px;
+  overflow: hidden;
+}
+.Button_277_397 {
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  display: flex;
+}
+.Container_277_398 {
+  flex: 1 0 0;
+  height: 28px;
+  overflow: hidden;
+}
+.Button_277_400 {
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  display: flex;
+}
+.Container_277_401 {
+  box-sizing: border-box;
+  border: 2px solid #4ade80;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 4px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_277_402 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  border-radius: 16777200px;
+  width: 24px;
+  height: 24px;
+}
+.Container_277_403 {
+  justify-content: center;
+  align-items: center;
+  width: 64px;
+  height: 64px;
+  display: flex;
+}
+.Button_277_404 {
+  box-sizing: border-box;
+  background: #ff4d6d;
+  border: 6px solid #fff;
+  border-radius: 32px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 14px;
+  display: flex;
+  box-shadow: 0 25px 50px -12px #0009;
+}
+.Container_277_405 {
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+}
+
+```
+
+---
+
+```src/components/assets/Container.tsx
+import React from 'react';
+export default function Container() {
+  return <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fillRule="evenodd" clipRule="evenodd" d="M18 33C26.2845 33 33 26.2845 33 18C33 9.7155 26.2845 3 18 3C9.7155 3 3 9.7155 3 18C3 26.2845 9.7155 33 18 33ZM19.125 13.5C19.125 12.8787 18.6213 12.375 18 12.375C17.3787 12.375 16.875 12.8787 16.875 13.5V16.875H13.5C12.8787 16.875 12.375 17.3787 12.375 18C12.375 18.6213 12.8787 19.125 13.5 19.125H16.875V22.5C16.875 23.1213 17.3787 23.625 18 23.625C18.6213 23.625 19.125 23.1213 19.125 22.5V19.125H22.5C23.1213 19.125 23.625 18.6213 23.625 18C23.625 17.3787 23.1213 16.875 22.5 16.875H19.125V13.5Z" fill="white"/>
+</svg>
+;
+}
+```
+
+---
+
+```src/components/WatermelonGamefolio.tsx
+import React from 'react';
+import styles from '../styles/WatermelonGamefolio.module.css';
+import Container from './assets/Container';
+
+export default function WatermelonGamefolio() {
+  return (
+    <div className={styles.WatermelonGamefolio_277_288}>
+      <div className={styles.Container_277_289}>
+        <div className={styles.Container_277_290}>
+          <div className={styles.Container_277_291}>
+            <div className={styles.Image_277_292}></div>
+            <div className={styles.Container_277_293}></div>
+            <div className={styles.Container_277_294}>
+              <div className={styles.Container_277_295}>
+                <div className={styles.Container_277_296}>
+                  <Container />
+                </div><span className={styles.SweetSummer_277_299}>Sweet Summer</span>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_277_300}>
+            <div className={styles.Container_277_301}>
+              <div className={styles.Container_277_302}>
+                <div className={styles.Button_277_303}><span className={styles.Follow_277_304}>Follow</span></div>
+                <div className={styles.Button_277_305}>
+                  <div className={styles.Container_277_306}>
+                    <Container />
+                  </div>
+                </div>
+              </div>
+              <div className={styles.Container_277_308}>
+                <div className={styles.Container_277_309}>
+                  <div className={styles.Container_277_310}>
+                    <div className={styles.Image_277_311}></div>
+                  </div>
+                </div>
+                <div className={styles.Container_277_312}>
+                  <div className={styles.Container_277_313}>
+                    <Container />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_277_315}>
+              <div className={styles.Container_277_316}>
+                <div className={styles.Container_277_317}><span className={styles.MelonMage_277_318}>MelonMage_</span></div>
+                <div className={styles.Container_277_319}><span className={styles.PremiumSliced_277_320}>Premium Sliced</span></div>
+              </div>
+              <div className={styles.Container_277_321}><span className={styles.MelonMage_277_322}>@MelonMage</span></div>
+              <div className={styles.Container_277_323}><span className={styles.CompetitiveFruitSlicingChampionKeepingThingsFreshAndJuicySince_98_277_324}>Competitive fruit-slicing champion. &#x1F349; Keeping things fresh and juicy since &#x27;98.</span></div>
+            </div>
+            <div className={styles.Container_277_325}>
+              <div className={styles.Container_277_326}>
+                <div className={styles.Container_277_327}>
+                  <div className={styles.Container_277_328}>
+                    <div className={styles.Container_277_329}>
+                      <Container />
+                    </div>
+                  </div>
+                  <div className={styles.Container_277_331}><span className={styles.JuicyClips_277_332}>Juicy Clips</span></div>
+                </div>
+                <div className={styles.Button_277_333}><span className={styles.BrowseAll_277_334}>Browse All</span></div>
+              </div>
+              <div className={styles.Container_277_335}>
+                <div className={styles.Container_277_336}>
+                  <div className={styles.Image_277_337}></div>
+                  <div className={styles.Container_277_338}></div>
+                  <div className={styles.Container_277_339}>
+                    <div className={styles.Container_277_340}><span className={styles.TheSlasher_277_341}>The Slasher</span></div>
+                  </div>
+                  <div className={styles.Container_277_342}>
+                    <div className={styles.Container_277_343}><span className={styles.PerfectRindCut_277_344}>Perfect Rind Cut &#x1F349;&#x2728;</span></div>
+                    <div className={styles.Container_277_345}>
+                      <div className={styles.Container_277_346}>
+                        <div className={styles.Container_277_347}>
+                          <Container />
+                        </div><span className={styles.k_277_350}>45k</span>
+                      </div>
+                      <div className={styles.Container_277_351}>
+                        <div className={styles.Container_277_352}>
+                          <Container />
+                        </div><span className={styles._2k_277_354}>9.2k</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_277_355}>
+              <div className={styles.Container_277_356}>
+                <div className={styles.Container_277_357}><span className={styles._9k_277_358}>8.9k</span></div>
+                <div className={styles.Container_277_359}><span className={styles.Seeds_277_360}>Seeds</span></div>
+              </div>
+              <div className={styles.Container_277_361}></div>
+              <div className={styles.Container_277_362}>
+                <div className={styles.Container_277_363}><span className={styles.generated_312_277_364}>312</span></div>
+                <div className={styles.Container_277_365}><span className={styles.Slices_277_366}>Slices</span></div>
+              </div>
+              <div className={styles.Container_277_367}></div>
+              <div className={styles.Container_277_368}>
+                <div className={styles.Container_277_369}><span className={styles.m_277_370}>15m</span></div>
+                <div className={styles.Container_277_371}><span className={styles.Juice_277_372}>Juice</span></div>
+              </div>
+              <div className={styles.Container_277_373}>
+                <div className={styles.Container_277_374}>
+                  <Container />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_277_376}>
+          <div className={styles.Container_277_377}>
+            <Container />
+          </div>
+          <div className={styles.Container_277_379}>
+            <Container />
+          </div>
+          <div className={styles.Container_277_381}>
+            <Container />
+          </div>
+          <div className={styles.Container_277_383}>
+            <Container />
+          </div>
+          <div className={styles.Container_277_385}>
+            <Container />
+          </div>
+          <div className={styles.Container_277_387}>
+            <Container />
+          </div>
+        </div>
+        <div className={styles.Navigation_277_389}>
+          <div className={styles.Button_277_390}>
+            <div className={styles.Container_277_391}>
+              <Container />
+            </div>
+            <div className={styles.Container_277_393}></div>
+          </div>
+          <div className={styles.Button_277_394}>
+            <div className={styles.Container_277_395}>
+              <Container />
+            </div>
+          </div>
+          <div className={styles.Button_277_397}>
+            <div className={styles.Container_277_398}>
+              <Container />
+            </div>
+          </div>
+          <div className={styles.Button_277_400}>
+            <div className={styles.Container_277_401}>
+              <div className={styles.Image_277_402}></div>
+            </div>
+          </div>
+          <div className={styles.Container_277_403}>
+            <div className={styles.Button_277_404}>
+              <div className={styles.Container_277_405}>
+                <Container />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
