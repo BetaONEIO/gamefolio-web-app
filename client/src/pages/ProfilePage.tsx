@@ -1307,6 +1307,8 @@ const ProfilePage = () => {
   const isForestTheme = !isLightBackground && accentColor?.toLowerCase() === '#4ade80' && backgroundColor?.toLowerCase() === '#0a2f1f';
   const isWatermelonTheme = accentColor?.toLowerCase() === '#4ade80' && backgroundColor?.toLowerCase() === '#ff4d6d';
 
+  const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isLightBackground;
+
   const platformBtnStyle = isWatermelonTheme
     ? { backgroundColor: '#ffb3c1', color: '#0d1a12', border: '3px solid #1d3932', borderRadius: '9999px' }
     : isCartoonTheme
@@ -1354,6 +1356,25 @@ const ProfilePage = () => {
     : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme)
       ? platformBtnStyle
       : { backgroundColor: '#000000', color: '#ffffff', border: '1.5px solid #000000', borderRadius: '9999px' };
+
+  const platformBrandStyles: Record<string, React.CSSProperties> = {
+    steam:       { backgroundColor: '#1b2838', color: '#c6d4df', border: '1px solid #1b2838', borderRadius: '9999px' },
+    xbox:        { backgroundColor: '#107c10', color: '#ffffff', border: '1px solid #107c10', borderRadius: '9999px' },
+    playstation: { backgroundColor: '#003087', color: '#ffffff', border: '1px solid #003087', borderRadius: '9999px' },
+    epic:        { backgroundColor: '#2a2a2a', color: '#ffffff', border: '1px solid #444444', borderRadius: '9999px' },
+    nintendo:    { backgroundColor: '#e60012', color: '#ffffff', border: '1px solid #e60012', borderRadius: '9999px' },
+    discord:     { backgroundColor: '#5865F2', color: '#ffffff', border: '1px solid #5865F2', borderRadius: '9999px' },
+    twitter:     { backgroundColor: '#000000', color: '#ffffff', border: '1px solid #000000', borderRadius: '9999px' },
+    youtube:     { backgroundColor: '#FF0000', color: '#ffffff', border: '1px solid #FF0000', borderRadius: '9999px' },
+    instagram:   { backgroundColor: '#E1306C', color: '#ffffff', border: '1px solid #E1306C', borderRadius: '9999px' },
+    facebook:    { backgroundColor: '#1877F2', color: '#ffffff', border: '1px solid #1877F2', borderRadius: '9999px' },
+  };
+
+  const getBtnStyle = (platform: string): React.CSSProperties => {
+    if (isDefaultTheme) return platformBrandStyles[platform] ?? socialOutlineStyle;
+    if (platform === 'twitter') return xButtonSolidStyle;
+    return socialOutlineStyle;
+  };
 
   const shareButtonStyle = isWatermelonTheme ? {
     color: '#1d3932',
@@ -2771,37 +2792,37 @@ const ProfilePage = () => {
           {/* Platform tags and Social Links — below the stats card */}
           {profileSectionTab === 'stats' && <div className={`flex flex-wrap gap-1.5 mb-4 mt-2 pl-4 pr-8 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''}`}>
             {profile.steamUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('steam')}>
                 <SiSteam className="w-2.5 h-2.5" />
                 <span>{profile.steamUsername}</span>
               </div>
             )}
             {profile.nintendoUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('nintendo')}>
                 <SiNintendo className="w-2.5 h-2.5" />
                 <span>{profile.nintendoUsername}</span>
               </div>
             )}
             {profile.xboxUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('xbox')}>
                 <FaXbox className="w-2.5 h-2.5" />
                 <span>{profile.xboxUsername}</span>
               </div>
             )}
             {profile.playstationUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('playstation')}>
                 <SiPlaystation className="w-2.5 h-2.5" />
                 <span>{profile.playstationUsername}</span>
               </div>
             )}
             {profile.epicUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('epic')}>
                 <SiEpicgames className="w-2.5 h-2.5" />
                 <span>{profile.epicUsername}</span>
               </div>
             )}
             {profile.discordUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('discord')}>
                 <SiDiscord className="w-2.5 h-2.5" />
                 <span>{profile.discordUsername}</span>
               </div>
@@ -2812,7 +2833,7 @@ const ProfilePage = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                style={xButtonSolidStyle}
+                style={getBtnStyle('twitter')}
               >
                 <FaXTwitter className="w-2.5 h-2.5" />
                 <span>{profile.twitterUsername}</span>
@@ -2824,7 +2845,7 @@ const ProfilePage = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                style={socialOutlineStyle}
+                style={getBtnStyle('youtube')}
               >
                 <FaYoutube className="w-2.5 h-2.5" />
                 <span>{profile.youtubeUsername}</span>
@@ -2836,7 +2857,7 @@ const ProfilePage = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                style={socialOutlineStyle}
+                style={getBtnStyle('instagram')}
               >
                 <FaInstagram className="w-2.5 h-2.5" />
                 <span>{profile.instagramUsername}</span>
@@ -2848,7 +2869,7 @@ const ProfilePage = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                style={socialOutlineStyle}
+                style={getBtnStyle('facebook')}
               >
                 <FaFacebook className="w-2.5 h-2.5" />
                 <span>{profile.facebookUsername}</span>
@@ -2860,37 +2881,37 @@ const ProfilePage = () => {
           {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
             <div className="flex flex-wrap gap-1.5 px-4 pb-4">
               {profile.steamUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('steam')}>
                   <SiSteam className="w-2.5 h-2.5" />
                   <span>{profile.steamUsername}</span>
                 </div>
               )}
               {profile.nintendoUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('nintendo')}>
                   <SiNintendo className="w-2.5 h-2.5" />
                   <span>{profile.nintendoUsername}</span>
                 </div>
               )}
               {profile.xboxUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('xbox')}>
                   <FaXbox className="w-2.5 h-2.5" />
                   <span>{profile.xboxUsername}</span>
                 </div>
               )}
               {profile.playstationUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('playstation')}>
                   <SiPlaystation className="w-2.5 h-2.5" />
                   <span>{profile.playstationUsername}</span>
                 </div>
               )}
               {profile.epicUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('epic')}>
                   <SiEpicgames className="w-2.5 h-2.5" />
                   <span>{profile.epicUsername}</span>
                 </div>
               )}
               {profile.discordUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('discord')}>
                   <SiDiscord className="w-2.5 h-2.5" />
                   <span>{profile.discordUsername}</span>
                 </div>
@@ -2901,7 +2922,7 @@ const ProfilePage = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                  style={xButtonSolidStyle}
+                  style={getBtnStyle('twitter')}
                 >
                   <FaXTwitter className="w-2.5 h-2.5" />
                   <span>{profile.twitterUsername}</span>
@@ -2913,7 +2934,7 @@ const ProfilePage = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                  style={socialOutlineStyle}
+                  style={getBtnStyle('youtube')}
                 >
                   <FaYoutube className="w-2.5 h-2.5" />
                   <span>{profile.youtubeUsername}</span>
@@ -2925,7 +2946,7 @@ const ProfilePage = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                  style={socialOutlineStyle}
+                  style={getBtnStyle('instagram')}
                 >
                   <FaInstagram className="w-2.5 h-2.5" />
                   <span>{profile.instagramUsername}</span>
@@ -2937,7 +2958,7 @@ const ProfilePage = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                  style={socialOutlineStyle}
+                  style={getBtnStyle('facebook')}
                 >
                   <FaFacebook className="w-2.5 h-2.5" />
                   <span>{profile.facebookUsername}</span>
@@ -3170,37 +3191,37 @@ const ProfilePage = () => {
             {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
               <div className={`flex flex-wrap gap-2 mt-4 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''}`}>
                 {profile.steamUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={socialOutlineStyle}>
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('steam')}>
                     <SiSteam className="w-3 h-3" />
                     <span>{profile.steamUsername}</span>
                   </div>
                 )}
                 {profile.xboxUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={socialOutlineStyle}>
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('xbox')}>
                     <FaXbox className="w-3 h-3" />
                     <span>{profile.xboxUsername}</span>
                   </div>
                 )}
                 {profile.playstationUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={socialOutlineStyle}>
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('playstation')}>
                     <SiPlaystation className="w-3 h-3" />
                     <span>{profile.playstationUsername}</span>
                   </div>
                 )}
                 {profile.discordUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={socialOutlineStyle}>
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('discord')}>
                     <SiDiscord className="w-3 h-3" />
                     <span>{profile.discordUsername}</span>
                   </div>
                 )}
                 {profile.epicUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={socialOutlineStyle}>
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('epic')}>
                     <SiEpicgames className="w-3 h-3" />
                     <span>{profile.epicUsername}</span>
                   </div>
                 )}
                 {profile.nintendoUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={socialOutlineStyle}>
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('nintendo')}>
                     <SiNintendo className="w-3 h-3" />
                     <span>{profile.nintendoUsername}</span>
                   </div>
@@ -3211,7 +3232,7 @@ const ProfilePage = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
-                    style={xButtonSolidStyle}
+                    style={getBtnStyle('twitter')}
                   >
                     <FaXTwitter className="w-3 h-3" />
                     <span>{profile.twitterUsername}</span>
@@ -3223,7 +3244,7 @@ const ProfilePage = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
-                    style={socialOutlineStyle}
+                    style={getBtnStyle('youtube')}
                   >
                     <FaYoutube className="w-3 h-3" />
                     <span>{profile.youtubeUsername}</span>
@@ -3235,7 +3256,7 @@ const ProfilePage = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
-                    style={socialOutlineStyle}
+                    style={getBtnStyle('instagram')}
                   >
                     <FaInstagram className="w-3 h-3" />
                     <span>{profile.instagramUsername}</span>
@@ -3247,7 +3268,7 @@ const ProfilePage = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
-                    style={socialOutlineStyle}
+                    style={getBtnStyle('facebook')}
                   >
                     <FaFacebook className="w-3 h-3" />
                     <span>{profile.facebookUsername}</span>
@@ -3647,7 +3668,7 @@ const ProfilePage = () => {
                 <span style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' as const, letterSpacing: '1px' }}>Clips</span>
               ) : (
                 <span className="flex flex-col items-center leading-none gap-0.5">
-                  <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'clips' ? '#1a1a1a' : '#ef4444' } : undefined}>Clips</span>
+                  <span className={`font-black ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'uppercase tracking-[0.5px]' : ''} ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'clips' ? '#1a1a1a' : '#ef4444' } : undefined}>Clips</span>
                   {showLimits && (
                     <span className={`text-[10px] font-normal ${clipsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: clipsCount >= 15 ? undefined : isMacTheme ? (activeTab === 'clips' ? '#555' : '#888') : activeTab === 'clips' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                       {clipsCount}/15
@@ -3667,7 +3688,7 @@ const ProfilePage = () => {
                 <span style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' as const, letterSpacing: '1px' }}>Reels</span>
               ) : (
                 <span className="flex flex-col items-center leading-none gap-0.5">
-                  <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'reels' ? '#1a1a1a' : '#3b82f6' } : undefined}>Reels</span>
+                  <span className={`font-black ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'uppercase tracking-[0.5px]' : ''} ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'reels' ? '#1a1a1a' : '#3b82f6' } : undefined}>Reels</span>
                   {showLimits && (
                     <span className={`text-[10px] font-normal ${reelsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: reelsCount >= 15 ? undefined : isMacTheme ? (activeTab === 'reels' ? '#555' : '#888') : activeTab === 'reels' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                       {reelsCount}/15
@@ -3687,7 +3708,7 @@ const ProfilePage = () => {
                 <span style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' as const, letterSpacing: '1px' }}>Shots</span>
               ) : (
                 <span className="flex flex-col items-center leading-none gap-0.5">
-                  <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'screenshots' ? '#1a1a1a' : '#4ade80' } : undefined}>Screenshots</span>
+                  <span className={`font-black ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'uppercase tracking-[0.5px]' : ''} ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'screenshots' ? '#1a1a1a' : '#4ade80' } : undefined}>Screenshots</span>
                   {showLimits && (
                     <span className={`text-[10px] font-normal ${screenshotsCount >= 10 ? 'text-red-400' : ''}`} style={{ color: screenshotsCount >= 10 ? undefined : isMacTheme ? (activeTab === 'screenshots' ? '#555' : '#888') : activeTab === 'screenshots' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                       {screenshotsCount}/10
@@ -3706,7 +3727,7 @@ const ProfilePage = () => {
               {isGothicTheme ? (
                 <span style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' as const, letterSpacing: '1px' }}>Saved</span>
               ) : (
-                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'favorites' ? '#1a1a1a' : '#facc15' } : undefined}>Favorites</span>
+                <span className={`font-black ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'uppercase tracking-[0.5px]' : ''} ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'favorites' ? '#1a1a1a' : '#facc15' } : undefined}>Favorites</span>
               )}
             </TabsTrigger>
 
