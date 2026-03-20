@@ -260,7 +260,7 @@ const MobileMenu = () => {
                   </li>
                   <li>
                     <Link
-                      href="/settings/profile"
+                      href="/account/settings"
                       onClick={close}
                       className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
                     >

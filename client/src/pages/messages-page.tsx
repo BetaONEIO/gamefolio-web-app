@@ -290,7 +290,7 @@ export default function MessagesPage() {
               You have disabled messaging for your account. To use messaging, please enable it in your settings.
             </p>
             <Button 
-              onClick={() => window.location.href = "/settings/profile"}
+              onClick={() => window.location.href = "/account/settings"}
               className="bg-green text-black hover:bg-green/90"
             >
               Go to Settings
