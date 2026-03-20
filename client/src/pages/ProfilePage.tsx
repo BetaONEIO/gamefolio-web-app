@@ -2631,6 +2631,29 @@ const ProfilePage = () => {
             >
               <div className="p-4">
                 {profileSectionTab === 'stats' ? (
+                  <>
+                  {isGothicTheme ? (
+                    <div className="flex mt-1 w-full">
+                      {[
+                        { icon: '👻', value: (clips?.length || 0) + (screenshots?.length || 0), label: 'Uploads' },
+                        { icon: '⭐', value: Number(profile._count?.followers || 0), label: 'Followers' },
+                        { icon: '🔥', value: Number(profile._count?.following || 0), label: 'Following' },
+                      ].map((stat, i, arr) => (
+                        <div key={stat.label} className="flex flex-1 items-center">
+                          <div className="flex flex-col items-center gap-1 flex-1 py-1">
+                            <div style={{ background: 'rgba(80,30,160,0.5)', borderRadius: '12px', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                              {stat.icon}
+                            </div>
+                            <span style={{ color: '#ffffff', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>{stat.value}</span>
+                            <span style={{ color: '#c27aff', fontSize: '8px', letterSpacing: '1.2px', fontWeight: 700, textTransform: 'uppercase' as const }}>{stat.label}</span>
+                          </div>
+                          {i < arr.length - 1 && (
+                            <div style={{ width: '1px', height: '60px', background: 'rgba(194,122,255,0.25)', flexShrink: 0 }} />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
                   <div className="flex mt-1" style={isWatermelonTheme ? { gap: 0 } : { gap: '1.5rem' }}>
                     <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
                       <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
@@ -2645,16 +2668,26 @@ const ProfilePage = () => {
                       <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#4ade80', color: '#1a1a1a', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWING</span>
                     </div>
                   </div>
+                  )}
+                  </>
                 ) : (
+                  <>
+                  {isGothicTheme ? (
+                    <div className="flex mt-1 w-full justify-center">
+                      <div className="flex flex-col items-center gap-1 py-1">
+                        <div style={{ background: 'rgba(80,30,160,0.5)', borderRadius: '12px', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                          💎
+                        </div>
+                        <span style={{ color: '#ffffff', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>{profileNftData?.nfts.filter(n => !n.sold).length || 0}</span>
+                        <span style={{ color: '#c27aff', fontSize: '8px', letterSpacing: '1.2px', fontWeight: 700, textTransform: 'uppercase' as const }}>NFTs Owned</span>
+                      </div>
+                    </div>
+                  ) : (
                   <div className="flex items-center gap-2 mt-1">
-                    <Hexagon className="w-4 h-4" style={{ color: isBlocksTheme ? '#a855f7' : isWatermelonTheme ? '#0d1a12' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isForestTheme ? '#4ade80' : isGothicTheme ? '#c27aff' : undefined }} />
+                    <Hexagon className="w-4 h-4" style={{ color: isBlocksTheme ? '#a855f7' : isWatermelonTheme ? '#0d1a12' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isForestTheme ? '#4ade80' : undefined }} />
                     {isBlocksTheme ? (
                       <span style={{ backgroundColor: '#a855f7', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' }}>
                         {profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs OWNED
-                      </span>
-                    ) : isGothicTheme ? (
-                      <span className="text-sm" style={{ color: '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '1px' }}>
-                        👻 {profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned
                       </span>
                     ) : (
                       <span className="text-sm" style={{ color: isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#1a1a1a' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : accentColor || 'hsl(var(--primary))' }}>
@@ -2662,6 +2695,8 @@ const ProfilePage = () => {
                       </span>
                     )}
                   </div>
+                  )}
+                  </>
                 )}
               </div>
             </div>
@@ -3505,7 +3540,7 @@ const ProfilePage = () => {
             const showLimits = isOwnProfile && !currentUser?.isPro;
             return (
           <TabsList 
-            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : isForestTheme ? '' : isZombieTheme ? '' : isMacTheme ? '' : isGothicTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
+            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : isGothicTheme ? 'rounded-2xl' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : isForestTheme ? '' : isZombieTheme ? '' : isMacTheme ? '' : isGothicTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${isGothicTheme ? 'h-[80px]' : showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
             style={tabListStyle}
           >
             {/* Mac Theme – traffic light dots on the left of the tab bar */}
@@ -3519,58 +3554,86 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={clipsTabRef}
               value="clips" 
-              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
-              style={getTabStyle('clips')}
+              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${isGothicTheme ? 'h-[72px]' : showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={isGothicTheme ? { backgroundColor: activeTab === 'clips' ? 'rgba(80,30,160,0.45)' : 'transparent', color: '#c27aff' } : getTabStyle('clips')}
             >
-              <span className="flex flex-col items-center leading-none gap-0.5">
-                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'clips' ? '#1a1a1a' : '#ef4444' } : undefined}>{isGothicTheme ? '👻 Clips' : 'Clips'}</span>
-                {showLimits && (
-                  <span className={`text-[10px] font-normal ${clipsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: clipsCount >= 15 ? undefined : isMacTheme ? (activeTab === 'clips' ? '#555' : '#888') : activeTab === 'clips' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
-                    {clipsCount}/15
-                  </span>
-                )}
-              </span>
+              {isGothicTheme ? (
+                <span className="flex flex-col items-center gap-1">
+                  <div style={{ background: activeTab === 'clips' ? 'rgba(100,40,200,0.7)' : 'rgba(60,20,120,0.5)', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', transition: 'background 0.2s' }}>🎬</div>
+                  <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.8px', color: activeTab === 'clips' ? '#ffffff' : '#c27aff', textTransform: 'uppercase' as const }}>Clips</span>
+                </span>
+              ) : (
+                <span className="flex flex-col items-center leading-none gap-0.5">
+                  <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'clips' ? '#1a1a1a' : '#ef4444' } : undefined}>Clips</span>
+                  {showLimits && (
+                    <span className={`text-[10px] font-normal ${clipsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: clipsCount >= 15 ? undefined : isMacTheme ? (activeTab === 'clips' ? '#555' : '#888') : activeTab === 'clips' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
+                      {clipsCount}/15
+                    </span>
+                  )}
+                </span>
+              )}
             </TabsTrigger>
 
             <TabsTrigger 
               ref={reelsTabRef}
               value="reels" 
-              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
-              style={getTabStyle('reels')}
+              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${isGothicTheme ? 'h-[72px]' : showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={isGothicTheme ? { backgroundColor: activeTab === 'reels' ? 'rgba(80,30,160,0.45)' : 'transparent', color: '#c27aff' } : getTabStyle('reels')}
             >
-              <span className="flex flex-col items-center leading-none gap-0.5">
-                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'reels' ? '#1a1a1a' : '#3b82f6' } : undefined}>{isGothicTheme ? '👻 Reels' : 'Reels'}</span>
-                {showLimits && (
-                  <span className={`text-[10px] font-normal ${reelsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: reelsCount >= 15 ? undefined : isMacTheme ? (activeTab === 'reels' ? '#555' : '#888') : activeTab === 'reels' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
-                    {reelsCount}/15
-                  </span>
-                )}
-              </span>
+              {isGothicTheme ? (
+                <span className="flex flex-col items-center gap-1">
+                  <div style={{ background: activeTab === 'reels' ? 'rgba(100,40,200,0.7)' : 'rgba(60,20,120,0.5)', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', transition: 'background 0.2s' }}>📱</div>
+                  <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.8px', color: activeTab === 'reels' ? '#ffffff' : '#c27aff', textTransform: 'uppercase' as const }}>Reels</span>
+                </span>
+              ) : (
+                <span className="flex flex-col items-center leading-none gap-0.5">
+                  <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'reels' ? '#1a1a1a' : '#3b82f6' } : undefined}>Reels</span>
+                  {showLimits && (
+                    <span className={`text-[10px] font-normal ${reelsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: reelsCount >= 15 ? undefined : isMacTheme ? (activeTab === 'reels' ? '#555' : '#888') : activeTab === 'reels' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
+                      {reelsCount}/15
+                    </span>
+                  )}
+                </span>
+              )}
             </TabsTrigger>
 
             <TabsTrigger 
               ref={screenshotsTabRef}
               value="screenshots" 
-              className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
-              style={getTabStyle('screenshots')}
+              className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${isGothicTheme ? 'h-[72px]' : showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={isGothicTheme ? { backgroundColor: activeTab === 'screenshots' ? 'rgba(80,30,160,0.45)' : 'transparent', color: '#c27aff' } : getTabStyle('screenshots')}
             >
-              <span className="flex flex-col items-center leading-none gap-0.5">
-                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'screenshots' ? '#1a1a1a' : '#4ade80' } : undefined}>{isGothicTheme ? '👻 Screenshots' : 'Screenshots'}</span>
-                {showLimits && (
-                  <span className={`text-[10px] font-normal ${screenshotsCount >= 10 ? 'text-red-400' : ''}`} style={{ color: screenshotsCount >= 10 ? undefined : isMacTheme ? (activeTab === 'screenshots' ? '#555' : '#888') : activeTab === 'screenshots' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
-                    {screenshotsCount}/10
-                  </span>
-                )}
-              </span>
+              {isGothicTheme ? (
+                <span className="flex flex-col items-center gap-1">
+                  <div style={{ background: activeTab === 'screenshots' ? 'rgba(100,40,200,0.7)' : 'rgba(60,20,120,0.5)', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', transition: 'background 0.2s' }}>📸</div>
+                  <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.8px', color: activeTab === 'screenshots' ? '#ffffff' : '#c27aff', textTransform: 'uppercase' as const }}>Shots</span>
+                </span>
+              ) : (
+                <span className="flex flex-col items-center leading-none gap-0.5">
+                  <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'screenshots' ? '#1a1a1a' : '#4ade80' } : undefined}>Screenshots</span>
+                  {showLimits && (
+                    <span className={`text-[10px] font-normal ${screenshotsCount >= 10 ? 'text-red-400' : ''}`} style={{ color: screenshotsCount >= 10 ? undefined : isMacTheme ? (activeTab === 'screenshots' ? '#555' : '#888') : activeTab === 'screenshots' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
+                      {screenshotsCount}/10
+                    </span>
+                  )}
+                </span>
+              )}
             </TabsTrigger>
 
             <TabsTrigger 
               ref={favoritesTabRef}
               value="favorites" 
-              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
-              style={getTabStyle('favorites')}
+              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${isGothicTheme ? 'h-[72px]' : showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={isGothicTheme ? { backgroundColor: activeTab === 'favorites' ? 'rgba(80,30,160,0.45)' : 'transparent', color: '#c27aff' } : getTabStyle('favorites')}
             >
-              <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'favorites' ? '#1a1a1a' : '#facc15' } : undefined}>{isGothicTheme ? '👻 Favorites' : 'Favorites'}</span>
+              {isGothicTheme ? (
+                <span className="flex flex-col items-center gap-1">
+                  <div style={{ background: activeTab === 'favorites' ? 'rgba(100,40,200,0.7)' : 'rgba(60,20,120,0.5)', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', transition: 'background 0.2s' }}>⭐</div>
+                  <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.8px', color: activeTab === 'favorites' ? '#ffffff' : '#c27aff', textTransform: 'uppercase' as const }}>Saved</span>
+                </span>
+              ) : (
+                <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'favorites' ? '#1a1a1a' : '#facc15' } : undefined}>Favorites</span>
+              )}
             </TabsTrigger>
 
             {profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0 && (
