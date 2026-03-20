@@ -2954,33 +2954,25 @@ const ProfilePage = () => {
                     size="default"
                     disabled={followMutation.isPending}
                     className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg px-6 py-3 text-base"
-                    style={isCyberpunkTheme ? {
-                      borderColor: followRequestStatus === 'none' ? 'transparent' : '#00b8db',
-                      color: followRequestStatus === 'none' ? '#020617' : '#00d3f2',
-                      backgroundColor: followRequestStatus === 'none' ? '#00d3f2' : 'transparent',
-                      boxShadow: '0 0 10px #00d3f244',
-                      fontFamily: "'Orbitron', sans-serif",
-                    } : followRequestStatus === 'following' ? {
-                      borderColor: 'hsl(var(--primary))',
-                      color: 'hsl(var(--primary))',
+                    style={followRequestStatus === 'following' || followRequestStatus === 'requested' ? {
+                      borderColor: accentColor || 'hsl(var(--primary))',
+                      color: accentColor || 'hsl(var(--primary))',
                       backgroundColor: 'transparent',
-                    } : followRequestStatus === 'requested' ? {
-                      borderColor: 'hsl(var(--primary))',
-                      color: 'hsl(var(--primary))',
-                      backgroundColor: 'transparent',
+                      ...(isCyberpunkTheme && { boxShadow: `0 0 10px ${accentColor}44`, fontFamily: "'Orbitron', sans-serif" }),
                     } : {
-                      backgroundColor: 'hsl(var(--primary))',
-                      borderColor: 'hsl(var(--primary))',
-                      color: 'hsl(var(--primary-foreground))',
-                      boxShadow: `0 4px 15px hsl(var(--primary) / 0.4)`,
+                      backgroundColor: accentColor || 'hsl(var(--primary))',
+                      borderColor: accentColor || 'hsl(var(--primary))',
+                      color: isLightBackground ? '#ffffff' : '#000000',
+                      boxShadow: `0 4px 15px ${accentColor || 'hsl(var(--primary))'}66`,
+                      ...(isCyberpunkTheme && { fontFamily: "'Orbitron', sans-serif" }),
                     }}
                     onMouseEnter={(e) => {
-                      if (followRequestStatus === 'following') {
-                        e.currentTarget.style.backgroundColor = isCyberpunkTheme ? '#00d3f211' : 'hsl(var(--primary) / 0.1)';
+                      if (followRequestStatus === 'following' || followRequestStatus === 'requested') {
+                        e.currentTarget.style.backgroundColor = `${accentColor || 'hsl(var(--primary))'}22`;
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (followRequestStatus === 'following') {
+                      if (followRequestStatus === 'following' || followRequestStatus === 'requested') {
                         e.currentTarget.style.backgroundColor = 'transparent';
                       }
                     }}
@@ -3008,14 +3000,13 @@ const ProfilePage = () => {
                     }}
                     variant="outline"
                     size="default"
-                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20 px-6 py-3 text-base"
-                    style={isCyberpunkTheme ? {
-                      borderColor: '#e12afb',
-                      color: '#e12afb',
+                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg px-6 py-3 text-base"
+                    style={{
+                      borderColor: accentColor || 'hsl(var(--primary))',
+                      color: accentColor || 'hsl(var(--primary))',
                       backgroundColor: 'transparent',
-                      boxShadow: '0 0 10px #e12afb44',
-                      fontFamily: "'Orbitron', sans-serif",
-                    } : undefined}
+                      ...(isCyberpunkTheme && { boxShadow: `0 0 10px ${accentColor}44`, fontFamily: "'Orbitron', sans-serif" }),
+                    }}
                   >
                     <MessageSquare className="mr-2 h-5 w-5" /> Message
                   </Button>
@@ -3054,13 +3045,13 @@ const ProfilePage = () => {
                         <Button
                           variant="outline"
                           size="default"
-                          className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20 px-4 py-3"
-                          style={isCyberpunkTheme ? {
-                            borderColor: '#00b8db',
-                            color: '#00d3f2',
-                            backgroundColor: 'transparent',
-                            boxShadow: '0 0 10px #00d3f244',
-                          } : isLightBackground ? { color: accentColor, background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
+                          className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg px-4 py-3"
+                          style={{
+                            borderColor: accentColor || 'hsl(var(--primary))',
+                            color: accentColor || 'hsl(var(--primary))',
+                            backgroundColor: isLightBackground ? 'rgba(255,255,255,0.37)' : 'transparent',
+                            ...(isCyberpunkTheme && { boxShadow: `0 0 10px ${accentColor}44` }),
+                          }}
                         >
                           <Share2 className="h-5 w-5" />
                         </Button>
@@ -3107,8 +3098,12 @@ const ProfilePage = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
-                          style={isLightBackground ? { color: accentColor, background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
+                          className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                          style={{
+                            borderColor: accentColor || 'hsl(var(--primary))',
+                            color: accentColor || 'hsl(var(--primary))',
+                            backgroundColor: isLightBackground ? 'rgba(255,255,255,0.37)' : 'transparent',
+                          }}
                         >
                           <Share2 className="h-4 w-4" />
                         </Button>
