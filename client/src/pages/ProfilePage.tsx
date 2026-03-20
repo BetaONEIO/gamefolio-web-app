@@ -1304,7 +1304,7 @@ const ProfilePage = () => {
   const isWatermelonTheme = accentColor?.toLowerCase() === '#4ade80' && backgroundColor?.toLowerCase() === '#ff4d6d';
 
   const platformBtnStyle = isWatermelonTheme
-    ? { backgroundColor: 'rgba(29,57,50,0.85)', color: '#4ade80', border: '1px solid #4ade8044', borderRadius: '9999px' }
+    ? { backgroundColor: '#ffb3c1', color: '#0d1a12', border: '3px solid #1d3932', borderRadius: '9999px' }
     : isLightBackground
     ? { backgroundColor: 'rgba(255,255,255,0.7)', color: accentColor, border: `1px solid ${accentColor}80` }
     : isZombieTheme
@@ -1346,8 +1346,9 @@ const ProfilePage = () => {
   });
 
   const nameTagBgStyle = isWatermelonTheme ? {
-    background: '#1d3932',
-    border: '1px solid rgba(74,222,128,0.3)',
+    background: '#ffb3c1',
+    border: '5px solid #1d3932',
+    borderRadius: '9999px',
   } : isLightBackground ? {
     background: 'rgba(255,255,255,0.37)',
     border: '0.556px solid rgba(255,255,255,0.8)',
@@ -2459,20 +2460,22 @@ const ProfilePage = () => {
               className="absolute -top-3 -right-1 z-10 px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
               style={{ 
                 background: profileSectionTab === 'collection'
-                  ? (isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : '#1a1a2e')
-                  : isLightBackground
-                    ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
-                    : isZombieTheme
-                      ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
-                      : isCyberpunkTheme
-                        ? 'rgba(2,6,23,0.9)'
-                        : isNeoTheme
-                          ? 'linear-gradient(180deg, #003300 0%, #001400 100%)'
-                          : isBlocksTheme
-                            ? 'linear-gradient(180deg, #4ade80 0%, #22c55e 100%)'
-                            : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#4ade80' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : '#0f172b',
-                border: isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #4ade80' : undefined,
+                  ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : '#1a1a2e')
+                  : isWatermelonTheme
+                    ? '#ffb3c1'
+                    : isLightBackground
+                      ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
+                      : isZombieTheme
+                        ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
+                        : isCyberpunkTheme
+                          ? 'rgba(2,6,23,0.9)'
+                          : isNeoTheme
+                            ? 'linear-gradient(180deg, #003300 0%, #001400 100%)'
+                            : isBlocksTheme
+                              ? 'linear-gradient(180deg, #4ade80 0%, #22c55e 100%)'
+                              : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#4ade80' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : '#0f172b',
+                border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #4ade80' : undefined,
                 fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined,
                 letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : isNeoTheme ? '1.5px' : isBlocksTheme ? '0.5px' : undefined,
                 fontWeight: isCyberpunkTheme ? '900' : isNeoTheme ? '700' : isBlocksTheme ? '400' : undefined,
@@ -2845,20 +2848,22 @@ const ProfilePage = () => {
                 className="absolute -top-3 -right-1 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
                 style={{ 
                   background: profileSectionTab === 'collection'
-                    ? (isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : '#1a1a2e')
-                    : isLightBackground
-                      ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
-                      : isZombieTheme
-                        ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
-                        : isCyberpunkTheme
-                          ? 'rgba(2,6,23,0.9)'
-                          : isNeoTheme
-                            ? 'linear-gradient(180deg, #003300 0%, #001400 100%)'
-                            : isBlocksTheme
-                              ? 'linear-gradient(180deg, #4ade80 0%, #22c55e 100%)'
-                              : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                  color: profileSectionTab === 'collection' ? (isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#4ade80' : '#ffffff') : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : '#0f172b',
-                  border: isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #4ade80' : undefined,
+                    ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : '#1a1a2e')
+                    : isWatermelonTheme
+                      ? '#ffb3c1'
+                      : isLightBackground
+                        ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
+                        : isZombieTheme
+                          ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
+                          : isCyberpunkTheme
+                            ? 'rgba(2,6,23,0.9)'
+                            : isNeoTheme
+                              ? 'linear-gradient(180deg, #003300 0%, #001400 100%)'
+                              : isBlocksTheme
+                                ? 'linear-gradient(180deg, #4ade80 0%, #22c55e 100%)'
+                                : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                  color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#4ade80' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : '#0f172b',
+                  border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #4ade80' : undefined,
                   fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined,
                   letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : isNeoTheme ? '1.5px' : isBlocksTheme ? '0.5px' : undefined,
                   fontWeight: isCyberpunkTheme ? '900' : isNeoTheme ? '700' : isBlocksTheme ? '400' : undefined,
@@ -3260,7 +3265,7 @@ const ProfilePage = () => {
           <div className="w-full">
             <div 
               className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-nft-header' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
-              style={isBlocksTheme ? undefined : isZombieTheme ? { background: '#1a1d1a' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
+              style={isBlocksTheme ? undefined : isWatermelonTheme ? { background: '#ffb3c1', border: '5px solid #1d3932', borderRadius: '9999px' } : isZombieTheme ? { background: '#1a1d1a' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
             >
               <div
                 className={`relative h-9 md:h-10 flex-1 flex items-center justify-center px-3 md:px-5 text-sm font-semibold gap-2 ${isCyberpunkTheme ? 'rounded-none' : isBlocksTheme ? 'rounded-none' : 'rounded-full'}`}
@@ -3291,6 +3296,9 @@ const ProfilePage = () => {
                   letterSpacing: '2px',
                   fontSize: '0.72rem',
                   fontWeight: '700',
+                } : isWatermelonTheme ? {
+                  background: '#1d3932',
+                  color: '#ffffff',
                 } : isLightBackground ? {
                   background: 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)',
                   color: '#ffffff',
