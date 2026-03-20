@@ -1322,13 +1322,15 @@ const ProfilePage = () => {
               ? { backgroundColor: 'rgba(232,213,183,0.85)', color: '#6B3A1F', border: '1px solid #c4a88266', borderRadius: '6px' }
               : isMacTheme
               ? { backgroundColor: 'rgba(0,122,255,0.08)', color: '#007aff', border: '1px solid rgba(0,122,255,0.3)', borderRadius: '8px' }
+              : isGothicTheme
+              ? { backgroundColor: 'rgba(20,2,50,0.85)', color: '#c27aff', border: '1px solid #c27aff44', borderRadius: '9999px', boxShadow: '0 0 8px #c27aff22' }
               : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
 
   const socialOutlineStyle = isWatermelonTheme
     ? { backgroundColor: '#ffffff', color: '#1d3932', border: '3px solid #1d3932', borderRadius: '9999px' }
     : isLightBackground
     ? { backgroundColor: 'rgba(255,255,255,0.9)', color: '#000000', border: '1.5px solid rgba(0,0,0,0.5)', borderRadius: '9999px' }
-    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isMacTheme)
+    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isMacTheme || isGothicTheme)
       ? platformBtnStyle
       : { backgroundColor: '#ffffff', color: '#000000', border: '1.5px solid #000000', borderRadius: '9999px' };
 
@@ -2996,7 +2998,7 @@ const ProfilePage = () => {
                 className="absolute -top-3 -right-1 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
                 style={{ 
                   background: profileSectionTab === 'collection'
-                    ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : '#1a1a2e')
+                    ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : '#1a1a2e')
                     : isWatermelonTheme
                       ? '#ffb3c1'
                       : isLightBackground
@@ -3011,17 +3013,19 @@ const ProfilePage = () => {
                                 ? 'linear-gradient(180deg, #4ade80 0%, #22c55e 100%)'
                                 : isForestTheme
                                   ? '#1d3932'
-                                  : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                  color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#4ade80' : isForestTheme ? '#5C3317' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : '#0f172b',
-                  border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #4ade80' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : undefined,
-                  fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined,
-                  letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : isNeoTheme ? '1.5px' : isBlocksTheme ? '0.5px' : undefined,
+                                  : isGothicTheme
+                                    ? 'linear-gradient(135deg, #3d0070 0%, #1e053a 100%)'
+                                    : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                  color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#4ade80' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : '#0f172b',
+                  border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #4ade80' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : undefined,
+                  fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : isGothicTheme ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" : undefined,
+                  letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : isNeoTheme ? '1.5px' : isBlocksTheme ? '0.5px' : isGothicTheme ? '1.5px' : undefined,
                   fontWeight: isCyberpunkTheme ? '900' : isNeoTheme ? '700' : isBlocksTheme ? '400' : undefined,
                   fontSize: isBlocksTheme ? '0.5rem' : undefined,
                   borderRadius: isBlocksTheme ? '4px' : undefined,
-                  boxShadow: isBlocksTheme ? '4px 4px 0 #000' : undefined,
+                  boxShadow: isBlocksTheme ? '4px 4px 0 #000' : isGothicTheme ? '0 0 14px #c27aff33' : undefined,
                 }}>
-                  <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>Collection</span>
+                  <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>{isGothicTheme ? '👻 Collection' : 'Collection'}</span>
               </button>
 
             {/* Stats card */}
@@ -3405,8 +3409,8 @@ const ProfilePage = () => {
         {profileSectionTab === 'collection' ? (
           <div className="w-full">
             <div 
-              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-nft-header' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : isMacTheme ? 'rounded-full' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
-              style={isBlocksTheme ? undefined : isWatermelonTheme ? { background: '#ffb3c1', border: '5px solid #1d3932', borderRadius: '9999px' } : isZombieTheme ? { background: '#1a1d1a' } : isMacTheme ? { background: 'linear-gradient(180deg, #ebebeb 0%, #d6d6d6 100%)', border: '1px solid #bdbdbd', borderRadius: '9999px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)', position: 'relative' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
+              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-nft-header' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : isMacTheme ? 'rounded-full' : isGothicTheme ? 'rounded-2xl' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
+              style={isBlocksTheme ? undefined : isWatermelonTheme ? { background: '#ffb3c1', border: '5px solid #1d3932', borderRadius: '9999px' } : isZombieTheme ? { background: '#1a1d1a' } : isMacTheme ? { background: 'linear-gradient(180deg, #ebebeb 0%, #d6d6d6 100%)', border: '1px solid #bdbdbd', borderRadius: '9999px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)', position: 'relative' } : isGothicTheme ? { background: 'rgba(15,2,38,0.92)', border: '1px solid #c27aff33', borderRadius: '16px', boxShadow: '0 0 18px #c27aff15' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
             >
               {isMacTheme && (
                 <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6, alignItems: 'center', zIndex: 2 }}>
@@ -3459,6 +3463,15 @@ const ProfilePage = () => {
                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif',
                   fontWeight: '600',
                   fontSize: '0.8rem',
+                } : isGothicTheme ? {
+                  background: 'linear-gradient(135deg, #3d0070 0%, #1e053a 100%)',
+                  color: '#c27aff',
+                  fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
+                  letterSpacing: '2px',
+                  fontSize: '0.75rem',
+                  fontWeight: '700',
+                  borderRadius: '12px',
+                  boxShadow: '0 0 10px #c27aff22',
                 } : isLightBackground ? {
                   background: 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)',
                   color: '#ffffff',
@@ -3467,8 +3480,8 @@ const ProfilePage = () => {
                   color: '#ffffff',
                 }}
               >
-                <Hexagon className={`w-4 h-4 ${isCyberpunkTheme ? 'text-[#00d3f2]' : isBlocksTheme ? 'text-[#a855f7]' : isZombieTheme ? 'text-[#9ae600]' : isNeoTheme ? 'text-[#00ff41]' : isForestTheme ? 'text-[#4ade80]' : ''}`} />
-                <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>NFTs</span>
+                {isGothicTheme ? <span style={{ fontSize: '16px' }}>💎</span> : <Hexagon className={`w-4 h-4 ${isCyberpunkTheme ? 'text-[#00d3f2]' : isBlocksTheme ? 'text-[#a855f7]' : isZombieTheme ? 'text-[#9ae600]' : isNeoTheme ? 'text-[#00ff41]' : isForestTheme ? 'text-[#4ade80]' : ''}`} />}
+                <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>{isGothicTheme ? 'NFT Collection' : 'NFTs'}</span>
                 {profileNftData && (
                   <span className={`text-xs opacity-80 ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>
                     ({profileNftData.nfts.filter(n => !n.sold).length})
@@ -3491,7 +3504,8 @@ const ProfilePage = () => {
                     return (
                       <div
                         key={nft.tokenId}
-                        className={`overflow-hidden cursor-pointer ${isBlocksTheme ? 'blocks-nft-card bg-[#1a1a1a]' : `rounded-2xl transition-all duration-200 hover:scale-[1.03] ${styles.bg} ${styles.glow}`}`}
+                        className={`overflow-hidden cursor-pointer ${isBlocksTheme ? 'blocks-nft-card bg-[#1a1a1a]' : isGothicTheme ? 'rounded-2xl transition-all duration-200 hover:scale-[1.03]' : `rounded-2xl transition-all duration-200 hover:scale-[1.03] ${styles.bg} ${styles.glow}`}`}
+                        style={isGothicTheme ? { background: 'rgba(20,2,50,0.9)', border: '1px solid #c27aff33', boxShadow: '0 0 12px #c27aff11' } : undefined}
                         onClick={() => setSelectedProfileNft(nft)}
                       >
                         <div className="aspect-square overflow-hidden">
@@ -3499,18 +3513,18 @@ const ProfilePage = () => {
                             <img src={nft.image} alt={nft.name} className={`w-full h-full object-cover${isBlocksTheme ? ' image-rendering-pixelated' : ''}`} />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-slate-800">
-                              <Hexagon className={`w-10 h-10 ${isBlocksTheme ? 'text-[#a855f7]' : 'text-slate-600'}`} />
+                              <Hexagon className={`w-10 h-10 ${isBlocksTheme ? 'text-[#a855f7]' : isGothicTheme ? 'text-[#c27aff]' : 'text-slate-600'}`} />
                             </div>
                           )}
                         </div>
                         <div className="p-3 pt-2">
-                          <h3 className={`text-sm font-bold truncate ${isBlocksTheme ? 'text-[#a855f7]' : styles.nameColor}`} style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.55rem' } : undefined}>{nft.name}</h3>
+                          <h3 className={`text-sm font-bold truncate ${isBlocksTheme ? 'text-[#a855f7]' : isGothicTheme ? '' : styles.nameColor}`} style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.55rem' } : isGothicTheme ? { color: '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" } : undefined}>{nft.name}</h3>
                           <div className="flex items-center justify-between mt-1">
                             <div className="flex items-center gap-1.5">
-                              <div className={`w-2 h-2 ${isBlocksTheme ? 'rounded-none bg-[#a855f7]' : `rounded-full ${styles.dotColor}`}`} />
-                              <span className={`text-[11px] uppercase tracking-tight ${isBlocksTheme ? 'text-[#4ade80]' : styles.textStyle}`} style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.45rem' } : undefined}>{rarity}</span>
+                              <div className={`w-2 h-2 ${isBlocksTheme ? 'rounded-none bg-[#a855f7]' : isGothicTheme ? 'rounded-full bg-[#c27aff]' : `rounded-full ${styles.dotColor}`}`} />
+                              <span className={`text-[11px] uppercase tracking-tight ${isBlocksTheme ? 'text-[#4ade80]' : isGothicTheme ? '' : styles.textStyle}`} style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.45rem' } : isGothicTheme ? { color: '#c27aff99', fontSize: '0.6rem', letterSpacing: '0.5px' } : undefined}>{rarity}</span>
                             </div>
-                            <span className={`text-[11px] font-medium ${isBlocksTheme ? 'text-[#4ade80]' : 'text-slate-500'}`} style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.45rem' } : undefined}>#{nft.tokenId}</span>
+                            <span className={`text-[11px] font-medium ${isBlocksTheme ? 'text-[#4ade80]' : isGothicTheme ? '' : 'text-slate-500'}`} style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.45rem' } : isGothicTheme ? { color: '#c27aff66', fontSize: '0.65rem' } : undefined}>#{nft.tokenId}</span>
                           </div>
                         </div>
                       </div>
@@ -3519,9 +3533,9 @@ const ProfilePage = () => {
                 </div>
               ) : (
                 <div className="py-12 text-center">
-                  <Hexagon className={`w-12 h-12 mx-auto mb-3 ${isBlocksTheme ? 'text-[#a855f7]' : 'text-slate-600'}`} />
-                  <p className="text-base text-foreground/70 font-medium" style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.6rem', color: '#a855f7' } : undefined}>No NFTs yet</p>
-                  {isOwnProfile && <p className="text-sm text-muted-foreground mt-1" style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.5rem', color: '#4ade80' } : undefined}>Mint your first NFT from the store</p>}
+                  {isGothicTheme ? <span style={{ fontSize: '40px', display: 'block', marginBottom: '12px' }}>💎</span> : <Hexagon className={`w-12 h-12 mx-auto mb-3 ${isBlocksTheme ? 'text-[#a855f7]' : 'text-slate-600'}`} />}
+                  <p className="text-base text-foreground/70 font-medium" style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.6rem', color: '#a855f7' } : isGothicTheme ? { fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", color: '#c27aff', letterSpacing: '1px' } : undefined}>No NFTs yet</p>
+                  {isOwnProfile && <p className="text-sm text-muted-foreground mt-1" style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.5rem', color: '#4ade80' } : isGothicTheme ? { fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", color: '#c27aff66', fontSize: '0.8rem' } : undefined}>Mint your first NFT from the store</p>}
                 </div>
               )}
             </div>
@@ -3540,7 +3554,7 @@ const ProfilePage = () => {
             const showLimits = isOwnProfile && !currentUser?.isPro;
             return (
           <TabsList 
-            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : isGothicTheme ? 'rounded-2xl' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : isForestTheme ? '' : isZombieTheme ? '' : isMacTheme ? '' : isGothicTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${isGothicTheme ? 'h-[80px]' : showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
+            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : isGothicTheme ? 'rounded-2xl' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : isForestTheme ? '' : isZombieTheme ? '' : isMacTheme ? '' : isGothicTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
             style={tabListStyle}
           >
             {/* Mac Theme – traffic light dots on the left of the tab bar */}
@@ -3554,14 +3568,11 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={clipsTabRef}
               value="clips" 
-              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${isGothicTheme ? 'h-[72px]' : showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
-              style={isGothicTheme ? { backgroundColor: activeTab === 'clips' ? 'rgba(80,30,160,0.45)' : 'transparent', color: '#c27aff' } : getTabStyle('clips')}
+              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={isGothicTheme ? { backgroundColor: activeTab === 'clips' ? 'rgba(80,30,160,0.45)' : 'transparent', color: activeTab === 'clips' ? '#ffffff' : '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '0.8px' } : getTabStyle('clips')}
             >
               {isGothicTheme ? (
-                <span className="flex flex-col items-center gap-1">
-                  <div style={{ background: activeTab === 'clips' ? 'rgba(100,40,200,0.7)' : 'rgba(60,20,120,0.5)', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', transition: 'background 0.2s' }}>🎬</div>
-                  <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.8px', color: activeTab === 'clips' ? '#ffffff' : '#c27aff', textTransform: 'uppercase' as const }}>Clips</span>
-                </span>
+                <span style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' as const, letterSpacing: '1px' }}>Clips</span>
               ) : (
                 <span className="flex flex-col items-center leading-none gap-0.5">
                   <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'clips' ? '#1a1a1a' : '#ef4444' } : undefined}>Clips</span>
@@ -3577,14 +3588,11 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={reelsTabRef}
               value="reels" 
-              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${isGothicTheme ? 'h-[72px]' : showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
-              style={isGothicTheme ? { backgroundColor: activeTab === 'reels' ? 'rgba(80,30,160,0.45)' : 'transparent', color: '#c27aff' } : getTabStyle('reels')}
+              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={isGothicTheme ? { backgroundColor: activeTab === 'reels' ? 'rgba(80,30,160,0.45)' : 'transparent', color: activeTab === 'reels' ? '#ffffff' : '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '0.8px' } : getTabStyle('reels')}
             >
               {isGothicTheme ? (
-                <span className="flex flex-col items-center gap-1">
-                  <div style={{ background: activeTab === 'reels' ? 'rgba(100,40,200,0.7)' : 'rgba(60,20,120,0.5)', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', transition: 'background 0.2s' }}>📱</div>
-                  <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.8px', color: activeTab === 'reels' ? '#ffffff' : '#c27aff', textTransform: 'uppercase' as const }}>Reels</span>
-                </span>
+                <span style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' as const, letterSpacing: '1px' }}>Reels</span>
               ) : (
                 <span className="flex flex-col items-center leading-none gap-0.5">
                   <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'reels' ? '#1a1a1a' : '#3b82f6' } : undefined}>Reels</span>
@@ -3600,14 +3608,11 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={screenshotsTabRef}
               value="screenshots" 
-              className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${isGothicTheme ? 'h-[72px]' : showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
-              style={isGothicTheme ? { backgroundColor: activeTab === 'screenshots' ? 'rgba(80,30,160,0.45)' : 'transparent', color: '#c27aff' } : getTabStyle('screenshots')}
+              className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={isGothicTheme ? { backgroundColor: activeTab === 'screenshots' ? 'rgba(80,30,160,0.45)' : 'transparent', color: activeTab === 'screenshots' ? '#ffffff' : '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '0.8px' } : getTabStyle('screenshots')}
             >
               {isGothicTheme ? (
-                <span className="flex flex-col items-center gap-1">
-                  <div style={{ background: activeTab === 'screenshots' ? 'rgba(100,40,200,0.7)' : 'rgba(60,20,120,0.5)', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', transition: 'background 0.2s' }}>📸</div>
-                  <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.8px', color: activeTab === 'screenshots' ? '#ffffff' : '#c27aff', textTransform: 'uppercase' as const }}>Shots</span>
-                </span>
+                <span style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' as const, letterSpacing: '1px' }}>Shots</span>
               ) : (
                 <span className="flex flex-col items-center leading-none gap-0.5">
                   <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'screenshots' ? '#1a1a1a' : '#4ade80' } : undefined}>Screenshots</span>
@@ -3623,14 +3628,11 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={favoritesTabRef}
               value="favorites" 
-              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${isGothicTheme ? 'h-[72px]' : showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
-              style={isGothicTheme ? { backgroundColor: activeTab === 'favorites' ? 'rgba(80,30,160,0.45)' : 'transparent', color: '#c27aff' } : getTabStyle('favorites')}
+              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={isGothicTheme ? { backgroundColor: activeTab === 'favorites' ? 'rgba(80,30,160,0.45)' : 'transparent', color: activeTab === 'favorites' ? '#ffffff' : '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '0.8px' } : getTabStyle('favorites')}
             >
               {isGothicTheme ? (
-                <span className="flex flex-col items-center gap-1">
-                  <div style={{ background: activeTab === 'favorites' ? 'rgba(100,40,200,0.7)' : 'rgba(60,20,120,0.5)', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', transition: 'background 0.2s' }}>⭐</div>
-                  <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.8px', color: activeTab === 'favorites' ? '#ffffff' : '#c27aff', textTransform: 'uppercase' as const }}>Saved</span>
-                </span>
+                <span style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' as const, letterSpacing: '1px' }}>Saved</span>
               ) : (
                 <span className={`font-black uppercase tracking-[0.5px] ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'favorites' ? '#1a1a1a' : '#facc15' } : undefined}>Favorites</span>
               )}
