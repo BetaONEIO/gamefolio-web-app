@@ -1344,6 +1344,11 @@ const ProfilePage = () => {
     background: 'rgba(255,255,255,0.37)',
     border: '0.556px solid rgba(255,255,255,0.8)',
     boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+  } : isForestTheme ? {
+    background: 'rgba(10,35,20,0.88)',
+    border: '1.5px solid rgba(164,118,66,0.45)',
+    borderRadius: '9999px',
+    padding: '4px 8px',
   } : undefined;
 
   const blocksTabColors: Record<string, string> = {
@@ -1353,8 +1358,8 @@ const ProfilePage = () => {
     favorites: '#facc15',
   };
   const getTabStyle = (tabName: string) => ({
-    backgroundColor: activeTab === tabName ? (isBlocksTheme ? (blocksTabColors[tabName] || accentColor) : accentColor) : 'transparent',
-    color: activeTab === tabName ? (isBlocksTheme ? '#1a1a1a' : isWatermelonTheme ? '#0d1a12' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? accentColor : undefined,
+    backgroundColor: activeTab === tabName ? (isBlocksTheme ? (blocksTabColors[tabName] || accentColor) : isForestTheme ? '#e8d5b7' : accentColor) : 'transparent',
+    color: activeTab === tabName ? (isBlocksTheme ? '#1a1a1a' : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#5C3317' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#c4a882' : isLightBackground ? accentColor : undefined,
     ...(isZombieTheme ? { fontFamily: "'Creepster', cursive", letterSpacing: '2px', fontSize: '0.8rem' } : {}),
     ...(isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2.5px', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase' as const } : {}),
     ...(isNeoTheme ? { fontFamily: "'JetBrains Mono', monospace", letterSpacing: '1.5px', fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase' as const } : {}),
@@ -1570,6 +1575,10 @@ const ProfilePage = () => {
         zIndex: 1
       } : isBlocksTheme ? {
         background: '#87ceeb',
+        position: 'relative',
+        zIndex: 1
+      } : isForestTheme ? {
+        backgroundColor: '#0a2f1f',
         position: 'relative',
         zIndex: 1
       } : (profile as any).profileBackgroundGradient !== false ? {
@@ -3315,6 +3324,11 @@ const ProfilePage = () => {
                 } : isWatermelonTheme ? {
                   background: '#1d3932',
                   color: '#ffffff',
+                } : isForestTheme ? {
+                  background: '#1d3932',
+                  color: '#e8d5b7',
+                  border: '1px solid rgba(164,118,66,0.4)',
+                  borderRadius: '9999px',
                 } : isLightBackground ? {
                   background: 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)',
                   color: '#ffffff',
@@ -3323,7 +3337,7 @@ const ProfilePage = () => {
                   color: '#ffffff',
                 }}
               >
-                <Hexagon className={`w-4 h-4 ${isCyberpunkTheme ? 'text-[#00d3f2]' : isBlocksTheme ? 'text-[#a855f7]' : isZombieTheme ? 'text-[#9ae600]' : isNeoTheme ? 'text-[#00ff41]' : ''}`} />
+                <Hexagon className={`w-4 h-4 ${isCyberpunkTheme ? 'text-[#00d3f2]' : isBlocksTheme ? 'text-[#a855f7]' : isZombieTheme ? 'text-[#9ae600]' : isNeoTheme ? 'text-[#00ff41]' : isForestTheme ? 'text-[#4ade80]' : ''}`} />
                 <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>NFTs</span>
                 {profileNftData && (
                   <span className={`text-xs opacity-80 ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>
@@ -3396,7 +3410,7 @@ const ProfilePage = () => {
             const showLimits = isOwnProfile && !currentUser?.isPro;
             return (
           <TabsList 
-            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
+            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : isForestTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
             style={tabListStyle}
           >
             <TabsTrigger 
