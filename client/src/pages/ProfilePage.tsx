@@ -1319,6 +1319,22 @@ const ProfilePage = () => {
               ? { backgroundColor: 'rgba(232,213,183,0.85)', color: '#2d4a1e', border: '1px solid #c4a88266', borderRadius: '6px' }
               : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
 
+  const socialOutlineStyle = isWatermelonTheme
+    ? { backgroundColor: '#ffffff', color: '#1d3932', border: '3px solid #1d3932', borderRadius: '9999px' }
+    : isLightBackground
+    ? { backgroundColor: 'rgba(255,255,255,0.9)', color: '#000000', border: '1.5px solid rgba(0,0,0,0.5)', borderRadius: '9999px' }
+    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme)
+      ? platformBtnStyle
+      : { backgroundColor: '#ffffff', color: '#000000', border: '1.5px solid #000000', borderRadius: '9999px' };
+
+  const xButtonSolidStyle = isWatermelonTheme
+    ? { backgroundColor: '#1d3932', color: '#ffffff', border: '3px solid #1d3932', borderRadius: '9999px' }
+    : isLightBackground
+    ? { backgroundColor: '#000000', color: '#ffffff', border: '1.5px solid #000000', borderRadius: '9999px' }
+    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme)
+      ? platformBtnStyle
+      : { backgroundColor: '#000000', color: '#ffffff', border: '1.5px solid #000000', borderRadius: '9999px' };
+
   const tabListStyle = isWatermelonTheme ? {
     background: '#ffb3c1',
     border: '5px solid #1d3932',
@@ -2558,37 +2574,37 @@ const ProfilePage = () => {
           {/* Platform tags and Social Links — below the stats card */}
           {profileSectionTab === 'stats' && <div className={`flex flex-wrap gap-1.5 mb-4 mt-2 pl-4 pr-8 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''}`}>
             {profile.steamUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
                 <SiSteam className="w-2.5 h-2.5" />
                 <span>{profile.steamUsername}</span>
               </div>
             )}
             {profile.nintendoUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
                 <SiNintendo className="w-2.5 h-2.5" />
                 <span>{profile.nintendoUsername}</span>
               </div>
             )}
             {profile.xboxUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
                 <FaXbox className="w-2.5 h-2.5" />
                 <span>{profile.xboxUsername}</span>
               </div>
             )}
             {profile.playstationUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
                 <SiPlaystation className="w-2.5 h-2.5" />
                 <span>{profile.playstationUsername}</span>
               </div>
             )}
             {profile.epicUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
                 <SiEpicgames className="w-2.5 h-2.5" />
                 <span>{profile.epicUsername}</span>
               </div>
             )}
             {profile.discordUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
                 <SiDiscord className="w-2.5 h-2.5" />
                 <span>{profile.discordUsername}</span>
               </div>
@@ -2599,7 +2615,7 @@ const ProfilePage = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                style={platformBtnStyle}
+                style={xButtonSolidStyle}
               >
                 <FaXTwitter className="w-2.5 h-2.5" />
                 <span>{profile.twitterUsername}</span>
@@ -2611,7 +2627,7 @@ const ProfilePage = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                style={platformBtnStyle}
+                style={socialOutlineStyle}
               >
                 <FaYoutube className="w-2.5 h-2.5" />
                 <span>{profile.youtubeUsername}</span>
@@ -2623,7 +2639,7 @@ const ProfilePage = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                style={platformBtnStyle}
+                style={socialOutlineStyle}
               >
                 <FaInstagram className="w-2.5 h-2.5" />
                 <span>{profile.instagramUsername}</span>
@@ -2635,7 +2651,7 @@ const ProfilePage = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                style={platformBtnStyle}
+                style={socialOutlineStyle}
               >
                 <FaFacebook className="w-2.5 h-2.5" />
                 <span>{profile.facebookUsername}</span>
@@ -2647,37 +2663,37 @@ const ProfilePage = () => {
           {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
             <div className="flex flex-wrap gap-1.5 px-4 pb-4">
               {profile.steamUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={isNeoTheme ? platformBtnStyle : { backgroundColor: 'rgba(27, 40, 56, 0.8)', color: '#FFFFFF' }}>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
                   <SiSteam className="w-2.5 h-2.5" />
                   <span>{profile.steamUsername}</span>
                 </div>
               )}
               {profile.nintendoUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={isNeoTheme ? platformBtnStyle : { backgroundColor: 'rgba(230, 0, 18, 0.8)', color: '#FFFFFF' }}>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
                   <SiNintendo className="w-2.5 h-2.5" />
                   <span>{profile.nintendoUsername}</span>
                 </div>
               )}
               {profile.xboxUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={isNeoTheme ? platformBtnStyle : { backgroundColor: 'rgba(16, 124, 16, 0.8)', color: '#FFFFFF' }}>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
                   <FaXbox className="w-2.5 h-2.5" />
                   <span>{profile.xboxUsername}</span>
                 </div>
               )}
               {profile.playstationUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={isNeoTheme ? platformBtnStyle : { backgroundColor: 'rgba(0, 55, 145, 0.8)', color: '#FFFFFF' }}>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
                   <SiPlaystation className="w-2.5 h-2.5" />
                   <span>{profile.playstationUsername}</span>
                 </div>
               )}
               {profile.epicUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={isNeoTheme ? platformBtnStyle : { backgroundColor: 'rgba(49, 49, 49, 0.8)', color: '#FFFFFF' }}>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
                   <SiEpicgames className="w-2.5 h-2.5" />
                   <span>{profile.epicUsername}</span>
                 </div>
               )}
               {profile.discordUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={isNeoTheme ? platformBtnStyle : { backgroundColor: 'rgba(88, 101, 242, 0.8)', color: '#FFFFFF' }}>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={socialOutlineStyle}>
                   <SiDiscord className="w-2.5 h-2.5" />
                   <span>{profile.discordUsername}</span>
                 </div>
@@ -2688,7 +2704,7 @@ const ProfilePage = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                  style={isNeoTheme ? platformBtnStyle : { backgroundColor: 'rgba(29, 161, 242, 0.8)', color: '#FFFFFF' }}
+                  style={xButtonSolidStyle}
                 >
                   <FaXTwitter className="w-2.5 h-2.5" />
                   <span>{profile.twitterUsername}</span>
@@ -2700,7 +2716,7 @@ const ProfilePage = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                  style={isNeoTheme ? platformBtnStyle : { backgroundColor: 'rgba(255, 0, 0, 0.8)', color: '#FFFFFF' }}
+                  style={socialOutlineStyle}
                 >
                   <FaYoutube className="w-2.5 h-2.5" />
                   <span>{profile.youtubeUsername}</span>
@@ -2712,7 +2728,7 @@ const ProfilePage = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                  style={isNeoTheme ? platformBtnStyle : { backgroundColor: 'rgba(228, 64, 95, 0.8)', color: '#FFFFFF' }}
+                  style={socialOutlineStyle}
                 >
                   <FaInstagram className="w-2.5 h-2.5" />
                   <span>{profile.instagramUsername}</span>
@@ -2724,7 +2740,7 @@ const ProfilePage = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                  style={isNeoTheme ? platformBtnStyle : { backgroundColor: 'rgba(24, 119, 242, 0.8)', color: '#FFFFFF' }}
+                  style={socialOutlineStyle}
                 >
                   <FaFacebook className="w-2.5 h-2.5" />
                   <span>{profile.facebookUsername}</span>
@@ -2951,37 +2967,37 @@ const ProfilePage = () => {
             {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
               <div className={`flex flex-wrap gap-2 mt-4 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''}`}>
                 {profile.steamUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={socialOutlineStyle}>
                     <SiSteam className="w-3 h-3" />
                     <span>{profile.steamUsername}</span>
                   </div>
                 )}
                 {profile.xboxUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={socialOutlineStyle}>
                     <FaXbox className="w-3 h-3" />
                     <span>{profile.xboxUsername}</span>
                   </div>
                 )}
                 {profile.playstationUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={socialOutlineStyle}>
                     <SiPlaystation className="w-3 h-3" />
                     <span>{profile.playstationUsername}</span>
                   </div>
                 )}
                 {profile.discordUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={socialOutlineStyle}>
                     <SiDiscord className="w-3 h-3" />
                     <span>{profile.discordUsername}</span>
                   </div>
                 )}
                 {profile.epicUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={socialOutlineStyle}>
                     <SiEpicgames className="w-3 h-3" />
                     <span>{profile.epicUsername}</span>
                   </div>
                 )}
                 {profile.nintendoUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={socialOutlineStyle}>
                     <SiNintendo className="w-3 h-3" />
                     <span>{profile.nintendoUsername}</span>
                   </div>
@@ -2991,8 +3007,8 @@ const ProfilePage = () => {
                     href={`https://twitter.com/${profile.twitterUsername}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                    style={platformBtnStyle}
+                    className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
+                    style={xButtonSolidStyle}
                   >
                     <FaXTwitter className="w-3 h-3" />
                     <span>{profile.twitterUsername}</span>
@@ -3003,8 +3019,8 @@ const ProfilePage = () => {
                     href={`https://youtube.com/@${profile.youtubeUsername}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                    style={platformBtnStyle}
+                    className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
+                    style={socialOutlineStyle}
                   >
                     <FaYoutube className="w-3 h-3" />
                     <span>{profile.youtubeUsername}</span>
@@ -3015,8 +3031,8 @@ const ProfilePage = () => {
                     href={`https://instagram.com/${profile.instagramUsername}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                    style={platformBtnStyle}
+                    className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
+                    style={socialOutlineStyle}
                   >
                     <FaInstagram className="w-3 h-3" />
                     <span>{profile.instagramUsername}</span>
@@ -3027,8 +3043,8 @@ const ProfilePage = () => {
                     href={`https://facebook.com/${profile.facebookUsername}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                    style={platformBtnStyle}
+                    className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
+                    style={socialOutlineStyle}
                   >
                     <FaFacebook className="w-3 h-3" />
                     <span>{profile.facebookUsername}</span>
