@@ -2319,28 +2319,10 @@ const ProfilePage = () => {
                 <span className={isCyberpunkTheme ? 'cyber-gradient-text' : ''}>Collection</span>
             </button>
 
-            {/* L-shaped fading border container for profile info */}
+            {/* Stats card container */}
             <div
               className="relative mt-4 rounded-lg transition-all duration-300"
             >
-              {/* Curved corner piece */}
-              <div 
-                className="absolute top-0 -left-4 w-3 h-3 pointer-events-none"
-                style={{
-                  borderLeft: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
-                  borderTop: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
-                  borderTopLeftRadius: '10px',
-                }}
-              />
-              
-              {/* Top horizontal line - fades to right with Collection button */}
-              <div 
-                className="absolute top-0 -left-1 h-[2px]"
-                style={{
-                  width: 'calc(100% + 4px)',
-                  background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, transparent 100%)`,
-                }}
-              />
 
             <div 
               className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''}`}
@@ -2380,40 +2362,8 @@ const ProfilePage = () => {
               </div>
             </div>
 
-            {/* Content */}
-            <div className="pl-0 pt-4 pb-4 pr-4">
-              {profileSectionTab === 'stats' ? (
-                <>
-                  {/* Stats - Horizontal row with uppercase labels */}
-                  <div className="flex gap-4 mb-2 mt-2 items-start">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-sm" style={{ color: statsTextColor }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                      <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>UPLOADS</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-sm" style={{ color: statsTextColor }}>{Number(profile._count?.followers || 0)}</span>
-                      <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>FOLLOWERS</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-sm" style={{ color: statsTextColor }}>{Number(profile._count?.following || 0)}</span>
-                      <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>FOLLOWING</span>
-                    </div>
-                  </div>
-
-                  {/* Member since date - uppercase */}
-                  {profile.createdAt && (
-                    <div className="mb-2">
-                      <span className="text-xs uppercase tracking-wider" style={{ color: statsLabelColor }}>
-                        MEMBER SINCE {new Date(profile.createdAt).toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'long' 
-                        }).toUpperCase()}
-                      </span>
-                    </div>
-                  )}
-
-                </>
-              ) : (
+            {profileSectionTab !== 'stats' && (
+              <div className="pl-0 pt-4 pb-4 pr-4">
                 <div className="mt-2">
                   <div className="flex items-center gap-2">
                     <Hexagon className="w-4 h-4 text-muted-foreground" />
@@ -2422,8 +2372,8 @@ const ProfilePage = () => {
                     </span>
                   </div>
                 </div>
-              )}
               </div>
+            )}
             </div>
           </div>
 
@@ -2514,10 +2464,6 @@ const ProfilePage = () => {
               </a>
             )}
           </div>}
-          {/* Bio - rendered outside the L-shaped container so it never overlaps */}
-          {profileSectionTab === 'stats' && profile.bio && (
-            <p className="text-sm text-foreground/90 mt-4 mb-3 px-4 break-words">{profile.bio}</p>
-          )}
 
           {/* Social linked accounts - rendered outside the L-shaped container, always below bio */}
           {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
@@ -3008,7 +2954,13 @@ const ProfilePage = () => {
                     size="default"
                     disabled={followMutation.isPending}
                     className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg px-6 py-3 text-base"
-                    style={followRequestStatus === 'following' ? {
+                    style={isCyberpunkTheme ? {
+                      borderColor: followRequestStatus === 'none' ? 'transparent' : '#00b8db',
+                      color: followRequestStatus === 'none' ? '#020617' : '#00d3f2',
+                      backgroundColor: followRequestStatus === 'none' ? '#00d3f2' : 'transparent',
+                      boxShadow: '0 0 10px #00d3f244',
+                      fontFamily: "'Orbitron', sans-serif",
+                    } : followRequestStatus === 'following' ? {
                       borderColor: 'hsl(var(--primary))',
                       color: 'hsl(var(--primary))',
                       backgroundColor: 'transparent',
@@ -3024,7 +2976,7 @@ const ProfilePage = () => {
                     }}
                     onMouseEnter={(e) => {
                       if (followRequestStatus === 'following') {
-                        e.currentTarget.style.backgroundColor = 'hsl(var(--primary) / 0.1)';
+                        e.currentTarget.style.backgroundColor = isCyberpunkTheme ? '#00d3f211' : 'hsl(var(--primary) / 0.1)';
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -3057,6 +3009,13 @@ const ProfilePage = () => {
                     variant="outline"
                     size="default"
                     className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20 px-6 py-3 text-base"
+                    style={isCyberpunkTheme ? {
+                      borderColor: '#e12afb',
+                      color: '#e12afb',
+                      backgroundColor: 'transparent',
+                      boxShadow: '0 0 10px #e12afb44',
+                      fontFamily: "'Orbitron', sans-serif",
+                    } : undefined}
                   >
                     <MessageSquare className="mr-2 h-5 w-5" /> Message
                   </Button>
@@ -3096,7 +3055,12 @@ const ProfilePage = () => {
                           variant="outline"
                           size="default"
                           className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20 px-4 py-3"
-                          style={isLightBackground ? { color: accentColor, background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
+                          style={isCyberpunkTheme ? {
+                            borderColor: '#00b8db',
+                            color: '#00d3f2',
+                            backgroundColor: 'transparent',
+                            boxShadow: '0 0 10px #00d3f244',
+                          } : isLightBackground ? { color: accentColor, background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
                         >
                           <Share2 className="h-5 w-5" />
                         </Button>
