@@ -1302,6 +1302,7 @@ const ProfilePage = () => {
   const isBlocksTheme = !isLightBackground && accentColor?.toLowerCase() === '#4ade80' && backgroundColor?.toLowerCase() === '#1a1a1a';
   const isForestTheme = !isLightBackground && accentColor?.toLowerCase() === '#4ade80' && backgroundColor?.toLowerCase() === '#0a2f1f';
   const isWatermelonTheme = accentColor?.toLowerCase() === '#4ade80' && backgroundColor?.toLowerCase() === '#ff4d6d';
+  const isMacTheme = !isLightBackground && accentColor?.toLowerCase() === '#007aff' && backgroundColor?.toLowerCase() === '#1c2333';
 
   const platformBtnStyle = isWatermelonTheme
     ? { backgroundColor: '#ffb3c1', color: '#0d1a12', border: '3px solid #1d3932', borderRadius: '9999px' }
@@ -1317,13 +1318,15 @@ const ProfilePage = () => {
             ? { backgroundColor: 'rgba(26,26,26,0.95)', color: '#4ade80', border: '2px solid #4ade8066', fontFamily: "'Press Start 2P', monospace", fontSize: '0.55rem', letterSpacing: '0.5px', borderRadius: '2px' }
             : isForestTheme
               ? { backgroundColor: 'rgba(232,213,183,0.85)', color: '#6B3A1F', border: '1px solid #c4a88266', borderRadius: '6px' }
+              : isMacTheme
+              ? { backgroundColor: 'rgba(0,122,255,0.08)', color: '#007aff', border: '1px solid rgba(0,122,255,0.3)', borderRadius: '8px' }
               : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
 
   const socialOutlineStyle = isWatermelonTheme
     ? { backgroundColor: '#ffffff', color: '#1d3932', border: '3px solid #1d3932', borderRadius: '9999px' }
     : isLightBackground
     ? { backgroundColor: 'rgba(255,255,255,0.9)', color: '#000000', border: '1.5px solid rgba(0,0,0,0.5)', borderRadius: '9999px' }
-    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme)
+    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isMacTheme)
       ? platformBtnStyle
       : { backgroundColor: '#ffffff', color: '#000000', border: '1.5px solid #000000', borderRadius: '9999px' };
 
@@ -1331,7 +1334,7 @@ const ProfilePage = () => {
     ? { backgroundColor: '#1d3932', color: '#ffffff', border: '3px solid #1d3932', borderRadius: '9999px' }
     : isLightBackground
     ? { backgroundColor: '#000000', color: '#ffffff', border: '1.5px solid #000000', borderRadius: '9999px' }
-    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme)
+    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isMacTheme)
       ? platformBtnStyle
       : { backgroundColor: '#000000', color: '#ffffff', border: '1.5px solid #000000', borderRadius: '9999px' };
 
@@ -1365,6 +1368,11 @@ const ProfilePage = () => {
     color: '#e8d5b7',
     background: 'rgba(14,45,28,0.85)',
     border: '1px solid rgba(164,118,66,0.5)',
+  } : isMacTheme ? {
+    color: '#007aff',
+    background: 'rgba(255,255,255,0.85)',
+    border: '1px solid rgba(0,122,255,0.4)',
+    borderRadius: '6px',
   } : {
     color: accentColor || 'hsl(var(--primary))',
     background: 'rgba(0,0,0,0.5)',
@@ -1390,6 +1398,11 @@ const ProfilePage = () => {
     border: '1.5px solid rgba(164,118,66,0.45)',
     borderRadius: '9999px',
     padding: '4px 8px',
+  } : isMacTheme ? {
+    background: '#f0f0f0',
+    border: '1px solid #d0d0d0',
+    borderRadius: '9999px',
+    padding: '4px 8px',
   } : undefined;
 
   const blocksTabColors: Record<string, string> = {
@@ -1399,8 +1412,8 @@ const ProfilePage = () => {
     favorites: '#facc15',
   };
   const getTabStyle = (tabName: string) => ({
-    backgroundColor: activeTab === tabName ? (isBlocksTheme ? (blocksTabColors[tabName] || accentColor) : isForestTheme ? '#e8d5b7' : accentColor) : 'transparent',
-    color: activeTab === tabName ? (isBlocksTheme ? '#1a1a1a' : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#5C3317' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#c4a882' : isLightBackground ? accentColor : undefined,
+    backgroundColor: activeTab === tabName ? (isBlocksTheme ? (blocksTabColors[tabName] || accentColor) : isForestTheme ? '#e8d5b7' : isMacTheme ? '#007aff' : accentColor) : 'transparent',
+    color: activeTab === tabName ? (isBlocksTheme ? '#1a1a1a' : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#5C3317' : isMacTheme ? '#ffffff' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#c4a882' : isMacTheme ? '#3a3a3a' : isLightBackground ? accentColor : undefined,
     ...(isZombieTheme ? { fontFamily: "'Creepster', cursive", letterSpacing: '2px', fontSize: '0.8rem' } : {}),
     ...(isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2.5px', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase' as const } : {}),
     ...(isNeoTheme ? { fontFamily: "'JetBrains Mono', monospace", letterSpacing: '1.5px', fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase' as const } : {}),
@@ -1434,6 +1447,10 @@ const ProfilePage = () => {
   } : isForestTheme ? {
     background: '#1d3932',
     border: '1px solid rgba(164,118,66,0.4)',
+  } : isMacTheme ? {
+    background: 'rgba(0,122,255,0.1)',
+    border: '1px solid rgba(0,122,255,0.3)',
+    borderRadius: '8px',
   } : {
     background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}cc 100%)`,
     border: `1px solid ${accentColor}80`,
@@ -1625,6 +1642,11 @@ const ProfilePage = () => {
         backgroundColor: '#0a2f1f',
         position: 'relative',
         zIndex: 1
+      } : isMacTheme ? {
+        backgroundColor: '#1c2333',
+        position: 'relative',
+        zIndex: 1,
+        minHeight: '100vh',
       } : (profile as any).profileBackgroundGradient !== false ? {
         background: isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
         position: 'relative',
@@ -1638,6 +1660,34 @@ const ProfilePage = () => {
       {/* Dark overlay for background image readability */}
       {profileBackgroundImageUrl && (
         <div className="fixed inset-0 bg-black/50 pointer-events-none" style={{ zIndex: 0 }} />
+      )}
+      {/* Mac Theme – macOS menu bar */}
+      {isMacTheme && (
+        <div className="mac-menubar" style={{
+          height: '28px',
+          background: 'rgba(28,28,28,0.97)',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 14px',
+          gap: '16px',
+          color: '#f0f0f0',
+          fontSize: '13px',
+          userSelect: 'none',
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          borderBottom: '1px solid rgba(255,255,255,0.07)',
+        }}>
+          <span style={{ fontSize: '16px', lineHeight: 1 }}>&#63743;</span>
+          <span style={{ fontWeight: 700, letterSpacing: '-0.2px' }}>Gamefolio</span>
+          {['File','Edit','View','Go','Window'].map(item => (
+            <span key={item} style={{ opacity: 0.82, cursor: 'default' }}>{item}</span>
+          ))}
+          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" opacity={0.8}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <span style={{ opacity: 0.82 }}>{new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</span>
+          </span>
+        </div>
       )}
       {/* Birthday Banner */}
       {(() => {
@@ -1674,9 +1724,10 @@ const ProfilePage = () => {
         className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 ${resolvedBannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
         style={{
           ...bannerStyle,
-          opacity: hideBanner ? 0 : 1,
-          pointerEvents: hideBanner ? 'none' : undefined,
+          opacity: (hideBanner || isMacTheme) ? 0 : 1,
+          pointerEvents: (hideBanner || isMacTheme) ? 'none' : undefined,
           transition: 'opacity 0.5s ease',
+          ...(isMacTheme ? { height: 0, minHeight: 0, padding: 0, margin: 0 } : {}),
         }}
         onClick={() => {
           if (resolvedBannerUrl && profile?.displayName && profile?.username) {
@@ -2233,6 +2284,73 @@ const ProfilePage = () => {
           }
         `}</style>
       )}
+      {/* Mac Theme CSS */}
+      {isMacTheme && (
+        <style>{`
+          .mac-profile-content {
+            color: #1a1a1a;
+          }
+          /* Override all white inline text colors inside the Mac window */
+          .mac-profile-content span,
+          .mac-profile-content p,
+          .mac-profile-content h1,
+          .mac-profile-content h2,
+          .mac-profile-content h3,
+          .mac-profile-content label,
+          .mac-profile-content div {
+            --mac-text: #1a1a1a;
+          }
+          .mac-profile-content .text-slate-300 {
+            color: #6b7280 !important;
+          }
+          .mac-profile-content .text-muted-foreground {
+            color: #6b7280 !important;
+          }
+          .mac-profile-content .text-foreground\/70 {
+            color: #6b7280 !important;
+          }
+          .mac-profile-content .text-slate-100 {
+            color: #1a1a1a !important;
+          }
+          /* Stat numbers and labels — force dark text */
+          .mac-profile-content .font-black.text-base,
+          .mac-profile-content .font-black.text-xl,
+          .mac-profile-content .font-black.text-2xl {
+            color: #1a1a1a !important;
+          }
+          .mac-profile-content .text-\\[8px\\],
+          .mac-profile-content .text-\\[9px\\] {
+            color: #007aff !important;
+          }
+          /* Bio text */
+          .mac-profile-content .text-sm.max-w-md {
+            color: #4a4a4a !important;
+          }
+          /* Small role/badge text */
+          .mac-profile-content [class*="text-xs"] {
+            color: #6b7280 !important;
+          }
+          /* Tab triggers inactive */
+          .mac-profile-content [role="tab"][data-state="inactive"],
+          .mac-profile-content [role="tab"][data-state="inactive"] * {
+            color: #3a3a3a !important;
+          }
+          /* Tab triggers active */
+          .mac-profile-content [role="tab"][data-state="active"],
+          .mac-profile-content [role="tab"][data-state="active"] * {
+            color: #ffffff !important;
+          }
+          /* NFT card text */
+          .mac-profile-content .nft-card-title,
+          .mac-profile-content .nft-card-text {
+            color: #1a1a1a !important;
+          }
+          /* Bottom window padding area */
+          .mac-profile-content .mac-window-bottom {
+            padding-bottom: 24px;
+          }
+        `}</style>
+      )}
       {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">
         <React.Suspense fallback={null}>
@@ -2279,13 +2397,50 @@ const ProfilePage = () => {
         </React.Suspense>
       </div>
 
+      {/* Mac Theme – window title bar (sits directly above the profile content box) */}
+      {isMacTheme && (
+        <div style={{
+          maxWidth: '680px',
+          margin: '32px auto 0',
+          borderRadius: '12px 12px 0 0',
+          background: 'linear-gradient(180deg, #e0e0e0 0%, #d0d0d0 100%)',
+          height: '36px',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 12px',
+          position: 'relative',
+          borderBottom: '1px solid #b8b8b8',
+          boxShadow: '0 -2px 12px rgba(0,0,0,0.35)',
+        }}>
+          <div style={{ display: 'flex', gap: '7px', alignItems: 'center' }}>
+            <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#ff5f57', border: '0.5px solid rgba(0,0,0,0.12)' }} />
+            <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#febc2e', border: '0.5px solid rgba(0,0,0,0.12)' }} />
+            <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#28c840', border: '0.5px solid rgba(0,0,0,0.12)' }} />
+          </div>
+          <span style={{
+            position: 'absolute', left: '50%', transform: 'translateX(-50%)',
+            fontSize: '13px', fontWeight: 500, color: '#3a3a3a', pointerEvents: 'none',
+          }}>User Profile</span>
+        </div>
+      )}
+
       {/* Profile Info - positioned below banner with overlapping profile picture */}
-      <div className="max-w-[98%] md:max-w-[90%] mx-auto relative z-20">
+      <div
+        className={`max-w-[98%] md:max-w-[90%] mx-auto relative z-20${isMacTheme ? ' mac-profile-content' : ''}`}
+        style={isMacTheme ? {
+          maxWidth: '680px',
+          background: '#ffffff',
+          borderRadius: '0 0 12px 12px',
+          boxShadow: '0 22px 60px rgba(0,0,0,0.6)',
+          overflow: 'hidden',
+          paddingBottom: '24px',
+        } : undefined}
+      >
 
         {/* Mobile Layout - Left-aligned like reference design */}
-        <div className="block md:hidden pb-6 relative" style={{ marginTop: '-80px', paddingTop: '0px' }}>
-          {/* Profile Picture - Left aligned on Mobile */}
-          <div className="flex justify-start mb-2 pl-4">
+        <div className="block md:hidden pb-6 relative" style={{ marginTop: isMacTheme ? '0px' : '-80px', paddingTop: '0px' }}>
+          {/* Profile Picture - Left aligned on Mobile (centered for Mac theme) */}
+          <div className={`flex mb-2 ${isMacTheme ? 'justify-center pt-8' : 'justify-start pl-4'}`}>
             {/* Explicit dimensions to ensure circular glow renders correctly - matches profile avatar sizes */}
             <div className="relative h-28 w-28">
               {/* Circular glow removed on mobile per user request */}
@@ -2463,7 +2618,7 @@ const ProfilePage = () => {
           {/* Username and Display Name - Left aligned on Mobile */}
           <div className="flex flex-col items-start gap-0.5 mb-2 mt-8 pl-4">
             <div className="flex items-center gap-2">
-              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, color: isWatermelonTheme ? '#ffffff' : isLightBackground ? accentColor : profileFontColor, fontSize: `${1.25 * profileFontScale}rem`, lineHeight: `${1.75 * profileFontScale}rem` }}>{profile.displayName}</h1>
+              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: isMacTheme ? 'none' : profileTextShadow, color: isWatermelonTheme ? '#ffffff' : isMacTheme ? '#1a1a1a' : isLightBackground ? accentColor : profileFontColor, fontSize: `${1.25 * profileFontScale}rem`, lineHeight: `${1.75 * profileFontScale}rem` }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
@@ -2806,7 +2961,7 @@ const ProfilePage = () => {
         </div>
 
         {/* Desktop Layout - Vertical stacked on left */}
-        <div className="hidden md:flex flex-row pb-4 relative max-w-[90%] mx-auto" style={{ marginTop: '-112px' }}>
+        <div className="hidden md:flex flex-row pb-4 relative max-w-[90%] mx-auto" style={{ marginTop: isMacTheme ? '24px' : '-112px' }}>
           {/* Left side - Profile info stacked vertically */}
           <div className="flex flex-col">
             {/* Profile Picture positioned to overlap banner - explicit dimensions to ensure circular glow renders correctly */}
@@ -2859,7 +3014,7 @@ const ProfilePage = () => {
 
             {/* Display Name and Badges */}
             <div className="flex items-center gap-2 flex-wrap mt-8">
-              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, color: isWatermelonTheme ? '#ffffff' : isLightBackground ? accentColor : profileFontColor, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.displayName}</h1>
+              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: isMacTheme ? 'none' : profileTextShadow, color: isWatermelonTheme ? '#ffffff' : isMacTheme ? '#1a1a1a' : isLightBackground ? accentColor : profileFontColor, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
@@ -3328,8 +3483,8 @@ const ProfilePage = () => {
         {profileSectionTab === 'collection' ? (
           <div className="w-full">
             <div 
-              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-nft-header' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
-              style={isBlocksTheme ? undefined : isWatermelonTheme ? { background: '#ffb3c1', border: '5px solid #1d3932', borderRadius: '9999px' } : isZombieTheme ? { background: '#1a1d1a' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
+              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-nft-header' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : isMacTheme ? 'rounded-full' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
+              style={isBlocksTheme ? undefined : isWatermelonTheme ? { background: '#ffb3c1', border: '5px solid #1d3932', borderRadius: '9999px' } : isZombieTheme ? { background: '#1a1d1a' } : isMacTheme ? { background: '#f0f0f0', border: '1px solid #d0d0d0', borderRadius: '9999px' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
             >
               <div
                 className={`relative h-9 md:h-10 flex-1 flex items-center justify-center px-3 md:px-5 text-sm font-semibold gap-2 ${isCyberpunkTheme ? 'rounded-none' : isBlocksTheme ? 'rounded-none' : 'rounded-full'}`}
@@ -3449,7 +3604,7 @@ const ProfilePage = () => {
             const showLimits = isOwnProfile && !currentUser?.isPro;
             return (
           <TabsList 
-            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : isForestTheme ? '' : isZombieTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
+            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : isForestTheme ? '' : isZombieTheme ? '' : isMacTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
             style={tabListStyle}
           >
             <TabsTrigger 
