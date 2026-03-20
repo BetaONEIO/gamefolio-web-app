@@ -59,6 +59,7 @@ const AccountSettingsPage = React.lazy(() => import("./pages/AccountSettingsPage
 const GameCategoriesPage = React.lazy(() => import("./pages/GameCategoriesPage"));
 const LeaderboardPage = React.lazy(() => import("./pages/LeaderboardPage"));
 const CustomizePage = React.lazy(() => import("./pages/customize-page"));
+const SettingsPage = React.lazy(() => import("./pages/settings-page"));
 const AuthPage = React.lazy(() => import("./pages/auth-page"));
 const OnboardingPage = React.lazy(() => import("./pages/onboarding-page"));
 const MessagesPage = React.lazy(() => import("./pages/MessagesPage"));
@@ -308,6 +309,7 @@ function Router() {
           <ProtectedRoute path="/upload-success/:contentType/:contentId" component={PostUploadSuccessPage} />
           <ProtectedRoute path="/account/settings" component={AccountSettingsPage} />
           <ProtectedRoute path="/customize" component={CustomizePage} />
+          <ProtectedRoute path="/settings/profile" component={SettingsPage} />
           <ProtectedRoute path="/browse/games/:category" component={GameCategoriesPage} />
           <ProtectedRoute path="/browse/games/categories" component={GameCategoriesPage} />
           <Route path="/leaderboard" component={LeaderboardPage} />

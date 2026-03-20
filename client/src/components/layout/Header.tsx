@@ -503,7 +503,7 @@ const Header = () => {
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="cursor-pointer"
-                        onClick={() => setLocation("/customize")}
+                        onClick={() => setLocation("/settings/profile")}
                       >
                         <UserCog className="mr-2 h-4 w-4" />
                         <span>Profile & Appearance</span>
