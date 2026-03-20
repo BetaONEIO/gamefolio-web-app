@@ -1303,7 +1303,9 @@ const ProfilePage = () => {
   const isForestTheme = !isLightBackground && accentColor?.toLowerCase() === '#4ade80' && backgroundColor?.toLowerCase() === '#0a2f1f';
   const isWatermelonTheme = accentColor?.toLowerCase() === '#4ade80' && backgroundColor?.toLowerCase() === '#ff4d6d';
 
-  const platformBtnStyle = isLightBackground
+  const platformBtnStyle = isWatermelonTheme
+    ? { backgroundColor: 'rgba(29,57,50,0.85)', color: '#4ade80', border: '1px solid #4ade8044', borderRadius: '9999px' }
+    : isLightBackground
     ? { backgroundColor: 'rgba(255,255,255,0.7)', color: accentColor, border: `1px solid ${accentColor}80` }
     : isZombieTheme
       ? { backgroundColor: 'rgba(15, 28, 8, 0.9)', color: '#9ae600', border: '1px solid #9ae60066' }
@@ -1317,7 +1319,10 @@ const ProfilePage = () => {
               ? { backgroundColor: 'rgba(232,213,183,0.85)', color: '#2d4a1e', border: '1px solid #c4a88266', borderRadius: '6px' }
               : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
 
-  const tabListStyle = isLightBackground ? {
+  const tabListStyle = isWatermelonTheme ? {
+    background: 'rgba(29,57,50,0.6)',
+    border: '1px solid rgba(74,222,128,0.2)',
+  } : isLightBackground ? {
     background: 'rgba(255,255,255,0.37)',
     border: '0.556px solid rgba(255,255,255,0.8)',
     boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
@@ -1331,14 +1336,17 @@ const ProfilePage = () => {
   };
   const getTabStyle = (tabName: string) => ({
     backgroundColor: activeTab === tabName ? (isBlocksTheme ? (blocksTabColors[tabName] || accentColor) : accentColor) : 'transparent',
-    color: activeTab === tabName ? (isBlocksTheme ? '#1a1a1a' : '#ffffff') : isLightBackground ? accentColor : undefined,
+    color: activeTab === tabName ? (isBlocksTheme ? '#1a1a1a' : '#ffffff') : isWatermelonTheme ? 'rgba(255,255,255,0.75)' : isLightBackground ? accentColor : undefined,
     ...(isZombieTheme ? { fontFamily: "'Creepster', cursive", letterSpacing: '2px', fontSize: '0.8rem' } : {}),
     ...(isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2.5px', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase' as const } : {}),
     ...(isNeoTheme ? { fontFamily: "'JetBrains Mono', monospace", letterSpacing: '1.5px', fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase' as const } : {}),
     ...(isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.55rem', letterSpacing: '0.5px', textTransform: 'uppercase' as const, borderRadius: '2px' } : {}),
   });
 
-  const nameTagBgStyle = isLightBackground ? {
+  const nameTagBgStyle = isWatermelonTheme ? {
+    background: '#1d3932',
+    border: '1px solid rgba(74,222,128,0.3)',
+  } : isLightBackground ? {
     background: 'rgba(255,255,255,0.37)',
     border: '0.556px solid rgba(255,255,255,0.8)',
   } : isZombieTheme ? {
@@ -2116,6 +2124,35 @@ const ProfilePage = () => {
           }
         `}</style>
       )}
+      {/* Watermelon theme */}
+      {isWatermelonTheme && (
+        <style>{`
+          .watermelon-stats-card {
+            border-radius: 9999px !important;
+            background: #1d3932 !important;
+            padding-left: 20px !important;
+            padding-right: 20px !important;
+          }
+          .watermelon-stat-item {
+            padding: 0 16px;
+          }
+          .watermelon-stat-item:not(:last-child) {
+            border-right: 1px solid rgba(255,255,255,0.15);
+            padding-right: 20px;
+          }
+          .watermelon-platform-section > div {
+            background: #1d393299 !important;
+            border: 1px solid #4ade8055 !important;
+            border-radius: 9999px !important;
+          }
+          .watermelon-platform-section span {
+            color: #4ade80 !important;
+          }
+          .watermelon-platform-section svg {
+            color: #4ade80 !important;
+          }
+        `}</style>
+      )}
       {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">
         <React.Suspense fallback={null}>
@@ -2346,7 +2383,7 @@ const ProfilePage = () => {
           {/* Username and Display Name - Left aligned on Mobile */}
           <div className="flex flex-col items-start gap-0.5 mb-2 mt-8 pl-4">
             <div className="flex items-center gap-2">
-              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, color: isLightBackground ? accentColor : profileFontColor, fontSize: `${1.25 * profileFontScale}rem`, lineHeight: `${1.75 * profileFontScale}rem` }}>{profile.displayName}</h1>
+              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, color: isWatermelonTheme ? '#ffffff' : isLightBackground ? accentColor : profileFontColor, fontSize: `${1.25 * profileFontScale}rem`, lineHeight: `${1.75 * profileFontScale}rem` }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
@@ -2442,8 +2479,11 @@ const ProfilePage = () => {
             >
 
             <div 
-              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''}`}
-              style={isLightBackground ? {
+              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''}`}
+              style={isWatermelonTheme ? {
+                background: '#1d3932',
+                border: 'none',
+              } : isLightBackground ? {
                 background: 'rgba(255,255,255,0.37)',
                 border: '0.556px solid rgba(255,255,255,0.8)',
                 boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
@@ -2470,18 +2510,18 @@ const ProfilePage = () => {
             >
               <div className="p-4">
                 {profileSectionTab === 'stats' ? (
-                  <div className="flex gap-6 mt-1">
-                    <div className="flex flex-col gap-1">
-                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#1a3d1a' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#3a5c26', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>UPLOADS</span>
+                  <div className="flex mt-1" style={isWatermelonTheme ? { gap: 0 } : { gap: '1.5rem' }}>
+                    <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
+                      <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#ffffff' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#1a3d1a' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: 'rgba(255,255,255,0.6)', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#3a5c26', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>UPLOADS</span>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : isBlocksTheme ? '#3b82f6' : isForestTheme ? '#1a3d1a' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.followers || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#3a5c26', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWERS</span>
+                    <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
+                      <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#ffffff' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : isBlocksTheme ? '#3b82f6' : isForestTheme ? '#1a3d1a' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.followers || 0)}</span>
+                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: 'rgba(255,255,255,0.6)', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#3a5c26', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWERS</span>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="font-black text-base" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#4ade80' : isForestTheme ? '#1a3d1a' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#4ade80', color: '#1a1a1a', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#3a5c26', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWING</span>
+                    <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
+                      <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#ffffff' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#4ade80' : isForestTheme ? '#1a3d1a' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
+                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: 'rgba(255,255,255,0.6)', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#4ade80', color: '#1a1a1a', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#3a5c26', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWING</span>
                     </div>
                   </div>
                 ) : (
@@ -2504,7 +2544,7 @@ const ProfilePage = () => {
           </div>
 
           {/* Platform tags and Social Links — below the stats card */}
-          {profileSectionTab === 'stats' && <div className={`flex flex-wrap gap-1.5 mb-4 mt-2 pl-4 pr-8 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''}`}>
+          {profileSectionTab === 'stats' && <div className={`flex flex-wrap gap-1.5 mb-4 mt-2 pl-4 pr-8 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''}`}>
             {profile.steamUsername && (
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={platformBtnStyle}>
                 <SiSteam className="w-2.5 h-2.5" />
@@ -2736,7 +2776,7 @@ const ProfilePage = () => {
 
             {/* Display Name and Badges */}
             <div className="flex items-center gap-2 flex-wrap mt-8">
-              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, color: isLightBackground ? accentColor : profileFontColor, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.displayName}</h1>
+              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, color: isWatermelonTheme ? '#ffffff' : isLightBackground ? accentColor : profileFontColor, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
@@ -2830,8 +2870,11 @@ const ProfilePage = () => {
             >
 
               <div 
-                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''}`}
-                style={isLightBackground ? {
+                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''}`}
+                style={isWatermelonTheme ? {
+                  background: '#1d3932',
+                  border: 'none',
+                } : isLightBackground ? {
                   background: 'rgba(255,255,255,0.37)',
                   border: '0.556px solid rgba(255,255,255,0.8)',
                   boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
@@ -2858,18 +2901,18 @@ const ProfilePage = () => {
               >
                 <div className="p-5">
                   {profileSectionTab === 'stats' ? (
-                    <div className="flex gap-8 items-center">
-                      <div className="flex flex-col gap-1">
-                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#1a3d1a' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#3a5c26', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Uploads</span>
+                    <div className="flex items-center" style={isWatermelonTheme ? { gap: 0 } : { gap: '2rem' }}>
+                      <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
+                        <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#ffffff' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#1a3d1a' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                        <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: 'rgba(255,255,255,0.6)', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#3a5c26', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Uploads</span>
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : isBlocksTheme ? '#3b82f6' : isForestTheme ? '#1a3d1a' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{Number(profile._count?.followers || 0)}</span>
-                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#3a5c26', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Followers</span>
+                      <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
+                        <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#ffffff' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : isBlocksTheme ? '#3b82f6' : isForestTheme ? '#1a3d1a' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{Number(profile._count?.followers || 0)}</span>
+                        <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: 'rgba(255,255,255,0.6)', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#3a5c26', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Followers</span>
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="font-black text-xl" style={{ color: isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#4ade80' : isForestTheme ? '#1a3d1a' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
-                        <span className="text-[9px] uppercase font-black" style={isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#4ade80', color: '#1a1a1a', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#3a5c26', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Following</span>
+                      <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
+                        <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#ffffff' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#4ade80' : isForestTheme ? '#1a3d1a' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
+                        <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: 'rgba(255,255,255,0.6)', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#4ade80', color: '#1a1a1a', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#3a5c26', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Following</span>
                       </div>
                     </div>
                   ) : (
@@ -2893,7 +2936,7 @@ const ProfilePage = () => {
 
             {/* Platform Connections — below the stats card */}
             {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
-              <div className={`flex flex-wrap gap-2 mt-4 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''}`}>
+              <div className={`flex flex-wrap gap-2 mt-4 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''}`}>
                 {profile.steamUsername && (
                   <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={platformBtnStyle}>
                     <SiSteam className="w-3 h-3" />
