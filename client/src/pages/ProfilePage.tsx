@@ -1390,6 +1390,9 @@ const ProfilePage = () => {
     border: '3px solid #4ade80',
     borderRadius: '4px',
     boxShadow: '4px 4px 0 #000',
+  } : isForestTheme ? {
+    background: '#1d3932',
+    border: '1px solid rgba(164,118,66,0.4)',
   } : {
     background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}cc 100%)`,
     border: `1px solid ${accentColor}80`,
@@ -2569,7 +2572,7 @@ const ProfilePage = () => {
                         {profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs OWNED
                       </span>
                     ) : (
-                      <span className="text-sm" style={{ color: isWatermelonTheme ? '#0d1a12' : accentColor || 'hsl(var(--primary))' }}>
+                      <span className="text-sm" style={{ color: isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#1a1a1a' : accentColor || 'hsl(var(--primary))' }}>
                         {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
                       </span>
                     )}
@@ -2961,7 +2964,7 @@ const ProfilePage = () => {
                           {profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs OWNED
                         </span>
                       ) : (
-                        <span className="text-sm" style={{ color: isWatermelonTheme ? '#0d1a12' : accentColor || 'hsl(var(--primary))' }}>
+                        <span className="text-sm" style={{ color: isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#1a1a1a' : accentColor || 'hsl(var(--primary))' }}>
                           {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
                         </span>
                       )}
