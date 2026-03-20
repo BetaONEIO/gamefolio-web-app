@@ -2647,7 +2647,7 @@ const ProfilePage = () => {
                               {stat.icon}
                             </div>
                             <span style={{ color: '#ffffff', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>{stat.value}</span>
-                            <span style={{ color: '#c27aff', fontSize: '8px', letterSpacing: '1.2px', fontWeight: 700, textTransform: 'uppercase' as const }}>{stat.label}</span>
+                            <span style={{ color: '#c27aff', fontSize: '8px', letterSpacing: '1.2px', fontWeight: 700, textTransform: 'uppercase' as const, fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }}>{stat.label}</span>
                           </div>
                           {i < arr.length - 1 && (
                             <div style={{ width: '1px', height: '60px', background: 'rgba(194,122,255,0.25)', flexShrink: 0 }} />
@@ -2681,7 +2681,7 @@ const ProfilePage = () => {
                           💎
                         </div>
                         <span style={{ color: '#ffffff', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>{profileNftData?.nfts.filter(n => !n.sold).length || 0}</span>
-                        <span style={{ color: '#c27aff', fontSize: '8px', letterSpacing: '1.2px', fontWeight: 700, textTransform: 'uppercase' as const }}>NFTs Owned</span>
+                        <span style={{ color: '#c27aff', fontSize: '8px', letterSpacing: '1.2px', fontWeight: 700, textTransform: 'uppercase' as const, fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }}>NFTs Owned</span>
                       </div>
                     </div>
                   ) : (
