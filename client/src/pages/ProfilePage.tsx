@@ -2685,7 +2685,6 @@ const ProfilePage = () => {
             <div
               className="relative mt-4 rounded-lg transition-all duration-300"
               style={{
-                marginLeft: '-32px',
                 width: '100%',
                 maxWidth: '600px',
               }}
