@@ -1657,34 +1657,6 @@ const ProfilePage = () => {
       {profileBackgroundImageUrl && (
         <div className="fixed inset-0 bg-black/50 pointer-events-none" style={{ zIndex: 0 }} />
       )}
-      {/* Mac Theme – macOS menu bar */}
-      {isMacTheme && (
-        <div className="mac-menubar" style={{
-          height: '28px',
-          background: 'rgba(28,28,28,0.97)',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 14px',
-          gap: '16px',
-          color: '#f0f0f0',
-          fontSize: '13px',
-          userSelect: 'none',
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-          borderBottom: '1px solid rgba(255,255,255,0.07)',
-        }}>
-          <span style={{ fontSize: '16px', lineHeight: 1 }}>&#63743;</span>
-          <span style={{ fontWeight: 700, letterSpacing: '-0.2px' }}>Gamefolio</span>
-          {['File','Edit','View','Go','Window'].map(item => (
-            <span key={item} style={{ opacity: 0.82, cursor: 'default' }}>{item}</span>
-          ))}
-          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" opacity={0.8}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <span style={{ opacity: 0.82 }}>{new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</span>
-          </span>
-        </div>
-      )}
       {/* Birthday Banner */}
       {(() => {
         if (!profile?.birthday) return null;
