@@ -1365,11 +1365,6 @@ export default function SettingsPage() {
       accentColor: theme.accentColor,
       backgroundColor: theme.backgroundColor,
       ...(theme.primaryColor ? { primaryColor: theme.primaryColor } : {})
-    // Themes only affect the accent colour — background colour and image are
-    // independent and must not be overwritten by a theme selection.
-    setProfileData(prev => ({
-      ...prev,
-      accentColor: theme.accentColor
     }));
     
     toast({
