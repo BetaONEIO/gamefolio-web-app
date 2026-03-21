@@ -1421,6 +1421,7 @@ export default function SettingsPage() {
       ...prev,
       accentColor: theme.accentColor,
       backgroundColor: theme.backgroundColor,
+      profileBackgroundImageUrl: null,
       ...(theme.primaryColor ? { primaryColor: theme.primaryColor } : {})
     }));
     

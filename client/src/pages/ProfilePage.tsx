@@ -1283,9 +1283,9 @@ const ProfilePage = () => {
     return <NotFound />;
   }
 
-  const accentColor = isOwnProfile ? (profile.accentColor || '#4ADE80') : '#4ADE80';
-  const backgroundColor = isOwnProfile ? (profile.backgroundColor || '#0B2232') : '#0B2232';
-  const cardColor = isOwnProfile ? (profile.cardColor || '#1E3A8A') : '#1E3A8A';
+  const accentColor = profile.accentColor || '#4ADE80';
+  const backgroundColor = profile.backgroundColor || '#0B2232';
+  const cardColor = profile.cardColor || '#1E3A8A';
 
   const isMacTheme = accentColor?.toLowerCase() === '#0066ff' && backgroundColor?.toLowerCase() === '#f0f0f2';
   const isCartoonTheme = accentColor?.toLowerCase() === '#ff5e5e' && backgroundColor?.toLowerCase() === '#fffaec';
