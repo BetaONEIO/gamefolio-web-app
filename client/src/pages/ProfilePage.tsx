@@ -3647,8 +3647,7 @@ const ProfilePage = () => {
                 <span style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' as const, letterSpacing: '1px' }}>Saved</span>
               ) : (
                 <span className={`font-black ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'uppercase tracking-[0.5px]' : ''} ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'favorites' ? '#1a1a1a' : '#facc15' } : undefined}>
-                  <span className="md:hidden">Favs</span>
-                  <span className="hidden md:inline">Favorites</span>
+                  Favorites
                 </span>
               )}
             </TabsTrigger>
