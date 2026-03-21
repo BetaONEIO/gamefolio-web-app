@@ -250,6 +250,7 @@ interface CustomAvatarProps {
   showBorder?: boolean;
   borderIntensity?: "subtle" | "normal" | "strong";
   showAvatarBorderOverlay?: boolean;
+  themeColor?: string;
   onNftClick?: (userId: number, tokenId: number, imageUrl: string, event: React.MouseEvent) => void;
   onClick?: (event: React.MouseEvent) => void;
 }
@@ -297,10 +298,11 @@ export const CustomAvatar = ({
   showBorder = true,
   borderIntensity = "normal",
   showAvatarBorderOverlay = true,
+  themeColor,
   onNftClick,
   onClick
 }: CustomAvatarProps) => {
-  const borderColor = 'hsl(var(--primary))';
+  const borderColor = themeColor || 'hsl(var(--primary))';
   const safeDisplayName = user?.displayName || user?.username || "?";
   const clipId = useMemo(() => `avatar-clip-${user?.id || 'default'}-${Math.random().toString(36).substr(2, 6)}`, [user?.id]);
   

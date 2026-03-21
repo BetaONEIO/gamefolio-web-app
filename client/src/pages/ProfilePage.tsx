@@ -1359,6 +1359,17 @@ const ProfilePage = () => {
 
   const isNamedTheme = isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme;
 
+  const avatarThemeColor = isWatermelonTheme ? '#ff6b6b'
+    : isCartoonTheme ? '#ff6b35'
+    : isMacTheme ? '#0071e3'
+    : isZombieTheme ? '#9ae600'
+    : isCyberpunkTheme ? '#00d3f2'
+    : isNeoTheme ? '#9333ea'
+    : isBlocksTheme ? '#4ade80'
+    : isForestTheme ? '#4a7c59'
+    : isGothicTheme ? '#c27aff'
+    : (accentColor || undefined);
+
   const getBtnStyle = (platform: string): React.CSSProperties => {
     if (!isNamedTheme) return platformBrandStyles[platform] ?? socialOutlineStyle;
     return socialOutlineStyle;
@@ -2381,6 +2392,7 @@ const ProfilePage = () => {
                   size="mobile-profile"
                   borderIntensity="strong"
                   showAvatarBorderOverlay={true}
+                  themeColor={avatarThemeColor}
                   className="h-full w-full"
                 />
               </div>
@@ -2904,6 +2916,7 @@ const ProfilePage = () => {
                   size="profile"
                   borderIntensity="strong"
                   showAvatarBorderOverlay={true}
+                  themeColor={avatarThemeColor}
                 />
               </div>
               {/* Level Badge with Progress */}
