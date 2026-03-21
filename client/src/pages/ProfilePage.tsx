@@ -3545,15 +3545,15 @@ const ProfilePage = () => {
             const showXboxTab = profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0;
             const showPsnTab = profile?.showPsnTrophies && Array.isArray(profile?.psnTrophyData) && profile.psnTrophyData.length > 0;
             const showScrollArrows = showXboxTab || showPsnTab;
-            const arrowBtnClass = `shrink-0 flex items-center justify-center w-7 h-7 rounded-full transition-colors ${isLightBackground ? 'bg-black/10 hover:bg-black/20' : 'bg-white/10 hover:bg-white/20'}`;
+            const arrowBtnClass = `flex items-center justify-center w-7 h-7 rounded-full transition-colors ${isLightBackground ? 'bg-black/15 hover:bg-black/30' : 'bg-black/40 hover:bg-black/60'}`;
             return (
-          <div className="relative flex items-center w-full gap-1">
+          <div className="relative w-full">
             {showScrollArrows && (
               <button
                 type="button"
                 onClick={() => { if (tabsListRef.current) tabsListRef.current.scrollLeft -= 150; }}
                 className={arrowBtnClass}
-                style={{ color: accentColor }}
+                style={{ color: accentColor, position: 'absolute', left: 4, top: '50%', transform: 'translateY(-50%)', zIndex: 10 }}
                 aria-label="Scroll tabs left"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -3561,7 +3561,7 @@ const ProfilePage = () => {
             )}
           <TabsList 
             ref={tabsListRef}
-            className={`flex-1 min-w-0 max-w-lg lg:max-w-full mx-auto justify-start md:justify-center p-1 relative flex flex-nowrap gap-0.5 overflow-x-auto scrollbar-hide ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : isGothicTheme ? 'rounded-2xl' : isCartoonTheme ? '' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : isForestTheme ? '' : isZombieTheme ? '' : isMacTheme ? '' : isGothicTheme ? '' : isCartoonTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
+            className={`w-full max-w-lg lg:max-w-full mx-auto justify-start md:justify-center p-1 relative flex flex-nowrap gap-0.5 overflow-x-auto scrollbar-hide ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : isGothicTheme ? 'rounded-2xl' : isCartoonTheme ? '' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : isForestTheme ? '' : isZombieTheme ? '' : isMacTheme ? '' : isGothicTheme ? '' : isCartoonTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
             style={tabListStyle}
           >
             {/* Mac Theme – traffic light dots on the left of the tab bar */}
@@ -3676,7 +3676,7 @@ const ProfilePage = () => {
                 type="button"
                 onClick={() => { if (tabsListRef.current) tabsListRef.current.scrollLeft += 150; }}
                 className={arrowBtnClass}
-                style={{ color: accentColor }}
+                style={{ color: accentColor, position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', zIndex: 10 }}
                 aria-label="Scroll tabs right"
               >
                 <ChevronRight className="w-4 h-4" />
