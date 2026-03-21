@@ -400,7 +400,7 @@ export const CustomAvatar = ({
   }
 
   if (hasSolidBorder) {
-    const solidColor = user?.avatarBorderColor || borderColor;
+    const solidColor = themeColor || user?.avatarBorderColor || borderColor;
     const solidBorderWidth = (size === 'sm' || size === 'md') ? 3 : 4;
     return (
       <div className={`relative inline-flex items-center justify-center ${className} ${onClick ? 'cursor-pointer' : ''}`} onClick={onClick}>
