@@ -111,8 +111,7 @@ export default function CustomizePage() {
   const [colors, setColors] = useState({
     accentColor: user?.accentColor || DEFAULT_COLORS.accentColor,
     backgroundColor: user?.backgroundColor || DEFAULT_COLORS.backgroundColor,
-    cardColor: user?.cardColor || DEFAULT_COLORS.cardColor,
-    profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || ''
+    cardColor: user?.cardColor || DEFAULT_COLORS.cardColor
   });
 
   const [activeColorPicker, setActiveColorPicker] = useState<string | null>(null);
@@ -143,13 +142,11 @@ export default function CustomizePage() {
   };
 
   const applyPreset = (preset: typeof PRESET_THEMES[0]) => {
-    setColors(prev => ({
-      ...prev,
+    setColors({
       accentColor: preset.accentColor,
       backgroundColor: preset.backgroundColor,
-      cardColor: preset.cardColor,
-      profileBackgroundImageUrl: ''
-    }));
+      cardColor: preset.cardColor
+    });
   };
 
   const resetToDefaults = () => {
