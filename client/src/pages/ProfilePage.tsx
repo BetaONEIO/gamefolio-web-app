@@ -1907,15 +1907,15 @@ const ProfilePage = () => {
             background-size:48px 48px;
           }
           @keyframes zombieMeshSweep {
-            0%   { transform: rotate(20deg) translateX(-160%); }
-            100% { transform: rotate(20deg) translateX(160%); }
+            0%   { transform: rotate(20deg) translateX(-200vw); }
+            100% { transform: rotate(20deg) translateX(200vw); }
           }
           .zombie-mesh-sweep {
             position:fixed;
-            top:-50%;
-            left:0;
-            width:100%;
-            height:200%;
+            top:-50vh;
+            left:-50vw;
+            width:200vw;
+            height:200vh;
             pointer-events:none;
             z-index:0;
             background: linear-gradient(
@@ -1975,11 +1975,11 @@ const ProfilePage = () => {
           }
           /* ── Diagonal scan sweep (cyan→magenta) ── */
           @keyframes cyberScanSweep {
-            0%   { transform: rotate(15deg) translateX(-160%); }
-            100% { transform: rotate(15deg) translateX(160%); }
+            0%   { transform: rotate(15deg) translateX(-200vw); }
+            100% { transform: rotate(15deg) translateX(200vw); }
           }
           .cyber-scan-sweep {
-            position:fixed; top:-50%; left:0; width:100%; height:200%;
+            position:fixed; top:-50vh; left:-50vw; width:200vw; height:200vh;
             pointer-events:none; z-index:0;
             background: linear-gradient(
               90deg,
