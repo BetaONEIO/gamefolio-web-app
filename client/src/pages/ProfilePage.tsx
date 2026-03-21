@@ -1357,8 +1357,10 @@ const ProfilePage = () => {
     facebook:    { backgroundColor: '#1877F2', color: '#ffffff', border: '1px solid #1877F2', borderRadius: '9999px' },
   };
 
+  const isNamedTheme = isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme;
+
   const getBtnStyle = (platform: string): React.CSSProperties => {
-    if (isDefaultTheme) return platformBrandStyles[platform] ?? socialOutlineStyle;
+    if (!isNamedTheme) return platformBrandStyles[platform] ?? socialOutlineStyle;
     return socialOutlineStyle;
   };
 
