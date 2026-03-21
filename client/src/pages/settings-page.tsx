@@ -1447,6 +1447,13 @@ export default function SettingsPage() {
   const bgRgb = user?.backgroundColor ? hexToRgb(user.backgroundColor) : null;
   const accentRgb = user?.accentColor ? hexToRgb(user.accentColor) : null;
 
+  const NAMED_THEME_NAMES = ['Zombie', 'Cyberpunk', 'NEO', 'Blocks', 'Watermelon', 'Forest', 'Gothic', 'Mac', 'Cartoon'];
+  const isNamedThemeActive = PRESET_THEMES.some(t =>
+    NAMED_THEME_NAMES.includes(t.name) &&
+    profileData.accentColor === t.accentColor &&
+    profileData.backgroundColor === t.backgroundColor
+  );
+
   return (
     <KeyboardAvoidingWrapper 
       className="min-h-screen px-0 py-4 pb-24 md:p-6 md:pb-6"
@@ -2177,7 +2184,15 @@ export default function SettingsPage() {
                   
                   {/* Border Color Picker - shown when a border is selected */}
                   {selectedBorderId && (
-                    <div className="mt-4 pt-4 border-t space-y-3">
+                    <div
+                      className="mt-4 pt-4 border-t space-y-3 transition-opacity duration-300"
+                      style={{ opacity: isNamedThemeActive ? 0.4 : 1, pointerEvents: isNamedThemeActive ? 'none' : 'auto' }}
+                    >
+                      {isNamedThemeActive && (
+                        <div className="px-3 py-2 rounded-md bg-muted text-xs text-muted-foreground border border-border">
+                          A visual theme is active — its border colour overrides this setting. Switch to "None" in Themes to customise.
+                        </div>
+                      )}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Palette className="h-4 w-4 text-muted-foreground" />
@@ -2379,11 +2394,16 @@ export default function SettingsPage() {
                   <div className="space-y-6">
                     <div
                       className="transition-opacity duration-300"
-                      style={{ opacity: profileData.profileBackgroundImageUrl ? 0.4 : 1, pointerEvents: profileData.profileBackgroundImageUrl ? 'none' : 'auto' }}
+                      style={{ opacity: profileData.profileBackgroundImageUrl || isNamedThemeActive ? 0.4 : 1, pointerEvents: profileData.profileBackgroundImageUrl || isNamedThemeActive ? 'none' : 'auto' }}
                     >
                     {profileData.profileBackgroundImageUrl && (
                       <div className="mb-3 px-3 py-2 rounded-md bg-muted text-xs text-muted-foreground border border-border">
                         Your background image is active — remove it to use a colour instead.
+                      </div>
+                    )}
+                    {isNamedThemeActive && !profileData.profileBackgroundImageUrl && (
+                      <div className="mb-3 px-3 py-2 rounded-md bg-muted text-xs text-muted-foreground border border-border">
+                        A visual theme is active — its colours override this setting. Switch to "None" in Themes to use a custom colour.
                       </div>
                     )}
                     <Card>
