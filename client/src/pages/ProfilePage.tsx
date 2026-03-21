@@ -1283,9 +1283,9 @@ const ProfilePage = () => {
     return <NotFound />;
   }
 
-  const accentColor = profile.accentColor || '#4ADE80';
-  const backgroundColor = profile.backgroundColor || '#0B2232';
-  const cardColor = profile.cardColor || '#1E3A8A';
+  const accentColor = isOwnProfile ? (profile.accentColor || '#4ADE80') : '#4ADE80';
+  const backgroundColor = isOwnProfile ? (profile.backgroundColor || '#0B2232') : '#0B2232';
+  const cardColor = isOwnProfile ? (profile.cardColor || '#1E3A8A') : '#1E3A8A';
 
   const isMacTheme = accentColor?.toLowerCase() === '#0066ff' && backgroundColor?.toLowerCase() === '#f0f0f2';
   const isCartoonTheme = accentColor?.toLowerCase() === '#ff5e5e' && backgroundColor?.toLowerCase() === '#fffaec';
@@ -2862,95 +2862,6 @@ const ProfilePage = () => {
             )}
           </div>}
 
-          {/* Social linked accounts - rendered outside the L-shaped container, always below bio */}
-          {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
-            <div className="flex flex-wrap gap-1.5 px-4 pb-4">
-              {profile.steamUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('steam')}>
-                  <SiSteam className="w-2.5 h-2.5" />
-                  <span>{profile.steamUsername}</span>
-                </div>
-              )}
-              {profile.nintendoUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('nintendo')}>
-                  <SiNintendo className="w-2.5 h-2.5" />
-                  <span>{profile.nintendoUsername}</span>
-                </div>
-              )}
-              {profile.xboxUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('xbox')}>
-                  <FaXbox className="w-2.5 h-2.5" />
-                  <span>{profile.xboxUsername}</span>
-                </div>
-              )}
-              {profile.playstationUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('playstation')}>
-                  <SiPlaystation className="w-2.5 h-2.5" />
-                  <span>{profile.playstationUsername}</span>
-                </div>
-              )}
-              {profile.epicUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('epic')}>
-                  <SiEpicgames className="w-2.5 h-2.5" />
-                  <span>{profile.epicUsername}</span>
-                </div>
-              )}
-              {profile.discordUsername && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('discord')}>
-                  <SiDiscord className="w-2.5 h-2.5" />
-                  <span>{profile.discordUsername}</span>
-                </div>
-              )}
-              {profile.twitterUsername && (
-                <a
-                  href={`https://twitter.com/${profile.twitterUsername}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                  style={getBtnStyle('twitter')}
-                >
-                  <FaXTwitter className="w-2.5 h-2.5" />
-                  <span>{profile.twitterUsername}</span>
-                </a>
-              )}
-              {profile.youtubeUsername && (
-                <a
-                  href={`https://youtube.com/@${profile.youtubeUsername}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                  style={getBtnStyle('youtube')}
-                >
-                  <FaYoutube className="w-2.5 h-2.5" />
-                  <span>{profile.youtubeUsername}</span>
-                </a>
-              )}
-              {profile.instagramUsername && (
-                <a
-                  href={`https://instagram.com/${profile.instagramUsername}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                  style={getBtnStyle('instagram')}
-                >
-                  <FaInstagram className="w-2.5 h-2.5" />
-                  <span>{profile.instagramUsername}</span>
-                </a>
-              )}
-              {profile.facebookUsername && (
-                <a
-                  href={`https://facebook.com/${profile.facebookUsername}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                  style={getBtnStyle('facebook')}
-                >
-                  <FaFacebook className="w-2.5 h-2.5" />
-                  <span>{profile.facebookUsername}</span>
-                </a>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Desktop Layout - Vertical stacked on left */}
@@ -3632,7 +3543,7 @@ const ProfilePage = () => {
             const showLimits = isOwnProfile && !currentUser?.isPro;
             return (
           <TabsList 
-            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : isGothicTheme ? 'rounded-2xl' : isCartoonTheme ? '' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : isForestTheme ? '' : isZombieTheme ? '' : isMacTheme ? '' : isGothicTheme ? '' : isCartoonTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
+            className={`w-full max-w-lg lg:max-w-full mx-auto justify-start md:justify-center p-1 relative flex flex-nowrap gap-0.5 overflow-x-auto scrollbar-hide ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : isGothicTheme ? 'rounded-2xl' : isCartoonTheme ? '' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : isForestTheme ? '' : isZombieTheme ? '' : isMacTheme ? '' : isGothicTheme ? '' : isCartoonTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
             style={tabListStyle}
           >
             {/* Mac Theme – traffic light dots on the left of the tab bar */}
@@ -3646,7 +3557,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={clipsTabRef}
               value="clips" 
-              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              className={`relative transition-all duration-200 shrink-0 md:flex-1 px-4 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
               style={isGothicTheme ? { backgroundColor: activeTab === 'clips' ? 'rgba(80,30,160,0.45)' : 'transparent', color: activeTab === 'clips' ? '#ffffff' : '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '0.8px' } : getTabStyle('clips')}
             >
               {isGothicTheme ? (
@@ -3666,7 +3577,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={reelsTabRef}
               value="reels" 
-              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              className={`relative transition-all duration-200 shrink-0 md:flex-1 px-4 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
               style={isGothicTheme ? { backgroundColor: activeTab === 'reels' ? 'rgba(80,30,160,0.45)' : 'transparent', color: activeTab === 'reels' ? '#ffffff' : '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '0.8px' } : getTabStyle('reels')}
             >
               {isGothicTheme ? (
@@ -3686,7 +3597,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={screenshotsTabRef}
               value="screenshots" 
-              className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              className={`relative transition-all duration-200 shrink-0 md:flex-1 px-3 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
               style={isGothicTheme ? { backgroundColor: activeTab === 'screenshots' ? 'rgba(80,30,160,0.45)' : 'transparent', color: activeTab === 'screenshots' ? '#ffffff' : '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '0.8px' } : getTabStyle('screenshots')}
             >
               {isGothicTheme ? (
@@ -3706,7 +3617,7 @@ const ProfilePage = () => {
             <TabsTrigger 
               ref={favoritesTabRef}
               value="favorites" 
-              className={`relative transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              className={`relative transition-all duration-200 shrink-0 md:flex-1 px-4 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
               style={isGothicTheme ? { backgroundColor: activeTab === 'favorites' ? 'rgba(80,30,160,0.45)' : 'transparent', color: activeTab === 'favorites' ? '#ffffff' : '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '0.8px' } : getTabStyle('favorites')}
             >
               {isGothicTheme ? (
@@ -3719,7 +3630,7 @@ const ProfilePage = () => {
             {profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0 && (
               <TabsTrigger
                 value="achievements"
-                className={`relative rounded-full transition-all duration-200 flex-1 px-2 md:px-4 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+                className={`relative rounded-full transition-all duration-200 shrink-0 md:flex-1 px-3 md:px-4 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
                 style={{ backgroundColor: activeTab === 'achievements' ? '#107C10' : 'transparent', color: activeTab === 'achievements' ? '#ffffff' : isLightBackground ? '#1d293d' : undefined }}
               >
                 <span className="flex items-center gap-1.5">
@@ -3732,7 +3643,7 @@ const ProfilePage = () => {
             {profile?.showPsnTrophies && Array.isArray(profile?.psnTrophyData) && profile.psnTrophyData.length > 0 && (
               <TabsTrigger
                 value="trophies"
-                className={`relative rounded-full transition-all duration-200 flex-1 px-2 md:px-4 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+                className={`relative rounded-full transition-all duration-200 shrink-0 md:flex-1 px-3 md:px-4 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
                 style={{ backgroundColor: activeTab === 'trophies' ? '#003791' : 'transparent', color: activeTab === 'trophies' ? '#ffffff' : isLightBackground ? '#1d293d' : undefined }}
               >
                 <span className="flex items-center gap-1.5">
