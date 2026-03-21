@@ -3647,12 +3647,33 @@ const ProfilePage = () => {
               style={isGothicTheme ? { backgroundColor: activeTab === 'screenshots' ? 'rgba(80,30,160,0.45)' : 'transparent', color: activeTab === 'screenshots' ? '#ffffff' : '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '0.8px' } : getTabStyle('screenshots')}
             >
               {isGothicTheme ? (
-                <Camera className="w-4 h-4" />
+                <Camera className="w-4 h-4" style={{ color: activeTab === 'screenshots' ? '#ffffff' : '#c27aff' }} />
               ) : (
                 <span className="flex flex-col items-center leading-none gap-0.5">
-                  <span className={`font-black ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'uppercase tracking-[0.5px]' : ''} ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'screenshots' ? '#1a1a1a' : '#4ade80' } : undefined}>
-                    <Camera className="w-4 h-4" />
-                  </span>
+                  <Camera
+                    className="w-4 h-4"
+                    style={{
+                      color: isCyberpunkTheme
+                        ? '#00d3f2'
+                        : isNeoTheme
+                          ? '#00ff41'
+                          : isZombieTheme
+                            ? '#9ae600'
+                            : isBlocksTheme
+                              ? (activeTab === 'screenshots' ? '#1a1a1a' : '#4ade80')
+                              : isWatermelonTheme
+                                ? '#0d1a12'
+                                : isForestTheme
+                                  ? (activeTab === 'screenshots' ? '#5C3317' : '#c4a882')
+                                  : isCartoonTheme
+                                    ? (activeTab === 'screenshots' ? '#27ae60' : 'rgba(0,0,0,0.25)')
+                                    : isMacTheme
+                                      ? (activeTab === 'screenshots' ? '#ffffff' : '#888')
+                                      : isLightBackground
+                                        ? (activeTab === 'screenshots' ? '#ffffff' : accentColor)
+                                        : activeTab === 'screenshots' ? '#ffffff' : 'rgba(255,255,255,0.5)',
+                    }}
+                  />
                   {showLimits && (
                     <span className={`text-[10px] font-normal ${screenshotsCount >= 10 ? 'text-red-400' : ''}`} style={{ color: screenshotsCount >= 10 ? undefined : isMacTheme ? (activeTab === 'screenshots' ? '#555' : '#888') : activeTab === 'screenshots' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
                       {screenshotsCount}/10
