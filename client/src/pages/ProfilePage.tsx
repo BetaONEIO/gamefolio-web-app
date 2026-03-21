@@ -1343,20 +1343,6 @@ const ProfilePage = () => {
       ? platformBtnStyle
       : { backgroundColor: '#ffffff', color: '#000000', border: '1.5px solid #000000', borderRadius: '9999px' };
 
-  const xButtonSolidStyle = isWatermelonTheme
-    ? { backgroundColor: '#1d3932', color: '#ffffff', border: '3px solid #1d3932', borderRadius: '9999px' }
-    : isCartoonTheme
-    ? platformBtnStyle
-    : isMacTheme
-    ? platformBtnStyle
-    : isGothicTheme
-    ? platformBtnStyle
-    : isLightBackground
-    ? { backgroundColor: '#000000', color: '#ffffff', border: '1.5px solid #000000', borderRadius: '9999px' }
-    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme)
-      ? platformBtnStyle
-      : { backgroundColor: '#000000', color: '#ffffff', border: '1.5px solid #000000', borderRadius: '9999px' };
-
   const platformBrandStyles: Record<string, React.CSSProperties> = {
     steam:       { backgroundColor: '#1b2838', color: '#c6d4df', border: '1px solid #1b2838', borderRadius: '9999px' },
     xbox:        { backgroundColor: '#107c10', color: '#ffffff', border: '1px solid #107c10', borderRadius: '9999px' },
@@ -1372,7 +1358,6 @@ const ProfilePage = () => {
 
   const getBtnStyle = (platform: string): React.CSSProperties => {
     if (isDefaultTheme) return platformBrandStyles[platform] ?? socialOutlineStyle;
-    if (platform === 'twitter') return xButtonSolidStyle;
     return socialOutlineStyle;
   };
 
