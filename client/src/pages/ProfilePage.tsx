@@ -2890,9 +2890,9 @@ const ProfilePage = () => {
                 <div 
                   className="absolute inset-0 rounded-full animate-pulse"
                   style={{
-                    background: `linear-gradient(45deg, hsl(var(--primary)), hsl(var(--card)))`,
+                    background: `linear-gradient(45deg, ${avatarThemeColor || 'hsl(var(--primary))'}, hsl(var(--card)))`,
                     padding: '4px',
-                    filter: `drop-shadow(0 0 20px hsl(var(--primary)))`,
+                    filter: `drop-shadow(0 0 20px ${avatarThemeColor || 'hsl(var(--primary))'})`,
                   }}
                 >
                   <div className="w-full h-full rounded-full bg-background"></div>
