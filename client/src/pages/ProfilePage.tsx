@@ -2715,20 +2715,17 @@ const ProfilePage = () => {
                   ) : isGothicTheme ? (
                     <div className="flex mt-1 w-full">
                       {[
-                        { icon: '👻', value: (clips?.length || 0) + (screenshots?.length || 0), label: 'Uploads' },
-                        { icon: '⭐', value: Number(profile._count?.followers || 0), label: 'Followers' },
-                        { icon: '🔥', value: Number(profile._count?.following || 0), label: 'Following' },
+                        { value: (clips?.length || 0) + (screenshots?.length || 0), label: 'Uploads' },
+                        { value: Number(profile._count?.followers || 0), label: 'Followers' },
+                        { value: Number(profile._count?.following || 0), label: 'Following' },
                       ].map((stat, i, arr) => (
                         <div key={stat.label} className="flex flex-1 items-center">
                           <div className="flex flex-col items-center gap-1 flex-1 py-1">
-                            <div style={{ background: 'rgba(80,30,160,0.5)', borderRadius: '12px', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-                              {stat.icon}
-                            </div>
                             <span style={{ color: '#ffffff', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>{stat.value}</span>
                             <span style={{ color: '#c27aff', fontSize: '8px', letterSpacing: '1.2px', fontWeight: 700, textTransform: 'uppercase' as const, fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }}>{stat.label}</span>
                           </div>
                           {i < arr.length - 1 && (
-                            <div style={{ width: '1px', height: '60px', background: 'rgba(194,122,255,0.25)', flexShrink: 0 }} />
+                            <div style={{ width: '1px', height: '40px', background: 'rgba(194,122,255,0.25)', flexShrink: 0 }} />
                           )}
                         </div>
                       ))}
