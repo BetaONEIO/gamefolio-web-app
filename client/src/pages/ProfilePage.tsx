@@ -3626,6 +3626,21 @@ const ProfilePage = () => {
             </TabsTrigger>
 
             <TabsTrigger 
+              ref={favoritesTabRef}
+              value="favorites" 
+              className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={isGothicTheme ? { backgroundColor: activeTab === 'favorites' ? 'rgba(80,30,160,0.45)' : 'transparent', color: activeTab === 'favorites' ? '#ffffff' : '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '0.8px' } : getTabStyle('favorites')}
+            >
+              {isGothicTheme ? (
+                <span style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' as const, letterSpacing: '1px' }}>Games</span>
+              ) : (
+                <span className={`font-black ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'uppercase tracking-[0.5px]' : ''} ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'favorites' ? '#1a1a1a' : '#facc15' } : undefined}>
+                  Games
+                </span>
+              )}
+            </TabsTrigger>
+
+            <TabsTrigger 
               ref={screenshotsTabRef}
               value="screenshots" 
               className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
@@ -3643,21 +3658,6 @@ const ProfilePage = () => {
                       {screenshotsCount}/10
                     </span>
                   )}
-                </span>
-              )}
-            </TabsTrigger>
-
-            <TabsTrigger 
-              ref={favoritesTabRef}
-              value="favorites" 
-              className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
-              style={isGothicTheme ? { backgroundColor: activeTab === 'favorites' ? 'rgba(80,30,160,0.45)' : 'transparent', color: activeTab === 'favorites' ? '#ffffff' : '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '0.8px' } : getTabStyle('favorites')}
-            >
-              {isGothicTheme ? (
-                <span style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' as const, letterSpacing: '1px' }}>Favorites</span>
-              ) : (
-                <span className={`font-black ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'uppercase tracking-[0.5px]' : ''} ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'favorites' ? '#1a1a1a' : '#facc15' } : undefined}>
-                  Favorites
                 </span>
               )}
             </TabsTrigger>
