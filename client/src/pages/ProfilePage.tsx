@@ -1357,7 +1357,7 @@ const ProfilePage = () => {
     facebook:    { backgroundColor: '#1877F2', color: '#ffffff', border: '1px solid #1877F2', borderRadius: '9999px' },
   };
 
-  const isNamedTheme = isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme;
+  const isNamedTheme = isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isLightBackground;
 
   const avatarThemeColor = isWatermelonTheme ? '#ff6b6b'
     : isCartoonTheme ? '#ff6b35'
