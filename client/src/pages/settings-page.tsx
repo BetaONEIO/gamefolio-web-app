@@ -284,7 +284,7 @@ const PRESET_THEMES = [
   {
     name: "None",
     backgroundColor: "#0B2232",
-    accentColor: "#00d5be",
+    accentColor: "#4ADE80",
     gradientTopColor: "#02172C",
     primaryColor: "#02172C"
   },
