@@ -56,11 +56,13 @@ const hexToHsl = (hex: string): string => {
   return `${h} ${sPercent}% ${lPercent}%`;
 };
 
+const DEFAULT_ACCENT = "#4ADE80";
+
 const initialState: ThemeProviderState = {
   theme: "dark",
   setTheme: () => null,
   actualTheme: "dark",
-  accentColor: "#4ADE80",
+  accentColor: DEFAULT_ACCENT,
   setAccentColor: () => null,
 };
 
@@ -70,57 +72,25 @@ export function ThemeProvider({
   children,
   ...props
 }: ThemeProviderProps) {
-  const [accentColor, setAccentColorState] = useState<string>(() => {
-    try {
-      if (typeof window !== "undefined") {
-        return localStorage.getItem("gf.theme.accent") || "#4ADE80";
-      }
-    } catch {
-      // ignore storage errors
-    }
-
-    return "#4ADE80";
-  });
+  const [accentColor, setAccentColorState] = useState<string>(DEFAULT_ACCENT);
 
   const setAccentColor = (color: string) => {
     setAccentColorState(color);
-
-    try {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("gf.theme.accent", color);
-      }
-    } catch {
-      // ignore storage errors
-    }
-
-    if (typeof document !== "undefined") {
-      const hslColor = hexToHsl(color);
-      const root = document.documentElement;
-
-      root.style.setProperty("--primary", hslColor);
-      root.style.setProperty("--accent", hslColor);
-      root.style.setProperty("--ring", hslColor);
-      root.style.setProperty("--chart-1", hslColor);
-      root.style.setProperty("--chart-2", hslColor);
-    }
   };
 
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
     root.classList.add("dark");
+
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("gf.theme.accent");
+      }
+    } catch {
+      // ignore storage errors
+    }
   }, []);
-
-  useEffect(() => {
-    const hslColor = hexToHsl(accentColor);
-    const root = window.document.documentElement;
-
-    root.style.setProperty("--primary", hslColor);
-    root.style.setProperty("--accent", hslColor);
-    root.style.setProperty("--ring", hslColor);
-    root.style.setProperty("--chart-1", hslColor);
-    root.style.setProperty("--chart-2", hslColor);
-  }, [accentColor]);
 
   const value: ThemeProviderState = {
     theme: "dark",

@@ -1637,9 +1637,6 @@ const ProfilePage = () => {
   const accentRgb = hexToRgb(accentColor);
   const defaultThemeColor = profile.primaryColor || '#0B2232';
 
-  // Debug: Log the actual colors being used
-  console.log('Profile colors:', { accentColor, backgroundColor, bgRgb, accentRgb });
-
   const selectedProfileNftDetail = selectedProfileNft ? (() => {
     const { score } = getNftRarity(selectedProfileNft);
     return (
