@@ -1423,6 +1423,7 @@ export default function SettingsPage() {
       backgroundColor: theme.backgroundColor,
       ...(theme.primaryColor ? { primaryColor: theme.primaryColor } : {})
     }));
+    setAvatarBorderColor(theme.accentColor);
     
     toast({
       title: "Theme Selected",
