@@ -283,7 +283,7 @@ const getCroppedImg = async (
 const PRESET_THEMES = [
   {
     name: "None",
-    backgroundColor: "#0B2232",
+    backgroundColor: "#121F2B",
     accentColor: "#4ADE80",
     gradientTopColor: "#02172C",
     primaryColor: "#02172C"
@@ -663,7 +663,7 @@ export default function SettingsPage() {
   const [profileData, setProfileData] = useState({
     displayName: user?.displayName || "",
     bio: user?.bio || "",
-    backgroundColor: user?.backgroundColor || "#0B2232",
+    backgroundColor: user?.backgroundColor || "#121F2B",
     accentColor: user?.accentColor || "#4ADE80",
     bannerUrl: user?.bannerUrl || "",
     avatarUrl: user?.avatarUrl || "",
@@ -742,7 +742,7 @@ export default function SettingsPage() {
   });
 
   const lastSyncedAppearance = React.useRef({
-    backgroundColor: user?.backgroundColor || "#0B2232",
+    backgroundColor: user?.backgroundColor || "#121F2B",
     accentColor: user?.accentColor || "#4ADE80",
     profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
     profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
@@ -797,7 +797,7 @@ export default function SettingsPage() {
         }
         
         const appearanceFields = hasPendingEdits.current ? {} : {
-          backgroundColor: user.backgroundColor || "#0B2232",
+          backgroundColor: user.backgroundColor || "#121F2B",
           accentColor: user.accentColor || "#4ADE80",
           profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
           profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
@@ -824,7 +824,7 @@ export default function SettingsPage() {
         const pick = <T,>(prevVal: T, serverVal: T, lastVal: T): T =>
           prevVal === lastVal ? serverVal : prevVal;
 
-        const newBgColor       = user.backgroundColor || "#0B2232";
+        const newBgColor       = user.backgroundColor || "#121F2B";
         const newAccent        = user.accentColor || "#4ADE80";
         const newBgType        = (user as any)?.profileBackgroundType || "solid";
         const newBgTheme       = (user as any)?.profileBackgroundTheme || "default";
@@ -938,7 +938,7 @@ export default function SettingsPage() {
   const hasUnsavedChanges = 
     normalizeValue(profileData.displayName) !== normalizeValue(user?.displayName) ||
     normalizeValue(profileData.bio) !== normalizeValue(user?.bio) ||
-    profileData.backgroundColor !== (user?.backgroundColor || "#0B2232") ||
+    profileData.backgroundColor !== (user?.backgroundColor || "#121F2B") ||
     profileData.accentColor !== (user?.accentColor || "#4ADE80") ||
     normalizeValue(profileData.bannerUrl) !== normalizeValue(user?.bannerUrl) ||
     profileData.profileBackgroundType !== ((user as any)?.profileBackgroundType || "solid") ||
@@ -2429,13 +2429,13 @@ export default function SettingsPage() {
                                 value={profileData.backgroundColor}
                                 onChange={(e) => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, backgroundColor: e.target.value })); }}
                                 className="w-32 font-mono text-sm"
-                                placeholder="#0B2232"
+                                placeholder="#121F2B"
                               />
                             </div>
                             <div
                               className="w-full h-24 rounded-lg border border-border overflow-hidden"
                               style={profileData.profileBackgroundGradient
-                                ? { background: `linear-gradient(180deg, #0B2232 0%, ${profileData.backgroundColor} 60%, ${profileData.backgroundColor} 100%)` }
+                                ? { background: `linear-gradient(180deg, #121F2B 0%, ${profileData.backgroundColor} 60%, ${profileData.backgroundColor} 100%)` }
                                 : { backgroundColor: profileData.backgroundColor }
                               }
                             />

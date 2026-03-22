@@ -1286,7 +1286,7 @@ const ProfilePage = () => {
   }
 
   const accentColor = profile.accentColor || '#4ADE80';
-  const backgroundColor = profile.backgroundColor || '#0B2232';
+  const backgroundColor = profile.backgroundColor || '#121F2B';
   const cardColor = profile.cardColor || '#1E3A8A';
 
   const isMacTheme = accentColor?.toLowerCase() === '#0066ff' && backgroundColor?.toLowerCase() === '#f0f0f2';
