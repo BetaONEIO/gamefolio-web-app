@@ -66,8 +66,6 @@ router.get('/auth/kick/connect', (req: Request, res: Response) => {
 
   req.session.save(() => {
     const callbackUrl = `${getBaseUrl(req)}/api/auth/kick/callback`;
-    console.log('[Kick OAuth] APP_BASE_URL:', process.env.APP_BASE_URL);
-    console.log('[Kick OAuth] callbackUrl being sent:', callbackUrl);
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: clientId,
@@ -89,15 +87,12 @@ router.get('/auth/kick/callback', async (req: Request, res: Response) => {
   const codeVerifier = (req.session as any).kickOAuthVerifier;
   const userId = (req.session as any).kickOAuthUserId;
 
-  console.log('[Kick CB] code:', !!code, '| state match:', state === storedState, '| userId:', userId, '| error:', error);
-
   delete (req.session as any).kickOAuthState;
   delete (req.session as any).kickOAuthVerifier;
   delete (req.session as any).kickOAuthUserId;
 
   if (error) {
     const errorStr = String(error).toLowerCase();
-    console.log('[Kick CB] Error from Kick:', error);
     if (errorStr.includes('redirect') || errorStr.includes('redirect_uri')) {
       return res.redirect('/settings/profile?tab=streamer&kick_error=redirect_uri_mismatch');
     }
@@ -105,7 +100,6 @@ router.get('/auth/kick/callback', async (req: Request, res: Response) => {
   }
 
   if (!code || !state || state !== storedState || !userId) {
-    console.log('[Kick CB] State mismatch — code:', !!code, 'state:', !!state, 'stateMatch:', state === storedState, 'userId:', userId);
     return res.redirect('/settings/profile?tab=streamer&kick_error=invalid_state');
   }
 
@@ -120,7 +114,6 @@ router.get('/auth/kick/callback', async (req: Request, res: Response) => {
   let accessToken: string;
   try {
     const callbackUrl = `${getBaseUrl(req)}/api/auth/kick/callback`;
-    console.log('[Kick CB] Exchanging code for token, redirectUri:', callbackUrl);
     const tokenRes = await axios.post(
       'https://id.kick.com/oauth/token',
       new URLSearchParams({
@@ -134,36 +127,29 @@ router.get('/auth/kick/callback', async (req: Request, res: Response) => {
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
     accessToken = tokenRes.data.access_token;
-    console.log('[Kick CB] Token exchange succeeded, access_token present:', !!accessToken);
   } catch (err: any) {
-    console.error('[Kick CB] Token exchange FAILED — status:', err?.response?.status, '| data:', JSON.stringify(err?.response?.data), '| msg:', err.message);
+    console.error('Kick token exchange error:', err?.response?.status, err?.response?.data);
     return res.redirect('/settings/profile?tab=streamer&kick_error=auth_failed');
   }
 
   // ── Step 2: Fetch user profile ──────────────────────────────────────────────
   try {
-    // Kick API: GET /public/v1/users returns the authenticated user
     const profileRes = await axios.get('https://api.kick.com/public/v1/users', {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-
-    console.log('[Kick CB] Profile raw response:', JSON.stringify(profileRes.data).slice(0, 500));
 
     // Response may be { data: {...} } or { data: [{...}] } or the object directly
     const raw = profileRes.data?.data ?? profileRes.data;
     const kickUser = Array.isArray(raw) ? raw[0] : raw;
 
     if (!kickUser) {
-      console.log('[Kick CB] No user object in profile response');
       return res.redirect('/settings/profile?tab=streamer&kick_error=no_channel');
     }
 
-    console.log('[Kick CB] kickUser keys:', Object.keys(kickUser));
     const kickId = String(kickUser.id ?? kickUser.user_id ?? '');
     const channelName = kickUser.slug ?? kickUser.username ?? kickUser.name ?? kickUser.channel?.slug ?? '';
 
     if (!channelName) {
-      console.log('[Kick CB] No channel name found in kickUser:', JSON.stringify(kickUser).slice(0, 300));
       return res.redirect('/settings/profile?tab=streamer&kick_error=no_channel');
     }
 
@@ -176,10 +162,9 @@ router.get('/auth/kick/callback', async (req: Request, res: Response) => {
       kickVerified: true,
     }).where(eq(users.id, userId));
 
-    console.log('[Kick CB] Successfully linked Kick channel:', channelName, 'for userId:', userId);
     return res.redirect('/settings/profile?tab=streamer&kick_connected=true');
   } catch (err: any) {
-    console.error('[Kick CB] Profile fetch FAILED — status:', err?.response?.status, '| data:', JSON.stringify(err?.response?.data), '| msg:', err.message);
+    console.error('Kick profile fetch error:', err?.response?.status, err?.response?.data);
     return res.redirect('/settings/profile?tab=streamer&kick_error=auth_failed');
   }
 });
@@ -233,11 +218,6 @@ router.get('/auth/twitch-stream/connect', (req: Request, res: Response) => {
 
   req.session.save(() => {
     const callbackUrl = `${getBaseUrl(req)}/api/auth/twitch-stream/callback`;
-    console.log('[Twitch OAuth] REPLIT_DOMAINS:', process.env.REPLIT_DOMAINS);
-    console.log('[Twitch OAuth] x-forwarded-proto:', req.headers['x-forwarded-proto']);
-    console.log('[Twitch OAuth] x-forwarded-host:', req.headers['x-forwarded-host']);
-    console.log('[Twitch OAuth] host:', req.get('host'));
-    console.log('[Twitch OAuth] callbackUrl:', callbackUrl);
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: clientId,
