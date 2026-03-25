@@ -809,7 +809,6 @@ export default function SettingsPage() {
     primaryUserType !== savedPrimary ||
     isStreamingEnabled !== savedIsStreamer ||
     streamPlatform !== ((user as any)?.streamPlatform || 'twitch') ||
-    streamChannelName !== ((user as any)?.streamChannelName || '') ||
     showLiveOverlay !== ((user as any)?.showLiveOverlay || false);
   
 
@@ -1215,7 +1214,6 @@ export default function SettingsPage() {
         avatarBorderColor,
         userType: combinedUserType,
         streamPlatform,
-        streamChannelName,
         showLiveOverlay,
       });
       setSelectedPreviousAvatar(null);
@@ -3729,8 +3727,8 @@ export default function SettingsPage() {
 
                 {/* Channel name */}
                 <div className="space-y-2">
-                  <Label htmlFor="stream-channel" className={!isStreamingEnabled ? 'text-muted-foreground' : ''}>
-                    Channel Name
+                  <Label className={!isStreamingEnabled ? 'text-muted-foreground' : ''}>
+                    Channel Connection
                   </Label>
 
                   {/* Twitch OAuth connect option */}
@@ -3841,27 +3839,16 @@ export default function SettingsPage() {
                     </div>
                   )}
 
-                  {/* Manual entry — shown when not OAuth-verified or OAuth not configured for the selected platform */}
-                  {((streamPlatform !== 'kick' || !(user as any)?.kickVerified) &&
-                    (streamPlatform !== 'twitch' || !(user as any)?.twitchVerified)) && (
-                    <>
-                      <Input
-                        id="stream-channel"
-                        disabled={!isStreamingEnabled}
-                        placeholder={
-                          isStreamingEnabled
-                            ? streamPlatform === 'kick'
-                              ? 'Your Kick channel name'
-                              : 'Your Twitch channel name'
-                            : 'Enable streaming to set your channel'
-                        }
-                        value={streamChannelName}
-                        onChange={(e) => setStreamChannelName(e.target.value)}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Enter your channel username exactly as it appears on {streamPlatform === 'kick' ? 'Kick' : 'Twitch'}.
-                      </p>
-                    </>
+                  {/* Show a message when OAuth isn't configured for the selected platform */}
+                  {isStreamingEnabled && streamPlatform === 'twitch' && !oauthConfig?.twitch && (
+                    <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-slate-700 p-3">
+                      Twitch OAuth is not configured for this app. Contact the administrator to enable it.
+                    </p>
+                  )}
+                  {isStreamingEnabled && streamPlatform === 'kick' && !oauthConfig?.kick && (
+                    <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-slate-700 p-3">
+                      Kick OAuth is not configured for this app. Contact the administrator to enable it.
+                    </p>
                   )}
                 </div>
 
