@@ -87,15 +87,19 @@ router.get('/auth/kick/callback', async (req: Request, res: Response) => {
   const codeVerifier = (req.session as any).kickOAuthVerifier;
   const userId = (req.session as any).kickOAuthUserId;
 
+  console.log('[Kick CB] code:', !!code, '| state match:', state === storedState, '| userId:', userId, '| error:', error);
+
   delete (req.session as any).kickOAuthState;
   delete (req.session as any).kickOAuthVerifier;
   delete (req.session as any).kickOAuthUserId;
 
   if (error) {
+    console.log('[Kick CB] Access denied by user');
     return res.redirect('/settings/profile?tab=streamer&kick_error=access_denied');
   }
 
   if (!code || !state || state !== storedState || !userId) {
+    console.log('[Kick CB] State mismatch — code:', !!code, 'state:', !!state, 'stateMatch:', state === storedState, 'userId:', userId);
     return res.redirect('/settings/profile?tab=streamer&kick_error=invalid_state');
   }
 
@@ -131,10 +135,13 @@ router.get('/auth/kick/callback', async (req: Request, res: Response) => {
     });
 
     const kickUser = profileRes.data.data ?? profileRes.data;
+    console.log('[Kick CB] Profile response keys:', Object.keys(kickUser));
+    console.log('[Kick CB] kickUser:', JSON.stringify(kickUser).slice(0, 500));
     const kickId = String(kickUser.id ?? kickUser.user_id ?? '');
     const channelName = kickUser.slug ?? kickUser.username ?? kickUser.channel?.slug ?? '';
 
     if (!channelName) {
+      console.log('[Kick CB] No channel name found in profile response');
       return res.redirect('/settings/profile?tab=streamer&kick_error=no_channel');
     }
 
