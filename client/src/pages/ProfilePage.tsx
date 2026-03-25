@@ -2559,36 +2559,76 @@ const ProfilePage = () => {
           }
           if (!activePlatform || !activeChannel) return null;
           const isKick = activePlatform === 'kick';
+          const isLive = profileLiveStatus?.isLive ?? false;
+          const hostname = window.location.hostname;
+
+          const playerSrc = isKick
+            ? `https://player.kick.com/${activeChannel}?autoplay=${isLive ? 'true' : 'false'}&muted=true`
+            : `https://player.twitch.tv/?channel=${activeChannel}&parent=${hostname}&autoplay=${isLive ? 'true' : 'false'}&muted=true`;
+
+          const chatSrc = isKick
+            ? `https://kick.com/${activeChannel}/chatroom`
+            : `https://www.twitch.tv/embed/${activeChannel}/chat?parent=${hostname}&darkpopout`;
+
+          const headerBg = isKick
+            ? 'linear-gradient(90deg, #1a3a1a, #0f2a0f)'
+            : 'linear-gradient(90deg, #1f1035, #0f0a1e)';
+
           return (
           <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-4 mb-2">
             <div className="rounded-xl overflow-hidden border border-border bg-black shadow-lg">
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-border"
-                style={{
-                  background: isKick
-                    ? 'linear-gradient(90deg, #1a3a1a, #0f2a0f)'
-                    : 'linear-gradient(90deg, #1f1035, #0f0a1e)'
-                }}
-              >
-                <div className={`w-2 h-2 rounded-full ${profileLiveStatus?.isLive ? 'animate-pulse' : 'opacity-40'} ${isKick ? 'bg-green-500' : 'bg-purple-500'}`} />
+              {/* Header bar */}
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-border" style={{ background: headerBg }}>
+                <div className={`w-2 h-2 rounded-full ${isLive ? 'animate-pulse' : 'opacity-40'} ${isKick ? 'bg-green-500' : 'bg-purple-500'}`} />
                 <span className={`text-xs font-semibold ${isKick ? 'text-green-400' : 'text-purple-400'}`}>
                   {isKick ? 'Kick' : 'Twitch'}
                 </span>
                 <span className="text-xs text-muted-foreground">— {activeChannel}</span>
-                {profileLiveStatus?.isLive && (
+                {isLive ? (
                   <span className="ml-auto text-[10px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded-full">LIVE</span>
+                ) : (
+                  <span className="ml-auto text-[10px] text-muted-foreground">Offline</span>
                 )}
               </div>
-              <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-                <iframe
-                  src={isKick
-                    ? `https://player.kick.com/${activeChannel}?autoplay=false`
-                    : `https://player.twitch.tv/?channel=${activeChannel}&parent=${window.location.hostname}&autoplay=false`
-                  }
-                  className="absolute inset-0 w-full h-full"
-                  allowFullScreen
-                  title={`${activeChannel}'s stream`}
-                />
-              </div>
+
+              {/* Player + Chat layout: side-by-side when live, full-width when offline */}
+              {isLive ? (
+                <div className="flex flex-col lg:flex-row" style={{ height: 'auto' }}>
+                  {/* Player — 16:9 aspect ratio on mobile, fixed 450px tall on desktop */}
+                  <div className="relative w-full lg:w-[65%] flex-none">
+                    <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                      <iframe
+                        key={`player-live-${activeChannel}`}
+                        src={playerSrc}
+                        className="absolute inset-0 w-full h-full"
+                        allowFullScreen
+                        allow="autoplay; fullscreen"
+                        title={`${activeChannel}'s stream`}
+                      />
+                    </div>
+                  </div>
+                  {/* Chat — full width on mobile (300px), fills player height on desktop */}
+                  <div className="w-full lg:w-[35%] border-t lg:border-t-0 lg:border-l border-border" style={{ height: '300px' }} >
+                    <iframe
+                      key={`chat-live-${activeChannel}`}
+                      src={chatSrc}
+                      className="w-full h-full"
+                      title={`${activeChannel}'s chat`}
+                    />
+                  </div>
+                </div>
+              ) : (
+                /* Offline — centred player, no chat */
+                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                  <iframe
+                    key={`player-offline-${activeChannel}`}
+                    src={playerSrc}
+                    className="absolute inset-0 w-full h-full"
+                    allowFullScreen
+                    title={`${activeChannel}'s stream`}
+                  />
+                </div>
+              )}
             </div>
           </div>
           );
