@@ -66,6 +66,8 @@ router.get('/auth/kick/connect', (req: Request, res: Response) => {
 
   req.session.save(() => {
     const callbackUrl = `${getBaseUrl(req)}/api/auth/kick/callback`;
+    console.log('[Kick OAuth] APP_BASE_URL:', process.env.APP_BASE_URL);
+    console.log('[Kick OAuth] callbackUrl being sent:', callbackUrl);
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: clientId,
@@ -94,7 +96,11 @@ router.get('/auth/kick/callback', async (req: Request, res: Response) => {
   delete (req.session as any).kickOAuthUserId;
 
   if (error) {
-    console.log('[Kick CB] Access denied by user');
+    const errorStr = String(error).toLowerCase();
+    console.log('[Kick CB] Error from Kick:', error);
+    if (errorStr.includes('redirect') || errorStr.includes('redirect_uri')) {
+      return res.redirect('/settings/profile?tab=streamer&kick_error=redirect_uri_mismatch');
+    }
     return res.redirect('/settings/profile?tab=streamer&kick_error=access_denied');
   }
 

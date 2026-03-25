@@ -964,6 +964,7 @@ export default function SettingsPage() {
     } else if (params.get('kick_error')) {
       const errMap: Record<string, string> = {
         access_denied: 'You cancelled the Kick authorisation.',
+        redirect_uri_mismatch: 'Redirect URI mismatch — the callback URL is not registered in your Kick app. Check the Kick developer dashboard.',
         invalid_state: 'Invalid OAuth state. Please try again.',
         not_configured: 'Kick OAuth is not configured on this server.',
         auth_failed: 'Kick authentication failed. Please try again.',
