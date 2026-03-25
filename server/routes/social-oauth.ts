@@ -116,10 +116,11 @@ router.get('/auth/kick/callback', async (req: Request, res: Response) => {
     return res.redirect('/settings/profile?tab=streamer&kick_error=not_configured');
   }
 
+  // ── Step 1: Exchange code for token ────────────────────────────────────────
+  let accessToken: string;
   try {
     const callbackUrl = `${getBaseUrl(req)}/api/auth/kick/callback`;
-
-    // Exchange code for token
+    console.log('[Kick CB] Exchanging code for token, redirectUri:', callbackUrl);
     const tokenRes = await axios.post(
       'https://id.kick.com/oauth/token',
       new URLSearchParams({
@@ -132,22 +133,37 @@ router.get('/auth/kick/callback', async (req: Request, res: Response) => {
       }).toString(),
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
+    accessToken = tokenRes.data.access_token;
+    console.log('[Kick CB] Token exchange succeeded, access_token present:', !!accessToken);
+  } catch (err: any) {
+    console.error('[Kick CB] Token exchange FAILED — status:', err?.response?.status, '| data:', JSON.stringify(err?.response?.data), '| msg:', err.message);
+    return res.redirect('/settings/profile?tab=streamer&kick_error=auth_failed');
+  }
 
-    const accessToken = tokenRes.data.access_token;
-
-    // Fetch user profile from Kick API
-    const profileRes = await axios.get('https://api.kick.com/public/v1/user', {
+  // ── Step 2: Fetch user profile ──────────────────────────────────────────────
+  try {
+    // Kick API: GET /public/v1/users returns the authenticated user
+    const profileRes = await axios.get('https://api.kick.com/public/v1/users', {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
-    const kickUser = profileRes.data.data ?? profileRes.data;
-    console.log('[Kick CB] Profile response keys:', Object.keys(kickUser));
-    console.log('[Kick CB] kickUser:', JSON.stringify(kickUser).slice(0, 500));
+    console.log('[Kick CB] Profile raw response:', JSON.stringify(profileRes.data).slice(0, 500));
+
+    // Response may be { data: {...} } or { data: [{...}] } or the object directly
+    const raw = profileRes.data?.data ?? profileRes.data;
+    const kickUser = Array.isArray(raw) ? raw[0] : raw;
+
+    if (!kickUser) {
+      console.log('[Kick CB] No user object in profile response');
+      return res.redirect('/settings/profile?tab=streamer&kick_error=no_channel');
+    }
+
+    console.log('[Kick CB] kickUser keys:', Object.keys(kickUser));
     const kickId = String(kickUser.id ?? kickUser.user_id ?? '');
-    const channelName = kickUser.slug ?? kickUser.username ?? kickUser.channel?.slug ?? '';
+    const channelName = kickUser.slug ?? kickUser.username ?? kickUser.name ?? kickUser.channel?.slug ?? '';
 
     if (!channelName) {
-      console.log('[Kick CB] No channel name found in profile response');
+      console.log('[Kick CB] No channel name found in kickUser:', JSON.stringify(kickUser).slice(0, 300));
       return res.redirect('/settings/profile?tab=streamer&kick_error=no_channel');
     }
 
@@ -160,9 +176,10 @@ router.get('/auth/kick/callback', async (req: Request, res: Response) => {
       kickVerified: true,
     }).where(eq(users.id, userId));
 
+    console.log('[Kick CB] Successfully linked Kick channel:', channelName, 'for userId:', userId);
     return res.redirect('/settings/profile?tab=streamer&kick_connected=true');
   } catch (err: any) {
-    console.error('Kick OAuth callback error:', err?.response?.data || err.message);
+    console.error('[Kick CB] Profile fetch FAILED — status:', err?.response?.status, '| data:', JSON.stringify(err?.response?.data), '| msg:', err.message);
     return res.redirect('/settings/profile?tab=streamer&kick_error=auth_failed');
   }
 });
