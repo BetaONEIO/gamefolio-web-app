@@ -252,6 +252,7 @@ const ProfileHeader = ({
                   height: "1px",
                   background: "linear-gradient(90deg, #4ade80, #22d3d3, #a78bfa, #38bdf8)",
                   pointerEvents: "none",
+                  zIndex: 5,
                 }}
               />
               {/* L-shaped gradient border — left edge */}
@@ -264,6 +265,7 @@ const ProfileHeader = ({
                   width: "1px",
                   background: "linear-gradient(180deg, #4ade80, #22d3d3, #a78bfa, #38bdf8)",
                   pointerEvents: "none",
+                  zIndex: 5,
                 }}
               />
 
