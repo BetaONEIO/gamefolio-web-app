@@ -4104,7 +4104,6 @@ export default function SettingsPage() {
               onClick={handleSave}
               disabled={updateProfileMutation.isPending}
               className="flex items-center gap-2 text-white font-medium px-6 py-2"
-              style={{ backgroundColor: profileData.accentColor }}
             >
               <Save className="h-4 w-4" />
               {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
