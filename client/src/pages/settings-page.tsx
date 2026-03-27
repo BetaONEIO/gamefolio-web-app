@@ -1136,6 +1136,10 @@ export default function SettingsPage() {
     enabled: !!user,
   });
 
+  const { data: oauthStatus } = useQuery<{ twitch: boolean; kick: boolean }>({
+    queryKey: ['/api/auth/oauth-status'],
+  });
+
   const { signedUrl: signedAvatarUrl } = useSignedUrl(user?.avatarUrl);
   const { signedUrl: signedDeactivatedAvatarUrl } = useSignedUrl(deactivatedAvatarUrl);
   const { signedUrl: signedSelectedPrevAvatar } = useSignedUrl(selectedPreviousAvatar);
@@ -3949,6 +3953,18 @@ export default function SettingsPage() {
                           </Button>
                         </div>
                       </div>
+                    ) : oauthStatus?.twitch === false ? (
+                      <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <SiTwitch className="w-4 h-4 text-amber-400" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-amber-300">Twitch OAuth not configured</div>
+                            <div className="text-xs text-slate-400 mt-0.5">Twitch integration requires app credentials to be set up by the administrator.</div>
+                          </div>
+                        </div>
+                      </div>
                     ) : (
                       <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
                         <div className="flex items-center justify-between">
@@ -3999,6 +4015,18 @@ export default function SettingsPage() {
                             {disconnectingKick ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlink className="w-4 h-4" />}
                             Disconnect
                           </Button>
+                        </div>
+                      </div>
+                    ) : oauthStatus?.kick === false ? (
+                      <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <SiKick className="w-4 h-4 text-amber-400" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-amber-300">Kick OAuth not configured</div>
+                            <div className="text-xs text-slate-400 mt-0.5">Kick integration requires app credentials to be set up by the administrator.</div>
+                          </div>
                         </div>
                       </div>
                     ) : (

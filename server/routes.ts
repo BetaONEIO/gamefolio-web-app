@@ -1442,7 +1442,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!clientId || !clientSecret) {
       return res.redirect("/settings?tab=platforms&twitch_error=not_configured");
     }
-    const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const state = randomBytes(16).toString("hex");
     (req.session as any).twitchOAuthState = state;
     (req.session as any).twitchOAuthUserId = (req.user as any).id;
     const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/twitch/callback`;
@@ -1542,7 +1542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!clientId || !clientSecret) {
       return res.redirect("/settings?tab=platforms&kick_error=not_configured");
     }
-    const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const state = randomBytes(16).toString("hex");
     (req.session as any).kickOAuthState = state;
     (req.session as any).kickOAuthUserId = (req.user as any).id;
     const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/kick/callback`;
@@ -1630,6 +1630,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Kick disconnect error:", err);
       res.status(500).json({ message: "Failed to disconnect Kick" });
     }
+  });
+
+  // OAuth credential availability check (public — no secrets exposed)
+  app.get("/api/auth/oauth-status", (req, res) => {
+    res.json({
+      twitch: !!(process.env.TWITCH_CLIENT_ID && process.env.TWITCH_CLIENT_SECRET),
+      kick: !!(process.env.KICK_CLIENT_ID && process.env.KICK_CLIENT_SECRET),
+    });
   });
 
   // Streamer settings save — save isStreamer, streamPlatform, liveEnabled
@@ -12093,10 +12101,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Final fallback: cancel in database directly (set end date to now)
-      const endDate = new Date();
+      // Final fallback: cancel in database directly (keep Pro active until end of paid period)
+      const endDate = user.proSubscriptionEndDate ? new Date(user.proSubscriptionEndDate) : new Date();
       await db.update(users).set({
-        isPro: false,
+        isPro: true,
         proSubscriptionEndDate: endDate,
         updatedAt: new Date(),
       }).where(eq(users.id, userId));
