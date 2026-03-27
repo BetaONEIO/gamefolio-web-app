@@ -289,7 +289,7 @@ const ProfileHeader = ({
                 const lblColor = isLight ? "#374151" : profile.accentColor || undefined;
 
                 return (
-                  <div className="flex space-x-4 text-xs px-4 py-2.5 bg-background/90">
+                  <div className="flex space-x-4 text-xs rounded-[10px] px-4 py-2.5 bg-background/90">
                       <div className="text-center">
                         <span className="font-bold block" style={{ color: numColor }}>
                           {(profile._count?.clips || 0) + (profile._count?.screenshots || 0)}
