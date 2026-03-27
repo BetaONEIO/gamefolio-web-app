@@ -1645,6 +1645,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const { isStreamer, streamPlatform, liveEnabled } = req.body;
+      const ALLOWED_PLATFORMS = ["twitch", "kick"];
+      if (streamPlatform !== undefined && !ALLOWED_PLATFORMS.includes(streamPlatform)) {
+        return res.status(400).json({ message: "Invalid streamPlatform value" });
+      }
       const update: any = {};
       if (isStreamer !== undefined) update.isStreamer = Boolean(isStreamer);
       if (streamPlatform !== undefined) update.streamPlatform = streamPlatform;
