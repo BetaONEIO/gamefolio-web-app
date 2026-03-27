@@ -216,6 +216,7 @@ const ProfileHeader = ({
               className="shadow-lg"
               borderIntensity="strong"
               showAvatarBorderOverlay={true}
+              themeColor={profile.accentColor}
               onNftClick={
                 isNftProfileActive
                   ? (userId, tokenId, imageUrl, event) => {
