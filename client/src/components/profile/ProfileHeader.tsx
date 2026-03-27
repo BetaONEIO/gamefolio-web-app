@@ -242,9 +242,10 @@ const ProfileHeader = ({
 
             {/* Stats box with Collection button */}
             <div className="relative mt-3">
+              {/* Collection button overlaid at top-right */}
               <Link href={`/${profile.username}/collections`}>
                 <div
-                  className="absolute -top-3 -right-3 z-10 cursor-pointer transition-opacity hover:opacity-80"
+                  className="absolute -top-3 right-0 z-10 cursor-pointer transition-opacity hover:opacity-80"
                   style={{
                     background: "linear-gradient(90deg, #4ade80, #22d3d3, #a78bfa, #38bdf8)",
                     padding: "1px",
@@ -263,6 +264,7 @@ const ProfileHeader = ({
                 const lblColor = isLight ? "#374151" : profile.accentColor || undefined;
 
                 return (
+                  /* Gradient border wrapper */
                   <div
                     className="rounded-xl transition-all duration-300"
                     style={{
@@ -270,104 +272,104 @@ const ProfileHeader = ({
                       padding: "1px",
                     }}
                   >
-                    <div className="flex space-x-4 text-xs rounded-[10px] px-4 py-2.5 transition-all duration-300 bg-background/90">
-                    <div className="text-center">
-                      <span className="font-bold block" style={{ color: numColor }}>
-                        {(profile._count?.clips || 0) + (profile._count?.screenshots || 0)}
-                      </span>
-                      <span className="text-muted-foreground" style={{ color: lblColor }}>
-                        Uploads
-                      </span>
-                    </div>
+                    <div className="flex space-x-4 text-xs rounded-[10px] px-4 py-2.5 bg-background/90">
+                      <div className="text-center">
+                        <span className="font-bold block" style={{ color: numColor }}>
+                          {(profile._count?.clips || 0) + (profile._count?.screenshots || 0)}
+                        </span>
+                        <span className="text-muted-foreground" style={{ color: lblColor }}>
+                          Uploads
+                        </span>
+                      </div>
 
-                    <div className="text-center">
-                      <span className="font-bold block" style={{ color: numColor }}>
-                        {profile._count?.followers || 0}
-                      </span>
-                      <span className="text-muted-foreground" style={{ color: lblColor }}>
-                        Followers
-                      </span>
-                    </div>
+                      <div className="text-center">
+                        <span className="font-bold block" style={{ color: numColor }}>
+                          {profile._count?.followers || 0}
+                        </span>
+                        <span className="text-muted-foreground" style={{ color: lblColor }}>
+                          Followers
+                        </span>
+                      </div>
 
-                    <div className="text-center">
-                      <span className="font-bold block" style={{ color: numColor }}>
-                        {profile._count?.following || 0}
-                      </span>
-                      <span className="text-muted-foreground" style={{ color: lblColor }}>
-                        Following
-                      </span>
-                    </div>
+                      <div className="text-center">
+                        <span className="font-bold block" style={{ color: numColor }}>
+                          {profile._count?.following || 0}
+                        </span>
+                        <span className="text-muted-foreground" style={{ color: lblColor }}>
+                          Following
+                        </span>
+                      </div>
 
-                    <div className="text-center" data-testid="stat-likes-received">
-                      <span
-                        className="font-bold block flex items-center gap-1 justify-center"
-                        style={{ color: numColor }}
-                      >
-                        <Heart className="w-3 h-3 text-red-500" />
-                        {profile._count?.likesReceived || 0}
-                      </span>
-                      <span className="text-muted-foreground" style={{ color: lblColor }}>
-                        Likes
-                      </span>
-                    </div>
+                      <div className="text-center" data-testid="stat-likes-received">
+                        <span
+                          className="font-bold block flex items-center gap-1 justify-center"
+                          style={{ color: numColor }}
+                        >
+                          <Heart className="w-3 h-3 text-red-500" />
+                          {profile._count?.likesReceived || 0}
+                        </span>
+                        <span className="text-muted-foreground" style={{ color: lblColor }}>
+                          Likes
+                        </span>
+                      </div>
 
-                    <div className="text-center" data-testid="stat-fires-received">
-                      <span
-                        className="font-bold block flex items-center gap-1 justify-center"
-                        style={{ color: numColor }}
-                      >
-                        <Flame className="w-3 h-3 text-orange-500" />
-                        {profile._count?.firesReceived || 0}
-                      </span>
-                      <span className="text-muted-foreground" style={{ color: lblColor }}>
-                        Fires
-                      </span>
-                    </div>
+                      <div className="text-center" data-testid="stat-fires-received">
+                        <span
+                          className="font-bold block flex items-center gap-1 justify-center"
+                          style={{ color: numColor }}
+                        >
+                          <Flame className="w-3 h-3 text-orange-500" />
+                          {profile._count?.firesReceived || 0}
+                        </span>
+                        <span className="text-muted-foreground" style={{ color: lblColor }}>
+                          Fires
+                        </span>
+                      </div>
 
-                    <div className="text-center" data-testid="stat-streak">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <span
-                              className="font-bold block flex items-center gap-1 justify-center"
-                              style={{ color: numColor }}
-                            >
-                              <Flame className="w-3 h-3 text-orange-500" />
-                              {profile.currentStreak || 0}
-                            </span>
-                            <span className="text-muted-foreground" style={{ color: lblColor }}>
-                              Streak
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-sm">Longest: {profile.longestStreak || 0} days</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
+                      <div className="text-center" data-testid="stat-streak">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <span
+                                className="font-bold block flex items-center gap-1 justify-center"
+                                style={{ color: numColor }}
+                              >
+                                <Flame className="w-3 h-3 text-orange-500" />
+                                {profile.currentStreak || 0}
+                              </span>
+                              <span className="text-muted-foreground" style={{ color: lblColor }}>
+                                Streak
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-sm">Longest: {profile.longestStreak || 0} days</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
 
-                    <div className="text-center">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <span
-                              className="font-bold block flex items-center gap-1 justify-center"
-                              style={{ color: numColor }}
-                            >
-                              <Trophy className="w-3 h-3 text-yellow-500" />
-                              {profile.level || 1}
-                            </span>
-                            <span className="text-muted-foreground" style={{ color: lblColor }}>
-                              Level
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-sm">{profile.totalXP || 0} Total XP</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <div className="text-center">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <span
+                                className="font-bold block flex items-center gap-1 justify-center"
+                                style={{ color: numColor }}
+                              >
+                                <Trophy className="w-3 h-3 text-yellow-500" />
+                                {profile.level || 1}
+                              </span>
+                              <span className="text-muted-foreground" style={{ color: lblColor }}>
+                                Level
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-sm">{profile.totalXP || 0} Total XP</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                     </div>
-                  </div>
                   </div>
                 );
               })()}
