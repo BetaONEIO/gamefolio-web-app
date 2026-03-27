@@ -2460,6 +2460,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           profileFontAnimation: userWithoutPassword.profileFontAnimation || 'none',
           canMintNfts: userWithoutPassword.canMintNfts || false,
           canSellNfts: userWithoutPassword.canSellNfts || false,
+          isStreamer: userWithoutPassword.isStreamer || false,
+          streamPlatform: userWithoutPassword.streamPlatform || null,
+          twitchChannelName: userWithoutPassword.twitchChannelName || null,
+          twitchVerified: userWithoutPassword.twitchVerified || false,
+          kickChannelName: userWithoutPassword.kickChannelName || null,
+          kickVerified: userWithoutPassword.kickVerified || false,
+          liveEnabled: userWithoutPassword.liveEnabled || false,
           ...(streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0 ? { streakInfo } : {}),
         });
       }
@@ -2526,6 +2533,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           profileFontAnimation: fallbackWithoutPassword.profileFontAnimation || 'none',
           canMintNfts: fallbackWithoutPassword.canMintNfts || false,
           canSellNfts: fallbackWithoutPassword.canSellNfts || false,
+          isStreamer: fallbackWithoutPassword.isStreamer || false,
+          streamPlatform: fallbackWithoutPassword.streamPlatform || null,
+          twitchChannelName: fallbackWithoutPassword.twitchChannelName || null,
+          twitchVerified: fallbackWithoutPassword.twitchVerified || false,
+          kickChannelName: fallbackWithoutPassword.kickChannelName || null,
+          kickVerified: fallbackWithoutPassword.kickVerified || false,
+          liveEnabled: fallbackWithoutPassword.liveEnabled || false,
         });
       }
     } catch (fallbackError) {
@@ -2585,6 +2599,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       profileFontAnimation: userWithoutPassword.profileFontAnimation || 'none',
       canMintNfts: userWithoutPassword.canMintNfts || false,
       canSellNfts: userWithoutPassword.canSellNfts || false,
+      isStreamer: userWithoutPassword.isStreamer || false,
+      streamPlatform: userWithoutPassword.streamPlatform || null,
+      twitchChannelName: userWithoutPassword.twitchChannelName || null,
+      twitchVerified: userWithoutPassword.twitchVerified || false,
+      kickChannelName: userWithoutPassword.kickChannelName || null,
+      kickVerified: userWithoutPassword.kickVerified || false,
+      liveEnabled: userWithoutPassword.liveEnabled || false,
     });
   });
 
