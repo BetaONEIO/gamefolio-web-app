@@ -242,6 +242,31 @@ const ProfileHeader = ({
 
             {/* Stats box with Collection button */}
             <div className="relative mt-3">
+              {/* L-shaped gradient border — top edge */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: "1px",
+                  background: "linear-gradient(90deg, #4ade80, #22d3d3, #a78bfa, #38bdf8)",
+                  pointerEvents: "none",
+                }}
+              />
+              {/* L-shaped gradient border — left edge */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  bottom: 0,
+                  width: "1px",
+                  background: "linear-gradient(180deg, #4ade80, #22d3d3, #a78bfa, #38bdf8)",
+                  pointerEvents: "none",
+                }}
+              />
+
               {/* Collection button overlaid at top-right */}
               <Link href={`/${profile.username}/collections`}>
                 <div
@@ -264,15 +289,7 @@ const ProfileHeader = ({
                 const lblColor = isLight ? "#374151" : profile.accentColor || undefined;
 
                 return (
-                  /* Gradient border wrapper */
-                  <div
-                    className="rounded-xl transition-all duration-300"
-                    style={{
-                      background: "linear-gradient(90deg, #4ade80, #22d3d3, #a78bfa, #38bdf8)",
-                      padding: "1px",
-                    }}
-                  >
-                    <div className="flex space-x-4 text-xs rounded-[10px] px-4 py-2.5 bg-background/90">
+                  <div className="flex space-x-4 text-xs px-4 py-2.5 bg-background/90">
                       <div className="text-center">
                         <span className="font-bold block" style={{ color: numColor }}>
                           {(profile._count?.clips || 0) + (profile._count?.screenshots || 0)}
@@ -369,7 +386,6 @@ const ProfileHeader = ({
                           </Tooltip>
                         </TooltipProvider>
                       </div>
-                    </div>
                   </div>
                 );
               })()}
