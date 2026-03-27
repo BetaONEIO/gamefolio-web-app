@@ -1498,11 +1498,6 @@ export default function SettingsPage() {
       ...(theme.primaryColor ? { primaryColor: theme.primaryColor } : {})
     }));
     setAvatarBorderColor(theme.accentColor);
-    
-    toast({
-      title: "Theme Selected",
-      description: `${theme.name} theme selected. Click "Save Changes" to apply.`,
-    });
   };
 
   if (!user) {
