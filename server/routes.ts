@@ -1432,6 +1432,223 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Twitch OAuth ─────────────────────────────────────────────────────────
+
+  // Twitch Connect — redirect to Twitch OAuth authorization
+  app.get("/api/auth/twitch/connect", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const clientId = process.env.TWITCH_CLIENT_ID;
+    const clientSecret = process.env.TWITCH_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      return res.redirect("/settings?tab=platforms&twitch_error=not_configured");
+    }
+    const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    (req.session as any).twitchOAuthState = state;
+    (req.session as any).twitchOAuthUserId = (req.user as any).id;
+    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/twitch/callback`;
+    const url = new URL("https://id.twitch.tv/oauth2/authorize");
+    url.searchParams.set("client_id", clientId);
+    url.searchParams.set("redirect_uri", redirectUri);
+    url.searchParams.set("response_type", "code");
+    url.searchParams.set("scope", "user:read:email");
+    url.searchParams.set("state", state);
+    res.redirect(url.toString());
+  });
+
+  // Twitch Callback — exchange code, fetch user info, save to DB
+  app.get("/api/auth/twitch/callback", async (req, res) => {
+    const { code, state, error } = req.query as Record<string, string>;
+    const storedState = (req.session as any).twitchOAuthState;
+    const userId = (req.session as any).twitchOAuthUserId;
+    delete (req.session as any).twitchOAuthState;
+    delete (req.session as any).twitchOAuthUserId;
+
+    if (error) return res.redirect(`/settings?tab=platforms&twitch_error=${encodeURIComponent(error)}`);
+    if (!state || state !== storedState || !userId) {
+      return res.redirect("/settings?tab=platforms&twitch_error=invalid_state");
+    }
+
+    const clientId = process.env.TWITCH_CLIENT_ID!;
+    const clientSecret = process.env.TWITCH_CLIENT_SECRET!;
+    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/twitch/callback`;
+
+    try {
+      // Exchange code for access token
+      const tokenRes = await fetch("https://id.twitch.tv/oauth2/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          code,
+          grant_type: "authorization_code",
+          redirect_uri: redirectUri,
+        }),
+      });
+      if (!tokenRes.ok) throw new Error(`Token exchange failed: ${tokenRes.status}`);
+      const tokenData = await tokenRes.json() as any;
+      const accessToken = tokenData.access_token;
+
+      // Fetch Twitch user info
+      const userRes = await fetch("https://api.twitch.tv/helix/users", {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Client-Id": clientId,
+        },
+      });
+      if (!userRes.ok) throw new Error(`Twitch user fetch failed: ${userRes.status}`);
+      const userData = await userRes.json() as any;
+      const twitchUser = userData.data?.[0];
+      if (!twitchUser) throw new Error("No Twitch user data returned");
+
+      await storage.updateUser(userId, {
+        twitchChannelName: twitchUser.login,
+        twitchChannelId: twitchUser.id,
+        twitchVerified: true,
+        twitchAccessToken: accessToken,
+      });
+
+      res.redirect("/settings?tab=platforms&twitch_connected=1");
+    } catch (err: any) {
+      console.error("Twitch callback error:", err);
+      res.redirect(`/settings?tab=platforms&twitch_error=${encodeURIComponent(err.message || "connection_failed")}`);
+    }
+  });
+
+  // Twitch Disconnect
+  app.post("/api/auth/twitch/disconnect", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      await storage.updateUser((req.user as any).id, {
+        twitchChannelName: null,
+        twitchChannelId: null,
+        twitchVerified: false,
+        twitchAccessToken: null,
+      });
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Twitch disconnect error:", err);
+      res.status(500).json({ message: "Failed to disconnect Twitch" });
+    }
+  });
+
+  // ── Kick OAuth ───────────────────────────────────────────────────────────
+
+  // Kick Connect — redirect to Kick OAuth authorization
+  app.get("/api/auth/kick/connect", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const clientId = process.env.KICK_CLIENT_ID;
+    const clientSecret = process.env.KICK_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      return res.redirect("/settings?tab=platforms&kick_error=not_configured");
+    }
+    const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    (req.session as any).kickOAuthState = state;
+    (req.session as any).kickOAuthUserId = (req.user as any).id;
+    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/kick/callback`;
+    const url = new URL("https://id.kick.com/oauth/authorize");
+    url.searchParams.set("client_id", clientId);
+    url.searchParams.set("redirect_uri", redirectUri);
+    url.searchParams.set("response_type", "code");
+    url.searchParams.set("scope", "user:read");
+    url.searchParams.set("state", state);
+    res.redirect(url.toString());
+  });
+
+  // Kick Callback — exchange code, fetch user info, save to DB
+  app.get("/api/auth/kick/callback", async (req, res) => {
+    const { code, state, error } = req.query as Record<string, string>;
+    const storedState = (req.session as any).kickOAuthState;
+    const userId = (req.session as any).kickOAuthUserId;
+    delete (req.session as any).kickOAuthState;
+    delete (req.session as any).kickOAuthUserId;
+
+    if (error) return res.redirect(`/settings?tab=platforms&kick_error=${encodeURIComponent(error)}`);
+    if (!state || state !== storedState || !userId) {
+      return res.redirect("/settings?tab=platforms&kick_error=invalid_state");
+    }
+
+    const clientId = process.env.KICK_CLIENT_ID!;
+    const clientSecret = process.env.KICK_CLIENT_SECRET!;
+    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/kick/callback`;
+
+    try {
+      // Exchange code for access token
+      const tokenRes = await fetch("https://id.kick.com/oauth/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          code,
+          grant_type: "authorization_code",
+          redirect_uri: redirectUri,
+        }),
+      });
+      if (!tokenRes.ok) throw new Error(`Kick token exchange failed: ${tokenRes.status}`);
+      const tokenData = await tokenRes.json() as any;
+      const accessToken = tokenData.access_token;
+
+      // Fetch Kick user info
+      const userRes = await fetch("https://api.kick.com/public/v1/users/me", {
+        headers: { "Authorization": `Bearer ${accessToken}` },
+      });
+      if (!userRes.ok) throw new Error(`Kick user fetch failed: ${userRes.status}`);
+      const userData = await userRes.json() as any;
+      const kickUser = userData.data ?? userData;
+      const channelName = kickUser.username ?? kickUser.slug ?? kickUser.login;
+      const channelId = String(kickUser.id ?? kickUser.user_id ?? "");
+
+      if (!channelName) throw new Error("No Kick channel data returned");
+
+      await storage.updateUser(userId, {
+        kickChannelName: channelName,
+        kickChannelId: channelId,
+        kickVerified: true,
+        kickAccessToken: accessToken,
+      });
+
+      res.redirect("/settings?tab=platforms&kick_connected=1");
+    } catch (err: any) {
+      console.error("Kick callback error:", err);
+      res.redirect(`/settings?tab=platforms&kick_error=${encodeURIComponent(err.message || "connection_failed")}`);
+    }
+  });
+
+  // Kick Disconnect
+  app.post("/api/auth/kick/disconnect", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      await storage.updateUser((req.user as any).id, {
+        kickChannelName: null,
+        kickChannelId: null,
+        kickVerified: false,
+        kickAccessToken: null,
+      });
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Kick disconnect error:", err);
+      res.status(500).json({ message: "Failed to disconnect Kick" });
+    }
+  });
+
+  // Streamer settings save — save isStreamer, streamPlatform, liveEnabled
+  app.patch("/api/user/streamer-settings", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { isStreamer, streamPlatform, liveEnabled } = req.body;
+      const update: any = {};
+      if (isStreamer !== undefined) update.isStreamer = Boolean(isStreamer);
+      if (streamPlatform !== undefined) update.streamPlatform = streamPlatform;
+      if (liveEnabled !== undefined) update.liveEnabled = Boolean(liveEnabled);
+      const updated = await storage.updateUser((req.user as any).id, update);
+      res.json(updated);
+    } catch (err) {
+      console.error("Streamer settings error:", err);
+      res.status(500).json({ message: "Failed to save streamer settings" });
+    }
+  });
+
   // Xbox Achievements — sync from xbl.io
   app.post("/api/xbox/achievements/sync", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });

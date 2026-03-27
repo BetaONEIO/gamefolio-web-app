@@ -30,7 +30,7 @@ import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord } from 'react-icon
 import { connectXboxAccount, isXboxConfigValid } from '@/lib/xbox';
 import { useTheme } from '@/hooks/use-theme';
 import { FaXTwitter } from 'react-icons/fa6';
-import { SiEpicgames, SiNintendo } from 'react-icons/si';
+import { SiEpicgames, SiNintendo, SiTwitch, SiKick } from 'react-icons/si';
 import Cropper from "react-easy-crop";
 import NftProfilePopup from "@/components/nft/NftProfilePopup";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -432,6 +432,9 @@ export default function SettingsPage() {
   const [showPsnDisconnectDialog, setShowPsnDisconnectDialog] = useState(false);
   const [disconnectingPsn, setDisconnectingPsn] = useState(false);
   const psnConfigRef = useRef<HTMLDivElement>(null);
+  const [disconnectingTwitch, setDisconnectingTwitch] = useState(false);
+  const [disconnectingKick, setDisconnectingKick] = useState(false);
+  const [savingStreamerSettings, setSavingStreamerSettings] = useState(false);
 
   const getPlatformIcon = (iconKey: string) => {
     switch (iconKey) {
@@ -619,6 +622,44 @@ export default function SettingsPage() {
       toast({ title: "Failed to disconnect", description: "Could not disconnect your PSN account. Please try again.", variant: "destructive" });
     } finally {
       setDisconnectingPsn(false);
+    }
+  };
+
+  const handleTwitchDisconnect = async () => {
+    setDisconnectingTwitch(true);
+    try {
+      await apiRequest("POST", "/api/auth/twitch/disconnect");
+      await refreshUser();
+      toast({ title: "Twitch disconnected", description: "Your Twitch channel has been unlinked.", duration: 3000 });
+    } catch {
+      toast({ title: "Failed to disconnect", variant: "destructive" });
+    } finally {
+      setDisconnectingTwitch(false);
+    }
+  };
+
+  const handleKickDisconnect = async () => {
+    setDisconnectingKick(true);
+    try {
+      await apiRequest("POST", "/api/auth/kick/disconnect");
+      await refreshUser();
+      toast({ title: "Kick disconnected", description: "Your Kick channel has been unlinked.", duration: 3000 });
+    } catch {
+      toast({ title: "Failed to disconnect", variant: "destructive" });
+    } finally {
+      setDisconnectingKick(false);
+    }
+  };
+
+  const handleStreamerSettingsSave = async (patch: { isStreamer?: boolean; streamPlatform?: string; liveEnabled?: boolean }) => {
+    setSavingStreamerSettings(true);
+    try {
+      await apiRequest("PATCH", "/api/user/streamer-settings", patch);
+      await refreshUser();
+    } catch {
+      toast({ title: "Failed to save", variant: "destructive" });
+    } finally {
+      setSavingStreamerSettings(false);
     }
   };
 
@@ -1201,6 +1242,35 @@ export default function SettingsPage() {
   }, [(user as any)?.selectedVerificationBadgeId, pendingVerificationBadgeId]);
   
 
+  // Handle OAuth callback URL params (Twitch/Kick)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const twitchConnected = params.get("twitch_connected");
+    const twitchError = params.get("twitch_error");
+    const kickConnected = params.get("kick_connected");
+    const kickError = params.get("kick_error");
+    if (twitchConnected) {
+      refreshUser();
+      toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked.", duration: 4000 });
+      window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
+    }
+    if (twitchError) {
+      const msg = twitchError === "not_configured" ? "Twitch OAuth is not configured." : twitchError === "invalid_state" ? "OAuth state mismatch — please try again." : twitchError;
+      toast({ title: "Twitch connection failed", description: msg, variant: "destructive", duration: 5000 });
+      window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
+    }
+    if (kickConnected) {
+      refreshUser();
+      toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
+      window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
+    }
+    if (kickError) {
+      const msg = kickError === "not_configured" ? "Kick OAuth is not configured." : kickError === "invalid_state" ? "OAuth state mismatch — please try again." : kickError;
+      toast({ title: "Kick connection failed", description: msg, variant: "destructive", duration: 5000 });
+      window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
+    }
+  }, []);
+
   const updateProfileMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await apiRequest("PATCH", `/api/users/${user?.id}`, data);
@@ -1474,7 +1544,7 @@ export default function SettingsPage() {
           <h1 className="text-xl sm:text-3xl font-bold">Profile & Appearance</h1>
         </div>
 
-        <Tabs defaultValue="profile" className="space-y-6">
+        <Tabs defaultValue={new URLSearchParams(window.location.search).get("tab") || "profile"} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1">
             <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -3781,6 +3851,195 @@ export default function SettingsPage() {
               </Card>
               </div>
             )}
+
+            {/* Streamer Settings Panel */}
+            <Card className="mt-4">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center flex-shrink-0">
+                    {(user as any)?.streamPlatform === "kick"
+                      ? <SiKick className="w-5 h-5 text-[#53FC18]" />
+                      : <SiTwitch className="w-5 h-5 text-[#9146FF]" />}
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-base">Streamer Settings</CardTitle>
+                    <CardDescription className="mt-0.5 text-xs">
+                      Verify your Twitch or Kick channel via OAuth to show a Streamer badge on your profile.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+
+                {/* Is Streamer Toggle */}
+                <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                  <div>
+                    <div className="text-sm font-medium text-slate-200">Streamer Mode</div>
+                    <div className="text-xs text-slate-400 mt-0.5">Show a Streamer badge on your public profile</div>
+                  </div>
+                  <Switch
+                    checked={!!(user as any)?.isStreamer}
+                    disabled={savingStreamerSettings}
+                    onCheckedChange={(val) => handleStreamerSettingsSave({ isStreamer: val })}
+                  />
+                </div>
+
+                {/* Platform Selector */}
+                <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                  <div>
+                    <div className="text-sm font-medium text-slate-200">Streaming Platform</div>
+                    <div className="text-xs text-slate-400 mt-0.5">Choose which platform to connect</div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleStreamerSettingsSave({ streamPlatform: "twitch" })}
+                      disabled={savingStreamerSettings}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                        (user as any)?.streamPlatform !== "kick"
+                          ? "border-[#9146FF]/60 bg-[#9146FF]/15 text-[#9146FF]"
+                          : "border-slate-700 text-slate-400 hover:border-slate-500"
+                      }`}
+                    >
+                      <SiTwitch className="w-3.5 h-3.5" />
+                      Twitch
+                    </button>
+                    <button
+                      onClick={() => handleStreamerSettingsSave({ streamPlatform: "kick" })}
+                      disabled={savingStreamerSettings}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                        (user as any)?.streamPlatform === "kick"
+                          ? "border-[#53FC18]/60 bg-[#53FC18]/10 text-[#53FC18]"
+                          : "border-slate-700 text-slate-400 hover:border-slate-500"
+                      }`}
+                    >
+                      <SiKick className="w-3.5 h-3.5" />
+                      Kick
+                    </button>
+                  </div>
+                </div>
+
+                {/* Twitch Connection */}
+                {(user as any)?.streamPlatform !== "kick" && (
+                  <>
+                    {(user as any)?.twitchVerified ? (
+                      <div className="rounded-xl border border-[#9146FF]/30 bg-[#9146FF]/5 px-4 py-3 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-[#9146FF]/15 flex items-center justify-center flex-shrink-0">
+                            <SiTwitch className="w-4 h-4 text-[#9146FF]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-slate-200">{(user as any)?.twitchChannelName}</span>
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#9146FF]/20 text-[#9146FF] border border-[#9146FF]/30">
+                                <Check className="w-2.5 h-2.5" />
+                                Verified
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-400">twitch.tv/{(user as any)?.twitchChannelName}</div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleTwitchDisconnect}
+                            disabled={disconnectingTwitch}
+                            className="gap-1.5 border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                          >
+                            {disconnectingTwitch ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlink className="w-4 h-4" />}
+                            Disconnect
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-medium text-slate-200">Connect Twitch</div>
+                            <div className="text-xs text-slate-400 mt-0.5">Authenticate via Twitch to verify your channel</div>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => { window.location.href = "/api/auth/twitch/connect"; }}
+                            className="gap-1.5 bg-[#9146FF] hover:bg-[#7d3ce8] text-white border-0"
+                          >
+                            <SiTwitch className="w-4 h-4" />
+                            Connect with Twitch
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Kick Connection */}
+                {(user as any)?.streamPlatform === "kick" && (
+                  <>
+                    {(user as any)?.kickVerified ? (
+                      <div className="rounded-xl border border-[#53FC18]/20 bg-[#53FC18]/5 px-4 py-3 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-[#53FC18]/10 flex items-center justify-center flex-shrink-0">
+                            <SiKick className="w-4 h-4 text-[#53FC18]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-slate-200">{(user as any)?.kickChannelName}</span>
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#53FC18]/10 text-[#53FC18] border border-[#53FC18]/30">
+                                <Check className="w-2.5 h-2.5" />
+                                Verified
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-400">kick.com/{(user as any)?.kickChannelName}</div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleKickDisconnect}
+                            disabled={disconnectingKick}
+                            className="gap-1.5 border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                          >
+                            {disconnectingKick ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlink className="w-4 h-4" />}
+                            Disconnect
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-medium text-slate-200">Connect Kick</div>
+                            <div className="text-xs text-slate-400 mt-0.5">Authenticate via Kick to verify your channel</div>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => { window.location.href = "/api/auth/kick/connect"; }}
+                            className="gap-1.5 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-[#53FC18] border border-[#53FC18]/30"
+                          >
+                            <SiKick className="w-4 h-4" />
+                            Connect with Kick
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* LIVE Badge Toggle */}
+                <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                  <div>
+                    <div className="text-sm font-medium text-slate-200">LIVE Badge</div>
+                    <div className="text-xs text-slate-400 mt-0.5">Show a LIVE badge on your profile when you're streaming</div>
+                  </div>
+                  <Switch
+                    checked={!!(user as any)?.liveEnabled}
+                    disabled={savingStreamerSettings || (!(user as any)?.twitchVerified && !(user as any)?.kickVerified)}
+                    onCheckedChange={(val) => handleStreamerSettingsSave({ liveEnabled: val })}
+                  />
+                </div>
+                {!(user as any)?.twitchVerified && !(user as any)?.kickVerified && (
+                  <p className="text-xs text-slate-500 px-1">Connect a streaming platform first to enable the LIVE badge.</p>
+                )}
+
+              </CardContent>
+            </Card>
 
             {/* PlayStation Disconnect Confirmation Dialog */}
             <AlertDialog open={showPsnDisconnectDialog} onOpenChange={setShowPsnDisconnectDialog}>

@@ -56,6 +56,18 @@ export const users = pgTable("users", {
   nintendoUsername: text("nintendo_username"), // Nintendo
   instagramUsername: text("instagram_username"), // Instagram
   facebookUsername: text("facebook_username"), // Facebook
+  // Streamer settings (OAuth-verified Twitch/Kick connections)
+  isStreamer: boolean("is_streamer").default(false),
+  streamPlatform: text("stream_platform"), // "twitch" or "kick"
+  twitchChannelName: text("twitch_channel_name"), // Verified via OAuth
+  twitchChannelId: text("twitch_channel_id"),     // Twitch user ID from OAuth
+  twitchVerified: boolean("twitch_verified").default(false),
+  twitchAccessToken: text("twitch_access_token"), // OAuth access token (server-only)
+  kickChannelName: text("kick_channel_name"),     // Verified via OAuth
+  kickChannelId: text("kick_channel_id"),         // Kick user/channel ID from OAuth
+  kickVerified: boolean("kick_verified").default(false),
+  kickAccessToken: text("kick_access_token"),     // OAuth access token (server-only)
+  liveEnabled: boolean("live_enabled").default(false), // Show LIVE badge on profile
   // Onboarding data for analytics and personalization
   userType: text("user_type"), // User type selection
   showUserType: boolean("show_user_type").default(true), // Whether to show user type badge on profile
