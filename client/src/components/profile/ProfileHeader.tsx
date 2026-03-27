@@ -242,7 +242,7 @@ const ProfileHeader = ({
 
             {/* Stats box with Collection button */}
             <div className="relative mt-3">
-              {/* L-shaped gradient border — top edge */}
+              {/* L-shaped gradient border — top edge (uses theme accent colour) */}
               <div
                 style={{
                   position: "absolute",
@@ -250,12 +250,12 @@ const ProfileHeader = ({
                   left: 0,
                   right: 0,
                   height: "1px",
-                  background: "linear-gradient(90deg, #4ade80, #22d3d3, #a78bfa, #38bdf8)",
+                  background: profile.accentColor || "#4ade80",
                   pointerEvents: "none",
                   zIndex: 5,
                 }}
               />
-              {/* L-shaped gradient border — left edge */}
+              {/* L-shaped gradient border — left edge (uses theme accent colour) */}
               <div
                 style={{
                   position: "absolute",
@@ -263,7 +263,7 @@ const ProfileHeader = ({
                   left: 0,
                   bottom: 0,
                   width: "1px",
-                  background: "linear-gradient(180deg, #4ade80, #22d3d3, #a78bfa, #38bdf8)",
+                  background: profile.accentColor || "#4ade80",
                   pointerEvents: "none",
                   zIndex: 5,
                 }}
@@ -274,7 +274,7 @@ const ProfileHeader = ({
                 <div
                   className="absolute -top-3 right-0 z-10 cursor-pointer transition-opacity hover:opacity-80"
                   style={{
-                    background: "linear-gradient(90deg, #4ade80, #22d3d3, #a78bfa, #38bdf8)",
+                    background: profile.accentColor || "#4ade80",
                     padding: "1px",
                     borderRadius: "8px",
                   }}
