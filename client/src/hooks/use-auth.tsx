@@ -111,21 +111,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               variant: "gamefolioSuccess",
             });
             
-            if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
-              setTimeout(() => {
-                if (!mounted) return;
-                showDailyXp({
-                  dailyXP: streakInfo.dailyXP,
-                  bonusAwarded: streakInfo.bonusAwarded,
-                  currentStreak: streakInfo.currentStreak,
-                  longestStreak: streakInfo.longestStreak || userData.longestStreak || 0,
-                  isNewMilestone: streakInfo.isNewMilestone,
-                  message: streakInfo.message,
-                  nextMilestone: streakInfo.nextMilestone || 5,
-                });
-              }, 800);
-            }
-            
             setLocation("/");
           }
         } catch (error) {
@@ -224,20 +209,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: `You are now logged in as ${user.displayName || user.username}`,
         variant: "gamefolioSuccess",
       });
-
-      if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
-        setTimeout(() => {
-          showDailyXp({
-            dailyXP: streakInfo.dailyXP,
-            bonusAwarded: streakInfo.bonusAwarded,
-            currentStreak: streakInfo.currentStreak,
-            longestStreak: streakInfo.longestStreak || user.longestStreak || 0,
-            isNewMilestone: streakInfo.isNewMilestone,
-            message: streakInfo.message,
-            nextMilestone: streakInfo.nextMilestone || 5,
-          });
-        }, 800);
-      }
 
       // Check if user needs onboarding
       const needsOnboarding = !user.userType;
