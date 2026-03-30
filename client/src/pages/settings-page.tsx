@@ -365,6 +365,8 @@ export default function SettingsPage() {
   const [disconnectingKick, setDisconnectingKick] = useState(false);
   const [connectingTwitch, setConnectingTwitch] = useState(false);
   const [disconnectingTwitch, setDisconnectingTwitch] = useState(false);
+  const [connectingRumble, setConnectingRumble] = useState(false);
+  const [disconnectingRumble, setDisconnectingRumble] = useState(false);
   const [syncingAchievements, setSyncingAchievements] = useState(false);
   const [togglingAchievements, setTogglingAchievements] = useState(false);
   const [showXboxDisconnectDialog, setShowXboxDisconnectDialog] = useState(false);
@@ -948,7 +950,7 @@ export default function SettingsPage() {
     enabled: !!user,
   });
 
-  const { data: oauthConfig } = useQuery<{ kick: boolean; twitch: boolean }>({
+  const { data: oauthConfig } = useQuery<{ kick: boolean; twitch: boolean; rumble: boolean }>({
     queryKey: ['/api/auth/social-oauth/config'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     staleTime: 60000,
@@ -985,6 +987,20 @@ export default function SettingsPage() {
         no_user: 'No Twitch user found on your account.',
       };
       toast({ title: "Twitch connection failed", description: errMap[params.get('twitch_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('rumble_connected') === 'true') {
+      refreshUser();
+      toast({ title: "Rumble connected!", description: "Your Rumble channel has been verified and linked.", duration: 4000 });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('rumble_error')) {
+      const errMap: Record<string, string> = {
+        access_denied: 'You cancelled the Rumble authorisation.',
+        invalid_state: 'Invalid OAuth state. Please try again.',
+        not_configured: 'Rumble OAuth is not configured on this server.',
+        auth_failed: 'Rumble authentication failed. Please try again.',
+        no_user: 'No Rumble user found on your account.',
+      };
+      toast({ title: "Rumble connection failed", description: errMap[params.get('rumble_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
       window.history.replaceState({}, '', window.location.pathname);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3723,6 +3739,20 @@ export default function SettingsPage() {
                     >
                       Kick
                     </button>
+                    <button
+                      type="button"
+                      disabled={!isStreamingEnabled}
+                      onClick={() => setStreamPlatform('rumble')}
+                      className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                        !isStreamingEnabled
+                          ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
+                          : streamPlatform === 'rumble'
+                          ? 'border-[#85C742] bg-[#85C742]/20 text-[#85C742]'
+                          : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
+                      }`}
+                    >
+                      Rumble
+                    </button>
                   </div>
                 </div>
 
@@ -3840,6 +3870,60 @@ export default function SettingsPage() {
                     </div>
                   )}
 
+                  {/* Rumble OAuth connect option */}
+                  {streamPlatform === 'rumble' && isStreamingEnabled && oauthConfig?.rumble && (
+                    <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.rumbleVerified ? 'border-[#85C742]/30 bg-[#85C742]/5' : 'border-slate-700 bg-slate-800/30'}`}>
+                      {(user as any)?.rumbleVerified ? (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded bg-[#85C742]/20 flex items-center justify-center">
+                              <Check className="w-3.5 h-3.5 text-[#85C742]" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-[#85C742]">Rumble OAuth Verified</p>
+                              <p className="text-[11px] text-slate-400">@{(user as any)?.streamChannelName}</p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={disconnectingRumble}
+                            className="h-7 px-2 text-xs text-slate-400 hover:text-red-400"
+                            onClick={async () => {
+                              setDisconnectingRumble(true);
+                              try {
+                                await apiRequest('POST', '/api/auth/rumble/disconnect');
+                                await refreshUser();
+                                setStreamChannelName('');
+                                toast({ title: 'Rumble disconnected', description: 'Your Rumble channel has been unlinked.', duration: 3000 });
+                              } catch {
+                                toast({ title: 'Failed to disconnect', description: 'Please try again.', variant: 'destructive' });
+                              } finally {
+                                setDisconnectingRumble(false);
+                              }
+                            }}
+                          >
+                            {disconnectingRumble ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Unlink className="w-3 h-3 mr-1" />}
+                            Disconnect
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-slate-400">Verify your Rumble channel via OAuth for a secure connection.</p>
+                          <Button
+                            size="sm"
+                            disabled={connectingRumble}
+                            className="bg-[#85C742] hover:bg-[#72aa38] text-black font-semibold border-0 h-8 px-3 text-xs"
+                            onClick={() => { setConnectingRumble(true); window.location.href = '/api/auth/rumble/connect'; }}
+                          >
+                            {connectingRumble ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+                            Connect with Rumble
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Show a message when OAuth isn't configured for the selected platform */}
                   {isStreamingEnabled && streamPlatform === 'twitch' && !oauthConfig?.twitch && (
                     <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-slate-700 p-3">
@@ -3849,6 +3933,11 @@ export default function SettingsPage() {
                   {isStreamingEnabled && streamPlatform === 'kick' && !oauthConfig?.kick && (
                     <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-slate-700 p-3">
                       Kick OAuth is not configured for this app. Contact the administrator to enable it.
+                    </p>
+                  )}
+                  {isStreamingEnabled && streamPlatform === 'rumble' && !oauthConfig?.rumble && (
+                    <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-slate-700 p-3">
+                      Rumble OAuth is not configured for this app. Contact the administrator to enable it.
                     </p>
                   )}
                 </div>

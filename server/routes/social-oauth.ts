@@ -324,6 +324,140 @@ router.post('/auth/twitch-stream/disconnect', async (req: Request, res: Response
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Rumble  OAuth 2.0  (Authorization Code flow)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Required env vars:
+//   RUMBLE_CLIENT_ID      – from rumble.com developer portal
+//   RUMBLE_CLIENT_SECRET  – from rumble.com developer portal
+//
+// Redirect URI to register in your Rumble app:
+//   https://<your-domain>/api/auth/rumble/callback
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.get('/auth/rumble/connect', (req: Request, res: Response) => {
+  if (!(req.user as any)?.id) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+
+  const clientId = process.env.RUMBLE_CLIENT_ID;
+  if (!clientId) {
+    return res.status(503).json({ message: 'Rumble OAuth is not configured.' });
+  }
+
+  const state = crypto.randomBytes(16).toString('hex');
+  (req.session as any).rumbleOAuthState = state;
+  (req.session as any).rumbleOAuthUserId = (req.user as any).id;
+
+  req.session.save(() => {
+    const callbackUrl = `${getBaseUrl(req)}/api/auth/rumble/callback`;
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: clientId,
+      redirect_uri: callbackUrl,
+      scope: 'openid',
+      state,
+    });
+
+    res.redirect(`https://rumble.com/api/oauth2/authorize?${params.toString()}`);
+  });
+});
+
+router.get('/auth/rumble/callback', async (req: Request, res: Response) => {
+  const { code, state, error } = req.query;
+
+  const storedState = (req.session as any).rumbleOAuthState;
+  const userId = (req.session as any).rumbleOAuthUserId;
+
+  delete (req.session as any).rumbleOAuthState;
+  delete (req.session as any).rumbleOAuthUserId;
+
+  if (error) {
+    return res.redirect('/settings/profile?tab=streamer&rumble_error=access_denied');
+  }
+
+  if (!code || !state || state !== storedState || !userId) {
+    return res.redirect('/settings/profile?tab=streamer&rumble_error=invalid_state');
+  }
+
+  const clientId = process.env.RUMBLE_CLIENT_ID;
+  const clientSecret = process.env.RUMBLE_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    return res.redirect('/settings/profile?tab=streamer&rumble_error=not_configured');
+  }
+
+  try {
+    const callbackUrl = `${getBaseUrl(req)}/api/auth/rumble/callback`;
+
+    // Exchange code for access token
+    const tokenRes = await axios.post(
+      'https://rumble.com/api/oauth2/token',
+      new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code: code as string,
+        grant_type: 'authorization_code',
+        redirect_uri: callbackUrl,
+      }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+
+    const accessToken = tokenRes.data.access_token;
+
+    // Fetch user profile from Rumble
+    const profileRes = await axios.get('https://rumble.com/api/User.Info', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    const rumbleUser = profileRes.data?.data ?? profileRes.data;
+    if (!rumbleUser) {
+      return res.redirect('/settings/profile?tab=streamer&rumble_error=no_user');
+    }
+
+    const rumbleId = String(rumbleUser.id ?? rumbleUser.user_id ?? '');
+    const channelName = rumbleUser.username ?? rumbleUser.slug ?? rumbleUser.name ?? '';
+
+    if (!channelName) {
+      return res.redirect('/settings/profile?tab=streamer&rumble_error=no_user');
+    }
+
+    // Save to DB
+    await db.update(users).set({
+      streamPlatform: 'rumble',
+      streamChannelName: channelName,
+      rumbleChannelName: channelName,
+      rumbleId,
+      rumbleVerified: true,
+    }).where(eq(users.id, userId));
+
+    return res.redirect('/settings/profile?tab=streamer&rumble_connected=true');
+  } catch (err: any) {
+    console.error('Rumble OAuth callback error:', err?.response?.data || err.message);
+    return res.redirect('/settings/profile?tab=streamer&rumble_error=auth_failed');
+  }
+});
+
+router.post('/auth/rumble/disconnect', async (req: Request, res: Response) => {
+  if (!(req.user as any)?.id) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+  try {
+    await db.update(users).set({
+      streamChannelName: null,
+      rumbleChannelName: null,
+      rumbleId: null,
+      rumbleVerified: false,
+    }).where(eq(users.id, (req.user as any).id));
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Rumble disconnect error:', err);
+    res.status(500).json({ message: 'Failed to disconnect Rumble' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Config check endpoint – lets the frontend know which OAuth providers are set up
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -331,6 +465,7 @@ router.get('/auth/social-oauth/config', (_req: Request, res: Response) => {
   res.json({
     kick: !!process.env.KICK_CLIENT_ID,
     twitch: !!process.env.TWITCH_CLIENT_ID,
+    rumble: !!process.env.RUMBLE_CLIENT_ID,
   });
 });
 
