@@ -2462,6 +2462,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           profileFont: userWithoutPassword.profileFont || 'default',
           profileFontEffect: userWithoutPassword.profileFontEffect || 'none',
           profileFontAnimation: userWithoutPassword.profileFontAnimation || 'none',
+          profileFontColor: userWithoutPassword.profileFontColor || '#FFFFFF',
+          cardColor: userWithoutPassword.cardColor || '#1E3A8A',
+          primaryColor: userWithoutPassword.primaryColor || '#02172C',
+          avatarBorderColor: userWithoutPassword.avatarBorderColor || '#4ADE80',
+          hideBanner: userWithoutPassword.hideBanner || false,
+          statsGlassEffect: userWithoutPassword.statsGlassEffect || false,
+          profileBackgroundGradient: userWithoutPassword.profileBackgroundGradient !== false,
+          profileBackgroundType: userWithoutPassword.profileBackgroundType || 'solid',
+          profileBackgroundTheme: userWithoutPassword.profileBackgroundTheme || 'default',
+          profileBackgroundAnimation: userWithoutPassword.profileBackgroundAnimation || 'none',
+          profileBackgroundImageUrl: userWithoutPassword.profileBackgroundImageUrl || '',
+          profileBackgroundPositionX: userWithoutPassword.profileBackgroundPositionX || '50',
+          profileBackgroundPositionY: userWithoutPassword.profileBackgroundPositionY || '50',
+          profileBackgroundZoom: userWithoutPassword.profileBackgroundZoom || '100',
+          profileBackgroundDesktopX: userWithoutPassword.profileBackgroundDesktopX || '50',
+          profileBackgroundDesktopY: userWithoutPassword.profileBackgroundDesktopY || '50',
+          profileBackgroundDesktopZoom: userWithoutPassword.profileBackgroundDesktopZoom || '100',
+          layoutStyle: userWithoutPassword.layoutStyle || 'grid',
+          showUserType: userWithoutPassword.showUserType !== false,
+          selectedAvatarBorderId: userWithoutPassword.selectedAvatarBorderId || null,
+          selectedNameTagId: userWithoutPassword.selectedNameTagId || null,
+          selectedVerificationBadgeId: userWithoutPassword.selectedVerificationBadgeId || null,
           canMintNfts: userWithoutPassword.canMintNfts || false,
           canSellNfts: userWithoutPassword.canSellNfts || false,
           isStreamer: userWithoutPassword.isStreamer || false,
@@ -2535,6 +2557,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           profileFont: fallbackWithoutPassword.profileFont || 'default',
           profileFontEffect: fallbackWithoutPassword.profileFontEffect || 'none',
           profileFontAnimation: fallbackWithoutPassword.profileFontAnimation || 'none',
+          profileFontColor: fallbackWithoutPassword.profileFontColor || '#FFFFFF',
+          cardColor: fallbackWithoutPassword.cardColor || '#1E3A8A',
+          primaryColor: fallbackWithoutPassword.primaryColor || '#02172C',
+          avatarBorderColor: fallbackWithoutPassword.avatarBorderColor || '#4ADE80',
+          hideBanner: fallbackWithoutPassword.hideBanner || false,
+          statsGlassEffect: fallbackWithoutPassword.statsGlassEffect || false,
+          profileBackgroundGradient: fallbackWithoutPassword.profileBackgroundGradient !== false,
+          profileBackgroundType: fallbackWithoutPassword.profileBackgroundType || 'solid',
+          profileBackgroundTheme: fallbackWithoutPassword.profileBackgroundTheme || 'default',
+          profileBackgroundAnimation: fallbackWithoutPassword.profileBackgroundAnimation || 'none',
+          profileBackgroundImageUrl: fallbackWithoutPassword.profileBackgroundImageUrl || '',
+          profileBackgroundPositionX: fallbackWithoutPassword.profileBackgroundPositionX || '50',
+          profileBackgroundPositionY: fallbackWithoutPassword.profileBackgroundPositionY || '50',
+          profileBackgroundZoom: fallbackWithoutPassword.profileBackgroundZoom || '100',
+          profileBackgroundDesktopX: fallbackWithoutPassword.profileBackgroundDesktopX || '50',
+          profileBackgroundDesktopY: fallbackWithoutPassword.profileBackgroundDesktopY || '50',
+          profileBackgroundDesktopZoom: fallbackWithoutPassword.profileBackgroundDesktopZoom || '100',
+          layoutStyle: fallbackWithoutPassword.layoutStyle || 'grid',
+          showUserType: fallbackWithoutPassword.showUserType !== false,
+          selectedAvatarBorderId: fallbackWithoutPassword.selectedAvatarBorderId || null,
+          selectedNameTagId: fallbackWithoutPassword.selectedNameTagId || null,
+          selectedVerificationBadgeId: fallbackWithoutPassword.selectedVerificationBadgeId || null,
           canMintNfts: fallbackWithoutPassword.canMintNfts || false,
           canSellNfts: fallbackWithoutPassword.canSellNfts || false,
           isStreamer: fallbackWithoutPassword.isStreamer || false,
@@ -8489,7 +8533,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const hiddenBadgeNames = ['moderator', 'moderator icon', 'pro user'];
       const filteredBadges = mergedBadges
-        .filter(b => !hiddenBadgeNames.includes(b.name.toLowerCase()))
+        .filter(b => {
+          const nameLower = b.name.toLowerCase();
+          if (isModerator && nameLower.includes('moderator')) return true;
+          return !hiddenBadgeNames.includes(nameLower);
+        })
         .map(b => {
           if (b.name.toLowerCase() === 'verified128') {
             return { ...b, name: 'Pro' };

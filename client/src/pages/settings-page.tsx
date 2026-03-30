@@ -766,6 +766,7 @@ export default function SettingsPage() {
   
   // Track if banner was manually uploaded to prevent useEffect override
   const [uploadedBannerUrl, setUploadedBannerUrl] = useState<string>('');
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Track previous avatarUrl to detect successful uploads
   const prevAvatarUrl = React.useRef(user?.avatarUrl);
@@ -1308,11 +1309,8 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       
-      toast({
-        title: "Settings updated!",
-        description: "Your profile has been successfully updated. Check your Gamefolio!",
-        variant: "gamefolioSuccess",
-      });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
     },
     onError: (error) => {
       toast({
@@ -4093,15 +4091,15 @@ export default function SettingsPage() {
         </Tabs>
 
         {/* Save Button */}
-        {(hasUnsavedChanges || updateProfileMutation.isPending) && (
+        {(hasUnsavedChanges || updateProfileMutation.isPending || saveSuccess) && (
           <div className="flex justify-end items-center mt-6 mb-4">
             <Button
               onClick={handleSave}
-              disabled={updateProfileMutation.isPending}
+              disabled={updateProfileMutation.isPending || saveSuccess}
               className="flex items-center gap-2 text-white font-medium px-6 py-2"
             >
               <Save className="h-4 w-4" />
-              {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
+              {updateProfileMutation.isPending ? "Saving..." : saveSuccess ? "Changes Saved" : "Save Changes"}
             </Button>
           </div>
         )}

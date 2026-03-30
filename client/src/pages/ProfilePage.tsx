@@ -2553,10 +2553,9 @@ const ProfilePage = () => {
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
                 badgeName={verificationBadgeData?.verificationBadge?.name}
                 size="lg"
-                isModerator={profile.role === "moderator" || profile.role === "admin"}
               />
               <ModeratorBadge 
-                isModerator={profile.role === "moderator" || profile.role === "admin"} 
+                isModerator={(profile.role === "moderator" || profile.role === "admin") && !verificationBadgeData?.verificationBadge} 
                 size="lg" 
               />
             </div>
@@ -2935,10 +2934,9 @@ const ProfilePage = () => {
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
                 badgeName={verificationBadgeData?.verificationBadge?.name}
                 size="xl"
-                isModerator={profile.role === "moderator" || profile.role === "admin"}
               />
               <ModeratorBadge 
-                isModerator={profile.role === "moderator" || profile.role === "admin"} 
+                isModerator={(profile.role === "moderator" || profile.role === "admin") && !verificationBadgeData?.verificationBadge} 
                 size="xl" 
               />
               {profile.userType && profile.showUserType !== false && (() => {
