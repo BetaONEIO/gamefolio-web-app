@@ -276,8 +276,8 @@ export default function CustomizePage() {
                 <CardTitle className="text-white">Preset Themes</CardTitle>
                 <CardDescription>Quick color combinations</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3">
+              <CardContent className="max-h-none overflow-visible">
+                <div className="grid grid-cols-2 gap-3 auto-rows-max">
                   {PRESET_THEMES.map((preset) => (
                     <div
                       key={preset.name}
