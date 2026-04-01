@@ -1308,8 +1308,9 @@ const ProfilePage = () => {
   const isBlocksTheme = !isLightBackground && accentColor?.toLowerCase() === '#4ade80' && backgroundColor?.toLowerCase() === '#1a1a1a';
   const isForestTheme = !isLightBackground && accentColor?.toLowerCase() === '#4ade80' && backgroundColor?.toLowerCase() === '#0a2f1f';
   const isWatermelonTheme = accentColor?.toLowerCase() === '#4ade80' && backgroundColor?.toLowerCase() === '#ff4d6d';
+  const isElectricTheme = !isLightBackground && accentColor?.toLowerCase() === '#ffe033' && backgroundColor?.toLowerCase() === '#1a1200';
 
-  const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isLightBackground;
+  const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isLightBackground;
 
   const platformBtnStyle = isWatermelonTheme
     ? { backgroundColor: '#ffb3c1', color: '#0d1a12', border: '3px solid #1d3932', borderRadius: '9999px' }
@@ -1331,6 +1332,8 @@ const ProfilePage = () => {
               ? { backgroundColor: 'rgba(232,213,183,0.85)', color: '#6B3A1F', border: '1px solid #c4a88266', borderRadius: '6px' }
               : isGothicTheme
               ? { backgroundColor: 'rgba(20,2,50,0.85)', color: '#c27aff', border: '1px solid #c27aff44', borderRadius: '9999px', boxShadow: '0 0 8px #c27aff22' }
+              : isElectricTheme
+              ? { backgroundColor: 'rgba(20,15,0,0.9)', color: '#ffe033', border: '1px solid #ffe03366', borderRadius: '9999px', boxShadow: '0 0 8px #ffe03333', fontFamily: "'Bangers', 'Impact', cursive", letterSpacing: '1px' }
               : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
 
   const socialOutlineStyle = isWatermelonTheme
@@ -1341,7 +1344,7 @@ const ProfilePage = () => {
     ? platformBtnStyle
     : isLightBackground
     ? { backgroundColor: 'rgba(255,255,255,0.9)', color: '#000000', border: '1.5px solid rgba(0,0,0,0.5)', borderRadius: '9999px' }
-    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme)
+    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme)
       ? platformBtnStyle
       : { backgroundColor: '#ffffff', color: '#000000', border: '1.5px solid #000000', borderRadius: '9999px' };
 
@@ -1358,7 +1361,7 @@ const ProfilePage = () => {
     facebook:    { backgroundColor: '#1877F2', color: '#ffffff', border: '1px solid #1877F2', borderRadius: '9999px' },
   };
 
-  const isNamedTheme = isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isLightBackground;
+  const isNamedTheme = isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme || isLightBackground;
 
   const avatarThemeColor = isWatermelonTheme ? '#ff6b6b'
     : isCartoonTheme ? '#ff6b35'
@@ -1369,6 +1372,7 @@ const ProfilePage = () => {
     : isBlocksTheme ? '#4ade80'
     : isForestTheme ? '#4a7c59'
     : isGothicTheme ? '#c27aff'
+    : isElectricTheme ? '#ffe033'
     : (accentColor || undefined);
 
   const getBtnStyle = (platform: string): React.CSSProperties => {
@@ -1411,6 +1415,11 @@ const ProfilePage = () => {
     background: 'rgba(255,255,255,0.85)',
     border: '1px solid rgba(0,122,255,0.4)',
     borderRadius: '6px',
+  } : isElectricTheme ? {
+    color: '#ffe033',
+    background: 'rgba(20,15,0,0.85)',
+    border: '1px solid #ffe03399',
+    boxShadow: '0 0 12px #ffe03344',
   } : {
     color: accentColor || 'hsl(var(--primary))',
     background: 'rgba(0,0,0,0.5)',
@@ -1453,6 +1462,12 @@ const ProfilePage = () => {
     borderRadius: '9999px',
     padding: '4px 8px',
     boxShadow: '0 0 18px #c27aff22',
+  } : isElectricTheme ? {
+    background: 'rgba(20,15,0,0.92)',
+    border: '1px solid #ffe03344',
+    borderRadius: '9999px',
+    padding: '4px 8px',
+    boxShadow: '0 0 18px #ffe03333, 0 0 4px #fff5 inset',
   } : undefined;
 
   const blocksTabColors: Record<string, string> = {
@@ -1476,6 +1491,7 @@ const ProfilePage = () => {
     ...(isNeoTheme ? { fontFamily: "'JetBrains Mono', monospace", letterSpacing: '1.5px', fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase' as const } : {}),
     ...(isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.55rem', letterSpacing: '0.5px', textTransform: 'uppercase' as const, borderRadius: '2px' } : {}),
     ...(isGothicTheme ? { fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '1.5px', fontSize: '0.78rem' } : {}),
+    ...(isElectricTheme ? { fontFamily: "'Bangers', 'Impact', cursive", letterSpacing: '2px', fontSize: '0.85rem', textTransform: 'uppercase' as const } : {}),
   });
 
   const nameTagBgStyle = isWatermelonTheme ? {
@@ -1518,6 +1534,10 @@ const ProfilePage = () => {
     background: 'rgba(20,2,50,0.95)',
     border: '1px solid #c27aff55',
     boxShadow: '0 0 12px #c27aff33',
+  } : isElectricTheme ? {
+    background: 'rgba(15,12,0,0.95)',
+    border: '1px solid #ffe03366',
+    boxShadow: '0 0 14px #ffe03344',
   } : {
     background: 'rgba(30,30,30,0.85)',
     border: '1px solid rgba(255,255,255,0.12)',
@@ -2314,6 +2334,147 @@ const ProfilePage = () => {
           }
         `}</style>
       )}
+      {/* Electric theme animations */}
+      {isElectricTheme && (
+        <style>{`
+          @keyframes electricCardGlow {
+            0%,100% { box-shadow: 0 0 12px #ffe03366, 0 0 28px #ffe03322; }
+            50%      { box-shadow: 0 0 22px #ffe033cc, 0 0 55px #ffe03355, 0 0 90px #fff81022; }
+          }
+          .electric-stats-card {
+            animation: electricCardGlow 1.8s ease-in-out infinite;
+          }
+          @keyframes lightningStrike1 {
+            0%,82%,100%  { opacity:0; }
+            83%  { opacity:1; }
+            84%  { opacity:0.35; }
+            85%  { opacity:0.9; }
+            86%  { opacity:0; }
+          }
+          @keyframes lightningStrike2 {
+            0%,90%,100%  { opacity:0; }
+            91%  { opacity:0.9; }
+            92%  { opacity:0.25; }
+            93%  { opacity:0; }
+          }
+          @keyframes lightningStrike3 {
+            0%,73%,100%  { opacity:0; }
+            74%  { opacity:0.7; }
+            75%  { opacity:0; }
+          }
+          @keyframes electricFlash1 {
+            0%,82%,100% { opacity:0; }
+            83% { opacity:0.18; }
+            84% { opacity:0; }
+            85% { opacity:0.10; }
+            86% { opacity:0; }
+          }
+          @keyframes electricFlash2 {
+            0%,90%,100% { opacity:0; }
+            91% { opacity:0.15; }
+            92% { opacity:0; }
+          }
+          @keyframes electricPlasma1 {
+            0%,100% { transform: translate(0,0) scale(1); }
+            33%     { transform: translate(4%,-3%) scale(1.03); }
+            66%     { transform: translate(-3%,4%) scale(0.97); }
+          }
+          @keyframes electricPlasma2 {
+            0%,100% { transform: translate(0,0) scale(1); }
+            50%     { transform: translate(-5%,-2%) scale(1.02); }
+          }
+          @keyframes electricPlasma3 {
+            0%,100% { transform: translate(0,0); }
+            40%     { transform: translate(3%,5%); }
+            80%     { transform: translate(-4%,-3%); }
+          }
+          .electric-bolt-1 {
+            position:fixed; inset:0; pointer-events:none; z-index:2;
+            background: linear-gradient(
+              65deg,
+              transparent 0%, transparent 28%,
+              rgba(255,248,100,0.04) 33%,
+              rgba(255,248,100,0.92) 36%,
+              rgba(255,255,255,1) 36.8%,
+              rgba(255,248,100,0.92) 37.5%,
+              rgba(255,248,100,0.04) 42%,
+              transparent 47%, transparent 100%
+            );
+            animation: lightningStrike1 6s linear infinite;
+          }
+          .electric-bolt-2 {
+            position:fixed; inset:0; pointer-events:none; z-index:2;
+            background: linear-gradient(
+              -52deg,
+              transparent 0%, transparent 52%,
+              rgba(255,248,100,0.04) 57%,
+              rgba(255,248,100,0.88) 60%,
+              rgba(255,255,255,0.98) 60.8%,
+              rgba(255,248,100,0.88) 61.5%,
+              rgba(255,248,100,0.04) 66%,
+              transparent 71%, transparent 100%
+            );
+            animation: lightningStrike2 8s linear infinite 1.8s;
+          }
+          .electric-bolt-3 {
+            position:fixed; inset:0; pointer-events:none; z-index:2;
+            background: linear-gradient(
+              78deg,
+              transparent 0%, transparent 68%,
+              rgba(255,248,100,0.03) 71%,
+              rgba(255,248,100,0.75) 74%,
+              rgba(255,255,255,0.92) 74.8%,
+              rgba(255,248,100,0.75) 75.5%,
+              rgba(255,248,100,0.03) 79%,
+              transparent 83%, transparent 100%
+            );
+            animation: lightningStrike3 10s linear infinite 4.5s;
+          }
+          .electric-flash-1 {
+            position:fixed; inset:0; pointer-events:none; z-index:1;
+            background: rgba(255,240,50,0.14);
+            animation: electricFlash1 6s linear infinite;
+          }
+          .electric-flash-2 {
+            position:fixed; inset:0; pointer-events:none; z-index:1;
+            background: rgba(255,240,50,0.12);
+            animation: electricFlash2 8s linear infinite 1.8s;
+          }
+          .electric-plasma-1 {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              radial-gradient(ellipse 60% 40% at 15% 25%, rgba(255,224,51,0.14) 0%, transparent 70%),
+              radial-gradient(ellipse 45% 55% at 85% 70%, rgba(255,224,51,0.09) 0%, transparent 70%),
+              radial-gradient(ellipse 80% 35% at 50% 95%, rgba(255,200,0,0.07) 0%, transparent 60%);
+            animation: electricPlasma1 9s ease-in-out infinite;
+          }
+          .electric-plasma-2 {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              radial-gradient(ellipse 50% 70% at 78% 18%, rgba(255,224,51,0.11) 0%, transparent 65%),
+              radial-gradient(ellipse 40% 50% at 10% 82%, rgba(255,224,51,0.08) 0%, transparent 70%),
+              radial-gradient(ellipse 90% 30% at 40% 55%, rgba(255,200,0,0.06) 0%, transparent 60%);
+            animation: electricPlasma2 13s ease-in-out infinite;
+          }
+          .electric-plasma-3 {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            opacity:0.4;
+            background-image:
+              linear-gradient(0deg, rgba(255,224,51,0.06) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255,224,51,0.06) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: electricPlasma3 20s ease-in-out infinite;
+          }
+        `}</style>
+      )}
+      {isElectricTheme && !profileBackgroundImageUrl && <div className="electric-plasma-1" />}
+      {isElectricTheme && !profileBackgroundImageUrl && <div className="electric-plasma-2" />}
+      {isElectricTheme && !profileBackgroundImageUrl && <div className="electric-plasma-3" />}
+      {isElectricTheme && <div className="electric-bolt-1" />}
+      {isElectricTheme && <div className="electric-bolt-2" />}
+      {isElectricTheme && <div className="electric-bolt-3" />}
+      {isElectricTheme && <div className="electric-flash-1" />}
+      {isElectricTheme && <div className="electric-flash-2" />}
       {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">
         <React.Suspense fallback={null}>
@@ -2650,7 +2811,7 @@ const ProfilePage = () => {
             >
 
             <div 
-              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''}`}
+              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''}`}
               style={isWatermelonTheme ? {
                 background: '#ffb3c1',
               } : isCartoonTheme ? {
@@ -3029,7 +3190,7 @@ const ProfilePage = () => {
             >
 
               <div 
-                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''}`}
+                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''}`}
                 style={isWatermelonTheme ? {
                   background: '#ffb3c1',
                 } : isLightBackground ? {

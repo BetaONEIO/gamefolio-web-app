@@ -100,6 +100,12 @@ const PRESET_THEMES = [
     accentColor: "#ff8904",
     backgroundColor: "#fefce8",
     cardColor: "#ffedd4"
+  },
+  {
+    name: "Electric",
+    accentColor: "#ffe033",
+    backgroundColor: "#1a1200",
+    cardColor: "#2d2100"
   }
 ];
 
