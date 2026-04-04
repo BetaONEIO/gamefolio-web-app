@@ -34,11 +34,36 @@ if (process.env.NODE_ENV === "production") {
 }
 
 // CORS configuration for production and mobile apps
+function isOriginAllowed(origin: string, allowedOrigins: string[]): boolean {
+  let url: URL;
+  try {
+    url = new URL(origin);
+  } catch {
+    return false;
+  }
+  const hostname = url.hostname; // e.g. "app.gamefolio.com" (no port)
+  const host = url.host;         // e.g. "localhost:8081" (with port)
+
+  return allowedOrigins.some(allowed => {
+    if (allowed === 'localhost') {
+      return hostname === 'localhost';
+    }
+    if (allowed.startsWith('localhost:')) {
+      return host === allowed;
+    }
+    if (allowed.startsWith('.')) {
+      const domain = allowed.slice(1); // ".gamefolio.com" → "gamefolio.com"
+      return hostname === domain || hostname.endsWith(allowed);
+    }
+    return hostname === allowed;
+  });
+}
+
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   const allowedOrigins = [
     '.replit.app',
-    '.repl.co',  
+    '.repl.co',
     'localhost',
     'localhost:8081',   // Expo local development
     'localhost:19006',  // Expo web development
@@ -49,10 +74,8 @@ app.use((req, res, next) => {
     '.expo.dev',        // Expo development
     'expo.dev',         // Expo development
   ];
-  
-  const isAllowed = origin && allowedOrigins.some(allowed => origin.includes(allowed));
-  
-  if (isAllowed) {
+
+  if (origin && isOriginAllowed(origin, allowedOrigins)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else if (!origin) {
     res.setHeader('Access-Control-Allow-Origin', '*');
