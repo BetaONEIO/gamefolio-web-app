@@ -54,9 +54,7 @@ app.use((req, res, next) => {
   
   if (isAllowed) {
     res.setHeader('Access-Control-Allow-Origin', origin);
-  } else if (origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else {
+  } else if (!origin) {
     res.setHeader('Access-Control-Allow-Origin', '*');
   }
   
