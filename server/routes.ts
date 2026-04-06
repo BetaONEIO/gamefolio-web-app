@@ -3012,6 +3012,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper to sign all Supabase URLs in clip objects (thumbnails, videos, avatars)
+  async function signClipUrls<T extends { thumbnailUrl?: string | null; videoUrl?: string | null; user?: { avatarUrl?: string | null } | null }>(clips: T[]): Promise<T[]> {
+    return Promise.all(
+      clips.map(async (clip) => {
+        const updates: Partial<T> = {};
+        if (clip.thumbnailUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(clip.thumbnailUrl, 3600);
+          if (signed) (updates as any).thumbnailUrl = signed;
+        }
+        if (clip.videoUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(clip.videoUrl, 3600);
+          if (signed) (updates as any).videoUrl = signed;
+        }
+        let user = clip.user;
+        if (clip.user?.avatarUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(clip.user.avatarUrl, 3600);
+          if (signed) user = { ...clip.user, avatarUrl: signed };
+        }
+        return { ...clip, ...updates, user };
+      })
+    );
+  }
+
   // Helper to sign avatar URLs for leaderboard entries
   async function signLeaderboardAvatars<T extends { user: { avatarUrl?: string | null } }>(entries: T[]): Promise<T[]> {
     return Promise.all(
@@ -4805,7 +4828,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Expires', '0');
       
       const clips = await storage.getAllClips(limit, offset, currentUserId);
-      res.json(clips);
+      res.json(await signClipUrls(clips));
     } catch (err) {
       console.error("Error fetching clips:", err);
       return res.status(500).json({ message: "Error fetching clips" });
@@ -4817,7 +4840,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { hashtag } = req.params;
       const clips = await storage.getClipsByHashtag(hashtag);
-      res.json(clips);
+      res.json(await signClipUrls(clips));
     } catch (err) {
       console.error("Error fetching clips by hashtag:", err);
       return res.status(500).json({ message: "Error fetching clips by hashtag" });
@@ -4831,7 +4854,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const period = (req.query.period as string) || "day";
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
       const clips = await storage.getFeedClips(period, limit);
-      res.json(clips);
+      res.json(await signClipUrls(clips));
     } catch (err) {
       console.error("Error fetching clips feed:", err);
       return res.status(500).json({ message: "Error fetching clips feed" });
@@ -4856,7 +4879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gameId ? parseInt(gameId as string) : undefined,
         currentUserId
       );
-      res.json(clips);
+      res.json(await signClipUrls(clips));
     } catch (err) {
       console.error("Error fetching trending clips:", err);
       res.status(500).json({ message: "Internal server error" });
