@@ -1161,6 +1161,7 @@ export default function SettingsPage() {
 
   const { data: profileStats } = useQuery<{ _count?: { followers?: number; following?: number; clips?: number } }>({
     queryKey: [`/api/users/${user?.username}`],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user?.username,
   });
 
@@ -4737,7 +4738,7 @@ export default function SettingsPage() {
                       borderRadius: '12px',
                     }}
                   >
-                    {isThemeLocked && <img src={gamefolioLogo} alt="Gamefolio" className="w-3.5 h-3.5 rounded-full" />}
+                    {isThemeLocked && <img src={gamefolioLogo} alt="Gamefolio" className="w-5 h-5 rounded-full flex-shrink-0" />}
                     {isThemeLocked ? 'Go Pro' : 'Apply Theme'}
                   </button>
                 </div>
