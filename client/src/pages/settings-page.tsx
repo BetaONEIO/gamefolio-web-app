@@ -4721,13 +4721,12 @@ export default function SettingsPage() {
                     }}
                     className="flex-1 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2"
                     style={{
-                      background: accent,
-                      color: isLight && !isGothic ? '#1d1d1f' : bg,
-                      boxShadow: `0 8px 24px -8px ${accent}`,
-                      fontFamily: themeFont,
-                      fontSize: isBlocks ? '0.5rem' : '0.875rem',
-                      borderRadius: isBlocks ? '4px' : isWatermelon ? '9999px' : '12px',
-                      border: isBlocks ? '2px solid #000' : undefined,
+                      background: isThemeLocked ? '#4ADE80' : accent,
+                      color: isThemeLocked ? '#1a1a1a' : (isLight && !isGothic ? '#1d1d1f' : bg),
+                      boxShadow: isThemeLocked ? '0 8px 24px -8px #4ade8066' : `0 8px 24px -8px ${accent}`,
+                      fontFamily: isThemeLocked ? undefined : themeFont,
+                      fontSize: '0.875rem',
+                      borderRadius: '12px',
                     }}
                   >
                     {isThemeLocked && <Lock className="w-3.5 h-3.5" />}
