@@ -1158,6 +1158,11 @@ export default function SettingsPage() {
     queryKey: ['/api/auth/oauth-status'],
   });
 
+  const { data: profileStats } = useQuery<{ _count?: { followers?: number; following?: number; clips?: number } }>({
+    queryKey: [`/api/users/${user?.username}`],
+    enabled: !!user?.username,
+  });
+
   const { signedUrl: signedAvatarUrl } = useSignedUrl(user?.avatarUrl);
   const { signedUrl: signedDeactivatedAvatarUrl } = useSignedUrl(deactivatedAvatarUrl);
   const { signedUrl: signedSelectedPrevAvatar } = useSignedUrl(selectedPreviousAvatar);
@@ -4674,41 +4679,19 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Stats Card */}
-                <div className="relative z-10 mx-4 mb-4 p-3" style={statsCardStyle}>
+                <div className="relative z-10 mx-4 mb-5 p-3" style={statsCardStyle}>
                   <div className="grid grid-cols-3" style={{ gap: 0 }}>
-                    {(['Level', 'Rank', 'XP'] as const).map((label, i) => (
+                    {[
+                      { label: 'Uploads', value: profileStats?._count?.clips ?? '—' },
+                      { label: 'Followers', value: profileStats?._count?.followers ?? '—' },
+                      { label: 'Following', value: profileStats?._count?.following ?? '—' },
+                    ].map(({ label, value }, i) => (
                       <div key={label} className="text-center px-2" style={{ borderRight: i < 2 ? `1px solid ${isWatermelon ? 'rgba(0,0,0,0.12)' : isLight ? 'rgba(0,0,0,0.08)' : `${accent}22`}` : 'none' }}>
-                        <p style={valueStyle}>{i === 0 ? ((user as any)?.level || 1) : i === 2 ? ((user as any)?.totalXP || 0) : '—'}</p>
+                        <p style={valueStyle}>{value}</p>
                         <p style={isCyberpunk ? cyberLabelStyle : labelStyle}>{label}</p>
                       </div>
                     ))}
                   </div>
-                </div>
-
-                {/* Fake tab bar styled per theme */}
-                <div className="relative z-10 mx-4 mb-4 flex gap-1 rounded-xl overflow-hidden p-1" style={{
-                  background: isWatermelon ? '#ffb3c1' : isCartoon ? 'transparent' : isMac ? '#e5e5e7' : isIce ? 'rgba(219,234,254,0.6)' : isBubbleTea ? 'rgba(255,237,212,0.6)' : `${topColor}dd`,
-                  border: isBlocks ? '3px solid #4ade80' : isCartoon ? 'none' : isMac ? '1px solid #e5e5e7' : `1px solid ${accent}33`,
-                  boxShadow: isBlocks ? '4px 4px 0 #000' : undefined,
-                  borderRadius: isWatermelon ? '9999px' : isBlocks ? '4px' : '12px',
-                }}>
-                  {['Posts', 'Clips', 'Stats'].map((tab, i) => (
-                    <div key={tab} className="flex-1 text-center py-1.5 rounded-lg" style={{
-                      fontFamily: themeFont,
-                      fontSize: isBlocks ? '0.42rem' : isElectric ? '0.7rem' : '0.65rem',
-                      fontWeight: i === 0 ? 700 : 500,
-                      color: i === 0
-                        ? (isWatermelon ? '#0d1a12' : isCartoon ? '#ff5e5e' : isLight ? '#1d1d1f' : '#fff')
-                        : (isWatermelon ? 'rgba(13,26,18,0.45)' : isLight ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.35)'),
-                      background: i === 0
-                        ? (isWatermelon ? 'transparent' : isCartoon ? 'transparent' : isMac ? accent : isIce ? accent : isBubbleTea ? accent : accent)
-                        : 'transparent',
-                      borderBottom: i === 0 && isCartoon ? '3px solid #ff5e5e' : 'none',
-                      letterSpacing: isZombie ? '1.5px' : isCyberpunk ? '2px' : isBlocks ? '0.5px' : '0.3px',
-                      textTransform: (isZombie || isCyberpunk || isNeo || isBlocks || isElectric) ? 'uppercase' as const : undefined,
-                      boxShadow: i === 0 && isBlocks ? 'inset 0 -2px 0 rgba(0,0,0,0.35)' : undefined,
-                    }}>{tab}</div>
-                  ))}
                 </div>
 
                 {/* Buttons */}
