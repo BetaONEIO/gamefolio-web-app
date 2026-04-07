@@ -1,7 +1,11 @@
 node_modules
 dist
 .DS_Store
+**/.DS_Store
 server/public
 vite.config.ts.*
 *.tar.gz
 /test-results
+/temp
+/playwright-report
+fresh_cookies.txt
