@@ -2447,12 +2447,11 @@ export default function SettingsPage() {
                             return (
                               <div
                                 key={theme.name}
-                                className="rounded-lg border-2 transition-all cursor-pointer hover:scale-[1.02]"
+                                className="rounded-lg border-2 transition-all"
                                 style={{
                                   borderColor: isActive ? theme.accentColor : 'transparent',
                                   boxShadow: isActive ? `0 0 10px ${theme.accentColor}50` : 'none',
                                 }}
-                                onClick={() => setThemePreviewData(theme)}
                               >
                                 <div
                                   className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm relative"
@@ -2460,10 +2459,14 @@ export default function SettingsPage() {
                                     background: `linear-gradient(180deg, ${topColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
                                   }}
                                 >
-                                  <div
-                                    className="w-8 h-8 rounded-full border-2 border-white"
-                                    style={{ backgroundColor: theme.accentColor }}
-                                  />
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => setThemePreviewData(theme)}
+                                    className="text-xs"
+                                  >
+                                    Preview
+                                  </Button>
                                   {isActive && (
                                     <div
                                       className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
