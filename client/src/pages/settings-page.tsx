@@ -2459,14 +2459,6 @@ export default function SettingsPage() {
                                     background: `linear-gradient(180deg, ${topColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
                                   }}
                                 >
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={() => setThemePreviewData(theme)}
-                                    className="text-xs"
-                                  >
-                                    Preview
-                                  </Button>
                                   {isActive && (
                                     <div
                                       className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
@@ -2485,6 +2477,14 @@ export default function SettingsPage() {
                                 {isLocked && theme.name !== "None" && (
                                   <p className="text-center text-xs text-muted-foreground">Pro only</p>
                                 )}
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => setThemePreviewData(theme)}
+                                  className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white"
+                                >
+                                  Preview
+                                </Button>
                               </div>
                             );
                           })}
