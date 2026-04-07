@@ -2478,10 +2478,12 @@ export default function SettingsPage() {
                                   <p className="text-center text-xs text-muted-foreground">Pro only</p>
                                 )}
                                 <Button
-                                  variant="default"
-                                  size="sm"
+                                  size="xs"
                                   onClick={() => setThemePreviewData(theme)}
-                                  className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white"
+                                  className="w-full mt-2 text-xs"
+                                  style={{ backgroundColor: '#4ADE80', color: 'white' }}
+                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#22c55e'}
+                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#4ADE80'}
                                 >
                                   Preview
                                 </Button>
