@@ -380,7 +380,7 @@ const PRESET_THEMES = [
   {
     name: "Bubble Tea",
     backgroundColor: "#fefce8",
-    accentColor: "#ff8904",
+    accentColor: "#d4a574",
     gradientTopColor: "#ffedd4",
     primaryColor: "#ffedd4",
     proOnly: true
