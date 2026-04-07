@@ -3391,24 +3391,10 @@ export default function SettingsPage() {
           <TabsContent value="platforms">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Platform Connections</CardTitle>
-                    <CardDescription className="mt-1">
-                      Connect your gaming accounts and social media profiles.
-                    </CardDescription>
-                  </div>
-                  {availablePlatforms.length > 0 && (
-                    <Button
-                      size="sm"
-                      onClick={() => { setShowAddPlatform(true); setSelectedPlatform(null); setPlatformHandle(''); }}
-                      className="gap-1.5"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add Connection
-                    </Button>
-                  )}
-                </div>
+                <CardTitle>Platform Connections</CardTitle>
+                <CardDescription className="mt-1">
+                  Connect your gaming accounts and social media profiles.
+                </CardDescription>
               </CardHeader>
               
               <CardContent className="space-y-4">
@@ -3456,7 +3442,7 @@ export default function SettingsPage() {
                               <div className="text-xs text-slate-500">Not connected</div>
                             )}
                           </div>
-                          {isConnected && (
+                          {isConnected ? (
                             <>
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                 <Check className="w-3 h-3" />
@@ -3502,6 +3488,16 @@ export default function SettingsPage() {
                                 </Button>
                               )}
                             </>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => { setShowAddPlatform(true); setSelectedPlatform(platform.key); setPlatformHandle(''); }}
+                              className="gap-1.5"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Add
+                            </Button>
                           )}
                         </div>
 
