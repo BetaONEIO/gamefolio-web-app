@@ -2438,18 +2438,12 @@ export default function SettingsPage() {
                             return (
                               <div
                                 key={theme.name}
-                                className={`rounded-lg border-2 transition-all ${isLocked ? 'opacity-60 cursor-pointer' : 'cursor-pointer'}`}
+                                className="rounded-lg border-2 transition-all cursor-pointer hover:scale-[1.02]"
                                 style={{
                                   borderColor: isActive ? theme.accentColor : 'transparent',
                                   boxShadow: isActive ? `0 0 10px ${theme.accentColor}50` : 'none',
                                 }}
-                                onClick={() => {
-                                  if (isLocked) {
-                                    setShowProUpgradeDialog(true);
-                                  } else {
-                                    setThemePreviewData(theme);
-                                  }
-                                }}
+                                onClick={() => setThemePreviewData(theme)}
                               >
                                 <div
                                   className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm relative"
@@ -4469,16 +4463,27 @@ export default function SettingsPage() {
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={() => {
-                    applyPresetTheme(themePreviewData);
-                    setThemePreviewData(null);
-                  }}
-                  className="flex-1 py-3 rounded-xl text-sm font-black transition-all"
-                  style={{ background: themePreviewData.accentColor, color: themePreviewData.backgroundColor, boxShadow: `0 8px 24px -8px ${themePreviewData.accentColor}` }}
-                >
-                  Apply Theme
-                </button>
+                {(() => {
+                  const isThemeLocked = (themePreviewData as any).proOnly && !user?.isPro && themePreviewData.name !== "None";
+                  return (
+                    <button
+                      onClick={() => {
+                        if (isThemeLocked) {
+                          setThemePreviewData(null);
+                          setShowProUpgradeDialog(true);
+                        } else {
+                          applyPresetTheme(themePreviewData);
+                          setThemePreviewData(null);
+                        }
+                      }}
+                      className="flex-1 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2"
+                      style={{ background: themePreviewData.accentColor, color: themePreviewData.backgroundColor, boxShadow: `0 8px 24px -8px ${themePreviewData.accentColor}` }}
+                    >
+                      {isThemeLocked && <Lock className="w-3.5 h-3.5" />}
+                      {isThemeLocked ? 'Go Pro' : 'Apply Theme'}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           </DialogContent>
