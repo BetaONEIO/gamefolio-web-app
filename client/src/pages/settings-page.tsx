@@ -4559,10 +4559,11 @@ export default function SettingsPage() {
 
         return (
           <Dialog open={!!themePreviewData} onOpenChange={(open) => { if (!open) setThemePreviewData(null); }}>
-            <DialogContent className="max-w-sm p-0 overflow-hidden border-none bg-transparent shadow-2xl [&>svg+button]:hidden">
+            <DialogContent className="max-w-sm p-0 overflow-hidden border-none bg-transparent shadow-2xl [&>button:not([data-custom-close])]:hidden">
               <DialogTitle className="sr-only">{tn} Theme Preview</DialogTitle>
               <button
                 onClick={() => setThemePreviewData(null)}
+                data-custom-close
                 className="absolute top-4 right-4 z-20 p-1 hover:bg-white/10 rounded-lg transition-colors"
                 aria-label="Close"
               >
