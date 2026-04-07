@@ -289,11 +289,12 @@ const PRESET_THEMES = [
     primaryColor: "#02172C"
   },
   {
-    name: "Pink Gamer Girl",
+    name: "Cutesy Pink",
     backgroundColor: "#fce7f3",
     accentColor: "#ff2056",
     gradientTopColor: "#4a0022",
-    primaryColor: "#4a0022"
+    primaryColor: "#4a0022",
+    proOnly: true
   },
   {
     name: "Zombie",
@@ -2417,15 +2418,16 @@ export default function SettingsPage() {
                             const topColor = theme.gradientTopColor || '#0B2232';
                             const defaultThemeColor = '#0B2232';
                             const isActive = profileData.accentColor === theme.accentColor && profileData.backgroundColor === theme.backgroundColor;
+                            const isLocked = (theme as any).proOnly && !user?.isPro;
                             return (
                               <div
                                 key={theme.name}
-                                className="cursor-pointer rounded-lg border-2 transition-all"
+                                className={`rounded-lg border-2 transition-all ${isLocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
                                 style={{
                                   borderColor: isActive ? theme.accentColor : 'transparent',
                                   boxShadow: isActive ? `0 0 10px ${theme.accentColor}50` : 'none',
                                 }}
-                                onClick={() => applyPresetTheme(theme)}
+                                onClick={() => !isLocked && applyPresetTheme(theme)}
                               >
                                 <div
                                   className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm relative"
@@ -2445,8 +2447,16 @@ export default function SettingsPage() {
                                       <Check className="w-3 h-3 text-white" />
                                     </div>
                                   )}
+                                  {isLocked && (
+                                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center bg-gray-700">
+                                      <Lock className="w-3 h-3 text-white" />
+                                    </div>
+                                  )}
                                 </div>
                                 <p className="text-center mt-2 text-sm font-medium">{theme.name}</p>
+                                {isLocked && (
+                                  <p className="text-center text-xs text-muted-foreground">Pro only</p>
+                                )}
                               </div>
                             );
                           })}
