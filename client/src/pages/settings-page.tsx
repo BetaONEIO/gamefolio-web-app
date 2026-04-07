@@ -2477,16 +2477,18 @@ export default function SettingsPage() {
                                 {isLocked && theme.name !== "None" && (
                                   <p className="text-center text-xs text-muted-foreground">Pro only</p>
                                 )}
-                                <Button
-                                  size="xs"
-                                  onClick={() => setThemePreviewData(theme)}
-                                  className="w-full mt-2 text-xs"
-                                  style={{ backgroundColor: '#4ADE80', color: 'white' }}
-                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#22c55e'}
-                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#4ADE80'}
-                                >
-                                  Preview
-                                </Button>
+                                <div className="flex justify-center">
+                                  <Button
+                                    size="xs"
+                                    onClick={() => setThemePreviewData(theme)}
+                                    className="mt-2 text-xs px-3"
+                                    style={{ backgroundColor: '#4ADE80', color: 'white' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#22c55e'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#4ADE80'}
+                                  >
+                                    Preview
+                                  </Button>
+                                </div>
                               </div>
                             );
                           })}
