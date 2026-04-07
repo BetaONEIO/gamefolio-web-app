@@ -286,7 +286,8 @@ const PRESET_THEMES = [
     backgroundColor: "#121F2B",
     accentColor: "#4ADE80",
     gradientTopColor: "#02172C",
-    primaryColor: "#02172C"
+    primaryColor: "#02172C",
+    proOnly: true
   },
   {
     name: "Cutesy Pink",
@@ -301,77 +302,88 @@ const PRESET_THEMES = [
     backgroundColor: "#0a0c0a",
     accentColor: "#9ae600",
     gradientTopColor: "#0d1a00",
-    primaryColor: "#0d1a00"
+    primaryColor: "#0d1a00",
+    proOnly: true
   },
   {
     name: "Cyberpunk",
     backgroundColor: "#020617",
     accentColor: "#00d3f2",
     gradientTopColor: "#0a0e1a",
-    primaryColor: "#0a0e1a"
+    primaryColor: "#0a0e1a",
+    proOnly: true
   },
   {
     name: "NEO",
     backgroundColor: "#000000",
     accentColor: "#00ff41",
     gradientTopColor: "#000800",
-    primaryColor: "#000800"
+    primaryColor: "#000800",
+    proOnly: true
   },
   {
     name: "Blocks",
     backgroundColor: "#1a1a1a",
     accentColor: "#4ade80",
     gradientTopColor: "#2d2d2d",
-    primaryColor: "#2d2d2d"
+    primaryColor: "#2d2d2d",
+    proOnly: true
   },
   {
     name: "Watermelon",
     backgroundColor: "#ff4d6d",
     accentColor: "#4ade80",
     gradientTopColor: "#1d3932",
-    primaryColor: "#1d3932"
+    primaryColor: "#1d3932",
+    proOnly: true
   },
   {
     name: "Forest",
     backgroundColor: "#0a2f1f",
     accentColor: "#4ade80",
     gradientTopColor: "#e8d5b7",
-    primaryColor: "#e8d5b7"
+    primaryColor: "#e8d5b7",
+    proOnly: true
   },
   {
     name: "Ice",
     backgroundColor: "#f0f9ff",
     accentColor: "#0ea5e9",
     gradientTopColor: "#dbeafe",
-    primaryColor: "#dbeafe"
+    primaryColor: "#dbeafe",
+    proOnly: true
   },
   {
     name: "Gothic",
     backgroundColor: "#1e053a",
     accentColor: "#c27aff",
     gradientTopColor: "#59168b",
-    primaryColor: "#59168b"
+    primaryColor: "#59168b",
+    proOnly: true
   },
   {
     name: "Mac",
     backgroundColor: "#f0f0f2",
     accentColor: "#0066ff",
     gradientTopColor: "#ffffff",
-    primaryColor: "#ffffff"
+    primaryColor: "#ffffff",
+    proOnly: true
   },
   {
     name: "Cartoon",
     backgroundColor: "#fffaec",
     accentColor: "#ff5e5e",
     gradientTopColor: "#ffffff",
-    primaryColor: "#ffffff"
+    primaryColor: "#ffffff",
+    proOnly: true
   },
   {
     name: "Bubble Tea",
     backgroundColor: "#fefce8",
     accentColor: "#ff8904",
     gradientTopColor: "#ffedd4",
-    primaryColor: "#ffedd4"
+    primaryColor: "#ffedd4",
+    proOnly: true
   }
 ];
 
