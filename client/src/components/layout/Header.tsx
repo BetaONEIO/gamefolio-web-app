@@ -465,15 +465,7 @@ const Header = () => {
                         onClick={() => setProUpgradeOpen(true)}
                         data-testid="button-go-pro"
                       >
-                        <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <defs>
-                            <linearGradient id="proStarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" stopColor="#4ADE80" />
-                              <stop offset="100%" stopColor="#FACC15" />
-                            </linearGradient>
-                          </defs>
-                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z" fill="url(#proStarGrad)" />
-                        </svg>
+                        <img src="/attached_assets/Gamefolio logo copy.png" alt="Gamefolio" className="mr-2 h-4 w-4 rounded-full object-cover" />
                         <span>Go Pro</span>
                       </DropdownMenuItem>
                     )}
