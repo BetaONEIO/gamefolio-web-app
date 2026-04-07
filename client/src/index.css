@@ -7,6 +7,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Text selection highlight */
+::selection {
+  background-color: #4ADE80;
+  color: white;
+}
+
 /* HIDE ALL TAB UNDERLINES ON MOBILE */
 @media (max-width: 639px) {
   .tabs-trigger,
