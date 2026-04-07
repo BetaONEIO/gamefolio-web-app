@@ -2479,12 +2479,8 @@ export default function SettingsPage() {
                                 )}
                                 <div className="flex justify-center p-2">
                                   <Button
-                                    size="xs"
                                     onClick={() => setThemePreviewData(theme)}
-                                    className="mt-2 text-xs px-3"
-                                    style={{ backgroundColor: '#4ADE80', color: 'white' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#22c55e'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#4ADE80'}
+                                    className="text-xs px-4 py-1.5 transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)] text-white"
                                   >
                                     Preview
                                   </Button>
