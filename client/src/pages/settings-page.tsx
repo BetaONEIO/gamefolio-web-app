@@ -42,6 +42,7 @@ import type { NameTag, VerificationBadge } from "@shared/schema";
 import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWrapper";
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
+import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 
 const EMOJI_CATEGORIES = [
   {
@@ -764,6 +765,10 @@ export default function SettingsPage() {
   
   // Verification badge state - same pattern as name tags
   const [pendingVerificationBadgeId, setPendingVerificationBadgeId] = useState<number | null | undefined>(undefined);
+
+  // Theme preview dialog state
+  const [themePreviewData, setThemePreviewData] = useState<typeof PRESET_THEMES[0] | null>(null);
+  const [showProUpgradeDialog, setShowProUpgradeDialog] = useState(false);
 
   // Font preview dialog state
   const [fontPreviewOpen, setFontPreviewOpen] = useState(false);
@@ -2433,12 +2438,18 @@ export default function SettingsPage() {
                             return (
                               <div
                                 key={theme.name}
-                                className={`rounded-lg border-2 transition-all ${isLocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                                className={`rounded-lg border-2 transition-all ${isLocked ? 'opacity-60 cursor-pointer' : 'cursor-pointer'}`}
                                 style={{
                                   borderColor: isActive ? theme.accentColor : 'transparent',
                                   boxShadow: isActive ? `0 0 10px ${theme.accentColor}50` : 'none',
                                 }}
-                                onClick={() => !isLocked && applyPresetTheme(theme)}
+                                onClick={() => {
+                                  if (isLocked) {
+                                    setShowProUpgradeDialog(true);
+                                  } else {
+                                    setThemePreviewData(theme);
+                                  }
+                                }}
                               >
                                 <div
                                   className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm relative"
@@ -4389,6 +4400,98 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+      {/* Theme Preview Dialog */}
+      {themePreviewData && (
+        <Dialog open={!!themePreviewData} onOpenChange={(open) => { if (!open) setThemePreviewData(null); }}>
+          <DialogContent className="max-w-sm p-0 overflow-hidden border-none bg-transparent shadow-2xl">
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{ background: `linear-gradient(180deg, ${themePreviewData.gradientTopColor} 0%, ${themePreviewData.backgroundColor} 50%, ${themePreviewData.backgroundColor} 100%)` }}
+            >
+              {/* Header */}
+              <div className="px-5 pt-5 pb-4 text-center">
+                <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: themePreviewData.accentColor }}>
+                  Theme Preview
+                </p>
+                {/* Avatar */}
+                <div className="flex justify-center mb-3">
+                  <div
+                    className="w-20 h-20 rounded-full border-4 overflow-hidden flex-shrink-0"
+                    style={{ borderColor: themePreviewData.accentColor }}
+                  >
+                    {signedAvatarUrl ? (
+                      <img src={signedAvatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-white" style={{ background: themePreviewData.gradientTopColor }}>
+                        {profileData.displayName?.[0]?.toUpperCase() || '?'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {/* Display Name */}
+                <h2 className="text-lg font-bold text-white">{profileData.displayName || user?.username}</h2>
+                <p className="text-xs mt-0.5" style={{ color: `${themePreviewData.accentColor}cc` }}>
+                  @{user?.username}
+                </p>
+              </div>
+
+              {/* Stats Card */}
+              <div className="mx-4 mb-4 rounded-xl p-4" style={{ background: `${themePreviewData.gradientTopColor}cc`, border: `1px solid ${themePreviewData.accentColor}33` }}>
+                <div className="grid grid-cols-3 divide-x" style={{ '--tw-divide-opacity': 1, borderColor: `${themePreviewData.accentColor}22` } as any}>
+                  <div className="text-center px-2">
+                    <p className="text-lg font-black text-white">{(user as any)?.level || 1}</p>
+                    <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: `${themePreviewData.accentColor}bb` }}>Level</p>
+                  </div>
+                  <div className="text-center px-2">
+                    <p className="text-lg font-black" style={{ color: themePreviewData.accentColor }}>●</p>
+                    <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: `${themePreviewData.accentColor}bb` }}>Clips</p>
+                  </div>
+                  <div className="text-center px-2">
+                    <p className="text-lg font-black text-white">{(user as any)?.totalXP || 0}</p>
+                    <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: `${themePreviewData.accentColor}bb` }}>XP</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Theme name tag */}
+              <div className="flex justify-center mb-4">
+                <span className="text-xs px-3 py-1 rounded-full font-semibold" style={{ background: `${themePreviewData.accentColor}22`, color: themePreviewData.accentColor, border: `1px solid ${themePreviewData.accentColor}44` }}>
+                  {themePreviewData.name}
+                </span>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3 px-4 pb-5">
+                <button
+                  onClick={() => setThemePreviewData(null)}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
+                  style={{ background: `${themePreviewData.accentColor}18`, color: 'rgba(255,255,255,0.7)', border: `1px solid ${themePreviewData.accentColor}33` }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    applyPresetTheme(themePreviewData);
+                    setThemePreviewData(null);
+                  }}
+                  className="flex-1 py-3 rounded-xl text-sm font-black transition-all"
+                  style={{ background: themePreviewData.accentColor, color: themePreviewData.backgroundColor, boxShadow: `0 8px 24px -8px ${themePreviewData.accentColor}` }}
+                >
+                  Apply Theme
+                </button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Pro Upgrade Dialog */}
+      <ProUpgradeDialog
+        open={showProUpgradeDialog}
+        onOpenChange={setShowProUpgradeDialog}
+        subtitle="Unlock premium themes and elevate your gaming profile"
+      />
+
     </KeyboardAvoidingWrapper>
   );
 }
