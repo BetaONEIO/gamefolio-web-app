@@ -1726,8 +1726,16 @@ export default function StorePage() {
                             src={badge.imageUrl}
                             alt={badge.name}
                             className="w-14 h-14 object-contain"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            onError={(e) => {
+                              const el = e.target as HTMLImageElement;
+                              el.style.display = 'none';
+                              const fallback = el.nextElementSibling as HTMLElement | null;
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
                           />
+                          <div className="w-14 h-14 rounded-lg bg-gray-700/50 hidden items-center justify-center">
+                            <CheckCircle className="h-6 w-6 text-gray-500" />
+                          </div>
                           <p className="text-xs font-medium text-gray-200 text-center truncate w-full">{badge.name}</p>
                           {!badge.isDefault && (
                             <span className={`text-[10px] font-semibold capitalize ${
