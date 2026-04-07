@@ -4559,7 +4559,7 @@ export default function SettingsPage() {
 
         return (
           <Dialog open={!!themePreviewData} onOpenChange={(open) => { if (!open) setThemePreviewData(null); }}>
-            <DialogContent className="max-w-sm p-0 overflow-hidden border-none bg-transparent shadow-2xl [&>button]:hidden">
+            <DialogContent className="max-w-sm p-0 overflow-hidden border-none bg-transparent shadow-2xl [&>svg+button]:hidden">
               <DialogTitle className="sr-only">{tn} Theme Preview</DialogTitle>
               <button
                 onClick={() => setThemePreviewData(null)}
