@@ -4489,7 +4489,17 @@ export default function SettingsPage() {
 
         const valueStyle: React.CSSProperties = {
           fontFamily: themeFont,
-          color: '#000000',
+          color:
+            isForest      ? '#000000' :
+            isWatermelon ? '#0d1a12' :
+            isLight       ? '#1d293d' :
+            isZombie      ? '#9ae600' :
+            isCyberpunk   ? '#00d3f2' :
+            isNeo         ? '#00ff41' :
+            isBlocks      ? '#4ade80' :
+            isElectric    ? '#ffe033' :
+            isGothic      ? '#c27aff' :
+            '#ffffff',
           fontWeight: 900,
           fontSize: isBlocks ? '0.6rem' : '1rem',
         };
