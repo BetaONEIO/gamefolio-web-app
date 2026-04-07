@@ -3427,8 +3427,15 @@ export default function SettingsPage() {
                             isXboxVerified ? 'border-[#107C10]/40 bg-[#107C10]/5' :
                             isPsnPlatform && isConnected ? 'border-[#003791]/40 bg-[#003791]/5' :
                             isConnected ? 'border-slate-700/50' :
-                            'border-slate-700/30'
+                            'border-slate-700/30 cursor-pointer hover:border-slate-600 hover:bg-slate-800/50 transition-colors'
                           }`}
+                          onClick={() => {
+                            if (!isConnected) {
+                              setShowAddPlatform(true);
+                              setSelectedPlatform(platform.key);
+                              setPlatformHandle('');
+                            }
+                          }}
                         >
                           <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
                             {getPlatformIcon(platform.icon)}
@@ -3449,7 +3456,7 @@ export default function SettingsPage() {
                               <div className="text-xs text-slate-500">Not connected</div>
                             )}
                           </div>
-                          {isConnected ? (
+                          {isConnected && (
                             <>
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                 <Check className="w-3 h-3" />
@@ -3495,16 +3502,6 @@ export default function SettingsPage() {
                                 </Button>
                               )}
                             </>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => { setShowAddPlatform(true); setSelectedPlatform(platform.key); setPlatformHandle(''); }}
-                              className="gap-1.5"
-                            >
-                              <Plus className="w-4 h-4" />
-                              Add
-                            </Button>
                           )}
                         </div>
 
