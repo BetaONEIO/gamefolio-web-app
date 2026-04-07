@@ -2460,7 +2460,7 @@ export default function SettingsPage() {
                                     </div>
                                   )}
                                   {isLocked && (
-                                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center bg-gray-700">
+                                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center bg-green-600">
                                       <Lock className="w-3 h-3 text-white" />
                                     </div>
                                   )}
