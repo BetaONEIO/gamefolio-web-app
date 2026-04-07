@@ -3410,109 +3410,23 @@ export default function SettingsPage() {
               </CardHeader>
               
               <CardContent className="space-y-4">
-                {/* Add Platform Flow */}
-                {showAddPlatform && (
-                  <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-medium text-slate-200">Add a new connection</h3>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setShowAddPlatform(false)}>
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-
-                    {!selectedPlatform ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {availablePlatforms.map((p) => (
-                          <button
-                            key={p.key}
-                            onClick={() => setSelectedPlatform(p.key)}
-                            className="flex flex-col items-center gap-2 p-3 rounded-lg border border-slate-700 bg-slate-900/50 hover:border-slate-500 hover:bg-slate-800 transition-colors"
-                          >
-                            {getPlatformIcon(p.icon)}
-                            <span className="text-xs text-slate-300">{p.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          {getPlatformIcon(PLATFORM_DEFINITIONS.find(p => p.key === selectedPlatform)?.icon || '')}
-                          <span className="text-sm font-medium text-slate-200">
-                            {PLATFORM_DEFINITIONS.find(p => p.key === selectedPlatform)?.label}
-                          </span>
-                          <button onClick={() => setSelectedPlatform(null)} className="ml-auto text-xs text-slate-400 hover:text-slate-200">
-                            Change
-                          </button>
-                        </div>
-                        {selectedPlatform === 'xboxUsername' ? (
-                          <div className="space-y-2">
-                            <p className="text-xs text-slate-400">Sign in with Microsoft to securely link your Xbox account and verify your gamertag.</p>
-                            <div className="flex gap-2 justify-end">
-                              <Button variant="outline" size="sm" onClick={() => setShowAddPlatform(false)}>
-                                Cancel
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={async () => {
-                                  if (!isXboxConfigValid) {
-                                    toast({ title: "Xbox not configured", description: "Xbox authentication is not set up yet.", variant: "destructive" });
-                                    return;
-                                  }
-                                  setConnectingXbox(true);
-                                  try {
-                                    await connectXboxAccount();
-                                  } catch (err: any) {
-                                    setConnectingXbox(false);
-                                    toast({ title: "Error", description: err.message || "Failed to start Xbox connection.", variant: "destructive" });
-                                  }
-                                }}
-                                disabled={connectingXbox}
-                                className="bg-[#107C10] hover:bg-[#0d6b0d] text-white border-0"
-                              >
-                                {connectingXbox ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <FaXbox className="w-4 h-4 mr-1" />}
-                                Connect with Xbox
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <Input
-                              placeholder={PLATFORM_DEFINITIONS.find(p => p.key === selectedPlatform)?.placeholder || 'Enter your username'}
-                              value={platformHandle}
-                              onChange={(e) => setPlatformHandle(e.target.value)}
-                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPlatform(); } }}
-                              autoFocus
-                            />
-                            <div className="flex gap-2 justify-end">
-                              <Button variant="outline" size="sm" onClick={() => setShowAddPlatform(false)}>
-                                Cancel
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={handleAddPlatform}
-                                disabled={!platformHandle.trim() || savingPlatform}
-                              >
-                                {savingPlatform ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />}
-                                Save
-                              </Button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Connected Platforms List */}
-                {connectedPlatforms.length > 0 ? (
-                  <div className="space-y-2">
-                    {connectedPlatforms.map((platform) => {
-                      const isXboxVerified = platform.key === 'xboxUsername' && !!(user as any)?.xboxXuid;
-                      const isPsnPlatform = platform.key === 'playstationUsername';
-                      return (
+                {/* All Platforms List */}
+                <div className="space-y-2">
+                  {PLATFORM_DEFINITIONS.map((platform) => {
+                    const isConnected = !!user?.[platform.key];
+                    const isXboxVerified = platform.key === 'xboxUsername' && !!(user as any)?.xboxXuid;
+                    const isPsnPlatform = platform.key === 'playstationUsername';
+                    const isAdding = selectedPlatform === platform.key && showAddPlatform;
+                    
+                    return (
+                      <div key={platform.key}>
                         <div
-                          key={platform.key}
-                          className={`flex items-center gap-3 px-4 py-3 rounded-xl border bg-slate-800/30 ${isXboxVerified ? 'border-[#107C10]/40 bg-[#107C10]/5' : isPsnPlatform ? 'border-[#003791]/40 bg-[#003791]/5' : 'border-slate-700/50'}`}
+                          className={`flex items-center gap-3 px-4 py-3 rounded-xl border bg-slate-800/30 ${
+                            isXboxVerified ? 'border-[#107C10]/40 bg-[#107C10]/5' :
+                            isPsnPlatform && isConnected ? 'border-[#003791]/40 bg-[#003791]/5' :
+                            isConnected ? 'border-slate-700/50' :
+                            'border-slate-700/30'
+                          }`}
                         >
                           <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
                             {getPlatformIcon(platform.icon)}
@@ -3520,82 +3434,141 @@ export default function SettingsPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <div className="text-sm font-medium text-slate-200">{platform.label}</div>
-                              {isXboxVerified && (
+                              {isConnected && isXboxVerified && (
                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#107C10]/20 text-[#4ade80] border border-[#107C10]/30">
                                   <Check className="w-2.5 h-2.5" />
                                   Verified
                                 </span>
                               )}
                             </div>
-                            <div className="text-xs text-slate-400 truncate">{user?.[platform.key]}</div>
+                            {isConnected ? (
+                              <div className="text-xs text-slate-400 truncate">{user?.[platform.key]}</div>
+                            ) : (
+                              <div className="text-xs text-slate-500">Not connected</div>
+                            )}
                           </div>
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            <Check className="w-3 h-3" />
-                            Connected
-                          </span>
-                          {platform.key === 'xboxUsername' ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-slate-400 hover:text-[#107C10]"
-                              title="Configure Xbox"
-                              onClick={() => {
-                                xboxConfigRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                              }}
-                            >
-                              <Settings className="w-4 h-4" />
-                            </Button>
-                          ) : isPsnPlatform ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-slate-400 hover:text-[#003791]"
-                              title="Configure PlayStation"
-                              onClick={() => {
-                                psnConfigRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                              }}
-                            >
-                              <Settings className="w-4 h-4" />
-                            </Button>
+                          {isConnected ? (
+                            <>
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                <Check className="w-3 h-3" />
+                                Connected
+                              </span>
+                              {platform.key === 'xboxUsername' ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-slate-400 hover:text-[#107C10]"
+                                  title="Configure Xbox"
+                                  onClick={() => {
+                                    xboxConfigRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                  }}
+                                >
+                                  <Settings className="w-4 h-4" />
+                                </Button>
+                              ) : isPsnPlatform ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-slate-400 hover:text-[#003791]"
+                                  title="Configure PlayStation"
+                                  onClick={() => {
+                                    psnConfigRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                  }}
+                                >
+                                  <Settings className="w-4 h-4" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-slate-500 hover:text-red-400"
+                                  onClick={() => handleRemovePlatform(platform.key)}
+                                  disabled={removingPlatform === platform.key}
+                                >
+                                  {removingPlatform === platform.key ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              )}
+                            </>
                           ) : (
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
-                              className="h-8 w-8 p-0 text-slate-500 hover:text-red-400"
-                              onClick={() => handleRemovePlatform(platform.key)}
-                              disabled={removingPlatform === platform.key}
+                              onClick={() => { setShowAddPlatform(true); setSelectedPlatform(platform.key); setPlatformHandle(''); }}
+                              className="gap-1.5"
                             >
-                              {removingPlatform === platform.key ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="w-4 h-4" />
-                              )}
+                              <Plus className="w-4 h-4" />
+                              Add
                             </Button>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-                ) : !showAddPlatform ? (
-                  <div className="text-center py-8 space-y-3">
-                    <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center mx-auto">
-                      <Gamepad2 className="w-6 h-6 text-slate-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-400">No platform connections yet</p>
-                      <p className="text-xs text-slate-500 mt-1">Add your gaming and social accounts to display on your profile</p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => { setShowAddPlatform(true); setSelectedPlatform(null); setPlatformHandle(''); }}
-                      className="gap-1.5"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add Connection
-                    </Button>
-                  </div>
-                ) : null}
+
+                        {/* Inline Add Form */}
+                        {isAdding && (
+                          <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 space-y-3 mt-2">
+                            {platform.key === 'xboxUsername' ? (
+                              <>
+                                <p className="text-xs text-slate-400">Sign in with Microsoft to securely link your Xbox account and verify your gamertag.</p>
+                                <div className="flex gap-2 justify-end">
+                                  <Button variant="outline" size="sm" onClick={() => setShowAddPlatform(false)}>
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={async () => {
+                                      if (!isXboxConfigValid) {
+                                        toast({ title: "Xbox not configured", description: "Xbox authentication is not set up yet.", variant: "destructive" });
+                                        return;
+                                      }
+                                      setConnectingXbox(true);
+                                      try {
+                                        await connectXboxAccount();
+                                      } catch (err: any) {
+                                        setConnectingXbox(false);
+                                        toast({ title: "Error", description: err.message || "Failed to start Xbox connection.", variant: "destructive" });
+                                      }
+                                    }}
+                                    disabled={connectingXbox}
+                                    className="bg-[#107C10] hover:bg-[#0d6b0d] text-white border-0"
+                                  >
+                                    {connectingXbox ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <FaXbox className="w-4 h-4 mr-1" />}
+                                    Connect with Xbox
+                                  </Button>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <Input
+                                  placeholder={platform.placeholder}
+                                  value={platformHandle}
+                                  onChange={(e) => setPlatformHandle(e.target.value)}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPlatform(); } }}
+                                  autoFocus
+                                />
+                                <div className="flex gap-2 justify-end">
+                                  <Button variant="outline" size="sm" onClick={() => setShowAddPlatform(false)}>
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={handleAddPlatform}
+                                    disabled={!platformHandle.trim() || savingPlatform}
+                                  >
+                                    {savingPlatform ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />}
+                                    Save
+                                  </Button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </CardContent>
             </Card>
 
