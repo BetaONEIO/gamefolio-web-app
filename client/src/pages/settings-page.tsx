@@ -30,6 +30,7 @@ import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord } from 'react-icon
 import { connectXboxAccount, isXboxConfigValid } from '@/lib/xbox';
 import { useTheme } from '@/hooks/use-theme';
 import { FaXTwitter } from 'react-icons/fa6';
+import gamefolioLogo from '@assets/gamefolio social logo 3d circle web.png';
 import { SiEpicgames, SiNintendo, SiTwitch, SiKick } from 'react-icons/si';
 import Cropper from "react-easy-crop";
 import NftProfilePopup from "@/components/nft/NftProfilePopup";
@@ -4559,6 +4560,13 @@ export default function SettingsPage() {
           <Dialog open={!!themePreviewData} onOpenChange={(open) => { if (!open) setThemePreviewData(null); }}>
             <DialogContent className="max-w-sm p-0 overflow-hidden border-none bg-transparent shadow-2xl">
               <DialogTitle className="sr-only">{tn} Theme Preview</DialogTitle>
+              <button
+                onClick={() => setThemePreviewData(null)}
+                className="absolute top-4 right-4 z-20 p-1 hover:bg-white/10 rounded-lg transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-6 h-6 text-white" />
+              </button>
               <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&family=Bangers&family=Bricolage+Grotesque:wght@400;800&display=swap');
 
@@ -4729,7 +4737,7 @@ export default function SettingsPage() {
                       borderRadius: '12px',
                     }}
                   >
-                    {isThemeLocked && <Lock className="w-3.5 h-3.5" />}
+                    {isThemeLocked && <img src={gamefolioLogo} alt="Gamefolio" className="w-3.5 h-3.5 rounded-full" />}
                     {isThemeLocked ? 'Go Pro' : 'Apply Theme'}
                   </button>
                 </div>
