@@ -438,8 +438,6 @@ export default function SettingsPage() {
   const [showPsnDisconnectDialog, setShowPsnDisconnectDialog] = useState(false);
   const [disconnectingPsn, setDisconnectingPsn] = useState(false);
   const psnConfigRef = useRef<HTMLDivElement>(null);
-  const [disconnectingTwitch, setDisconnectingTwitch] = useState(false);
-  const [disconnectingKick, setDisconnectingKick] = useState(false);
   const [savingStreamerSettings, setSavingStreamerSettings] = useState(false);
 
   const getPlatformIcon = (iconKey: string) => {
