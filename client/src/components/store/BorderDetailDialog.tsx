@@ -8,6 +8,7 @@ import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import { useState } from "react";
 import { BorderCheckoutDialog } from "./BorderCheckoutDialog";
 import { useAuth } from "@/hooks/use-auth";
+import { useTokenBalance } from "@/hooks/use-token";
 
 interface ProfileBorder {
   id: number;
@@ -54,6 +55,8 @@ export function BorderDetailDialog({
 }: BorderDetailDialogProps) {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const { user } = useAuth();
+  const { balance: tokenBalanceStr } = useTokenBalance();
+  const onChainBalance = parseFloat(tokenBalanceStr || '0');
 
   if (!border) return null;
 
@@ -268,7 +271,7 @@ export function BorderDetailDialog({
         onOpenChange={setCheckoutOpen}
         onConfirm={handleConfirmPurchase}
         isPurchasing={isPurchasing}
-        gfBalance={user?.gfTokenBalance || 0}
+        gfBalance={onChainBalance}
       />
     </Dialog>
   );

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMobile } from "@/hooks/use-mobile";
 import { useLocation, Link } from "wouter";
-import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -29,8 +28,9 @@ import { z } from "zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord } from 'react-icons/fa';
 import { connectXboxAccount, isXboxConfigValid } from '@/lib/xbox';
+import { useTheme } from '@/hooks/use-theme';
 import { FaXTwitter } from 'react-icons/fa6';
-import { SiEpicgames, SiNintendo } from 'react-icons/si';
+import { SiEpicgames, SiNintendo, SiTwitch, SiKick } from 'react-icons/si';
 import Cropper from "react-easy-crop";
 import NftProfilePopup from "@/components/nft/NftProfilePopup";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -282,34 +282,95 @@ const getCroppedImg = async (
 
 const PRESET_THEMES = [
   {
-    name: "Basic",
-    backgroundColor: "#0B2232",
-    accentColor: "#4ADE80"
+    name: "None",
+    backgroundColor: "#121F2B",
+    accentColor: "#4ADE80",
+    gradientTopColor: "#02172C",
+    primaryColor: "#02172C"
   },
   {
-    name: "Purple Night",
-    backgroundColor: "#1e1b4b",
-    accentColor: "#a855f7"
+    name: "Pink Gamer Girl",
+    backgroundColor: "#fce7f3",
+    accentColor: "#ff2056",
+    gradientTopColor: "#4a0022",
+    primaryColor: "#4a0022"
   },
   {
-    name: "Golden Yellow",
-    backgroundColor: "#713f12",
-    accentColor: "#facc15"
+    name: "Zombie",
+    backgroundColor: "#0a0c0a",
+    accentColor: "#9ae600",
+    gradientTopColor: "#0d1a00",
+    primaryColor: "#0d1a00"
   },
   {
-    name: "Rose Gold",
-    backgroundColor: "#4c1d4d",
-    accentColor: "#f472b6"
+    name: "Cyberpunk",
+    backgroundColor: "#020617",
+    accentColor: "#00d3f2",
+    gradientTopColor: "#0a0e1a",
+    primaryColor: "#0a0e1a"
   },
   {
-    name: "Sunset Orange",
-    backgroundColor: "#431407",
-    accentColor: "#fb7185"
+    name: "NEO",
+    backgroundColor: "#000000",
+    accentColor: "#00ff41",
+    gradientTopColor: "#000800",
+    primaryColor: "#000800"
   },
   {
-    name: "Arctic Blue",
-    backgroundColor: "#0c4a6e",
-    accentColor: "#38bdf8"
+    name: "Blocks",
+    backgroundColor: "#1a1a1a",
+    accentColor: "#4ade80",
+    gradientTopColor: "#2d2d2d",
+    primaryColor: "#2d2d2d"
+  },
+  {
+    name: "Watermelon",
+    backgroundColor: "#ff4d6d",
+    accentColor: "#4ade80",
+    gradientTopColor: "#1d3932",
+    primaryColor: "#1d3932"
+  },
+  {
+    name: "Forest",
+    backgroundColor: "#0a2f1f",
+    accentColor: "#4ade80",
+    gradientTopColor: "#e8d5b7",
+    primaryColor: "#e8d5b7"
+  },
+  {
+    name: "Ice",
+    backgroundColor: "#f0f9ff",
+    accentColor: "#0ea5e9",
+    gradientTopColor: "#dbeafe",
+    primaryColor: "#dbeafe"
+  },
+  {
+    name: "Gothic",
+    backgroundColor: "#1e053a",
+    accentColor: "#c27aff",
+    gradientTopColor: "#59168b",
+    primaryColor: "#59168b"
+  },
+  {
+    name: "Mac",
+    backgroundColor: "#f0f0f2",
+    accentColor: "#0066ff",
+    gradientTopColor: "#ffffff",
+    primaryColor: "#ffffff"
+  },
+  {
+    name: "Cartoon",
+    backgroundColor: "#fffaec",
+    accentColor: "#ff5e5e",
+    gradientTopColor: "#ffffff",
+    primaryColor: "#ffffff"
+  },
+  {
+    name: "Bubble Tea",
+    backgroundColor: "#fefce8",
+    accentColor: "#ff8904",
+    gradientTopColor: "#ffedd4",
+    primaryColor: "#ffedd4"
   }
 ];
 
@@ -350,7 +411,7 @@ export default function SettingsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { setAccentColor } = useTheme();
+  useTheme();
   const { customerInfo, refreshCustomerInfo } = useRevenueCat();
   
   const updateProfile = useUpdateProfile();
@@ -377,6 +438,9 @@ export default function SettingsPage() {
   const [showPsnDisconnectDialog, setShowPsnDisconnectDialog] = useState(false);
   const [disconnectingPsn, setDisconnectingPsn] = useState(false);
   const psnConfigRef = useRef<HTMLDivElement>(null);
+  const [disconnectingTwitch, setDisconnectingTwitch] = useState(false);
+  const [disconnectingKick, setDisconnectingKick] = useState(false);
+  const [savingStreamerSettings, setSavingStreamerSettings] = useState(false);
 
   const getPlatformIcon = (iconKey: string) => {
     switch (iconKey) {
@@ -567,6 +631,44 @@ export default function SettingsPage() {
     }
   };
 
+  const handleTwitchDisconnect = async () => {
+    setDisconnectingTwitch(true);
+    try {
+      await apiRequest("POST", "/api/auth/twitch/disconnect");
+      await refreshUser();
+      toast({ title: "Twitch disconnected", description: "Your Twitch channel has been unlinked.", duration: 3000 });
+    } catch {
+      toast({ title: "Failed to disconnect", variant: "destructive" });
+    } finally {
+      setDisconnectingTwitch(false);
+    }
+  };
+
+  const handleKickDisconnect = async () => {
+    setDisconnectingKick(true);
+    try {
+      await apiRequest("POST", "/api/auth/kick/disconnect");
+      await refreshUser();
+      toast({ title: "Kick disconnected", description: "Your Kick channel has been unlinked.", duration: 3000 });
+    } catch {
+      toast({ title: "Failed to disconnect", variant: "destructive" });
+    } finally {
+      setDisconnectingKick(false);
+    }
+  };
+
+  const handleStreamerSettingsSave = async (patch: { isStreamer?: boolean; streamPlatform?: string; liveEnabled?: boolean }) => {
+    setSavingStreamerSettings(true);
+    try {
+      await apiRequest("PATCH", "/api/user/streamer-settings", patch);
+      await refreshUser();
+    } catch {
+      toast({ title: "Failed to save", variant: "destructive" });
+    } finally {
+      setSavingStreamerSettings(false);
+    }
+  };
+
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
@@ -608,7 +710,7 @@ export default function SettingsPage() {
   const [profileData, setProfileData] = useState({
     displayName: user?.displayName || "",
     bio: user?.bio || "",
-    backgroundColor: user?.backgroundColor || "#0B2232",
+    backgroundColor: user?.backgroundColor || "#121F2B",
     accentColor: user?.accentColor || "#4ADE80",
     bannerUrl: user?.bannerUrl || "",
     avatarUrl: user?.avatarUrl || "",
@@ -623,6 +725,8 @@ export default function SettingsPage() {
     profileBackgroundDesktopY: (user as any)?.profileBackgroundDesktopY || "50",
     profileBackgroundDesktopZoom: (user as any)?.profileBackgroundDesktopZoom || "100",
     hideBanner: (user as any)?.hideBanner || false,
+    statsGlassEffect: (user as any)?.statsGlassEffect || false,
+    profileBackgroundGradient: (user as any)?.profileBackgroundGradient !== false,
     profileFont: (user as any)?.profileFont || "default",
     profileFontEffect: (user as any)?.profileFontEffect || "none",
     profileFontAnimation: (user as any)?.profileFontAnimation || "none",
@@ -668,10 +772,44 @@ export default function SettingsPage() {
   
   // Track if banner was manually uploaded to prevent useEffect override
   const [uploadedBannerUrl, setUploadedBannerUrl] = useState<string>('');
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Track previous avatarUrl to detect successful uploads
   const prevAvatarUrl = React.useRef(user?.avatarUrl);
   const fontPreviewRef = React.useRef<HTMLDivElement>(null);
+  // Guard against query refreshes overwriting in-progress appearance edits
+  const hasPendingEdits = React.useRef(false);
+
+  // Track the last values synced FROM the server so we can tell whether the user
+  // has made local changes. If prev[field] still equals the last-synced server
+  // value the user hasn't touched it — safe to update. If they differ, the user
+  // has an unsaved edit in flight and we must preserve it.
+  const lastSyncedBorder = React.useRef({
+    avatarBorderColor: user?.avatarBorderColor || '#4ADE80',
+    selectedBorderId:  user?.selectedAvatarBorderId ?? -1,
+  });
+
+  const lastSyncedAppearance = React.useRef({
+    backgroundColor: user?.backgroundColor || "#121F2B",
+    accentColor: user?.accentColor || "#4ADE80",
+    profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
+    profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
+    profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
+    profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || "",
+    profileBackgroundPositionX: (user as any)?.profileBackgroundPositionX || "50",
+    profileBackgroundPositionY: (user as any)?.profileBackgroundPositionY || "50",
+    profileBackgroundZoom: (user as any)?.profileBackgroundZoom || "100",
+    profileBackgroundDesktopX: (user as any)?.profileBackgroundDesktopX || "50",
+    profileBackgroundDesktopY: (user as any)?.profileBackgroundDesktopY || "50",
+    profileBackgroundDesktopZoom: (user as any)?.profileBackgroundDesktopZoom || "100",
+    hideBanner: (user as any)?.hideBanner || false,
+    statsGlassEffect: (user as any)?.statsGlassEffect || false,
+    profileBackgroundGradient: (user as any)?.profileBackgroundGradient !== false,
+    profileFont: (user as any)?.profileFont || "default",
+    profileFontEffect: (user as any)?.profileFontEffect || "none",
+    profileFontAnimation: (user as any)?.profileFontAnimation || "none",
+    profileFontColor: (user as any)?.profileFontColor || "#FFFFFF",
+  });
 
   const scrollToFontPreview = () => {
     if (window.innerWidth < 768) {
@@ -724,13 +862,9 @@ export default function SettingsPage() {
           finalBannerUrl = user.bannerUrl || "";
         }
         
-        return {
-          displayName: user.displayName || "",
-          bio: user.bio || "",
-          backgroundColor: user.backgroundColor || "#0B2232",
+        const appearanceFields = hasPendingEdits.current ? {} : {
+          backgroundColor: user.backgroundColor || "#121F2B",
           accentColor: user.accentColor || "#4ADE80",
-          bannerUrl: finalBannerUrl,
-          avatarUrl: user.avatarUrl || "",
           profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
           profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
           profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
@@ -741,11 +875,99 @@ export default function SettingsPage() {
           profileBackgroundDesktopX: (user as any)?.profileBackgroundDesktopX || "50",
           profileBackgroundDesktopY: (user as any)?.profileBackgroundDesktopY || "50",
           profileBackgroundDesktopZoom: (user as any)?.profileBackgroundDesktopZoom || "100",
-          hideBanner: (user as any)?.hideBanner || false,
           profileFont: (user as any)?.profileFont || "default",
           profileFontEffect: (user as any)?.profileFontEffect || "none",
           profileFontAnimation: (user as any)?.profileFontAnimation || "none",
           profileFontColor: (user as any)?.profileFontColor || "#FFFFFF",
+        };
+
+        // For appearance/font/background fields: only sync from server if the user
+        // hasn't made a local change. We detect a local change by comparing prev
+        // against the last value we synced from the server. If they still match the
+        // user hasn't touched the field so it is safe to update; otherwise preserve
+        // the in-flight edit.
+        const synced = lastSyncedAppearance.current;
+        const pick = <T,>(prevVal: T, serverVal: T, lastVal: T): T =>
+          prevVal === lastVal ? serverVal : prevVal;
+
+        const newBgColor       = user.backgroundColor || "#121F2B";
+        const newAccent        = user.accentColor || "#4ADE80";
+        const newBgType        = (user as any)?.profileBackgroundType || "solid";
+        const newBgTheme       = (user as any)?.profileBackgroundTheme || "default";
+        const newBgAnim        = (user as any)?.profileBackgroundAnimation || "none";
+        const newBgImageUrl    = (user as any)?.profileBackgroundImageUrl || "";
+        const newBgPosX        = (user as any)?.profileBackgroundPositionX || "50";
+        const newBgPosY        = (user as any)?.profileBackgroundPositionY || "50";
+        const newBgZoom        = (user as any)?.profileBackgroundZoom || "100";
+        const newBgDeskX       = (user as any)?.profileBackgroundDesktopX || "50";
+        const newBgDeskY       = (user as any)?.profileBackgroundDesktopY || "50";
+        const newBgDeskZoom    = (user as any)?.profileBackgroundDesktopZoom || "100";
+        const newHideBanner      = (user as any)?.hideBanner || false;
+        const newStatsGlass      = (user as any)?.statsGlassEffect || false;
+        const newBgGradient      = (user as any)?.profileBackgroundGradient !== false;
+        const newFont            = (user as any)?.profileFont || "default";
+        const newFontEffect    = (user as any)?.profileFontEffect || "none";
+        const newFontAnim      = (user as any)?.profileFontAnimation || "none";
+        const newFontColor     = (user as any)?.profileFontColor || "#FFFFFF";
+
+        // Update the ref so the next comparison has the right baseline
+        lastSyncedAppearance.current = {
+          backgroundColor: newBgColor,
+          accentColor: newAccent,
+          profileBackgroundType: newBgType,
+          profileBackgroundTheme: newBgTheme,
+          profileBackgroundAnimation: newBgAnim,
+          profileBackgroundImageUrl: newBgImageUrl,
+          profileBackgroundPositionX: newBgPosX,
+          profileBackgroundPositionY: newBgPosY,
+          profileBackgroundZoom: newBgZoom,
+          profileBackgroundDesktopX: newBgDeskX,
+          profileBackgroundDesktopY: newBgDeskY,
+          profileBackgroundDesktopZoom: newBgDeskZoom,
+          hideBanner: newHideBanner,
+          statsGlassEffect: newStatsGlass,
+          profileBackgroundGradient: newBgGradient,
+          profileFont: newFont,
+          profileFontEffect: newFontEffect,
+          profileFontAnimation: newFontAnim,
+          profileFontColor: newFontColor,
+        };
+
+        return {
+          displayName: user.displayName || "",
+          bio: user.bio || "",
+          avatarUrl: user.avatarUrl || "",
+          bannerUrl: finalBannerUrl,
+          // Appearance/font/background — preserve pending user edits
+          backgroundColor:              pick(prev.backgroundColor,           newBgColor,    synced.backgroundColor),
+          accentColor:                  pick(prev.accentColor,               newAccent,     synced.accentColor),
+          profileBackgroundType:        pick(prev.profileBackgroundType,     newBgType,     synced.profileBackgroundType),
+          profileBackgroundTheme:       pick(prev.profileBackgroundTheme,    newBgTheme,    synced.profileBackgroundTheme),
+          profileBackgroundAnimation:   pick(prev.profileBackgroundAnimation,newBgAnim,     synced.profileBackgroundAnimation),
+          profileBackgroundImageUrl:    pick(prev.profileBackgroundImageUrl, newBgImageUrl, synced.profileBackgroundImageUrl),
+          profileBackgroundPositionX:   pick(prev.profileBackgroundPositionX,newBgPosX,    synced.profileBackgroundPositionX),
+          profileBackgroundPositionY:   pick(prev.profileBackgroundPositionY,newBgPosY,    synced.profileBackgroundPositionY),
+          profileBackgroundZoom:        pick(prev.profileBackgroundZoom,     newBgZoom,     synced.profileBackgroundZoom),
+          profileBackgroundDesktopX:    pick(prev.profileBackgroundDesktopX, newBgDeskX,   synced.profileBackgroundDesktopX),
+          profileBackgroundDesktopY:    pick(prev.profileBackgroundDesktopY, newBgDeskY,   synced.profileBackgroundDesktopY),
+          profileBackgroundDesktopZoom: pick(prev.profileBackgroundDesktopZoom, newBgDeskZoom, synced.profileBackgroundDesktopZoom),
+          hideBanner:                   pick(prev.hideBanner,                newHideBanner,   synced.hideBanner),
+          statsGlassEffect:             pick(prev.statsGlassEffect,          newStatsGlass,   synced.statsGlassEffect),
+          profileBackgroundGradient:    pick(prev.profileBackgroundGradient, newBgGradient,   synced.profileBackgroundGradient),
+          profileFont:                  pick(prev.profileFont,               newFont,         synced.profileFont),
+          profileFontEffect:            pick(prev.profileFontEffect,         newFontEffect, synced.profileFontEffect),
+          profileFontAnimation:         pick(prev.profileFontAnimation,      newFontAnim,   synced.profileFontAnimation),
+          profileFontColor:             pick(prev.profileFontColor,          newFontColor,  synced.profileFontColor),
+        };
+
+        return {
+          ...prev,
+          displayName: user.displayName || "",
+          bio: user.bio || "",
+          bannerUrl: finalBannerUrl,
+          avatarUrl: user.avatarUrl || "",
+          hideBanner: (user as any)?.hideBanner || false,
+          ...appearanceFields,
         };
       });
 
@@ -791,7 +1013,7 @@ export default function SettingsPage() {
   const hasUnsavedChanges = 
     normalizeValue(profileData.displayName) !== normalizeValue(user?.displayName) ||
     normalizeValue(profileData.bio) !== normalizeValue(user?.bio) ||
-    profileData.backgroundColor !== (user?.backgroundColor || "#0B2232") ||
+    profileData.backgroundColor !== (user?.backgroundColor || "#121F2B") ||
     profileData.accentColor !== (user?.accentColor || "#4ADE80") ||
     normalizeValue(profileData.bannerUrl) !== normalizeValue(user?.bannerUrl) ||
     profileData.profileBackgroundType !== ((user as any)?.profileBackgroundType || "solid") ||
@@ -802,6 +1024,8 @@ export default function SettingsPage() {
     profileData.profileFontEffect !== ((user as any)?.profileFontEffect || "none") ||
     profileData.profileFontAnimation !== ((user as any)?.profileFontAnimation || "none") ||
     profileData.profileFontColor !== ((user as any)?.profileFontColor || "#FFFFFF") ||
+    profileData.statsGlassEffect !== ((user as any)?.statsGlassEffect || false) ||
+    profileData.profileBackgroundGradient !== ((user as any)?.profileBackgroundGradient !== false) ||
     avatarFile !== null ||
     selectedPreviousAvatar !== null ||
     avatarBorderColor !== (user?.avatarBorderColor || '#4ADE80') ||
@@ -1006,6 +1230,7 @@ export default function SettingsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+
   const { signedUrl: signedAvatarUrl } = useSignedUrl(user?.avatarUrl);
   const { signedUrl: signedDeactivatedAvatarUrl } = useSignedUrl(deactivatedAvatarUrl);
   const { signedUrl: signedSelectedPrevAvatar } = useSignedUrl(selectedPreviousAvatar);
@@ -1077,13 +1302,22 @@ export default function SettingsPage() {
   // Border colour picker visibility
   const [showBorderColorPicker, setShowBorderColorPicker] = useState(false);
   
-  // Update selected border when user data loads
+  // Update selected border when user data loads, but preserve any pending local
+  // changes using the same dirty-state pattern as lastSyncedAppearance.
   useEffect(() => {
     if (user?.selectedAvatarBorderId !== undefined) {
-      setSelectedBorderId(user.selectedAvatarBorderId ?? -1);
+      const newId = user.selectedAvatarBorderId ?? -1;
+      setSelectedBorderId(prev =>
+        prev === lastSyncedBorder.current.selectedBorderId ? newId : prev
+      );
+      lastSyncedBorder.current.selectedBorderId = newId;
     }
     if (user?.avatarBorderColor) {
-      setAvatarBorderColor(user.avatarBorderColor);
+      const newColor = user.avatarBorderColor;
+      setAvatarBorderColor(prev =>
+        prev === lastSyncedBorder.current.avatarBorderColor ? newColor : prev
+      );
+      lastSyncedBorder.current.avatarBorderColor = newColor;
     }
   }, [user?.selectedAvatarBorderId, user?.avatarBorderColor]);
   
@@ -1103,12 +1337,44 @@ export default function SettingsPage() {
   }, [(user as any)?.selectedVerificationBadgeId, pendingVerificationBadgeId]);
   
 
+  // Handle OAuth callback URL params (Twitch/Kick)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const twitchConnected = params.get("twitch_connected");
+    const twitchError = params.get("twitch_error");
+    const kickConnected = params.get("kick_connected");
+    const kickError = params.get("kick_error");
+    if (twitchConnected) {
+      refreshUser();
+      toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked.", duration: 4000 });
+      window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
+    }
+    if (twitchError) {
+      const msg = twitchError === "not_configured" ? "Twitch OAuth is not configured." : twitchError === "invalid_state" ? "OAuth state mismatch — please try again." : twitchError;
+      toast({ title: "Twitch connection failed", description: msg, variant: "destructive", duration: 5000 });
+      window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
+    }
+    if (kickConnected) {
+      refreshUser();
+      toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
+      window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
+    }
+    if (kickError) {
+      const msg = kickError === "not_configured" ? "Kick OAuth is not configured." : kickError === "invalid_state" ? "OAuth state mismatch — please try again." : kickError;
+      toast({ title: "Kick connection failed", description: msg, variant: "destructive", duration: 5000 });
+      window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
+    }
+  }, []);
+
   const updateProfileMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await apiRequest("PATCH", `/api/users/${user?.id}`, data);
       return response.json();
     },
     onSuccess: (updatedUser) => {
+      // Save is complete — allow future user refreshes to sync appearance fields again
+      hasPendingEdits.current = false;
+
       // Direct cache update using functional updater to merge with existing cache
       // This preserves fields like selectedNameTagId that aren't returned in the PATCH response
       const cacheUpdater = (oldData: any) => {
@@ -1133,13 +1399,8 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       
-      setAccentColor(updatedUser.accentColor || profileData.accentColor);
-      
-      toast({
-        title: "Settings updated!",
-        description: "Your profile has been successfully updated. Check your Gamefolio!",
-        variant: "gamefolioSuccess",
-      });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
     },
     onError: (error) => {
       toast({
@@ -1294,6 +1555,7 @@ export default function SettingsPage() {
             profileBackgroundDesktopZoom: String(data.zoom),
           };
       await apiRequest("PATCH", `/api/users/${user?.id}`, patch);
+      hasPendingEdits.current = false;
       setProfileData(prev => ({ ...prev, ...patch }));
       setShowBgPositionPreview(false);
       setPendingBgImageUrl('');
@@ -1312,6 +1574,7 @@ export default function SettingsPage() {
   const handleRemoveBackgroundImage = async () => {
     try {
       await apiRequest("PATCH", `/api/users/${user?.id}`, { profileBackgroundImageUrl: "" });
+      hasPendingEdits.current = false;
       setProfileData(prev => ({ ...prev, profileBackgroundImageUrl: "" }));
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
@@ -1322,18 +1585,14 @@ export default function SettingsPage() {
   };
 
   const applyPresetTheme = (theme: typeof PRESET_THEMES[0]) => {
+    hasPendingEdits.current = true;
     setProfileData(prev => ({
       ...prev,
+      accentColor: theme.accentColor,
       backgroundColor: theme.backgroundColor,
-      accentColor: theme.accentColor
+      ...(theme.primaryColor ? { primaryColor: theme.primaryColor } : {})
     }));
-    
     setAvatarBorderColor(theme.accentColor);
-    
-    toast({
-      title: "Theme Selected",
-      description: `${theme.name} theme selected. Click "Save Changes" to apply.`,
-    });
   };
 
   if (!user) {
@@ -1352,6 +1611,13 @@ export default function SettingsPage() {
 
   const bgRgb = user?.backgroundColor ? hexToRgb(user.backgroundColor) : null;
   const accentRgb = user?.accentColor ? hexToRgb(user.accentColor) : null;
+
+  const NAMED_THEME_NAMES = ['Zombie', 'Cyberpunk', 'NEO', 'Blocks', 'Watermelon', 'Forest', 'Gothic', 'Mac', 'Cartoon'];
+  const isNamedThemeActive = PRESET_THEMES.some(t =>
+    NAMED_THEME_NAMES.includes(t.name) &&
+    profileData.accentColor === t.accentColor &&
+    profileData.backgroundColor === t.backgroundColor
+  );
 
   return (
     <KeyboardAvoidingWrapper 
@@ -2088,7 +2354,15 @@ export default function SettingsPage() {
                   
                   {/* Border Color Picker - shown when a border is selected */}
                   {selectedBorderId && (
-                    <div className="mt-4 pt-4 border-t space-y-3">
+                    <div
+                      className="mt-4 pt-4 border-t space-y-3 transition-opacity duration-300"
+                      style={{ opacity: isNamedThemeActive ? 0.4 : 1, pointerEvents: isNamedThemeActive ? 'none' : 'auto' }}
+                    >
+                      {isNamedThemeActive && (
+                        <div className="px-3 py-2 rounded-md bg-muted text-xs text-muted-foreground border border-border">
+                          A visual theme is active — its border colour overrides this setting. Switch to "None" in Themes to customise.
+                        </div>
+                      )}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Palette className="h-4 w-4 text-muted-foreground" />
@@ -2242,23 +2516,37 @@ export default function SettingsPage() {
                       <CardContent>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {PRESET_THEMES.map((theme) => {
+                            const topColor = theme.gradientTopColor || '#0B2232';
                             const defaultThemeColor = '#0B2232';
+                            const isActive = profileData.accentColor === theme.accentColor && profileData.backgroundColor === theme.backgroundColor;
                             return (
                               <div
                                 key={theme.name}
-                                className="cursor-pointer rounded-lg border-2 border-transparent hover:border-primary/50 transition-colors"
+                                className="cursor-pointer rounded-lg border-2 transition-all"
+                                style={{
+                                  borderColor: isActive ? theme.accentColor : 'transparent',
+                                  boxShadow: isActive ? `0 0 10px ${theme.accentColor}50` : 'none',
+                                }}
                                 onClick={() => applyPresetTheme(theme)}
                               >
                                 <div
-                                  className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm"
+                                  className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm relative"
                                   style={{ 
-                                    background: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
+                                    background: `linear-gradient(180deg, ${topColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
                                   }}
                                 >
                                   <div
                                     className="w-8 h-8 rounded-full border-2 border-white"
                                     style={{ backgroundColor: theme.accentColor }}
                                   />
+                                  {isActive && (
+                                    <div
+                                      className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
+                                      style={{ backgroundColor: theme.accentColor }}
+                                    >
+                                      <Check className="w-3 h-3 text-white" />
+                                    </div>
+                                  )}
                                 </div>
                                 <p className="text-center mt-2 text-sm font-medium">{theme.name}</p>
                               </div>
@@ -2276,11 +2564,16 @@ export default function SettingsPage() {
                   <div className="space-y-6">
                     <div
                       className="transition-opacity duration-300"
-                      style={{ opacity: profileData.profileBackgroundImageUrl ? 0.4 : 1, pointerEvents: profileData.profileBackgroundImageUrl ? 'none' : 'auto' }}
+                      style={{ opacity: profileData.profileBackgroundImageUrl || isNamedThemeActive ? 0.4 : 1, pointerEvents: profileData.profileBackgroundImageUrl || isNamedThemeActive ? 'none' : 'auto' }}
                     >
                     {profileData.profileBackgroundImageUrl && (
                       <div className="mb-3 px-3 py-2 rounded-md bg-muted text-xs text-muted-foreground border border-border">
                         Your background image is active — remove it to use a colour instead.
+                      </div>
+                    )}
+                    {isNamedThemeActive && !profileData.profileBackgroundImageUrl && (
+                      <div className="mb-3 px-3 py-2 rounded-md bg-muted text-xs text-muted-foreground border border-border">
+                        A visual theme is active — its colours override this setting. Switch to "None" in Themes to use a custom colour.
                       </div>
                     )}
                     <Card>
@@ -2297,25 +2590,35 @@ export default function SettingsPage() {
                         <div className="flex flex-col sm:flex-row gap-6 items-start">
                           <HexColorPicker
                             color={profileData.backgroundColor}
-                            onChange={(color) => setProfileData(prev => ({ ...prev, backgroundColor: color }))}
+                            onChange={(color) => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, backgroundColor: color })); }}
                           />
                           <div className="space-y-3 flex-1">
                             <div className="flex items-center gap-2">
                               <Label className="text-sm font-medium">Hex Code</Label>
                               <Input
                                 value={profileData.backgroundColor}
-                                onChange={(e) => setProfileData(prev => ({ ...prev, backgroundColor: e.target.value }))}
+                                onChange={(e) => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, backgroundColor: e.target.value })); }}
                                 className="w-32 font-mono text-sm"
-                                placeholder="#0B2232"
+                                placeholder="#121F2B"
                               />
                             </div>
                             <div
-                              className="w-full h-24 rounded-lg border border-border"
-                              style={{ backgroundColor: profileData.backgroundColor }}
+                              className="w-full h-24 rounded-lg border border-border overflow-hidden"
+                              style={profileData.profileBackgroundGradient
+                                ? { background: `linear-gradient(180deg, #121F2B 0%, ${profileData.backgroundColor} 60%, ${profileData.backgroundColor} 100%)` }
+                                : { backgroundColor: profileData.backgroundColor }
+                              }
                             />
-                            <p className="text-xs text-muted-foreground">
-                              This color will be used as the background gradient on your profile.
-                            </p>
+                            <div className="flex items-center justify-between pt-1">
+                              <div>
+                                <p className="text-sm font-medium">Background Gradient</p>
+                                <p className="text-xs text-muted-foreground">Blend from dark to your chosen colour.</p>
+                              </div>
+                              <Switch
+                                checked={profileData.profileBackgroundGradient}
+                                onCheckedChange={(val) => setProfileData(prev => ({ ...prev, profileBackgroundGradient: val }))}
+                              />
+                            </div>
                           </div>
                         </div>
                       </CardContent>
@@ -2328,22 +2631,23 @@ export default function SettingsPage() {
                           try {
                             await apiRequest("PATCH", `/api/users/${user?.id}`, {
                               profileBackgroundImageUrl: url,
-                              profileBackgroundPositionX: mobilePos.positionX,
-                              profileBackgroundPositionY: mobilePos.positionY,
-                              profileBackgroundZoom: mobilePos.zoom,
-                              profileBackgroundDesktopX: desktopPos.positionX,
-                              profileBackgroundDesktopY: desktopPos.positionY,
-                              profileBackgroundDesktopZoom: desktopPos.zoom,
+                              profileBackgroundPositionX: String(mobilePos.positionX),
+                              profileBackgroundPositionY: String(mobilePos.positionY),
+                              profileBackgroundZoom: String(mobilePos.zoom),
+                              profileBackgroundDesktopX: String(desktopPos.positionX),
+                              profileBackgroundDesktopY: String(desktopPos.positionY),
+                              profileBackgroundDesktopZoom: String(desktopPos.zoom),
                             });
+                            hasPendingEdits.current = false;
                             setProfileData(prev => ({
                               ...prev,
                               profileBackgroundImageUrl: url,
-                              profileBackgroundPositionX: mobilePos.positionX,
-                              profileBackgroundPositionY: mobilePos.positionY,
-                              profileBackgroundZoom: mobilePos.zoom,
-                              profileBackgroundDesktopX: desktopPos.positionX,
-                              profileBackgroundDesktopY: desktopPos.positionY,
-                              profileBackgroundDesktopZoom: desktopPos.zoom,
+                              profileBackgroundPositionX: String(mobilePos.positionX),
+                              profileBackgroundPositionY: String(mobilePos.positionY),
+                              profileBackgroundZoom: String(mobilePos.zoom),
+                              profileBackgroundDesktopX: String(desktopPos.positionX),
+                              profileBackgroundDesktopY: String(desktopPos.positionY),
+                              profileBackgroundDesktopZoom: String(desktopPos.zoom),
                             }));
                             queryClient.invalidateQueries({ queryKey: ['/api/user'] });
                             queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
@@ -2433,7 +2737,7 @@ export default function SettingsPage() {
                                         src={signedBgImageUrl || profileData.profileBackgroundImageUrl}
                                         alt="Mobile background preview"
                                         className="w-full h-full object-cover"
-                                        style={{ objectPosition: `${profileData.profileBackgroundPositionX || 50}% ${profileData.profileBackgroundPositionY || 50}%` }}
+                                        style={{ objectPosition: `${profileData.profileBackgroundPositionX ?? 50}% ${profileData.profileBackgroundPositionY ?? 50}%` }}
                                       />
                                       <div className="absolute top-2 left-2">
                                         <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
@@ -2455,7 +2759,7 @@ export default function SettingsPage() {
                                         src={signedBgImageUrl || profileData.profileBackgroundImageUrl}
                                         alt="Desktop background preview"
                                         className="w-full h-full object-cover"
-                                        style={{ objectPosition: `${profileData.profileBackgroundDesktopX || 50}% ${profileData.profileBackgroundDesktopY || 50}%` }}
+                                        style={{ objectPosition: `${profileData.profileBackgroundDesktopX ?? 50}% ${profileData.profileBackgroundDesktopY ?? 50}%` }}
                                       />
                                       <div className="absolute top-2 left-2">
                                         <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
@@ -2571,7 +2875,7 @@ export default function SettingsPage() {
                                     <button
                                       key={font.value}
                                       type="button"
-                                      onClick={() => { setProfileData(prev => ({ ...prev, profileFont: font.value })); scrollToFontPreview(); }}
+                                      onClick={() => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFont: font.value })); scrollToFontPreview(); }}
                                       className={`p-2 sm:p-4 rounded-lg border-2 text-left transition-all ${
                                         isSelected
                                           ? 'border-primary bg-primary/10'
@@ -2604,7 +2908,7 @@ export default function SettingsPage() {
                                     <button
                                       key={effect.value}
                                       type="button"
-                                      onClick={() => { setProfileData(prev => ({ ...prev, profileFontEffect: effect.value })); scrollToFontPreview(); }}
+                                      onClick={() => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFontEffect: effect.value })); scrollToFontPreview(); }}
                                       className={`p-3 rounded-lg border-2 text-center transition-all ${
                                         isSelected
                                           ? 'border-primary bg-primary/10'
@@ -2631,7 +2935,7 @@ export default function SettingsPage() {
                                     <button
                                       key={anim.value}
                                       type="button"
-                                      onClick={() => { setProfileData(prev => ({ ...prev, profileFontAnimation: anim.value })); scrollToFontPreview(); }}
+                                      onClick={() => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFontAnimation: anim.value })); scrollToFontPreview(); }}
                                       className={`p-3 rounded-lg border-2 text-center transition-all ${
                                         isSelected
                                           ? 'border-primary bg-primary/10'
@@ -2651,7 +2955,7 @@ export default function SettingsPage() {
                               <div className="flex flex-col items-center gap-4">
                                 <HexColorPicker
                                   color={profileData.profileFontColor}
-                                  onChange={(color) => { setProfileData(prev => ({ ...prev, profileFontColor: color })); scrollToFontPreview(); }}
+                                  onChange={(color) => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFontColor: color })); scrollToFontPreview(); }}
                                   style={{ width: '100%', maxWidth: '280px' }}
                                 />
                                 <div className="flex items-center gap-3 w-full max-w-xs">
@@ -2662,6 +2966,7 @@ export default function SettingsPage() {
                                     onChange={(e) => {
                                       const val = e.target.value;
                                       if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) {
+                                        hasPendingEdits.current = true;
                                         setProfileData(prev => ({ ...prev, profileFontColor: val }));
                                         if (val.length === 7) scrollToFontPreview();
                                       }
@@ -2672,7 +2977,7 @@ export default function SettingsPage() {
                                   />
                                   <button
                                     type="button"
-                                    onClick={() => { setProfileData(prev => ({ ...prev, profileFontColor: '#FFFFFF' })); scrollToFontPreview(); }}
+                                    onClick={() => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFontColor: '#FFFFFF' })); scrollToFontPreview(); }}
                                     className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 border border-border rounded"
                                   >
                                     Reset
@@ -2683,7 +2988,7 @@ export default function SettingsPage() {
                                     <button
                                       key={preset}
                                       type="button"
-                                      onClick={() => { setProfileData(prev => ({ ...prev, profileFontColor: preset })); scrollToFontPreview(); }}
+                                      onClick={() => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, profileFontColor: preset })); scrollToFontPreview(); }}
                                       className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110"
                                       style={{ backgroundColor: preset, borderColor: profileData.profileFontColor === preset ? 'white' : 'transparent' }}
                                       title={preset}
@@ -3650,6 +3955,219 @@ export default function SettingsPage() {
               </div>
             )}
 
+            {/* Streamer Settings Panel */}
+            <Card className="mt-4">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center flex-shrink-0">
+                    {(user as any)?.streamPlatform === "kick"
+                      ? <SiKick className="w-5 h-5 text-[#53FC18]" />
+                      : <SiTwitch className="w-5 h-5 text-[#9146FF]" />}
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-base">Streamer Settings</CardTitle>
+                    <CardDescription className="mt-0.5 text-xs">
+                      Verify your Twitch or Kick channel via OAuth to show a Streamer badge on your profile.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+
+                {/* Is Streamer Toggle */}
+                <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                  <div>
+                    <div className="text-sm font-medium text-slate-200">Streamer Mode</div>
+                    <div className="text-xs text-slate-400 mt-0.5">Show a Streamer badge on your public profile</div>
+                  </div>
+                  <Switch
+                    checked={!!(user as any)?.isStreamer}
+                    disabled={savingStreamerSettings}
+                    onCheckedChange={(val) => handleStreamerSettingsSave({ isStreamer: val })}
+                  />
+                </div>
+
+                {/* Platform Selector */}
+                <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                  <div>
+                    <div className="text-sm font-medium text-slate-200">Streaming Platform</div>
+                    <div className="text-xs text-slate-400 mt-0.5">Choose which platform to connect</div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleStreamerSettingsSave({ streamPlatform: "twitch" })}
+                      disabled={savingStreamerSettings}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                        (user as any)?.streamPlatform !== "kick"
+                          ? "border-[#9146FF]/60 bg-[#9146FF]/15 text-[#9146FF]"
+                          : "border-slate-700 text-slate-400 hover:border-slate-500"
+                      }`}
+                    >
+                      <SiTwitch className="w-3.5 h-3.5" />
+                      Twitch
+                    </button>
+                    <button
+                      onClick={() => handleStreamerSettingsSave({ streamPlatform: "kick" })}
+                      disabled={savingStreamerSettings}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                        (user as any)?.streamPlatform === "kick"
+                          ? "border-[#53FC18]/60 bg-[#53FC18]/10 text-[#53FC18]"
+                          : "border-slate-700 text-slate-400 hover:border-slate-500"
+                      }`}
+                    >
+                      <SiKick className="w-3.5 h-3.5" />
+                      Kick
+                    </button>
+                  </div>
+                </div>
+
+                {/* Twitch Connection */}
+                {(user as any)?.streamPlatform !== "kick" && (
+                  <>
+                    {(user as any)?.twitchVerified ? (
+                      <div className="rounded-xl border border-[#9146FF]/30 bg-[#9146FF]/5 px-4 py-3 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-[#9146FF]/15 flex items-center justify-center flex-shrink-0">
+                            <SiTwitch className="w-4 h-4 text-[#9146FF]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-slate-200">{(user as any)?.twitchChannelName}</span>
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#9146FF]/20 text-[#9146FF] border border-[#9146FF]/30">
+                                <Check className="w-2.5 h-2.5" />
+                                Verified
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-400">twitch.tv/{(user as any)?.twitchChannelName}</div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleTwitchDisconnect}
+                            disabled={disconnectingTwitch}
+                            className="gap-1.5 border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                          >
+                            {disconnectingTwitch ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlink className="w-4 h-4" />}
+                            Disconnect
+                          </Button>
+                        </div>
+                      </div>
+                    ) : oauthStatus?.twitch === false ? (
+                      <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <SiTwitch className="w-4 h-4 text-amber-400" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-amber-300">Twitch OAuth not configured</div>
+                            <div className="text-xs text-slate-400 mt-0.5">Twitch integration requires app credentials to be set up by the administrator.</div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-medium text-slate-200">Connect Twitch</div>
+                            <div className="text-xs text-slate-400 mt-0.5">Authenticate via Twitch to verify your channel</div>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => { window.location.href = "/api/auth/twitch/connect"; }}
+                            className="gap-1.5 bg-[#9146FF] hover:bg-[#7d3ce8] text-white border-0"
+                          >
+                            <SiTwitch className="w-4 h-4" />
+                            Connect with Twitch
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Kick Connection */}
+                {(user as any)?.streamPlatform === "kick" && (
+                  <>
+                    {(user as any)?.kickVerified ? (
+                      <div className="rounded-xl border border-[#53FC18]/20 bg-[#53FC18]/5 px-4 py-3 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-[#53FC18]/10 flex items-center justify-center flex-shrink-0">
+                            <SiKick className="w-4 h-4 text-[#53FC18]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-slate-200">{(user as any)?.kickChannelName}</span>
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#53FC18]/10 text-[#53FC18] border border-[#53FC18]/30">
+                                <Check className="w-2.5 h-2.5" />
+                                Verified
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-400">kick.com/{(user as any)?.kickChannelName}</div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleKickDisconnect}
+                            disabled={disconnectingKick}
+                            className="gap-1.5 border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                          >
+                            {disconnectingKick ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlink className="w-4 h-4" />}
+                            Disconnect
+                          </Button>
+                        </div>
+                      </div>
+                    ) : oauthStatus?.kick === false ? (
+                      <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <SiKick className="w-4 h-4 text-amber-400" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-amber-300">Kick OAuth not configured</div>
+                            <div className="text-xs text-slate-400 mt-0.5">Kick integration requires app credentials to be set up by the administrator.</div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-medium text-slate-200">Connect Kick</div>
+                            <div className="text-xs text-slate-400 mt-0.5">Authenticate via Kick to verify your channel</div>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => { window.location.href = "/api/auth/kick/connect"; }}
+                            className="gap-1.5 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-[#53FC18] border border-[#53FC18]/30"
+                          >
+                            <SiKick className="w-4 h-4" />
+                            Connect with Kick
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* LIVE Badge Toggle */}
+                <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                  <div>
+                    <div className="text-sm font-medium text-slate-200">LIVE Badge</div>
+                    <div className="text-xs text-slate-400 mt-0.5">Show a LIVE badge on your profile when you're streaming</div>
+                  </div>
+                  <Switch
+                    checked={!!(user as any)?.liveEnabled}
+                    disabled={savingStreamerSettings || (!(user as any)?.twitchVerified && !(user as any)?.kickVerified)}
+                    onCheckedChange={(val) => handleStreamerSettingsSave({ liveEnabled: val })}
+                  />
+                </div>
+                {!(user as any)?.twitchVerified && !(user as any)?.kickVerified && (
+                  <p className="text-xs text-slate-500 px-1">Connect a streaming platform first to enable the LIVE badge.</p>
+                )}
+
+              </CardContent>
+            </Card>
+
             {/* PlayStation Disconnect Confirmation Dialog */}
             <AlertDialog open={showPsnDisconnectDialog} onOpenChange={setShowPsnDisconnectDialog}>
               <AlertDialogContent>
@@ -3964,16 +4482,15 @@ export default function SettingsPage() {
         </Tabs>
 
         {/* Save Button */}
-        {(hasUnsavedChanges || updateProfileMutation.isPending) && (
+        {(hasUnsavedChanges || updateProfileMutation.isPending || saveSuccess) && (
           <div className="flex justify-end items-center mt-6 mb-4">
             <Button
               onClick={handleSave}
-              disabled={updateProfileMutation.isPending}
+              disabled={updateProfileMutation.isPending || saveSuccess}
               className="flex items-center gap-2 text-white font-medium px-6 py-2"
-              style={{ backgroundColor: profileData.accentColor }}
             >
               <Save className="h-4 w-4" />
-              {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
+              {updateProfileMutation.isPending ? "Saving..." : saveSuccess ? "Changes Saved" : "Save Changes"}
             </Button>
           </div>
         )}

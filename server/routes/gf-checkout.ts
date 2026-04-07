@@ -7,7 +7,7 @@ import { getUncachableStripeClient, getStripePublishableKey } from '../stripeCli
 import { hybridAuth } from '../middleware/hybrid-auth';
 import { getTreasuryBalance, getTreasuryAddress, transferGfTokens } from '../gf-token-service';
 
-const SKALE_NEBULA_TESTNET_CHAIN_ID = 37084624;
+const SKALE_NEBULA_TESTNET_CHAIN_ID = 1187947933;
 
 const router = Router();
 
@@ -308,22 +308,30 @@ router.post('/api/gf/recover-orders', hybridAuth, async (req: Request, res: Resp
         }
 
         if (paymentSucceeded) {
-          await db.update(gfOrders)
-            .set({ status: 'credited', updatedAt: new Date() })
-            .where(eq(gfOrders.id, order.id));
-
-          const [currentUser] = await db.select({ gfTokenBalance: users.gfTokenBalance })
+          const [recoverUser] = await db.select({ walletAddress: users.walletAddress })
             .from(users).where(eq(users.id, userId));
-          
-          if (currentUser) {
-            await db.update(users)
-              .set({ gfTokenBalance: currentUser.gfTokenBalance + order.gfAmount })
-              .where(eq(users.id, userId));
-            totalCredited += order.gfAmount;
+
+          if (recoverUser?.walletAddress) {
+            const result = await transferGfTokens(recoverUser.walletAddress, order.gfAmount);
+            if (result.success) {
+              await db.update(gfOrders)
+                .set({ status: 'delivered', txHash: result.txHash, updatedAt: new Date() })
+                .where(eq(gfOrders.id, order.id));
+              totalCredited += order.gfAmount;
+              console.log(`[GF Recovery] Order ${order.id} recovered and delivered ${order.gfAmount} GFT on-chain to ${recoverUser.walletAddress}`);
+            } else {
+              await db.update(gfOrders)
+                .set({ status: 'credited', updatedAt: new Date() })
+                .where(eq(gfOrders.id, order.id));
+              console.log(`[GF Recovery] Order ${order.id} credited (on-chain transfer failed: ${result.error})`);
+            }
+          } else {
+            await db.update(gfOrders)
+              .set({ status: 'credited', updatedAt: new Date() })
+              .where(eq(gfOrders.id, order.id));
           }
 
           recovered++;
-          console.log(`[GF Recovery] Order ${order.id} recovered and credited ${order.gfAmount} GFT to user ${userId}`);
         }
       } catch (err: any) {
         console.error(`[GF Recovery] Failed to check order ${order.id}:`, err.message);
@@ -368,31 +376,21 @@ router.post('/api/gf/confirm-payment', hybridAuth, async (req: Request, res: Res
     }
 
     if (order.status === 'delivered' || order.status === 'credited') {
-      const [user] = await db.select({ gfTokenBalance: users.gfTokenBalance }).from(users).where(eq(users.id, userId));
       return res.json({ 
         success: true, 
         alreadyProcessed: true, 
         gfAmount: order.gfAmount,
-        newBalance: user?.gfTokenBalance || 0
       });
     }
 
     const [currentUser] = await db.select({ 
-      gfTokenBalance: users.gfTokenBalance, 
       walletAddress: users.walletAddress 
     }).from(users).where(eq(users.id, userId));
-
-    const [updatedUser] = await db.update(users)
-      .set({ 
-        gfTokenBalance: currentUser.gfTokenBalance + order.gfAmount
-      })
-      .where(eq(users.id, userId))
-      .returning({ gfTokenBalance: users.gfTokenBalance });
 
     let txHash: string | undefined;
     let onChainSuccess = false;
 
-    if (currentUser.walletAddress) {
+    if (currentUser?.walletAddress) {
       console.log(`[GF Confirm] Attempting on-chain transfer of ${order.gfAmount} GFT to ${currentUser.walletAddress}`);
       try {
         const result = await transferGfTokens(currentUser.walletAddress, order.gfAmount);
@@ -410,19 +408,18 @@ router.post('/api/gf/confirm-payment', hybridAuth, async (req: Request, res: Res
 
     await db.update(gfOrders)
       .set({ 
-        status: onChainSuccess ? 'delivered' : 'credited', 
+        status: onChainSuccess ? 'delivered' : 'pending', 
         stripePaymentIntentId: paymentIntentId,
         txHash: txHash,
         updatedAt: new Date() 
       })
       .where(eq(gfOrders.id, order.id));
 
-    console.log(`[GF Confirm] Order ${order.id} ${onChainSuccess ? 'delivered' : 'credited'}. User ${userId} received ${order.gfAmount} GFT. New balance: ${updatedUser?.gfTokenBalance}`);
+    console.log(`[GF Confirm] Order ${order.id} ${onChainSuccess ? 'delivered' : 'pending on-chain'}. User ${userId} queued ${order.gfAmount} GFT.`);
 
     return res.json({ 
       success: true, 
       gfAmount: order.gfAmount,
-      newBalance: updatedUser?.gfTokenBalance || 0,
       onChainTransfer: onChainSuccess,
       txHash,
     });
@@ -498,7 +495,7 @@ router.get('/api/token/on-chain-balance', hybridAuth, async (req: Request, res: 
     }
 
     const { GF_TOKEN_ADDRESS } = await import('@shared/contracts');
-    const explorerBaseUrl = 'https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com';
+    const explorerBaseUrl = 'https://base.explorer.mainnet.skalenodes.com';
 
     const explorerRes = await fetch(
       `${explorerBaseUrl}/api/v2/addresses/${user.walletAddress}/token-balances`
@@ -540,10 +537,10 @@ router.get('/api/token/on-chain-balance', hybridAuth, async (req: Request, res: 
       }
 
       const { createPublicClient, http } = await import('viem');
-      const { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } = await import('@shared/contracts');
+      const { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_BASE_MAINNET } = await import('@shared/contracts');
 
       const publicClient = createPublicClient({
-        chain: SKALE_NEBULA_TESTNET,
+        chain: SKALE_BASE_MAINNET,
         transport: http(),
       });
 
@@ -560,7 +557,7 @@ router.get('/api/token/on-chain-balance', hybridAuth, async (req: Request, res: 
         balance,
         walletAddress: user.walletAddress,
         source: 'rpc-fallback',
-        explorerUrl: `https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com/address/${user.walletAddress}`,
+        explorerUrl: `https://base.explorer.mainnet.skalenodes.com/address/${user.walletAddress}`,
       });
     } catch (fallbackError: any) {
       console.error('RPC fallback also failed:', fallbackError.message);

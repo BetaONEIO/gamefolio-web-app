@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button";
 
 interface ProfileTabsProps {
   username: string;
+  isCyberpunkTheme?: boolean;
 }
 
-const ProfileTabs = ({ username }: ProfileTabsProps) => {
+const ProfileTabs = ({ username, isCyberpunkTheme = false }: ProfileTabsProps) => {
   const [activeTab, setActiveTab] = useState("clips");
   const queryClient = useQueryClient();
   
@@ -117,6 +118,15 @@ const ProfileTabs = ({ username }: ProfileTabsProps) => {
 
   return (
     <div>
+      {isCyberpunkTheme && (
+        <style>{`
+          @keyframes profileTabsCyberGlow {
+            0%,100% { box-shadow:0 0 8px #00d3f244, inset 0 0 8px #00d3f211; border-color:#00b8db88; }
+            50%      { box-shadow:0 0 14px #e12afb55, inset 0 0 10px #e12afb11; border-color:#e12afb88; }
+          }
+          .profile-tabs-cyber-border { animation: profileTabsCyberGlow 4s ease-in-out infinite; }
+        `}</style>
+      )}
       {/* Curved fading line with tabs */}
       <div className="relative py-4">
         {/* Curved line container with fading ends */}
@@ -132,7 +142,14 @@ const ProfileTabs = ({ username }: ProfileTabsProps) => {
           />
           
           {/* Main curved rectangle border */}
-          <div className="relative flex items-center gap-1 px-2 py-1 rounded-xl border border-border/60 bg-background/50 backdrop-blur-sm">
+          <div 
+            className={`relative flex items-center gap-1 px-2 py-1 backdrop-blur-sm ${isCyberpunkTheme ? 'rounded-none border-0 profile-tabs-cyber-border' : 'rounded-xl border border-border/60 bg-background/50'}`}
+            style={isCyberpunkTheme ? {
+              background: '#020617',
+              border: '1px solid #00b8db88',
+              clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)',
+            } : undefined}
+          >
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -143,10 +160,14 @@ const ProfileTabs = ({ username }: ProfileTabsProps) => {
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
                 onClick={() => setActiveTab(tab.id)}
+                style={isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2px', fontSize: '0.65rem', fontWeight: '900' } : undefined}
               >
                 <span className="flex items-center gap-2">
                   {tab.icon}
-                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span
+                    className="hidden sm:inline"
+                    style={isCyberpunkTheme ? { background: 'linear-gradient(270deg,#00d3f2,#e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } : undefined}
+                  >{tab.label}</span>
                 </span>
               </button>
             ))}
@@ -156,10 +177,14 @@ const ProfileTabs = ({ username }: ProfileTabsProps) => {
               variant="outline"
               size="sm"
               className="ml-2 rounded-lg border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
+              style={isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2px', fontSize: '0.65rem', fontWeight: '900', borderColor: '#00b8db66' } : undefined}
               onClick={() => setActiveTab("collection")}
             >
               <FolderOpen className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Collection</span>
+              <span
+                className="hidden sm:inline"
+                style={isCyberpunkTheme ? { background: 'linear-gradient(270deg,#00d3f2,#e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } : undefined}
+              >Collection</span>
             </Button>
           </div>
           

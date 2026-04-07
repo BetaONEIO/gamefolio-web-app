@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { getQueryFn } from '@/lib/queryClient';
 
 interface TokenInfo {
   name: string;
@@ -17,6 +18,7 @@ interface TokenBalance {
 export function useTokenInfo() {
   return useQuery<TokenInfo>({
     queryKey: ['/api/token/info'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
     refetchInterval: 30000,
   });
 }
@@ -24,6 +26,7 @@ export function useTokenInfo() {
 export function useTokenBalance() {
   return useQuery<TokenBalance>({
     queryKey: ['/api/token/balance'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
     refetchInterval: 15000,
   });
 }

@@ -9,7 +9,7 @@ interface ProBadgeProps {
 }
 
 export function ProBadge({ selectedVerificationBadgeId, size = "md", isModerator = false }: ProBadgeProps) {
-  if (!selectedVerificationBadgeId || isModerator) return null;
+  if (!selectedVerificationBadgeId) return null;
 
   const sizeClasses = {
     sm: "w-4 h-4",

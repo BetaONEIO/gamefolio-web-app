@@ -109,8 +109,8 @@ const GameSelector = ({ games, selectedGame, onSelect }: GameSelectorProps) => {
       setOpen(false);
       setSearchQuery("");
       toast({
-        title: "Game added",
-        description: `"${newGame.name}" has been added and selected.`,
+        title: "Game added — pending approval",
+        description: `"${newGame.name}" has been added and selected. Your content will be visible once an admin approves this game.`,
       });
     } catch (error) {
       toast({

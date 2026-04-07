@@ -9,6 +9,7 @@ interface OGMetaTags {
   title: string;
   description: string;
   image: string;
+  imageType?: string;
   url: string;
   type: string;
   videoUrl?: string;
@@ -134,6 +135,28 @@ export function createOGMetaMiddleware(storage: IStorage) {
         }
       }
 
+      // Match profile URLs: /@username (but not /@username/clip/... or /@username/screenshot/...)
+      const profileMatch = url.match(/^\/@([^/]+)\/?(\?.*)?$/);
+      if (profileMatch && !ogTags) {
+        const [, username] = profileMatch;
+        
+        const user = await storage.getUserByUsername(username);
+        
+        if (user) {
+          const baseHost = `https://${req.get('host')}`;
+          const previewImageUrl = `${baseHost}/api/social-preview/${username}`;
+          
+          ogTags = {
+            title: `${user.displayName || user.username} - Gamefolio`,
+            description: user.bio || `Check out ${user.displayName || user.username}'s gaming portfolio on Gamefolio!`,
+            image: previewImageUrl,
+            imageType: 'image/png',
+            url: `${baseHost}${url}`,
+            type: 'profile'
+          };
+        }
+      }
+
       // If we have OG tags, inject them into the HTML
       if (ogTags) {
         const __filename = fileURLToPath(import.meta.url);
@@ -158,7 +181,7 @@ export function createOGMetaMiddleware(storage: IStorage) {
     <meta property="og:description" content="${escapeHtml(ogTags.description)}" />
     <meta property="og:image" content="${escapeHtml(ogTags.image)}" />
     <meta property="og:image:secure_url" content="${escapeHtml(ogTags.image)}" />
-    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:type" content="${ogTags.imageType || 'image/jpeg'}" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="${escapeHtml(ogTags.title)}" />

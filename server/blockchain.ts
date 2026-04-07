@@ -1,9 +1,11 @@
 import { createPublicClient, http, formatUnits, Address } from 'viem';
 import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from '../shared/contracts';
 
+const RPC_URL = SKALE_NEBULA_TESTNET.rpcUrls.default.http[0];
+
 const publicClient = createPublicClient({
   chain: SKALE_NEBULA_TESTNET,
-  transport: http(),
+  transport: http(RPC_URL),
 });
 
 export async function getTokenBalance(walletAddress: string): Promise<string> {

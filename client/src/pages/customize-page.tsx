@@ -52,6 +52,60 @@ const PRESET_THEMES = [
     accentColor: "#FF69B4",
     backgroundColor: "#1E1E2E",
     cardColor: "#2D2D44"
+  },
+  {
+    name: "Blocks",
+    accentColor: "#4ade80",
+    backgroundColor: "#1a1a1a",
+    cardColor: "#2d2d2d"
+  },
+  {
+    name: "Watermelon",
+    accentColor: "#4ade80",
+    backgroundColor: "#ff4d6d",
+    cardColor: "#1d3932"
+  },
+  {
+    name: "Forest",
+    accentColor: "#4ade80",
+    backgroundColor: "#0a2f1f",
+    cardColor: "#e8d5b7"
+  },
+  {
+    name: "Ice",
+    accentColor: "#0ea5e9",
+    backgroundColor: "#f0f9ff",
+    cardColor: "#dbeafe"
+  },
+  {
+    name: "Gothic",
+    accentColor: "#c27aff",
+    backgroundColor: "#1e053a",
+    cardColor: "#59168b"
+  },
+  {
+    name: "Mac",
+    accentColor: "#0066ff",
+    backgroundColor: "#f0f0f2",
+    cardColor: "#ffffff"
+  },
+  {
+    name: "Cartoon",
+    accentColor: "#ff5e5e",
+    backgroundColor: "#fffaec",
+    cardColor: "#ffffff"
+  },
+  {
+    name: "Bubble Tea",
+    accentColor: "#ff8904",
+    backgroundColor: "#fefce8",
+    cardColor: "#ffedd4"
+  },
+  {
+    name: "Electric",
+    accentColor: "#ffe033",
+    backgroundColor: "#1a1200",
+    cardColor: "#2d2100"
   }
 ];
 
@@ -222,8 +276,8 @@ export default function CustomizePage() {
                 <CardTitle className="text-white">Preset Themes</CardTitle>
                 <CardDescription>Quick color combinations</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3">
+              <CardContent className="max-h-none overflow-visible">
+                <div className="grid grid-cols-2 gap-3 auto-rows-max">
                   {PRESET_THEMES.map((preset) => (
                     <div
                       key={preset.name}

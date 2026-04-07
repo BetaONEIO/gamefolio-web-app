@@ -309,10 +309,10 @@ const Header = () => {
                           <div className="flex items-center gap-1">
                             <span className="font-medium text-foreground">{searchUser.displayName}</span>
                             <ModeratorBadge 
-                              isModerator={searchUser.role === "moderator" || searchUser.role === "admin"} 
+                              isModerator={(searchUser.role === "moderator" || searchUser.role === "admin") && !searchUser.selectedVerificationBadgeId} 
                               size="sm" 
                             />
-                            <ProBadge selectedVerificationBadgeId={searchUser.selectedVerificationBadgeId} size="sm" isModerator={searchUser.role === "moderator" || searchUser.role === "admin"} />
+                            <ProBadge selectedVerificationBadgeId={searchUser.selectedVerificationBadgeId} size="sm" />
                           </div>
                           <div className="text-sm text-muted-foreground">@{searchUser.username}</div>
                         </div>
@@ -665,10 +665,10 @@ const Header = () => {
                               <div className="flex items-center gap-1">
                                 <span className="font-medium text-foreground">{searchUser.displayName}</span>
                                 <ModeratorBadge 
-                                  isModerator={searchUser.role === "moderator" || searchUser.role === "admin"} 
+                                  isModerator={(searchUser.role === "moderator" || searchUser.role === "admin") && !searchUser.selectedVerificationBadgeId} 
                                   size="sm" 
                                 />
-                                <ProBadge selectedVerificationBadgeId={searchUser.selectedVerificationBadgeId} size="sm" isModerator={searchUser.role === "moderator" || searchUser.role === "admin"} />
+                                <ProBadge selectedVerificationBadgeId={searchUser.selectedVerificationBadgeId} size="sm" />
                               </div>
                               <div className="text-sm text-muted-foreground">@{searchUser.username}</div>
                             </div>

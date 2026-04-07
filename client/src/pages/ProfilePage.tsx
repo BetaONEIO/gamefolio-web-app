@@ -47,7 +47,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Camera
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -238,6 +239,7 @@ const ProfilePage = () => {
 
   // Profile theme scope ref for dynamic styling
   const profileThemeScopeRef = useRef<HTMLDivElement>(null);
+  const neoCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Screenshot lightbox state
   const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null);
@@ -822,6 +824,48 @@ const ProfilePage = () => {
     }
   }, [currentUser?.username, username, queryClient]);
 
+  // NEO theme: matrix rain canvas animation
+  // Must be before early returns to satisfy Rules of Hooks
+  const _neoAccent = (profile as any)?.accentColor?.toLowerCase();
+  const _neoBgImg = bgImageSignedUrl || (profile as any)?.profileBackgroundImageUrl || '';
+  const _isNeoActive = _neoAccent === '#00ff41' && !_neoBgImg;
+  useEffect(() => {
+    if (!_isNeoActive) return;
+    const canvas = neoCanvasRef.current;
+    if (!canvas) return;
+    const setSize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    setSize();
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const fontSize = 14;
+    let columns = Math.floor(canvas.width / fontSize);
+    let drops: number[] = Array.from({ length: columns }, () => Math.floor(Math.random() * -canvas.height / fontSize));
+    let animFrame: number;
+    const draw = () => {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < drops.length; i++) {
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        const y = drops[i] * fontSize;
+        ctx.fillStyle = drops[i] % 9 === 0 ? '#ccffcc' : (drops[i] % 4 === 0 ? '#55ff77' : '#00ff41');
+        ctx.font = `${fontSize}px "JetBrains Mono", monospace`;
+        ctx.fillText(char, i * fontSize, y);
+        if (y > canvas.height && Math.random() > 0.975) drops[i] = 0;
+        drops[i]++;
+      }
+      animFrame = requestAnimationFrame(draw);
+    };
+    draw();
+    const handleResize = () => {
+      setSize();
+      columns = Math.floor(canvas.width / fontSize);
+      drops = Array.from({ length: columns }, () => Math.floor(Math.random() * -canvas.height / fontSize));
+    };
+    window.addEventListener('resize', handleResize);
+    return () => { cancelAnimationFrame(animFrame); window.removeEventListener('resize', handleResize); };
+  }, [_isNeoActive]);
+
   // Follow mutation
   const followMutation = useMutation({
     mutationFn: async ({ currentFollowStatus }: { currentFollowStatus: 'following' | 'requested' | 'not_following' }) => {
@@ -1018,12 +1062,7 @@ const ProfilePage = () => {
   const reelsTabRef = useRef<HTMLButtonElement>(null);
   const screenshotsTabRef = useRef<HTMLButtonElement>(null);
   const favoritesTabRef = useRef<HTMLButtonElement>(null);
-
-  // Screenshot carousel
-  const screenshotsScrollRef = useRef<HTMLDivElement>(null);
-  const [screenshotsDragging, setScreenshotsDragging] = useState(false);
-  const [screenshotsDragStart, setScreenshotsDragStart] = useState(0);
-  const [screenshotsScrollStart, setScreenshotsScrollStart] = useState(0);
+  const tabsListRef = useRef<HTMLDivElement>(null);
 
   // Calculate tab positions using percentage-based approach
   const getTabPosition = (tabName: string) => {
@@ -1265,8 +1304,262 @@ const ProfilePage = () => {
   }
 
   const accentColor = profile.accentColor || '#4ADE80';
-  const backgroundColor = profile.backgroundColor || '#0B2232';
+  const backgroundColor = profile.backgroundColor || '#121F2B';
   const cardColor = profile.cardColor || '#1E3A8A';
+
+  const isMacTheme = accentColor?.toLowerCase() === '#0066ff' && backgroundColor?.toLowerCase() === '#f0f0f2';
+  const isCartoonTheme = accentColor?.toLowerCase() === '#ff5e5e' && backgroundColor?.toLowerCase() === '#fffaec';
+
+  const isLightBackground = (() => {
+    const hex = backgroundColor.replace('#', '');
+    if (hex.length !== 6) return false;
+    const r = parseInt(hex.substring(0, 2), 16) / 255;
+    const g = parseInt(hex.substring(2, 4), 16) / 255;
+    const b = parseInt(hex.substring(4, 6), 16) / 255;
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 0.5;
+  })();
+
+  const isZombieTheme = !isLightBackground && accentColor?.toLowerCase() === '#9ae600';
+  const isCyberpunkTheme = !isLightBackground && accentColor?.toLowerCase() === '#00d3f2';
+  const isNeoTheme = !isLightBackground && accentColor?.toLowerCase() === '#00ff41';
+  const isGothicTheme = !isLightBackground && accentColor?.toLowerCase() === '#c27aff' && backgroundColor?.toLowerCase() === '#1e053a';
+  const isBlocksTheme = !isLightBackground && accentColor?.toLowerCase() === '#4ade80' && backgroundColor?.toLowerCase() === '#1a1a1a';
+  const isForestTheme = !isLightBackground && accentColor?.toLowerCase() === '#4ade80' && backgroundColor?.toLowerCase() === '#0a2f1f';
+  const isWatermelonTheme = accentColor?.toLowerCase() === '#4ade80' && backgroundColor?.toLowerCase() === '#ff4d6d';
+  const isElectricTheme = !isLightBackground && accentColor?.toLowerCase() === '#ffe033' && backgroundColor?.toLowerCase() === '#1a1200';
+
+  const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isLightBackground;
+
+  const platformBtnStyle = isWatermelonTheme
+    ? { backgroundColor: '#ffb3c1', color: '#0d1a12', border: '3px solid #1d3932', borderRadius: '9999px' }
+    : isCartoonTheme
+    ? { backgroundColor: '#ffffff', color: '#1d1d1f', border: '3px solid #1d1d1f', borderRadius: '9999px', boxShadow: '3px 3px 0 #1d1d1f', fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: '800' }
+    : isMacTheme
+    ? { backgroundColor: 'rgba(0,122,255,0.08)', color: '#007aff', border: '1px solid rgba(0,122,255,0.3)', borderRadius: '8px' }
+    : isLightBackground
+    ? { backgroundColor: 'rgba(255,255,255,0.7)', color: accentColor, border: `1px solid ${accentColor}80` }
+    : isZombieTheme
+      ? { backgroundColor: 'rgba(15, 28, 8, 0.9)', color: '#9ae600', border: '1px solid #9ae60066' }
+      : isCyberpunkTheme
+        ? { backgroundColor: 'rgba(0,6,18,0.9)', color: '#00d3f2', border: '1px solid #00b8db55', fontFamily: "'Orbitron', sans-serif", fontSize: '0.6rem', letterSpacing: '0.8px', borderRadius: '2px' }
+        : isNeoTheme
+          ? { backgroundColor: 'rgba(0,8,0,0.9)', color: '#00ff41', border: '1px solid #00ff4155', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.65rem', letterSpacing: '0.5px', borderRadius: '2px' }
+          : isBlocksTheme
+            ? { backgroundColor: 'rgba(26,26,26,0.95)', color: '#4ade80', border: '2px solid #4ade8066', fontFamily: "'Press Start 2P', monospace", fontSize: '0.55rem', letterSpacing: '0.5px', borderRadius: '2px' }
+            : isForestTheme
+              ? { backgroundColor: 'rgba(232,213,183,0.85)', color: '#6B3A1F', border: '1px solid #c4a88266', borderRadius: '6px' }
+              : isGothicTheme
+              ? { backgroundColor: 'rgba(20,2,50,0.85)', color: '#c27aff', border: '1px solid #c27aff44', borderRadius: '9999px', boxShadow: '0 0 8px #c27aff22' }
+              : isElectricTheme
+              ? { backgroundColor: 'rgba(20,15,0,0.9)', color: '#ffe033', border: '1px solid #ffe03366', borderRadius: '9999px', boxShadow: '0 0 8px #ffe03333', fontFamily: "'Bangers', 'Impact', cursive", letterSpacing: '1px' }
+              : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
+
+  const socialOutlineStyle = isWatermelonTheme
+    ? { backgroundColor: '#ffffff', color: '#1d3932', border: '3px solid #1d3932', borderRadius: '9999px' }
+    : isCartoonTheme
+    ? platformBtnStyle
+    : isMacTheme
+    ? platformBtnStyle
+    : isLightBackground
+    ? { backgroundColor: 'rgba(255,255,255,0.9)', color: '#000000', border: '1.5px solid rgba(0,0,0,0.5)', borderRadius: '9999px' }
+    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme)
+      ? platformBtnStyle
+      : { backgroundColor: '#ffffff', color: '#000000', border: '1.5px solid #000000', borderRadius: '9999px' };
+
+  const platformBrandStyles: Record<string, React.CSSProperties> = {
+    steam:       { backgroundColor: '#1b2838', color: '#c6d4df', border: '1px solid #1b2838', borderRadius: '9999px' },
+    xbox:        { backgroundColor: '#107c10', color: '#ffffff', border: '1px solid #107c10', borderRadius: '9999px' },
+    playstation: { backgroundColor: '#003087', color: '#ffffff', border: '1px solid #003087', borderRadius: '9999px' },
+    epic:        { backgroundColor: '#2a2a2a', color: '#ffffff', border: '1px solid #444444', borderRadius: '9999px' },
+    nintendo:    { backgroundColor: '#e60012', color: '#ffffff', border: '1px solid #e60012', borderRadius: '9999px' },
+    discord:     { backgroundColor: '#5865F2', color: '#ffffff', border: '1px solid #5865F2', borderRadius: '9999px' },
+    twitter:     { backgroundColor: '#000000', color: '#ffffff', border: '1px solid #000000', borderRadius: '9999px' },
+    youtube:     { backgroundColor: '#FF0000', color: '#ffffff', border: '1px solid #FF0000', borderRadius: '9999px' },
+    instagram:   { backgroundColor: '#E1306C', color: '#ffffff', border: '1px solid #E1306C', borderRadius: '9999px' },
+    facebook:    { backgroundColor: '#1877F2', color: '#ffffff', border: '1px solid #1877F2', borderRadius: '9999px' },
+  };
+
+  const isNamedTheme = isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme || isLightBackground;
+
+  const avatarThemeColor = isWatermelonTheme ? '#ff6b6b'
+    : isCartoonTheme ? '#ff6b35'
+    : isMacTheme ? '#0071e3'
+    : isZombieTheme ? '#9ae600'
+    : isCyberpunkTheme ? '#00d3f2'
+    : isNeoTheme ? '#9333ea'
+    : isBlocksTheme ? '#4ade80'
+    : isForestTheme ? '#4a7c59'
+    : isGothicTheme ? '#c27aff'
+    : isElectricTheme ? '#ffe033'
+    : (accentColor || undefined);
+
+  const getBtnStyle = (platform: string): React.CSSProperties => {
+    if (!isNamedTheme) return platformBrandStyles[platform] ?? socialOutlineStyle;
+    return socialOutlineStyle;
+  };
+
+  const shareButtonStyle = isWatermelonTheme ? {
+    color: '#1d3932',
+    background: '#ffb3c1',
+    border: '3px solid #1d3932',
+  } : isLightBackground ? {
+    color: accentColor,
+    background: 'rgba(255,255,255,0.37)',
+    border: '0.556px solid rgba(255,255,255,0.8)',
+  } : isZombieTheme ? {
+    color: '#9ae600',
+    background: 'rgba(15,28,8,0.8)',
+    border: '1px solid #9ae60099',
+  } : isCyberpunkTheme ? {
+    color: '#00d3f2',
+    background: 'rgba(0,6,18,0.8)',
+    border: '1px solid #00d3f299',
+    boxShadow: '0 0 10px #00d3f244',
+  } : isNeoTheme ? {
+    color: '#00ff41',
+    background: 'rgba(0,8,0,0.8)',
+    border: '1px solid #00ff4199',
+    boxShadow: '0 0 10px #00ff4144',
+  } : isBlocksTheme ? {
+    color: '#4ade80',
+    background: 'rgba(26,26,26,0.9)',
+    border: '2px solid #4ade8099',
+  } : isForestTheme ? {
+    color: '#e8d5b7',
+    background: 'rgba(14,45,28,0.85)',
+    border: '1px solid rgba(164,118,66,0.5)',
+  } : isMacTheme ? {
+    color: '#007aff',
+    background: 'rgba(255,255,255,0.85)',
+    border: '1px solid rgba(0,122,255,0.4)',
+    borderRadius: '6px',
+  } : isElectricTheme ? {
+    color: '#ffe033',
+    background: 'rgba(20,15,0,0.85)',
+    border: '1px solid #ffe03399',
+    boxShadow: '0 0 12px #ffe03344',
+  } : {
+    color: accentColor || 'hsl(var(--primary))',
+    background: 'rgba(0,0,0,0.5)',
+    border: `1px solid ${accentColor ? accentColor + '80' : 'rgba(255,255,255,0.2)'}`,
+  };
+
+  const tabListStyle = isWatermelonTheme ? {
+    background: '#ffb3c1',
+    border: '5px solid #1d3932',
+    borderRadius: '9999px',
+    padding: '4px 8px',
+  } : isMacTheme ? {
+    background: 'linear-gradient(180deg, #ebebeb 0%, #d6d6d6 100%)',
+    border: '1px solid #bdbdbd',
+    borderRadius: '9999px',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
+  } : isCartoonTheme ? {
+    background: '#ffffff',
+    border: '3px solid #1d1d1f',
+    borderRadius: '12px',
+    boxShadow: '4px 4px 0 #1d1d1f',
+    padding: '2px 4px',
+  } : isLightBackground ? {
+    background: 'rgba(255,255,255,0.37)',
+    border: '0.556px solid rgba(255,255,255,0.8)',
+    boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+  } : isZombieTheme ? {
+    background: 'rgba(15,28,8,0.9)',
+    border: '1px solid #9ae60044',
+    borderRadius: '9999px',
+    padding: '4px 8px',
+  } : isForestTheme ? {
+    background: 'rgba(10,35,20,0.88)',
+    border: '1.5px solid rgba(164,118,66,0.45)',
+    borderRadius: '9999px',
+    padding: '4px 8px',
+  } : isGothicTheme ? {
+    background: 'rgba(20,2,50,0.92)',
+    border: '1px solid #c27aff44',
+    borderRadius: '9999px',
+    padding: '4px 8px',
+    boxShadow: '0 0 18px #c27aff22',
+  } : isElectricTheme ? {
+    background: 'rgba(20,15,0,0.92)',
+    border: '1px solid #ffe03344',
+    borderRadius: '9999px',
+    padding: '4px 8px',
+    boxShadow: '0 0 18px #ffe03333, 0 0 4px #fff5 inset',
+  } : undefined;
+
+  const blocksTabColors: Record<string, string> = {
+    clips: '#ef4444',
+    reels: '#3b82f6',
+    screenshots: '#4ade80',
+    favorites: '#facc15',
+  };
+  const cartoonTabColors: Record<string, string> = {
+    clips: '#ff5e5e',
+    reels: '#3498db',
+    screenshots: '#27ae60',
+    favorites: '#f39c12',
+  };
+  const getTabStyle = (tabName: string) => ({
+    backgroundColor: isCartoonTheme ? 'transparent' : activeTab === tabName ? (isBlocksTheme ? (blocksTabColors[tabName] || accentColor) : isForestTheme ? '#e8d5b7' : isMacTheme ? accentColor : accentColor) : 'transparent',
+    color: isCartoonTheme ? (activeTab === tabName ? (cartoonTabColors[tabName] || '#1d1d1f') : 'rgba(0,0,0,0.25)') : activeTab === tabName ? (isBlocksTheme ? '#1a1a1a' : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#5C3317' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#c4a882' : isLightBackground ? accentColor : undefined,
+    ...(isCartoonTheme ? { fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: '800', letterSpacing: '-0.5px', fontSize: '1.1rem', borderBottom: activeTab === tabName ? `4px solid ${cartoonTabColors[tabName] || 'gold'}` : '4px solid transparent', borderRadius: '0', paddingBottom: '6px' } : {}),
+    ...(isZombieTheme ? { fontFamily: "'Creepster', cursive", letterSpacing: '2px', fontSize: '0.8rem' } : {}),
+    ...(isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2.5px', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase' as const } : {}),
+    ...(isNeoTheme ? { fontFamily: "'JetBrains Mono', monospace", letterSpacing: '1.5px', fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase' as const } : {}),
+    ...(isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.55rem', letterSpacing: '0.5px', textTransform: 'uppercase' as const, borderRadius: '2px' } : {}),
+    ...(isGothicTheme ? { fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '1.5px', fontSize: '0.78rem' } : {}),
+    ...(isElectricTheme ? { fontFamily: "'Bangers', 'Impact', cursive", letterSpacing: '2px', fontSize: '0.85rem', textTransform: 'uppercase' as const } : {}),
+  });
+
+  const nameTagBgStyle = isWatermelonTheme ? {
+    background: '#ffb3c1',
+    border: '5px solid #1d3932',
+    borderRadius: '9999px',
+  } : isLightBackground ? {
+    background: 'rgba(255,255,255,0.37)',
+    border: '0.556px solid rgba(255,255,255,0.8)',
+  } : isZombieTheme ? {
+    background: '#1a1d1a',
+    border: '1.667px solid #7ccf00',
+    boxShadow: '0 0 12px #9ae60033',
+  } : isCyberpunkTheme ? {
+    background: '#020617',
+    border: '0.556px solid #00b8db66',
+    boxShadow: '0 0 14px #00d3f222',
+  } : isNeoTheme ? {
+    background: '#000800',
+    border: '0.556px solid #00ff4166',
+    boxShadow: '0 0 12px #00ff4122',
+  } : isBlocksTheme ? {
+    background: '#1a1a1a',
+    border: '3px solid #4ade80',
+    borderRadius: '4px',
+    boxShadow: '4px 4px 0 #000',
+  } : isForestTheme ? {
+    background: '#1d3932',
+    border: '1px solid rgba(164,118,66,0.4)',
+  } : isMacTheme ? {
+    background: 'rgba(0,122,255,0.1)',
+    border: '1px solid rgba(0,122,255,0.3)',
+    borderRadius: '8px',
+  } : isCartoonTheme ? {
+    background: '#ffffff',
+    border: '3px solid #1d1d1f',
+    borderRadius: '16px',
+    boxShadow: '4px 4px 0 #1d1d1f',
+  } : isGothicTheme ? {
+    background: 'rgba(20,2,50,0.95)',
+    border: '1px solid #c27aff55',
+    boxShadow: '0 0 12px #c27aff33',
+  } : isElectricTheme ? {
+    background: 'rgba(15,12,0,0.95)',
+    border: '1px solid #ffe03366',
+    boxShadow: '0 0 14px #ffe03344',
+  } : {
+    background: 'rgba(30,30,30,0.85)',
+    border: '1px solid rgba(255,255,255,0.12)',
+  };
   const profileBackgroundImageUrl = bgImageSignedUrl || (profile as any).profileBackgroundImageUrl || '';
   const isMobileViewport = window.innerWidth <= 768;
   const profileBackgroundPosX = isMobileViewport
@@ -1354,6 +1647,19 @@ const ProfilePage = () => {
     } : null;
   };
 
+  const getRelativeLuminance = (hex: string): number => {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return 0;
+    const toLinear = (c: number) => {
+      const s = c / 255;
+      return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * toLinear(rgb.r) + 0.7152 * toLinear(rgb.g) + 0.0722 * toLinear(rgb.b);
+  };
+
+  const statsTextColor = isLightBackground ? '#111827' : '#FFFFFF';
+  const statsLabelColor = isLightBackground ? '#374151' : (accentColor || 'hsl(var(--primary))');
+
   // Darken a hex color by a percentage
   const darkenColor = (hex: string, percent: number) => {
     const rgb = hexToRgb(hex);
@@ -1367,10 +1673,7 @@ const ProfilePage = () => {
 
   const bgRgb = hexToRgb(backgroundColor);
   const accentRgb = hexToRgb(accentColor);
-  const defaultThemeColor = '#0B2232';
-
-  // Debug: Log the actual colors being used
-  console.log('Profile colors:', { accentColor, backgroundColor, bgRgb, accentRgb });
+  const defaultThemeColor = profile.primaryColor || '#0B2232';
 
   const selectedProfileNftDetail = selectedProfileNft ? (() => {
     const { score } = getNftRarity(selectedProfileNft);
@@ -1411,8 +1714,16 @@ const ProfilePage = () => {
   return (
     <>
     {selectedProfileNftDetail}
+    {isNeoTheme && !profileBackgroundImageUrl && (
+      <div style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 0, pointerEvents: 'none' }} />
+    )}
+    {isNeoTheme && !profileBackgroundImageUrl && (
+      <canvas ref={neoCanvasRef} className="neo-canvas" />
+    )}
+    {isNeoTheme && !profileBackgroundImageUrl && <div className="neo-vignette" />}
+    {isNeoTheme && !profileBackgroundImageUrl && <div className="neo-scanline" />}
     <div 
-      className="min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope" 
+      className={`min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope${isBlocksTheme && !profileBackgroundImageUrl ? ' blocks-bg' : ''}`}
       ref={profileThemeScopeRef}
       style={profileBackgroundImageUrl ? {
         backgroundImage: `url(${profileBackgroundImageUrl})`,
@@ -1421,8 +1732,24 @@ const ProfilePage = () => {
         backgroundAttachment: 'fixed',
         position: 'relative',
         zIndex: 1
-      } : { 
-        background: `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
+      } : isNeoTheme ? {
+        background: 'transparent',
+        position: 'relative',
+        zIndex: 1
+      } : isBlocksTheme ? {
+        background: '#87ceeb',
+        position: 'relative',
+        zIndex: 1
+      } : isForestTheme ? {
+        backgroundColor: '#0a2f1f',
+        position: 'relative',
+        zIndex: 1
+      } : (profile as any).profileBackgroundGradient !== false ? {
+        background: isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
+        position: 'relative',
+        zIndex: 1
+      } : {
+        backgroundColor: backgroundColor,
         position: 'relative',
         zIndex: 1
       }}
@@ -1463,7 +1790,7 @@ const ProfilePage = () => {
 
       {/* Enhanced Banner with global theme colors */}
       <div 
-        className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 border-b-4 border-primary ${resolvedBannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
+        className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 ${resolvedBannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
         style={{
           ...bannerStyle,
           opacity: hideBanner ? 0 : 1,
@@ -1552,8 +1879,620 @@ const ProfilePage = () => {
         ></div>
         </>
         )}
+
+        {/* Bottom fade — merges banner into page background */}
+        <div className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none" style={{ background: `linear-gradient(to bottom, transparent, ${backgroundColor})` }} />
       </div>
 
+      {/* Zombie theme animations */}
+      {isZombieTheme && (
+        <style>{`
+          @keyframes zombieFlicker {
+            0%,88%,92%,100% { opacity:1; filter:brightness(1); }
+            89% { opacity:0.55; filter:brightness(1.6) saturate(2); }
+            90%,91% { opacity:0.82; filter:brightness(0.75); }
+          }
+
+          @keyframes zombieGlow {
+            0%,100% { box-shadow:0 0 18px #9ae60055, 0 0 40px #9ae60022; }
+            50% { box-shadow:0 0 30px #9ae60099, 0 0 70px #9ae60044; }
+          }
+          .zombie-stats-card {
+            animation: zombieFlicker 8s infinite 1.5s, zombieGlow 3.5s ease-in-out infinite;
+          }
+          /* ── Zombie fog layers ── */
+          @keyframes zombieFogDrift1 {
+            0%   { transform: translate(0%,    0%); }
+            25%  { transform: translate(7%,   -5%); }
+            50%  { transform: translate(3%,    8%); }
+            75%  { transform: translate(-6%,   4%); }
+            100% { transform: translate(0%,    0%); }
+          }
+          @keyframes zombieFogDrift2 {
+            0%   { transform: translate(0%,    0%); }
+            33%  { transform: translate(-9%,   6%); }
+            66%  { transform: translate(6%,   -8%); }
+            100% { transform: translate(0%,    0%); }
+          }
+          @keyframes zombieFogDrift3 {
+            0%   { transform: translate(0%,    0%); }
+            50%  { transform: translate(5%,    7%); }
+            100% { transform: translate(0%,    0%); }
+          }
+          .zombie-fog-1 {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              radial-gradient(ellipse 70% 50% at 20% 30%, #1a2e0a88 0%, transparent 70%),
+              radial-gradient(ellipse 50% 60% at 80% 70%, #0d1a0577 0%, transparent 70%),
+              radial-gradient(ellipse 80% 40% at 50% 90%, #9ae60020 0%, transparent 60%);
+            animation: zombieFogDrift1 28s ease-in-out infinite;
+          }
+          .zombie-fog-2 {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              radial-gradient(ellipse 60% 70% at 72% 18%, #9ae60016 0%, transparent 65%),
+              radial-gradient(ellipse 45% 55% at 10% 78%, #1a2e0a66 0%, transparent 70%),
+              radial-gradient(ellipse 90% 35% at 38% 52%, #0d1a0544 0%, transparent 60%);
+            animation: zombieFogDrift2 35s ease-in-out infinite;
+          }
+          .zombie-fog-3 {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              radial-gradient(ellipse 55% 80% at 85% 42%, #9ae60012 0%, transparent 68%),
+              radial-gradient(ellipse 75% 45% at 14% 58%, #1a2e0a55 0%, transparent 65%);
+            animation: zombieFogDrift3 44s ease-in-out infinite;
+          }
+          .zombie-bg-pulse {
+            position:fixed;
+            inset:0;
+            pointer-events:none;
+            z-index:0;
+            opacity:0.35;
+            background-image:
+              linear-gradient(0deg, #9ae60038 1px, transparent 1px),
+              linear-gradient(90deg, #9ae60038 1px, transparent 1px);
+            background-size:48px 48px;
+          }
+          @keyframes zombieMeshSweep {
+            0%   { transform: rotate(20deg) translateX(-200vw); }
+            100% { transform: rotate(20deg) translateX(200vw); }
+          }
+          .zombie-mesh-sweep {
+            position:fixed;
+            top:-50vh;
+            left:-50vw;
+            width:200vw;
+            height:200vh;
+            pointer-events:none;
+            z-index:0;
+            background: linear-gradient(
+              90deg,
+              transparent 0%,
+              transparent 42%,
+              #9ae60008 46%,
+              #9ae60055 49%,
+              #9ae600bb 50%,
+              #9ae60055 51%,
+              #9ae60008 54%,
+              transparent 58%,
+              transparent 100%
+            );
+            animation: zombieMeshSweep 7s ease-in-out infinite;
+          }
+        `}</style>
+      )}
+      {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-fog-1" />}
+      {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-fog-2" />}
+      {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-fog-3" />}
+      {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-bg-pulse" />}
+      {isZombieTheme && !profileBackgroundImageUrl && <div className="zombie-mesh-sweep" />}
+      {/* Cyberpunk theme animations */}
+      {isCyberpunkTheme && (
+        <style>{`
+          @keyframes cyberBorderGlow {
+            0%,100% { box-shadow:0 0 12px #00d3f266, 0 0 32px #00d3f222; border-color:#00b8db; }
+            50%      { box-shadow:0 0 14px #e12afb77, 0 0 36px #e12afb22; border-color:#e12afb; }
+          }
+          .cyber-stats-card {
+            position:relative;
+            animation: cyberBorderGlow 4s ease-in-out infinite;
+          }
+          .cyber-stats-card::before,.cyber-stats-card::after {
+            content:'';
+            position:absolute;
+            width:10px;
+            height:10px;
+            pointer-events:none;
+          }
+          .cyber-stats-card::before { top:-1px; left:-1px; border-top:1.667px solid #ffffff88; border-left:1.667px solid #ffffff88; }
+          .cyber-stats-card::after  { bottom:-1px; right:-1px; border-bottom:1.667px solid #ffffff88; border-right:1.667px solid #ffffff88; }
+          /* ── Diamond mesh base ── */
+          @keyframes cyberNodePulse {
+            0%,100% { opacity:0.18; transform:scale(1); }
+            50%      { opacity:0.32; transform:scale(1.012); }
+          }
+          .cyber-bg-mesh {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background-image:
+              radial-gradient(circle, #00d3f228 1.5px, transparent 1.5px),
+              linear-gradient(45deg,  #00b8db1a 1px, transparent 1px),
+              linear-gradient(-45deg, #e12afb14 1px, transparent 1px);
+            background-size:48px 48px, 48px 48px, 48px 48px;
+            animation: cyberNodePulse 4s ease-in-out infinite;
+          }
+          /* ── Diagonal scan sweep (cyan→magenta) ── */
+          @keyframes cyberScanSweep {
+            0%   { transform: rotate(15deg) translateX(-200vw); }
+            100% { transform: rotate(15deg) translateX(200vw); }
+          }
+          .cyber-scan-sweep {
+            position:fixed; top:-50vh; left:-50vw; width:200vw; height:200vh;
+            pointer-events:none; z-index:0;
+            background: linear-gradient(
+              90deg,
+              transparent 0%, transparent 44%,
+              #00d3f206 46%, #00d3f255 48%,
+              #e12afbcc 50%,
+              #00d3f255 52%, #00d3f206 54%,
+              transparent 56%, transparent 100%
+            );
+            animation: cyberScanSweep 9s linear infinite;
+          }
+          /* ── Glitch scanlines base ── */
+          .cyber-scanlines {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background: repeating-linear-gradient(
+              0deg,
+              transparent,
+              transparent 3px,
+              rgba(0,0,0,0.18) 3px,
+              rgba(0,0,0,0.18) 4px
+            );
+          }
+          /* ── RGB chromatic-aberration channels ── */
+          @keyframes cyberRGBR {
+            0%,79%  { transform:translate(0,0); opacity:0; }
+            80%     { transform:translate(7px,0); opacity:0.45; }
+            81%     { transform:translate(-4px,1px); opacity:0.3; }
+            82%     { transform:translate(0,0); opacity:0; }
+            91%     { transform:translate(5px,-1px); opacity:0.35; }
+            92%     { transform:translate(0,0); opacity:0; }
+            100%    { opacity:0; }
+          }
+          @keyframes cyberRGBB {
+            0%,79%  { transform:translate(0,0); opacity:0; }
+            80%     { transform:translate(-7px,0); opacity:0.45; }
+            81%     { transform:translate(4px,-1px); opacity:0.3; }
+            82%     { transform:translate(0,0); opacity:0; }
+            91%     { transform:translate(-5px,1px); opacity:0.35; }
+            92%     { transform:translate(0,0); opacity:0; }
+            100%    { opacity:0; }
+          }
+          .cyber-rgb-red {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              linear-gradient(180deg, transparent 15%, #ff004422 15.4%, transparent 15.8%),
+              linear-gradient(180deg, transparent 48%, #ff003318 48.5%, transparent 49%),
+              linear-gradient(180deg, transparent 72%, #ff005522 72.4%, transparent 72.8%);
+            mix-blend-mode: screen;
+            animation: cyberRGBR 8s step-start infinite;
+          }
+          .cyber-rgb-blue {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              linear-gradient(180deg, transparent 15%, #0055ff22 15.4%, transparent 15.8%),
+              linear-gradient(180deg, transparent 48%, #0033ff18 48.5%, transparent 49%),
+              linear-gradient(180deg, transparent 72%, #0077ff22 72.4%, transparent 72.8%);
+            mix-blend-mode: screen;
+            animation: cyberRGBB 8s step-start infinite;
+          }
+          /* ── Horizontal glitch tear lines ── */
+          @keyframes cyberGlitchTear {
+            0%,74%  { transform:translateX(0); opacity:0.55; }
+            75%     { transform:translateX(-12px); opacity:0.8; }
+            75.5%   { transform:translateX(9px);  opacity:0.7; }
+            76%     { transform:translateX(-6px);  opacity:0.6; }
+            76.5%   { transform:translateX(0);     opacity:0.55; }
+            88%     { transform:translateX(0);     opacity:0.55; }
+            88.5%   { transform:translateX(16px);  opacity:0.9; }
+            89%     { transform:translateX(-8px);  opacity:0.7; }
+            89.5%   { transform:translateX(4px);   opacity:0.6; }
+            90%     { transform:translateX(0);     opacity:0.55; }
+            100%    { transform:translateX(0);     opacity:0.55; }
+          }
+          .cyber-glitch-lines {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              linear-gradient(180deg, transparent 22%,   #00d3f214 22.25%, transparent 22.5%),
+              linear-gradient(180deg, transparent 41%,   #e12afb11 41.3%,  transparent 41.6%),
+              linear-gradient(180deg, transparent 63%,   #00d3f212 63.2%,  transparent 63.4%),
+              linear-gradient(180deg, transparent 85.5%, #e12afb14 85.8%,  transparent 86.1%);
+            animation: cyberGlitchTear 7s step-start infinite;
+          }
+          /* ── Digital interference noise ── */
+          @keyframes cyberInterference {
+            0%   { opacity:0.06; background-position: 0 0; }
+            25%  { opacity:0.09; background-position: 3px -2px; }
+            50%  { opacity:0.06; background-position: -2px 4px; }
+            75%  { opacity:0.08; background-position: 4px 1px; }
+            100% { opacity:0.06; background-position: 0 0; }
+          }
+          .cyber-interference {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background-image:
+              repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,211,242,0.08) 1px, rgba(0,211,242,0.08) 2px),
+              repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(225,42,251,0.05) 1px, rgba(225,42,251,0.05) 2px);
+            background-size: 4px 4px, 4px 4px;
+            animation: cyberInterference 0.15s step-start infinite;
+          }
+          .cyber-gradient-text {
+            background: linear-gradient(270deg, #00d3f2 0%, #e12afb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+          }
+          .cyber-platform-section span {
+            background: linear-gradient(270deg, #00d3f2 0%, #e12afb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+          }
+          @keyframes cyberIconColorCycle {
+            0%,100% { color: #00d3f2; filter: drop-shadow(0 0 3px #00d3f277); }
+            50%      { color: #e12afb; filter: drop-shadow(0 0 3px #e12afb77); }
+          }
+          .cyber-platform-section svg {
+            animation: cyberIconColorCycle 4s ease-in-out infinite;
+          }
+          @keyframes cyberTabGlow {
+            0%,100% { box-shadow:0 0 8px #00d3f244, inset 0 0 8px #00d3f211; border-color:#00b8db88; }
+            50%      { box-shadow:0 0 14px #e12afb55, inset 0 0 10px #e12afb11; border-color:#e12afb88; }
+          }
+          .cyber-tab-list {
+            background: #020617 !important;
+            border: 1px solid #00b8db88 !important;
+            border-radius: 4px !important;
+            animation: cyberTabGlow 4s ease-in-out infinite;
+            clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+          }
+        `}</style>
+      )}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-bg-mesh" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-scan-sweep" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-scanlines" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-rgb-red" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-rgb-blue" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-glitch-lines" />}
+      {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-interference" />}
+      {/* NEO / Matrix theme */}
+      {isNeoTheme && (
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+          @keyframes neoGlow {
+            0%,100% { box-shadow: 0 0 8px #00ff4144, 0 0 24px #00ff4111; border-color: #00ff4188; }
+            50%      { box-shadow: 0 0 16px #00ff4177, 0 0 40px #00ff4122; border-color: #00ff41cc; }
+          }
+          @keyframes neoScanline {
+            0%   { transform: translateY(-100%); }
+            100% { transform: translateY(100vh); }
+          }
+          @keyframes neoFlicker {
+            0%,100% { opacity: 1; }
+            92%     { opacity: 1; }
+            93%     { opacity: 0.85; }
+            94%     { opacity: 1; }
+            96%     { opacity: 0.9; }
+            97%     { opacity: 1; }
+          }
+          .neo-canvas {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            opacity: 0.18;
+            animation: neoFlicker 8s step-start infinite;
+          }
+          .neo-vignette {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background: radial-gradient(ellipse 85% 85% at 50% 50%, transparent 55%, rgba(0,0,0,0.72) 100%);
+          }
+          .neo-scanline {
+            position: fixed; left: 0; width: 100%; height: 2px; pointer-events: none; z-index: 0;
+            background: linear-gradient(180deg, transparent 0%, #00ff4122 50%, transparent 100%);
+            animation: neoScanline 6s linear infinite;
+          }
+          .neo-stats-card {
+            animation: neoGlow 3s ease-in-out infinite;
+          }
+          .neo-tab-list {
+            background: #000800 !important;
+            border: 1px solid #00ff4177 !important;
+            border-radius: 2px !important;
+            animation: neoGlow 3s ease-in-out infinite;
+          }
+          .neo-gradient-text {
+            background: linear-gradient(90deg, #00ff41 0%, #88ffaa 50%, #00ff41 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: neoTextShift 4s linear infinite;
+          }
+          @keyframes neoTextShift {
+            0%   { background-position: 0% center; }
+            100% { background-position: 200% center; }
+          }
+          .neo-platform-section span {
+            color: #00ff41;
+          }
+          .neo-platform-section svg {
+            color: #00ff41;
+            filter: drop-shadow(0 0 4px #00ff4188);
+          }
+        `}</style>
+      )}
+      {/* Blocks / Minecraft theme */}
+      {isBlocksTheme && (
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+          @keyframes blocksGlow {
+            0%,100% { box-shadow: 0 0 0 3px #4ade8066, 6px 6px 0 #000; }
+            50%      { box-shadow: 0 0 0 3px #4ade80aa, 6px 6px 0 #000; }
+          }
+          .blocks-stats-card {
+            border: 3px solid #4ade80 !important;
+            border-radius: 4px !important;
+            animation: blocksGlow 2s ease-in-out infinite;
+          }
+          .blocks-tab-list {
+            background: #2a2a2a !important;
+            border: 3px solid #4ade80 !important;
+            border-radius: 4px !important;
+            box-shadow: 6px 6px 0 #000 !important;
+          }
+          .blocks-tab-list [data-state="active"] {
+            border-radius: 2px !important;
+            box-shadow: inset 0 -3px 0 rgba(0,0,0,0.35) !important;
+          }
+          .blocks-platform-section > div {
+            box-shadow: 3px 3px 0 #000 !important;
+          }
+          .blocks-platform-section span {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.5rem;
+            color: #4ade80;
+          }
+          .blocks-platform-section svg {
+            color: #4ade80;
+          }
+          .blocks-bg::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background-image:
+              linear-gradient(white, white),
+              linear-gradient(white, white),
+              linear-gradient(white, white),
+              linear-gradient(#5ea832, #5ea832),
+              linear-gradient(#8b5e3c, #8b5e3c),
+              linear-gradient(#6b4a2e, #6b4a2e),
+              linear-gradient(180deg, #5ba3d0 0%, #87ceeb 55%, #b4daf5 100%);
+            background-size:
+              96px 32px,
+              72px 24px,
+              80px 28px,
+              100% 16px,
+              100% 32px,
+              100% 16px,
+              100% 100%;
+            background-position:
+              8% 12%,
+              52% 6%,
+              80% 20%,
+              0 calc(100% - 48px),
+              0 calc(100% - 32px),
+              0 calc(100% - 16px),
+              0 0;
+            background-repeat: no-repeat;
+          }
+          .blocks-nft-header {
+            background: #2a2a2a !important;
+            border: 3px solid #a855f7 !important;
+            border-radius: 4px !important;
+            box-shadow: 6px 6px 0 #000 !important;
+          }
+          .blocks-nft-card {
+            border: 3px solid #000 !important;
+            border-radius: 4px !important;
+            box-shadow: 4px 4px 0 #000 !important;
+            transition: box-shadow 0.1s, transform 0.1s !important;
+          }
+          .blocks-nft-card:hover {
+            box-shadow: 6px 6px 0 #000 !important;
+            transform: translate(-2px, -2px) !important;
+          }
+          .image-rendering-pixelated {
+            image-rendering: pixelated;
+          }
+        `}</style>
+      )}
+      {/* Watermelon theme */}
+      {isWatermelonTheme && (
+        <style>{`
+          .watermelon-stats-card {
+            border-radius: 9999px !important;
+            background: #ffb3c1 !important;
+            border: 5px solid #1d3932 !important;
+            padding-left: 8px !important;
+            padding-right: 8px !important;
+          }
+          .watermelon-stat-item {
+            padding: 4px 20px;
+            text-align: center;
+          }
+          .watermelon-stat-item:not(:last-child) {
+            border-right: 2px solid rgba(0,0,0,0.12);
+            padding-right: 20px;
+          }
+          .watermelon-tab-list {
+            border-radius: 9999px !important;
+            background: #ffb3c1 !important;
+            border: 5px solid #1d3932 !important;
+            padding: 4px 8px !important;
+          }
+          .watermelon-platform-section > div {
+            background: #1d3932cc !important;
+            border: 2px solid #1d3932 !important;
+            border-radius: 9999px !important;
+          }
+          .watermelon-platform-section span {
+            color: #4ade80 !important;
+          }
+          .watermelon-platform-section svg {
+            color: #4ade80 !important;
+          }
+        `}</style>
+      )}
+      {/* Electric theme animations */}
+      {isElectricTheme && (
+        <style>{`
+          @keyframes electricCardGlow {
+            0%,100% { box-shadow: 0 0 12px #ffe03366, 0 0 28px #ffe03322; }
+            50%      { box-shadow: 0 0 22px #ffe033cc, 0 0 55px #ffe03355, 0 0 90px #fff81022; }
+          }
+          .electric-stats-card {
+            animation: electricCardGlow 1.8s ease-in-out infinite;
+          }
+          @keyframes lightningStrike1 {
+            0%,82%,100%  { opacity:0; }
+            83%  { opacity:1; }
+            84%  { opacity:0.35; }
+            85%  { opacity:0.9; }
+            86%  { opacity:0; }
+          }
+          @keyframes lightningStrike2 {
+            0%,90%,100%  { opacity:0; }
+            91%  { opacity:0.9; }
+            92%  { opacity:0.25; }
+            93%  { opacity:0; }
+          }
+          @keyframes lightningStrike3 {
+            0%,73%,100%  { opacity:0; }
+            74%  { opacity:0.7; }
+            75%  { opacity:0; }
+          }
+          @keyframes electricFlash1 {
+            0%,82%,100% { opacity:0; }
+            83% { opacity:0.18; }
+            84% { opacity:0; }
+            85% { opacity:0.10; }
+            86% { opacity:0; }
+          }
+          @keyframes electricFlash2 {
+            0%,90%,100% { opacity:0; }
+            91% { opacity:0.15; }
+            92% { opacity:0; }
+          }
+          @keyframes electricPlasma1 {
+            0%,100% { transform: translate(0,0) scale(1); }
+            33%     { transform: translate(4%,-3%) scale(1.03); }
+            66%     { transform: translate(-3%,4%) scale(0.97); }
+          }
+          @keyframes electricPlasma2 {
+            0%,100% { transform: translate(0,0) scale(1); }
+            50%     { transform: translate(-5%,-2%) scale(1.02); }
+          }
+          @keyframes electricPlasma3 {
+            0%,100% { transform: translate(0,0); }
+            40%     { transform: translate(3%,5%); }
+            80%     { transform: translate(-4%,-3%); }
+          }
+          .electric-bolt-1 {
+            position:fixed; inset:0; pointer-events:none; z-index:2;
+            background: linear-gradient(
+              65deg,
+              transparent 0%, transparent 28%,
+              rgba(255,248,100,0.04) 33%,
+              rgba(255,248,100,0.92) 36%,
+              rgba(255,255,255,1) 36.8%,
+              rgba(255,248,100,0.92) 37.5%,
+              rgba(255,248,100,0.04) 42%,
+              transparent 47%, transparent 100%
+            );
+            animation: lightningStrike1 6s linear infinite;
+          }
+          .electric-bolt-2 {
+            position:fixed; inset:0; pointer-events:none; z-index:2;
+            background: linear-gradient(
+              -52deg,
+              transparent 0%, transparent 52%,
+              rgba(255,248,100,0.04) 57%,
+              rgba(255,248,100,0.88) 60%,
+              rgba(255,255,255,0.98) 60.8%,
+              rgba(255,248,100,0.88) 61.5%,
+              rgba(255,248,100,0.04) 66%,
+              transparent 71%, transparent 100%
+            );
+            animation: lightningStrike2 8s linear infinite 1.8s;
+          }
+          .electric-bolt-3 {
+            position:fixed; inset:0; pointer-events:none; z-index:2;
+            background: linear-gradient(
+              78deg,
+              transparent 0%, transparent 68%,
+              rgba(255,248,100,0.03) 71%,
+              rgba(255,248,100,0.75) 74%,
+              rgba(255,255,255,0.92) 74.8%,
+              rgba(255,248,100,0.75) 75.5%,
+              rgba(255,248,100,0.03) 79%,
+              transparent 83%, transparent 100%
+            );
+            animation: lightningStrike3 10s linear infinite 4.5s;
+          }
+          .electric-flash-1 {
+            position:fixed; inset:0; pointer-events:none; z-index:1;
+            background: rgba(255,240,50,0.14);
+            animation: electricFlash1 6s linear infinite;
+          }
+          .electric-flash-2 {
+            position:fixed; inset:0; pointer-events:none; z-index:1;
+            background: rgba(255,240,50,0.12);
+            animation: electricFlash2 8s linear infinite 1.8s;
+          }
+          .electric-plasma-1 {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              radial-gradient(ellipse 60% 40% at 15% 25%, rgba(255,224,51,0.14) 0%, transparent 70%),
+              radial-gradient(ellipse 45% 55% at 85% 70%, rgba(255,224,51,0.09) 0%, transparent 70%),
+              radial-gradient(ellipse 80% 35% at 50% 95%, rgba(255,200,0,0.07) 0%, transparent 60%);
+            animation: electricPlasma1 9s ease-in-out infinite;
+          }
+          .electric-plasma-2 {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            background:
+              radial-gradient(ellipse 50% 70% at 78% 18%, rgba(255,224,51,0.11) 0%, transparent 65%),
+              radial-gradient(ellipse 40% 50% at 10% 82%, rgba(255,224,51,0.08) 0%, transparent 70%),
+              radial-gradient(ellipse 90% 30% at 40% 55%, rgba(255,200,0,0.06) 0%, transparent 60%);
+            animation: electricPlasma2 13s ease-in-out infinite;
+          }
+          .electric-plasma-3 {
+            position:fixed; inset:0; pointer-events:none; z-index:0;
+            opacity:0.4;
+            background-image:
+              linear-gradient(0deg, rgba(255,224,51,0.06) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255,224,51,0.06) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: electricPlasma3 20s ease-in-out infinite;
+          }
+        `}</style>
+      )}
+      {isElectricTheme && !profileBackgroundImageUrl && <div className="electric-plasma-1" />}
+      {isElectricTheme && !profileBackgroundImageUrl && <div className="electric-plasma-2" />}
+      {isElectricTheme && !profileBackgroundImageUrl && <div className="electric-plasma-3" />}
+      {isElectricTheme && <div className="electric-bolt-1" />}
+      {isElectricTheme && <div className="electric-bolt-2" />}
+      {isElectricTheme && <div className="electric-bolt-3" />}
+      {isElectricTheme && <div className="electric-flash-1" />}
+      {isElectricTheme && <div className="electric-flash-2" />}
       {/* Share button - positioned on banner top right for mobile */}
       <div className="block md:hidden absolute top-4 right-4 z-30">
         <React.Suspense fallback={null}>
@@ -1590,7 +2529,8 @@ const ProfilePage = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="p-2 h-10 w-10 rounded-full hover:bg-primary/10 bg-background/80 backdrop-blur-sm"
+                className="p-2 h-10 w-10 rounded-full hover:opacity-90 backdrop-blur-sm"
+                style={shareButtonStyle}
               >
                 <Share2 className="w-5 h-5" />
               </Button>
@@ -1600,12 +2540,14 @@ const ProfilePage = () => {
       </div>
 
       {/* Profile Info - positioned below banner with overlapping profile picture */}
-      <div className="max-w-[98%] md:max-w-[90%] mx-auto relative z-20">
+      <div
+        className="max-w-[98%] md:max-w-[90%] mx-auto relative z-20"
+      >
 
         {/* Mobile Layout - Left-aligned like reference design */}
         <div className="block md:hidden pb-6 relative" style={{ marginTop: '-80px', paddingTop: '0px' }}>
           {/* Profile Picture - Left aligned on Mobile */}
-          <div className="flex justify-start mb-2 pl-4">
+          <div className="flex mb-2 justify-start pl-4">
             {/* Explicit dimensions to ensure circular glow renders correctly - matches profile avatar sizes */}
             <div className="relative h-28 w-28">
               {/* Circular glow removed on mobile per user request */}
@@ -1629,6 +2571,7 @@ const ProfilePage = () => {
                   showAvatarBorderOverlay={true}
                   showLiveOverlay={!!(isStreamer && (profile?.twitchVerified || profile?.kickVerified))}
                   isLive={profileLiveStatus?.isLive ?? false}
+                  themeColor={avatarThemeColor}
                   className="h-full w-full"
                 />
               </div>
@@ -1666,9 +2609,8 @@ const ProfilePage = () => {
                     style={{
                       width: '120px',
                       height: '28px',
-                      background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
-                      border: '1px solid rgba(148, 163, 184, 0.2)',
-                      boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
+                      ...nameTagBgStyle,
+                      ...(isLightBackground ? {} : { boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)' })
                     }}
                   />
                   <img 
@@ -1688,7 +2630,10 @@ const ProfilePage = () => {
                     }}
                   />
                 </div>
-                <span className="text-[10px] text-white/40 mt-1 uppercase tracking-widest hover:text-white/60 transition-colors">Nametag</span>
+                <span
+                  className="text-[10px] mt-1 uppercase tracking-widest transition-colors"
+                  style={isCyberpunkTheme ? { background: 'linear-gradient(270deg,#00d3f2,#e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontFamily: "'Orbitron', sans-serif", letterSpacing: '1.4px' } : { color: 'rgba(255,255,255,0.4)' }}
+                >Nametag</span>
               </div>
             </div>
           )}
@@ -1770,7 +2715,10 @@ const ProfilePage = () => {
                       }}
                     />
                   </div>
-                  <span className="text-[10px] text-white/40 mt-1 uppercase tracking-widest hover:text-white/60 transition-colors">Nametag</span>
+                  <span
+                    className="text-[10px] mt-1 uppercase tracking-widest transition-colors"
+                    style={isCyberpunkTheme ? { background: 'linear-gradient(270deg,#00d3f2,#e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontFamily: "'Orbitron', sans-serif", letterSpacing: '1.4px' } : { color: 'rgba(255,255,255,0.4)' }}
+                  >Nametag</span>
                 </div>
               )}
             </div>
@@ -1780,20 +2728,19 @@ const ProfilePage = () => {
           {/* Username and Display Name - Left aligned on Mobile */}
           <div className="flex flex-col items-start gap-0.5 mb-2 mt-8 pl-4">
             <div className="flex items-center gap-2">
-              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, color: profileFontColor, fontSize: `${1.25 * profileFontScale}rem`, lineHeight: `${1.75 * profileFontScale}rem` }}>{profile.displayName}</h1>
+              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: isMacTheme ? 'none' : profileTextShadow, color: isWatermelonTheme ? '#ffffff' : isMacTheme ? '#1a1a1a' : isLightBackground ? accentColor : profileFontColor, fontSize: `${1.25 * profileFontScale}rem`, lineHeight: `${1.75 * profileFontScale}rem` }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
                 badgeName={verificationBadgeData?.verificationBadge?.name}
                 size="lg"
-                isModerator={profile.role === "moderator" || profile.role === "admin"}
               />
               <ModeratorBadge 
-                isModerator={profile.role === "moderator" || profile.role === "admin"} 
+                isModerator={(profile.role === "moderator" || profile.role === "admin") && !verificationBadgeData?.verificationBadge} 
                 size="lg" 
               />
             </div>
-            <span className="text-sm text-white/60 font-normal">@{profile.username}</span>
+            <span className="text-sm font-normal" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.6)' }}>@{profile.username}</span>
             {/* User type badges on their own line */}
             {profile.userType && profile.showUserType !== false && (
               <div className="flex items-center gap-2 flex-wrap mt-3 mb-2">
@@ -1809,14 +2756,19 @@ const ProfilePage = () => {
                       <Badge 
                         key={`${type}-${index}`}
                         variant="outline" 
-                        className="border text-xs font-medium px-2 py-0.5"
-                        style={{
-                          backgroundColor: `${accentColor}20`,
-                          color: accentColor,
-                          borderColor: `${accentColor}50`,
+                        className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px]"
+                        style={isLightBackground ? {
+                          backgroundColor: 'rgba(255,255,255,0.6)',
+                          color: '#ff2056',
+                          border: '0.556px solid #fda5d5',
+                          boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+                        } : {
+                          backgroundColor: `${accentColor || '#00bba7'}1a`,
+                          color: accentColor || '#00d5be',
+                          borderColor: `${accentColor || '#00bba7'}66`,
                         }}
                       >
-                        <IconComponent className="w-3 h-3 mr-1" />
+                        <IconComponent className="w-3 h-3 mr-1.5" />
                         {config.label}
                       </Badge>
                     );
@@ -1826,150 +2778,226 @@ const ProfilePage = () => {
             )}
           </div>
 
-          {/* L-shaped fading border container for profile info */}
-          <div className="relative mt-4 mb-1 mx-4">
-            {/* Curved corner piece */}
+          {/* Bio — below the streamer badge, outside the card */}
+          {profile.bio && (
+            <div className="mx-4 mt-2 mb-1">
+              <p className={`text-sm pr-4 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>{profile.bio}</p>
+            </div>
+          )}
+
+          {/* Profile Info Card — stats only, Collection button on top-right border */}
+          <div className="relative mx-4 mt-2 mb-1">
+            {/* Collection button pinned to top-right border of the card */}
+            <button 
+              onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
+              className="absolute -top-3 -right-1 z-10 px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
+              style={{ 
+                background: profileSectionTab === 'collection'
+                  ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : '#1a1a2e')
+                  : isWatermelonTheme
+                    ? '#ffb3c1'
+                    : isLightBackground
+                      ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
+                      : isZombieTheme
+                        ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
+                        : isCyberpunkTheme
+                          ? 'rgba(2,6,23,0.9)'
+                          : isNeoTheme
+                            ? 'linear-gradient(180deg, #003300 0%, #001400 100%)'
+                            : isBlocksTheme
+                              ? 'linear-gradient(180deg, #4ade80 0%, #22c55e 100%)'
+                              : isForestTheme
+                                ? '#1d3932'
+                                : isGothicTheme
+                                  ? 'linear-gradient(135deg, #3d0070 0%, #1e053a 100%)'
+                                  : isCartoonTheme
+                                    ? (profileSectionTab === 'collection' ? '#fffaec' : 'linear-gradient(135deg, #ff5e5e 0%, #ff7a5e 100%)')
+                                    : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#4ade80' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : '#0f172b',
+                border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #4ade80' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : undefined,
+                fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : isGothicTheme ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" : isCartoonTheme ? "'Bricolage Grotesque', 'Arial Black', sans-serif" : undefined,
+                letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : isNeoTheme ? '1.5px' : isBlocksTheme ? '0.5px' : isGothicTheme ? '1.5px' : isCartoonTheme ? '-0.5px' : undefined,
+                fontWeight: isCyberpunkTheme ? '900' : isNeoTheme ? '700' : isBlocksTheme ? '400' : isCartoonTheme ? '800' : undefined,
+                fontSize: isBlocksTheme ? '0.5rem' : isCartoonTheme ? '0.7rem' : undefined,
+                borderRadius: isBlocksTheme ? '4px' : undefined,
+                boxShadow: isBlocksTheme ? '4px 4px 0 #000' : isGothicTheme ? '0 0 14px #c27aff33' : isCartoonTheme ? '3px 3px 0 #1d1d1f' : undefined,
+              }}>
+                <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>{isGothicTheme ? '👻 Collection' : 'Collection'}</span>
+            </button>
+
+            {/* Stats card container */}
+            <div
+              className="relative mt-4 rounded-lg transition-all duration-300"
+            >
+
             <div 
-              className="absolute top-0 -left-4 w-3 h-3 pointer-events-none"
-              style={{
-                borderLeft: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
-                borderTop: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
-                borderTopLeftRadius: '10px',
-              }}
-            />
-            
-            {/* Top horizontal line - fades to right with Collection button */}
-            <div 
-              className="absolute top-0 -left-1 h-[2px] flex items-center"
-              style={{
-                width: 'calc(100% + 4px)',
-                background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, transparent 100%)`,
+              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''}`}
+              style={isWatermelonTheme ? {
+                background: '#ffb3c1',
+              } : isCartoonTheme ? {
+                background: '#ffffff',
+                border: '4px solid #000000',
+                borderRadius: '32px',
+                boxShadow: '8px 8px 0 #000000',
+              } : isLightBackground ? {
+                background: 'rgba(255,255,255,0.37)',
+                border: '0.556px solid rgba(255,255,255,0.8)',
+                boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+              } : isZombieTheme ? {
+                background: '#1a1d1a',
+                border: '1.667px solid #7ccf00',
+                boxShadow: '0 0 18px #9ae60055, 0 0 40px #9ae60022',
+              } : isCyberpunkTheme ? {
+                background: '#020617',
+                border: '1px solid #00b8db',
+              } : isNeoTheme ? {
+                background: '#001a00',
+                border: '1px solid #00ff4177',
+                boxShadow: '0 0 16px #00ff4122, 0 0 40px #00ff4111',
+              } : isBlocksTheme ? {
+                background: '#2a2a2a',
+              } : isForestTheme ? {
+                background: '#e8d5b7',
+                border: '1px solid #c4a88266',
+              } : isGothicTheme ? {
+                background: 'rgba(15,2,38,0.92)',
+                border: '1px solid #c27aff55',
+                boxShadow: '0 0 20px #c27aff22, 0 0 40px #c27aff11',
+              } : {
+                background: `${accentColor || '#00bba7'}0d`,
+                border: `1px solid ${accentColor || '#00bba7'}33`,
               }}
             >
-              {/* Collection button at the end of top line */}
-              <button 
-                onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-                className="px-3 py-1 text-xs font-semibold rounded-full hover:opacity-90 hover:scale-105 transition-all"
-                style={{ 
-                  position: 'absolute',
-                  top: '-12px',
-                  right: '0px',
-                  background: profileSectionTab === 'collection'
-                    ? '#1a1a2e'
-                    : 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
-                  color: profileSectionTab === 'collection' ? '#ffffff' : '#1f2937',
-                  border: '2px solid transparent',
-                  backgroundClip: 'padding-box',
-                }}
-              >
-                <span 
-                  className="absolute inset-0 rounded-full pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
-                    padding: '2px',
-                    mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                    maskComposite: 'xor',
-                    WebkitMaskComposite: 'xor',
-                    opacity: profileSectionTab === 'collection' ? 1 : 0,
-                  }}
-                />
-                Collection
-              </button>
-            </div>
-            
-            {/* Left vertical line - fades downward */}
-            <div 
-              className="absolute top-3 -left-4 w-[2px]"
-              style={{
-                height: 'calc(100% - 12px)',
-                background: `linear-gradient(180deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 60%, transparent 100%)`,
-              }}
-            />
-
-            {/* Content */}
-            <div className="pl-0 pt-4 pb-4 pr-4">
-              {profileSectionTab === 'stats' ? (
-                <>
-                  {/* Stats - Horizontal row with uppercase labels */}
-                  <div className="flex gap-4 mb-2 mt-2 items-start">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-sm">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>UPLOADS</span>
+              <div className="p-4">
+                {profileSectionTab === 'stats' ? (
+                  <>
+                  {isCartoonTheme ? (
+                    <div className="flex w-full py-2">
+                      {[
+                        { value: (clips?.length || 0) + (screenshots?.length || 0), label: 'Uploads', color: '#3498db' },
+                        { value: Number(profile._count?.followers || 0), label: 'Followers', color: '#e74c3c' },
+                        { value: Number(profile._count?.following || 0), label: 'Following', color: '#27ae60' },
+                      ].map((stat, i, arr) => (
+                        <div key={stat.label} className="flex flex-1 items-center">
+                          <div className="flex flex-col items-center gap-1 flex-1 py-1">
+                            <span style={{ color: stat.color, fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: 800, fontSize: '1.6rem', letterSpacing: '-0.9px', lineHeight: 1 }}>{stat.value}</span>
+                            <span style={{ color: 'rgba(0,0,0,0.4)', fontSize: '10px', letterSpacing: '2.2px', fontWeight: 800, textTransform: 'uppercase' as const, fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif" }}>{stat.label}</span>
+                          </div>
+                          {i < arr.length - 1 && (
+                            <div style={{ width: '4px', height: '56px', background: '#000000', flexShrink: 0 }} />
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-sm">{Number(profile._count?.followers || 0)}</span>
-                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>FOLLOWERS</span>
+                  ) : isGothicTheme ? (
+                    <div className="flex mt-1 w-full">
+                      {[
+                        { value: (clips?.length || 0) + (screenshots?.length || 0), label: 'Uploads' },
+                        { value: Number(profile._count?.followers || 0), label: 'Followers' },
+                        { value: Number(profile._count?.following || 0), label: 'Following' },
+                      ].map((stat, i, arr) => (
+                        <div key={stat.label} className="flex flex-1 items-center">
+                          <div className="flex flex-col items-center gap-1 flex-1 py-1">
+                            <span style={{ color: '#ffffff', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>{stat.value}</span>
+                            <span style={{ color: '#c27aff', fontSize: '8px', letterSpacing: '1.2px', fontWeight: 700, textTransform: 'uppercase' as const, fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }}>{stat.label}</span>
+                          </div>
+                          {i < arr.length - 1 && (
+                            <div style={{ width: '1px', height: '40px', background: 'rgba(194,122,255,0.25)', flexShrink: 0 }} />
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-sm">{Number(profile._count?.following || 0)}</span>
-                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>FOLLOWING</span>
+                  ) : (
+                  <div className="flex mt-1" style={isWatermelonTheme ? { gap: 0 } : { gap: '1.5rem' }}>
+                    <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
+                      <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>UPLOADS</span>
+                    </div>
+                    <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
+                      <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : isBlocksTheme ? '#3b82f6' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.followers || 0)}</span>
+                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWERS</span>
+                    </div>
+                    <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
+                      <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#4ade80' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
+                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#4ade80', color: '#1a1a1a', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWING</span>
                     </div>
                   </div>
-
-                  {/* Member since date - uppercase */}
-                  {profile.createdAt && (
-                    <div className="mb-2">
-                      <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>
-                        MEMBER SINCE {new Date(profile.createdAt).toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'long' 
-                        }).toUpperCase()}
+                  )}
+                  </>
+                ) : (
+                  <>
+                  {isCartoonTheme ? (
+                    <div className="flex w-full py-2 justify-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <span style={{ color: '#ff5e5e', fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: 800, fontSize: '1.6rem', letterSpacing: '-0.9px', lineHeight: 1 }}>{profileNftData?.nfts.filter(n => !n.sold).length || 0}</span>
+                        <span style={{ color: 'rgba(0,0,0,0.4)', fontSize: '10px', letterSpacing: '2.2px', fontWeight: 800, textTransform: 'uppercase' as const, fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif" }}>NFTs Owned</span>
+                      </div>
+                    </div>
+                  ) : isGothicTheme ? (
+                    <div className="flex mt-1 w-full justify-center">
+                      <div className="flex flex-col items-center gap-1 py-1">
+                        <div style={{ background: 'rgba(80,30,160,0.5)', borderRadius: '12px', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                          💎
+                        </div>
+                        <span style={{ color: '#ffffff', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>{profileNftData?.nfts.filter(n => !n.sold).length || 0}</span>
+                        <span style={{ color: '#c27aff', fontSize: '8px', letterSpacing: '1.2px', fontWeight: 700, textTransform: 'uppercase' as const, fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }}>NFTs Owned</span>
+                      </div>
+                    </div>
+                  ) : (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Hexagon className="w-4 h-4" style={{ color: isBlocksTheme ? '#a855f7' : isWatermelonTheme ? '#0d1a12' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isForestTheme ? '#4ade80' : undefined }} />
+                    {isBlocksTheme ? (
+                      <span style={{ backgroundColor: '#a855f7', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' }}>
+                        {profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs OWNED
                       </span>
-                    </div>
-                  )}
-
-                  {/* Bio/description - left aligned */}
-                  {profile.bio && (
-                    <p className="text-sm text-foreground/90 mb-3 pr-4">{profile.bio}</p>
-                  )}
-                </>
-              ) : (
-                <div className="mt-2">
-                  <div className="flex items-center gap-2">
-                    <Hexagon className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
-                      {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
-                    </span>
+                    ) : (
+                      <span className="text-sm" style={{ color: isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#1a1a1a' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : accentColor || 'hsl(var(--primary))' }}>
+                        {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
+                      </span>
+                    )}
                   </div>
-                </div>
-              )}
+                  )}
+                  </>
+                )}
+              </div>
+            </div>
             </div>
           </div>
 
-          {/* Platform tags and Social Links - hidden when collection tab is active */}
-          {profileSectionTab === 'stats' && <div className="flex flex-wrap gap-1.5 mb-4 pl-4 pr-8">
+          {/* Platform tags and Social Links — below the stats card */}
+          {profileSectionTab === 'stats' && <div className={`flex flex-wrap gap-1.5 mb-4 mt-4 pl-4 pr-8 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''}`}>
             {profile.steamUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(27, 40, 56, 0.8)', color: '#FFFFFF' }}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('steam')}>
                 <SiSteam className="w-2.5 h-2.5" />
                 <span>{profile.steamUsername}</span>
               </div>
             )}
             {profile.nintendoUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(230, 0, 18, 0.8)', color: '#FFFFFF' }}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('nintendo')}>
                 <SiNintendo className="w-2.5 h-2.5" />
                 <span>{profile.nintendoUsername}</span>
               </div>
             )}
             {profile.xboxUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(16, 124, 16, 0.8)', color: '#FFFFFF' }}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('xbox')}>
                 <FaXbox className="w-2.5 h-2.5" />
                 <span>{profile.xboxUsername}</span>
               </div>
             )}
             {profile.playstationUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(0, 55, 145, 0.8)', color: '#FFFFFF' }}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('playstation')}>
                 <SiPlaystation className="w-2.5 h-2.5" />
                 <span>{profile.playstationUsername}</span>
               </div>
             )}
             {profile.epicUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(49, 49, 49, 0.8)', color: '#FFFFFF' }}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('epic')}>
                 <SiEpicgames className="w-2.5 h-2.5" />
                 <span>{profile.epicUsername}</span>
               </div>
             )}
             {profile.discordUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ backgroundColor: 'rgba(88, 101, 242, 0.8)', color: '#FFFFFF' }}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('discord')}>
                 <SiDiscord className="w-2.5 h-2.5" />
                 <span>{profile.discordUsername}</span>
               </div>
@@ -1980,7 +3008,7 @@ const ProfilePage = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                style={{ backgroundColor: 'rgba(29, 161, 242, 0.8)', color: '#FFFFFF' }}
+                style={getBtnStyle('twitter')}
               >
                 <FaXTwitter className="w-2.5 h-2.5" />
                 <span>{profile.twitterUsername}</span>
@@ -1992,7 +3020,7 @@ const ProfilePage = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                style={{ backgroundColor: 'rgba(255, 0, 0, 0.8)', color: '#FFFFFF' }}
+                style={getBtnStyle('youtube')}
               >
                 <FaYoutube className="w-2.5 h-2.5" />
                 <span>{profile.youtubeUsername}</span>
@@ -2004,7 +3032,7 @@ const ProfilePage = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                style={{ backgroundColor: 'rgba(228, 64, 95, 0.8)', color: '#FFFFFF' }}
+                style={getBtnStyle('instagram')}
               >
                 <FaInstagram className="w-2.5 h-2.5" />
                 <span>{profile.instagramUsername}</span>
@@ -2016,13 +3044,14 @@ const ProfilePage = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
-                style={{ backgroundColor: 'rgba(24, 119, 242, 0.8)', color: '#FFFFFF' }}
+                style={getBtnStyle('facebook')}
               >
                 <FaFacebook className="w-2.5 h-2.5" />
                 <span>{profile.facebookUsername}</span>
               </a>
             )}
           </div>}
+
         </div>
 
         {/* Desktop Layout - Vertical stacked on left */}
@@ -2036,9 +3065,9 @@ const ProfilePage = () => {
                 <div 
                   className="absolute inset-0 rounded-full animate-pulse"
                   style={{
-                    background: `linear-gradient(45deg, hsl(var(--primary)), hsl(var(--card)))`,
+                    background: `linear-gradient(45deg, ${avatarThemeColor || 'hsl(var(--primary))'}, hsl(var(--card)))`,
                     padding: '4px',
-                    filter: `drop-shadow(0 0 20px hsl(var(--primary)))`,
+                    filter: `drop-shadow(0 0 20px ${avatarThemeColor || 'hsl(var(--primary))'})`,
                   }}
                 >
                   <div className="w-full h-full rounded-full bg-background"></div>
@@ -2064,6 +3093,7 @@ const ProfilePage = () => {
                   showAvatarBorderOverlay={true}
                   showLiveOverlay={!!(isStreamer && (profile?.twitchVerified || profile?.kickVerified))}
                   isLive={profileLiveStatus?.isLive ?? false}
+                  themeColor={avatarThemeColor}
                 />
               </div>
               {/* Level Badge with Progress */}
@@ -2081,16 +3111,15 @@ const ProfilePage = () => {
 
             {/* Display Name and Badges */}
             <div className="flex items-center gap-2 flex-wrap mt-8">
-              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: profileTextShadow, color: profileFontColor, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.displayName}</h1>
+              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: isMacTheme ? 'none' : profileTextShadow, color: isWatermelonTheme ? '#ffffff' : isMacTheme ? '#1a1a1a' : isLightBackground ? accentColor : profileFontColor, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
                 badgeName={verificationBadgeData?.verificationBadge?.name}
                 size="xl"
-                isModerator={profile.role === "moderator" || profile.role === "admin"}
               />
               <ModeratorBadge 
-                isModerator={profile.role === "moderator" || profile.role === "admin"} 
+                isModerator={(profile.role === "moderator" || profile.role === "admin") && !verificationBadgeData?.verificationBadge} 
                 size="xl" 
               />
               {profile.userType && profile.showUserType !== false && (() => {
@@ -2105,14 +3134,19 @@ const ProfilePage = () => {
                     <Badge 
                       key={`${type}-${index}`}
                       variant="outline" 
-                      className="border text-xs font-medium px-2 py-0.5"
-                      style={{
-                        backgroundColor: `${accentColor}20`,
-                        color: accentColor,
-                        borderColor: `${accentColor}50`,
+                      className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px]"
+                      style={isLightBackground ? {
+                        backgroundColor: 'rgba(255,255,255,0.6)',
+                        color: '#ff2056',
+                        border: '0.556px solid #fda5d5',
+                        boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+                      } : {
+                        backgroundColor: `${accentColor || '#00bba7'}1a`,
+                        color: accentColor || '#00d5be',
+                        borderColor: `${accentColor || '#00bba7'}66`,
                       }}
                     >
-                      <IconComponent className="w-3 h-3 mr-1" />
+                      <IconComponent className="w-3 h-3 mr-1.5" />
                       {config.label}
                     </Badge>
                   );
@@ -2121,212 +3155,208 @@ const ProfilePage = () => {
             </div>
 
             {/* Username */}
-            <span className="text-base text-white/70 font-normal mt-1">@{profile.username}</span>
+            <span className="text-base font-normal mt-1" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.7)' }}>@{profile.username}</span>
 
-            {/* L-shaped fading border with curved corner and button */}
-            <div className="relative mt-4" style={{ marginLeft: '-32px', height: '140px', width: '100%', maxWidth: '600px' }}>
-              {/* Curved corner piece with glow */}
+            {/* Bio — below the streamer badge, outside the card */}
+            {profile.bio && (
+              <p className={`text-sm max-w-md mt-2 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>{profile.bio}</p>
+            )}
+
+            {/* Profile Info Card — stats only, Collection button on top-right border */}
+            <div className="relative mt-4 max-w-xl">
+              {/* Collection button pinned to top-right border */}
+              <button 
+                onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
+                className="absolute -top-3 -right-1 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
+                style={{ 
+                  background: profileSectionTab === 'collection'
+                    ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : isCartoonTheme ? '#fffaec' : '#1a1a2e')
+                    : isWatermelonTheme
+                      ? '#ffb3c1'
+                      : isLightBackground
+                        ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
+                        : isZombieTheme
+                          ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
+                          : isCyberpunkTheme
+                            ? 'rgba(2,6,23,0.9)'
+                            : isNeoTheme
+                              ? 'linear-gradient(180deg, #003300 0%, #001400 100%)'
+                              : isBlocksTheme
+                                ? 'linear-gradient(180deg, #4ade80 0%, #22c55e 100%)'
+                                : isForestTheme
+                                  ? '#1d3932'
+                                  : isGothicTheme
+                                    ? 'linear-gradient(135deg, #3d0070 0%, #1e053a 100%)'
+                                    : isCartoonTheme
+                                      ? 'linear-gradient(135deg, #ff5e5e 0%, #ff7a5e 100%)'
+                                      : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
+                  color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#4ade80' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : '#0f172b',
+                  border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #4ade80' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : undefined,
+                  fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : isGothicTheme ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" : isCartoonTheme ? "'Bricolage Grotesque', 'Arial Black', sans-serif" : undefined,
+                  letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : isNeoTheme ? '1.5px' : isBlocksTheme ? '0.5px' : isGothicTheme ? '1.5px' : isCartoonTheme ? '-0.5px' : undefined,
+                  fontWeight: isCyberpunkTheme ? '900' : isNeoTheme ? '700' : isBlocksTheme ? '400' : isCartoonTheme ? '800' : undefined,
+                  fontSize: isBlocksTheme ? '0.5rem' : isCartoonTheme ? '0.7rem' : undefined,
+                  borderRadius: isBlocksTheme ? '4px' : undefined,
+                  boxShadow: isBlocksTheme ? '4px 4px 0 #000' : isGothicTheme ? '0 0 14px #c27aff33' : isCartoonTheme ? '3px 3px 0 #1d1d1f' : undefined,
+                }}>
+                  <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>{isGothicTheme ? '👻 Collection' : 'Collection'}</span>
+              </button>
+
+            {/* Stats card */}
+            <div
+              className="relative mt-4 rounded-lg transition-all duration-300"
+              style={{
+                width: '100%',
+                maxWidth: '600px',
+              }}
+            >
+
               <div 
-                className="absolute top-0 left-0 w-4 h-4 pointer-events-none"
-                style={{
-                  borderLeft: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
-                  borderTop: `2px solid ${accentColor || 'hsl(var(--primary))'}`,
-                  borderTopLeftRadius: '12px',
-                  filter: `drop-shadow(0 0 6px ${accentColor || 'hsl(var(--primary))'})`,
-                }}
-              />
-              
-              {/* Top horizontal line - extends far right and fades with inner glow */}
-              <div 
-                className="absolute top-0 left-4 h-[2px] flex items-center"
-                style={{
-                  width: '550px',
-                  background: `linear-gradient(90deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 40%, transparent 100%)`,
-                  boxShadow: `0 0 12px 2px ${accentColor || 'hsl(var(--primary))'}50, 0 2px 8px ${accentColor || 'hsl(var(--primary))'}30`,
+                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''}`}
+                style={isWatermelonTheme ? {
+                  background: '#ffb3c1',
+                } : isLightBackground ? {
+                  background: 'rgba(255,255,255,0.37)',
+                  border: '0.556px solid rgba(255,255,255,0.8)',
+                  boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+                } : isZombieTheme ? {
+                  background: '#1a1d1a',
+                  border: '1.667px solid #7ccf00',
+                  boxShadow: '0 0 18px #9ae60055, 0 0 40px #9ae60022',
+                } : isCyberpunkTheme ? {
+                  background: '#020617',
+                  border: '1px solid #00b8db',
+                } : isNeoTheme ? {
+                  background: '#001a00',
+                  border: '1px solid #00ff4177',
+                  boxShadow: '0 0 16px #00ff4122, 0 0 40px #00ff4111',
+                } : isBlocksTheme ? {
+                  background: '#2a2a2a',
+                } : isForestTheme ? {
+                  background: '#e8d5b7',
+                  border: '1px solid #c4a88266',
+                } : {
+                  background: `${accentColor || '#00bba7'}0d`,
+                  border: `1px solid ${accentColor || '#00bba7'}33`,
                 }}
               >
-                {/* Collection button at the end of top line */}
-                <button 
-                  onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-                  className="px-4 py-1.5 text-sm font-semibold rounded-full hover:opacity-90 hover:scale-105"
-                  style={{ 
-                    position: 'absolute',
-                    top: '-14px',
-                    right: '0px',
-                    background: profileSectionTab === 'collection'
-                      ? '#1a1a2e'
-                      : 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
-                    color: profileSectionTab === 'collection' ? '#ffffff' : '#1f2937',
-                    border: '2px solid transparent',
-                    backgroundClip: 'padding-box',
-                  }}
-                >
-                  <span 
-                    className="absolute inset-0 rounded-full pointer-events-none"
-                    style={{
-                      background: 'linear-gradient(135deg, #d8b4fe 0%, #a5f3fc 25%, #86efac 50%, #fde68a 75%, #fecaca 100%)',
-                      padding: '2px',
-                      mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                      maskComposite: 'xor',
-                      WebkitMaskComposite: 'xor',
-                      opacity: profileSectionTab === 'collection' ? 1 : 0,
-                    }}
-                  />
-                  Collection
-                </button>
-              </div>
-              
-              {/* Left vertical line - starts after curved corner with inner glow */}
-              <div 
-                className="absolute top-4 left-0 w-[2px]"
-                style={{
-                  height: '120px',
-                  background: `linear-gradient(180deg, ${accentColor || 'hsl(var(--primary))'} 0%, ${accentColor || 'hsl(var(--primary))'} 50%, transparent 100%)`,
-                  boxShadow: `0 0 12px 2px ${accentColor || 'hsl(var(--primary))'}50, 2px 0 8px ${accentColor || 'hsl(var(--primary))'}30`,
-                }}
-              />
-              
-              {/* Content aligned with username above */}
-              <div className="pl-8 pt-4" style={{ minHeight: '120px' }}>
-                {profileSectionTab === 'stats' ? (
-                  <>
-                    {/* Stats - Uploads, Followers, Following */}
-                    <div className="flex gap-6 items-center">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-lg">{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                        <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Uploads</span>
+                <div className="p-5">
+                  {profileSectionTab === 'stats' ? (
+                    <div className="flex items-center" style={isWatermelonTheme ? { gap: 0 } : { gap: '2rem' }}>
+                      <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
+                        <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                        <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Uploads</span>
                       </div>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-lg">{Number(profile._count?.followers || 0)}</span>
-                        <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Followers</span>
+                      <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
+                        <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : isBlocksTheme ? '#3b82f6' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{Number(profile._count?.followers || 0)}</span>
+                        <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Followers</span>
                       </div>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-lg">{Number(profile._count?.following || 0)}</span>
-                        <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>Following</span>
+                      <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
+                        <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#4ade80' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
+                        <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#4ade80', color: '#1a1a1a', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Following</span>
                       </div>
                     </div>
-
-                    {/* Member since date */}
-                    {profile.createdAt && (
-                      <div className="mt-3">
-                        <span className="text-xs uppercase tracking-wider" style={{ color: accentColor || 'hsl(var(--primary))' }}>
-                          Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { 
-                            year: 'numeric', 
-                            month: 'long' 
-                          })}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Bio/description */}
-                    {profile.bio && (
-                      <p className="mt-3 text-base text-foreground/90 max-w-xl">{profile.bio}</p>
-                    )}
-                  </>
-                ) : (
-                  <div className="mt-4">
+                  ) : (
                     <div className="flex items-center gap-2">
-                      <Hexagon className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm" style={{ color: accentColor || 'hsl(var(--primary))' }}>
-                        {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
-                      </span>
+                      <Hexagon className="w-4 h-4" style={{ color: isBlocksTheme ? '#a855f7' : isWatermelonTheme ? '#0d1a12' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isForestTheme ? '#4ade80' : undefined }} />
+                      {isBlocksTheme ? (
+                        <span style={{ backgroundColor: '#a855f7', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' }}>
+                          {profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs OWNED
+                        </span>
+                      ) : (
+                        <span className="text-sm" style={{ color: isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#1a1a1a' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : accentColor || 'hsl(var(--primary))' }}>
+                          {`${profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs owned`}
+                        </span>
+                      )}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
+            </div>
 
-            {/* Platform Connections - hidden when collection tab is active */}
+            {/* Platform Connections — below the stats card */}
             {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
-              <div className="flex flex-wrap gap-2 mt-4">
+              <div className={`flex flex-wrap gap-2 mt-4 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''}`}>
                 {profile.steamUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#1B2838', color: '#FFFFFF' }}>
-                      <SiSteam className="w-3 h-3" />
-                      <span>{profile.steamUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.xboxUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#107C10', color: '#FFFFFF' }}>
-                      <FaXbox className="w-3 h-3" />
-                      <span>{profile.xboxUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.playstationUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#003087', color: '#FFFFFF' }}>
-                      <SiPlaystation className="w-3 h-3" />
-                      <span>{profile.playstationUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.discordUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#5865F2', color: '#FFFFFF' }}>
-                      <SiDiscord className="w-3 h-3" />
-                      <span>{profile.discordUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.epicUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#000000', color: '#FFFFFF' }}>
-                      <SiEpicgames className="w-3 h-3" />
-                      <span>{profile.epicUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.nintendoUsername && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: '#E60012', color: '#FFFFFF' }}>
-                      <SiNintendo className="w-3 h-3" />
-                      <span>{profile.nintendoUsername}</span>
-                    </div>
-                  )}
-
-                  {profile.twitterUsername && (
-                    <a 
-                      href={`https://twitter.com/${profile.twitterUsername}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                      style={{ backgroundColor: '#1DA1F2', color: '#FFFFFF' }}
-                    >
-                      <FaXTwitter className="w-3 h-3" />
-                      <span>{profile.twitterUsername}</span>
-                    </a>
-                  )}
-
-                  {profile.youtubeUsername && (
-                    <a 
-                      href={`https://youtube.com/@${profile.youtubeUsername}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                      style={{ backgroundColor: '#FF0000', color: '#FFFFFF' }}
-                    >
-                      <FaYoutube className="w-3 h-3" />
-                      <span>{profile.youtubeUsername}</span>
-                    </a>
-                  )}
-
-                  {profile.instagramUsername && (
-                    <a 
-                      href={`https://instagram.com/${profile.instagramUsername}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                      style={{ backgroundColor: '#E4405F', color: '#FFFFFF' }}
-                    >
-                      <FaInstagram className="w-3 h-3" />
-                      <span>{profile.instagramUsername}</span>
-                    </a>
-                  )}
-
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('steam')}>
+                    <SiSteam className="w-3 h-3" />
+                    <span>{profile.steamUsername}</span>
+                  </div>
+                )}
+                {profile.xboxUsername && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('xbox')}>
+                    <FaXbox className="w-3 h-3" />
+                    <span>{profile.xboxUsername}</span>
+                  </div>
+                )}
+                {profile.playstationUsername && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('playstation')}>
+                    <SiPlaystation className="w-3 h-3" />
+                    <span>{profile.playstationUsername}</span>
+                  </div>
+                )}
+                {profile.discordUsername && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('discord')}>
+                    <SiDiscord className="w-3 h-3" />
+                    <span>{profile.discordUsername}</span>
+                  </div>
+                )}
+                {profile.epicUsername && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('epic')}>
+                    <SiEpicgames className="w-3 h-3" />
+                    <span>{profile.epicUsername}</span>
+                  </div>
+                )}
+                {profile.nintendoUsername && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('nintendo')}>
+                    <SiNintendo className="w-3 h-3" />
+                    <span>{profile.nintendoUsername}</span>
+                  </div>
+                )}
+                {profile.twitterUsername && (
+                  <a 
+                    href={`https://twitter.com/${profile.twitterUsername}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
+                    style={getBtnStyle('twitter')}
+                  >
+                    <FaXTwitter className="w-3 h-3" />
+                    <span>{profile.twitterUsername}</span>
+                  </a>
+                )}
+                {profile.youtubeUsername && (
+                  <a 
+                    href={`https://youtube.com/@${profile.youtubeUsername}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
+                    style={getBtnStyle('youtube')}
+                  >
+                    <FaYoutube className="w-3 h-3" />
+                    <span>{profile.youtubeUsername}</span>
+                  </a>
+                )}
+                {profile.instagramUsername && (
+                  <a 
+                    href={`https://instagram.com/${profile.instagramUsername}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
+                    style={getBtnStyle('instagram')}
+                  >
+                    <FaInstagram className="w-3 h-3" />
+                    <span>{profile.instagramUsername}</span>
+                  </a>
+                )}
                 {profile.facebookUsername && (
                   <a 
                     href={`https://facebook.com/${profile.facebookUsername}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium hover:opacity-80 transition-opacity"
-                    style={{ backgroundColor: '#1877F2', color: '#FFFFFF' }}
+                    className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
+                    style={getBtnStyle('facebook')}
                   >
                     <FaFacebook className="w-3 h-3" />
                     <span>{profile.facebookUsername}</span>
@@ -2351,9 +3381,8 @@ const ProfilePage = () => {
                   style={{
                     width: '351px',
                     height: '109px',
-                    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
-                    border: '1px solid rgba(148, 163, 184, 0.2)',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+                    ...nameTagBgStyle,
+                    ...(isLightBackground ? {} : { boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' })
                   }}
                 >
                   <img 
@@ -2375,8 +3404,9 @@ const ProfilePage = () => {
                   />
                 </div>
                 <span 
-                  className="text-xs text-white/40 mt-3 uppercase tracking-widest cursor-pointer hover:text-white/60 transition-colors"
+                  className="text-xs mt-3 uppercase tracking-widest cursor-pointer transition-colors"
                   onClick={() => setNameTagPreviewOpen(true)}
+                  style={isCyberpunkTheme ? { background: 'linear-gradient(270deg,#00d3f2,#e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontFamily: "'Orbitron', sans-serif", letterSpacing: '1.4px' } : { color: 'rgba(255,255,255,0.4)' }}
                 >Nametag</span>
               </div>
             )}
@@ -2392,27 +3422,25 @@ const ProfilePage = () => {
                     size="default"
                     disabled={followMutation.isPending}
                     className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg px-6 py-3 text-base"
-                    style={followRequestStatus === 'following' ? {
-                      borderColor: 'hsl(var(--primary))',
-                      color: 'hsl(var(--primary))',
+                    style={followRequestStatus === 'following' || followRequestStatus === 'requested' ? {
+                      borderColor: accentColor || 'hsl(var(--primary))',
+                      color: accentColor || 'hsl(var(--primary))',
                       backgroundColor: 'transparent',
-                    } : followRequestStatus === 'requested' ? {
-                      borderColor: 'hsl(var(--primary))',
-                      color: 'hsl(var(--primary))',
-                      backgroundColor: 'transparent',
+                      ...(isCyberpunkTheme && { boxShadow: `0 0 10px ${accentColor}44`, fontFamily: "'Orbitron', sans-serif" }),
                     } : {
-                      backgroundColor: 'hsl(var(--primary))',
-                      borderColor: 'hsl(var(--primary))',
-                      color: 'hsl(var(--primary-foreground))',
-                      boxShadow: `0 4px 15px hsl(var(--primary) / 0.4)`,
+                      backgroundColor: accentColor || 'hsl(var(--primary))',
+                      borderColor: accentColor || 'hsl(var(--primary))',
+                      color: isLightBackground ? '#ffffff' : '#000000',
+                      boxShadow: `0 4px 15px ${accentColor || 'hsl(var(--primary))'}66`,
+                      ...(isCyberpunkTheme && { fontFamily: "'Orbitron', sans-serif" }),
                     }}
                     onMouseEnter={(e) => {
-                      if (followRequestStatus === 'following') {
-                        e.currentTarget.style.backgroundColor = 'hsl(var(--primary) / 0.1)';
+                      if (followRequestStatus === 'following' || followRequestStatus === 'requested') {
+                        e.currentTarget.style.backgroundColor = `${accentColor || 'hsl(var(--primary))'}22`;
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (followRequestStatus === 'following') {
+                      if (followRequestStatus === 'following' || followRequestStatus === 'requested') {
                         e.currentTarget.style.backgroundColor = 'transparent';
                       }
                     }}
@@ -2440,7 +3468,13 @@ const ProfilePage = () => {
                     }}
                     variant="outline"
                     size="default"
-                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20 px-6 py-3 text-base"
+                    className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg px-6 py-3 text-base"
+                    style={{
+                      borderColor: accentColor || 'hsl(var(--primary))',
+                      color: accentColor || 'hsl(var(--primary))',
+                      backgroundColor: 'transparent',
+                      ...(isCyberpunkTheme && { boxShadow: `0 0 10px ${accentColor}44`, fontFamily: "'Orbitron', sans-serif" }),
+                    }}
                   >
                     <MessageSquare className="mr-2 h-5 w-5" /> Message
                   </Button>
@@ -2479,7 +3513,8 @@ const ProfilePage = () => {
                         <Button
                           variant="outline"
                           size="default"
-                          className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20 px-4 py-3"
+                          className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg px-4 py-3"
+                          style={shareButtonStyle}
                         >
                           <Share2 className="h-5 w-5" />
                         </Button>
@@ -2526,7 +3561,8 @@ const ProfilePage = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary text-primary hover:bg-primary/20"
+                          className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                          style={shareButtonStyle}
                         >
                           <Share2 className="h-4 w-4" />
                         </Button>
@@ -2636,16 +3672,95 @@ const ProfilePage = () => {
         }
 
         {/* Enhanced Tabs section with rounded container style */}
-        <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-2 md:mt-8">
+        <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-2 md:mt-8 relative z-20">
         {profileSectionTab === 'collection' ? (
           <div className="w-full">
             <div 
-              className="w-full max-w-lg lg:max-w-full mx-auto justify-center rounded-full h-11 md:h-12 p-1 relative flex gap-0.5 bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg"
+              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-nft-header' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : isMacTheme ? 'rounded-full' : isGothicTheme ? 'rounded-2xl' : isCartoonTheme ? 'rounded-xl' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
+              style={isBlocksTheme ? undefined : isWatermelonTheme ? { background: '#ffb3c1', border: '5px solid #1d3932', borderRadius: '9999px' } : isZombieTheme ? { background: '#1a1d1a' } : isMacTheme ? { background: 'linear-gradient(180deg, #ebebeb 0%, #d6d6d6 100%)', border: '1px solid #bdbdbd', borderRadius: '9999px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)', position: 'relative' } : isGothicTheme ? { background: 'rgba(15,2,38,0.92)', border: '1px solid #c27aff33', borderRadius: '16px', boxShadow: '0 0 18px #c27aff15' } : isCartoonTheme ? { background: '#ffffff', border: '3px solid #1d1d1f', borderRadius: '12px', boxShadow: '4px 4px 0 #1d1d1f' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
             >
-              <div className="relative rounded-full h-9 md:h-10 flex-1 flex items-center justify-center px-3 md:px-5 text-sm font-semibold text-white !bg-primary gap-2">
-                <Hexagon className="w-4 h-4" />
-                NFTs
-                {profileNftData && <span className="text-xs opacity-80">({profileNftData.nfts.filter(n => !n.sold).length})</span>}
+              {isMacTheme && (
+                <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6, alignItems: 'center', zIndex: 2 }}>
+                  <div style={{ width: 13, height: 13, borderRadius: '50%', background: '#ff5f57', border: '0.5px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
+                  <div style={{ width: 13, height: 13, borderRadius: '50%', background: '#febc2e', border: '0.5px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
+                  <div style={{ width: 13, height: 13, borderRadius: '50%', background: '#28c840', border: '0.5px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
+                </div>
+              )}
+              <div
+                className={`relative h-9 md:h-10 flex-1 flex items-center justify-center px-3 md:px-5 text-sm font-semibold gap-2 ${isCyberpunkTheme ? 'rounded-none' : isBlocksTheme ? 'rounded-none' : isCartoonTheme ? 'rounded-lg' : 'rounded-full'}`}
+                style={isCyberpunkTheme ? {
+                  background: 'rgba(0,211,242,0.12)',
+                  borderBottom: '2px solid #00d3f2',
+                  color: 'transparent',
+                  fontFamily: "'Orbitron', sans-serif",
+                  letterSpacing: '2.5px',
+                  fontSize: '0.7rem',
+                  fontWeight: '900',
+                } : isBlocksTheme ? {
+                  background: 'transparent',
+                  color: '#a855f7',
+                  fontFamily: "'Press Start 2P', monospace",
+                  fontSize: '0.6rem',
+                  letterSpacing: '1px',
+                } : isZombieTheme ? {
+                  background: 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)',
+                  color: '#9ae600',
+                  fontFamily: "'Creepster', cursive",
+                  letterSpacing: '2px',
+                } : isNeoTheme ? {
+                  background: 'rgba(0,20,0,0.85)',
+                  borderBottom: '2px solid #00ff41',
+                  color: 'transparent',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  letterSpacing: '2px',
+                  fontSize: '0.72rem',
+                  fontWeight: '700',
+                } : isWatermelonTheme ? {
+                  background: '#1d3932',
+                  color: '#ffffff',
+                } : isForestTheme ? {
+                  background: '#1d3932',
+                  color: '#e8d5b7',
+                  border: '1px solid rgba(164,118,66,0.4)',
+                  borderRadius: '9999px',
+                } : isMacTheme ? {
+                  background: 'rgba(0,0,0,0.08)',
+                  color: '#1a1a1a',
+                  borderBottom: '2px solid #0066ff',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif',
+                  fontWeight: '600',
+                  fontSize: '0.8rem',
+                } : isGothicTheme ? {
+                  background: 'linear-gradient(135deg, #3d0070 0%, #1e053a 100%)',
+                  color: '#c27aff',
+                  fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
+                  letterSpacing: '2px',
+                  fontSize: '0.75rem',
+                  fontWeight: '700',
+                  borderRadius: '12px',
+                  boxShadow: '0 0 10px #c27aff22',
+                } : isCartoonTheme ? {
+                  background: 'transparent',
+                  color: '#a855f7',
+                  fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif",
+                  fontWeight: '800',
+                  fontSize: '0.95rem',
+                  letterSpacing: '-0.5px',
+                } : isLightBackground ? {
+                  background: 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)',
+                  color: '#ffffff',
+                } : {
+                  background: `hsl(var(--primary))`,
+                  color: '#ffffff',
+                }}
+              >
+                {isGothicTheme ? <span style={{ fontSize: '16px' }}>💎</span> : <Hexagon className={`w-4 h-4 ${isCyberpunkTheme ? 'text-[#00d3f2]' : isBlocksTheme ? 'text-[#a855f7]' : isZombieTheme ? 'text-[#9ae600]' : isNeoTheme ? 'text-[#00ff41]' : isForestTheme ? 'text-[#4ade80]' : ''}`} />}
+                <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>{isGothicTheme ? 'NFT Collection' : 'NFTs'}</span>
+                {profileNftData && (
+                  <span className={`text-xs opacity-80 ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>
+                    ({profileNftData.nfts.filter(n => !n.sold).length})
+                  </span>
+                )}
               </div>
             </div>
             <div className="pt-4 px-1 md:px-4">
@@ -2663,26 +3778,27 @@ const ProfilePage = () => {
                     return (
                       <div
                         key={nft.tokenId}
-                        className={`rounded-2xl overflow-hidden cursor-pointer transition-all duration-200 hover:scale-[1.03] ${styles.bg} ${styles.glow}`}
+                        className={`overflow-hidden cursor-pointer ${isBlocksTheme ? 'blocks-nft-card bg-[#1a1a1a]' : isGothicTheme ? 'rounded-2xl transition-all duration-200 hover:scale-[1.03]' : `rounded-2xl transition-all duration-200 hover:scale-[1.03] ${styles.bg} ${styles.glow}`}`}
+                        style={isGothicTheme ? { background: 'rgba(20,2,50,0.9)', border: '1px solid #c27aff33', boxShadow: '0 0 12px #c27aff11' } : undefined}
                         onClick={() => setSelectedProfileNft(nft)}
                       >
                         <div className="aspect-square overflow-hidden">
                           {nft.image ? (
-                            <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
+                            <img src={nft.image} alt={nft.name} className={`w-full h-full object-cover${isBlocksTheme ? ' image-rendering-pixelated' : ''}`} />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-slate-800">
-                              <Hexagon className="w-10 h-10 text-slate-600" />
+                              <Hexagon className={`w-10 h-10 ${isBlocksTheme ? 'text-[#a855f7]' : isGothicTheme ? 'text-[#c27aff]' : 'text-slate-600'}`} />
                             </div>
                           )}
                         </div>
                         <div className="p-3 pt-2">
-                          <h3 className={`text-sm font-bold truncate ${styles.nameColor}`}>{nft.name}</h3>
+                          <h3 className={`text-sm font-bold truncate ${isBlocksTheme ? 'text-[#a855f7]' : isGothicTheme ? '' : styles.nameColor}`} style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.55rem' } : isGothicTheme ? { color: '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" } : undefined}>{nft.name}</h3>
                           <div className="flex items-center justify-between mt-1">
                             <div className="flex items-center gap-1.5">
-                              <div className={`w-2 h-2 rounded-full ${styles.dotColor}`} />
-                              <span className={`text-[11px] uppercase tracking-tight ${styles.textStyle}`}>{rarity}</span>
+                              <div className={`w-2 h-2 ${isBlocksTheme ? 'rounded-none bg-[#a855f7]' : isGothicTheme ? 'rounded-full bg-[#c27aff]' : `rounded-full ${styles.dotColor}`}`} />
+                              <span className={`text-[11px] uppercase tracking-tight ${isBlocksTheme ? 'text-[#4ade80]' : isGothicTheme ? '' : styles.textStyle}`} style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.45rem' } : isGothicTheme ? { color: '#c27aff99', fontSize: '0.6rem', letterSpacing: '0.5px' } : undefined}>{rarity}</span>
                             </div>
-                            <span className="text-[11px] text-slate-500 font-medium">#{nft.tokenId}</span>
+                            <span className={`text-[11px] font-medium ${isBlocksTheme ? 'text-[#4ade80]' : isGothicTheme ? '' : 'text-slate-500'}`} style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.45rem' } : isGothicTheme ? { color: '#c27aff66', fontSize: '0.65rem' } : undefined}>#{nft.tokenId}</span>
                           </div>
                         </div>
                       </div>
@@ -2691,9 +3807,9 @@ const ProfilePage = () => {
                 </div>
               ) : (
                 <div className="py-12 text-center">
-                  <Hexagon className="w-12 h-12 mx-auto mb-3 text-slate-600" />
-                  <p className="text-base text-foreground/70 font-medium">No NFTs yet</p>
-                  {isOwnProfile && <p className="text-sm text-muted-foreground mt-1">Mint your first NFT from the store</p>}
+                  {isGothicTheme ? <span style={{ fontSize: '40px', display: 'block', marginBottom: '12px' }}>💎</span> : <Hexagon className={`w-12 h-12 mx-auto mb-3 ${isBlocksTheme ? 'text-[#a855f7]' : 'text-slate-600'}`} />}
+                  <p className="text-base text-foreground/70 font-medium" style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.6rem', color: '#a855f7' } : isGothicTheme ? { fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", color: '#c27aff', letterSpacing: '1px' } : undefined}>No NFTs yet</p>
+                  {isOwnProfile && <p className="text-sm text-muted-foreground mt-1" style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.5rem', color: '#4ade80' } : isGothicTheme ? { fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", color: '#c27aff66', fontSize: '0.8rem' } : undefined}>Mint your first NFT from the store</p>}
                 </div>
               )}
             </div>
@@ -2710,67 +3826,139 @@ const ProfilePage = () => {
             const reelsCount = clips?.filter(c => c.videoType === 'reel').length ?? 0;
             const screenshotsCount = screenshots?.length ?? 0;
             const showLimits = isOwnProfile && !currentUser?.isPro;
+            const showXboxTab = profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0;
+            const showPsnTab = profile?.showPsnTrophies && Array.isArray(profile?.psnTrophyData) && profile.psnTrophyData.length > 0;
+            const showScrollArrows = showXboxTab || showPsnTab;
+            const arrowBtnClass = `flex items-center justify-center w-7 h-7 rounded-full transition-colors ${isLightBackground ? 'bg-black/15 hover:bg-black/30' : 'bg-black/40 hover:bg-black/60'}`;
             return (
+          <div className="relative w-full">
+            {showScrollArrows && (
+              <button
+                type="button"
+                onClick={() => { if (tabsListRef.current) tabsListRef.current.scrollLeft -= 150; }}
+                className={arrowBtnClass}
+                style={{ color: accentColor, position: 'absolute', left: 4, top: '50%', transform: 'translateY(-50%)', zIndex: 10 }}
+                aria-label="Scroll tabs left"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            )}
           <TabsList 
-            className={`w-full max-w-lg lg:max-w-full mx-auto justify-center rounded-full p-1 relative flex gap-0.5 bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
+            ref={tabsListRef}
+            className={`w-full max-w-lg lg:max-w-full mx-auto justify-start md:justify-center p-1 relative flex flex-nowrap gap-0.5 overflow-x-auto scrollbar-hide ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : isGothicTheme ? 'rounded-2xl' : isCartoonTheme ? '' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : isForestTheme ? '' : isZombieTheme ? '' : isMacTheme ? '' : isGothicTheme ? '' : isCartoonTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
+            style={tabListStyle}
           >
+            {/* Mac Theme – traffic light dots on the left of the tab bar */}
+            {isMacTheme && (
+              <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6, alignItems: 'center', zIndex: 2 }}>
+                <div style={{ width: 13, height: 13, borderRadius: '50%', background: '#ff5f57', border: '0.5px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
+                <div style={{ width: 13, height: 13, borderRadius: '50%', background: '#febc2e', border: '0.5px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
+                <div style={{ width: 13, height: 13, borderRadius: '50%', background: '#28c840', border: '0.5px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
+              </div>
+            )}
             <TabsTrigger 
               ref={clipsTabRef}
               value="clips" 
-              className={`relative rounded-full transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'clips' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+              className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={isGothicTheme ? { backgroundColor: activeTab === 'clips' ? 'rgba(80,30,160,0.45)' : 'transparent', color: activeTab === 'clips' ? '#ffffff' : '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '0.8px' } : getTabStyle('clips')}
             >
-              <span className="flex flex-col items-center leading-none gap-0.5">
-                <span>Clips</span>
-                {showLimits && (
-                  <span className={`text-[10px] font-normal ${clipsCount >= 15 ? 'text-red-400' : activeTab === 'clips' ? 'text-white/70' : 'text-gray-500'}`}>
-                    {clipsCount}/15
-                  </span>
-                )}
-              </span>
+              {isGothicTheme ? (
+                <span style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' as const, letterSpacing: '1px' }}>Clips</span>
+              ) : (
+                <span className="flex flex-col items-center leading-none gap-0.5">
+                  <span className={`font-black ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'uppercase tracking-[0.5px]' : ''} ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'clips' ? '#1a1a1a' : '#ef4444' } : undefined}>Clips</span>
+                  {showLimits && (
+                    <span className={`text-[10px] font-normal ${clipsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: clipsCount >= 15 ? undefined : isMacTheme ? (activeTab === 'clips' ? '#555' : '#888') : activeTab === 'clips' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
+                      {clipsCount}/15
+                    </span>
+                  )}
+                </span>
+              )}
             </TabsTrigger>
 
             <TabsTrigger 
               ref={reelsTabRef}
               value="reels" 
-              className={`relative rounded-full transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'reels' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+              className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={isGothicTheme ? { backgroundColor: activeTab === 'reels' ? 'rgba(80,30,160,0.45)' : 'transparent', color: activeTab === 'reels' ? '#ffffff' : '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '0.8px' } : getTabStyle('reels')}
             >
-              <span className="flex flex-col items-center leading-none gap-0.5">
-                <span>Reels</span>
-                {showLimits && (
-                  <span className={`text-[10px] font-normal ${reelsCount >= 15 ? 'text-red-400' : activeTab === 'reels' ? 'text-white/70' : 'text-gray-500'}`}>
-                    {reelsCount}/15
-                  </span>
-                )}
-              </span>
-            </TabsTrigger>
-
-            <TabsTrigger 
-              ref={screenshotsTabRef}
-              value="screenshots" 
-              className={`relative rounded-full transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'screenshots' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
-            >
-              <span className="flex flex-col items-center leading-none gap-0.5">
-                <span>Screenshots</span>
-                {showLimits && (
-                  <span className={`text-[10px] font-normal ${screenshotsCount >= 10 ? 'text-red-400' : activeTab === 'screenshots' ? 'text-white/70' : 'text-gray-500'}`}>
-                    {screenshotsCount}/10
-                  </span>
-                )}
-              </span>
+              {isGothicTheme ? (
+                <span style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' as const, letterSpacing: '1px' }}>Reels</span>
+              ) : (
+                <span className="flex flex-col items-center leading-none gap-0.5">
+                  <span className={`font-black ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'uppercase tracking-[0.5px]' : ''} ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'reels' ? '#1a1a1a' : '#3b82f6' } : undefined}>Reels</span>
+                  {showLimits && (
+                    <span className={`text-[10px] font-normal ${reelsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: reelsCount >= 15 ? undefined : isMacTheme ? (activeTab === 'reels' ? '#555' : '#888') : activeTab === 'reels' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
+                      {reelsCount}/15
+                    </span>
+                  )}
+                </span>
+              )}
             </TabsTrigger>
 
             <TabsTrigger 
               ref={favoritesTabRef}
               value="favorites" 
-              className={`relative rounded-full transition-all duration-200 flex-1 px-3 md:px-5 text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'favorites' ? 'text-white !bg-primary' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+              className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={isGothicTheme ? { backgroundColor: activeTab === 'favorites' ? 'rgba(80,30,160,0.45)' : 'transparent', color: activeTab === 'favorites' ? '#ffffff' : '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '0.8px' } : getTabStyle('favorites')}
             >
-              Favorites
+              {isGothicTheme ? (
+                <span style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' as const, letterSpacing: '1px' }}>Games</span>
+              ) : (
+                <span className={`font-black ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'uppercase tracking-[0.5px]' : ''} ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'favorites' ? '#1a1a1a' : '#facc15' } : undefined}>
+                  Games
+                </span>
+              )}
+            </TabsTrigger>
+
+            <TabsTrigger 
+              ref={screenshotsTabRef}
+              value="screenshots" 
+              className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+              style={isGothicTheme ? { backgroundColor: activeTab === 'screenshots' ? 'rgba(80,30,160,0.45)' : 'transparent', color: activeTab === 'screenshots' ? '#ffffff' : '#c27aff', fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '0.8px' } : getTabStyle('screenshots')}
+            >
+              {isGothicTheme ? (
+                <Camera className="w-4 h-4" style={{ color: activeTab === 'screenshots' ? '#ffffff' : '#c27aff' }} />
+              ) : (
+                <span className="flex flex-col items-center leading-none gap-0.5">
+                  <Camera
+                    className="w-4 h-4"
+                    style={{
+                      color: isCyberpunkTheme
+                        ? '#00d3f2'
+                        : isNeoTheme
+                          ? '#00ff41'
+                          : isZombieTheme
+                            ? '#9ae600'
+                            : isBlocksTheme
+                              ? (activeTab === 'screenshots' ? '#1a1a1a' : '#4ade80')
+                              : isWatermelonTheme
+                                ? '#0d1a12'
+                                : isForestTheme
+                                  ? (activeTab === 'screenshots' ? '#5C3317' : '#c4a882')
+                                  : isCartoonTheme
+                                    ? (activeTab === 'screenshots' ? '#27ae60' : 'rgba(0,0,0,0.25)')
+                                    : isMacTheme
+                                      ? (activeTab === 'screenshots' ? '#ffffff' : '#888')
+                                      : isLightBackground
+                                        ? (activeTab === 'screenshots' ? '#ffffff' : accentColor)
+                                        : activeTab === 'screenshots' ? '#ffffff' : 'rgba(255,255,255,0.5)',
+                    }}
+                  />
+                  {showLimits && (
+                    <span className={`text-[10px] font-normal ${screenshotsCount >= 10 ? 'text-red-400' : ''}`} style={{ color: screenshotsCount >= 10 ? undefined : isMacTheme ? (activeTab === 'screenshots' ? '#555' : '#888') : activeTab === 'screenshots' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
+                      {screenshotsCount}/10
+                    </span>
+                  )}
+                </span>
+              )}
             </TabsTrigger>
 
             {profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0 && (
               <TabsTrigger
                 value="achievements"
-                className={`relative rounded-full transition-all duration-200 flex-1 px-2 md:px-4 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'achievements' ? 'text-white !bg-[#107C10]' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+                className={`relative rounded-full transition-all duration-200 shrink-0 md:flex-1 px-3 md:px-4 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+                style={{ backgroundColor: activeTab === 'achievements' ? '#107C10' : 'transparent', color: activeTab === 'achievements' ? '#ffffff' : isLightBackground ? '#1d293d' : undefined }}
               >
                 <span className="flex items-center gap-1.5">
                   <FaXbox className="w-3 h-3 shrink-0" />
@@ -2782,7 +3970,8 @@ const ProfilePage = () => {
             {profile?.showPsnTrophies && Array.isArray(profile?.psnTrophyData) && profile.psnTrophyData.length > 0 && (
               <TabsTrigger
                 value="trophies"
-                className={`relative rounded-full transition-all duration-200 flex-1 px-2 md:px-4 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'} ${activeTab === 'trophies' ? 'text-white !bg-[#003791]' : 'text-gray-400 hover:text-white !bg-transparent'}`}
+                className={`relative rounded-full transition-all duration-200 shrink-0 md:flex-1 px-3 md:px-4 text-xs md:text-sm font-semibold !shadow-none ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
+                style={{ backgroundColor: activeTab === 'trophies' ? '#003791' : 'transparent', color: activeTab === 'trophies' ? '#ffffff' : isLightBackground ? '#1d293d' : undefined }}
               >
                 <span className="flex items-center gap-1.5">
                   <FaPlaystation className="w-3 h-3 shrink-0" />
@@ -2791,6 +3980,18 @@ const ProfilePage = () => {
               </TabsTrigger>
             )}
           </TabsList>
+            {showScrollArrows && (
+              <button
+                type="button"
+                onClick={() => { if (tabsListRef.current) tabsListRef.current.scrollLeft += 150; }}
+                className={arrowBtnClass}
+                style={{ color: accentColor, position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', zIndex: 10 }}
+                aria-label="Scroll tabs right"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
             );
           })()}
 
@@ -3152,46 +4353,13 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : isLoadingScreenshots ? (
-              <div className="flex gap-5 overflow-hidden pb-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="flex-shrink-0 w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px]">
-                    <Skeleton className="aspect-video w-full rounded-xl" />
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <Skeleton key={i} className="aspect-video w-full rounded-xl" />
                 ))}
               </div>
             ) : screenshots && screenshots.length > 0 ? (
-              <div className="relative">
-                <button
-                  onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft -= 480; } }}
-                  className="absolute -left-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft += 480; } }}
-                  className="absolute -right-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
-                <div
-                  ref={screenshotsScrollRef}
-                  className={`flex gap-5 overflow-x-auto scrollbar-hide pb-4 select-none ${screenshotsDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-                  style={{ scrollBehavior: screenshotsDragging ? 'auto' : 'smooth' }}
-                  onMouseDown={(e) => {
-                    if (!screenshotsScrollRef.current) return;
-                    setScreenshotsDragging(true);
-                    setScreenshotsDragStart(e.clientX);
-                    setScreenshotsScrollStart(screenshotsScrollRef.current.scrollLeft);
-                    e.preventDefault();
-                  }}
-                  onMouseMove={(e) => {
-                    if (!screenshotsDragging || !screenshotsScrollRef.current) return;
-                    e.preventDefault();
-                    screenshotsScrollRef.current.scrollLeft = screenshotsScrollStart - (e.clientX - screenshotsDragStart);
-                  }}
-                  onMouseUp={() => setScreenshotsDragging(false)}
-                  onMouseLeave={() => setScreenshotsDragging(false)}
-                >
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {[...screenshots]
                     .sort((a, b) => {
                       if (a.pinnedAt && !b.pinnedAt) return -1;
@@ -3201,11 +4369,18 @@ const ProfilePage = () => {
                     .map((screenshot) => {
                     const isHighlighted = highlightedContent?.type === 'screenshot' && highlightedContent.id === screenshot.id.toString();
                     const isPinned = !!screenshot.pinnedAt;
+                    const isPendingGameApproval = isOwnProfile && screenshot.game?.isApproved === false;
                     return (
                       <div
                         key={`screenshot-${screenshot.id}`}
-                        className="flex-shrink-0 w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px] relative group"
+                        className="relative group"
                       >
+                        {isPendingGameApproval && (
+                          <div className="absolute bottom-1.5 left-1.5 z-10 flex items-center gap-1 bg-amber-500/90 text-white text-xs px-1.5 py-0.5 rounded">
+                            <Clock className="w-2.5 h-2.5 shrink-0" />
+                            <span>Pending approval</span>
+                          </div>
+                        )}
                         {isPinned && !isOwnProfile && (
                           <div className="absolute top-1.5 left-1.5 z-10 bg-primary/90 text-primary-foreground p-1 rounded-md">
                             <Pin className="w-2.5 h-2.5" />
@@ -3245,7 +4420,6 @@ const ProfilePage = () => {
                     );
                   })}
                 </div>
-              </div>
             ) : (
               <div className="py-12 text-center">
                 <h3 className="text-lg font-medium mb-2">No screenshots yet</h3>
@@ -3686,17 +4860,6 @@ const ProfilePage = () => {
                   <h3 className="text-lg font-medium mb-2">About {profile.displayName}</h3>
                   <p className="text-muted-foreground">
                     {profile.bio || `${profile.displayName} hasn't added a bio yet.`}
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium mb-2">Member Since</h3>
-                  <p className="text-muted-foreground">
-                    {new Date(profile.createdAt).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
                   </p>
                 </div>
 

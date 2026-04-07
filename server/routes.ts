@@ -58,6 +58,7 @@ import supportRouter from "./routes/support";
 import { reportsRouter } from "./routes/reports";
 import mintNftRouter from "./routes/mint-nft";
 import quickSellRouter from "./routes/quick-sell";
+import adminNftSeedRouter from "./routes/admin-nft-seed";
 import { twitchApi } from "./services/twitch-api";
 import { VideoProcessor } from "./video-processor";
 import sharp from "sharp";
@@ -74,10 +75,29 @@ import { supabaseStorage } from "./supabase-storage";
 import { contentFilterService } from "./services/content-filter";
 import { addPlayButtonOverlay } from "./og-thumbnail";
 import { getTokenBalance, getTokenInfo } from "./blockchain";
+import { transferGfTokens } from "./gf-token-service";
+import { writeContractWithPoW } from "./skale-pow";
+import { createPublicClient, http, parseUnits, decodeEventLog, type Address as ViemAddress } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { GF_TOKEN_ADDRESS as NFT_GF_TOKEN_ADDRESS, GF_TOKEN_ABI as NFT_GF_TOKEN_ABI, SKALE_NEBULA_TESTNET as NFT_SKALE_CHAIN } from "../shared/contracts";
 import { TwoFactorService } from "./services/two-factor-service";
 
 // Import upload middlewares from upload router
 import multer from "multer";
+
+const nftPublicClient = createPublicClient({
+  chain: NFT_SKALE_CHAIN,
+  transport: http(NFT_SKALE_CHAIN.rpcUrls.default.http[0]),
+});
+
+function getNftTreasuryAddress(): string {
+  const privateKey = process.env.TREASURY_PRIVATE_KEY;
+  if (!privateKey) throw new Error('TREASURY_PRIVATE_KEY not configured');
+  const formattedKey = privateKey.startsWith('0x') ? privateKey as `0x${string}` : `0x${privateKey}` as `0x${string}`;
+  return privateKeyToAccount(formattedKey).address;
+}
+
+const NFT_GF_DECIMALS = 18;
 
 // Rate limiting disabled - users can like/react freely
 
@@ -1412,6 +1432,235 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Twitch OAuth ─────────────────────────────────────────────────────────
+
+  // Twitch Connect — redirect to Twitch OAuth authorization
+  app.get("/api/auth/twitch/connect", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const clientId = process.env.TWITCH_CLIENT_ID;
+    const clientSecret = process.env.TWITCH_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      return res.redirect("/settings?tab=platforms&twitch_error=not_configured");
+    }
+    const state = randomBytes(16).toString("hex");
+    (req.session as any).twitchOAuthState = state;
+    (req.session as any).twitchOAuthUserId = (req.user as any).id;
+    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/twitch/callback`;
+    const url = new URL("https://id.twitch.tv/oauth2/authorize");
+    url.searchParams.set("client_id", clientId);
+    url.searchParams.set("redirect_uri", redirectUri);
+    url.searchParams.set("response_type", "code");
+    url.searchParams.set("scope", "user:read:email");
+    url.searchParams.set("state", state);
+    res.redirect(url.toString());
+  });
+
+  // Twitch Callback — exchange code, fetch user info, save to DB
+  app.get("/api/auth/twitch/callback", async (req, res) => {
+    const { code, state, error } = req.query as Record<string, string>;
+    const storedState = (req.session as any).twitchOAuthState;
+    const userId = (req.session as any).twitchOAuthUserId;
+    delete (req.session as any).twitchOAuthState;
+    delete (req.session as any).twitchOAuthUserId;
+
+    if (error) return res.redirect(`/settings?tab=platforms&twitch_error=${encodeURIComponent(error)}`);
+    if (!state || state !== storedState || !userId) {
+      return res.redirect("/settings?tab=platforms&twitch_error=invalid_state");
+    }
+
+    const clientId = process.env.TWITCH_CLIENT_ID!;
+    const clientSecret = process.env.TWITCH_CLIENT_SECRET!;
+    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/twitch/callback`;
+
+    try {
+      // Exchange code for access token
+      const tokenRes = await fetch("https://id.twitch.tv/oauth2/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          code,
+          grant_type: "authorization_code",
+          redirect_uri: redirectUri,
+        }),
+      });
+      if (!tokenRes.ok) throw new Error(`Token exchange failed: ${tokenRes.status}`);
+      const tokenData = await tokenRes.json() as any;
+      const accessToken = tokenData.access_token;
+
+      // Fetch Twitch user info
+      const userRes = await fetch("https://api.twitch.tv/helix/users", {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Client-Id": clientId,
+        },
+      });
+      if (!userRes.ok) throw new Error(`Twitch user fetch failed: ${userRes.status}`);
+      const userData = await userRes.json() as any;
+      const twitchUser = userData.data?.[0];
+      if (!twitchUser) throw new Error("No Twitch user data returned");
+
+      await storage.updateUser(userId, {
+        twitchChannelName: twitchUser.login,
+        twitchChannelId: twitchUser.id,
+        twitchVerified: true,
+        twitchAccessToken: accessToken,
+      });
+
+      res.redirect("/settings?tab=platforms&twitch_connected=1");
+    } catch (err: any) {
+      console.error("Twitch callback error:", err);
+      res.redirect(`/settings?tab=platforms&twitch_error=${encodeURIComponent(err.message || "connection_failed")}`);
+    }
+  });
+
+  // Twitch Disconnect
+  app.post("/api/auth/twitch/disconnect", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      await storage.updateUser((req.user as any).id, {
+        twitchChannelName: null,
+        twitchChannelId: null,
+        twitchVerified: false,
+        twitchAccessToken: null,
+      });
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Twitch disconnect error:", err);
+      res.status(500).json({ message: "Failed to disconnect Twitch" });
+    }
+  });
+
+  // ── Kick OAuth ───────────────────────────────────────────────────────────
+
+  // Kick Connect — redirect to Kick OAuth authorization
+  app.get("/api/auth/kick/connect", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const clientId = process.env.KICK_CLIENT_ID;
+    const clientSecret = process.env.KICK_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      return res.redirect("/settings?tab=platforms&kick_error=not_configured");
+    }
+    const state = randomBytes(16).toString("hex");
+    (req.session as any).kickOAuthState = state;
+    (req.session as any).kickOAuthUserId = (req.user as any).id;
+    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/kick/callback`;
+    const url = new URL("https://id.kick.com/oauth/authorize");
+    url.searchParams.set("client_id", clientId);
+    url.searchParams.set("redirect_uri", redirectUri);
+    url.searchParams.set("response_type", "code");
+    url.searchParams.set("scope", "user:read");
+    url.searchParams.set("state", state);
+    res.redirect(url.toString());
+  });
+
+  // Kick Callback — exchange code, fetch user info, save to DB
+  app.get("/api/auth/kick/callback", async (req, res) => {
+    const { code, state, error } = req.query as Record<string, string>;
+    const storedState = (req.session as any).kickOAuthState;
+    const userId = (req.session as any).kickOAuthUserId;
+    delete (req.session as any).kickOAuthState;
+    delete (req.session as any).kickOAuthUserId;
+
+    if (error) return res.redirect(`/settings?tab=platforms&kick_error=${encodeURIComponent(error)}`);
+    if (!state || state !== storedState || !userId) {
+      return res.redirect("/settings?tab=platforms&kick_error=invalid_state");
+    }
+
+    const clientId = process.env.KICK_CLIENT_ID!;
+    const clientSecret = process.env.KICK_CLIENT_SECRET!;
+    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/kick/callback`;
+
+    try {
+      // Exchange code for access token
+      const tokenRes = await fetch("https://id.kick.com/oauth/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          code,
+          grant_type: "authorization_code",
+          redirect_uri: redirectUri,
+        }),
+      });
+      if (!tokenRes.ok) throw new Error(`Kick token exchange failed: ${tokenRes.status}`);
+      const tokenData = await tokenRes.json() as any;
+      const accessToken = tokenData.access_token;
+
+      // Fetch Kick user info
+      const userRes = await fetch("https://api.kick.com/public/v1/users/me", {
+        headers: { "Authorization": `Bearer ${accessToken}` },
+      });
+      if (!userRes.ok) throw new Error(`Kick user fetch failed: ${userRes.status}`);
+      const userData = await userRes.json() as any;
+      const kickUser = userData.data ?? userData;
+      const channelName = kickUser.username ?? kickUser.slug ?? kickUser.login;
+      const channelId = String(kickUser.id ?? kickUser.user_id ?? "");
+
+      if (!channelName) throw new Error("No Kick channel data returned");
+
+      await storage.updateUser(userId, {
+        kickChannelName: channelName,
+        kickChannelId: channelId,
+        kickVerified: true,
+        kickAccessToken: accessToken,
+      });
+
+      res.redirect("/settings?tab=platforms&kick_connected=1");
+    } catch (err: any) {
+      console.error("Kick callback error:", err);
+      res.redirect(`/settings?tab=platforms&kick_error=${encodeURIComponent(err.message || "connection_failed")}`);
+    }
+  });
+
+  // Kick Disconnect
+  app.post("/api/auth/kick/disconnect", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      await storage.updateUser((req.user as any).id, {
+        kickChannelName: null,
+        kickChannelId: null,
+        kickVerified: false,
+        kickAccessToken: null,
+      });
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Kick disconnect error:", err);
+      res.status(500).json({ message: "Failed to disconnect Kick" });
+    }
+  });
+
+  // OAuth credential availability check (public — no secrets exposed)
+  app.get("/api/auth/oauth-status", (req, res) => {
+    res.json({
+      twitch: !!(process.env.TWITCH_CLIENT_ID && process.env.TWITCH_CLIENT_SECRET),
+      kick: !!(process.env.KICK_CLIENT_ID && process.env.KICK_CLIENT_SECRET),
+    });
+  });
+
+  // Streamer settings save — save isStreamer, streamPlatform, liveEnabled
+  app.patch("/api/user/streamer-settings", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { isStreamer, streamPlatform, liveEnabled } = req.body;
+      const ALLOWED_PLATFORMS = ["twitch", "kick"];
+      if (streamPlatform !== undefined && !ALLOWED_PLATFORMS.includes(streamPlatform)) {
+        return res.status(400).json({ message: "Invalid streamPlatform value" });
+      }
+      const update: any = {};
+      if (isStreamer !== undefined) update.isStreamer = Boolean(isStreamer);
+      if (streamPlatform !== undefined) update.streamPlatform = streamPlatform;
+      if (liveEnabled !== undefined) update.liveEnabled = Boolean(liveEnabled);
+      const updated = await storage.updateUser((req.user as any).id, update);
+      res.json(updated);
+    } catch (err) {
+      console.error("Streamer settings error:", err);
+      res.status(500).json({ message: "Failed to save streamer settings" });
+    }
+  });
+
   // Xbox Achievements — sync from xbl.io
   app.post("/api/xbox/achievements/sync", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
@@ -2213,15 +2462,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
           profileFont: userWithoutPassword.profileFont || 'default',
           profileFontEffect: userWithoutPassword.profileFontEffect || 'none',
           profileFontAnimation: userWithoutPassword.profileFontAnimation || 'none',
+          profileFontColor: userWithoutPassword.profileFontColor || '#FFFFFF',
+          cardColor: userWithoutPassword.cardColor || '#1E3A8A',
+          primaryColor: userWithoutPassword.primaryColor || '#02172C',
+          avatarBorderColor: userWithoutPassword.avatarBorderColor || '#4ADE80',
+          hideBanner: userWithoutPassword.hideBanner || false,
+          statsGlassEffect: userWithoutPassword.statsGlassEffect || false,
+          profileBackgroundGradient: userWithoutPassword.profileBackgroundGradient !== false,
+          profileBackgroundType: userWithoutPassword.profileBackgroundType || 'solid',
+          profileBackgroundTheme: userWithoutPassword.profileBackgroundTheme || 'default',
+          profileBackgroundAnimation: userWithoutPassword.profileBackgroundAnimation || 'none',
+          profileBackgroundImageUrl: userWithoutPassword.profileBackgroundImageUrl || '',
+          profileBackgroundPositionX: userWithoutPassword.profileBackgroundPositionX || '50',
+          profileBackgroundPositionY: userWithoutPassword.profileBackgroundPositionY || '50',
+          profileBackgroundZoom: userWithoutPassword.profileBackgroundZoom || '100',
+          profileBackgroundDesktopX: userWithoutPassword.profileBackgroundDesktopX || '50',
+          profileBackgroundDesktopY: userWithoutPassword.profileBackgroundDesktopY || '50',
+          profileBackgroundDesktopZoom: userWithoutPassword.profileBackgroundDesktopZoom || '100',
+          layoutStyle: userWithoutPassword.layoutStyle || 'grid',
+          showUserType: userWithoutPassword.showUserType !== false,
+          selectedAvatarBorderId: userWithoutPassword.selectedAvatarBorderId || null,
+          selectedNameTagId: userWithoutPassword.selectedNameTagId || null,
+          selectedVerificationBadgeId: userWithoutPassword.selectedVerificationBadgeId || null,
           canMintNfts: userWithoutPassword.canMintNfts || false,
           canSellNfts: userWithoutPassword.canSellNfts || false,
+          isStreamer: userWithoutPassword.isStreamer || false,
           streamPlatform: userWithoutPassword.streamPlatform || null,
           streamChannelName: userWithoutPassword.streamChannelName || null,
+          twitchChannelName: userWithoutPassword.twitchChannelName || null,
           twitchVerified: userWithoutPassword.twitchVerified || false,
           twitchUserId: userWithoutPassword.twitchUserId || null,
+          kickChannelName: userWithoutPassword.kickChannelName || null,
           kickVerified: userWithoutPassword.kickVerified || false,
           kickId: userWithoutPassword.kickId || null,
           showLiveOverlay: userWithoutPassword.showLiveOverlay || false,
+          liveEnabled: userWithoutPassword.liveEnabled || false,
+          ...(streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0 ? { streakInfo } : {}),
         });
       }
     } catch (error) {
@@ -2285,15 +2561,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
           profileFont: fallbackWithoutPassword.profileFont || 'default',
           profileFontEffect: fallbackWithoutPassword.profileFontEffect || 'none',
           profileFontAnimation: fallbackWithoutPassword.profileFontAnimation || 'none',
+          profileFontColor: fallbackWithoutPassword.profileFontColor || '#FFFFFF',
+          cardColor: fallbackWithoutPassword.cardColor || '#1E3A8A',
+          primaryColor: fallbackWithoutPassword.primaryColor || '#02172C',
+          avatarBorderColor: fallbackWithoutPassword.avatarBorderColor || '#4ADE80',
+          hideBanner: fallbackWithoutPassword.hideBanner || false,
+          statsGlassEffect: fallbackWithoutPassword.statsGlassEffect || false,
+          profileBackgroundGradient: fallbackWithoutPassword.profileBackgroundGradient !== false,
+          profileBackgroundType: fallbackWithoutPassword.profileBackgroundType || 'solid',
+          profileBackgroundTheme: fallbackWithoutPassword.profileBackgroundTheme || 'default',
+          profileBackgroundAnimation: fallbackWithoutPassword.profileBackgroundAnimation || 'none',
+          profileBackgroundImageUrl: fallbackWithoutPassword.profileBackgroundImageUrl || '',
+          profileBackgroundPositionX: fallbackWithoutPassword.profileBackgroundPositionX || '50',
+          profileBackgroundPositionY: fallbackWithoutPassword.profileBackgroundPositionY || '50',
+          profileBackgroundZoom: fallbackWithoutPassword.profileBackgroundZoom || '100',
+          profileBackgroundDesktopX: fallbackWithoutPassword.profileBackgroundDesktopX || '50',
+          profileBackgroundDesktopY: fallbackWithoutPassword.profileBackgroundDesktopY || '50',
+          profileBackgroundDesktopZoom: fallbackWithoutPassword.profileBackgroundDesktopZoom || '100',
+          layoutStyle: fallbackWithoutPassword.layoutStyle || 'grid',
+          showUserType: fallbackWithoutPassword.showUserType !== false,
+          selectedAvatarBorderId: fallbackWithoutPassword.selectedAvatarBorderId || null,
+          selectedNameTagId: fallbackWithoutPassword.selectedNameTagId || null,
+          selectedVerificationBadgeId: fallbackWithoutPassword.selectedVerificationBadgeId || null,
           canMintNfts: fallbackWithoutPassword.canMintNfts || false,
           canSellNfts: fallbackWithoutPassword.canSellNfts || false,
+          isStreamer: fallbackWithoutPassword.isStreamer || false,
           streamPlatform: fallbackWithoutPassword.streamPlatform || null,
           streamChannelName: fallbackWithoutPassword.streamChannelName || null,
+          twitchChannelName: fallbackWithoutPassword.twitchChannelName || null,
           twitchVerified: fallbackWithoutPassword.twitchVerified || false,
           twitchUserId: fallbackWithoutPassword.twitchUserId || null,
+          kickChannelName: fallbackWithoutPassword.kickChannelName || null,
           kickVerified: fallbackWithoutPassword.kickVerified || false,
           kickId: fallbackWithoutPassword.kickId || null,
           showLiveOverlay: fallbackWithoutPassword.showLiveOverlay || false,
+          liveEnabled: fallbackWithoutPassword.liveEnabled || false,
         });
       }
     } catch (fallbackError) {
@@ -2353,6 +2655,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       profileFontAnimation: userWithoutPassword.profileFontAnimation || 'none',
       canMintNfts: userWithoutPassword.canMintNfts || false,
       canSellNfts: userWithoutPassword.canSellNfts || false,
+      isStreamer: userWithoutPassword.isStreamer || false,
+      streamPlatform: userWithoutPassword.streamPlatform || null,
+      twitchChannelName: userWithoutPassword.twitchChannelName || null,
+      twitchVerified: userWithoutPassword.twitchVerified || false,
+      kickChannelName: userWithoutPassword.kickChannelName || null,
+      kickVerified: userWithoutPassword.kickVerified || false,
+      liveEnabled: userWithoutPassword.liveEnabled || false,
     });
   });
 
@@ -2710,6 +3019,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error fetching settings" });
     }
   });
+
+  // Helper to sign all Supabase URLs in clip objects (thumbnails, videos, avatars)
+  async function signClipUrls<T extends { thumbnailUrl?: string | null; videoUrl?: string | null; user?: { avatarUrl?: string | null } | null }>(clips: T[]): Promise<T[]> {
+    return Promise.all(
+      clips.map(async (clip) => {
+        const updates: Partial<T> = {};
+        if (clip.thumbnailUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(clip.thumbnailUrl, 3600);
+          if (signed) (updates as any).thumbnailUrl = signed;
+        }
+        if (clip.videoUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(clip.videoUrl, 3600);
+          if (signed) (updates as any).videoUrl = signed;
+        }
+        let user = clip.user;
+        if (clip.user?.avatarUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(clip.user.avatarUrl, 3600);
+          if (signed) user = { ...clip.user, avatarUrl: signed };
+        }
+        return { ...clip, ...updates, user };
+      })
+    );
+  }
 
   // Helper to sign avatar URLs for leaderboard entries
   const SENSITIVE_USER_FIELDS = [
@@ -3848,7 +4180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "profileBackgroundType", "profileBackgroundTheme", "profileBackgroundAnimation", "profileBackgroundImageUrl",
         "profileBackgroundPositionX", "profileBackgroundPositionY",
         "profileBackgroundZoom", "profileBackgroundDesktopX", "profileBackgroundDesktopY", "profileBackgroundDesktopZoom",
-        "hideBanner",
+        "hideBanner", "statsGlassEffect", "profileBackgroundGradient",
         "steamUsername", "xboxUsername", "playstationUsername",
         "discordUsername", "epicUsername", "twitchUsername", "youtubeUsername",
         "twitterUsername", "instagramUsername", "facebookUsername", "nintendoUsername",
@@ -4131,7 +4463,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get actual clips from database for all users including demo
-      const clips = await storage.getClipsByUserId(user.id);
+      let clips = await storage.getClipsByUserId(user.id);
+
+      // For non-owners, hide clips associated with unapproved custom games
+      if (!isOwnProfile) {
+        clips = clips.filter((c) => !c.game || c.game.isApproved !== false);
+      }
 
       // For demo user, also include the demo clips if no real clips exist
       if (req.params.username === "demo" && clips.length === 0) {
@@ -4245,6 +4582,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error deleting admin game:", err);
       res.status(500).json({ message: "Error deleting game" });
+    }
+  });
+
+  // Admin: Get pending (unapproved) custom games
+  app.get("/api/admin/games/pending", adminMiddleware, async (req, res) => {
+    try {
+      const pendingGames = await storage.getPendingGames();
+      res.json(pendingGames);
+    } catch (err) {
+      console.error("Error fetching pending games:", err);
+      res.status(500).json({ message: "Error fetching pending games" });
+    }
+  });
+
+  // Admin: Approve a custom game
+  app.patch("/api/admin/games/:id/approve", adminMiddleware, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid game ID" });
+
+      const game = await storage.approveGame(id);
+      if (!game) return res.status(404).json({ message: "Game not found" });
+      res.json(game);
+    } catch (err) {
+      console.error("Error approving game:", err);
+      res.status(500).json({ message: "Error approving game" });
+    }
+  });
+
+  // Admin: Reject a custom game (keeps it permanently unapproved so content stays hidden)
+  app.patch("/api/admin/games/:id/reject", adminMiddleware, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid game ID" });
+
+      const rejected = await storage.rejectGame(id);
+      if (!rejected) return res.status(404).json({ message: "Game not found" });
+      res.json({ message: "Game rejected — content remains hidden. Use delete to fully remove the game." });
+    } catch (err) {
+      console.error("Error rejecting game:", err);
+      res.status(500).json({ message: "Error rejecting game" });
     }
   });
 
@@ -4494,7 +4872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Expires', '0');
       
       const clips = await storage.getAllClips(limit, offset, currentUserId);
-      res.json(clips);
+      res.json(await signClipUrls(clips));
     } catch (err) {
       console.error("Error fetching clips:", err);
       return res.status(500).json({ message: "Error fetching clips" });
@@ -4506,7 +4884,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { hashtag } = req.params;
       const clips = await storage.getClipsByHashtag(hashtag);
-      res.json(clips);
+      res.json(await signClipUrls(clips));
     } catch (err) {
       console.error("Error fetching clips by hashtag:", err);
       return res.status(500).json({ message: "Error fetching clips by hashtag" });
@@ -4520,7 +4898,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const period = (req.query.period as string) || "day";
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
       const clips = await storage.getFeedClips(period, limit);
-      res.json(clips);
+      res.json(await signClipUrls(clips));
     } catch (err) {
       console.error("Error fetching clips feed:", err);
       return res.status(500).json({ message: "Error fetching clips feed" });
@@ -4545,7 +4923,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gameId ? parseInt(gameId as string) : undefined,
         currentUserId
       );
-      res.json(clips);
+      res.json(await signClipUrls(clips));
     } catch (err) {
       console.error("Error fetching trending clips:", err);
       res.status(500).json({ message: "Internal server error" });
@@ -5162,10 +5540,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let existingGame = await storage.getGameByName(req.body.gameName);
 
           if (!existingGame) {
-            // Create a default game
+            // Create a user-supplied game (not from Twitch) — requires admin approval
             existingGame = await storage.createGame({
               name: req.body.gameName,
               imageUrl: "",
+              isUserAdded: true,
+              isApproved: false,
             });
           }
 
@@ -7805,7 +8185,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Purchase a name tag with GF tokens (off-chain balance)
+  // On-chain name tag purchase: step 1 — create intent
+  app.post("/api/store/name-tag-purchase-intent", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { nameTagId } = req.body;
+      if (!nameTagId) return res.status(400).json({ error: "nameTagId is required" });
+
+      const nameTag = await storage.getNameTag(nameTagId);
+      if (!nameTag) return res.status(404).json({ error: "Name tag not found" });
+      if (!nameTag.availableInStore || !nameTag.isActive) return res.status(400).json({ error: "Not available for purchase" });
+      if (nameTag.isDefault) return res.status(400).json({ error: "This name tag is free for everyone" });
+
+      const baseCost = nameTag.gfCost || 0;
+      if (baseCost <= 0) return res.status(400).json({ error: "This name tag has no price set" });
+
+      const hasUnlocked = await storage.userHasUnlockedNameTag(req.user.id, nameTagId);
+      if (hasUnlocked) return res.status(400).json({ error: "You already own this name tag" });
+
+      const user = await storage.getUserById(req.user.id);
+      if (!user || !user.walletAddress) return res.status(400).json({ error: "Wallet address required" });
+
+      const gfCost = user.isPro ? Math.floor(baseCost * 0.8) : baseCost;
+      const treasuryAddress = getNftTreasuryAddress();
+
+      return res.json({ nameTagId, gfCost, treasuryAddress, discountApplied: user.isPro, originalPrice: baseCost });
+    } catch (err) {
+      console.error("Name tag purchase intent error:", err);
+      return res.status(500).json({ error: "Failed to create purchase intent" });
+    }
+  });
+
+  // On-chain name tag purchase: step 2 — verify tx and unlock
+  app.post("/api/store/verify-name-tag-purchase", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { nameTagId, txHash, gfCost } = req.body;
+      if (!nameTagId || !txHash || gfCost === undefined) return res.status(400).json({ error: "nameTagId, txHash, and gfCost are required" });
+
+      const user = await storage.getUserById(req.user.id);
+      if (!user || !user.walletAddress) return res.status(400).json({ error: "Wallet address required" });
+
+      const hasUnlocked = await storage.userHasUnlockedNameTag(req.user.id, nameTagId);
+      if (hasUnlocked) return res.json({ success: true, message: "Already owned" });
+
+      const receipt = await nftPublicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
+      if (receipt.status !== 'success') return res.status(400).json({ error: 'Transaction failed on-chain' });
+
+      const treasuryAddress = getNftTreasuryAddress().toLowerCase();
+      const buyerAddress = (user.walletAddress as string).toLowerCase();
+      const expectedAmount = parseUnits(String(gfCost), NFT_GF_DECIMALS);
+
+      let validTransfer = false;
+      for (const log of receipt.logs) {
+        if (log.address.toLowerCase() !== NFT_GF_TOKEN_ADDRESS.toLowerCase()) continue;
+        try {
+          const decoded = decodeEventLog({ abi: NFT_GF_TOKEN_ABI, data: log.data, topics: log.topics });
+          if (decoded.eventName === 'Transfer') {
+            const { from, to, value } = decoded.args as { from: string; to: string; value: bigint };
+            if (from.toLowerCase() === buyerAddress && to.toLowerCase() === treasuryAddress && value >= expectedAmount) {
+              validTransfer = true;
+              break;
+            }
+          }
+        } catch { continue; }
+      }
+
+      if (!validTransfer) return res.status(400).json({ error: 'Invalid transfer: amount, sender, or recipient mismatch' });
+
+      const nameTag = await storage.getNameTag(nameTagId);
+      await storage.unlockNameTagForUser(req.user.id, nameTagId);
+
+      return res.json({
+        success: true,
+        message: `Successfully purchased "${nameTag?.name}"!`,
+        txHash,
+      });
+    } catch (err) {
+      console.error("Verify name tag purchase error:", err);
+      return res.status(500).json({ error: "Failed to verify purchase" });
+    }
+  });
+
+  // Legacy name tag purchase (deprecated — kept for compatibility)
   app.post("/api/store/purchase-name-tag", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.sendStatus(401);
@@ -7835,13 +8297,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "This name tag has no price set" });
       }
 
-      // Check if user already owns it
       const hasUnlocked = await storage.userHasUnlockedNameTag(req.user.id, nameTagId);
       if (hasUnlocked) {
         return res.status(400).json({ message: "You already own this name tag" });
       }
 
-      // Check user's GF token balance
       const user = await storage.getUserById(req.user.id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -7849,23 +8309,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const cost = user.isPro ? Math.floor(baseCost * 0.8) : baseCost;
 
-      const balance = user.gfTokenBalance || 0;
-      if (balance < cost) {
-        return res.status(400).json({ message: `Insufficient GF tokens. Need ${cost} GF, you have ${balance} GF` });
-      }
-
-      // Deduct GF tokens and unlock the name tag
-      await db.update(users)
-        .set({ gfTokenBalance: sql`COALESCE(${users.gfTokenBalance}, 0) - ${cost}` })
-        .where(eq(users.id, req.user.id));
-
       await storage.unlockNameTagForUser(req.user.id, nameTagId);
 
       res.json({ 
         success: true, 
         message: `Successfully purchased "${nameTag.name}"!` + (user.isPro ? ` (20% Pro discount applied!)` : ''),
         nameTag,
-        newBalance: balance - cost,
         discountApplied: user.isPro,
         originalPrice: baseCost,
         finalPrice: cost,
@@ -7980,6 +8429,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // On-chain border purchase: step 1 — create intent
+  app.post("/api/store/border-purchase-intent", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { borderId } = req.body;
+      if (!borderId) return res.status(400).json({ error: "borderId is required" });
+
+      const user = await storage.getUserById(req.user.id);
+      if (!user) return res.status(404).json({ error: "User not found" });
+      if (!user.walletAddress) return res.status(400).json({ error: "Wallet address required" });
+      if (!user.isPro) return res.status(403).json({ error: "Profile borders are a Pro-only feature. Upgrade to Pro to use borders!" });
+
+      const border = await storage.getProfileBorder(borderId);
+      if (!border) return res.status(404).json({ error: "Border not found" });
+      if (!border.availableInStore || !border.isActive) return res.status(400).json({ error: "Not available for purchase" });
+      if (border.isDefault) return res.status(400).json({ error: "This border is free for everyone" });
+
+      const gfCost = border.gfCost || 0;
+      if (gfCost <= 0) return res.status(400).json({ error: "This border has no price set" });
+
+      const hasUnlocked = await storage.userHasUnlockedBorder(req.user.id, borderId);
+      if (hasUnlocked) return res.status(400).json({ error: "You already own this border" });
+
+      const treasuryAddress = getNftTreasuryAddress();
+      return res.json({ borderId, gfCost, treasuryAddress });
+    } catch (err) {
+      console.error("Border purchase intent error:", err);
+      return res.status(500).json({ error: "Failed to create purchase intent" });
+    }
+  });
+
+  // On-chain border purchase: step 2 — verify tx and unlock
+  app.post("/api/store/verify-border-purchase", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { borderId, txHash, gfCost } = req.body;
+      if (!borderId || !txHash || gfCost === undefined) return res.status(400).json({ error: "borderId, txHash, and gfCost are required" });
+
+      const user = await storage.getUserById(req.user.id);
+      if (!user || !user.walletAddress) return res.status(400).json({ error: "Wallet address required" });
+
+      const hasUnlocked = await storage.userHasUnlockedBorder(req.user.id, borderId);
+      if (hasUnlocked) return res.json({ success: true, message: "Already owned" });
+
+      const receipt = await nftPublicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
+      if (receipt.status !== 'success') return res.status(400).json({ error: 'Transaction failed on-chain' });
+
+      const treasuryAddress = getNftTreasuryAddress().toLowerCase();
+      const buyerAddress = (user.walletAddress as string).toLowerCase();
+      const expectedAmount = parseUnits(String(gfCost), NFT_GF_DECIMALS);
+
+      let validTransfer = false;
+      for (const log of receipt.logs) {
+        if (log.address.toLowerCase() !== NFT_GF_TOKEN_ADDRESS.toLowerCase()) continue;
+        try {
+          const decoded = decodeEventLog({ abi: NFT_GF_TOKEN_ABI, data: log.data, topics: log.topics });
+          if (decoded.eventName === 'Transfer') {
+            const { from, to, value } = decoded.args as { from: string; to: string; value: bigint };
+            if (from.toLowerCase() === buyerAddress && to.toLowerCase() === treasuryAddress && value >= expectedAmount) {
+              validTransfer = true;
+              break;
+            }
+          }
+        } catch { continue; }
+      }
+
+      if (!validTransfer) return res.status(400).json({ error: 'Invalid transfer: amount, sender, or recipient mismatch' });
+
+      const border = await storage.getProfileBorder(borderId);
+      await storage.unlockBorderForUser(req.user.id, borderId);
+
+      return res.json({
+        success: true,
+        message: `Successfully purchased "${border?.name}"!`,
+        txHash,
+      });
+    } catch (err) {
+      console.error("Verify border purchase error:", err);
+      return res.status(500).json({ error: "Failed to verify purchase" });
+    }
+  });
+
+  // Legacy border purchase (deprecated — kept for compatibility)
   app.post("/api/store/purchase-border", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.sendStatus(401);
@@ -8023,22 +8555,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "You already own this border" });
       }
 
-      const balance = user.gfTokenBalance || 0;
-      if (balance < cost) {
-        return res.status(400).json({ message: `Insufficient GF tokens. Need ${cost} GF, you have ${balance} GF` });
-      }
-
-      await db.update(users)
-        .set({ gfTokenBalance: sql`COALESCE(${users.gfTokenBalance}, 0) - ${cost}` })
-        .where(eq(users.id, req.user.id));
-
       await storage.unlockBorderForUser(req.user.id, borderId);
 
       res.json({
         success: true,
         message: `Successfully purchased "${border.name}"!`,
         border,
-        newBalance: balance - cost,
       });
     } catch (err) {
       console.error("Error purchasing border:", err);
@@ -8142,7 +8664,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const hiddenBadgeNames = ['moderator', 'moderator icon', 'pro user'];
       const filteredBadges = mergedBadges
-        .filter(b => !hiddenBadgeNames.includes(b.name.toLowerCase()))
+        .filter(b => {
+          const nameLower = b.name.toLowerCase();
+          if (isModerator && nameLower.includes('moderator')) return true;
+          return !hiddenBadgeNames.includes(nameLower);
+        })
         .map(b => {
           if (b.name.toLowerCase() === 'verified128') {
             return { ...b, name: 'Pro' };
@@ -8305,22 +8831,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "You already own this verification badge" });
       }
 
-      const balance = user.gfTokenBalance || 0;
-      if (balance < cost) {
-        return res.status(400).json({ message: `Insufficient GF tokens. Need ${cost} GF, you have ${balance} GF` });
-      }
-
-      await db.update(users)
-        .set({ gfTokenBalance: sql`COALESCE(${users.gfTokenBalance}, 0) - ${cost}` })
-        .where(eq(users.id, req.user.id));
-
       await storage.unlockVerificationBadgeForUser(req.user.id, badgeId);
 
       res.json({
         success: true,
         message: `Successfully purchased "${badge.name}"!`,
         badge,
-        newBalance: balance - cost,
       });
     } catch (err) {
       console.error("Error purchasing verification badge:", err);
@@ -8563,11 +9079,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Found existing game by name: ${gameName} (ID: ${existingGame.id})`);
           game = existingGame;
         } else {
-          console.log(`Creating new game with ID ${gameId}: ${gameName}`);
+          console.log(`Creating new user-supplied game with ID ${gameId}: ${gameName}`);
           try {
             game = await storage.createGame({
               name: gameName,
-              imageUrl: gameImageUrl || null
+              imageUrl: gameImageUrl || null,
+              isUserAdded: true,
+              isApproved: false,
             });
           } catch (createError: any) {
             // Handle race condition where game was created by another request
@@ -8713,7 +9231,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "This profile is private. Please log in and follow the user to see their content." });
       }
 
-      const screenshots = await storage.getScreenshotsByUserId(userId);
+      let screenshots = await storage.getScreenshotsByUserId(userId);
+
+      // For non-owners, hide screenshots associated with unapproved custom games
+      if (!isOwnProfile) {
+        const gameIds = [...new Set(screenshots.map((s) => s.gameId).filter((id): id is number => id !== null))];
+        if (gameIds.length > 0) {
+          const allGames = await storage.getAllGames();
+          const unapprovedGameIds = new Set(allGames.filter((g) => g.isApproved === false).map((g) => g.id));
+          screenshots = screenshots.filter((s) => !s.gameId || !unapprovedGameIds.has(s.gameId));
+        }
+      }
+
       res.json(screenshots);
     } catch (err) {
       console.error("Error fetching user screenshots:", err);
@@ -9371,6 +9900,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Mount quick sell routes
   app.use(quickSellRouter);
+  app.use(adminNftSeedRouter);
 
   // Desktop app video upload endpoint - combines upload and processing in one step
   // Expected by desktop app: POST /api/videos/upload with multipart/form-data
@@ -10670,8 +11200,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Purchase NFT with GF tokens
-  app.post("/api/nft/purchase", authMiddleware, async (req, res) => {
+  // NFT purchase intent (returns cost and treasury address)
+  app.post("/api/nft/purchase-intent", authMiddleware, async (req, res) => {
     try {
       const userId = req.user!.id;
       const { nftId } = req.body;
@@ -10680,17 +11210,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid NFT ID" });
       }
 
-      // Look up NFT price from server-side catalog (prevents price manipulation)
       const nft = NFT_CATALOG.find(n => n.id === nftId);
-      if (!nft) {
-        return res.status(404).json({ message: "NFT not found" });
-      }
+      if (!nft) return res.status(404).json({ message: "NFT not found" });
+      if (!nft.forSale) return res.status(400).json({ message: "NFT is not for sale" });
 
-      if (!nft.forSale) {
-        return res.status(400).json({ message: "NFT is not for sale" });
-      }
-
-      // Check if this NFT has already been purchased by someone
       const existingPurchase = await db.execute(
         sql`SELECT id FROM store_nft_purchases WHERE nft_catalog_id = ${nftId} LIMIT 1`
       );
@@ -10700,53 +11223,180 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // Check if user has a wallet
+      if (!user) return res.status(404).json({ message: "User not found" });
       if (!user.walletAddress) {
         return res.status(400).json({ message: "Wallet required to purchase NFTs" });
       }
 
-      // Check if user has enough GF tokens (use server-side price)
-      const currentBalance = user.gfTokenBalance || 0;
-      if (currentBalance < nft.price) {
-        return res.status(400).json({ 
-          message: "Insufficient GF token balance",
-          currentBalance,
-          required: nft.price
-        });
+      const treasuryAddress = getNftTreasuryAddress();
+      return res.json({ gfCost: nft.price, treasuryAddress });
+    } catch (error) {
+      console.error("Error creating NFT purchase intent:", error);
+      res.status(500).json({ error: "Failed to create purchase intent" });
+    }
+  });
+
+  // Verify NFT purchase after on-chain transfer
+  app.post("/api/nft/verify-purchase", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { nftId, txHash } = req.body;
+
+      if (!nftId || typeof nftId !== 'number' || !txHash) {
+        return res.status(400).json({ message: "nftId and txHash are required" });
       }
 
-      // Deduct GF tokens
-      const newBalance = currentBalance - nft.price;
-      await storage.updateUser(userId, {
-        gfTokenBalance: newBalance
-      });
+      const nft = NFT_CATALOG.find(n => n.id === nftId);
+      if (!nft) return res.status(404).json({ message: "NFT not found" });
+      if (!nft.forSale) return res.status(400).json({ message: "NFT is not for sale" });
 
-      // Record the store NFT purchase (marks it as sold/unavailable)
+      const existingPurchase = await db.execute(
+        sql`SELECT id FROM store_nft_purchases WHERE nft_catalog_id = ${nftId} LIMIT 1`
+      );
+      const existingRows = (existingPurchase as any).rows || existingPurchase || [];
+      if (existingRows.length > 0) {
+        return res.status(400).json({ message: "This NFT has already been sold" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user?.walletAddress) {
+        return res.status(400).json({ message: "Wallet required to purchase NFTs" });
+      }
+
+      const treasuryAddress = getNftTreasuryAddress().toLowerCase();
+      const expectedAmount = parseUnits(String(nft.price), NFT_GF_DECIMALS);
+      const receipt = await nftPublicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
+
+      if (receipt.status !== 'success') {
+        return res.status(400).json({ message: "Transaction failed on-chain" });
+      }
+
+      let validTransfer = false;
+      for (const log of receipt.logs) {
+        if (log.address.toLowerCase() !== NFT_GF_TOKEN_ADDRESS.toLowerCase()) continue;
+        try {
+          const decoded = decodeEventLog({ abi: NFT_GF_TOKEN_ABI, data: log.data, topics: log.topics });
+          if (decoded.eventName === 'Transfer') {
+            const { from, to, value } = decoded.args as { from: ViemAddress; to: ViemAddress; value: bigint };
+            if (
+              from.toLowerCase() === user.walletAddress.toLowerCase() &&
+              to.toLowerCase() === treasuryAddress &&
+              value >= expectedAmount
+            ) {
+              validTransfer = true;
+              break;
+            }
+          }
+        } catch { continue; }
+      }
+
+      if (!validTransfer) {
+        return res.status(400).json({ message: "Invalid transfer: amount, sender, or recipient mismatch" });
+      }
+
       await db.execute(
         sql`INSERT INTO store_nft_purchases (nft_catalog_id, buyer_user_id, price_paid) VALUES (${nftId}, ${userId}, ${nft.price})`
       );
-
-      // Add the NFT to the buyer's wallet (user_nfts table)
       await db.execute(
-        sql`INSERT INTO user_nfts (user_id, token_id, tx_hash) VALUES (${userId}, ${nftId}, ${'store_purchase_' + Date.now()}) ON CONFLICT (user_id, token_id) DO NOTHING`
+        sql`INSERT INTO user_nfts (user_id, token_id, tx_hash) VALUES (${userId}, ${nftId}, ${txHash}) ON CONFLICT (user_id, token_id) DO NOTHING`
       );
 
-      res.json({
-        success: true,
-        message: "NFT purchased successfully",
-        nftId,
-        nftName: nft.name,
-        pricePaid: nft.price,
-        newBalance,
-        transactionId: `store_purchase_${Date.now()}_${nftId}`
-      });
+      console.log(`[NFT Purchase] User ${userId} purchased NFT #${nftId} for ${nft.price} GFT (tx: ${txHash})`);
+      res.json({ success: true, message: "NFT purchased successfully", nftId, nftName: nft.name, pricePaid: nft.price });
     } catch (error) {
-      console.error("Error purchasing NFT:", error);
-      res.status(500).json({ error: "Failed to purchase NFT" });
+      console.error("Error verifying NFT purchase:", error);
+      res.status(500).json({ error: "Failed to verify purchase" });
+    }
+  });
+
+  // Server-side NFT purchase (signs transaction using user's stored encrypted private key)
+  app.post("/api/nft/server-purchase", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { nftId } = req.body;
+
+      if (!nftId || typeof nftId !== 'number') {
+        return res.status(400).json({ message: "Invalid NFT ID" });
+      }
+
+      const nft = NFT_CATALOG.find(n => n.id === nftId);
+      if (!nft) return res.status(404).json({ message: "NFT not found" });
+      if (!nft.forSale) return res.status(400).json({ message: "NFT is not for sale" });
+
+      const existingPurchase = await db.execute(
+        sql`SELECT id FROM store_nft_purchases WHERE nft_catalog_id = ${nftId} LIMIT 1`
+      );
+      const existingRows = (existingPurchase as any).rows || existingPurchase || [];
+      if (existingRows.length > 0) {
+        return res.status(400).json({ message: "This NFT has already been sold" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user.walletAddress || !user.encryptedPrivateKey) {
+        return res.status(400).json({ message: "No server-side wallet available", code: "NO_WALLET" });
+      }
+
+      const onChainBalance = await getTokenBalance(user.walletAddress);
+      if (parseFloat(onChainBalance) < nft.price) {
+        return res.status(400).json({
+          message: `Insufficient GFT balance. Have: ${parseFloat(onChainBalance).toFixed(2)} GFT, Need: ${nft.price} GFT`,
+          code: "INSUFFICIENT_BALANCE",
+        });
+      }
+
+      const treasuryAddress = getNftTreasuryAddress();
+      const amountRaw = parseUnits(String(nft.price), NFT_GF_DECIMALS);
+
+      console.log(`[NFT Server Purchase] User ${userId} purchasing NFT #${nftId} for ${nft.price} GFT`);
+      const txHash = await writeContractWithPoW({
+        encryptedPrivateKey: user.encryptedPrivateKey,
+        contractAddress: NFT_GF_TOKEN_ADDRESS as ViemAddress,
+        abi: NFT_GF_TOKEN_ABI,
+        functionName: "transfer",
+        args: [treasuryAddress as ViemAddress, amountRaw],
+      });
+
+      const receipt = await nftPublicClient.waitForTransactionReceipt({ hash: txHash, timeout: 60_000 });
+      if (receipt.status !== 'success') {
+        return res.status(400).json({ message: "Transfer transaction reverted on-chain", txHash });
+      }
+
+      let validTransfer = false;
+      for (const log of receipt.logs) {
+        if (log.address.toLowerCase() !== NFT_GF_TOKEN_ADDRESS.toLowerCase()) continue;
+        try {
+          const decoded = decodeEventLog({ abi: NFT_GF_TOKEN_ABI, data: log.data, topics: log.topics });
+          if (decoded.eventName === 'Transfer') {
+            const { from, to, value } = decoded.args as { from: ViemAddress; to: ViemAddress; value: bigint };
+            if (
+              from.toLowerCase() === user.walletAddress.toLowerCase() &&
+              to.toLowerCase() === treasuryAddress.toLowerCase() &&
+              value >= amountRaw
+            ) {
+              validTransfer = true;
+              break;
+            }
+          }
+        } catch { continue; }
+      }
+
+      if (!validTransfer) {
+        return res.status(400).json({ message: "Transfer event not found in receipt", txHash });
+      }
+
+      await db.execute(
+        sql`INSERT INTO store_nft_purchases (nft_catalog_id, buyer_user_id, price_paid) VALUES (${nftId}, ${userId}, ${nft.price})`
+      );
+      await db.execute(
+        sql`INSERT INTO user_nfts (user_id, token_id, tx_hash) VALUES (${userId}, ${nftId}, ${txHash}) ON CONFLICT (user_id, token_id) DO NOTHING`
+      );
+
+      console.log(`[NFT Server Purchase] User ${userId} purchased NFT #${nftId} for ${nft.price} GFT (tx: ${txHash})`);
+      return res.json({ success: true, txHash, nftId, nftName: nft.name, pricePaid: nft.price });
+    } catch (error: any) {
+      console.error("[NFT Server Purchase] Error:", error);
+      return res.status(500).json({ error: error.message || "Failed to process purchase" });
     }
   });
 
@@ -11000,25 +11650,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Order amount validation failed" });
       }
 
-      // Get user and update balance
+      // Get user and deliver tokens on-chain
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      const currentBalance = user.gfTokenBalance || 0;
-      const newBalance = currentBalance + gfTokenAmount;
+      if (!user.walletAddress) {
+        return res.status(400).json({ message: "User has no wallet address for on-chain delivery" });
+      }
 
-      await storage.updateUser(userId, {
-        gfTokenBalance: newBalance
-      });
+      const transferResult = await transferGfTokens(user.walletAddress, gfTokenAmount);
+      if (!transferResult.success) {
+        console.error(`❌ On-chain GFT delivery failed for user ${userId}: ${transferResult.error}`);
+        return res.status(500).json({ message: `On-chain transfer failed: ${transferResult.error}` });
+      }
 
-      console.log(`✅ GF Tokens Delivered: User ${userId} received ${gfTokenAmount} GF (Order: ${orderId})`);
+      console.log(`✅ GF Tokens Delivered On-Chain: User ${userId} received ${gfTokenAmount} GF (Order: ${orderId}, TxHash: ${transferResult.txHash})`);
 
       res.json({
         success: true,
         amount: gfTokenAmount,
-        newBalance,
+        txHash: transferResult.txHash,
         orderId
       });
     } catch (error) {
@@ -11652,7 +12305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Final fallback: cancel in database directly (keep Pro active until end date)
+      // Final fallback: cancel in database directly (keep Pro active until end of paid period)
       const endDate = user.proSubscriptionEndDate ? new Date(user.proSubscriptionEndDate) : new Date();
       await db.update(users).set({
         isPro: true,

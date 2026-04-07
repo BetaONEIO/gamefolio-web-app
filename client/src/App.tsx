@@ -308,8 +308,8 @@ function Router() {
           <ProtectedRoute path="/upload-success" component={PostUploadSuccessPage} />
           <ProtectedRoute path="/upload-success/:contentType/:contentId" component={PostUploadSuccessPage} />
           <ProtectedRoute path="/account/settings" component={AccountSettingsPage} />
-          <ProtectedRoute path="/settings/profile" component={SettingsPage} />
           <ProtectedRoute path="/customize" component={CustomizePage} />
+          <ProtectedRoute path="/settings/profile" component={SettingsPage} />
           <ProtectedRoute path="/browse/games/:category" component={GameCategoriesPage} />
           <ProtectedRoute path="/browse/games/categories" component={GameCategoriesPage} />
           <Route path="/leaderboard" component={LeaderboardPage} />

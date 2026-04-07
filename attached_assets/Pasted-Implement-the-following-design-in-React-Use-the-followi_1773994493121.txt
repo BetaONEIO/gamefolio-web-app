@@ -1,0 +1,1110 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/SnowGamefolio.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,900;0,700;0,500&display=swap";
+.SnowGamefolio_276_106 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_276_107 {
+  background: #f0f9ff;
+  flex: 1 0 0;
+  width: 100%;
+  height: 1114px;
+  overflow: hidden;
+}
+.Container_276_108,
+.Container_276_109 {
+  width: 430px;
+  height: 932px;
+}
+.Container_276_110 {
+  width: 430px;
+  height: 240px;
+  overflow: hidden;
+}
+.Image_276_111 {
+  aspect-ratio: 43/24;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 430px;
+  height: 240px;
+}
+.Container_276_112 {
+  background: linear-gradient(#f0f9ff 0%, #f0f9ff00 50% 100%);
+  width: 430px;
+  height: 240px;
+}
+.Container_276_113 {
+  justify-content: center;
+  align-items: center;
+  width: 143px;
+  height: 29px;
+  display: flex;
+}
+.Container_276_114 {
+  backdrop-filter: blur(12px);
+  box-sizing: border-box;
+  background: #fff3;
+  border: 1px solid #fff6;
+  border-radius: 16777200px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 5.5px;
+  padding: 7px 14.5px 7px 17px;
+  display: flex;
+}
+.Container_276_115 {
+  background: #51a2ff;
+  border-radius: 16777200px;
+  width: 8px;
+  height: 8px;
+  box-shadow: 0 0 8px #60a5fa;
+}
+.CSubzero_276_116 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 98px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_276_117 {
+  width: 430px;
+  height: 842px;
+}
+.Container_276_118 {
+  width: 382px;
+  height: 128px;
+}
+.Container_276_119 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 7.75781px;
+  width: 150px;
+  height: 48px;
+  padding-right: 0.242px;
+  display: flex;
+}
+.Button_276_120 {
+  background: #0ea5e9;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 48px;
+  padding: 15px 21.5px;
+  display: flex;
+  box-shadow: 0 8px 20px -4px #0ea5e980;
+}
+.Freeze_276_121 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 51px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 20px;
+  display: inline-block;
+}
+.Button_276_122 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #eff6ff80;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 48px;
+  padding: 12px;
+  display: flex;
+  box-shadow:
+    0 8px 10px -6px #1c398e1a,
+    0 20px 25px -5px #1c398e1a;
+}
+.Container_276_123 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_276_125 {
+  width: 128px;
+  height: 128px;
+}
+.Container_276_126 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 6px solid #fff;
+  border-radius: 24px;
+  justify-content: center;
+  align-items: center;
+  width: 135px;
+  height: 135px;
+  padding: 13.262px 13.738px 13.738px 13.262px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px #1c398e33;
+}
+.Container_276_127 {
+  background: #e0f2fe;
+  border-radius: 16px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 108px;
+  height: 108px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_276_128 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 108px;
+  height: 108px;
+}
+.Container_276_129 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 4px solid #f0f9ff;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+  box-shadow:
+    0 4px 6px -4px #0000001a,
+    0 10px 15px -3px #0000001a;
+}
+.Container_276_130 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_276_132 {
+  width: 382px;
+  height: 154px;
+}
+.Container_276_133 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 11.5469px;
+  padding-right: 126.453px;
+  display: flex;
+}
+.Container_276_134 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  display: flex;
+}
+.FrostByte_276_135 {
+  color: #0f172a;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.8px;
+  width: 164px;
+  height: 46px;
+  font-family: Plus Jakarta Sans;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 40px;
+  display: inline-block;
+}
+.Container_276_136 {
+  box-sizing: border-box;
+  background: #dbeafe;
+  border: 1px solid #bedbff;
+  border-radius: 16777200px;
+  justify-content: center;
+  align-items: center;
+  width: 85px;
+  height: 25px;
+  padding: 6px 10.5px;
+  display: flex;
+}
+.PeakPro_276_137 {
+  color: #155dfc;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 64px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_276_138 {
+  align-items: center;
+  height: 20px;
+  padding: 1px 249.5px 1px 0;
+  display: inline-flex;
+}
+.ArctiicMaster_276_139 {
+  color: #2b7fff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+  width: 134px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_276_140 {
+  align-items: center;
+  height: 74px;
+  padding: 2.5px 40px 3.5px 0;
+  display: inline-flex;
+}
+.ExploringTheColdestPeaksOfGamingSpeedrunnerGlacierGuideAndLoverOfAllThingsFrozen_276_141 {
+  color: #45556ce6;
+  font-feature-settings: "dlig" on;
+  width: 305px;
+  height: 68px;
+  font-family: Plus Jakarta Sans;
+  font-size: 15px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 24.375px;
+  display: inline-block;
+}
+.Container_276_142 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 11.3281px;
+  width: 382px;
+  height: 98px;
+  display: flex;
+}
+.Container_276_143 {
+  box-sizing: border-box;
+  background: #fff;
+  border-bottom: 8px solid #dbeafe;
+  border-radius: 32px;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 4px;
+  height: 98px;
+  padding: 20px 31.836px 28px 31.164px;
+  display: flex;
+  box-shadow:
+    0 8px 10px -6px #1c398e0d,
+    0 20px 25px -5px #1c398e0d;
+}
+.Container_276_144 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 57px;
+  height: 32px;
+  padding: 0.5px 0;
+  display: flex;
+}
+._1k_276_145 {
+  color: #0f172a;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  flex-shrink: 0;
+  width: 62px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_276_146 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 38px;
+  height: 14px;
+  padding: 1px 0;
+  display: flex;
+}
+.Chills_276_147 {
+  color: #90a1b9;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 43px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_276_148 {
+  box-sizing: border-box;
+  background: #fff;
+  border-bottom: 8px solid #dbeafe;
+  border-radius: 32px;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 4px;
+  height: 98px;
+  padding: 20px 33.5px 28px;
+  display: flex;
+  box-shadow:
+    0 8px 10px -6px #1c398e0d,
+    0 20px 25px -5px #1c398e0d;
+}
+.Container_276_149 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 44px;
+  height: 32px;
+  padding: 0.5px 0;
+  display: flex;
+}
+._2k_276_150 {
+  color: #0f172a;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  flex-shrink: 0;
+  width: 49px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_276_151 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 53px;
+  height: 14px;
+  padding: 1px 0;
+  display: flex;
+}
+.Glaciers_276_152 {
+  color: #90a1b9;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 58px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_276_153 {
+  box-sizing: border-box;
+  background: #fff;
+  border-bottom: 8px solid #dbeafe;
+  border-radius: 32px;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 4px;
+  height: 98px;
+  padding: 20px 33.445px 28px 33.555px;
+  display: flex;
+  box-shadow:
+    0 8px 10px -6px #1c398e0d,
+    0 20px 25px -5px #1c398e0d;
+}
+.Container_276_154 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 53px;
+  height: 32px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.generated_94_276_155 {
+  color: #0f172a;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  flex-shrink: 0;
+  width: 58px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_276_156 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 38px;
+  height: 14px;
+  padding: 1px 0;
+  display: flex;
+}
+.Purity_276_157 {
+  color: #90a1b9;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 43px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_276_158 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 32px;
+  width: 382px;
+  display: flex;
+}
+.Container_276_159 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 123px;
+  height: 48px;
+  display: flex;
+}
+.Container_276_160 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  height: 48px;
+  display: flex;
+}
+.Container_276_161 {
+  box-sizing: border-box;
+  background: #2b7fff1a;
+  border: 1px solid #bedbff;
+  border-radius: 24px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 48px;
+  padding: 10px;
+  display: flex;
+  box-shadow: inset 0 2px 4px #0000000d;
+}
+.Container_276_162 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0.927531px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_276_165 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 171px;
+  height: 47px;
+  display: flex;
+}
+.Container_276_166 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.RecentFreezes_276_167 {
+  color: #0f172a;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.6px;
+  width: 176px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_276_168 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 15px;
+  padding: 1px 27.5px 1px 0;
+  display: flex;
+}
+.CapturedInSubZero_276_169 {
+  color: #90a1b9;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 145px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_276_170 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_276_172 {
+  justify-content: center;
+  align-items: center;
+  height: 279px;
+  padding-bottom: 64px;
+  display: flex;
+}
+.Container_276_173 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 8px solid #fff;
+  border-radius: 48px;
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 382px;
+  height: 215px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px #1c398e1a;
+}
+.Image_276_174 {
+  aspect-ratio: 103/56;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 366px;
+  height: 199px;
+}
+.Container_276_175 {
+  background: linear-gradient(#1c398e00 0% 50%, #1c398ee6 100%);
+  width: 366px;
+  height: 199px;
+}
+.Container_276_176 {
+  justify-content: center;
+  align-items: center;
+  width: 125px;
+  height: 33px;
+  display: flex;
+}
+.Container_276_177 {
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+  background: #fff3;
+  border: 1px solid #ffffff4d;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 14.5px;
+  display: flex;
+  box-shadow:
+    0 8px 10px -6px #0000001a,
+    0 20px 25px -5px #0000001a;
+}
+.NorthWind_276_178 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 96px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_276_179 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  width: 302px;
+  display: flex;
+}
+.Container_276_180 {
+  align-items: center;
+  height: 60px;
+  padding-right: 32.5px;
+  display: flex;
+}
+.StealthTakedownInTheBlizzard_276_181 {
+  color: #fff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.6px;
+  width: 272px;
+  height: 61px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 30px;
+  display: inline-block;
+}
+.Container_276_182 {
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 23.0781px;
+  height: 20px;
+  padding-right: 172.922px;
+  display: flex;
+}
+.Container_276_183 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6.5px;
+  height: 20px;
+  display: flex;
+}
+.Container_276_184 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 20px;
+  display: flex;
+  overflow: hidden;
+}
+.k_276_187 {
+  color: #dbeafe;
+  font-feature-settings: "dlig" on;
+  width: 30px;
+  height: 20px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_276_188 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6.5px;
+  height: 20px;
+  display: flex;
+}
+.Container_276_189 {
+  flex: 1 0 0;
+  height: 20px;
+  overflow: hidden;
+}
+.k_276_191 {
+  color: #dbeafe;
+  font-feature-settings: "dlig" on;
+  width: 26px;
+  height: 20px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_276_192 {
+  justify-content: center;
+  align-items: center;
+  width: 366px;
+  height: 199px;
+  display: flex;
+}
+.Container_276_193 {
+  backdrop-filter: blur(6px);
+  background: #ffffff4d;
+  border-radius: 16777200px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 12px;
+  display: flex;
+}
+.Container_276_194 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_276_196 {
+  width: 430px;
+  height: 932px;
+  overflow: hidden;
+}
+.Container_276_197 {
+  filter: blur(0.5px);
+  background: #fff;
+  border-radius: 16777200px;
+  width: 8px;
+  height: 8px;
+}
+.Container_276_198 {
+  filter: blur(0.5px);
+  background: #fff;
+  border-radius: 16777200px;
+  width: 4px;
+  height: 4px;
+}
+.Container_276_199 {
+  filter: blur(0.5px);
+  background: #fff;
+  border-radius: 16777200px;
+  width: 6px;
+  height: 6px;
+}
+.Container_276_200 {
+  filter: blur(0.5px);
+  background: #fff;
+  border-radius: 16777200px;
+  width: 4px;
+  height: 4px;
+}
+.Navigation_276_201 {
+  backdrop-filter: blur(20px);
+  box-sizing: border-box;
+  background: #fffc;
+  border: 1px solid #fff;
+  border-radius: 40px;
+  width: 382px;
+  height: 80px;
+  box-shadow: 0 20px 50px -12px #0f172a26;
+}
+.Button_276_202 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 28px;
+  display: flex;
+}
+.Container_276_203 {
+  height: 28px;
+  overflow: hidden;
+}
+.Container_276_205 {
+  background: #155dfc;
+  border-radius: 16777200px;
+  width: 16px;
+  height: 4px;
+}
+.Button_276_206 {
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  display: flex;
+}
+.Container_276_207 {
+  flex: 1 0 0;
+  height: 28px;
+  overflow: hidden;
+}
+.Button_276_209 {
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  display: flex;
+}
+.Container_276_210 {
+  flex: 1 0 0;
+  height: 28px;
+  overflow: hidden;
+}
+.Button_276_212 {
+  box-sizing: border-box;
+  background: #eff6ff;
+  border: 2px solid #dbeafe;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 4px;
+  display: flex;
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px -1px #0000001a,
+    0 1px 3px #0000001a;
+}
+.Image_276_213 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  border-radius: 16px;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+}
+.Container_276_214 {
+  justify-content: center;
+  align-items: center;
+  width: 64px;
+  height: 64px;
+  display: flex;
+}
+.Button_276_215 {
+  box-sizing: border-box;
+  background: linear-gradient(#51a2ff 0%, #155dfc 100%);
+  border: 4px solid #f0f9ff;
+  border-radius: 32px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 14px;
+  display: flex;
+  box-shadow:
+    0 8px 10px -6px #2b7fff66,
+    0 20px 25px -5px #2b7fff66;
+}
+.Container_276_216 {
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+}
+
+```
+
+---
+
+```src/components/assets/Container.tsx
+import React from 'react';
+export default function Container() {
+  return <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fillRule="evenodd" clipRule="evenodd" d="M18 33C26.2845 33 33 26.2845 33 18C33 9.7155 26.2845 3 18 3C9.7155 3 3 9.7155 3 18C3 26.2845 9.7155 33 18 33ZM19.125 13.5C19.125 12.8787 18.6213 12.375 18 12.375C17.3787 12.375 16.875 12.8787 16.875 13.5V16.875H13.5C12.8787 16.875 12.375 17.3787 12.375 18C12.375 18.6213 12.8787 19.125 13.5 19.125H16.875V22.5C16.875 23.1213 17.3787 23.625 18 23.625C18.6213 23.625 19.125 23.1213 19.125 22.5V19.125H22.5C23.1213 19.125 23.625 18.6213 23.625 18C23.625 17.3787 23.1213 16.875 22.5 16.875H19.125V13.5Z" fill="white"/>
+</svg>
+;
+}
+```
+
+---
+
+```src/components/SnowGamefolio.tsx
+import React from 'react';
+import styles from '../styles/SnowGamefolio.module.css';
+import Container from './assets/Container';
+
+export default function SnowGamefolio() {
+  return (
+    <div className={styles.SnowGamefolio_276_106}>
+      <div className={styles.Container_276_107}>
+        <div className={styles.Container_276_108}></div>
+        <div className={styles.Container_276_109}>
+          <div className={styles.Container_276_110}>
+            <div className={styles.Image_276_111}></div>
+            <div className={styles.Container_276_112}></div>
+            <div className={styles.Container_276_113}>
+              <div className={styles.Container_276_114}>
+                <div className={styles.Container_276_115}></div><span className={styles.CSubzero_276_116}>-12&#xB0;C Subzero</span>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_276_117}>
+            <div className={styles.Container_276_118}>
+              <div className={styles.Container_276_119}>
+                <div className={styles.Button_276_120}><span className={styles.Freeze_276_121}>Freeze</span></div>
+                <div className={styles.Button_276_122}>
+                  <div className={styles.Container_276_123}>
+                    <Container />
+                  </div>
+                </div>
+              </div>
+              <div className={styles.Container_276_125}>
+                <div className={styles.Container_276_126}>
+                  <div className={styles.Container_276_127}>
+                    <div className={styles.Image_276_128}></div>
+                  </div>
+                </div>
+                <div className={styles.Container_276_129}>
+                  <div className={styles.Container_276_130}>
+                    <Container />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_276_132}>
+              <div className={styles.Container_276_133}>
+                <div className={styles.Container_276_134}><span className={styles.FrostByte_276_135}>FrostByte</span></div>
+                <div className={styles.Container_276_136}><span className={styles.PeakPro_276_137}>Peak Pro</span></div>
+              </div>
+              <div className={styles.Container_276_138}><span className={styles.ArctiicMaster_276_139}>@ArctiicMaster</span></div>
+              <div className={styles.Container_276_140}><span className={styles.ExploringTheColdestPeaksOfGamingSpeedrunnerGlacierGuideAndLoverOfAllThingsFrozen_276_141}>Exploring the coldest peaks of gaming. &#x2744;&#xFE0F; Speedrunner, glacier guide, and lover of all things frozen.</span></div>
+            </div>
+            <div className={styles.Container_276_142}>
+              <div className={styles.Container_276_143}>
+                <div className={styles.Container_276_144}><span className={styles._1k_276_145}>42.1k</span></div>
+                <div className={styles.Container_276_146}><span className={styles.Chills_276_147}>Chills</span></div>
+              </div>
+              <div className={styles.Container_276_148}>
+                <div className={styles.Container_276_149}><span className={styles._2k_276_150}>1.2k</span></div>
+                <div className={styles.Container_276_151}><span className={styles.Glaciers_276_152}>Glaciers</span></div>
+              </div>
+              <div className={styles.Container_276_153}>
+                <div className={styles.Container_276_154}><span className={styles.generated_94_276_155}>94%</span></div>
+                <div className={styles.Container_276_156}><span className={styles.Purity_276_157}>Purity</span></div>
+              </div>
+            </div>
+            <div className={styles.Container_276_158}>
+              <div className={styles.Container_276_159}>
+                <div className={styles.Container_276_160}>
+                  <div className={styles.Container_276_161}>
+                    <div className={styles.Container_276_162}>
+                      <Container />
+                    </div>
+                  </div>
+                  <div className={styles.Container_276_165}>
+                    <div className={styles.Container_276_166}><span className={styles.RecentFreezes_276_167}>Recent Freezes</span></div>
+                    <div className={styles.Container_276_168}><span className={styles.CapturedInSubZero_276_169}>Captured in sub-zero</span></div>
+                  </div>
+                </div>
+                <div className={styles.Container_276_170}>
+                  <Container />
+                </div>
+              </div>
+              <div className={styles.Container_276_172}>
+                <div className={styles.Container_276_173}>
+                  <div className={styles.Image_276_174}></div>
+                  <div className={styles.Container_276_175}></div>
+                  <div className={styles.Container_276_176}>
+                    <div className={styles.Container_276_177}><span className={styles.NorthWind_276_178}>North Wind &#x2744;&#xFE0F;</span></div>
+                  </div>
+                  <div className={styles.Container_276_179}>
+                    <div className={styles.Container_276_180}><span className={styles.StealthTakedownInTheBlizzard_276_181}>Stealth Takedown in the Blizzard</span></div>
+                    <div className={styles.Container_276_182}>
+                      <div className={styles.Container_276_183}>
+                        <div className={styles.Container_276_184}>
+                          <Container />
+                        </div><span className={styles.k_276_187}>84k</span>
+                      </div>
+                      <div className={styles.Container_276_188}>
+                        <div className={styles.Container_276_189}>
+                          <Container />
+                        </div><span className={styles.k_276_191}>12k</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.Container_276_192}>
+                    <div className={styles.Container_276_193}>
+                      <div className={styles.Container_276_194}>
+                        <Container />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_276_196}>
+          <div className={styles.Container_276_197}></div>
+          <div className={styles.Container_276_198}></div>
+          <div className={styles.Container_276_199}></div>
+          <div className={styles.Container_276_200}></div>
+        </div>
+        <div className={styles.Navigation_276_201}>
+          <div className={styles.Button_276_202}>
+            <div className={styles.Container_276_203}>
+              <Container />
+            </div>
+            <div className={styles.Container_276_205}></div>
+          </div>
+          <div className={styles.Button_276_206}>
+            <div className={styles.Container_276_207}>
+              <Container />
+            </div>
+          </div>
+          <div className={styles.Button_276_209}>
+            <div className={styles.Container_276_210}>
+              <Container />
+            </div>
+          </div>
+          <div className={styles.Button_276_212}>
+            <div className={styles.Image_276_213}></div>
+          </div>
+          <div className={styles.Container_276_214}>
+            <div className={styles.Button_276_215}>
+              <div className={styles.Container_276_216}>
+                <Container />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

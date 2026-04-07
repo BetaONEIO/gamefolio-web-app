@@ -1,0 +1,1335 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/MacGamefolio.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,700;0,900;0,500;0,400&display=swap";
+.MacGamefolio_280_679 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_280_680 {
+  background: #f0f0f2;
+  flex: 1 0 0;
+  width: 100%;
+  height: 1057px;
+  overflow: hidden;
+}
+.Container_280_681 {
+  width: 430px;
+  height: 932px;
+}
+.Container_280_682 {
+  background: linear-gradient(#fff 0%, #fff0 100%);
+  width: 430px;
+  height: 256px;
+}
+.Container_280_683 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 31.5px;
+  width: 430px;
+  padding: 24px 24px 3.5px;
+  display: flex;
+}
+.Container_280_684 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #fff;
+  border-radius: 16px;
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 382px;
+  height: 428px;
+  padding: 1px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 20px 50px #00000026;
+}
+.Container_280_685 {
+  background: linear-gradient(#fff 0%, #fcfcfc 50%, #f5f5f7 100%);
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 380px;
+  height: 394px;
+  display: flex;
+}
+.Container_280_686 {
+  justify-content: center;
+  align-items: center;
+  width: 145px;
+  display: flex;
+}
+.SierraMist_280_687 {
+  color: #1d1d1f;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.75px;
+  flex-shrink: 0;
+  width: 148px;
+  height: 38px;
+  font-family: Plus Jakarta Sans;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 36px;
+  display: inline-block;
+}
+.Container_280_688 {
+  justify-content: center;
+  align-items: center;
+  width: 91px;
+  height: 17px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.ProMember_280_689 {
+  color: #06f;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.65px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 96px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_280_690 {
+  box-sizing: border-box;
+  border-top: 1px solid #0000000d;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: -0.671875px;
+  width: 316px;
+  padding-top: 33px;
+  display: flex;
+}
+.Container_280_691 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 9px;
+  width: 106px;
+  height: 56px;
+  padding-bottom: 3px;
+  display: flex;
+}
+.Container_280_692 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 0.5px 23.133px 0.5px 22.867px;
+  display: flex;
+}
+._4k_280_693 {
+  color: #1d1d1f;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  width: 60px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_280_694 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 65px;
+  height: 12px;
+  display: flex;
+}
+.Followers_280_695 {
+  color: #0006;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 70px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_280_696 {
+  box-sizing: border-box;
+  border-left: 1px solid #0000000d;
+  border-right: 1px solid #0000000d;
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 9px;
+  width: 106px;
+  height: 56px;
+  padding: 0 1px 3px;
+  display: flex;
+}
+.Container_280_697 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 104px;
+  height: 32px;
+  padding: 0.5px 29.633px 0.5px 29.367px;
+  display: flex;
+}
+.generated_842_280_698 {
+  color: #1d1d1f;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  flex-shrink: 0;
+  width: 45px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_280_699 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 38px;
+  height: 12px;
+  display: flex;
+}
+.Games_280_700 {
+  color: #0006;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 43px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_280_701 {
+  flex-flow: column;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 9px;
+  width: 106px;
+  height: 56px;
+  padding-bottom: 3px;
+  display: flex;
+}
+.Container_280_702 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 0.5px 30.461px 0.5px 30.539px;
+  display: flex;
+}
+._1k_280_703 {
+  color: #1d1d1f;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  width: 45px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_280_704 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 31px;
+  height: 12px;
+  display: flex;
+}
+.Clips_280_705 {
+  color: #0006;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 36px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_280_706 {
+  width: 128px;
+  height: 128px;
+}
+.Container_280_707 {
+  background: #fff;
+  border-radius: 16777200px;
+  justify-content: center;
+  align-items: center;
+  width: 128px;
+  height: 128px;
+  padding: 4px;
+  display: flex;
+  overflow: hidden;
+  box-shadow:
+    0 4px 15px #0000001a,
+    0 0 0 1px #0000000d;
+}
+.Container_280_708 {
+  box-sizing: border-box;
+  border: 1px solid #0000000d;
+  border-radius: 16777200px;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_280_709 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 118px;
+  height: 118px;
+}
+.Container_280_710 {
+  background: linear-gradient(#fff0 0%, #fff3 50%, #fff6 100%);
+  width: 118px;
+  height: 118px;
+}
+.Container_280_711 {
+  box-sizing: border-box;
+  background: linear-gradient(#3498db 0%, #2980b9 100%);
+  border: 2px solid #fff;
+  border-radius: 16777200px;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+  display: flex;
+  box-shadow:
+    0 2px 4px -2px #0000001a,
+    0 4px 6px -1px #0000001a;
+}
+.Container_280_712 {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.Container_280_714 {
+  box-sizing: border-box;
+  background: linear-gradient(#f0f0f0 0%, #ccc 100%);
+  border-bottom: 1px solid #0000001a;
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 380px;
+  height: 32px;
+  display: flex;
+}
+.Container_280_715 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6px;
+  width: 48px;
+  height: 12px;
+  display: flex;
+}
+.Container_280_716 {
+  box-sizing: border-box;
+  background: #ff5f57;
+  border: 1px solid #0000001a;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  height: 12px;
+  box-shadow: inset 0 2px 4px #0000000d;
+}
+.Container_280_717 {
+  box-sizing: border-box;
+  background: #febc2e;
+  border: 1px solid #0000001a;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  height: 12px;
+  box-shadow: inset 0 2px 4px #0000000d;
+}
+.Container_280_718 {
+  box-sizing: border-box;
+  background: #28c840;
+  border: 1px solid #0000001a;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  height: 12px;
+  box-shadow: inset 0 2px 4px #0000000d;
+}
+.Container_280_719 {
+  justify-content: center;
+  align-items: center;
+  width: 380px;
+  height: 31px;
+  padding: 7.25px 0 6.75px;
+  display: flex;
+}
+.Container_280_720 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 58px;
+  height: 17px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.UserProfile_280_721 {
+  color: #0009;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.275px;
+  flex-shrink: 0;
+  width: 61px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_280_722 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  height: 153px;
+  display: flex;
+}
+.Container_280_723 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #0000000d;
+  border-radius: 16px;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  height: 153px;
+  padding: 21px 49.789px 21px 50.211px;
+  display: flex;
+  box-shadow:
+    0 1px 2px -1px #0000001a,
+    0 1px 3px #0000001a;
+}
+.Container_280_724 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 83px;
+  display: flex;
+}
+.Container_280_725 {
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 4.477px 1px 4.523px;
+  display: flex;
+}
+.MyLibrary_280_726 {
+  color: #1d1d1f;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 74px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_280_727 {
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+._8GbAvailable_280_728 {
+  color: #0006;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 85px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_280_729 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 64px;
+  height: 64px;
+  padding: 4px;
+  display: flex;
+}
+.Container_280_730 {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+}
+.Container_280_732 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #0000000d;
+  border-radius: 16px;
+  flex-flow: column;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  height: 153px;
+  padding: 21px 42.289px 21px 42.711px;
+  display: flex;
+  box-shadow:
+    0 1px 2px -1px #0000001a,
+    0 1px 3px #0000001a;
+}
+.Container_280_733 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 98px;
+  display: flex;
+}
+.Container_280_734 {
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.Achievements_280_735 {
+  color: #1d1d1f;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 101px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_280_736 {
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 9.438px 1px 9.563px;
+  display: flex;
+}
+.NewRewards_280_737 {
+  color: #0006;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  width: 79px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_280_738 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 64px;
+  height: 64px;
+  padding: 4px;
+  display: flex;
+}
+.Container_280_739 {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+}
+.Container_280_741 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #fff;
+  border-radius: 16px;
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  width: 382px;
+  height: 232px;
+  padding: 1px;
+  display: flex;
+  overflow: hidden;
+  box-shadow:
+    0 4px 6px -4px #0000001a,
+    0 10px 15px -3px #0000001a;
+}
+.Container_280_742 {
+  box-sizing: border-box;
+  background: linear-gradient(#f8f8f8 0%, #e0e0e0 100%);
+  border-bottom: 1px solid #0000001a;
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 117.516px;
+  height: 32px;
+  padding: 8px 12.008px 9px 12px;
+  display: flex;
+}
+.Container_280_743 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6px;
+  width: 48px;
+  height: 12px;
+  display: flex;
+}
+.Container_280_744 {
+  box-sizing: border-box;
+  background: #ff5f57;
+  border: 1px solid #0000000d;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  height: 12px;
+}
+.Container_280_745 {
+  box-sizing: border-box;
+  background: #febc2e;
+  border: 1px solid #0000000d;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  height: 12px;
+}
+.Container_280_746 {
+  box-sizing: border-box;
+  background: #28c840;
+  border: 1px solid #0000000d;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  height: 12px;
+}
+.Container_280_747 {
+  justify-content: center;
+  align-items: center;
+  width: 61px;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+.Captures_280_748 {
+  color: #0006;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 64px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_280_749 {
+  width: 12px;
+  height: 12px;
+}
+.Container_280_750 {
+  background: #f8f8f8;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 380px;
+  height: 198px;
+  padding: 16px;
+  display: flex;
+}
+.Container_280_751 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #0000000d;
+  border-radius: 12px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 166px;
+  height: 166px;
+  padding: 5px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px #0000000d;
+}
+.Image_280_752 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  border-radius: 4px;
+  flex-shrink: 0;
+  width: 156px;
+  height: 156px;
+  box-shadow:
+    0 1px 2px -1px #0000001a,
+    0 1px 3px #0000001a;
+}
+.Container_280_753 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #0000000d;
+  border-radius: 12px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 166px;
+  height: 166px;
+  padding: 5px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px #0000000d;
+}
+.Image_280_754 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  border-radius: 4px;
+  flex-shrink: 0;
+  width: 156px;
+  height: 156px;
+  box-shadow:
+    0 1px 2px -1px #0000001a,
+    0 1px 3px #0000001a;
+}
+.Header_280_755 {
+  box-sizing: border-box;
+  background: linear-gradient(#fdfdfd 0%, #e8e8e8 50%, #d1d1d1 100%);
+  border-bottom: 1px solid #0003;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2.25781px;
+  width: 430px;
+  height: 28px;
+  padding: 5.25px 15.742px 5.75px 16px;
+  display: flex;
+  box-shadow:
+    0 1px 2px -1px #0000001a,
+    0 1px 3px #0000001a;
+}
+.Container_280_756 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 290px;
+  height: 17px;
+  padding-right: 0.586px;
+  display: flex;
+}
+.Container_280_757 {
+  flex: 1 0 0;
+  height: 16px;
+  overflow: hidden;
+}
+.Container_280_759 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 17px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Gamefolio_280_760 {
+  color: #1d1d1f;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.275px;
+  width: 57px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_280_761 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 17px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.File_280_762 {
+  color: #1d1d1f;
+  font-feature-settings: "dlig" on;
+  width: 21px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_280_763 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 17px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Edit_280_764 {
+  color: #1d1d1f;
+  font-feature-settings: "dlig" on;
+  width: 23px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_280_765 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 17px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.View_280_766 {
+  color: #1d1d1f;
+  font-feature-settings: "dlig" on;
+  width: 28px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_280_767 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 17px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Go_280_768 {
+  color: #1d1d1f;
+  font-feature-settings: "dlig" on;
+  width: 19px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_280_769 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 17px;
+  padding: 1px 0 2px;
+  display: flex;
+}
+.Window_280_770 {
+  color: #1d1d1f;
+  font-feature-settings: "dlig" on;
+  width: 45px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Container_280_771 {
+  flex-flow: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 106px;
+  height: 17px;
+  display: flex;
+}
+.Container_280_772,
+.Container_280_775 {
+  width: 14px;
+  height: 14px;
+  overflow: hidden;
+}
+.G_280_776 {
+  width: 11.667px;
+  height: 11.667px;
+}
+.Container_280_779 {
+  justify-content: center;
+  align-items: center;
+  width: 50px;
+  height: 17px;
+  display: flex;
+}
+.Container_280_780 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  padding: 1px 0 2px;
+  display: flex;
+}
+._42Am_280_781 {
+  color: #1d1d1f;
+  font-feature-settings: "dlig" on;
+  width: 53px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16.5px;
+  display: inline-block;
+}
+.Footer_280_782 {
+  justify-content: center;
+  align-items: center;
+  width: 356px;
+  height: 70px;
+  display: flex;
+}
+.Container_280_783 {
+  backdrop-filter: blur(32px);
+  box-sizing: border-box;
+  background: #fff6;
+  border: 1px solid #fff9;
+  border-radius: 28px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  display: flex;
+  box-shadow: 0 15px 35px #0000001a;
+}
+.Button_280_784 {
+  box-sizing: border-box;
+  background: linear-gradient(#60b3ff 0%, #06f 100%);
+  border: 1px solid #fff3;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 10px;
+  display: flex;
+  box-shadow:
+    0 4px 6px -4px #0000001a,
+    0 10px 15px -3px #0000001a;
+}
+.Container_280_785 {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+}
+.Button_280_787 {
+  box-sizing: border-box;
+  background: linear-gradient(#fff 0%, #e0e0e0 100%);
+  border: 1px solid #fff;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 10px;
+  display: flex;
+  box-shadow:
+    0 2px 4px -2px #0000001a,
+    0 4px 6px -1px #0000001a;
+}
+.Container_280_788 {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+}
+.Container_280_790 {
+  background: #0000001a;
+  width: 1px;
+  height: 32px;
+}
+.Button_280_791 {
+  box-sizing: border-box;
+  background: linear-gradient(#ffb360 0%, #ff8c00 100%);
+  border: 1px solid #fff3;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 10px;
+  display: flex;
+  box-shadow:
+    0 4px 6px -4px #0000001a,
+    0 10px 15px -3px #0000001a;
+}
+.Container_280_792 {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+}
+.Container_280_794 {
+  background: #0000001a;
+  width: 1px;
+  height: 32px;
+}
+.Button_280_795 {
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #0000000d;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 3px;
+  display: flex;
+  overflow: hidden;
+  box-shadow:
+    0 2px 4px -2px #0000001a,
+    0 4px 6px -1px #0000001a;
+}
+.Image_280_796 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  border-radius: 12px;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+}
+.Container_280_797 {
+  background: #fff9;
+  width: 306px;
+  height: 1px;
+}
+.Button_280_798 {
+  box-sizing: border-box;
+  background: linear-gradient(#60ffb3 0%, #0c6 100%);
+  border: 1px solid #fff3;
+  border-radius: 16px;
+  width: 48px;
+  height: 48px;
+  box-shadow:
+    0 4px 6px -4px #0000001a,
+    0 10px 15px -3px #0000001a;
+}
+.Container_280_799 {
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+}
+.Container_280_801 {
+  box-sizing: border-box;
+  background: #ff3b30;
+  border: 2px solid #fff;
+  border-radius: 16777200px;
+  justify-content: center;
+  align-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 3.25px 4px 2.75px;
+  display: flex;
+  box-shadow:
+    0 1px 2px -1px #0000001a,
+    0 1px 3px #0000001a;
+}
+.generated_3_280_802 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  flex-shrink: 0;
+  width: 12px;
+  height: 14px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 13.5px;
+  display: inline-block;
+}
+
+```
+
+---
+
+```src/components/assets/Container.tsx
+import React from 'react';
+export default function Container() {
+  return <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clipPath="url(#clip0_280_799)">
+<path fillRule="evenodd" clipRule="evenodd" d="M0 0H28V28H0V0Z" fill="white"/>
+</g>
+<defs>
+<clipPath id="clip0_280_799">
+<rect width="28" height="28" fill="white"/>
+</clipPath>
+</defs>
+</svg>
+;
+}
+```
+
+---
+
+```src/components/assets/G.tsx
+import React from 'react';
+export default function G() {
+  return <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fillRule="evenodd" clipRule="evenodd" d="M0 5.54167C0 2.48109 2.48109 0 5.54167 0C8.60225 0 11.0833 2.48109 11.0833 5.54167C11.0833 8.60225 8.60225 11.0833 5.54167 11.0833C2.48109 11.0833 0 8.60225 0 5.54167Z" stroke="#1D1D1F" strokeWidth="0.875"/>
+<path d="M9.625 9.625L11.6667 11.6667" stroke="#1D1D1F" strokeWidth="0.874999" strokeLinecap="round"/>
+</svg>
+;
+}
+```
+
+---
+
+```src/components/MacGamefolio.tsx
+import React from 'react';
+import styles from '../styles/MacGamefolio.module.css';
+import Container from './assets/Container';
+import G from './assets/G';
+
+export default function MacGamefolio() {
+  return (
+    <div className={styles.MacGamefolio_280_679}>
+      <div className={styles.Container_280_680}>
+        <div className={styles.Container_280_681}></div>
+        <div className={styles.Container_280_682}></div>
+        <div className={styles.Container_280_683}>
+          <div className={styles.Container_280_684}>
+            <div className={styles.Container_280_685}>
+              <div className={styles.Container_280_686}><span className={styles.SierraMist_280_687}>Sierra Mist</span></div>
+              <div className={styles.Container_280_688}><span className={styles.ProMember_280_689}>Pro Member</span></div>
+              <div className={styles.Container_280_690}>
+                <div className={styles.Container_280_691}>
+                  <div className={styles.Container_280_692}><span className={styles._4k_280_693}>12.4k</span></div>
+                  <div className={styles.Container_280_694}><span className={styles.Followers_280_695}>Followers</span></div>
+                </div>
+                <div className={styles.Container_280_696}>
+                  <div className={styles.Container_280_697}><span className={styles.generated_842_280_698}>842</span></div>
+                  <div className={styles.Container_280_699}><span className={styles.Games_280_700}>Games</span></div>
+                </div>
+                <div className={styles.Container_280_701}>
+                  <div className={styles.Container_280_702}><span className={styles._1k_280_703}>2.1k</span></div>
+                  <div className={styles.Container_280_704}><span className={styles.Clips_280_705}>Clips</span></div>
+                </div>
+              </div>
+              <div className={styles.Container_280_706}>
+                <div className={styles.Container_280_707}>
+                  <div className={styles.Container_280_708}>
+                    <div className={styles.Image_280_709}></div>
+                    <div className={styles.Container_280_710}></div>
+                  </div>
+                </div>
+                <div className={styles.Container_280_711}>
+                  <div className={styles.Container_280_712}>
+                    <Container />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_280_714}>
+              <div className={styles.Container_280_715}>
+                <div className={styles.Container_280_716}></div>
+                <div className={styles.Container_280_717}></div>
+                <div className={styles.Container_280_718}></div>
+              </div>
+              <div className={styles.Container_280_719}>
+                <div className={styles.Container_280_720}><span className={styles.UserProfile_280_721}>User Profile</span></div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_280_722}>
+            <div className={styles.Container_280_723}>
+              <div className={styles.Container_280_724}>
+                <div className={styles.Container_280_725}><span className={styles.MyLibrary_280_726}>My Library</span></div>
+                <div className={styles.Container_280_727}><span className={styles._8GbAvailable_280_728}>42.8 GB available</span></div>
+              </div>
+              <div className={styles.Container_280_729}>
+                <div className={styles.Container_280_730}>
+                  <Container />
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_280_732}>
+              <div className={styles.Container_280_733}>
+                <div className={styles.Container_280_734}><span className={styles.Achievements_280_735}>Achievements</span></div>
+                <div className={styles.Container_280_736}><span className={styles.NewRewards_280_737}>12 New Rewards</span></div>
+              </div>
+              <div className={styles.Container_280_738}>
+                <div className={styles.Container_280_739}>
+                  <Container />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_280_741}>
+            <div className={styles.Container_280_742}>
+              <div className={styles.Container_280_743}>
+                <div className={styles.Container_280_744}></div>
+                <div className={styles.Container_280_745}></div>
+                <div className={styles.Container_280_746}></div>
+              </div>
+              <div className={styles.Container_280_747}><span className={styles.Captures_280_748}>Captures</span></div>
+              <div className={styles.Container_280_749}></div>
+            </div>
+            <div className={styles.Container_280_750}>
+              <div className={styles.Container_280_751}>
+                <div className={styles.Image_280_752}></div>
+              </div>
+              <div className={styles.Container_280_753}>
+                <div className={styles.Image_280_754}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Header_280_755}>
+          <div className={styles.Container_280_756}>
+            <div className={styles.Container_280_757}>
+              <Container />
+            </div>
+            <div className={styles.Container_280_759}><span className={styles.Gamefolio_280_760}>Gamefolio</span></div>
+            <div className={styles.Container_280_761}><span className={styles.File_280_762}>File</span></div>
+            <div className={styles.Container_280_763}><span className={styles.Edit_280_764}>Edit</span></div>
+            <div className={styles.Container_280_765}><span className={styles.View_280_766}>View</span></div>
+            <div className={styles.Container_280_767}><span className={styles.Go_280_768}>Go</span></div>
+            <div className={styles.Container_280_769}><span className={styles.Window_280_770}>Window</span></div>
+          </div>
+          <div className={styles.Container_280_771}>
+            <div className={styles.Container_280_772}>
+              <Container />
+            </div>
+            <div className={styles.Container_280_775}>
+              <div className={styles.G_280_776}>
+                <G />
+              </div>
+            </div>
+            <div className={styles.Container_280_779}>
+              <div className={styles.Container_280_780}><span className={styles._42Am_280_781}>10:42 AM</span></div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Footer_280_782}>
+          <div className={styles.Container_280_783}>
+            <div className={styles.Button_280_784}>
+              <div className={styles.Container_280_785}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Button_280_787}>
+              <div className={styles.Container_280_788}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Container_280_790}></div>
+            <div className={styles.Button_280_791}>
+              <div className={styles.Container_280_792}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Container_280_794}></div>
+            <div className={styles.Button_280_795}>
+              <div className={styles.Image_280_796}></div>
+            </div>
+            <div className={styles.Container_280_797}></div>
+            <div className={styles.Button_280_798}>
+              <div className={styles.Container_280_799}>
+                <Container />
+              </div>
+              <div className={styles.Container_280_801}><span className={styles.generated_3_280_802}>3</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

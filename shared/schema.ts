@@ -31,6 +31,8 @@ export const users = pgTable("users", {
   profileBackgroundDesktopY: text("profile_background_desktop_y").default("50"),
   profileBackgroundDesktopZoom: text("profile_background_desktop_zoom").default("100"),
   hideBanner: boolean("hide_banner").default(false),
+  statsGlassEffect: boolean("stats_glass_effect").default(false),
+  profileBackgroundGradient: boolean("profile_background_gradient").default(true),
   layoutStyle: text("layout_style").default("grid"), // grid, masonry, classic
   // Platform connections
   steamUsername: text("steam_username"),
@@ -54,6 +56,18 @@ export const users = pgTable("users", {
   nintendoUsername: text("nintendo_username"), // Nintendo
   instagramUsername: text("instagram_username"), // Instagram
   facebookUsername: text("facebook_username"), // Facebook
+  // Streamer settings (OAuth-verified Twitch/Kick connections)
+  isStreamer: boolean("is_streamer").default(false),
+  streamPlatform: text("stream_platform"), // "twitch" or "kick"
+  twitchChannelName: text("twitch_channel_name"), // Verified via OAuth
+  twitchChannelId: text("twitch_channel_id"),     // Twitch user ID from OAuth
+  twitchVerified: boolean("twitch_verified").default(false),
+  twitchAccessToken: text("twitch_access_token"), // OAuth access token (server-only)
+  kickChannelName: text("kick_channel_name"),     // Verified via OAuth
+  kickChannelId: text("kick_channel_id"),         // Kick user/channel ID from OAuth
+  kickVerified: boolean("kick_verified").default(false),
+  kickAccessToken: text("kick_access_token"),     // OAuth access token (server-only)
+  liveEnabled: boolean("live_enabled").default(false), // Show LIVE badge on profile
   // Onboarding data for analytics and personalization
   userType: text("user_type"), // User type selection
   showUserType: boolean("show_user_type").default(true), // Whether to show user type badge on profile
@@ -104,6 +118,7 @@ export const users = pgTable("users", {
   proSubscriptionEndDate: timestamp("pro_subscription_end_date"), // When subscription expires
   stripeCustomerId: text("stripe_customer_id"), // Stripe customer ID for recurring billing
   stripeSubscriptionId: text("stripe_subscription_id"), // Stripe subscription ID for managing recurring payments
+  revenuecatUserId: text("revenuecat_user_id"), // RevenueCat app user ID for mobile subscription verification
   // Selected Avatar Border (from lootbox rewards)
   selectedAvatarBorderId: integer("selected_avatar_border_id"), // References asset_rewards table
   // Selected Name Tag
@@ -140,6 +155,7 @@ export const games = pgTable("games", {
   imageUrl: text("image_url"),
   twitchId: text("twitch_id"),
   isUserAdded: boolean("is_user_added").default(false).notNull(),
+  isApproved: boolean("is_approved").default(true).notNull(),
   showContactBanner: boolean("show_contact_banner").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -1246,7 +1262,10 @@ export type InsertUserBlock = z.infer<typeof insertUserBlockSchema>;
 export type ProfileBanner = typeof profileBanners.$inferSelect;
 export type InsertProfileBanner = z.infer<typeof insertProfileBannerSchema>;
 
-export type Screenshot = typeof screenshots.$inferSelect;
+export type Screenshot = typeof screenshots.$inferSelect & {
+  game?: Game | null;
+  _count?: { likes: number; reactions: number; comments: number };
+};
 export type InsertScreenshot = z.infer<typeof insertScreenshotSchema>;
 
 export type Badge = typeof badges.$inferSelect;

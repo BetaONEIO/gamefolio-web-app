@@ -1,0 +1,1283 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/GothicGamefolio.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,900;0,700;0,500&display=swap";
+.GothicGamefolio_279_545 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_279_546 {
+  background: #1e053a;
+  flex: 1 0 0;
+  width: 100%;
+}
+.Container_279_547 {
+  width: 430px;
+  height: 932px;
+}
+.Container_279_548 {
+  filter: blur(75px);
+  background: #9810fa33;
+  width: 430px;
+  height: 500px;
+}
+.Container_279_549 {
+  filter: blur(50px);
+  background: #4f39f61a;
+  width: 256px;
+  height: 256px;
+}
+.Container_279_550 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 143px;
+  width: 430px;
+  padding: 32px 24px 16px;
+  display: flex;
+}
+.Container_279_551 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  width: 143px;
+  height: 40px;
+  display: flex;
+}
+.Container_279_552 {
+  box-sizing: border-box;
+  background: #59168b66;
+  border: 1px solid #c27aff4d;
+  border-radius: 16px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 8px;
+  display: flex;
+  box-shadow: 0 0 20px #a855f74d;
+}
+.Container_279_553 {
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_279_556 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 91px;
+  height: 20px;
+  padding: 1px 0;
+  display: flex;
+}
+.Sanctum_279_557 {
+  color: #dab2ff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 2.8px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 96px;
+  height: 18px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 20px;
+  display: inline-block;
+}
+.Container_279_558 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 96px;
+  height: 40px;
+  display: flex;
+}
+.Button_279_559 {
+  box-sizing: border-box;
+  background: #59168b4d;
+  border: 1px solid #c27aff33;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 10px;
+  display: flex;
+}
+.Container_279_560 {
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+.G_279_561 {
+  width: 16.667px;
+  height: 16.667px;
+}
+.Container_279_564 {
+  box-sizing: border-box;
+  background: #ffffff03;
+  border: 2px solid #c27aff80;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 4px;
+  display: flex;
+  box-shadow: 0 0 15px #a855f766;
+}
+.Image_279_565 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  border-radius: 16777200px;
+  width: 32px;
+  height: 32px;
+}
+.Container_279_566 {
+  width: 430px;
+  height: 844px;
+}
+.Container_279_567 {
+  width: 430px;
+  height: 152px;
+}
+.Container_279_568 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 11.5469px;
+  padding-right: 144.453px;
+  display: flex;
+}
+.Container_279_569 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  display: flex;
+}
+.VoidWalker_279_570 {
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.8px;
+  -webkit-text-fill-color: transparent;
+  background: linear-gradient(270deg, #f3e8ff 0%, #dab2ff 50%, #a3b3ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  width: 191px;
+  height: 46px;
+  font-family: Plus Jakarta Sans;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 40px;
+  display: inline-block;
+}
+.Container_279_571 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_279_573 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 7.91406px;
+  padding-right: 70.086px;
+  display: flex;
+}
+.Container_279_574 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+.MasterOfShadows_279_575 {
+  color: #c27aff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  width: 169px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_279_576 {
+  background: #6e11b0;
+  width: 32px;
+  height: 1px;
+}
+.Container_279_577 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+.Lv_99Wraith_279_578 {
+  color: #e9d4ff99;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 87px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_279_579 {
+  box-sizing: border-box;
+  border-left: 2px solid #8200db;
+  justify-content: flex-end;
+  align-items: center;
+  height: 69px;
+  padding: 2.5px 1px 3.5px 17px;
+  display: inline-flex;
+}
+.ExploringTheDarkCornersOfTheMultiverseProfessionalSpeedrunnerOfNightmaresInTheVoidWeAreInfinite_279_580 {
+  color: #f3e8ffcc;
+  font-feature-settings: "dlig" on;
+  width: 294px;
+  height: 63px;
+  font-family: Plus Jakarta Sans;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 22.75px;
+  display: inline-block;
+}
+.Container_279_581 {
+  justify-content: center;
+  align-items: center;
+  width: 430px;
+  height: 172px;
+  padding: 0 24px;
+  display: flex;
+}
+.Container_279_582 {
+  backdrop-filter: blur(4px);
+  box-sizing: border-box;
+  background: #3c036633;
+  border: 1px solid #c27aff33;
+  border-radius: 32px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 172px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: inset 0 0 30px #a855f71a;
+}
+.Container_279_583 {
+  filter: blur(32px);
+  background: #ad46ff1a;
+  border-radius: 16777200px;
+  width: 160px;
+  height: 160px;
+}
+.Container_279_584 {
+  filter: blur(32px);
+  background: #615fff1a;
+  border-radius: 16777200px;
+  width: 160px;
+  height: 160px;
+}
+.Container_279_585 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 39.2422px;
+  height: 106px;
+  padding: 0 19.414px 0 19.617px;
+  display: flex;
+}
+.Container_279_586 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 106px;
+  display: flex;
+}
+.Container_279_587 {
+  box-sizing: border-box;
+  background: #59168b66;
+  border: 1px solid #c27aff4d;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 12px;
+  display: flex;
+  box-shadow: 0 0 20px #a855f726;
+}
+.Container_279_588 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_279_590 {
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  display: flex;
+}
+.generated_666_279_591 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  flex-shrink: 0;
+  width: 45px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_279_592 {
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 14px;
+  padding: 1px 0;
+  display: flex;
+}
+.Souls_279_593 {
+  color: #c27aff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 45px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_279_594 {
+  background: linear-gradient(#c27aff00 0%, #c27aff4d 50%, #c27aff00 100%);
+  width: 1px;
+  height: 48px;
+}
+.Container_279_595 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 106px;
+  display: flex;
+}
+.Container_279_596 {
+  box-sizing: border-box;
+  background: #59168b66;
+  border: 1px solid #c27aff4d;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 12px;
+  display: flex;
+  box-shadow: 0 0 20px #a855f726;
+}
+.Container_279_597 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_279_599 {
+  justify-content: center;
+  align-items: center;
+  width: 36px;
+  display: flex;
+}
+.k_279_600 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  flex-shrink: 0;
+  width: 41px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_279_601 {
+  justify-content: center;
+  align-items: center;
+  width: 48px;
+  height: 14px;
+  padding: 1px 0;
+  display: flex;
+}
+.Curses_279_602 {
+  color: #c27aff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 53px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_279_603 {
+  background: linear-gradient(#c27aff00 0%, #c27aff4d 50%, #c27aff00 100%);
+  width: 1px;
+  height: 48px;
+}
+.Container_279_604 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 106px;
+  display: flex;
+}
+.Container_279_605 {
+  box-sizing: border-box;
+  background: #59168b66;
+  border: 1px solid #c27aff4d;
+  border-radius: 16px;
+  justify-content: center;
+  align-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 12px;
+  display: flex;
+  box-shadow: 0 0 20px #a855f726;
+}
+.Container_279_606 {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_279_608 {
+  justify-content: center;
+  align-items: center;
+  width: 47px;
+  display: flex;
+}
+._2k_279_609 {
+  color: #fff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  flex-shrink: 0;
+  width: 52px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_279_610 {
+  justify-content: center;
+  align-items: center;
+  width: 54px;
+  height: 14px;
+  padding: 1px 0;
+  display: flex;
+}
+.Essence_279_611 {
+  color: #c27aff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 59px;
+  height: 12px;
+  font-family: Plus Jakarta Sans;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 13.5px;
+  display: inline-block;
+}
+.Container_279_612 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+  width: 430px;
+  padding: 0 24px 144px;
+  display: flex;
+}
+.Container_279_613 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 112.453px;
+  height: 32px;
+  padding: 0 7.547px 0 8px;
+  display: flex;
+}
+.Container_279_614 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  height: 32px;
+  display: flex;
+}
+.Container_279_615 {
+  background: #ad46ff;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  height: 32px;
+  box-shadow: 0 0 12px #a855f7cc;
+}
+.Container_279_616 {
+  justify-content: center;
+  align-items: center;
+  width: 155px;
+  height: 16px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.DarkGrimoires_279_617 {
+  color: #faf5ff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 3.6px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 160px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 16px;
+  display: inline-block;
+}
+.Button_279_618 {
+  justify-content: center;
+  align-items: center;
+  width: 83px;
+  height: 15px;
+  padding: 1px 0;
+  display: flex;
+}
+.ManifestAll_279_619 {
+  color: #c27aff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 88px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_279_620 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 382px;
+  height: 244px;
+  display: flex;
+}
+.Container_279_621 {
+  box-sizing: border-box;
+  background: #3c03664d;
+  border: 1px solid #c27aff33;
+  border-radius: 32px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 244px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px #00000040;
+}
+.Image_279_622 {
+  aspect-ratio: 89/119;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 181px;
+  height: 242px;
+}
+.Container_279_623 {
+  background: linear-gradient(#1e053a 0%, #1e053a00 50% 100%);
+  width: 181px;
+  height: 242px;
+}
+.Container_279_624 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  width: 149px;
+  height: 35px;
+  display: flex;
+}
+.Container_279_625 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 15px;
+  padding: 1px 61.5px 1px 0;
+  display: flex;
+}
+.EldritchRite_279_626 {
+  color: #dab2ff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 90px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_279_627 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 8px;
+  height: 16px;
+  padding-right: 98px;
+  display: flex;
+}
+.Container_279_628 {
+  flex: 1 0 0;
+  height: 16px;
+  overflow: hidden;
+}
+.Container_279_630 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 0.5px 0;
+  display: flex;
+}
+._2k_279_631 {
+  color: #ffffffe6;
+  font-feature-settings: "dlig" on;
+  width: 30px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_279_632 {
+  box-sizing: border-box;
+  background: #3c03664d;
+  border: 1px solid #c27aff33;
+  border-radius: 32px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 244px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px #00000040;
+}
+.Image_279_633 {
+  aspect-ratio: 89/119;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 181px;
+  height: 242px;
+}
+.Container_279_634 {
+  background: linear-gradient(#1e053a 0%, #1e053a00 50% 100%);
+  width: 181px;
+  height: 242px;
+}
+.Container_279_635 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  width: 149px;
+  height: 35px;
+  display: flex;
+}
+.Container_279_636 {
+  flex-shrink: 0;
+  align-items: center;
+  height: 15px;
+  padding: 1px 50.5px 1px 0;
+  display: flex;
+}
+.AbyssalReach_279_637 {
+  color: #dab2ff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 101px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_279_638 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 8px;
+  height: 16px;
+  padding-right: 101px;
+  display: flex;
+}
+.Container_279_639 {
+  flex: 1 0 0;
+  height: 16px;
+  overflow: hidden;
+}
+.Container_279_641 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 0.5px 0;
+  display: flex;
+}
+._8k_279_642 {
+  color: #ffffffe6;
+  font-feature-settings: "dlig" on;
+  width: 27px;
+  height: 15px;
+  font-family: Plus Jakarta Sans;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+  display: inline-block;
+}
+.Container_279_643 {
+  width: 430px;
+  height: 256px;
+}
+.Container_279_644 {
+  width: 430px;
+  height: 256px;
+  overflow: hidden;
+}
+.Image_279_645 {
+  aspect-ratio: 215/128;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 430px;
+  height: 256px;
+}
+.Container_279_646 {
+  background: linear-gradient(#1e053a00 0%, #1e053a66 50%, #1e053a 100%);
+  width: 430px;
+  height: 256px;
+}
+.Container_279_647 {
+  justify-content: center;
+  align-items: center;
+  width: 128px;
+  height: 128px;
+  display: flex;
+}
+.Container_279_648 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  display: flex;
+}
+.Container_279_649 {
+  background: linear-gradient(#ad46ff 0%, #432dd7 100%);
+  justify-content: center;
+  align-items: center;
+  width: 128px;
+  height: 128px;
+  padding: 3px;
+  display: flex;
+  box-shadow: 0 0 40px #a855f780;
+}
+.Container_279_650 {
+  background: #1e053a;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 122px;
+  height: 122px;
+  padding: 4px;
+  display: flex;
+}
+.Image_279_651 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 114px;
+  height: 114px;
+}
+.Container_279_652 {
+  box-sizing: border-box;
+  background: #ad46ff;
+  border: 2px solid #dab2ff4d;
+  border-radius: 12px;
+  justify-content: center;
+  align-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 9.488px 9.512px 9.512px 9.488px;
+  display: flex;
+  box-shadow:
+    0 4px 6px -4px #0000001a,
+    0 10px 15px -3px #0000001a;
+}
+.Container_279_653 {
+  flex-shrink: 0;
+  width: 29px;
+  height: 29px;
+  overflow: hidden;
+}
+.Container_279_655 {
+  background: linear-gradient(#1e053a 0%, #1e053a00 100%);
+  justify-content: center;
+  align-items: center;
+  width: 430px;
+  padding: 16px 24px 32px;
+  display: flex;
+}
+.Navigation_279_656 {
+  backdrop-filter: blur(20px);
+  box-sizing: border-box;
+  background: #3c036699;
+  border: 1px solid #c27aff33;
+  border-radius: 32px;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 382px;
+  height: 80px;
+  display: flex;
+  box-shadow: 0 25px 60px #0009;
+}
+.Button_279_657 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  width: 71px;
+  padding: 0 23.484px 0 23.5px;
+  display: flex;
+}
+.Container_279_658 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_279_661 {
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 12px;
+  padding: 0.5px 0;
+  display: flex;
+}
+.Void_279_662 {
+  color: #dab2ff;
+  text-align: center;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 29px;
+  height: 11px;
+  font-family: Plus Jakarta Sans;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 12px;
+  display: inline-block;
+}
+.Button_279_663 {
+  justify-content: center;
+  align-items: center;
+  width: 71px;
+  height: 24px;
+  padding: 0 23.5px;
+  display: flex;
+}
+.Container_279_664 {
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 24px;
+  display: flex;
+  overflow: hidden;
+}
+.Button_279_667 {
+  justify-content: center;
+  align-items: center;
+  width: 71px;
+  height: 24px;
+  padding: 0 23.5px;
+  display: flex;
+}
+.Container_279_668 {
+  flex: 1 0 0;
+  height: 24px;
+  overflow: hidden;
+}
+.Button_279_670 {
+  justify-content: center;
+  align-items: center;
+  width: 71px;
+  height: 24px;
+  padding: 0 23.5px;
+  display: flex;
+}
+.Container_279_671 {
+  box-sizing: border-box;
+  background: #ffffff03;
+  border: 2px solid #c27aff;
+  border-radius: 16777200px;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 24px;
+  padding: 2px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 0 10px #a855f766;
+}
+.Image_279_672 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 20px;
+  height: 20px;
+}
+.Button_279_673 {
+  width: 64px;
+  height: 64px;
+}
+.Container_279_674 {
+  filter: blur(20px);
+  background: #ad46ff;
+  border-radius: 16777200px;
+  width: 64px;
+  height: 64px;
+}
+.Container_279_675 {
+  box-sizing: border-box;
+  background: linear-gradient(#9810fa 0%, #615fff 100%);
+  border: 4px solid #1e053a;
+  border-radius: 16777200px;
+  justify-content: center;
+  align-items: center;
+  width: 64px;
+  height: 64px;
+  padding: 12px;
+  display: flex;
+  box-shadow:
+    0 8px 10px -6px #59168b99,
+    0 20px 25px -5px #59168b99;
+}
+.Container_279_676 {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+}
+
+```
+
+---
+
+```src/components/assets/Container.tsx
+import React from 'react';
+export default function Container() {
+  return <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fillRule="evenodd" clipRule="evenodd" d="M20 36.6668C29.205 36.6668 36.6667 29.2052 36.6667 20.0002C36.6667 10.7952 29.205 3.3335 20 3.3335C10.795 3.3335 3.33331 10.7952 3.33331 20.0002C3.33331 29.2052 10.795 36.6668 20 36.6668ZM21.25 15.0002C21.25 14.3098 20.6903 13.7502 20 13.7502C19.3096 13.7502 18.75 14.3098 18.75 15.0002V18.7502H15C14.3096 18.7502 13.75 19.3098 13.75 20.0002C13.75 20.6905 14.3096 21.2502 15 21.2502H18.75V25.0002C18.75 25.6905 19.3096 26.2502 20 26.2502C20.6903 26.2502 21.25 25.6905 21.25 25.0002V21.2502H25C25.6903 21.2502 26.25 20.6905 26.25 20.0002C26.25 19.3098 25.6903 18.7502 25 18.7502H21.25V15.0002Z" fill="white"/>
+</svg>
+;
+}
+```
+
+---
+
+```src/components/assets/G.tsx
+import React from 'react';
+export default function G() {
+  return <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fillRule="evenodd" clipRule="evenodd" d="M0 7.91667C0 3.54441 3.54441 0 7.91667 0C12.2889 0 15.8333 3.54441 15.8333 7.91667C15.8333 12.2889 12.2889 15.8333 7.91667 15.8333C3.54441 15.8333 0 12.2889 0 7.91667Z" stroke="#E9D4FF" strokeWidth="1.25"/>
+<path d="M13.75 13.75L16.6667 16.6667" stroke="#E9D4FF" strokeWidth="1.25" strokeLinecap="round"/>
+</svg>
+;
+}
+```
+
+---
+
+```src/components/GothicGamefolio.tsx
+import React from 'react';
+import styles from '../styles/GothicGamefolio.module.css';
+import Container from './assets/Container';
+import G from './assets/G';
+
+export default function GothicGamefolio() {
+  return (
+    <div className={styles.GothicGamefolio_279_545}>
+      <div className={styles.Container_279_546}>
+        <div className={styles.Container_279_547}></div>
+        <div className={styles.Container_279_548}></div>
+        <div className={styles.Container_279_549}></div>
+        <div className={styles.Container_279_550}>
+          <div className={styles.Container_279_551}>
+            <div className={styles.Container_279_552}>
+              <div className={styles.Container_279_553}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Container_279_556}><span className={styles.Sanctum_279_557}>Sanctum</span></div>
+          </div>
+          <div className={styles.Container_279_558}>
+            <div className={styles.Button_279_559}>
+              <div className={styles.Container_279_560}>
+                <div className={styles.G_279_561}>
+                  <G />
+                </div>
+              </div>
+            </div>
+            <div className={styles.Container_279_564}>
+              <div className={styles.Image_279_565}></div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_279_566}>
+          <div className={styles.Container_279_567}>
+            <div className={styles.Container_279_568}>
+              <div className={styles.Container_279_569}><span className={styles.VoidWalker_279_570}>VoidWalker</span></div>
+              <div className={styles.Container_279_571}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Container_279_573}>
+              <div className={styles.Container_279_574}><span className={styles.MasterOfShadows_279_575}>Master of Shadows</span></div>
+              <div className={styles.Container_279_576}></div>
+              <div className={styles.Container_279_577}><span className={styles.Lv_99Wraith_279_578}>Lv. 99 Wraith</span></div>
+            </div>
+            <div className={styles.Container_279_579}><span className={styles.ExploringTheDarkCornersOfTheMultiverseProfessionalSpeedrunnerOfNightmaresInTheVoidWeAreInfinite_279_580}>Exploring the dark corners of the multiverse. Professional speedrunner of nightmares. &#x2728; &#x22;In the void, we are infinite.&#x22;</span></div>
+          </div>
+          <div className={styles.Container_279_581}>
+            <div className={styles.Container_279_582}>
+              <div className={styles.Container_279_583}></div>
+              <div className={styles.Container_279_584}></div>
+              <div className={styles.Container_279_585}>
+                <div className={styles.Container_279_586}>
+                  <div className={styles.Container_279_587}>
+                    <div className={styles.Container_279_588}>
+                      <Container />
+                    </div>
+                  </div>
+                  <div className={styles.Container_279_590}><span className={styles.generated_666_279_591}>666</span></div>
+                  <div className={styles.Container_279_592}><span className={styles.Souls_279_593}>Souls</span></div>
+                </div>
+                <div className={styles.Container_279_594}></div>
+                <div className={styles.Container_279_595}>
+                  <div className={styles.Container_279_596}>
+                    <div className={styles.Container_279_597}>
+                      <Container />
+                    </div>
+                  </div>
+                  <div className={styles.Container_279_599}><span className={styles.k_279_600}>13k</span></div>
+                  <div className={styles.Container_279_601}><span className={styles.Curses_279_602}>Curses</span></div>
+                </div>
+                <div className={styles.Container_279_603}></div>
+                <div className={styles.Container_279_604}>
+                  <div className={styles.Container_279_605}>
+                    <div className={styles.Container_279_606}>
+                      <Container />
+                    </div>
+                  </div>
+                  <div className={styles.Container_279_608}><span className={styles._2k_279_609}>9.2k</span></div>
+                  <div className={styles.Container_279_610}><span className={styles.Essence_279_611}>Essence</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_279_612}>
+            <div className={styles.Container_279_613}>
+              <div className={styles.Container_279_614}>
+                <div className={styles.Container_279_615}></div>
+                <div className={styles.Container_279_616}><span className={styles.DarkGrimoires_279_617}>Dark Grimoires</span></div>
+              </div>
+              <div className={styles.Button_279_618}><span className={styles.ManifestAll_279_619}>Manifest All</span></div>
+            </div>
+            <div className={styles.Container_279_620}>
+              <div className={styles.Container_279_621}>
+                <div className={styles.Image_279_622}></div>
+                <div className={styles.Container_279_623}></div>
+                <div className={styles.Container_279_624}>
+                  <div className={styles.Container_279_625}><span className={styles.EldritchRite_279_626}>Eldritch Rite</span></div>
+                  <div className={styles.Container_279_627}>
+                    <div className={styles.Container_279_628}>
+                      <Container />
+                    </div>
+                    <div className={styles.Container_279_630}><span className={styles._2k_279_631}>4.2k</span></div>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.Container_279_632}>
+                <div className={styles.Image_279_633}></div>
+                <div className={styles.Container_279_634}></div>
+                <div className={styles.Container_279_635}>
+                  <div className={styles.Container_279_636}><span className={styles.AbyssalReach_279_637}>Abyssal Reach</span></div>
+                  <div className={styles.Container_279_638}>
+                    <div className={styles.Container_279_639}>
+                      <Container />
+                    </div>
+                    <div className={styles.Container_279_641}><span className={styles._8k_279_642}>1.8k</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_279_643}>
+            <div className={styles.Container_279_644}>
+              <div className={styles.Image_279_645}></div>
+              <div className={styles.Container_279_646}></div>
+            </div>
+            <div className={styles.Container_279_647}>
+              <div className={styles.Container_279_648}>
+                <div className={styles.Container_279_649}>
+                  <div className={styles.Container_279_650}>
+                    <div className={styles.Image_279_651}></div>
+                  </div>
+                </div>
+                <div className={styles.Container_279_652}>
+                  <div className={styles.Container_279_653}>
+                    <Container />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_279_655}>
+          <div className={styles.Navigation_279_656}>
+            <div className={styles.Button_279_657}>
+              <div className={styles.Container_279_658}>
+                <Container />
+              </div>
+              <div className={styles.Container_279_661}><span className={styles.Void_279_662}>Void</span></div>
+            </div>
+            <div className={styles.Button_279_663}>
+              <div className={styles.Container_279_664}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Button_279_667}>
+              <div className={styles.Container_279_668}>
+                <Container />
+              </div>
+            </div>
+            <div className={styles.Button_279_670}>
+              <div className={styles.Container_279_671}>
+                <div className={styles.Image_279_672}></div>
+              </div>
+            </div>
+            <div className={styles.Button_279_673}>
+              <div className={styles.Container_279_674}></div>
+              <div className={styles.Container_279_675}>
+                <div className={styles.Container_279_676}>
+                  <Container />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

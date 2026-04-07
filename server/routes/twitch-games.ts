@@ -145,6 +145,7 @@ router.post('/games/custom', async (req: express.Request, res: express.Response)
       name: trimmedName,
       imageUrl: '/favicon.png',
       isUserAdded: true,
+      isApproved: false,
     };
 
     const createdGame = await storage.createGame(newGame);

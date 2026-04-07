@@ -3,16 +3,15 @@ import sharp from 'sharp';
 import { db } from '../db';
 import { users, previousAvatars } from '@shared/schema';
 import { eq, sql, desc } from 'drizzle-orm';
-import { maxUint256, parseUnits, type Address, decodeEventLog } from 'viem';
+import { parseUnits, type Address, decodeEventLog } from 'viem';
 import {
   GF_TOKEN_ADDRESS,
   GF_TOKEN_ABI,
-  MINT_SALE_ADDRESS,
-  MINT_SALE_ABI,
   MINT_CONFIG,
   NFT_ABI,
   NFT_CONTRACT_ADDRESS,
 } from '../../shared/contracts';
+import { privateKeyToAccount } from 'viem/accounts';
 import { encryptPrivateKey } from '../wallet-crypto';
 import { writeContractWithPoW, writeContractWithPoWFromRawKey, publicClient } from '../skale-pow';
 
@@ -151,24 +150,7 @@ router.post('/api/mint/approve', async (req: Request, res: Response) => {
       });
     }
 
-    const hash = await writeContractWithPoW({
-      encryptedPrivateKey: user.encryptedPrivateKey,
-      contractAddress: GF_TOKEN_ADDRESS as Address,
-      abi: GF_TOKEN_ABI,
-      functionName: 'approve',
-      args: [MINT_SALE_ADDRESS as Address, maxUint256],
-    });
-
-    const receipt = await publicClient.waitForTransactionReceipt({
-      hash,
-      timeout: 60_000,
-    });
-
-    if (receipt.status !== 'success') {
-      return res.status(400).json({ error: 'Approval transaction reverted', txHash: hash });
-    }
-
-    return res.json({ success: true, txHash: hash });
+    return res.json({ success: true, message: 'No approval needed — minting uses treasury wallet directly.' });
   } catch (error: any) {
     console.error('Server-side approve error:', error);
     return res.status(500).json({ error: error.message || 'Approval failed' });
@@ -231,36 +213,38 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
 
     console.log(`🪙 Minting ${quantity} NFT(s) for user ${userId} (${userAddress}). Cost: ${totalCost} GFT. On-chain balance: ${readableBalance}`);
 
-    const allowance = await publicClient.readContract({
-      address: GF_TOKEN_ADDRESS as Address,
-      abi: GF_TOKEN_ABI,
-      functionName: 'allowance',
-      args: [userAddress, MINT_SALE_ADDRESS as Address],
-    }) as bigint;
-
-    if (allowance < costInWei) {
-      console.log(`🔓 Approving MintSale to spend GFT for user ${userId}`);
-      const approveHash = await writeContractWithPoW({
-        encryptedPrivateKey: user.encryptedPrivateKey,
-        contractAddress: GF_TOKEN_ADDRESS as Address,
-        abi: GF_TOKEN_ABI,
-        functionName: 'approve',
-        args: [MINT_SALE_ADDRESS as Address, maxUint256],
-      });
-      const approveReceipt = await publicClient.waitForTransactionReceipt({ hash: approveHash, timeout: 60_000 });
-      if (approveReceipt.status !== 'success') {
-        return res.status(400).json({ error: 'Approval transaction reverted', txHash: approveHash });
-      }
-      console.log(`✅ Approved MintSale. TX: ${approveHash}`);
+    const treasuryPrivateKey = process.env.TREASURY_PRIVATE_KEY;
+    if (!treasuryPrivateKey) {
+      return res.status(500).json({ error: 'Treasury wallet not configured' });
     }
+    const formattedTreasuryKey = treasuryPrivateKey.startsWith('0x')
+      ? (treasuryPrivateKey as `0x${string}`)
+      : (`0x${treasuryPrivateKey}` as `0x${string}`);
+    const treasuryAccount = privateKeyToAccount(formattedTreasuryKey);
+    const treasuryAddress = treasuryAccount.address;
 
-    console.log(`🛒 Calling buy(${quantity}) from user wallet`);
-    const hash = await writeContractWithPoW({
+    console.log(`💸 Transferring ${totalCost} GFT from user ${userAddress} to treasury ${treasuryAddress}`);
+    const transferHash = await writeContractWithPoW({
       encryptedPrivateKey: user.encryptedPrivateKey,
-      contractAddress: MINT_SALE_ADDRESS as Address,
-      abi: MINT_SALE_ABI,
-      functionName: 'buy',
-      args: [BigInt(quantity)],
+      contractAddress: GF_TOKEN_ADDRESS as Address,
+      abi: GF_TOKEN_ABI,
+      functionName: 'transfer',
+      args: [treasuryAddress, costInWei],
+    });
+
+    const transferReceipt = await publicClient.waitForTransactionReceipt({ hash: transferHash, timeout: 60_000 });
+    if (transferReceipt.status !== 'success') {
+      return res.status(400).json({ error: 'GFT transfer failed', txHash: transferHash });
+    }
+    console.log(`✅ GFT transferred to treasury. TX: ${transferHash}`);
+
+    console.log(`🎨 Treasury minting ${quantity} NFT(s) to ${userAddress}`);
+    const hash = await writeContractWithPoWFromRawKey({
+      privateKeyRaw: treasuryPrivateKey,
+      contractAddress: NFT_CONTRACT_ADDRESS as Address,
+      abi: NFT_ABI,
+      functionName: 'mint',
+      args: [userAddress, BigInt(quantity)],
     });
 
     const receipt = await publicClient.waitForTransactionReceipt({
@@ -272,16 +256,7 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Mint transaction reverted', txHash: hash });
     }
 
-    console.log(`✅ NFT minted successfully. On-chain GFT was spent via MintSale contract.`);
-
-    try {
-      await db.update(users)
-        .set({ gfTokenBalance: sql`${users.gfTokenBalance} - ${totalCost}` })
-        .where(eq(users.id, userId));
-      console.log(`✅ Deducted ${totalCost} GFT from in-app balance for user ${userId}`);
-    } catch (balanceErr) {
-      console.error('Failed to deduct GFT balance after mint:', balanceErr);
-    }
+    console.log(`✅ NFT minted successfully via treasury wallet.`);
 
     const tokenIds: number[] = [];
     for (const log of receipt.logs) {
@@ -385,6 +360,11 @@ function ipfsToHttp(ipfsUri: string, gatewayIndex = 0): string {
 function ipfsToProxyUrl(ipfsUri: string): string {
   if (!ipfsUri.startsWith('ipfs://')) return ipfsUri;
   const path = ipfsUri.replace('ipfs://', '');
+  // Fix for specific metadata using placeholder CID
+  if (path.startsWith('NewUriToReplace/')) {
+    const fileName = path.split('/').pop();
+    return `/api/nft/image/bafybeihcjav5e6ivjqolmja3wwtbmajf743bmn3larf354edzrr25g7lym/${fileName}`;
+  }
   return `/api/nft/image/${path}`;
 }
 
@@ -523,19 +503,29 @@ router.get('/api/nft/metadata/:tokenId', async (req: Request, res: Response) => 
       return res.status(400).json({ error: 'Invalid token ID' });
     }
 
-    const tokenURI = await publicClient.readContract({
-      address: NFT_CONTRACT_ADDRESS as `0x${string}`,
-      abi: NFT_ABI,
-      functionName: 'tokenURI',
-      args: [BigInt(tokenId)],
-    });
+    let tokenURI: string | null = null;
+    try {
+      tokenURI = await publicClient.readContract({
+        address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+        abi: NFT_ABI,
+        functionName: 'tokenURI',
+        args: [BigInt(tokenId)],
+      }) as string;
+    } catch (contractErr) {
+      console.warn(`Contract tokenURI failed for ${tokenId}, using default baseURI`);
+      tokenURI = `${MINT_CONFIG.baseURI}${tokenId}`;
+    }
 
-    const metadataUrl = ipfsToHttp(tokenURI as string) + '.json';
+    if (!tokenURI) {
+      return res.status(404).json({ error: 'Token URI not found' });
+    }
+
+    const metadataUrl = ipfsToHttp(tokenURI) + '.json';
 
     let metadata: any = null;
     for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
       try {
-        const url = ipfsToHttp(tokenURI as string, i) + '.json';
+        const url = ipfsToHttp(tokenURI, i) + '.json';
         const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
         if (response.ok) {
           metadata = await response.json();
@@ -619,7 +609,7 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
     }
 
     const dbNfts = await db.execute(
-      sql`SELECT token_id, tx_hash, minted_at, sold, sold_at, listed_price, listing_active FROM user_nfts WHERE user_id = ${userId} ORDER BY minted_at DESC`
+      sql`SELECT token_id, tx_hash, minted_at, sold, sold_at, listed_price, listing_active FROM user_nfts WHERE user_id = ${userId} ORDER BY token_id DESC`
     );
 
     const rows = (dbNfts as any).rows || dbNfts;
@@ -643,38 +633,7 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
     const metadataResults = await Promise.allSettled(
       ownedTokenIds.slice(0, 50).map(async (tokenId: number) => {
         const dbRow = rowMap.get(tokenId);
-        const tokenURI = await publicClient.readContract({
-          address: NFT_CONTRACT_ADDRESS as `0x${string}`,
-          abi: NFT_ABI,
-          functionName: 'tokenURI',
-          args: [BigInt(tokenId)],
-        });
-
-        for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
-          try {
-            const url = ipfsToHttp(tokenURI as string, i) + '.json';
-            const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
-            if (response.ok) {
-              const metadata = await response.json();
-              if (metadata.image) {
-                metadata.image = ipfsToProxyUrl(metadata.image);
-              }
-              return {
-                tokenId,
-                txHash: dbRow?.txHash || '',
-                mintedAt: dbRow?.mintedAt || '',
-                sold: dbRow?.sold || false,
-                soldAt: dbRow?.soldAt || null,
-                listedPrice: dbRow?.listedPrice || null,
-                listingActive: dbRow?.listingActive || false,
-                ...metadata,
-              };
-            }
-          } catch {
-            continue;
-          }
-        }
-        return {
+        const fallbackData = {
           tokenId,
           name: `Gamefolio Genesis #${tokenId}`,
           image: null,
@@ -685,12 +644,64 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
           listedPrice: dbRow?.listedPrice || null,
           listingActive: dbRow?.listingActive || false,
         };
+
+        try {
+          let tokenURI: string | null = null;
+          try {
+            tokenURI = await publicClient.readContract({
+              address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+              abi: NFT_ABI,
+              functionName: 'tokenURI',
+              args: [BigInt(tokenId)],
+            }) as string;
+          } catch (contractErr) {
+            console.warn(`Contract tokenURI failed for ${tokenId}, using default baseURI`);
+            tokenURI = `${MINT_CONFIG.baseURI}${tokenId}`;
+          }
+
+          if (!tokenURI) return fallbackData;
+
+          for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
+            try {
+              const url = ipfsToHttp(tokenURI, i) + '.json';
+              const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+              if (response.ok) {
+                const metadata = await response.json();
+                if (metadata.image) {
+                  metadata.image = ipfsToProxyUrl(metadata.image);
+                }
+                return {
+                  ...fallbackData,
+                  ...metadata,
+                };
+              }
+            } catch {
+              continue;
+            }
+          }
+        } catch (err) {
+          console.error(`Error processing token ${tokenId}:`, err);
+        }
+        return fallbackData;
       })
     );
 
-    const nfts = metadataResults
-      .filter((r) => r.status === 'fulfilled')
-      .map((r) => (r as PromiseFulfilledResult<any>).value);
+    const nfts = metadataResults.map((r, i) => {
+      if (r.status === 'fulfilled') return r.value;
+      const tokenId = ownedTokenIds[i];
+      const dbRow = rowMap.get(tokenId);
+      return {
+        tokenId,
+        name: `Gamefolio Genesis #${tokenId}`,
+        image: null,
+        txHash: dbRow?.txHash || '',
+        mintedAt: dbRow?.mintedAt || '',
+        sold: dbRow?.sold || false,
+        soldAt: dbRow?.soldAt || null,
+        listedPrice: dbRow?.listedPrice || null,
+        listingActive: dbRow?.listingActive || false,
+      };
+    });
 
     return res.json({ nfts, count: ownedTokenIds.length });
   } catch (error: any) {

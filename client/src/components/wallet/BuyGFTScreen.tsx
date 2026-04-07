@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth";
+import { useTokenBalance } from "@/hooks/use-token";
 import CustomAmountScreen from "./CustomAmountScreen";
 
 interface BuyGFTScreenProps {
@@ -16,11 +16,12 @@ export default function BuyGFTScreen({
   onContinue,
   currentBalance = 0,
 }: BuyGFTScreenProps) {
-  const { user } = useAuth();
   const [selectedAmount, setSelectedAmount] = useState(25);
   const [customAmount, setCustomAmount] = useState<number | null>(null);
   const [isCustom, setIsCustom] = useState(false);
   const [showCustomScreen, setShowCustomScreen] = useState(false);
+  const { balance: tokenBalanceStr } = useTokenBalance();
+  const balance = parseFloat(tokenBalanceStr || '0') || currentBalance;
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -28,7 +29,6 @@ export default function BuyGFTScreen({
 
   const displayAmount = isCustom && customAmount !== null ? customAmount : selectedAmount;
   const gftReceived = displayAmount / GFT_RATE;
-  const balance = user?.gfTokenBalance || currentBalance;
 
   const handlePresetClick = (amount: number) => {
     setSelectedAmount(amount);

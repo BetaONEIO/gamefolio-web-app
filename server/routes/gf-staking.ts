@@ -6,7 +6,7 @@ import { parseUnits, formatUnits, maxUint256, type Address } from 'viem';
 import { writeContractWithPoW, publicClient } from '../skale-pow';
 import { GF_STAKING_ADDRESS, GF_STAKING_ABI, GF_TOKEN_ADDRESS, GF_TOKEN_ABI } from '../../shared/contracts';
 import { getStakingStats, getStakePosition } from '../gf-staking-service';
-import { transferGfTokens } from '../gf-token-service';
+import { getTokenBalance } from '../blockchain';
 
 const router = Router();
 const GF_DECIMALS = 18;
@@ -77,25 +77,16 @@ router.post('/api/staking/stake', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'No server-side wallet available', code: 'NO_WALLET' });
     }
 
-    const inAppBalance = user.gfTokenBalance || 0;
-    if (inAppBalance < amountFloat) {
+    const userAddress = user.walletAddress as Address;
+
+    const onChainBalanceStr = await getTokenBalance(userAddress);
+    const onChainBalance = parseFloat(onChainBalanceStr);
+    if (onChainBalance < amountFloat) {
       return res.status(400).json({
-        error: `Insufficient GFT balance. Have: ${inAppBalance.toFixed(2)} GFT, Need: ${amountFloat} GFT`,
+        error: `Insufficient on-chain GFT balance. Have: ${onChainBalance.toFixed(2)} GFT, Need: ${amountFloat} GFT`,
         code: 'INSUFFICIENT_BALANCE',
       });
     }
-
-    const userAddress = user.walletAddress as Address;
-
-    console.log(`[Staking] Transferring ${amountFloat} GFT from treasury to user wallet ${userAddress}`);
-    const transferResult = await transferGfTokens(userAddress, amountFloat);
-    if (!transferResult.success) {
-      return res.status(400).json({
-        error: `Treasury transfer failed: ${transferResult.error}`,
-        code: 'TREASURY_TRANSFER_FAILED',
-      });
-    }
-    console.log(`[Staking] Treasury transfer confirmed. TX: ${transferResult.txHash}`);
 
     const allowance = await publicClient.readContract({
       address: GF_TOKEN_ADDRESS as Address,
@@ -136,10 +127,6 @@ router.post('/api/staking/stake', async (req: Request, res: Response) => {
 
     console.log(`[Staking] On-chain stake confirmed. TX: ${stakeHash}`);
 
-    await db.update(users)
-      .set({ gfTokenBalance: sql`${users.gfTokenBalance} - ${amountFloat}` })
-      .where(eq(users.id, userId));
-
     const now = new Date();
     const [existing] = await db.select().from(userStaking).where(eq(userStaking.userId, userId)).limit(1);
 
@@ -157,13 +144,11 @@ router.post('/api/staking/stake', async (req: Request, res: Response) => {
       });
     }
 
-    const [updated] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-
     await db.insert(userStakingHistory).values({
       userId,
       type: 'stake',
       amount: amountFloat,
-      balanceAfter: updated.gfTokenBalance || 0,
+      balanceAfter: 0,
       createdAt: now,
     });
 
@@ -171,7 +156,6 @@ router.post('/api/staking/stake', async (req: Request, res: Response) => {
       success: true,
       txHash: stakeHash,
       stakedAmount: existing ? existing.stakedAmount + amountFloat : amountFloat,
-      balance: updated.gfTokenBalance,
     });
   } catch (error: any) {
     console.error('[Staking] Stake error:', error);
@@ -276,17 +260,11 @@ router.post('/api/staking/unstake', async (req: Request, res: Response) => {
         .where(eq(userStaking.userId, userId));
     }
 
-    await db.update(users)
-      .set({ gfTokenBalance: sql`${users.gfTokenBalance} + ${finalAmountFloat}` })
-      .where(eq(users.id, userId));
-
-    const [updated] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-
     await db.insert(userStakingHistory).values({
       userId,
       type: 'unstake',
       amount: finalAmountFloat,
-      balanceAfter: updated.gfTokenBalance || 0,
+      balanceAfter: 0,
       createdAt: now,
     });
 
@@ -294,7 +272,6 @@ router.post('/api/staking/unstake', async (req: Request, res: Response) => {
       success: true,
       txHash,
       unstaked: finalAmountFloat,
-      balance: updated.gfTokenBalance,
     });
   } catch (error: any) {
     console.error('[Staking] Unstake error:', error);
@@ -367,17 +344,11 @@ router.post('/api/staking/claim', async (req: Request, res: Response) => {
       })
       .where(eq(userStaking.userId, userId));
 
-    await db.update(users)
-      .set({ gfTokenBalance: sql`${users.gfTokenBalance} + ${rewards}` })
-      .where(eq(users.id, userId));
-
-    const [updated] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-
     await db.insert(userStakingHistory).values({
       userId,
       type: 'claim',
       amount: rewards,
-      balanceAfter: updated.gfTokenBalance || 0,
+      balanceAfter: 0,
       createdAt: now,
     });
 
@@ -385,7 +356,6 @@ router.post('/api/staking/claim', async (req: Request, res: Response) => {
       success: true,
       txHash,
       rewards,
-      balance: updated.gfTokenBalance,
     });
   } catch (error: any) {
     console.error('[Staking] Claim error:', error);

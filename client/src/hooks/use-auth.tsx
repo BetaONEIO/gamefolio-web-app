@@ -83,6 +83,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!mounted) return;
 
           const streakInfo = userData.streakInfo;
+          // Mark reward as shown so the session-restore useEffect doesn't double-fire
+          if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
+            dailyRewardShownRef.current = true;
+          }
           queryClient.setQueryData(["/api/user"], userData);
 
           if (userData.needsOnboarding) {
@@ -107,21 +111,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               variant: "gamefolioSuccess",
             });
             
-            if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
-              setTimeout(() => {
-                if (!mounted) return;
-                showDailyXp({
-                  dailyXP: streakInfo.dailyXP,
-                  bonusAwarded: streakInfo.bonusAwarded,
-                  currentStreak: streakInfo.currentStreak,
-                  longestStreak: streakInfo.longestStreak || userData.longestStreak || 0,
-                  isNewMilestone: streakInfo.isNewMilestone,
-                  message: streakInfo.message,
-                  nextMilestone: streakInfo.nextMilestone || 5,
-                });
-              }, 800);
-            }
-            
             setLocation("/");
           }
         } catch (error) {
@@ -145,6 +134,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [queryClient, toast, setLocation]);
 
+  const dailyRewardShownRef = useRef(false);
+
   const {
     data: user,
     error,
@@ -156,6 +147,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     staleTime: 60000,
     refetchInterval: 60000,
   });
+
+  useEffect(() => {
+    if (!user || dailyRewardShownRef.current) return;
+    const userData = user as any;
+    const streakInfo = userData.streakInfo;
+    if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
+      dailyRewardShownRef.current = true;
+      setTimeout(() => {
+        showDailyXp({
+          dailyXP: streakInfo.dailyXP,
+          bonusAwarded: streakInfo.bonusAwarded,
+          currentStreak: streakInfo.currentStreak,
+          longestStreak: streakInfo.longestStreak || userData.longestStreak || 0,
+          isNewMilestone: streakInfo.isNewMilestone,
+          message: streakInfo.message,
+          nextMilestone: streakInfo.nextMilestone || 5,
+        });
+      }, 800);
+    }
+  }, [user, showDailyXp]);
 
 
 
@@ -185,6 +196,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const user = responseData as User;
       const streakInfo = responseData.streakInfo;
+
+      // Mark reward as shown so the session-restore useEffect doesn't double-fire
+      dailyRewardShownRef.current = true;
       
       // Use centralized refreshUser to ensure cache consistency
       await refreshUser();
@@ -195,20 +209,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: `You are now logged in as ${user.displayName || user.username}`,
         variant: "gamefolioSuccess",
       });
-
-      if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
-        setTimeout(() => {
-          showDailyXp({
-            dailyXP: streakInfo.dailyXP,
-            bonusAwarded: streakInfo.bonusAwarded,
-            currentStreak: streakInfo.currentStreak,
-            longestStreak: streakInfo.longestStreak || user.longestStreak || 0,
-            isNewMilestone: streakInfo.isNewMilestone,
-            message: streakInfo.message,
-            nextMilestone: streakInfo.nextMilestone || 5,
-          });
-        }, 800);
-      }
 
       // Check if user needs onboarding
       const needsOnboarding = !user.userType;

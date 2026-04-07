@@ -1,19 +1,18 @@
-import { createPublicClient, http, parseUnits, formatUnits, type Address } from 'viem';
+import { createPublicClient, createWalletClient, http, parseUnits, formatUnits, type Address } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from '../shared/contracts';
-import { writeContractWithPoWFromRawKey } from './skale-pow';
+import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_BASE_MAINNET } from '../shared/contracts';
 
 const GF_TOKEN_DECIMALS = 18;
 
 const publicClient = createPublicClient({
-  chain: SKALE_NEBULA_TESTNET,
-  transport: http(SKALE_NEBULA_TESTNET.rpcUrls.default.http[0]),
+  chain: SKALE_BASE_MAINNET,
+  transport: http(SKALE_BASE_MAINNET.rpcUrls.default.http[0]),
 });
 
 function getTreasuryPrivateKey(): string {
-  const privateKey = process.env.TREASURY_WALLET_PRIVATE_KEY;
+  const privateKey = process.env.TREASURY_PRIVATE_KEY;
   if (!privateKey) {
-    throw new Error('TREASURY_WALLET_PRIVATE_KEY not configured');
+    throw new Error('TREASURY_PRIVATE_KEY not configured');
   }
   return privateKey;
 }
@@ -72,14 +71,22 @@ export async function transferGfTokens(
       };
     }
 
-    console.log(`[Treasury] Sending ${amount} GFT to ${toAddress} via PoW...`);
+    console.log(`[Treasury] Sending ${amount} GFT to ${toAddress} on SKALE Base Mainnet...`);
 
-    const hash = await writeContractWithPoWFromRawKey({
-      privateKeyRaw: getTreasuryPrivateKey(),
-      contractAddress: GF_TOKEN_ADDRESS as Address,
+    const walletClient = createWalletClient({
+      account,
+      chain: SKALE_BASE_MAINNET,
+      transport: http(SKALE_BASE_MAINNET.rpcUrls.default.http[0]),
+    });
+
+    const gasPrice = await publicClient.getGasPrice();
+
+    const hash = await walletClient.writeContract({
+      address: GF_TOKEN_ADDRESS as Address,
       abi: GF_TOKEN_ABI,
       functionName: 'transfer',
       args: [toAddress as Address, amountInWei],
+      gasPrice,
     });
 
     const receipt = await publicClient.waitForTransactionReceipt({

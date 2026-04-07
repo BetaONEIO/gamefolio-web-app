@@ -1,0 +1,911 @@
+Implement the following design in React. Use the following files generated from a Figma design as a specification and guide:
+
+```src/styles/NightCityCyberGamefolio.module.css
+@import "https://fonts.googleapis.com/css?family=Plus+Jakarta+Sans:0,900;0,700;0,500&display=swap";
+.NightCityCyberGamefolio_239_1097 {
+  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.Container_239_1098 {
+  background: #020617;
+  flex: 1 0 0;
+  width: 100%;
+}
+.Container_239_1099 {
+  backdrop-filter: blur(12px);
+  box-sizing: border-box;
+  background: #020618cc;
+  border-bottom: 0.556px solid #00b8db33;
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 176.005px;
+  width: 431px;
+  padding: 23.993px 16.997px 17.007px 15.998px;
+  display: flex;
+}
+.Container_239_1100 {
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 15.9983px;
+  width: 186px;
+  height: 40px;
+  padding-right: 0.002px;
+  display: flex;
+}
+.Container_239_1101 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 130px;
+  height: 16px;
+  padding: 1.111px 0 1.889px;
+  display: flex;
+}
+.GhostNetV4_2_239_1102 {
+  color: #00b8db99;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 135px;
+  height: 13px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 15px;
+  display: inline-block;
+}
+.Container_239_1103 {
+  box-sizing: border-box;
+  border: 0.556px solid #00b8db66;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 40px;
+  display: flex;
+}
+.Container_239_1104 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_239_1107,
+.Container_239_1108 {
+  background: #00d3f2;
+  width: 4px;
+  height: 4px;
+}
+.Container_239_1109 {
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 36px;
+  height: 36px;
+  display: flex;
+}
+.Container_239_1110 {
+  box-sizing: border-box;
+  border: 0.556px solid #e12afb66;
+  border-radius: 8px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 36px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_239_1111 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 35px;
+  height: 35px;
+}
+.Container_239_1112 {
+  background: #00b8db1a;
+  width: 35px;
+  height: 35px;
+}
+.Container_239_1113 {
+  width: 431px;
+  height: 852px;
+}
+.Container_239_1114 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 7.99133px;
+  width: 431px;
+  padding: 0 24.007px 0.009px 23.993px;
+  display: flex;
+}
+.Container_239_1115 {
+  align-items: center;
+  width: 383px;
+  height: 32px;
+  padding-right: 221px;
+  display: flex;
+}
+.Container_239_1116 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 32px;
+  padding: 0.556px 0 0.444px;
+  display: flex;
+}
+.NeuroDiver_239_1117 {
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  text-transform: uppercase;
+  -webkit-text-fill-color: transparent;
+  background: linear-gradient(270deg, #00d3f2 0%, #ed6aff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  width: 167px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 32px;
+  display: inline-block;
+}
+.Container_239_1118 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 11.9913px;
+  height: 18px;
+  padding-right: 212.009px;
+  display: flex;
+}
+.Container_239_1119 {
+  background: #00d3f2;
+  justify-content: center;
+  align-items: center;
+  width: 93px;
+  height: 16px;
+  padding: 2.552px 4.502px 3.448px 4.498px;
+  display: flex;
+}
+.MasterHacker_239_1120 {
+  color: #104e64;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 84px;
+  height: 10px;
+  font-family: Plus Jakarta Sans;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 12px;
+  display: inline-block;
+}
+.Container_239_1121 {
+  box-sizing: border-box;
+  border: 0.556px solid #e12afb80;
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 18px;
+  padding: 3.108px 4.946px 4.892px 5.054px;
+  display: flex;
+}
+.NightCity_239_1122 {
+  color: #ed6aff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  width: 56px;
+  height: 10px;
+  font-family: Plus Jakarta Sans;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 12px;
+  display: inline-block;
+}
+.Container_239_1123 {
+  justify-content: center;
+  align-items: center;
+  width: 431px;
+  height: 100px;
+  padding: 0 16.002px 0 15.998px;
+  display: flex;
+}
+.Container_239_1124 {
+  border-radius: 8px;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 100px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_239_1125 {
+  background: linear-gradient(270deg, #00b8db 0%, #e12afb 50%, #00b8db 100%);
+  width: 399px;
+  height: 100px;
+}
+.Container_239_1126 {
+  background: #020618;
+  width: 395px;
+  height: 96px;
+}
+.Container_239_1127 {
+  background: linear-gradient(
+    #12101000 50%,
+    #ff00000f 60%,
+    #00ff0005 80%,
+    #0000ff0f 100%
+  );
+  width: 395px;
+  height: 96px;
+}
+.Container_239_1128 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6.99655px;
+  width: 58px;
+  padding-bottom: 0.003px;
+  display: flex;
+}
+.Container_239_1129 {
+  flex-flow: row;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 7.48252px;
+  height: 25px;
+  display: flex;
+}
+.Container_239_1130 {
+  flex: 1 0 0;
+  justify-content: center;
+  align-items: center;
+  height: 25px;
+  display: flex;
+}
+._2K_239_1131 {
+  color: #00d3f2;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  width: 51px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_239_1132 {
+  background: #00d3f2;
+  width: 5px;
+  height: 5px;
+}
+.Container_239_1133 {
+  background: #00d3f2e6;
+  justify-content: center;
+  align-items: center;
+  width: 45px;
+  height: 15px;
+  padding: 2.552px 2.507px 3.448px 2.493px;
+  display: flex;
+}
+.Packets_239_1134 {
+  color: #104e64;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 40px;
+  height: 9px;
+  font-family: Plus Jakarta Sans;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 10.5px;
+  display: inline-block;
+}
+.Container_239_1135 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6.99655px;
+  width: 44px;
+  padding-bottom: 0.003px;
+  display: flex;
+}
+.Container_239_1136 {
+  justify-content: center;
+  align-items: center;
+  height: 25px;
+  display: flex;
+}
+.generated_450_239_1137 {
+  color: #ed6aff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  width: 49px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_239_1138 {
+  background: #ed6affe6;
+  justify-content: center;
+  align-items: center;
+  width: 37px;
+  height: 15px;
+  padding: 2.552px 2.507px 3.448px 2.493px;
+  display: flex;
+}
+.Nodes_239_1139 {
+  color: #721378;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 32px;
+  height: 9px;
+  font-family: Plus Jakarta Sans;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 10.5px;
+  display: inline-block;
+}
+.Container_239_1140 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6.99652px;
+  width: 33px;
+  padding-bottom: 0.003px;
+  display: flex;
+}
+.Container_239_1141 {
+  justify-content: flex-end;
+  align-items: center;
+  height: 25px;
+  padding-left: 2.969px;
+  display: flex;
+}
+.generated_89_239_1142 {
+  color: #fff;
+  text-align: right;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -1.2px;
+  width: 33px;
+  height: 31px;
+  font-family: Plus Jakarta Sans;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 24px;
+  display: inline-block;
+}
+.Container_239_1143 {
+  box-sizing: border-box;
+  border: 0.556px solid #314158;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  padding: 3.108px 2.951px 3.892px 3.049px;
+  display: flex;
+}
+.Links_239_1144 {
+  color: #90a1b9;
+  text-align: right;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  width: 27px;
+  height: 9px;
+  font-family: Plus Jakarta Sans;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 10.5px;
+  display: inline-block;
+}
+.Container_239_1145 {
+  box-sizing: border-box;
+  border-top: 1.667px solid #fff;
+  border-left: 1.667px solid #fff;
+  width: 8px;
+  height: 8px;
+}
+.Container_239_1146 {
+  box-sizing: border-box;
+  border-bottom: 1.667px solid #fff;
+  border-right: 1.667px solid #fff;
+  width: 8px;
+  height: 8px;
+}
+.Container_239_1147 {
+  justify-content: center;
+  align-items: center;
+  width: 431px;
+  height: 66px;
+  padding: 0 24.007px 0 23.993px;
+  display: flex;
+}
+.Container_239_1148 {
+  box-sizing: border-box;
+  border: 0.556px solid #104e6466;
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  height: 66px;
+  display: flex;
+  overflow: hidden;
+}
+.Container_239_1149 {
+  align-items: center;
+  height: 33px;
+  padding: 1.667px 35px 1.333px 0;
+  display: inline-flex;
+}
+.RunningTraceRoute_100CompleteAccessingNeuralLinkWelcomeToTheGridTheFutureIsCodedInNeon_239_1150 {
+  color: #00d3f2cc;
+  font-feature-settings: "dlig" on;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  width: 315px;
+  height: 30px;
+  font-family: Plus Jakarta Sans;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 16.25px;
+  display: inline-block;
+}
+.Container_239_1151 {
+  justify-content: center;
+  align-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 3.993px 4.007px 4.007px 3.993px;
+  display: flex;
+}
+.Container_239_1152 {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  overflow: hidden;
+}
+.Container_239_1154 {
+  flex-flow: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6.99481px;
+  width: 431px;
+  padding: 0 16.007px 128px 15.998px;
+  display: flex;
+}
+.Container_239_1155 {
+  box-sizing: border-box;
+  background: #0f172b;
+  border: 0.556px solid #00b8db1a;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 196px;
+  height: 128px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_239_1156 {
+  aspect-ratio: 139/91;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 194px;
+  height: 127px;
+}
+.Container_239_1157 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 7.875px;
+  width: 170px;
+  padding: 11.111px 118px 0.014px 0;
+  display: flex;
+}
+.Container_239_1158 {
+  justify-content: center;
+  align-items: center;
+  width: 52px;
+  height: 9px;
+  display: flex;
+}
+.Archive_01_239_1159 {
+  color: #00d3f2;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 57px;
+  height: 9px;
+  font-family: Plus Jakarta Sans;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 10.5px;
+  display: inline-block;
+}
+.Container_239_1160 {
+  background: #00b8db;
+  width: 32px;
+  height: 1px;
+}
+.Container_239_1161 {
+  box-sizing: border-box;
+  background: #0f172b;
+  border: 0.556px solid #e12afb1a;
+  flex-flow: row;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  width: 196px;
+  height: 128px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_239_1162 {
+  aspect-ratio: 139/91;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 194px;
+  height: 127px;
+}
+.Container_239_1163 {
+  flex-flow: column;
+  flex-grow: 1;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 7.875px;
+  width: 170px;
+  padding: 11.111px 117px 0.014px 0;
+  display: flex;
+}
+.Container_239_1164 {
+  justify-content: center;
+  align-items: center;
+  width: 53px;
+  height: 9px;
+  display: flex;
+}
+.Archive_02_239_1165 {
+  color: #ed6aff;
+  font-feature-settings: "dlig" on;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 58px;
+  height: 9px;
+  font-family: Plus Jakarta Sans;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 10.5px;
+  display: inline-block;
+}
+.Container_239_1166 {
+  background: #e12afb;
+  width: 32px;
+  height: 1px;
+}
+.Container_239_1167 {
+  width: 431px;
+  height: 192px;
+}
+.Container_239_1168 {
+  width: 431px;
+  height: 192px;
+  overflow: hidden;
+}
+.Image_239_1169 {
+  aspect-ratio: 321/143;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  width: 431px;
+  height: 192px;
+}
+.Container_239_1170 {
+  background: linear-gradient(#020617 0%, #02061700 50% 100%);
+  width: 431px;
+  height: 192px;
+}
+.Container_239_1171 {
+  background: linear-gradient(
+    #12101000 50%,
+    #ff000008 60%,
+    #00ff0003 80%,
+    #0000ff08 100%
+  );
+  width: 431px;
+  height: 192px;
+}
+.Container_239_1172 {
+  justify-content: center;
+  align-items: center;
+  width: 104px;
+  height: 104px;
+  display: flex;
+}
+.Container_239_1173 {
+  background: linear-gradient(#00b8db 0%, #e12afb 100%);
+  flex-flow: row;
+  flex: 1 0 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+  display: flex;
+}
+.Container_239_1174 {
+  background: #020618;
+  justify-content: center;
+  align-items: center;
+  width: 96px;
+  height: 96px;
+  display: flex;
+  overflow: hidden;
+}
+.Image_239_1175 {
+  aspect-ratio: 1;
+  background: #d3d3d3 url(<path-to-image>) 50% / cover no-repeat;
+  flex-shrink: 0;
+  width: 96px;
+  height: 96px;
+}
+.Container_239_1176 {
+  box-sizing: border-box;
+  border-top: 1.667px solid #fff;
+  border-left: 1.667px solid #fff;
+  width: 12px;
+  height: 12px;
+}
+.Container_239_1177 {
+  box-sizing: border-box;
+  border-bottom: 1.667px solid #fff;
+  border-right: 1.667px solid #fff;
+  width: 12px;
+  height: 12px;
+}
+.Navigation_239_1178 {
+  backdrop-filter: blur(12px);
+  box-sizing: border-box;
+  background: #020618e6;
+  border-top: 0.556px solid #00b8db33;
+  width: 431px;
+  height: 81px;
+}
+.Container_239_1179,
+.Container_239_1181 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_239_1183 {
+  background: linear-gradient(#00b8db 0%, #e12afb 100%);
+  justify-content: center;
+  align-items: center;
+  width: 56px;
+  height: 56px;
+  padding: 1.997px 1.003px 1.003px 1.997px;
+  display: flex;
+  box-shadow: 0 0 15px #22d3ee66;
+}
+.Container_239_1184 {
+  background: #020618;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 53px;
+  height: 53px;
+  padding: 10px 11px 11px 10px;
+  display: flex;
+}
+.Container_239_1185 {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+}
+.Container_239_1187 {
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.Container_239_1189 {
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2.99913px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  overflow: hidden;
+}
+
+```
+
+---
+
+```src/components/assets/Container.tsx
+import React from 'react';
+export default function Container() {
+  return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fillRule="evenodd" clipRule="evenodd" d="M7.99756 5.99833C7.99756 3.78984 9.78789 1.99951 11.9964 1.99951C14.2049 1.99951 15.9952 3.78984 15.9952 5.99833C15.9952 8.20682 14.2049 9.99715 11.9964 9.99715C9.78789 9.99715 7.99756 8.20682 7.99756 5.99833Z" fill="#314158"/>
+<path fillRule="evenodd" clipRule="evenodd" d="M19.9944 17.4948C19.9944 19.9791 19.9944 21.9935 11.9967 21.9935C3.99902 21.9935 3.99902 19.9791 3.99902 17.4948C3.99902 15.0105 7.57998 12.9961 11.9967 12.9961C16.4134 12.9961 19.9944 15.0105 19.9944 17.4948Z" fill="#314158"/>
+</svg>
+;
+}
+```
+
+---
+
+```src/components/NightCityCyberGamefolio.tsx
+import React from 'react';
+import styles from '../styles/NightCityCyberGamefolio.module.css';
+import Container from './assets/Container';
+
+export default function NightCityCyberGamefolio() {
+  return (
+    <div className={styles.NightCityCyberGamefolio_239_1097}>
+      <div className={styles.Container_239_1098}>
+        <div className={styles.Container_239_1099}>
+          <div className={styles.Container_239_1100}>
+            <div className={styles.Container_239_1101}><span className={styles.GhostNetV4_2_239_1102}>Ghost_Net v4.2</span></div>
+            <div className={styles.Container_239_1103}>
+              <div className={styles.Container_239_1104}>
+                <Container />
+              </div>
+              <div className={styles.Container_239_1107}></div>
+              <div className={styles.Container_239_1108}></div>
+            </div>
+          </div>
+          <div className={styles.Container_239_1109}>
+            <div className={styles.Container_239_1110}>
+              <div className={styles.Image_239_1111}></div>
+              <div className={styles.Container_239_1112}></div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Container_239_1113}>
+          <div className={styles.Container_239_1114}>
+            <div className={styles.Container_239_1115}>
+              <div className={styles.Container_239_1116}><span className={styles.NeuroDiver_239_1117}>Neuro_Diver</span></div>
+            </div>
+            <div className={styles.Container_239_1118}>
+              <div className={styles.Container_239_1119}><span className={styles.MasterHacker_239_1120}>Master_Hacker</span></div>
+              <div className={styles.Container_239_1121}><span className={styles.NightCity_239_1122}>Night City</span></div>
+            </div>
+          </div>
+          <div className={styles.Container_239_1123}>
+            <div className={styles.Container_239_1124}>
+              <div className={styles.Container_239_1125}></div>
+              <div className={styles.Container_239_1126}>
+                <div className={styles.Container_239_1127}></div>
+                <div className={styles.Container_239_1128}>
+                  <div className={styles.Container_239_1129}>
+                    <div className={styles.Container_239_1130}><span className={styles._2K_239_1131}>1.2K</span></div>
+                    <div className={styles.Container_239_1132}></div>
+                  </div>
+                  <div className={styles.Container_239_1133}><span className={styles.Packets_239_1134}>Packets</span></div>
+                </div>
+                <div className={styles.Container_239_1135}>
+                  <div className={styles.Container_239_1136}><span className={styles.generated_450_239_1137}>450</span></div>
+                  <div className={styles.Container_239_1138}><span className={styles.Nodes_239_1139}>Nodes</span></div>
+                </div>
+                <div className={styles.Container_239_1140}>
+                  <div className={styles.Container_239_1141}><span className={styles.generated_89_239_1142}>89</span></div>
+                  <div className={styles.Container_239_1143}><span className={styles.Links_239_1144}>Links</span></div>
+                </div>
+              </div>
+              <div className={styles.Container_239_1145}></div>
+              <div className={styles.Container_239_1146}></div>
+            </div>
+          </div>
+          <div className={styles.Container_239_1147}>
+            <div className={styles.Container_239_1148}>
+              <div className={styles.Container_239_1149}><span className={styles.RunningTraceRoute_100CompleteAccessingNeuralLinkWelcomeToTheGridTheFutureIsCodedInNeon_239_1150}>Running trace route... 100% complete. Accessing neural link. Welcome to the grid. The future is coded in neon. &#x1F9BE;&#x1F30C;</span></div>
+              <div className={styles.Container_239_1151}>
+                <div className={styles.Container_239_1152}>
+                  <Container />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_239_1154}>
+            <div className={styles.Container_239_1155}>
+              <div className={styles.Image_239_1156}></div>
+              <div className={styles.Container_239_1157}>
+                <div className={styles.Container_239_1158}><span className={styles.Archive_01_239_1159}>Archive_01</span></div>
+                <div className={styles.Container_239_1160}></div>
+              </div>
+            </div>
+            <div className={styles.Container_239_1161}>
+              <div className={styles.Image_239_1162}></div>
+              <div className={styles.Container_239_1163}>
+                <div className={styles.Container_239_1164}><span className={styles.Archive_02_239_1165}>Archive_02</span></div>
+                <div className={styles.Container_239_1166}></div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_239_1167}>
+            <div className={styles.Container_239_1168}>
+              <div className={styles.Image_239_1169}></div>
+              <div className={styles.Container_239_1170}></div>
+              <div className={styles.Container_239_1171}></div>
+            </div>
+            <div className={styles.Container_239_1172}>
+              <div className={styles.Container_239_1173}>
+                <div className={styles.Container_239_1174}>
+                  <div className={styles.Image_239_1175}></div>
+                </div>
+                <div className={styles.Container_239_1176}></div>
+                <div className={styles.Container_239_1177}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.Navigation_239_1178}>
+          <div className={styles.Container_239_1179}>
+            <Container />
+          </div>
+          <div className={styles.Container_239_1181}>
+            <Container />
+          </div>
+          <div className={styles.Container_239_1183}>
+            <div className={styles.Container_239_1184}>
+              <div className={styles.Container_239_1185}>
+                <Container />
+              </div>
+            </div>
+          </div>
+          <div className={styles.Container_239_1187}>
+            <Container />
+          </div>
+          <div className={styles.Container_239_1189}>
+            <Container />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+

@@ -270,6 +270,7 @@ interface CustomAvatarProps {
   showAvatarBorderOverlay?: boolean;
   showLiveOverlay?: boolean;
   isLive?: boolean;
+  themeColor?: string;
   onNftClick?: (userId: number, tokenId: number, imageUrl: string, event: React.MouseEvent) => void;
   onClick?: (event: React.MouseEvent) => void;
 }
@@ -328,10 +329,11 @@ export const CustomAvatar = ({
   showAvatarBorderOverlay = true,
   showLiveOverlay = false,
   isLive: isLiveProp,
+  themeColor,
   onNftClick,
   onClick
 }: CustomAvatarProps) => {
-  const borderColor = 'hsl(var(--primary))';
+  const borderColor = themeColor || 'hsl(var(--primary))';
   const safeDisplayName = user?.displayName || user?.username || "?";
   const clipId = useMemo(() => `avatar-clip-${user?.id || 'default'}-${Math.random().toString(36).substr(2, 6)}`, [user?.id]);
 
@@ -435,7 +437,7 @@ export const CustomAvatar = ({
   }
 
   if (hasSolidBorder) {
-    const solidColor = user?.avatarBorderColor || borderColor;
+    const solidColor = themeColor || borderColor || user?.avatarBorderColor;
     const solidBorderWidth = (size === 'sm' || size === 'md') ? 3 : 4;
     return (
       <div className={`relative inline-flex items-center justify-center ${className} ${onClick ? 'cursor-pointer' : ''}`} style={{ overflow: 'visible' }} onClick={onClick}>
