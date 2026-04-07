@@ -286,8 +286,7 @@ const PRESET_THEMES = [
     backgroundColor: "#121F2B",
     accentColor: "#4ADE80",
     gradientTopColor: "#02172C",
-    primaryColor: "#02172C",
-    proOnly: true
+    primaryColor: "#02172C"
   },
   {
     name: "Cutesy Pink",
@@ -2430,7 +2429,7 @@ export default function SettingsPage() {
                             const topColor = theme.gradientTopColor || '#0B2232';
                             const defaultThemeColor = '#0B2232';
                             const isActive = profileData.accentColor === theme.accentColor && profileData.backgroundColor === theme.backgroundColor;
-                            const isLocked = (theme as any).proOnly && !user?.isPro;
+                            const isLocked = (theme as any).proOnly && !user?.isPro && theme.name !== "None";
                             return (
                               <div
                                 key={theme.name}
