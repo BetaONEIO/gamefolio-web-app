@@ -3255,16 +3255,13 @@ export default function SettingsPage() {
                         </div>
                         <Switch
                           checked={!!profileData.hideBanner}
-                          onCheckedChange={async (checked) => {
+                          onCheckedChange={(checked) => {
                             setProfileData(prev => ({ ...prev, hideBanner: checked }));
-                            try {
-                              await apiRequest("PATCH", `/api/users/${user?.id}`, { hideBanner: checked });
-                              queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-                              queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
-                            } catch (err: any) {
-                              toast({ title: "Failed to save", description: err.message || "Could not update banner visibility.", variant: "destructive" });
-                              setProfileData(prev => ({ ...prev, hideBanner: !checked }));
-                            }
+                            toast({
+                              title: checked ? "Banner hidden" : "Banner shown",
+                              description: `Click "Save Changes" to apply.`,
+                              variant: "gamefolioSuccess",
+                            });
                           }}
                         />
                       </div>
