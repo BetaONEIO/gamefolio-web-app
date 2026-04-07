@@ -2477,7 +2477,7 @@ export default function SettingsPage() {
                                 {isLocked && theme.name !== "None" && (
                                   <p className="text-center text-xs text-muted-foreground">Pro only</p>
                                 )}
-                                <div className="flex justify-center">
+                                <div className="flex justify-center p-2">
                                   <Button
                                     size="xs"
                                     onClick={() => setThemePreviewData(theme)}
