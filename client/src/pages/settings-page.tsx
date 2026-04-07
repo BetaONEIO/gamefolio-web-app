@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video } from "lucide-react";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -437,6 +437,12 @@ export default function SettingsPage() {
   const [savingPlatform, setSavingPlatform] = useState(false);
   const [removingPlatform, setRemovingPlatform] = useState<PlatformKey | null>(null);
   const [connectingXbox, setConnectingXbox] = useState(false);
+  const [connectingKick, setConnectingKick] = useState(false);
+  const [disconnectingKick, setDisconnectingKick] = useState(false);
+  const [connectingTwitch, setConnectingTwitch] = useState(false);
+  const [disconnectingTwitch, setDisconnectingTwitch] = useState(false);
+  const [connectingRumble, setConnectingRumble] = useState(false);
+  const [disconnectingRumble, setDisconnectingRumble] = useState(false);
   const [syncingAchievements, setSyncingAchievements] = useState(false);
   const [togglingAchievements, setTogglingAchievements] = useState(false);
   const [showXboxDisconnectDialog, setShowXboxDisconnectDialog] = useState(false);
@@ -447,8 +453,6 @@ export default function SettingsPage() {
   const [showPsnDisconnectDialog, setShowPsnDisconnectDialog] = useState(false);
   const [disconnectingPsn, setDisconnectingPsn] = useState(false);
   const psnConfigRef = useRef<HTMLDivElement>(null);
-  const [disconnectingTwitch, setDisconnectingTwitch] = useState(false);
-  const [disconnectingKick, setDisconnectingKick] = useState(false);
   const [savingStreamerSettings, setSavingStreamerSettings] = useState(false);
 
   const getPlatformIcon = (iconKey: string) => {
@@ -834,6 +838,24 @@ export default function SettingsPage() {
   // Track deactivated avatar URL so preview stays visible but greyed out
   const [deactivatedAvatarUrl, setDeactivatedAvatarUrl] = useState<string | null>(null);
 
+  // Streamer state — parsed from user.userType and dedicated streamer fields
+  const parseUserType = (rawType: string | null | undefined) => {
+    const parts = (rawType || '').split(',').map((t: string) => t.trim()).filter(Boolean);
+    return { primary: parts.filter((t: string) => t !== 'streamer').join(','), isStreamer: parts.includes('streamer') };
+  };
+  const buildUserType = (primary: string, isStreamer: boolean): string => {
+    const parts: string[] = [];
+    if (primary) parts.push(primary);
+    if (isStreamer) parts.push('streamer');
+    return parts.join(',');
+  };
+  const { primary: initPrimaryType, isStreamer: initIsStreamer } = parseUserType(user?.userType);
+  const [primaryUserType, setPrimaryUserType] = useState<string>(initPrimaryType);
+  const [isStreamingEnabled, setIsStreamingEnabled] = useState<boolean>(initIsStreamer);
+  const [streamPlatform, setStreamPlatform] = useState<string>((user as any)?.streamPlatform || 'twitch');
+  const [streamChannelName, setStreamChannelName] = useState<string>((user as any)?.streamChannelName || '');
+  const [showLiveOverlay, setShowLiveOverlay] = useState<boolean>((user as any)?.showLiveOverlay || false);
+
   // Update profile data when user data changes (preserve uploaded banners)
   useEffect(() => {
     if (user) {
@@ -966,6 +988,14 @@ export default function SettingsPage() {
           ...appearanceFields,
         };
       });
+
+      // Sync streamer state from updated user data
+      const { primary, isStreamer } = parseUserType(user.userType);
+      setPrimaryUserType(primary);
+      setIsStreamingEnabled(isStreamer);
+      setStreamPlatform((user as any)?.streamPlatform || 'twitch');
+      setStreamChannelName((user as any)?.streamChannelName || '');
+      setShowLiveOverlay((user as any)?.showLiveOverlay || false);
       
       // Only clear avatar upload state if the avatarUrl actually changed (successful upload)
       if (avatarFile && user.avatarUrl && user.avatarUrl !== prevAvatarUrl.current) {
@@ -997,6 +1027,7 @@ export default function SettingsPage() {
   };
 
   // Check if there are unsaved changes
+  const { primary: savedPrimary, isStreamer: savedIsStreamer } = parseUserType(user?.userType);
   const hasUnsavedChanges = 
     normalizeValue(profileData.displayName) !== normalizeValue(user?.displayName) ||
     normalizeValue(profileData.bio) !== normalizeValue(user?.bio) ||
@@ -1018,7 +1049,11 @@ export default function SettingsPage() {
     avatarBorderColor !== (user?.avatarBorderColor || '#4ADE80') ||
     selectedBorderId !== (user?.selectedAvatarBorderId ?? -1) ||
     (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId) ||
-    (pendingVerificationBadgeId !== undefined && pendingVerificationBadgeId !== (user as any)?.selectedVerificationBadgeId);
+    (pendingVerificationBadgeId !== undefined && pendingVerificationBadgeId !== (user as any)?.selectedVerificationBadgeId) ||
+    primaryUserType !== savedPrimary ||
+    isStreamingEnabled !== savedIsStreamer ||
+    streamPlatform !== ((user as any)?.streamPlatform || 'twitch') ||
+    showLiveOverlay !== ((user as any)?.showLiveOverlay || false);
   
 
   // Handle crop complete callback
@@ -1157,8 +1192,10 @@ export default function SettingsPage() {
     enabled: !!user,
   });
 
-  const { data: oauthStatus } = useQuery<{ twitch: boolean; kick: boolean }>({
-    queryKey: ['/api/auth/oauth-status'],
+  const { data: oauthConfig } = useQuery<{ kick: boolean; twitch: boolean; rumble: boolean }>({
+    queryKey: ['/api/auth/social-oauth/config'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    staleTime: 60000,
   });
 
   const { data: profileStats } = useQuery<{ _count?: { followers?: number; following?: number; clips?: number } }>({
@@ -1166,6 +1203,56 @@ export default function SettingsPage() {
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user?.username,
   });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('kick_connected') === 'true') {
+      refreshUser();
+      toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('kick_error')) {
+      const errMap: Record<string, string> = {
+        access_denied: 'You cancelled the Kick authorisation.',
+        redirect_uri_mismatch: 'Redirect URI mismatch — the callback URL is not registered in your Kick app. Check the Kick developer dashboard.',
+        invalid_state: 'Invalid OAuth state. Please try again.',
+        not_configured: 'Kick OAuth is not configured on this server.',
+        auth_failed: 'Kick authentication failed. Please try again.',
+        no_channel: 'No Kick channel found on your account.',
+      };
+      toast({ title: "Kick connection failed", description: errMap[params.get('kick_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('twitch_connected') === 'true') {
+      refreshUser();
+      toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked.", duration: 4000 });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('twitch_error')) {
+      const errMap: Record<string, string> = {
+        access_denied: 'You cancelled the Twitch authorisation.',
+        invalid_state: 'Invalid OAuth state. Please try again.',
+        not_configured: 'Twitch OAuth is not configured on this server.',
+        auth_failed: 'Twitch authentication failed. Please try again.',
+        no_user: 'No Twitch user found on your account.',
+      };
+      toast({ title: "Twitch connection failed", description: errMap[params.get('twitch_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('rumble_connected') === 'true') {
+      refreshUser();
+      toast({ title: "Rumble connected!", description: "Your Rumble channel has been verified and linked.", duration: 4000 });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('rumble_error')) {
+      const errMap: Record<string, string> = {
+        access_denied: 'You cancelled the Rumble authorisation.',
+        invalid_state: 'Invalid OAuth state. Please try again.',
+        not_configured: 'Rumble OAuth is not configured on this server.',
+        auth_failed: 'Rumble authentication failed. Please try again.',
+        no_user: 'No Rumble user found on your account.',
+      };
+      toast({ title: "Rumble connection failed", description: errMap[params.get('rumble_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { signedUrl: signedAvatarUrl } = useSignedUrl(user?.avatarUrl);
   const { signedUrl: signedDeactivatedAvatarUrl } = useSignedUrl(deactivatedAvatarUrl);
@@ -1422,7 +1509,14 @@ export default function SettingsPage() {
         }
       }
 
-      updateProfileMutation.mutate({ ...updatedData, avatarBorderColor });
+      const combinedUserType = buildUserType(primaryUserType, isStreamingEnabled);
+      updateProfileMutation.mutate({
+        ...updatedData,
+        avatarBorderColor,
+        userType: combinedUserType,
+        streamPlatform,
+        showLiveOverlay,
+      });
       setSelectedPreviousAvatar(null);
       queryClient.invalidateQueries({ queryKey: ['/api/user/previous-avatars'] });
     } catch (error) {
@@ -1567,8 +1661,8 @@ export default function SettingsPage() {
           <h1 className="text-xl sm:text-3xl font-bold">Profile & Appearance</h1>
         </div>
 
-        <Tabs defaultValue={new URLSearchParams(window.location.search).get("tab") || "profile"} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1">
+        <Tabs defaultValue="profile" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 gap-1">
             <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Profile</span>
@@ -1577,7 +1671,7 @@ export default function SettingsPage() {
             <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Appearance</span>
-              <span className="sm:hidden">Appearance</span>
+              <span className="sm:hidden">Look</span>
             </TabsTrigger>
             <TabsTrigger value="banners" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -1588,6 +1682,11 @@ export default function SettingsPage() {
               <Gamepad2 className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Platforms</span>
               <span className="sm:hidden">Platforms</span>
+            </TabsTrigger>
+            <TabsTrigger value="streamer" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Video className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Streamer</span>
+              <span className="sm:hidden">Stream</span>
             </TabsTrigger>
           </TabsList>
 
@@ -4088,6 +4187,291 @@ export default function SettingsPage() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+          </TabsContent>
+
+          {/* Streamer Tab */}
+          <TabsContent value="streamer">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Video className="h-5 w-5 text-purple-400" />
+                  Streamer Settings
+                </CardTitle>
+                <CardDescription>
+                  Enable streaming to add the Streamer badge to your profile and display your live stream embed.
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-6">
+                {/* Enable Streaming toggle */}
+                <div className="flex items-center justify-between rounded-lg border border-purple-500/30 bg-purple-500/5 p-4">
+                  <div>
+                    <p className="text-sm font-semibold text-purple-300">Enable Streaming</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Adds the Streamer badge to your profile and displays your stream embed.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={isStreamingEnabled}
+                    onCheckedChange={setIsStreamingEnabled}
+                  />
+                </div>
+
+                {/* Platform selector */}
+                <div className="space-y-2">
+                  <Label className={!isStreamingEnabled ? 'text-muted-foreground' : ''}>
+                    Streaming Platform
+                  </Label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={!isStreamingEnabled}
+                      onClick={() => setStreamPlatform('twitch')}
+                      className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                        !isStreamingEnabled
+                          ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
+                          : streamPlatform === 'twitch'
+                          ? 'border-purple-500 bg-purple-500/20 text-purple-300'
+                          : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
+                      }`}
+                    >
+                      Twitch
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!isStreamingEnabled}
+                      onClick={() => setStreamPlatform('kick')}
+                      className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                        !isStreamingEnabled
+                          ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
+                          : streamPlatform === 'kick'
+                          ? 'border-green-500 bg-green-500/20 text-green-300'
+                          : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
+                      }`}
+                    >
+                      Kick
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!isStreamingEnabled}
+                      onClick={() => setStreamPlatform('rumble')}
+                      className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                        !isStreamingEnabled
+                          ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
+                          : streamPlatform === 'rumble'
+                          ? 'border-[#85C742] bg-[#85C742]/20 text-[#85C742]'
+                          : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
+                      }`}
+                    >
+                      Rumble
+                    </button>
+                  </div>
+                </div>
+
+                {/* Channel name */}
+                <div className="space-y-2">
+                  <Label className={!isStreamingEnabled ? 'text-muted-foreground' : ''}>
+                    Channel Connection
+                  </Label>
+
+                  {/* Twitch OAuth connect option */}
+                  {streamPlatform === 'twitch' && isStreamingEnabled && oauthConfig?.twitch && (
+                    <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.twitchVerified ? 'border-purple-500/30 bg-purple-500/5' : 'border-slate-700 bg-slate-800/30'}`}>
+                      {(user as any)?.twitchVerified ? (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded bg-purple-500/20 flex items-center justify-center">
+                              <Check className="w-3.5 h-3.5 text-purple-400" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-purple-300">Twitch OAuth Verified</p>
+                              <p className="text-[11px] text-slate-400">@{(user as any)?.streamChannelName}</p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={disconnectingTwitch}
+                            className="h-7 px-2 text-xs text-slate-400 hover:text-red-400"
+                            onClick={async () => {
+                              setDisconnectingTwitch(true);
+                              try {
+                                await apiRequest('POST', '/api/auth/twitch-stream/disconnect');
+                                await refreshUser();
+                                setStreamChannelName('');
+                                toast({ title: 'Twitch disconnected', description: 'Your Twitch channel has been unlinked.', duration: 3000 });
+                              } catch {
+                                toast({ title: 'Failed to disconnect', description: 'Please try again.', variant: 'destructive' });
+                              } finally {
+                                setDisconnectingTwitch(false);
+                              }
+                            }}
+                          >
+                            {disconnectingTwitch ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Unlink className="w-3 h-3 mr-1" />}
+                            Disconnect
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-slate-400">Verify your Twitch channel via OAuth for a secure connection.</p>
+                          <Button
+                            size="sm"
+                            disabled={connectingTwitch}
+                            className="bg-[#9146FF] hover:bg-[#7d3de8] text-white font-semibold border-0 h-8 px-3 text-xs"
+                            onClick={() => { setConnectingTwitch(true); window.location.href = '/api/auth/twitch-stream/connect'; }}
+                          >
+                            {connectingTwitch ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+                            Connect with Twitch
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Kick OAuth connect option */}
+                  {streamPlatform === 'kick' && isStreamingEnabled && oauthConfig?.kick && (
+                    <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.kickVerified ? 'border-green-500/30 bg-green-500/5' : 'border-slate-700 bg-slate-800/30'}`}>
+                      {(user as any)?.kickVerified ? (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded bg-green-500/20 flex items-center justify-center">
+                              <Check className="w-3.5 h-3.5 text-green-400" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-green-300">Kick OAuth Verified</p>
+                              <p className="text-[11px] text-slate-400">@{(user as any)?.streamChannelName}</p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={disconnectingKick}
+                            className="h-7 px-2 text-xs text-slate-400 hover:text-red-400"
+                            onClick={async () => {
+                              setDisconnectingKick(true);
+                              try {
+                                await apiRequest('POST', '/api/auth/kick/disconnect');
+                                await refreshUser();
+                                setStreamChannelName('');
+                                toast({ title: 'Kick disconnected', description: 'Your Kick channel has been unlinked.', duration: 3000 });
+                              } catch {
+                                toast({ title: 'Failed to disconnect', description: 'Please try again.', variant: 'destructive' });
+                              } finally {
+                                setDisconnectingKick(false);
+                              }
+                            }}
+                          >
+                            {disconnectingKick ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Unlink className="w-3 h-3 mr-1" />}
+                            Disconnect
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-slate-400">Verify your Kick channel via OAuth for a secure connection.</p>
+                          <Button
+                            size="sm"
+                            disabled={connectingKick}
+                            className="bg-[#53fc18] hover:bg-[#45d414] text-black font-semibold border-0 h-8 px-3 text-xs"
+                            onClick={() => { setConnectingKick(true); window.location.href = '/api/auth/kick/connect'; }}
+                          >
+                            {connectingKick ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+                            Connect with Kick
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Rumble OAuth connect option */}
+                  {streamPlatform === 'rumble' && isStreamingEnabled && oauthConfig?.rumble && (
+                    <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.rumbleVerified ? 'border-[#85C742]/30 bg-[#85C742]/5' : 'border-slate-700 bg-slate-800/30'}`}>
+                      {(user as any)?.rumbleVerified ? (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded bg-[#85C742]/20 flex items-center justify-center">
+                              <Check className="w-3.5 h-3.5 text-[#85C742]" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-[#85C742]">Rumble OAuth Verified</p>
+                              <p className="text-[11px] text-slate-400">@{(user as any)?.streamChannelName}</p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={disconnectingRumble}
+                            className="h-7 px-2 text-xs text-slate-400 hover:text-red-400"
+                            onClick={async () => {
+                              setDisconnectingRumble(true);
+                              try {
+                                await apiRequest('POST', '/api/auth/rumble/disconnect');
+                                await refreshUser();
+                                setStreamChannelName('');
+                                toast({ title: 'Rumble disconnected', description: 'Your Rumble channel has been unlinked.', duration: 3000 });
+                              } catch {
+                                toast({ title: 'Failed to disconnect', description: 'Please try again.', variant: 'destructive' });
+                              } finally {
+                                setDisconnectingRumble(false);
+                              }
+                            }}
+                          >
+                            {disconnectingRumble ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Unlink className="w-3 h-3 mr-1" />}
+                            Disconnect
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-slate-400">Verify your Rumble channel via OAuth for a secure connection.</p>
+                          <Button
+                            size="sm"
+                            disabled={connectingRumble}
+                            className="bg-[#85C742] hover:bg-[#72aa38] text-black font-semibold border-0 h-8 px-3 text-xs"
+                            onClick={() => { setConnectingRumble(true); window.location.href = '/api/auth/rumble/connect'; }}
+                          >
+                            {connectingRumble ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+                            Connect with Rumble
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Show a message when OAuth isn't configured for the selected platform */}
+                  {isStreamingEnabled && streamPlatform === 'twitch' && !oauthConfig?.twitch && (
+                    <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-slate-700 p-3">
+                      Twitch OAuth is not configured for this app. Contact the administrator to enable it.
+                    </p>
+                  )}
+                  {isStreamingEnabled && streamPlatform === 'kick' && !oauthConfig?.kick && (
+                    <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-slate-700 p-3">
+                      Kick OAuth is not configured for this app. Contact the administrator to enable it.
+                    </p>
+                  )}
+                  {isStreamingEnabled && streamPlatform === 'rumble' && !oauthConfig?.rumble && (
+                    <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-slate-700 p-3">
+                      Rumble OAuth is not configured for this app. Contact the administrator to enable it.
+                    </p>
+                  )}
+                </div>
+
+                {/* LIVE overlay toggle */}
+                <div className={`flex items-center justify-between rounded-lg border p-4 transition-colors ${
+                  !isStreamingEnabled ? 'border-muted opacity-50' : 'border-border'
+                }`}>
+                  <div>
+                    <p className="text-sm font-medium">Show LIVE badge on profile picture</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Displays a red LIVE badge on your avatar so visitors know you're streaming.
+                    </p>
+                  </div>
+                  <Switch
+                    disabled={!isStreamingEnabled}
+                    checked={showLiveOverlay}
+                    onCheckedChange={setShowLiveOverlay}
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 

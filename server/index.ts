@@ -2,10 +2,39 @@ import express, { type Request, Response, NextFunction } from "express";
 import { eq } from 'drizzle-orm';
 import { db } from './db';
 import { users } from '../shared/schema';
+import { scrypt, randomBytes } from 'crypto';
+import { promisify } from 'util';
+
+const scryptAsync = promisify(scrypt);
+
+async function ensureOnboardingTestAccount() {
+  try {
+    const email = 'onboarding@gamefolio.com';
+    const username = 'onboardingtest';
+
+    const [existing] = await db.select().from(users).where(eq(users.email, email));
+    if (existing) return;
+
+    const [byUsername] = await db.select().from(users).where(eq(users.username, username));
+    const salt = randomBytes(16).toString('hex');
+    const buf = (await scryptAsync('Helloworld1!', salt, 64)) as Buffer;
+    const hashed = `${buf.toString('hex')}.${salt}`;
+
+    if (byUsername) {
+      await db.update(users).set({ email, password: hashed, emailVerified: true, userType: null }).where(eq(users.id, byUsername.id));
+    } else {
+      await db.insert(users).values({ username, email, password: hashed, displayName: 'Onboarding Test', emailVerified: true, userType: null, authProvider: 'local', role: 'user', status: 'active' });
+    }
+    log('Onboarding test account ready');
+  } catch (err) {
+    console.error('Failed to ensure onboarding test account:', err);
+  }
+}
 import { setupVite, serveStatic, log } from './vite';
 import { registerRoutes } from './routes';
 import { runMigration } from './migrate-to-supabase';
 import authRoutes from './routes/auth-routes';
+import socialOAuthRoutes from './routes/social-oauth';
 import adminRoutes from './routes/admin';
 import uploadRoutes from './routes/upload';
 import twitchGamesRoutes from './routes/twitch-games';
@@ -147,6 +176,7 @@ app.use((req, res, next) => {
     app.use('/static/email-assets', express.static(path.join(__dirname, 'static/email-assets')));
 
     app.use('/api', authRoutes);
+    app.use('/api', socialOAuthRoutes);
     app.use('/api/admin', adminRoutes);
     app.use('/api', uploadRoutes);
     app.use('/api/twitch', twitchGamesRoutes);
@@ -194,6 +224,18 @@ app.use((req, res, next) => {
         const baseUrl = getBaseUrl();
         const previewImageUrl = `${baseUrl}/api/social-preview/${username}`;
         const profileUrl = `${baseUrl}/profile/${username}`;
+
+        // Build rich description from user data
+        const userTypesArr = (profile.userType || '').split(',').map((t: string) => t.trim()).filter(Boolean);
+        const typeLabels: Record<string, string> = {
+          streamer: 'Streamer', gamer: 'Gamer', professional_gamer: 'Pro Gamer',
+          content_creator: 'Creator', indie_developer: 'Indie Dev', viewer: 'Viewer',
+          filthy_casual: 'Casual', doom_scroller: 'Doom Scroller'
+        };
+        const typePart = userTypesArr.map((t: string) => typeLabels[t] || t).slice(0, 2).join(' · ');
+        const ogDescription = profile.bio 
+          ? profile.bio 
+          : `${typePart ? typePart + ' · ' : ''}Check out ${profile.displayName || profile.username}'s gaming portfolio on Gamefolio!`;
         
         // Create HTML with Open Graph meta tags
         const html = `
@@ -207,7 +249,7 @@ app.use((req, res, next) => {
     <!-- Open Graph meta tags for social media -->
     <meta property="og:type" content="profile">
     <meta property="og:title" content="${profile.displayName || profile.username} - Gamefolio">
-    <meta property="og:description" content="${profile.bio || `Check out ${profile.displayName || profile.username}'s gaming portfolio on Gamefolio!`}">
+    <meta property="og:description" content="${ogDescription}">
     <meta property="og:url" content="${profileUrl}">
     <meta property="og:image" content="${previewImageUrl}">
     <meta property="og:image:width" content="1200">
@@ -217,12 +259,12 @@ app.use((req, res, next) => {
     <!-- Twitter Card meta tags -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="${profile.displayName || profile.username} - Gamefolio">
-    <meta name="twitter:description" content="${profile.bio || `Check out ${profile.displayName || profile.username}'s gaming portfolio on Gamefolio!`}">
+    <meta name="twitter:description" content="${ogDescription}">
     <meta name="twitter:image" content="${previewImageUrl}">
     
     <!-- LinkedIn meta tags -->
     <meta property="linkedin:title" content="${profile.displayName || profile.username} - Gamefolio">
-    <meta property="linkedin:description" content="${profile.bio || `Check out ${profile.displayName || profile.username}'s gaming portfolio on Gamefolio!`}">
+    <meta property="linkedin:description" content="${ogDescription}">
     <meta property="linkedin:image" content="${previewImageUrl}">
     
     <!-- Redirect to the actual app after a moment -->
@@ -282,6 +324,8 @@ app.use((req, res, next) => {
       reusePort: true,
     }, () => {
       log(`serving on port ${port}`);
+
+      ensureOnboardingTestAccount().catch(console.error);
 
       LeaderboardService.processPeriodicLeaderboardClosures()
         .then(() => log('Leaderboard periodic closures check completed'))

@@ -29,6 +29,13 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 - Prioritize data integrity and security
 - Prefer comprehensive solutions over quick fixes
 
+## Recent Changes (Mar 2026 - Streamer Profile Type)
+- **Streamer Profile Features**: Added dedicated Streamer profile type functionality
+  - **DB**: Added `stream_platform` (text: 'twitch'|'kick'), `stream_channel_name` (text), `show_live_overlay` (boolean) columns to `users` table
+  - **Settings Page** (`ProfileSettingsPage.tsx`): Conditional "Streamer Settings" section appears when user type is "Streamer" — includes platform selector (Twitch/Kick), channel name input, and LIVE overlay toggle
+  - **Profile Page** (`ProfilePage.tsx`): Stream embed (16:9 iframe) displayed above tabs for streamer profiles with a configured channel; supports both Twitch (`player.twitch.tv`) and Kick (`player.kick.com`) embeds
+  - **CustomAvatar** (`custom-avatar.tsx`): Added `showLiveOverlay` prop + red `LIVE` pill badge that renders at the bottom of the avatar for live streamers
+
 ## Recent Changes (Feb 2026 - XP System & Level Tracker Full Overhaul)
 - **Level Tracker Page Redesigned** with 5 navigable tabs (Today, Streaks, Milestones, Earn XP, History); 24hr reset countdown clock; progress bars for daily tasks; navy gradient colors replaced with `bg-card`/`bg-muted`
 - **Share XP Tracking**: Added `POST /api/clips/:id/track-share` and `POST /api/screenshots/:id/track-share` endpoints; now awards `share_given` XP once/day to sharer and `share_received` XP to content owner on every share. Wired into ClipShareDialog and ScreenshotShareDialog copy/native/social share actions.
@@ -72,6 +79,8 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 - **Database**: Supabase PostgreSQL, managed with Drizzle ORM and `postgres` library.
 - **Backend**: Node.js/Express with TypeScript.
 - **Authentication**: Hybrid session-based (`passport-local`) and JWT token-based (`jsonwebtoken`) authentication. Social OAuth providers: Google (Firebase), Discord, and Xbox Live (xbl.io). Xbox auth requires `VITE_MICROSOFT_CLIENT_ID` (Azure app client ID) and `XBL_API_KEY` (xbl.io API key). Two redirect URIs must be registered in the Azure app: `{app-url}/auth/xbox/callback` (web) and `{app-url}/api/auth/mobile/xbox/callback` (Rork mobile).
+- **Kick OAuth**: Implemented in `server/routes/social-oauth.ts`. Uses OAuth 2.0 with PKCE. Requires env vars `KICK_CLIENT_ID` and `KICK_CLIENT_SECRET` (from kick.com/developer). Callback URI: `{app-url}/api/auth/kick/callback`. When connected, auto-populates `streamChannelName`, sets `streamPlatform='kick'`, and `kickVerified=true`. Without these env vars the app gracefully falls back to manual username entry.
+- **Twitch Stream OAuth**: Implemented in `server/routes/social-oauth.ts`. Uses OAuth 2.0 authorization code flow (reuses existing `TWITCH_CLIENT_ID`/`TWITCH_CLIENT_SECRET`). Callback URI: `{app-url}/api/auth/twitch-stream/callback` (note: separate from Twitch Games API). When connected, auto-populates `streamChannelName`, sets `streamPlatform='twitch'`, and `twitchVerified=true`.
 - **Content Moderation**: `bad-words` library integrated with a Supabase `banned_words` table for real-time filtering.
 - **File Uploads**: `multer` for general file uploads and Supabase storage. TUS protocol for robust video uploads.
 - **Data Fetching**: TanStack Query for data fetching, caching, and synchronization.

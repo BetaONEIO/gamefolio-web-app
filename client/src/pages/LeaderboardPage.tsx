@@ -316,9 +316,9 @@ const LeaderboardPage = () => {
           </div>
         </div>
         
-        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-b from-[#fdc700] to-[#d08700] shadow-[0_4px_6px_-4px_#f0b10033,0_10px_15px_-3px_#f0b10033]">
-          <span className="text-xs font-medium text-black">
-            {contributor.totalPoints}
+        <div className="flex-shrink-0 px-2.5 py-1 rounded-lg bg-gradient-to-b from-[#fdc700] to-[#d08700] shadow-[0_4px_6px_-4px_#f0b10033,0_10px_15px_-3px_#f0b10033]">
+          <span className="text-xs font-bold text-black whitespace-nowrap">
+            {Number.isInteger(contributor.totalPoints) ? contributor.totalPoints : contributor.totalPoints.toFixed(1)} pts
           </span>
         </div>
       </div>

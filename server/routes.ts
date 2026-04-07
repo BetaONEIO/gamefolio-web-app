@@ -2488,10 +2488,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           canSellNfts: userWithoutPassword.canSellNfts || false,
           isStreamer: userWithoutPassword.isStreamer || false,
           streamPlatform: userWithoutPassword.streamPlatform || null,
+          streamChannelName: userWithoutPassword.streamChannelName || null,
           twitchChannelName: userWithoutPassword.twitchChannelName || null,
           twitchVerified: userWithoutPassword.twitchVerified || false,
+          twitchUserId: userWithoutPassword.twitchUserId || null,
           kickChannelName: userWithoutPassword.kickChannelName || null,
           kickVerified: userWithoutPassword.kickVerified || false,
+          kickId: userWithoutPassword.kickId || null,
+          showLiveOverlay: userWithoutPassword.showLiveOverlay || false,
           liveEnabled: userWithoutPassword.liveEnabled || false,
           ...(streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0 ? { streakInfo } : {}),
         });
@@ -2583,10 +2587,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           canSellNfts: fallbackWithoutPassword.canSellNfts || false,
           isStreamer: fallbackWithoutPassword.isStreamer || false,
           streamPlatform: fallbackWithoutPassword.streamPlatform || null,
+          streamChannelName: fallbackWithoutPassword.streamChannelName || null,
           twitchChannelName: fallbackWithoutPassword.twitchChannelName || null,
           twitchVerified: fallbackWithoutPassword.twitchVerified || false,
+          twitchUserId: fallbackWithoutPassword.twitchUserId || null,
           kickChannelName: fallbackWithoutPassword.kickChannelName || null,
           kickVerified: fallbackWithoutPassword.kickVerified || false,
+          kickId: fallbackWithoutPassword.kickId || null,
+          showLiveOverlay: fallbackWithoutPassword.showLiveOverlay || false,
           liveEnabled: fallbackWithoutPassword.liveEnabled || false,
         });
       }
@@ -3012,17 +3020,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper to sign all Supabase URLs in clip objects (thumbnails, videos, avatars)
+  async function signClipUrls<T extends { thumbnailUrl?: string | null; videoUrl?: string | null; user?: { avatarUrl?: string | null } | null }>(clips: T[]): Promise<T[]> {
+    return Promise.all(
+      clips.map(async (clip) => {
+        const updates: Partial<T> = {};
+        if (clip.thumbnailUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(clip.thumbnailUrl, 3600);
+          if (signed) (updates as any).thumbnailUrl = signed;
+        }
+        if (clip.videoUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(clip.videoUrl, 3600);
+          if (signed) (updates as any).videoUrl = signed;
+        }
+        let user = clip.user;
+        if (clip.user?.avatarUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(clip.user.avatarUrl, 3600);
+          if (signed) user = { ...clip.user, avatarUrl: signed };
+        }
+        return { ...clip, ...updates, user };
+      })
+    );
+  }
+
   // Helper to sign avatar URLs for leaderboard entries
+  const SENSITIVE_USER_FIELDS = [
+    'password', 'encryptedPrivateKey', 'twoFactorSecret', 'stripeCustomerId',
+    'stripeSubscriptionId', 'email', 'dateOfBirth', 'birthday', 'bannedReason',
+    'externalId', 'walletAddress', 'walletChain', 'encryptedPrivateKey',
+    'stripeCustomerId', 'stripeSubscriptionId',
+  ] as const;
+
   async function signLeaderboardAvatars<T extends { user: { avatarUrl?: string | null } }>(entries: T[]): Promise<T[]> {
     return Promise.all(
       entries.map(async (entry) => {
-        if (entry.user?.avatarUrl && entry.user.avatarUrl.includes('supabase.co/storage')) {
-          const signed = await supabaseStorage.convertToSignedUrl(entry.user.avatarUrl, 3600);
-          if (signed) {
-            return { ...entry, user: { ...entry.user, avatarUrl: signed } };
-          }
+        let userData = { ...entry.user };
+        // Strip sensitive fields
+        for (const field of SENSITIVE_USER_FIELDS) {
+          delete (userData as Record<string, unknown>)[field];
         }
-        return entry;
+        // Sign avatar URL if needed
+        if (userData.avatarUrl && userData.avatarUrl.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(userData.avatarUrl, 3600);
+          if (signed) userData.avatarUrl = signed;
+        }
+        return { ...entry, user: userData };
       })
     );
   }
@@ -3768,7 +3810,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (user.bannerUrl) {
         try {
           console.log(`🖼️ Fetching banner from: ${user.bannerUrl}`);
-          const response = await fetch(user.bannerUrl);
+          let bannerFetchUrl = user.bannerUrl;
+          if (user.bannerUrl.includes('supabase')) {
+            const signed = await supabaseStorage.convertToSignedUrl(user.bannerUrl, 120);
+            if (signed) bannerFetchUrl = signed;
+          }
+          const response = await fetch(bannerFetchUrl);
           if (response.ok) {
             const bannerBuffer = Buffer.from(await response.arrayBuffer());
             const bannerImage = await sharp(bannerBuffer)
@@ -3793,10 +3840,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
         
       // Add profile picture if available - much larger and more prominent
+      let avatarLoaded = false;
       if (user.avatarUrl) {
         try {
           console.log(`👤 Fetching avatar from: ${user.avatarUrl}`);
-          const avatarResponse = await fetch(user.avatarUrl);
+          let avatarFetchUrl = user.avatarUrl;
+          if (user.avatarUrl.includes('supabase')) {
+            const signed = await supabaseStorage.convertToSignedUrl(user.avatarUrl, 120);
+            if (signed) avatarFetchUrl = signed;
+          }
+          const avatarResponse = await fetch(avatarFetchUrl);
           if (avatarResponse.ok) {
             const avatarBuffer = Buffer.from(await avatarResponse.arrayBuffer());
             const profilePicSize = 180; // Much larger profile picture
@@ -3828,6 +3881,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .png()
               .toBuffer();
               
+            avatarLoaded = true;
             console.log(`✅ Avatar added successfully at position (${profileX}, ${profileY})`);
           } else {
             console.log(`❌ Avatar fetch failed with status: ${avatarResponse.status}`);
@@ -3880,6 +3934,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create gamefolio-style profile layout using SVG to match the React component
       const displayName = user.displayName || user.username;
       const bio = user.bio || 'Ready to play any game!';
+      const accentColor = user.avatarBorderColor || user.accentColor || '#8b5cf6';
       
       // Calculate positions based on new layout
       const profileX = 100;
@@ -3890,7 +3945,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <style>
-              .profile-border { fill: none; stroke: #8b5cf6; stroke-width: 6; }
+              .profile-border { fill: none; stroke: ${accentColor}; stroke-width: 6; }
               .username { fill: #ffffff; font-family: 'Arial', sans-serif; font-size: 48px; font-weight: bold; }
               .handle { fill: #9ca3af; font-family: 'Arial', sans-serif; font-size: 24px; }
               .bio-text { fill: #d1d5db; font-family: 'Arial', sans-serif; font-size: 20px; }
@@ -3901,8 +3956,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             </style>
           </defs>
           
-          <!-- Purple border around profile picture -->
+          <!-- Accent-colored border around profile picture -->
           <circle cx="${profileX + profilePicSize/2}" cy="${profileY + profilePicSize/2}" r="${profilePicSize/2 + 8}" class="profile-border"/>
+          
+          ${!avatarLoaded ? `
+          <!-- Initials fallback when no avatar photo -->
+          <circle cx="${profileX + profilePicSize/2}" cy="${profileY + profilePicSize/2}" r="${profilePicSize/2}" fill="${accentColor}22"/>
+          <text x="${profileX + profilePicSize/2}" y="${profileY + profilePicSize/2 + 20}" text-anchor="middle" fill="${accentColor}" font-family="Arial, sans-serif" font-size="60" font-weight="bold">${(user.displayName || user.username || '?').substring(0, 2).toUpperCase()}</text>
+          ` : ''}
           
           <!-- Profile info section - positioned to the right of profile picture -->
           <g transform="translate(${profileX + profilePicSize + 40}, ${profileY + 20})">
@@ -4123,10 +4184,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "steamUsername", "xboxUsername", "playstationUsername",
         "discordUsername", "epicUsername", "twitchUsername", "youtubeUsername",
         "twitterUsername", "instagramUsername", "facebookUsername", "nintendoUsername",
+        "streamPlatform", "streamChannelName", "showLiveOverlay",
       ]);
       const safeBody = Object.fromEntries(
         Object.entries(req.body).filter(([key]) => ALLOWED_PROFILE_FIELDS.has(key))
       );
+
+      // Prevent the onboarding test account from ever completing onboarding
+      if (req.user?.email === 'onboarding@gamefolio.com') {
+        delete safeBody.userType;
+      }
 
       // Handle demo user separately
       if (userId === 999) {
@@ -4805,7 +4872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Expires', '0');
       
       const clips = await storage.getAllClips(limit, offset, currentUserId);
-      res.json(clips);
+      res.json(await signClipUrls(clips));
     } catch (err) {
       console.error("Error fetching clips:", err);
       return res.status(500).json({ message: "Error fetching clips" });
@@ -4817,7 +4884,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { hashtag } = req.params;
       const clips = await storage.getClipsByHashtag(hashtag);
-      res.json(clips);
+      res.json(await signClipUrls(clips));
     } catch (err) {
       console.error("Error fetching clips by hashtag:", err);
       return res.status(500).json({ message: "Error fetching clips by hashtag" });
@@ -4831,7 +4898,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const period = (req.query.period as string) || "day";
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
       const clips = await storage.getFeedClips(period, limit);
-      res.json(clips);
+      res.json(await signClipUrls(clips));
     } catch (err) {
       console.error("Error fetching clips feed:", err);
       return res.status(500).json({ message: "Error fetching clips feed" });
@@ -4856,7 +4923,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gameId ? parseInt(gameId as string) : undefined,
         currentUserId
       );
-      res.json(clips);
+      res.json(await signClipUrls(clips));
     } catch (err) {
       console.error("Error fetching trending clips:", err);
       res.status(500).json({ message: "Internal server error" });
@@ -7854,6 +7921,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error fetching user avatar border:", err);
       return res.status(500).json({ message: "Error fetching user avatar border" });
+    }
+  });
+
+  // ==========================================
+  // Live Status Route
+  // ==========================================
+  app.get("/api/user/:userId/live-status", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const user = await storage.getUser(userId);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      let twitchLive = false;
+      let kickLive = false;
+
+      const twitchChannel = user.twitchChannelName || (user.twitchVerified ? user.streamChannelName : null);
+      const kickChannel = user.kickChannelName || (user.kickVerified ? user.streamChannelName : null);
+
+      if (user.twitchVerified && user.twitchUserId) {
+        twitchLive = await twitchApi.checkUserLive(user.twitchUserId);
+      }
+
+      if (user.kickVerified && user.kickId) {
+        try {
+          const kickRes = await axios.get(`https://api.kick.com/public/v1/channels`, {
+            params: { broadcaster_user_id: user.kickId },
+            headers: { Accept: 'application/json' },
+            timeout: 5000,
+          });
+          const channels = kickRes.data?.data ?? kickRes.data;
+          const channel = Array.isArray(channels) ? channels[0] : channels;
+          kickLive = !!(channel?.is_live || channel?.livestream?.is_live);
+        } catch (e) {
+          console.error("Kick live check failed:", e);
+        }
+      }
+
+      const isLive = twitchLive || kickLive;
+      let activePlatform: string | null = null;
+      let activeChannel: string | null = null;
+
+      if (twitchLive) {
+        activePlatform = 'twitch';
+        activeChannel = twitchChannel || null;
+      } else if (kickLive) {
+        activePlatform = 'kick';
+        activeChannel = kickChannel || null;
+      }
+
+      return res.json({
+        isLive,
+        twitchLive,
+        kickLive,
+        activePlatform,
+        activeChannel,
+        twitchChannel: twitchChannel || null,
+        kickChannel: kickChannel || null,
+      });
+    } catch (err) {
+      console.error("Error checking live status:", err);
+      return res.status(500).json({ message: "Error checking live status" });
     }
   });
 

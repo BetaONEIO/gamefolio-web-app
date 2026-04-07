@@ -388,6 +388,24 @@ const ProfilePage = () => {
     enabled: !!profile?.id,
   });
 
+  const isStreamer = !!(profile?.userType?.split(',').map(t => t.trim()).includes('streamer'));
+  const hasStreamSetup = !!(isStreamer && (profile?.twitchVerified || profile?.kickVerified));
+  const { data: profileLiveStatus } = useQuery<{
+    isLive: boolean;
+    twitchLive: boolean;
+    kickLive: boolean;
+    activePlatform: string | null;
+    activeChannel: string | null;
+    twitchChannel: string | null;
+    kickChannel: string | null;
+  }>({
+    queryKey: [`/api/user/${profile?.id}/live-status`],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!profile?.id && hasStreamSetup,
+    staleTime: 60 * 1000,
+    refetchInterval: 2 * 60 * 1000,
+  });
+
   const profileNftQueryKey = isOwnProfile ? "/api/nfts/owned" : `/api/nfts/user/${profile?.id}`;
   const { data: profileNftData, isLoading: profileNftsLoading, refetch: refetchProfileNfts } = useQuery<OwnedNftsData>({
     queryKey: [profileNftQueryKey],
@@ -2551,6 +2569,8 @@ const ProfilePage = () => {
                   size="mobile-profile"
                   borderIntensity="strong"
                   showAvatarBorderOverlay={true}
+                  showLiveOverlay={!!(isStreamer && (profile?.twitchVerified || profile?.kickVerified))}
+                  isLive={profileLiveStatus?.isLive ?? false}
                   themeColor={avatarThemeColor}
                   className="h-full w-full"
                 />
@@ -3071,6 +3091,8 @@ const ProfilePage = () => {
                   size="profile"
                   borderIntensity="strong"
                   showAvatarBorderOverlay={true}
+                  showLiveOverlay={!!(isStreamer && (profile?.twitchVerified || profile?.kickVerified))}
+                  isLive={profileLiveStatus?.isLive ?? false}
                   themeColor={avatarThemeColor}
                 />
               </div>
@@ -3555,6 +3577,99 @@ const ProfilePage = () => {
 
         {/* Spacer for tabs section */}
         <div className="h-0 md:h-[12px]"></div>
+
+        {/* Stream Embed - shown for streamers with a configured channel */}
+        {(() => {
+          if (!isStreamer) return null;
+          const twitchChannel = (profile as any)?.twitchChannelName || (profile?.twitchVerified ? profile?.streamChannelName : null);
+          const kickChannel = (profile as any)?.kickChannelName || (profile?.kickVerified ? profile?.streamChannelName : null);
+          let activePlatform: string | null = null;
+          let activeChannel: string | null = null;
+          if (profileLiveStatus) {
+            activePlatform = profileLiveStatus.activePlatform;
+            activeChannel = profileLiveStatus.activeChannel;
+          }
+          if (!activePlatform) {
+            activePlatform = profile?.streamPlatform || (twitchChannel ? 'twitch' : kickChannel ? 'kick' : null);
+            activeChannel = activePlatform === 'twitch' ? twitchChannel : kickChannel;
+          }
+          if (!activePlatform || !activeChannel) return null;
+          const isKick = activePlatform === 'kick';
+          const isLive = profileLiveStatus?.isLive ?? false;
+          const hostname = window.location.hostname;
+
+          const playerSrc = isKick
+            ? `https://player.kick.com/${activeChannel}?autoplay=${isLive ? 'true' : 'false'}&muted=true`
+            : `https://player.twitch.tv/?channel=${activeChannel}&parent=${hostname}&autoplay=${isLive ? 'true' : 'false'}&muted=true`;
+
+          const chatSrc = isKick
+            ? `https://kick.com/${activeChannel}/chatroom`
+            : `https://www.twitch.tv/embed/${activeChannel}/chat?parent=${hostname}&darkpopout`;
+
+          const headerBg = isKick
+            ? 'linear-gradient(90deg, #1a3a1a, #0f2a0f)'
+            : 'linear-gradient(90deg, #1f1035, #0f0a1e)';
+
+          return (
+          <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-4 mb-2">
+            <div className="rounded-xl overflow-hidden border border-border bg-black shadow-lg">
+              {/* Header bar */}
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-border" style={{ background: headerBg }}>
+                <div className={`w-2 h-2 rounded-full ${isLive ? 'animate-pulse' : 'opacity-40'} ${isKick ? 'bg-green-500' : 'bg-purple-500'}`} />
+                <span className={`text-xs font-semibold ${isKick ? 'text-green-400' : 'text-purple-400'}`}>
+                  {isKick ? 'Kick' : 'Twitch'}
+                </span>
+                <span className="text-xs text-muted-foreground">— {activeChannel}</span>
+                {isLive ? (
+                  <span className="ml-auto text-[10px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded-full">LIVE</span>
+                ) : (
+                  <span className="ml-auto text-[10px] text-muted-foreground">Offline</span>
+                )}
+              </div>
+
+              {/* Player + Chat layout: side-by-side when live, full-width when offline */}
+              {isLive ? (
+                <div className="flex flex-col lg:flex-row" style={{ height: 'auto' }}>
+                  {/* Player — 16:9 aspect ratio on mobile, fixed 450px tall on desktop */}
+                  <div className="relative w-full lg:w-[65%] flex-none">
+                    <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                      <iframe
+                        key={`player-live-${activeChannel}`}
+                        src={playerSrc}
+                        className="absolute inset-0 w-full h-full"
+                        allowFullScreen
+                        allow="autoplay; fullscreen"
+                        title={`${activeChannel}'s stream`}
+                      />
+                    </div>
+                  </div>
+                  {/* Chat — full width on mobile (300px), fills player height on desktop */}
+                  <div className="w-full lg:w-[35%] border-t lg:border-t-0 lg:border-l border-border" style={{ height: '300px' }} >
+                    <iframe
+                      key={`chat-live-${activeChannel}`}
+                      src={chatSrc}
+                      className="w-full h-full"
+                      title={`${activeChannel}'s chat`}
+                    />
+                  </div>
+                </div>
+              ) : (
+                /* Offline — centred player, no chat */
+                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                  <iframe
+                    key={`player-offline-${activeChannel}`}
+                    src={playerSrc}
+                    className="absolute inset-0 w-full h-full"
+                    allowFullScreen
+                    title={`${activeChannel}'s stream`}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+          );
+        })()
+        }
 
         {/* Enhanced Tabs section with rounded container style */}
         <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-2 md:mt-8 relative z-20">
