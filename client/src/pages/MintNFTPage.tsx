@@ -629,7 +629,7 @@ export default function MintNFTPage() {
                     Cosmic Fragments #124
                   </h2>
                   <span className="text-sm text-[#94a3b8]">
-                    Celestial Collection by Astra
+                    Genesis Avatar Collection by Gamefolio
                   </span>
                 </div>
                 <div className="backdrop-blur-md bg-white/10 border border-white/10 rounded-2xl p-3 flex flex-col items-center">
@@ -637,7 +637,7 @@ export default function MintNFTPage() {
                     Supply
                   </span>
                   <span className="text-sm font-bold text-[#f8fafc]">
-                    {totalMinted.toLocaleString()}/{maxSupply.toLocaleString()}
+                    {maxSupply.toLocaleString()}
                   </span>
                 </div>
               </div>
