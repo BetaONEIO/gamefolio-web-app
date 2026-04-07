@@ -56,6 +56,7 @@ export const users = pgTable("users", {
   nintendoUsername: text("nintendo_username"), // Nintendo
   instagramUsername: text("instagram_username"), // Instagram
   facebookUsername: text("facebook_username"), // Facebook
+  rumbleUsername: text("rumble_username"),    // Rumble
   // Streamer settings (OAuth-verified Twitch/Kick connections)
   isStreamer: boolean("is_streamer").default(false),
   streamPlatform: text("stream_platform"), // "twitch" or "kick"

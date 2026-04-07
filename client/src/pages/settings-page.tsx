@@ -416,6 +416,7 @@ const PLATFORM_DEFINITIONS = [
   { key: "nintendoUsername" as const, label: "Nintendo", placeholder: "Enter your Nintendo username", icon: "nintendo", category: "gaming" },
   { key: "twitterUsername" as const, label: "X (Twitter)", placeholder: "Enter your X username", icon: "twitter", category: "social" },
   { key: "youtubeUsername" as const, label: "YouTube", placeholder: "Enter your YouTube username", icon: "youtube", category: "social" },
+  { key: "rumbleUsername" as const, label: "Rumble", placeholder: "Enter your Rumble username", icon: "rumble", category: "social" },
 ] as const;
 
 type PlatformKey = typeof PLATFORM_DEFINITIONS[number]["key"];
@@ -460,6 +461,7 @@ export default function SettingsPage() {
       case 'nintendo': return <SiNintendo className="w-5 h-5 text-[#E60012]" />;
       case 'twitter': return <FaXTwitter className="w-5 h-5 text-white" />;
       case 'youtube': return <FaYoutube className="w-5 h-5 text-[#FF0000]" />;
+      case 'rumble': return <FaYoutube className="w-5 h-5 text-[#05a34a]" />;
       default: return <Gamepad2 className="w-5 h-5" />;
     }
   };
