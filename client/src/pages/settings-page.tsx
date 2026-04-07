@@ -1869,7 +1869,7 @@ export default function SettingsPage() {
                                       if (isCurrent) return;
                                       setSelectedPreviousAvatar(prev.avatarUrl);
                                       setAvatarFile(null);
-                                      setAvatarPreview(prev.avatarUrl);
+                                      setAvatarPreview('');
                                     }}
                                     className={`relative w-16 h-16 rounded-full overflow-hidden border-2 transition-all ${
                                       isSelected
