@@ -4398,10 +4398,71 @@ export default function SettingsPage() {
       {themePreviewData && (
         <Dialog open={!!themePreviewData} onOpenChange={(open) => { if (!open) setThemePreviewData(null); }}>
           <DialogContent className="max-w-sm p-0 overflow-hidden border-none bg-transparent shadow-2xl">
+            <style>{`
+              @keyframes zombieFlickerPreview {
+                0%, 100% { opacity: 0.8; }
+                50% { opacity: 1; }
+              }
+              @keyframes zombieGlowPreview {
+                0%, 100% { box-shadow: 0 0 20px rgba(154, 230, 0, 0.3); }
+                50% { box-shadow: 0 0 40px rgba(154, 230, 0, 0.5); }
+              }
+              @keyframes fogDrift1Preview {
+                0% { transform: translateX(0) translateY(0); }
+                50% { transform: translateX(20px) translateY(-10px); }
+                100% { transform: translateX(0) translateY(0); }
+              }
+              @keyframes fogDrift2Preview {
+                0% { transform: translateX(0) translateY(0); }
+                50% { transform: translateX(-15px) translateY(10px); }
+                100% { transform: translateX(0) translateY(0); }
+              }
+              @keyframes cyberScanPreview {
+                0% { top: -100%; }
+                100% { top: 100%; }
+              }
+              .theme-preview-bg {
+                position: relative;
+                overflow: hidden;
+              }
+              .theme-preview-fog {
+                position: absolute;
+                inset: 0;
+                pointer-events: none;
+              }
+              ${themePreviewData.name === 'Zombie' ? `
+                .zombie-fog-preview {
+                  position: absolute;
+                  inset: 0;
+                  opacity: 0.15;
+                  background: radial-gradient(ellipse at center, rgba(154,230,0,0.2) 0%, transparent 70%);
+                  animation: fogDrift1Preview 8s ease-in-out infinite;
+                }
+                .zombie-mesh-preview {
+                  position: absolute;
+                  inset: 0;
+                  background: linear-gradient(90deg, transparent 49%, rgba(154,230,0,0.1) 50%, transparent 51%);
+                  animation: cyberScanPreview 7s linear infinite;
+                }
+              ` : ''}
+            `}</style>
             <div
-              className="rounded-2xl overflow-hidden"
+              className="rounded-2xl overflow-hidden theme-preview-bg relative"
               style={{ background: `linear-gradient(180deg, ${themePreviewData.gradientTopColor} 0%, ${themePreviewData.backgroundColor} 50%, ${themePreviewData.backgroundColor} 100%)` }}
             >
+              {themePreviewData.name === 'Zombie' && (
+                <>
+                  <div className="zombie-fog-preview" />
+                  <div className="zombie-fog-preview" style={{ animationDelay: '2s' }} />
+                  <div className="zombie-mesh-preview" />
+                </>
+              )}
+              {themePreviewData.name === 'Cyberpunk' && (
+                <>
+                  <div className="absolute inset-0 opacity-10" style={{ background: 'linear-gradient(90deg, transparent 49%, #00d3f2 50%, transparent 51%)', animation: 'cyberScanPreview 7s linear infinite' }} />
+                  <div className="absolute inset-0 opacity-5" style={{ background: 'repeating-linear-gradient(0deg, rgba(0,211,242,0.15) 0px, rgba(0,211,242,0.15) 1px, transparent 1px, transparent 2px)' }} />
+                </>
+              )}
               {/* Header */}
               <div className="px-5 pt-5 pb-4 text-center">
                 <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: themePreviewData.accentColor }}>
