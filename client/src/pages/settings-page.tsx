@@ -4588,6 +4588,7 @@ export default function SettingsPage() {
                 @keyframes cpRGBB { 0%,79%{transform:translate(0,0);opacity:0} 80%{transform:translate(-7px,0);opacity:0.45} 81%{transform:translate(4px,-1px);opacity:0.3} 82%{transform:translate(0,0);opacity:0} 91%{transform:translate(-5px,1px);opacity:0.35} 92%{transform:translate(0,0);opacity:0} }
 
                 /* Neo */
+                @keyframes neoMatrixFall { 0%{transform:translateY(-50px)} 100%{transform:translateY(550px)} }
                 @keyframes neoScanline { 0%{transform:translateY(-100%)} 100%{transform:translateY(400px)} }
                 @keyframes neoFlicker { 0%,100%{opacity:1} 92%{opacity:1} 93%{opacity:0.85} 94%{opacity:1} 96%{opacity:0.9} 97%{opacity:1} }
                 @keyframes neoGlow { 0%,100%{box-shadow:0 0 8px #00ff4144,0 0 24px #00ff4111;border-color:#00ff4188} 50%{box-shadow:0 0 16px #00ff4177,0 0 40px #00ff4122;border-color:#00ff41cc} }
@@ -4625,6 +4626,13 @@ export default function SettingsPage() {
 
                 {/* ── Neo layers ── */}
                 {isNeo && <>
+                  <svg style={{ position:'absolute', inset:0, pointerEvents:'none', width:'100%', height:'100%' }} viewBox="0 0 400 500" preserveAspectRatio="none">
+                    {['0', '1', 'ア', 'イ', 'ウ', 'エ', '2', '3', 'カ', 'キ'].map((char, i) => (
+                      <text key={i} x={40 + i * 35} y={-50} style={{ font:'13px "JetBrains Mono"', fill: i % 3 === 0 ? '#ccffcc' : (i % 2 === 0 ? '#55ff77' : '#00ff41'), animation:`neoMatrixFall ${4 + i * 0.3}s linear infinite`, opacity:0.9 }}>
+                        {char}
+                      </text>
+                    ))}
+                  </svg>
                   <div style={{ position:'absolute', inset:0, pointerEvents:'none', opacity:0.18, backgroundImage:'radial-gradient(circle at 50% 50%, #00ff4115 1px, transparent 1px)', backgroundSize:'24px 24px', animation:'neoFlicker 8s step-start infinite' }} />
                   <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 85% 85% at 50% 50%, transparent 55%, rgba(0,0,0,0.72) 100%)' }} />
                   <div style={{ position:'absolute', left:0, width:'100%', height:'2px', pointerEvents:'none', background:'linear-gradient(180deg, transparent 0%, #00ff4122 50%, transparent 100%)', animation:'neoScanline 6s linear infinite' }} />
