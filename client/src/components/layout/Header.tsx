@@ -461,7 +461,8 @@ const Header = () => {
                     
                     {!(isPro || user?.isPro || (user?.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date())) && (
                       <DropdownMenuItem
-                        className="cursor-pointer bg-gradient-to-r from-[#4ADE80] to-[#FACC15] text-white"
+                        className="cursor-pointer text-white"
+                        style={{ background: 'linear-gradient(to right, #4ADE80, #FACC15, rgba(30, 41, 59, 0))' }}
                         onClick={() => setProUpgradeOpen(true)}
                         data-testid="button-go-pro"
                       >
