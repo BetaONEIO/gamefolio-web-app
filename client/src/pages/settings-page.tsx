@@ -4395,161 +4395,367 @@ export default function SettingsPage() {
         </div>
       )}
       {/* Theme Preview Dialog */}
-      {themePreviewData && (
-        <Dialog open={!!themePreviewData} onOpenChange={(open) => { if (!open) setThemePreviewData(null); }}>
-          <DialogContent className="max-w-sm p-0 overflow-hidden border-none bg-transparent shadow-2xl">
-            <style>{`
-              @keyframes zombieFlickerPreview {
-                0%, 100% { opacity: 0.8; }
-                50% { opacity: 1; }
-              }
-              @keyframes zombieGlowPreview {
-                0%, 100% { box-shadow: 0 0 20px rgba(154, 230, 0, 0.3); }
-                50% { box-shadow: 0 0 40px rgba(154, 230, 0, 0.5); }
-              }
-              @keyframes fogDrift1Preview {
-                0% { transform: translateX(0) translateY(0); }
-                50% { transform: translateX(20px) translateY(-10px); }
-                100% { transform: translateX(0) translateY(0); }
-              }
-              @keyframes fogDrift2Preview {
-                0% { transform: translateX(0) translateY(0); }
-                50% { transform: translateX(-15px) translateY(10px); }
-                100% { transform: translateX(0) translateY(0); }
-              }
-              @keyframes cyberScanPreview {
-                0% { top: -100%; }
-                100% { top: 100%; }
-              }
-              .theme-preview-bg {
-                position: relative;
-                overflow: hidden;
-              }
-              .theme-preview-fog {
-                position: absolute;
-                inset: 0;
-                pointer-events: none;
-              }
-              ${themePreviewData.name === 'Zombie' ? `
-                .zombie-fog-preview {
-                  position: absolute;
-                  inset: 0;
-                  opacity: 0.15;
-                  background: radial-gradient(ellipse at center, rgba(154,230,0,0.2) 0%, transparent 70%);
-                  animation: fogDrift1Preview 8s ease-in-out infinite;
-                }
-                .zombie-mesh-preview {
-                  position: absolute;
-                  inset: 0;
-                  background: linear-gradient(90deg, transparent 49%, rgba(154,230,0,0.1) 50%, transparent 51%);
-                  animation: cyberScanPreview 7s linear infinite;
-                }
-              ` : ''}
-            `}</style>
-            <div
-              className="rounded-2xl overflow-hidden theme-preview-bg relative"
-              style={{ background: `linear-gradient(180deg, ${themePreviewData.gradientTopColor} 0%, ${themePreviewData.backgroundColor} 50%, ${themePreviewData.backgroundColor} 100%)` }}
-            >
-              {themePreviewData.name === 'Zombie' && (
-                <>
-                  <div className="zombie-fog-preview" />
-                  <div className="zombie-fog-preview" style={{ animationDelay: '2s' }} />
-                  <div className="zombie-mesh-preview" />
-                </>
-              )}
-              {themePreviewData.name === 'Cyberpunk' && (
-                <>
-                  <div className="absolute inset-0 opacity-10" style={{ background: 'linear-gradient(90deg, transparent 49%, #00d3f2 50%, transparent 51%)', animation: 'cyberScanPreview 7s linear infinite' }} />
-                  <div className="absolute inset-0 opacity-5" style={{ background: 'repeating-linear-gradient(0deg, rgba(0,211,242,0.15) 0px, rgba(0,211,242,0.15) 1px, transparent 1px, transparent 2px)' }} />
-                </>
-              )}
-              {/* Header */}
-              <div className="px-5 pt-5 pb-4 text-center">
-                <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: themePreviewData.accentColor }}>
-                  Theme Preview
-                </p>
-                {/* Avatar */}
-                <div className="flex justify-center mb-3">
-                  <div
-                    className="w-20 h-20 rounded-full border-4 overflow-hidden flex-shrink-0"
-                    style={{ borderColor: themePreviewData.accentColor }}
-                  >
-                    {signedAvatarUrl ? (
-                      <img src={signedAvatarUrl} alt="avatar" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-white" style={{ background: themePreviewData.gradientTopColor }}>
-                        {profileData.displayName?.[0]?.toUpperCase() || '?'}
+      {themePreviewData && (() => {
+        const tn = themePreviewData.name;
+        const accent = themePreviewData.accentColor;
+        const bg = themePreviewData.backgroundColor;
+        const topColor = themePreviewData.gradientTopColor;
+
+        const isZombie      = tn === 'Zombie';
+        const isCyberpunk   = tn === 'Cyberpunk';
+        const isNeo         = tn === 'Neo';
+        const isBlocks      = tn === 'Blocks';
+        const isElectric    = tn === 'Electric';
+        const isGothic      = tn === 'Gothic';
+        const isCartoon     = tn === 'Cartoon';
+        const isWatermelon  = tn === 'Watermelon';
+        const isForest      = tn === 'Forest';
+        const isIce         = tn === 'Ice';
+        const isMac         = tn === 'Mac';
+        const isBubbleTea   = tn === 'Bubble Tea';
+        const isCutesyPink  = tn === 'Cutesy Pink';
+        const isLight       = isMac || isCartoon || isIce || isBubbleTea || isWatermelon;
+
+        const themeFont =
+          isZombie    ? "'Creepster', cursive" :
+          isCyberpunk ? "'Orbitron', sans-serif" :
+          isNeo       ? "'JetBrains Mono', monospace" :
+          isBlocks    ? "'Press Start 2P', monospace" :
+          isElectric  ? "'Bangers', cursive" :
+          isGothic    ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" :
+          isCartoon   ? "'Bricolage Grotesque', 'Arial Black', sans-serif" :
+          undefined;
+
+        const nameColor = isLight && !isWatermelon ? '#1d1d1f' : '#ffffff';
+
+        const nameStyle: React.CSSProperties = isCyberpunk ? {
+          background: 'linear-gradient(270deg, #00d3f2, #e12afb)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+          fontFamily: themeFont,
+          fontSize: '1.1rem',
+          fontWeight: 900,
+          letterSpacing: '2px',
+        } : isNeo ? {
+          background: 'linear-gradient(90deg, #00ff41 0%, #88ffaa 50%, #00ff41 100%)',
+          backgroundSize: '200% auto',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+          fontFamily: themeFont,
+          fontSize: '1rem',
+          fontWeight: 700,
+          letterSpacing: '2px',
+        } : {
+          color: nameColor,
+          fontFamily: themeFont,
+          fontWeight: isBlocks ? 400 : isElectric ? 400 : 700,
+          fontSize: isBlocks ? '0.7rem' : isElectric ? '1.4rem' : '1.1rem',
+          letterSpacing: isZombie ? '2px' : isBlocks ? '1px' : isElectric ? '2px' : isGothic ? '1px' : undefined,
+        };
+
+        const labelStyle: React.CSSProperties = {
+          fontFamily: themeFont,
+          color:
+            isWatermelon ? '#0d1a12' :
+            isLight       ? '#555' :
+            isCyberpunk   ? undefined :
+            `${accent}bb`,
+          fontSize: isBlocks ? '0.45rem' : isElectric ? '0.75rem' : '0.6rem',
+          letterSpacing: isZombie ? '1.5px' : '0.8px',
+          textTransform: 'uppercase' as const,
+          fontWeight: 700,
+        };
+
+        const cyberLabelStyle: React.CSSProperties = {
+          background: 'linear-gradient(270deg, #00d3f2, #e12afb)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+          fontFamily: themeFont,
+          fontSize: '0.5rem',
+          letterSpacing: '1.5px',
+          textTransform: 'uppercase' as const,
+          fontWeight: 700,
+        };
+
+        const valueStyle: React.CSSProperties = {
+          fontFamily: themeFont,
+          color:
+            isWatermelon ? '#0d1a12' :
+            isLight       ? '#1d293d' :
+            isZombie      ? '#9ae600' :
+            isCyberpunk   ? '#00d3f2' :
+            isNeo         ? '#00ff41' :
+            isBlocks      ? '#4ade80' :
+            isElectric    ? '#ffe033' :
+            isGothic      ? '#c27aff' :
+            '#ffffff',
+          fontWeight: 900,
+          fontSize: isBlocks ? '0.6rem' : '1rem',
+        };
+
+        const statsCardStyle: React.CSSProperties = isWatermelon ? {
+          borderRadius: '9999px',
+          background: '#ffb3c1',
+          border: '5px solid #1d3932',
+          padding: '10px 16px',
+        } : isBlocks ? {
+          borderRadius: '4px',
+          background: `${topColor}ee`,
+          border: '3px solid #4ade80',
+          boxShadow: '4px 4px 0 #000',
+        } : isCartoon ? {
+          borderRadius: '16px',
+          background: '#ffffff',
+          border: '3px solid #1d1d1f',
+          boxShadow: '4px 4px 0 #1d1d1f',
+        } : isMac ? {
+          borderRadius: '16px',
+          background: '#ffffff',
+          border: '1px solid #e5e5e7',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+        } : isIce ? {
+          borderRadius: '16px',
+          background: 'rgba(219,234,254,0.7)',
+          border: '1px solid rgba(56,189,248,0.3)',
+          boxShadow: '0 4px 16px rgba(56,189,248,0.12)',
+        } : isBubbleTea ? {
+          borderRadius: '16px',
+          background: 'rgba(255,237,212,0.7)',
+          border: `1px solid ${accent}44`,
+        } : {
+          borderRadius: '12px',
+          background: `${topColor}cc`,
+          border: `1px solid ${accent}33`,
+        };
+
+        const avatarBorderStyle: React.CSSProperties = isBlocks ? {
+          border: '4px solid #4ade80',
+          borderRadius: '4px',
+          boxShadow: '4px 4px 0 #000',
+        } : isCartoon ? {
+          border: '4px solid #1d1d1f',
+          borderRadius: '9999px',
+          boxShadow: '3px 3px 0 #1d1d1f',
+        } : isMac ? {
+          border: `4px solid ${accent}`,
+          borderRadius: '9999px',
+          boxShadow: '0 4px 16px rgba(0,102,255,0.2)',
+        } : {
+          border: `4px solid ${accent}`,
+          borderRadius: '9999px',
+        };
+
+        const isThemeLocked = (themePreviewData as any).proOnly && !user?.isPro && tn !== "None";
+
+        return (
+          <Dialog open={!!themePreviewData} onOpenChange={(open) => { if (!open) setThemePreviewData(null); }}>
+            <DialogContent className="max-w-sm p-0 overflow-hidden border-none bg-transparent shadow-2xl">
+              <DialogTitle className="sr-only">{tn} Theme Preview</DialogTitle>
+              <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&family=Bangers&family=Bricolage+Grotesque:wght@400;800&display=swap');
+
+                /* Zombie */
+                @keyframes zpFogDrift1 { 0%{transform:translate(0%,0%)} 25%{transform:translate(7%,-5%)} 50%{transform:translate(3%,8%)} 75%{transform:translate(-6%,4%)} 100%{transform:translate(0%,0%)} }
+                @keyframes zpFogDrift2 { 0%{transform:translate(0%,0%)} 33%{transform:translate(-9%,6%)} 66%{transform:translate(6%,-8%)} 100%{transform:translate(0%,0%)} }
+                @keyframes zpMeshSweep { 0%{transform:rotate(20deg) translateX(-200%)} 100%{transform:rotate(20deg) translateX(200%)} }
+                @keyframes zpGlow { 0%,100%{box-shadow:0 0 18px #9ae60055,0 0 40px #9ae60022} 50%{box-shadow:0 0 30px #9ae60099,0 0 70px #9ae60044} }
+                @keyframes zpFlicker { 0%,88%,92%,100%{opacity:1} 89%{opacity:0.55} 90%,91%{opacity:0.82} }
+
+                /* Cyberpunk */
+                @keyframes cpNodePulse { 0%,100%{opacity:0.18;transform:scale(1)} 50%{opacity:0.32;transform:scale(1.012)} }
+                @keyframes cpScanSweep { 0%{transform:rotate(15deg) translateX(-200%)} 100%{transform:rotate(15deg) translateX(200%)} }
+                @keyframes cpBorderGlow { 0%,100%{box-shadow:0 0 12px #00d3f266,0 0 32px #00d3f222;border-color:#00b8db} 50%{box-shadow:0 0 14px #e12afb77,0 0 36px #e12afb22;border-color:#e12afb} }
+                @keyframes cpRGBR { 0%,79%{transform:translate(0,0);opacity:0} 80%{transform:translate(7px,0);opacity:0.45} 81%{transform:translate(-4px,1px);opacity:0.3} 82%{transform:translate(0,0);opacity:0} 91%{transform:translate(5px,-1px);opacity:0.35} 92%{transform:translate(0,0);opacity:0} }
+                @keyframes cpRGBB { 0%,79%{transform:translate(0,0);opacity:0} 80%{transform:translate(-7px,0);opacity:0.45} 81%{transform:translate(4px,-1px);opacity:0.3} 82%{transform:translate(0,0);opacity:0} 91%{transform:translate(-5px,1px);opacity:0.35} 92%{transform:translate(0,0);opacity:0} }
+
+                /* Neo */
+                @keyframes neoScanline { 0%{transform:translateY(-100%)} 100%{transform:translateY(400px)} }
+                @keyframes neoFlicker { 0%,100%{opacity:1} 92%{opacity:1} 93%{opacity:0.85} 94%{opacity:1} 96%{opacity:0.9} 97%{opacity:1} }
+                @keyframes neoGlow { 0%,100%{box-shadow:0 0 8px #00ff4144,0 0 24px #00ff4111;border-color:#00ff4188} 50%{box-shadow:0 0 16px #00ff4177,0 0 40px #00ff4122;border-color:#00ff41cc} }
+
+                /* Electric */
+                @keyframes elPlasma1 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(4%,-3%) scale(1.03)} 66%{transform:translate(-3%,4%) scale(0.97)} }
+                @keyframes elPlasma2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-5%,-2%) scale(1.02)} }
+                @keyframes elBolt1 { 0%,82%,100%{opacity:0} 83%{opacity:1} 84%{opacity:0.35} 85%{opacity:0.9} 86%{opacity:0} }
+                @keyframes elBolt2 { 0%,90%,100%{opacity:0} 91%{opacity:0.9} 92%{opacity:0.25} 93%{opacity:0} }
+                @keyframes elGlow { 0%,100%{box-shadow:0 0 12px #ffe03366,0 0 28px #ffe03322} 50%{box-shadow:0 0 22px #ffe033cc,0 0 55px #ffe03355} }
+
+                /* Gothic */
+                @keyframes gothicPulse { 0%,100%{box-shadow:0 0 15px #c27aff44,0 0 30px #c27aff22} 50%{box-shadow:0 0 25px #c27aff88,0 0 50px #c27aff33} }
+              `}</style>
+              <div
+                className="rounded-2xl overflow-hidden relative"
+                style={{ background: `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)` }}
+              >
+                {/* ── Zombie layers ── */}
+                {isZombie && <>
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 70% 50% at 20% 30%, #1a2e0a88 0%, transparent 70%), radial-gradient(ellipse 80% 40% at 50% 90%, #9ae60020 0%, transparent 60%)', animation:'zpFogDrift1 28s ease-in-out infinite' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 60% 70% at 72% 18%, #9ae60016 0%, transparent 65%), radial-gradient(ellipse 90% 35% at 38% 52%, #0d1a0544 0%, transparent 60%)', animation:'zpFogDrift2 35s ease-in-out infinite' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', opacity:0.35, backgroundImage:'linear-gradient(0deg, #9ae60038 1px, transparent 1px), linear-gradient(90deg, #9ae60038 1px, transparent 1px)', backgroundSize:'48px 48px' }} />
+                  <div style={{ position:'absolute', top:'-50%', left:'-50%', width:'200%', height:'200%', pointerEvents:'none', background:'linear-gradient(90deg, transparent 44%, #9ae60008 46%, #9ae60055 49%, #9ae600bb 50%, #9ae60055 51%, #9ae60008 54%, transparent 58%)', animation:'zpMeshSweep 7s ease-in-out infinite' }} />
+                </>}
+
+                {/* ── Cyberpunk layers ── */}
+                {isCyberpunk && <>
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'radial-gradient(circle, #00d3f228 1.5px, transparent 1.5px), linear-gradient(45deg, #00b8db1a 1px, transparent 1px), linear-gradient(-45deg, #e12afb14 1px, transparent 1px)', backgroundSize:'48px 48px', animation:'cpNodePulse 4s ease-in-out infinite' }} />
+                  <div style={{ position:'absolute', top:'-50%', left:'-50%', width:'200%', height:'200%', pointerEvents:'none', background:'linear-gradient(90deg, transparent 44%, #00d3f206 46%, #00d3f255 48%, #e12afbcc 50%, #00d3f255 52%, #00d3f206 54%, transparent 56%)', animation:'cpScanSweep 9s linear infinite' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px)' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'rgba(255,0,60,0.12)', animation:'cpRGBR 9s linear infinite', mixBlendMode:'screen' as any }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'rgba(0,80,255,0.12)', animation:'cpRGBB 9s linear infinite', mixBlendMode:'screen' as any }} />
+                </>}
+
+                {/* ── Neo layers ── */}
+                {isNeo && <>
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', opacity:0.18, backgroundImage:'radial-gradient(circle at 50% 50%, #00ff4115 1px, transparent 1px)', backgroundSize:'24px 24px', animation:'neoFlicker 8s step-start infinite' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 85% 85% at 50% 50%, transparent 55%, rgba(0,0,0,0.72) 100%)' }} />
+                  <div style={{ position:'absolute', left:0, width:'100%', height:'2px', pointerEvents:'none', background:'linear-gradient(180deg, transparent 0%, #00ff4122 50%, transparent 100%)', animation:'neoScanline 6s linear infinite' }} />
+                </>}
+
+                {/* ── Blocks layers ── */}
+                {isBlocks && <>
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(white,white), linear-gradient(white,white), linear-gradient(#5ea832,#5ea832), linear-gradient(#8b5e3c,#8b5e3c), linear-gradient(#6b4a2e,#6b4a2e), linear-gradient(180deg,#5ba3d0 0%,#87ceeb 55%,#b4daf5 100%)', backgroundSize:'96px 32px, 72px 24px, 100% 16px, 100% 32px, 100% 16px, 100% 100%', backgroundPosition:'8% 12%, 52% 6%, 0 calc(100% - 48px), 0 calc(100% - 32px), 0 calc(100% - 16px), 0 0', backgroundRepeat:'no-repeat', opacity:0.7 }} />
+                </>}
+
+                {/* ── Electric layers ── */}
+                {isElectric && <>
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 60% 40% at 15% 25%, rgba(255,224,51,0.14) 0%, transparent 70%), radial-gradient(ellipse 45% 55% at 85% 70%, rgba(255,224,51,0.09) 0%, transparent 70%)', animation:'elPlasma1 9s ease-in-out infinite' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 50% 70% at 78% 18%, rgba(255,224,51,0.11) 0%, transparent 65%), radial-gradient(ellipse 40% 50% at 10% 82%, rgba(255,224,51,0.08) 0%, transparent 70%)', animation:'elPlasma2 13s ease-in-out infinite' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', opacity:0.4, backgroundImage:'linear-gradient(0deg, rgba(255,224,51,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,224,51,0.06) 1px, transparent 1px)', backgroundSize:'50px 50px' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(65deg, transparent 28%, rgba(255,248,100,0.04) 33%, rgba(255,248,100,0.92) 36%, rgba(255,255,255,1) 36.8%, rgba(255,248,100,0.92) 37.5%, rgba(255,248,100,0.04) 42%, transparent 47%)', animation:'elBolt1 6s linear infinite' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(-52deg, transparent 52%, rgba(255,248,100,0.04) 57%, rgba(255,248,100,0.88) 60%, rgba(255,255,255,0.98) 60.8%, rgba(255,248,100,0.88) 61.5%, rgba(255,248,100,0.04) 66%, transparent 71%)', animation:'elBolt2 8s linear infinite 1.8s' }} />
+                </>}
+
+                {/* ── Gothic vignette ── */}
+                {isGothic && <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 80% 80% at 50% 40%, rgba(194,122,255,0.08) 0%, rgba(30,5,58,0.6) 100%)' }} />}
+
+                {/* ── Watermelon seeds ── */}
+                {isWatermelon && <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'radial-gradient(ellipse 6px 10px at center, #1d3932 100%, transparent 100%)', backgroundSize:'40px 50px', backgroundPosition:'10px 15px, 30px 35px', opacity:0.12 }} />}
+
+                {/* ── Ice shimmer ── */}
+                {isIce && <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%, rgba(56,189,248,0.15) 100%)' }} />}
+
+                {/* ── Mac dock gradient ── */}
+                {isMac && <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(240,240,242,0.2) 100%)' }} />}
+
+                {/* ── Bubble Tea bubbles ── */}
+                {isBubbleTea && <>
+                  <div style={{ position:'absolute', bottom:'20%', left:'12%', width:18, height:18, borderRadius:'50%', background:'#d4a57488', pointerEvents:'none' }} />
+                  <div style={{ position:'absolute', bottom:'30%', left:'22%', width:12, height:12, borderRadius:'50%', background:'#e8c4a088', pointerEvents:'none' }} />
+                  <div style={{ position:'absolute', bottom:'18%', left:'30%', width:16, height:16, borderRadius:'50%', background:'#c4906044', pointerEvents:'none' }} />
+                </>}
+
+                {/* ── Content ── */}
+                <div className="relative z-10 px-5 pt-5 pb-0 text-center">
+                  <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ fontFamily: themeFont, color: isLight && !isWatermelon ? '#666' : `${accent}cc`, letterSpacing: '1.5px' }}>
+                    {tn} Theme
+                  </p>
+
+                  {/* Avatar */}
+                  <div className="flex justify-center mb-3">
+                    <div className="w-20 h-20 overflow-hidden flex-shrink-0" style={{ ...avatarBorderStyle }}>
+                      {signedAvatarUrl ? (
+                        <img src={signedAvatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-2xl font-bold" style={{ background: topColor, color: accent }}>
+                          {profileData.displayName?.[0]?.toUpperCase() || '?'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Display Name */}
+                  <h2 style={nameStyle}>{profileData.displayName || user?.username}</h2>
+                  <p className="text-xs mt-0.5 mb-4" style={{ color: isLight && !isWatermelon ? '#888' : `${accent}99`, fontFamily: themeFont }}>
+                    @{user?.username}
+                  </p>
+                </div>
+
+                {/* Stats Card */}
+                <div className="relative z-10 mx-4 mb-4 p-3" style={statsCardStyle}>
+                  <div className="grid grid-cols-3" style={{ gap: 0 }}>
+                    {(['Level', 'Rank', 'XP'] as const).map((label, i) => (
+                      <div key={label} className="text-center px-2" style={{ borderRight: i < 2 ? `1px solid ${isWatermelon ? 'rgba(0,0,0,0.12)' : isLight ? 'rgba(0,0,0,0.08)' : `${accent}22`}` : 'none' }}>
+                        <p style={valueStyle}>{i === 0 ? ((user as any)?.level || 1) : i === 2 ? ((user as any)?.totalXP || 0) : '—'}</p>
+                        <p style={isCyberpunk ? cyberLabelStyle : labelStyle}>{label}</p>
                       </div>
-                    )}
+                    ))}
                   </div>
                 </div>
-                {/* Display Name */}
-                <h2 className="text-lg font-bold text-white">{profileData.displayName || user?.username}</h2>
-                <p className="text-xs mt-0.5" style={{ color: `${themePreviewData.accentColor}cc` }}>
-                  @{user?.username}
-                </p>
-              </div>
 
-              {/* Stats Card */}
-              <div className="mx-4 mb-4 rounded-xl p-4" style={{ background: `${themePreviewData.gradientTopColor}cc`, border: `1px solid ${themePreviewData.accentColor}33` }}>
-                <div className="grid grid-cols-3 divide-x" style={{ '--tw-divide-opacity': 1, borderColor: `${themePreviewData.accentColor}22` } as any}>
-                  <div className="text-center px-2">
-                    <p className="text-lg font-black text-white">{(user as any)?.level || 1}</p>
-                    <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: `${themePreviewData.accentColor}bb` }}>Level</p>
-                  </div>
-                  <div className="text-center px-2">
-                    <p className="text-lg font-black" style={{ color: themePreviewData.accentColor }}>●</p>
-                    <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: `${themePreviewData.accentColor}bb` }}>Clips</p>
-                  </div>
-                  <div className="text-center px-2">
-                    <p className="text-lg font-black text-white">{(user as any)?.totalXP || 0}</p>
-                    <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: `${themePreviewData.accentColor}bb` }}>XP</p>
-                  </div>
+                {/* Fake tab bar styled per theme */}
+                <div className="relative z-10 mx-4 mb-4 flex gap-1 rounded-xl overflow-hidden p-1" style={{
+                  background: isWatermelon ? '#ffb3c1' : isCartoon ? 'transparent' : isMac ? '#e5e5e7' : isIce ? 'rgba(219,234,254,0.6)' : isBubbleTea ? 'rgba(255,237,212,0.6)' : `${topColor}dd`,
+                  border: isBlocks ? '3px solid #4ade80' : isCartoon ? 'none' : isMac ? '1px solid #e5e5e7' : `1px solid ${accent}33`,
+                  boxShadow: isBlocks ? '4px 4px 0 #000' : undefined,
+                  borderRadius: isWatermelon ? '9999px' : isBlocks ? '4px' : '12px',
+                }}>
+                  {['Posts', 'Clips', 'Stats'].map((tab, i) => (
+                    <div key={tab} className="flex-1 text-center py-1.5 rounded-lg" style={{
+                      fontFamily: themeFont,
+                      fontSize: isBlocks ? '0.42rem' : isElectric ? '0.7rem' : '0.65rem',
+                      fontWeight: i === 0 ? 700 : 500,
+                      color: i === 0
+                        ? (isWatermelon ? '#0d1a12' : isCartoon ? '#ff5e5e' : isLight ? '#1d1d1f' : '#fff')
+                        : (isWatermelon ? 'rgba(13,26,18,0.45)' : isLight ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.35)'),
+                      background: i === 0
+                        ? (isWatermelon ? 'transparent' : isCartoon ? 'transparent' : isMac ? accent : isIce ? accent : isBubbleTea ? accent : accent)
+                        : 'transparent',
+                      borderBottom: i === 0 && isCartoon ? '3px solid #ff5e5e' : 'none',
+                      letterSpacing: isZombie ? '1.5px' : isCyberpunk ? '2px' : isBlocks ? '0.5px' : '0.3px',
+                      textTransform: (isZombie || isCyberpunk || isNeo || isBlocks || isElectric) ? 'uppercase' as const : undefined,
+                      boxShadow: i === 0 && isBlocks ? 'inset 0 -2px 0 rgba(0,0,0,0.35)' : undefined,
+                    }}>{tab}</div>
+                  ))}
+                </div>
+
+                {/* Buttons */}
+                <div className="relative z-10 flex gap-3 px-4 pb-5">
+                  <button
+                    onClick={() => setThemePreviewData(null)}
+                    className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
+                    style={{
+                      background: isLight ? 'rgba(0,0,0,0.07)' : `${accent}18`,
+                      color: isLight && !isWatermelon ? '#555' : 'rgba(255,255,255,0.7)',
+                      border: `1px solid ${isLight ? 'rgba(0,0,0,0.12)' : `${accent}33`}`,
+                      fontFamily: themeFont,
+                      fontSize: isBlocks ? '0.5rem' : '0.875rem',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (isThemeLocked) {
+                        setThemePreviewData(null);
+                        setShowProUpgradeDialog(true);
+                      } else {
+                        applyPresetTheme(themePreviewData);
+                        setThemePreviewData(null);
+                      }
+                    }}
+                    className="flex-1 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2"
+                    style={{
+                      background: accent,
+                      color: isLight && !isGothic ? '#1d1d1f' : bg,
+                      boxShadow: `0 8px 24px -8px ${accent}`,
+                      fontFamily: themeFont,
+                      fontSize: isBlocks ? '0.5rem' : '0.875rem',
+                      borderRadius: isBlocks ? '4px' : isWatermelon ? '9999px' : '12px',
+                      border: isBlocks ? '2px solid #000' : undefined,
+                    }}
+                  >
+                    {isThemeLocked && <Lock className="w-3.5 h-3.5" />}
+                    {isThemeLocked ? 'Go Pro' : 'Apply Theme'}
+                  </button>
                 </div>
               </div>
-
-              {/* Theme name tag */}
-              <div className="flex justify-center mb-4">
-                <span className="text-xs px-3 py-1 rounded-full font-semibold" style={{ background: `${themePreviewData.accentColor}22`, color: themePreviewData.accentColor, border: `1px solid ${themePreviewData.accentColor}44` }}>
-                  {themePreviewData.name}
-                </span>
-              </div>
-
-              {/* Buttons */}
-              <div className="flex gap-3 px-4 pb-5">
-                <button
-                  onClick={() => setThemePreviewData(null)}
-                  className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
-                  style={{ background: `${themePreviewData.accentColor}18`, color: 'rgba(255,255,255,0.7)', border: `1px solid ${themePreviewData.accentColor}33` }}
-                >
-                  Cancel
-                </button>
-                {(() => {
-                  const isThemeLocked = (themePreviewData as any).proOnly && !user?.isPro && themePreviewData.name !== "None";
-                  return (
-                    <button
-                      onClick={() => {
-                        if (isThemeLocked) {
-                          setThemePreviewData(null);
-                          setShowProUpgradeDialog(true);
-                        } else {
-                          applyPresetTheme(themePreviewData);
-                          setThemePreviewData(null);
-                        }
-                      }}
-                      className="flex-1 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2"
-                      style={{ background: themePreviewData.accentColor, color: themePreviewData.backgroundColor, boxShadow: `0 8px 24px -8px ${themePreviewData.accentColor}` }}
-                    >
-                      {isThemeLocked && <Lock className="w-3.5 h-3.5" />}
-                      {isThemeLocked ? 'Go Pro' : 'Apply Theme'}
-                    </button>
-                  );
-                })()}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
 
       {/* Pro Upgrade Dialog */}
       <ProUpgradeDialog
