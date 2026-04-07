@@ -4410,7 +4410,7 @@ export default function SettingsPage() {
 
         const isZombie      = tn === 'Zombie';
         const isCyberpunk   = tn === 'Cyberpunk';
-        const isNeo         = tn === 'Neo';
+        const isNeo         = tn === 'NEO';
         const isBlocks      = tn === 'Blocks';
         const isElectric    = tn === 'Electric';
         const isGothic      = tn === 'Gothic';
