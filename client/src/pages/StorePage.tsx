@@ -263,6 +263,24 @@ export default function StorePage() {
     },
   });
 
+  interface UnlockedVerificationBadge {
+    id: number;
+    name: string;
+    imageUrl: string;
+    rarity: string;
+    isDefault: boolean;
+  }
+
+  const { data: unlockedBadges = [], isLoading: isLoadingUnlockedBadges } = useQuery<UnlockedVerificationBadge[]>({
+    queryKey: ["/api/user/verification-badges"],
+    queryFn: async () => {
+      const response = await fetch('/api/user/verification-badges', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch unlocked badges');
+      return response.json();
+    },
+    enabled: !!user,
+  });
+
   const [buyingTokenId, setBuyingTokenId] = useState<number | null>(null);
 
   const handleBuyMarketplaceNft = async ({ tokenId, sellerId }: { tokenId: number; sellerId: number }) => {
@@ -1682,11 +1700,48 @@ export default function StorePage() {
                       Official
                     </Badge>
                   </h3>
-                  <div className="bg-gray-800/30 rounded-2xl border border-dashed border-gray-700 p-12 text-center">
-                    <CheckCircle className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-                    <p className="text-gray-400 text-sm">Verification badges are awarded to notable community members and partners.</p>
-                    <p className="text-gray-500 text-xs mt-2">Check back soon for application details.</p>
-                  </div>
+                  {!user ? (
+                    <div className="bg-gray-800/30 rounded-2xl border border-dashed border-gray-700 p-12 text-center">
+                      <CheckCircle className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                      <p className="text-gray-400 text-sm">Log in to view your verification badges.</p>
+                    </div>
+                  ) : isLoadingUnlockedBadges ? (
+                    <div className="flex items-center justify-center p-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                    </div>
+                  ) : unlockedBadges.length === 0 ? (
+                    <div className="bg-gray-800/30 rounded-2xl border border-dashed border-gray-700 p-12 text-center">
+                      <CheckCircle className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                      <p className="text-gray-400 text-sm">You haven't unlocked any verification badges yet.</p>
+                      <p className="text-gray-500 text-xs mt-2">Verification badges are awarded to notable community members and partners.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      {unlockedBadges.map((badge) => (
+                        <div
+                          key={badge.id}
+                          className="bg-gray-800/40 rounded-xl border border-gray-700/50 p-4 flex flex-col items-center gap-2"
+                        >
+                          <img
+                            src={badge.imageUrl}
+                            alt={badge.name}
+                            className="w-14 h-14 object-contain"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                          <p className="text-xs font-medium text-gray-200 text-center truncate w-full">{badge.name}</p>
+                          {!badge.isDefault && (
+                            <span className={`text-[10px] font-semibold capitalize ${
+                              badge.rarity === 'legendary' ? 'text-amber-400' :
+                              badge.rarity === 'epic' ? 'text-purple-400' :
+                              badge.rarity === 'rare' ? 'text-blue-400' : 'text-gray-400'
+                            }`}>
+                              {badge.rarity}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
