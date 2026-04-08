@@ -464,7 +464,7 @@ const Header = () => {
                       data-testid="button-referral"
                     >
                       <Gift className="mr-2 h-4 w-4" />
-                      <span>Referral</span>
+                      <span>Refer a Friend</span>
                     </DropdownMenuItem>
                     
                     {!(isPro || user?.isPro || (user?.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date())) && (
