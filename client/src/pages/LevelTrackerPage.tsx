@@ -103,6 +103,8 @@ const sourceIcons: Record<string, typeof Zap> = {
   view_milestone_5000: Award,
   view_milestone_10000: Award,
   streak_milestone: Flame,
+  referral: UserPlus,
+  referral_bonus: Gift,
   other: Award,
 };
 
@@ -138,6 +140,8 @@ const sourceLabels: Record<string, string> = {
   view_milestone_5000: "5K Views Milestone",
   view_milestone_10000: "10K Views Milestone",
   streak_milestone: "Streak Milestone",
+  referral: "Friend Referred",
+  referral_bonus: "Referral Welcome Bonus",
   other: "Other",
 };
 
@@ -166,6 +170,8 @@ const sourceColors: Record<string, string> = {
   consecutive_upload_bonus: "text-lime-400",
   weekend_upload_bonus: "text-rose-400",
   streak_milestone: "text-orange-400",
+  referral: "text-violet-400",
+  referral_bonus: "text-violet-300",
   other: "text-gray-400",
 };
 
