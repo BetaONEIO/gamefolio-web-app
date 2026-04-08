@@ -261,7 +261,7 @@ export class DatabaseStorage implements IStorage {
         avatarUrl: safeUserData.avatarUrl || "/attached_assets/gamefolio social logo 3d circle web.png",
         bannerUrl: safeUserData.bannerUrl || "/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg",
         selectedAvatarBorderId: safeUserData.selectedAvatarBorderId ?? (await db.select({ id: assetRewards.id }).from(assetRewards).where(eq(assetRewards.category, "avatar_border")).limit(1))[0]?.id,
-        referralCode: safeUserData.referralCode || await generateReferralCode(),
+        referralCode: await generateReferralCode(),
       };
       const [user] = await db.insert(users).values(userWithDefaults).returning();
       return user;

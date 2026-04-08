@@ -1888,12 +1888,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register route
   app.post("/api/register", async (req, res) => {
     try {
-      // Extract referral code before schema validation (it's not in insertUserSchema)
-      const referralCodeInput: string | undefined = typeof req.body.referralCode === 'string' && req.body.referralCode.trim()
+      // Extract the referral code the new user typed at signup — separate from their own future referral code
+      const usedReferralCode: string | undefined = typeof req.body.referralCode === 'string' && req.body.referralCode.trim()
         ? req.body.referralCode.trim().toUpperCase()
         : undefined;
 
-      // Validate request body
+      // Validate request body — referralCode / referredBy are stripped by insertUserSchema so clients cannot set them
       const userData = insertUserSchema.parse(req.body);
 
       // Validate content for inappropriate language
@@ -1955,10 +1955,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate referral code if provided
       let referringUser: { id: number } | null = null;
-      if (referralCodeInput) {
-        const foundReferrer = await storage.getUserByReferralCode(referralCodeInput);
+      if (usedReferralCode) {
+        const foundReferrer = await storage.getUserByReferralCode(usedReferralCode);
         if (!foundReferrer) {
           return res.status(400).json({ message: "Invalid referral code" });
+        }
+        // Prevent self-referral: compare normalized username and email
+        const normalizedNewUsername = userData.username.toLowerCase();
+        const normalizedNewEmail = userData.email.toLowerCase();
+        if (
+          foundReferrer.username.toLowerCase() === normalizedNewUsername ||
+          (foundReferrer.email && foundReferrer.email.toLowerCase() === normalizedNewEmail)
+        ) {
+          return res.status(400).json({ message: "You cannot use your own referral code" });
         }
         referringUser = { id: foundReferrer.id };
       }
@@ -1966,14 +1975,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const hashedPassword = await hashPassword(userData.password);
 
-      // Create user with hashed password, normalized email and username
+      // Create user — referralCode is always server-generated; referredBy records which code was used at signup
       const user = await storage.createUser({
         ...userData,
         username: userData.username.toLowerCase(),
         email: userData.email.toLowerCase(),
         password: hashedPassword,
-        emailVerified: false, // Set to false initially
-        ...(referralCodeInput && { referredBy: referralCodeInput }),
+        emailVerified: false,
+        ...(usedReferralCode && { referredBy: usedReferralCode }),
       });
 
       // Generate verification code and store it in the database

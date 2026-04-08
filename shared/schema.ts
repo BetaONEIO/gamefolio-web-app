@@ -659,6 +659,8 @@ export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
   gfTokenBalance: true,
+  referralCode: true,
+  referredBy: true,
 });
 
 // Schema for password reset request
