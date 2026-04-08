@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Settings, LogOut, CheckCircle2, Palette, UserCog, Menu, ShieldCheck, Flame, Trophy, Crown, Video, Film, Camera } from "lucide-react";
+import { Search, Plus, Settings, LogOut, CheckCircle2, Palette, UserCog, Menu, ShieldCheck, Flame, Trophy, Crown, Video, Film, Camera, Gift } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
@@ -457,6 +457,14 @@ const Header = () => {
                     >
                       <Trophy className="mr-2 h-4 w-4" />
                       <span>Level Tracker</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => setLocation("/account-settings?tab=referral")}
+                      data-testid="button-referral"
+                    >
+                      <Gift className="mr-2 h-4 w-4" />
+                      <span>Referral</span>
                     </DropdownMenuItem>
                     
                     {!(isPro || user?.isPro || (user?.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date())) && (

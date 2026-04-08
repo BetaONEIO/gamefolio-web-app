@@ -288,6 +288,15 @@ const ReferralSection: React.FC = () => {
 };
 
 const AccountSettingsPage: React.FC = () => {
+  const initialTab = (() => {
+    try {
+      const tab = new URLSearchParams(window.location.search).get('tab');
+      return ['security', '2fa', 'privacy', 'referral'].includes(tab ?? '') ? tab! : 'security';
+    } catch {
+      return 'security';
+    }
+  })();
+
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
   const updateProfile = useUpdateProfile();
@@ -598,7 +607,7 @@ const AccountSettingsPage: React.FC = () => {
     <div className="w-full px-4 py-8 pb-24 md:pb-8">
       <h1 className="text-3xl font-bold mb-8">Account Settings</h1>
       
-      <Tabs defaultValue="security" className="w-full">
+      <Tabs defaultValue={initialTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-8">
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="2fa">
