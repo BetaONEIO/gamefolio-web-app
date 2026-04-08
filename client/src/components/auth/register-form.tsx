@@ -298,13 +298,19 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
     // Remove confirmPassword and add displayName before sending
     const { confirmPassword, referralCode, ...userData } = formData;
-    const registrationData: any = {
+    const trimmedCode = referralCode.trim().toUpperCase();
+    const registrationData: {
+      username: string;
+      email: string;
+      password: string;
+      dateOfBirth: string;
+      displayName: string;
+      referralCode?: string;
+    } = {
       ...userData,
       displayName: userData.username,
+      ...(trimmedCode && { referralCode: trimmedCode }),
     };
-    if (referralCode.trim()) {
-      registrationData.referralCode = referralCode.trim().toUpperCase();
-    }
 
     // Clear previous errors
     setServerError("");

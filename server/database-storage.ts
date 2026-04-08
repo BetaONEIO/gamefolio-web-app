@@ -245,15 +245,13 @@ export class DatabaseStorage implements IStorage {
       
       const generateReferralCode = async (): Promise<string> => {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        let code: string;
-        let attempts = 0;
-        do {
-          code = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        const maxAttempts = 20;
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          const code = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
           const existing = await db.select({ id: users.id }).from(users).where(eq(users.referralCode, code)).limit(1);
-          if (existing.length === 0) break;
-          attempts++;
-        } while (attempts < 10);
-        return code!;
+          if (existing.length === 0) return code;
+        }
+        throw new Error('Failed to generate unique referral code after maximum attempts');
       };
 
       const userWithDefaults = {
