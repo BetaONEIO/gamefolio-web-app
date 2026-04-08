@@ -206,6 +206,34 @@ export class DatabaseStorage implements IStorage {
     return user || null;
   }
 
+  async getUserByReferralCode(referralCode: string): Promise<User | null> {
+    const [user] = await db.select().from(users).where(eq(users.referralCode, referralCode.toUpperCase()));
+    return user || null;
+  }
+
+  async getReferralStats(userId: number): Promise<{ referralCount: number; totalXpEarned: number; referralCode: string | null }> {
+    const user = await this.getUser(userId);
+    if (!user) return { referralCount: 0, totalXpEarned: 0, referralCode: null };
+
+    const referralCode = user.referralCode || null;
+
+    const referredUsersResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .where(eq(users.referredBy, referralCode ?? ''));
+
+    const referralCount = referralCode ? Number(referredUsersResult[0]?.count ?? 0) : 0;
+
+    const xpResult = await db
+      .select({ total: sql<number>`COALESCE(SUM(${userXPHistory.xpAmount}), 0)` })
+      .from(userXPHistory)
+      .where(and(eq(userXPHistory.userId, userId), eq(userXPHistory.source, 'referral')));
+
+    const totalXpEarned = Number(xpResult[0]?.total ?? 0);
+
+    return { referralCount, totalXpEarned, referralCode };
+  }
+
   async createUser(userData: InsertUser): Promise<User> {
     try {
       // CRITICAL SECURITY: Hash password before storing
@@ -215,11 +243,25 @@ export class DatabaseStorage implements IStorage {
         safeUserData.password = await hashPassword(safeUserData.password);
       }
       
+      const generateReferralCode = async (): Promise<string> => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code: string;
+        let attempts = 0;
+        do {
+          code = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+          const existing = await db.select({ id: users.id }).from(users).where(eq(users.referralCode, code)).limit(1);
+          if (existing.length === 0) break;
+          attempts++;
+        } while (attempts < 10);
+        return code!;
+      };
+
       const userWithDefaults = {
         ...safeUserData,
         avatarUrl: safeUserData.avatarUrl || "/attached_assets/gamefolio social logo 3d circle web.png",
         bannerUrl: safeUserData.bannerUrl || "/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg",
         selectedAvatarBorderId: safeUserData.selectedAvatarBorderId ?? (await db.select({ id: assetRewards.id }).from(assetRewards).where(eq(assetRewards.category, "avatar_border")).limit(1))[0]?.id,
+        referralCode: safeUserData.referralCode || await generateReferralCode(),
       };
       const [user] = await db.insert(users).values(userWithDefaults).returning();
       return user;

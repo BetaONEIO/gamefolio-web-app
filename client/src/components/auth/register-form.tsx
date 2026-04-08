@@ -20,12 +20,21 @@ interface RegisterFormProps {
 }
 
 export default function RegisterForm({ onSuccess }: RegisterFormProps) {
+  const initialReferralCode = (() => {
+    try {
+      return new URLSearchParams(window.location.search).get('ref') || '';
+    } catch {
+      return '';
+    }
+  })();
+
   const [formData, setFormData] = useState({
     username: "",
     email: "",
     password: "",
     confirmPassword: "",
     dateOfBirth: "",
+    referralCode: initialReferralCode,
   });
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [usernameTimer, setUsernameTimer] = useState<NodeJS.Timeout | null>(null);
@@ -288,11 +297,14 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     }
 
     // Remove confirmPassword and add displayName before sending
-    const { confirmPassword, ...userData } = formData;
-    const registrationData = {
+    const { confirmPassword, referralCode, ...userData } = formData;
+    const registrationData: any = {
       ...userData,
       displayName: userData.username,
     };
+    if (referralCode.trim()) {
+      registrationData.referralCode = referralCode.trim().toUpperCase();
+    }
 
     // Clear previous errors
     setServerError("");
@@ -458,6 +470,23 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
         </Popover>
         <p className="text-xs text-muted-foreground">You must be at least 13 years old to sign up</p>
         <FieldError error={fieldErrors.dateOfBirth} />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="referralCode" className="text-foreground text-sm">
+          Referral Code <span className="text-muted-foreground font-normal">(optional)</span>
+        </Label>
+        <Input
+          id="referralCode"
+          name="referralCode"
+          placeholder="Enter a referral code (e.g. ABC12345)"
+          value={formData.referralCode}
+          onChange={handleChange}
+          disabled={isLoading}
+          className="auth-input uppercase"
+          maxLength={8}
+        />
+        <p className="text-xs text-muted-foreground">Have a friend's referral code? Enter it here to earn bonus XP!</p>
       </div>
 
       <div className="flex items-start gap-2">

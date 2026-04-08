@@ -67,6 +67,8 @@ export interface IStorage {
   getUsersByUsernames(usernames: string[]): Promise<User[]>; // For bulk username validation
   getUserByEmail(email: string): Promise<User | null>;
   getUserByExternalId?(externalId: string, authProvider: string): Promise<User | null>;
+  getUserByReferralCode(referralCode: string): Promise<User | null>;
+  getReferralStats(userId: number): Promise<{ referralCount: number; totalXpEarned: number; referralCode: string | null }>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<User>): Promise<User | null>;
   updateUserType(id: number, userType: string): Promise<User | null>;

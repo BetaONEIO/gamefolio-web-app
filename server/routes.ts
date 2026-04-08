@@ -15,6 +15,7 @@ import { StreakService } from "./streak-service";
 import { PerformanceMilestoneService } from "./performance-milestone-service";
 import { CreatorMilestoneService } from "./creator-milestone-service";
 import { BonusEventsService } from "./bonus-events-service";
+import { XPService } from "./xp-service";
 import { createInsertSchema } from "drizzle-zod";
 import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema } from "@shared/schema";
 import { promisify } from "util";
@@ -1887,6 +1888,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register route
   app.post("/api/register", async (req, res) => {
     try {
+      // Extract referral code before schema validation (it's not in insertUserSchema)
+      const referralCodeInput: string | undefined = typeof req.body.referralCode === 'string' && req.body.referralCode.trim()
+        ? req.body.referralCode.trim().toUpperCase()
+        : undefined;
+
       // Validate request body
       const userData = insertUserSchema.parse(req.body);
 
@@ -1947,6 +1953,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email address already registered" });
       }
 
+      // Validate referral code if provided
+      let referringUser: { id: number } | null = null;
+      if (referralCodeInput) {
+        const foundReferrer = await storage.getUserByReferralCode(referralCodeInput);
+        if (!foundReferrer) {
+          return res.status(400).json({ message: "Invalid referral code" });
+        }
+        referringUser = { id: foundReferrer.id };
+      }
+
       // Hash password
       const hashedPassword = await hashPassword(userData.password);
 
@@ -1957,6 +1973,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: userData.email.toLowerCase(),
         password: hashedPassword,
         emailVerified: false, // Set to false initially
+        ...(referralCodeInput && { referredBy: referralCodeInput }),
       });
 
       // Generate verification code and store it in the database
@@ -1983,6 +2000,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`New user notification sent for ${user.username}`);
         } catch (error) {
           console.error('Failed to send new user notification:', error);
+        }
+      }
+
+      // Award referral XP if a valid referral code was used
+      if (referringUser) {
+        try {
+          // Award XP to the referrer (person who shared their code)
+          await XPService.awardXP(
+            referringUser.id,
+            500,
+            'referral',
+            `Earned 500 XP for referring a new user who signed up (${user.username})`
+          );
+          // Award a smaller welcome bonus XP to the new user for using a referral code
+          await XPService.awardXP(
+            user.id,
+            100,
+            'referral_bonus',
+            'Earned 100 XP for signing up with a referral code'
+          );
+          console.log(`Referral XP awarded: 500 XP to user ${referringUser.id}, 100 XP to new user ${user.id}`);
+        } catch (xpError) {
+          console.error('Failed to award referral XP:', xpError);
         }
       }
 
@@ -2497,6 +2537,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           kickId: userWithoutPassword.kickId || null,
           showLiveOverlay: userWithoutPassword.showLiveOverlay || false,
           liveEnabled: userWithoutPassword.liveEnabled || false,
+          referralCode: userWithoutPassword.referralCode || null,
+          referredBy: userWithoutPassword.referredBy || null,
           ...(streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0 ? { streakInfo } : {}),
         });
       }
@@ -2596,6 +2638,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           kickId: fallbackWithoutPassword.kickId || null,
           showLiveOverlay: fallbackWithoutPassword.showLiveOverlay || false,
           liveEnabled: fallbackWithoutPassword.liveEnabled || false,
+          referralCode: fallbackWithoutPassword.referralCode || null,
+          referredBy: fallbackWithoutPassword.referredBy || null,
         });
       }
     } catch (fallbackError) {
@@ -2663,6 +2707,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       kickVerified: userWithoutPassword.kickVerified || false,
       liveEnabled: userWithoutPassword.liveEnabled || false,
     });
+  });
+
+  // ==========================================
+  // Referral Stats Endpoint
+  // ==========================================
+  app.get("/api/user/referral-stats", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const stats = await storage.getReferralStats(userId);
+      const appUrl = process.env.VITE_APP_URL || `${req.protocol}://${req.get('host')}`;
+      return res.json({
+        referralCode: stats.referralCode,
+        referralCount: stats.referralCount,
+        totalXpEarned: stats.totalXpEarned,
+        referralLink: stats.referralCode ? `${appUrl}/auth?ref=${stats.referralCode}` : null,
+      });
+    } catch (error) {
+      console.error('Error fetching referral stats:', error);
+      return res.status(500).json({ message: 'Failed to fetch referral stats' });
+    }
   });
 
   // ==========================================

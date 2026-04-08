@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect } from 'wouter';
-import { Loader2, Trash2, AlertTriangle, Shield, Palette, Type, Sparkles, Check, X, Save, Smile, User, KeyRound } from 'lucide-react';
+import { Loader2, Trash2, AlertTriangle, Shield, Palette, Type, Sparkles, Check, X, Save, Smile, User, KeyRound, Gift, Copy, ExternalLink, Users, Star } from 'lucide-react';
 import { validatePassword, isPasswordValid } from '@/lib/password-validation';
 import { PasswordRequirementsDisplay } from '@/components/ui/password-requirements';
 
@@ -160,6 +160,130 @@ const NameTagImage: React.FC<{
         (e.target as HTMLImageElement).style.opacity = '0.3';
       }}
     />
+  );
+};
+
+const ReferralSection: React.FC = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const { data: referralStats, isLoading } = useQuery<{
+    referralCode: string | null;
+    referralCount: number;
+    totalXpEarned: number;
+    referralLink: string | null;
+  }>({
+    queryKey: ['/api/user/referral-stats'],
+    enabled: !!user,
+  });
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({ title: `${label} copied!`, description: 'Ready to share.', duration: 2000 });
+    }).catch(() => {
+      toast({ title: 'Copy failed', description: 'Please copy manually.', variant: 'destructive' });
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Gift className="h-5 w-5 text-primary" />
+            Referral Program
+          </CardTitle>
+          <CardDescription>
+            Share your unique referral code with friends. When they sign up, you earn <strong>500 XP</strong> and they earn <strong>100 XP</strong> as a welcome bonus.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Your referral code */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Your Referral Code</h3>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 bg-muted rounded-lg px-4 py-3 font-mono text-xl font-bold tracking-widest text-center border border-border">
+                {referralStats?.referralCode ?? '—'}
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => referralStats?.referralCode && copyToClipboard(referralStats.referralCode, 'Referral code')}
+                disabled={!referralStats?.referralCode}
+                title="Copy code"
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Shareable link */}
+          {referralStats?.referralLink && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Shareable Link</h3>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 bg-muted rounded-lg px-3 py-2 text-sm text-muted-foreground truncate border border-border">
+                  {referralStats.referralLink}
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => copyToClipboard(referralStats.referralLink!, 'Referral link')}
+                  title="Copy link"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                When someone visits this link and signs up, the referral code is automatically applied.
+              </p>
+            </div>
+          )}
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-muted/50 rounded-lg p-4 text-center border border-border">
+              <div className="flex items-center justify-center mb-2">
+                <Users className="h-5 w-5 text-primary" />
+              </div>
+              <div className="text-2xl font-bold">{referralStats?.referralCount ?? 0}</div>
+              <div className="text-xs text-muted-foreground mt-1">Friends Referred</div>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-4 text-center border border-border">
+              <div className="flex items-center justify-center mb-2">
+                <Star className="h-5 w-5 text-yellow-400" />
+              </div>
+              <div className="text-2xl font-bold">{referralStats?.totalXpEarned ?? 0}</div>
+              <div className="text-xs text-muted-foreground mt-1">XP Earned from Referrals</div>
+            </div>
+          </div>
+
+          {/* How it works */}
+          <div className="bg-primary/5 rounded-lg p-4 border border-primary/20 space-y-2">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Gift className="h-4 w-4 text-primary" />
+              How It Works
+            </h3>
+            <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+              <li>Share your referral code or link with a friend</li>
+              <li>They enter your code during signup (or use your referral link)</li>
+              <li>When they complete registration, you both earn XP!</li>
+              <li>You get <strong className="text-foreground">+500 XP</strong>, they get <strong className="text-foreground">+100 XP</strong></li>
+            </ol>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
@@ -475,15 +599,19 @@ const AccountSettingsPage: React.FC = () => {
       <h1 className="text-3xl font-bold mb-8">Account Settings</h1>
       
       <Tabs defaultValue="security" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-8">
+        <TabsList className="grid w-full grid-cols-4 mb-8">
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="2fa">
             <KeyRound className="h-4 w-4 mr-2" />
-            Two-Factor Auth
+            2FA
           </TabsTrigger>
           <TabsTrigger value="privacy">
             <Shield className="h-4 w-4 mr-2" />
-            Privacy & Safety
+            Privacy
+          </TabsTrigger>
+          <TabsTrigger value="referral">
+            <Gift className="h-4 w-4 mr-2" />
+            Referral
           </TabsTrigger>
         </TabsList>
 
@@ -1047,6 +1175,11 @@ const AccountSettingsPage: React.FC = () => {
         {/* Two-Factor Authentication */}
         <TabsContent value="2fa">
           <TwoFactorSettings />
+        </TabsContent>
+
+        {/* Referral Program */}
+        <TabsContent value="referral">
+          <ReferralSection />
         </TabsContent>
       </Tabs>
 
