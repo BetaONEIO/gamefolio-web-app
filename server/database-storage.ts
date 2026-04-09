@@ -215,7 +215,20 @@ export class DatabaseStorage implements IStorage {
     const user = await this.getUser(userId);
     if (!user) return { referralCount: 0, totalXpEarned: 0, referralCode: null };
 
-    const referralCode = user.referralCode || null;
+    let referralCode = user.referralCode || null;
+
+    if (!referralCode) {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      for (let attempt = 0; attempt < 20; attempt++) {
+        const code = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        const existing = await db.select({ id: users.id }).from(users).where(eq(users.referralCode, code)).limit(1);
+        if (existing.length === 0) {
+          await db.update(users).set({ referralCode: code }).where(eq(users.id, userId));
+          referralCode = code;
+          break;
+        }
+      }
+    }
 
     const referredUsersResult = await db
       .select({ count: sql<number>`count(*)` })
