@@ -460,7 +460,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="cursor-pointer"
-                      onClick={() => setLocation("/account-settings?tab=referral")}
+                      onClick={() => setLocation("/account/settings?tab=referral")}
                       data-testid="button-referral"
                     >
                       <Gift className="mr-2 h-4 w-4" />
