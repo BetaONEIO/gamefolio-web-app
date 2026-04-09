@@ -30,5 +30,6 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ["@0xsequence/connect"],
+    include: ["eventemitter2", "webextension-polyfill"],
   },
 });
