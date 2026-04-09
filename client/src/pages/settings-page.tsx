@@ -4251,20 +4251,6 @@ export default function SettingsPage() {
                     >
                       Kick
                     </button>
-                    <button
-                      type="button"
-                      disabled={!isStreamingEnabled}
-                      onClick={() => setStreamPlatform('rumble')}
-                      className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                        !isStreamingEnabled
-                          ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
-                          : streamPlatform === 'rumble'
-                          ? 'border-[#85C742] bg-[#85C742]/20 text-[#85C742]'
-                          : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
-                      }`}
-                    >
-                      Rumble
-                    </button>
                   </div>
                 </div>
 
@@ -4383,7 +4369,7 @@ export default function SettingsPage() {
                   )}
 
                   {/* Rumble OAuth connect option */}
-                  {streamPlatform === 'rumble' && isStreamingEnabled && oauthConfig?.rumble && (
+                  {isStreamingEnabled && oauthConfig?.rumble && (
                     <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.rumbleVerified ? 'border-[#85C742]/30 bg-[#85C742]/5' : 'border-slate-700 bg-slate-800/30'}`}>
                       {(user as any)?.rumbleVerified ? (
                         <div className="flex items-center justify-between">
@@ -4447,9 +4433,9 @@ export default function SettingsPage() {
                       Kick OAuth is not configured for this app. Contact the administrator to enable it.
                     </p>
                   )}
-                  {isStreamingEnabled && streamPlatform === 'rumble' && !oauthConfig?.rumble && (
+                  {isStreamingEnabled && !oauthConfig?.rumble && (
                     <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-slate-700 p-3">
-                      Rumble OAuth is not configured for this app. Contact the administrator to enable it.
+                      Rumble connection is not configured for this app. Contact the administrator to enable it.
                     </p>
                   )}
                 </div>
