@@ -485,7 +485,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
         <Input
           id="referralCode"
           name="referralCode"
-          placeholder="GAMEFOLI"
+          placeholder="g4m3f0li0"
           value={formData.referralCode}
           onChange={handleChange}
           disabled={isLoading}
