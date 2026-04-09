@@ -4046,7 +4046,7 @@ export default function SettingsPage() {
                           </Button>
                         </div>
                       </div>
-                    ) : oauthStatus?.twitch === false ? (
+                    ) : oauthConfig?.twitch === false ? (
                       <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
                         <div className="flex items-start gap-3">
                           <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -4110,7 +4110,7 @@ export default function SettingsPage() {
                           </Button>
                         </div>
                       </div>
-                    ) : oauthStatus?.kick === false ? (
+                    ) : oauthConfig?.kick === false ? (
                       <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
                         <div className="flex items-start gap-3">
                           <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
