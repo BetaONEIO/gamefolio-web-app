@@ -29,7 +29,10 @@ export default defineConfig({
     emptyOutDir: true,
   },
   optimizeDeps: {
-    exclude: ["@0xsequence/connect"],
-    include: ["eventemitter2", "webextension-polyfill"],
+    include: [
+      "eventemitter2",
+      "webextension-polyfill",
+      "react-apple-signin-auth",
+    ],
   },
 });
