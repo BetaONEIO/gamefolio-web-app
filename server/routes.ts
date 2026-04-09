@@ -2738,6 +2738,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/user/apply-referral", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser) return res.status(404).json({ message: 'User not found' });
+
+      if (currentUser.referredBy) {
+        return res.status(400).json({ message: 'You have already used a referral code' });
+      }
+
+      const codeRaw = req.body.referralCode;
+      if (!codeRaw || typeof codeRaw !== 'string') {
+        return res.status(400).json({ message: 'Referral code is required' });
+      }
+      const code = codeRaw.trim().toUpperCase();
+
+      const referrer = await storage.getUserByReferralCode(code);
+      if (!referrer) {
+        return res.status(400).json({ message: 'Invalid referral code' });
+      }
+
+      if (referrer.id === userId) {
+        return res.status(400).json({ message: 'You cannot use your own referral code' });
+      }
+
+      await storage.updateUser(userId, { referredBy: code });
+
+      await XPService.awardXP(referrer.id, 500, 'referral', `Earned 500 XP for referring ${currentUser.username}`);
+      await XPService.awardXP(userId, 100, 'referral_bonus', 'Earned 100 XP for using a referral code');
+
+      return res.json({ message: 'Referral code applied! You both earned XP.' });
+    } catch (error) {
+      console.error('Error applying referral code:', error);
+      return res.status(500).json({ message: 'Failed to apply referral code' });
+    }
+  });
+
   // ==========================================
   // User Routes
   // ==========================================

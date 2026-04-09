@@ -6,7 +6,7 @@ import { useUpdateProfile } from '@/hooks/use-profile';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { Redirect } from 'wouter';
 import { Loader2, Trash2, AlertTriangle, Shield, Palette, Type, Sparkles, Check, X, Save, Smile, User, KeyRound, Gift, Copy, ExternalLink, Users, Star } from 'lucide-react';
 import { validatePassword, isPasswordValid } from '@/lib/password-validation';
@@ -166,6 +166,8 @@ const NameTagImage: React.FC<{
 const ReferralSection: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [applyCode, setApplyCode] = useState('');
 
   const { data: referralStats, isLoading } = useQuery<{
     referralCode: string | null;
@@ -176,6 +178,20 @@ const ReferralSection: React.FC = () => {
     queryKey: ['/api/user/referral-stats'],
     queryFn: getQueryFn({ on401: 'throw' }),
     enabled: !!user,
+  });
+
+  const applyMutation = useMutation({
+    mutationFn: (code: string) =>
+      apiRequest('POST', '/api/user/apply-referral', { referralCode: code }),
+    onSuccess: () => {
+      toast({ title: 'Referral code applied!', description: 'You both earned XP. Thanks for joining via a friend!', duration: 3000 });
+      setApplyCode('');
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/referral-stats'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Could not apply code', description: error.message, variant: 'destructive' });
+    },
   });
 
   const copyToClipboard = (text: string, label: string) => {
@@ -284,6 +300,40 @@ const ReferralSection: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Enter a friend's code — only shown if not yet referred */}
+      {!user?.referredBy && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Users className="h-4 w-4 text-primary" />
+              Have a Friend's Code?
+            </CardTitle>
+            <CardDescription>
+              Already have an account but joined via a friend? Enter their referral code here to give them credit and earn yourself <strong>100 XP</strong>.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={applyCode}
+                onChange={(e) => setApplyCode(e.target.value.toUpperCase())}
+                placeholder="g4m3f0li0"
+                maxLength={8}
+                disabled={applyMutation.isPending}
+                className="flex-1 bg-muted border border-border rounded-md px-3 py-2 text-sm font-mono uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+              <Button
+                onClick={() => applyMutation.mutate(applyCode)}
+                disabled={applyCode.trim().length < 4 || applyMutation.isPending}
+              >
+                {applyMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
