@@ -178,7 +178,7 @@ const Header = () => {
     <header className="bg-card shadow-md sticky top-0 z-50 w-full">
       <div className="w-full px-3 sm:px-4 lg:px-8 py-3 sm:py-4 md:py-6 flex items-center justify-between">
         {/* Header left section */}
-        <div className="flex items-center">
+        <div className="flex items-center flex-shrink-0">
           {/* Mobile Menu Button - positioned before logo */}
           {isMobile && (
             <Button
@@ -195,11 +195,11 @@ const Header = () => {
           
           {/* Logo */}
           <Link href="/">
-            <div className="flex items-center">
+            <div className="flex items-center flex-shrink-0">
               <img
                 src="/attached_assets/Gamefolio logo copy.png"
                 alt="Gamefolio"
-                className="h-8 sm:h-10 md:h-12 xl:h-16 w-auto"
+                className="h-8 sm:h-10 md:h-12 xl:h-16 w-auto object-contain flex-shrink-0"
               />
             </div>
           </Link>
