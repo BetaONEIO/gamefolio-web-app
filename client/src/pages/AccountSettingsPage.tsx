@@ -174,6 +174,7 @@ const ReferralSection: React.FC = () => {
     referralLink: string | null;
   }>({
     queryKey: ['/api/user/referral-stats'],
+    queryFn: getQueryFn({ on401: 'throw' }),
     enabled: !!user,
   });
 
@@ -329,16 +330,19 @@ const AccountSettingsPage: React.FC = () => {
   // Fetch user's unlocked profile banners (only banners they have access to)
   const { data: profileBanners = [] } = useQuery<ProfileBanner[]>({
     queryKey: ['/api/user/unlocked-banners'],
+    queryFn: getQueryFn({ on401: 'throw' }),
     enabled: !!user,
   });
 
   const { data: userNameTags = [], isLoading: isLoadingNameTags } = useQuery<NameTag[]>({
     queryKey: ['/api/user/name-tags'],
+    queryFn: getQueryFn({ on401: 'throw' }),
     enabled: !!user,
   });
 
   const { data: userVerificationBadges = [], isLoading: isLoadingVerificationBadges } = useQuery<VerificationBadge[]>({
     queryKey: ['/api/user/verification-badges'],
+    queryFn: getQueryFn({ on401: 'throw' }),
     enabled: !!user,
   });
 
