@@ -57,7 +57,7 @@ function lazyWithRecovery<T extends React.ComponentType<object>>(
   return React.lazy(() =>
     factory().catch(async (err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
-      const isChunkError = msg.includes('dynamically imported module') || msg.includes('Failed to fetch');
+      const isChunkError = msg.includes('Failed to fetch dynamically imported module');
       const key = 'vite_chunk_reload_v1';
       if (isChunkError && !sessionStorage.getItem(key)) {
         sessionStorage.setItem(key, '1');
