@@ -28,4 +28,13 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
   },
+  server: {
+    warmup: {
+      clientFiles: [
+        "./src/pages/StorePage.tsx",
+        "./src/pages/WalletPage.tsx",
+        "./src/pages/StakingPage.tsx",
+      ],
+    },
+  },
 });
