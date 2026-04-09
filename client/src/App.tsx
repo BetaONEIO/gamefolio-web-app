@@ -45,37 +45,6 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { DiscordCallback } from "./components/auth/DiscordCallback";
 import { XboxCallback } from "./components/auth/XboxCallback";
 
-async function bustViteDepCache() {
-  try {
-    const entries = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
-    const depUrls = entries
-      .map(e => e.name)
-      .filter(url => url.includes('.vite/deps') || url.includes('node_modules/.vite'));
-    await Promise.all(depUrls.map(url => fetch(url, { cache: 'reload' }).catch(() => {})));
-  } catch (_) {}
-}
-
-function lazyWithRecovery<T extends React.ComponentType<any>>(
-  factory: () => Promise<{ default: T }>
-) {
-  return React.lazy(() =>
-    factory().catch(async (err: unknown) => {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes('dynamically imported module') || msg.includes('Failed to fetch')) {
-        const key = 'vite_chunk_reload_v1';
-        if (!sessionStorage.getItem(key)) {
-          sessionStorage.setItem(key, '1');
-          await bustViteDepCache();
-          window.location.reload();
-          return new Promise<{ default: T }>(() => {});
-        }
-        sessionStorage.removeItem(key);
-      }
-      throw err;
-    })
-  );
-}
-
 const HomePage = React.lazy(() => import("./pages/HomePageSimple"));
 const ProfilePage = React.lazy(() => import("./pages/ProfilePage"));
 const ExplorePage = React.lazy(() => import("./pages/explore-page"));
@@ -110,9 +79,9 @@ const PrivacyPage = React.lazy(() => import("./pages/privacy-page"));
 const ContactPage = React.lazy(() => import("./pages/contact-page"));
 const HelpPage = React.lazy(() => import("./pages/HelpPage"));
 const LeaderboardEmbedPage = React.lazy(() => import("./pages/LeaderboardEmbedPage"));
-const StorePage = lazyWithRecovery(() => import("./pages/StorePage"));
-const WalletPage = lazyWithRecovery(() => import("./pages/WalletPage"));
-const StakingPage = lazyWithRecovery(() => import("./pages/StakingPage"));
+const StorePage = React.lazy(() => import("./pages/StorePage"));
+const WalletPage = React.lazy(() => import("./pages/WalletPage"));
+const StakingPage = React.lazy(() => import("./pages/StakingPage"));
 const StoragePage = React.lazy(() => import("./pages/StoragePage"));
 const WatchlistPage = React.lazy(() => import("./pages/WatchlistPage"));
 const UserBattlesPage = React.lazy(() => import("./pages/UserBattlesPage"));
