@@ -703,7 +703,7 @@ export default function StorePage() {
         variant={activeTab === "watchlist" ? "default" : "ghost"}
         className={`w-full justify-start gap-3 ${
           activeTab === "watchlist" 
-            ? "bg-red-600 hover:bg-red-700" 
+            ? "bg-green-600 hover:bg-green-700" 
             : "hover:bg-gray-800"
         }`}
         onClick={() => {
@@ -812,7 +812,7 @@ export default function StorePage() {
               variant={activeTab === "watchlist" ? "default" : "ghost"}
               className={`w-full justify-start gap-3 ${
                 activeTab === "watchlist" 
-                  ? "bg-red-600 hover:bg-red-700" 
+                  ? "bg-green-600 hover:bg-green-700" 
                   : "hover:bg-gray-800"
               }`}
               onClick={() => {
@@ -925,7 +925,7 @@ export default function StorePage() {
                   variant={activeTab === "watchlist" ? "default" : "ghost"}
                   className={`w-full justify-start gap-3 ${
                     activeTab === "watchlist" 
-                      ? "bg-red-600 hover:bg-red-700" 
+                      ? "bg-green-600 hover:bg-green-700" 
                       : "hover:bg-gray-800"
                   }`}
                   onClick={() => {
