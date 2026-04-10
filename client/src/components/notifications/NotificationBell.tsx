@@ -126,9 +126,24 @@ export function NotificationBell() {
     mutationFn: async () => {
       await apiRequest("POST", "/api/notifications/mark-all-read");
     },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['/api/notifications'] });
+      await queryClient.cancelQueries({ queryKey: ['/api/notifications/unread-count'] });
+      const previous = queryClient.getQueryData(['/api/notifications']);
+      queryClient.setQueryData(['/api/notifications'], (old: any[]) =>
+        (old || []).map((n: any) => ({ ...n, isRead: true }))
+      );
+      queryClient.setQueryData(['/api/notifications/unread-count'], 0);
+      return { previous };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
+    },
+    onError: (_err, _vars, context: any) => {
+      queryClient.setQueryData(['/api/notifications'], context?.previous);
+      queryClient.setQueryData(['/api/notifications/unread-count'], (context?.previous as any[])?.filter((n: any) => !n.isRead).length ?? 0);
+      toast({ title: "Failed to mark notifications as read", variant: "destructive" });
     },
   });
 
@@ -139,6 +154,7 @@ export function NotificationBell() {
     },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ['/api/notifications'] });
+      await queryClient.cancelQueries({ queryKey: ['/api/notifications/unread-count'] });
       const previous = queryClient.getQueryData(['/api/notifications']);
       queryClient.setQueryData(['/api/notifications'], []);
       queryClient.setQueryData(['/api/notifications/unread-count'], 0);
