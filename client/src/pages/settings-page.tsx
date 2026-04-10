@@ -1442,6 +1442,21 @@ export default function SettingsPage() {
       // Upload new avatar if a file is selected
       if (avatarFile) {
         setUploadingAvatar(true);
+
+        // Optimistic update: show the local preview immediately so the UI
+        // feels instant while the actual upload happens in the background.
+        if (avatarPreview) {
+          queryClient.setQueriesData({ queryKey: ["/api/user"] }, (old: any) =>
+            old ? { ...old, avatarUrl: avatarPreview } : old
+          );
+          const currentUser = queryClient.getQueryData(["/api/user"]) as any;
+          if (currentUser?.username) {
+            queryClient.setQueryData([`/api/users/${currentUser.username}`], (old: any) =>
+              old ? { ...old, avatarUrl: avatarPreview } : old
+            );
+          }
+        }
+
         const formData = new FormData();
         formData.append('avatar', avatarFile);
 
@@ -1451,6 +1466,8 @@ export default function SettingsPage() {
         });
 
         if (!response.ok) {
+          // Revert optimistic update on failure
+          queryClient.invalidateQueries({ queryKey: ["/api/user"] });
           throw new Error('Failed to upload avatar');
         }
 
