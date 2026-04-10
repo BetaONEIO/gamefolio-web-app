@@ -251,7 +251,7 @@ export function BlockedUsersSection() {
           <div className="space-y-3">
             {blockedUsers.map((user) => (
               <div key={user.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                {user.nftProfileTokenId && user.nftProfileImageUrl ? (
+                {user.nftProfileTokenId && user.nftProfileImageUrl && (user as any).activeProfilePicType === 'nft' ? (
                   <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
                     <img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" />
                   </div>

@@ -392,7 +392,7 @@ export default function MessagesPage() {
                     }`}
                     onClick={() => setSelectedConversation(conversation)}
                   >
-                    {conversation.nftProfileTokenId && conversation.nftProfileImageUrl ? (
+                    {conversation.nftProfileTokenId && conversation.nftProfileImageUrl && (conversation as any).activeProfilePicType === 'nft' ? (
                       <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
                         <img src={conversation.nftProfileImageUrl} alt={conversation.displayName} className="w-full h-full object-cover" />
                       </div>
@@ -438,7 +438,7 @@ export default function MessagesPage() {
               {/* Chat Header */}
               <div className="p-4 border-b border-navy-light flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  {selectedConversation.nftProfileTokenId && selectedConversation.nftProfileImageUrl ? (
+                  {selectedConversation.nftProfileTokenId && selectedConversation.nftProfileImageUrl && (selectedConversation as any).activeProfilePicType === 'nft' ? (
                     <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#4ade80]/40">
                       <img src={selectedConversation.nftProfileImageUrl} alt={selectedConversation.displayName} className="w-full h-full object-cover" />
                     </div>

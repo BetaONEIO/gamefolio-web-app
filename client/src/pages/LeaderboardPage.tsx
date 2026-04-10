@@ -211,7 +211,7 @@ const LeaderboardPage = () => {
           </div>
 
           {/* Avatar */}
-          {entry.user.nftProfileTokenId && entry.user.nftProfileImageUrl ? (
+          {entry.user.nftProfileTokenId && entry.user.nftProfileImageUrl && (entry.user as any).activeProfilePicType === 'nft' ? (
             <div className="w-12 h-12 rounded-lg border border-[#4ade80]/40 overflow-hidden flex-shrink-0">
               <img src={entry.user.nftProfileImageUrl} alt={entry.user.displayName} className="w-full h-full object-cover" loading="lazy" />
             </div>
@@ -292,7 +292,7 @@ const LeaderboardPage = () => {
           </svg>
         </div>
         
-        {contributor.user.nftProfileTokenId && contributor.user.nftProfileImageUrl ? (
+        {contributor.user.nftProfileTokenId && contributor.user.nftProfileImageUrl && (contributor.user as any).activeProfilePicType === 'nft' ? (
           <div className="w-10 h-10 rounded-lg border border-[#4ade80]/40 overflow-hidden flex-shrink-0">
             <img src={contributor.user.nftProfileImageUrl} alt={contributor.user.displayName} className="w-full h-full object-cover" loading="lazy" />
           </div>

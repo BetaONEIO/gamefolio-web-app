@@ -205,7 +205,7 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center">
               <Link href={`/profile/${clip.user.username}`} onClick={(e) => e.stopPropagation()}>
-                {clip.user.nftProfileTokenId && clip.user.nftProfileImageUrl ? (
+                {clip.user.nftProfileTokenId && clip.user.nftProfileImageUrl && (clip.user as any).activeProfilePicType === 'nft' ? (
                   <div className="h-8 w-8 mr-3 rounded-lg overflow-hidden border border-[#4ade80]/40 hover:opacity-80 transition-opacity cursor-pointer">
                     <img src={clip.user.nftProfileImageUrl} alt={clip.user.displayName} loading="lazy" className="w-full h-full object-cover" />
                   </div>

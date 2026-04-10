@@ -340,7 +340,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                   e.stopPropagation();
                   onClose();
                 }}>
-                  {screenshotUser?.nftProfileTokenId && screenshotUser?.nftProfileImageUrl ? (
+                  {screenshotUser?.nftProfileTokenId && screenshotUser?.nftProfileImageUrl && screenshotUser?.activeProfilePicType === 'nft' ? (
                     <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#4ade80]/40 flex-shrink-0">
                       <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName || ''} className="w-full h-full object-cover" />
                     </div>
@@ -501,7 +501,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
             <div className="border-b border-border p-4 pr-12">
               <div className="flex items-center justify-between">
                 <div className="flex items-center min-w-0">
-                  {screenshotUser?.nftProfileTokenId && screenshotUser?.nftProfileImageUrl ? (
+                  {screenshotUser?.nftProfileTokenId && screenshotUser?.nftProfileImageUrl && screenshotUser?.activeProfilePicType === 'nft' ? (
                     <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#4ade80]/40 mr-3 flex-shrink-0">
                       <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName || ''} className="w-full h-full object-cover" />
                     </div>

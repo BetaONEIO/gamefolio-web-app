@@ -119,7 +119,7 @@ export function ScreenshotCard({
           <div className="flex items-center justify-between mb-2">
             <Link href={`/profile/${screenshotUser.username}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
               <div className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
-                {screenshotUser.nftProfileTokenId && screenshotUser.nftProfileImageUrl ? (
+                {screenshotUser.nftProfileTokenId && screenshotUser.nftProfileImageUrl && (screenshotUser as any).activeProfilePicType === 'nft' ? (
                   <div className="h-7 w-7 rounded-lg overflow-hidden border border-[#4ade80]/40 flex-shrink-0">
                     <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName} loading="lazy" className="w-full h-full object-cover" />
                   </div>

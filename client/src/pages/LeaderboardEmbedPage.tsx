@@ -111,7 +111,7 @@ const LeaderboardEmbedPage = () => {
                     {getRankIcon(entry.rank)}
                   </div>
                   
-                  {entry.user.nftProfileTokenId && entry.user.nftProfileImageUrl ? (
+                  {entry.user.nftProfileTokenId && entry.user.nftProfileImageUrl && (entry.user as any).activeProfilePicType === 'nft' ? (
                     <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
                       <img src={entry.user.nftProfileImageUrl} alt={entry.user.displayName} className="w-full h-full object-cover" loading="lazy" />
                     </div>

@@ -212,7 +212,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
         {comments && comments.length > 0 ? (
           comments.map((comment) => (
             <div key={comment.id} className="flex space-x-3 text-sm">
-              {(comment.user as any).nftProfileTokenId && (comment.user as any).nftProfileImageUrl ? (
+              {(comment.user as any).nftProfileTokenId && (comment.user as any).nftProfileImageUrl && (comment.user as any).activeProfilePicType === 'nft' ? (
                 <img
                   src={(comment.user as any).nftProfileImageUrl}
                   alt={comment.user.username || "User"}

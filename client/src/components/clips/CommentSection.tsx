@@ -229,7 +229,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                 animation: highlightCommentId === comment.id ? 'pulse 1s ease-in-out infinite' : 'none'
               }}
             >
-              {comment.user.nftProfileTokenId && comment.user.nftProfileImageUrl ? (
+              {comment.user.nftProfileTokenId && comment.user.nftProfileImageUrl && (comment.user as any).activeProfilePicType === 'nft' ? (
                 <img
                   src={comment.user.nftProfileImageUrl}
                   alt={comment.user.username || "User"}

@@ -126,7 +126,7 @@ export function FollowRequestsSection() {
             className="flex items-center justify-between p-4 border rounded-lg"
           >
             <div className="flex items-center gap-3">
-              {request.requester.nftProfileTokenId && request.requester.nftProfileImageUrl ? (
+              {request.requester.nftProfileTokenId && request.requester.nftProfileImageUrl && (request.requester as any).activeProfilePicType === 'nft' ? (
                 <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
                   <img src={request.requester.nftProfileImageUrl} alt={request.requester.displayName} className="w-full h-full object-cover" />
                 </div>

@@ -231,7 +231,7 @@ export default function StorePage() {
     shape?: string;
   }
 
-  const hasNftProfile = !!(user?.nftProfileTokenId && user?.nftProfileImageUrl);
+  const hasNftProfile = !!(user?.nftProfileTokenId && user?.nftProfileImageUrl && user?.activeProfilePicType === 'nft');
   const borderShapeFilter = hasNftProfile ? 'square' : 'circle';
 
   const { data: storeBorders = [], isLoading: isLoadingBorders } = useQuery<StoreBorder[]>({
@@ -1079,7 +1079,7 @@ export default function StorePage() {
               </div>
               
               <div className="hidden md:flex items-center gap-3">
-                {user?.nftProfileTokenId && user?.nftProfileImageUrl ? (
+                {user?.nftProfileTokenId && user?.nftProfileImageUrl && user?.activeProfilePicType === 'nft' ? (
                   <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
                     <img src={user.nftProfileImageUrl} alt={user.username || "User"} className="w-full h-full object-cover" />
                   </div>

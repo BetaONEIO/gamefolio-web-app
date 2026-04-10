@@ -247,7 +247,7 @@ export function GamefolioShareDialog({
                 <div className="relative px-4 pb-4">
                   {/* Avatar - overlapping banner */}
                   <div className="relative -mt-10 mb-2 w-20 h-20">
-                    {userProfile?.nftProfileTokenId && userProfile?.nftProfileImageUrl ? (
+                    {userProfile?.nftProfileTokenId && userProfile?.nftProfileImageUrl && userProfile?.activeProfilePicType === 'nft' ? (
                       <div className="relative w-20 h-20">
                         <div
                           className="w-full h-full rounded-lg overflow-hidden border-2"
