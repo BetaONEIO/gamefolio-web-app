@@ -188,6 +188,9 @@ const UploadPage = () => {
   const [videoAspectRatio, setVideoAspectRatio] = useState(0);
   const [isDraggingReel, setIsDraggingReel] = useState(false);
   const reelDragStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
+  const [isDraggingClip, setIsDraggingClip] = useState(false);
+  const [isDraggingReelDrop, setIsDraggingReelDrop] = useState(false);
+  const [isDraggingScreenshot, setIsDraggingScreenshot] = useState(false);
   
   // Share dialog state
   const [showShareDialog, setShowShareDialog] = useState(false);
@@ -939,19 +942,27 @@ const UploadPage = () => {
                   </div>
                   
                   <div 
-                    className={`border-2 border-dashed ${fileError ? 'border-destructive' : 'border-muted'} rounded-lg p-8 text-center ${!file ? 'cursor-pointer hover:border-primary transition-colors' : ''}`}
+                    className={`border-2 border-dashed ${fileError ? 'border-destructive' : isDraggingClip ? 'border-primary bg-primary/5' : 'border-muted'} rounded-lg p-8 text-center transition-colors ${!file ? 'cursor-pointer hover:border-primary' : ''}`}
                     onClick={!file ? triggerFileInput : undefined}
                     onDragOver={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      if (!isDraggingClip) setIsDraggingClip(true);
                     }}
                     onDragEnter={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      setIsDraggingClip(true);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsDraggingClip(false);
                     }}
                     onDrop={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      setIsDraggingClip(false);
                       if (!file && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                         const droppedFile = e.dataTransfer.files[0];
                         const fakeEvent = {
@@ -1357,19 +1368,27 @@ const UploadPage = () => {
                   </div>
                   
                   <div 
-                    className={`border-2 border-dashed ${fileError ? 'border-destructive' : 'border-muted'} rounded-lg text-center ${!file ? 'cursor-pointer hover:border-primary transition-colors aspect-[9/16] h-[500px] w-auto mx-auto flex items-center justify-center px-6' : 'p-8'}`}
+                    className={`border-2 border-dashed ${fileError ? 'border-destructive' : isDraggingReelDrop ? 'border-primary bg-primary/5' : 'border-muted'} rounded-lg text-center transition-colors ${!file ? 'cursor-pointer hover:border-primary aspect-[9/16] h-[500px] w-auto mx-auto flex items-center justify-center px-6' : 'p-8'}`}
                     onClick={!file ? triggerFileInput : undefined}
                     onDragOver={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      if (!isDraggingReelDrop) setIsDraggingReelDrop(true);
                     }}
                     onDragEnter={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      setIsDraggingReelDrop(true);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsDraggingReelDrop(false);
                     }}
                     onDrop={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      setIsDraggingReelDrop(false);
                       if (!file && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                         const droppedFile = e.dataTransfer.files[0];
                         const fakeEvent = {
@@ -1920,18 +1939,26 @@ const UploadPage = () => {
                   {screenshotFiles.length === 0 ? (
                     <label 
                       htmlFor="screenshot"
-                      className="border-2 border-dashed border-muted rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors flex flex-col items-center"
+                      className={`border-2 border-dashed ${isDraggingScreenshot ? 'border-primary bg-primary/5' : 'border-muted'} rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors flex flex-col items-center`}
                       onDragOver={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        if (!isDraggingScreenshot) setIsDraggingScreenshot(true);
                       }}
                       onDragEnter={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        setIsDraggingScreenshot(true);
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsDraggingScreenshot(false);
                       }}
                       onDrop={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        setIsDraggingScreenshot(false);
                         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                           const fakeEvent = {
                             target: { files: e.dataTransfer.files }

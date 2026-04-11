@@ -22,6 +22,8 @@ const ScreenshotUploadPage: React.FC = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Fetch games for selection
   const { data: games = [] } = useQuery({
@@ -44,10 +46,9 @@ const ScreenshotUploadPage: React.FC = () => {
     return <Redirect to="/auth" />;
   }
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
+  const processFiles = (files: File[]) => {
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
-    
+
     if (imageFiles.length !== files.length) {
       toast({
         title: "Invalid files",
@@ -69,7 +70,6 @@ const ScreenshotUploadPage: React.FC = () => {
     const newFiles = [...selectedFiles, ...imageFiles];
     setSelectedFiles(newFiles);
 
-    // Create previews
     const newPreviews = [...previews];
     imageFiles.forEach(file => {
       const reader = new FileReader();
@@ -79,6 +79,38 @@ const ScreenshotUploadPage: React.FC = () => {
       };
       reader.readAsDataURL(file);
     });
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    processFiles(files);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragging) setIsDragging(true);
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (isUploading || selectedFiles.length >= 3) return;
+    const files = Array.from(e.dataTransfer.files);
+    processFiles(files);
   };
 
   const removeFile = (index: number) => {
@@ -182,6 +214,7 @@ const ScreenshotUploadPage: React.FC = () => {
             
             {/* Single hidden input for all file selections */}
             <input
+              ref={fileInputRef}
               type="file"
               multiple
               accept="image/*"
@@ -193,18 +226,22 @@ const ScreenshotUploadPage: React.FC = () => {
             />
             
             {selectedFiles.length === 0 ? (
-              <label
-                htmlFor="screenshot-upload"
-                className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-muted-foreground/50 transition-colors cursor-pointer flex flex-col items-center space-y-4"
+              <div
+                className={`border-2 border-dashed ${isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-muted-foreground/50'} rounded-lg p-8 text-center transition-colors cursor-pointer flex flex-col items-center space-y-4`}
+                onClick={() => !isUploading && fileInputRef.current?.click()}
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
               >
                 <Upload className="h-12 w-12 text-muted-foreground" />
                 <div className="space-y-2">
-                  <p className="text-lg font-medium">Drop files here or click to browse</p>
+                  <p className="text-lg font-medium">{isDragging ? 'Drop files here' : 'Drag & drop or click to browse'}</p>
                   <p className="text-sm text-muted-foreground">
                     Select up to 3 screenshots • PNG, JPG, JPEG • Hold Ctrl/Cmd to select multiple
                   </p>
                 </div>
-              </label>
+              </div>
             ) : (
               <>
                 {/* Preview Grid */}
