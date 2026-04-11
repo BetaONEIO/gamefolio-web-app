@@ -1979,12 +1979,14 @@ const UploadPage = () => {
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {screenshotPreviews.map((preview, index) => (
                           <div key={index} className="relative group">
-                            <img
-                              src={preview}
-                              alt={`Preview ${index + 1}`}
-                              className="w-full aspect-video object-cover rounded-lg border"
-                              data-testid={`img-screenshot-preview-${index}`}
-                            />
+                            <div className="w-full rounded-lg border overflow-hidden bg-muted flex items-center justify-center">
+                              <img
+                                src={preview}
+                                alt={`Preview ${index + 1}`}
+                                className="w-full h-auto object-contain"
+                                data-testid={`img-screenshot-preview-${index}`}
+                              />
+                            </div>
                             <Button
                               type="button"
                               variant="destructive"
