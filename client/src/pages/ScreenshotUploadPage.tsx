@@ -24,6 +24,7 @@ const ScreenshotUploadPage: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const dragCounterRef = React.useRef(0);
 
   // Fetch games for selection
   const { data: games = [] } = useQuery({
@@ -89,24 +90,29 @@ const ScreenshotUploadPage: React.FC = () => {
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!isDragging) setIsDragging(true);
   };
 
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(true);
+    dragCounterRef.current += 1;
+    if (dragCounterRef.current === 1) setIsDragging(true);
   };
 
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(false);
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0;
+      setIsDragging(false);
+    }
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    dragCounterRef.current = 0;
     setIsDragging(false);
     if (isUploading || selectedFiles.length >= 3) return;
     const files = Array.from(e.dataTransfer.files);
@@ -243,7 +249,13 @@ const ScreenshotUploadPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <>
+              <div
+                className={`space-y-4 rounded-lg transition-colors ${selectedFiles.length < 3 && isDragging ? 'border-2 border-dashed border-primary bg-primary/5 p-4' : ''}`}
+                onDragOver={selectedFiles.length < 3 ? handleDragOver : undefined}
+                onDragEnter={selectedFiles.length < 3 ? handleDragEnter : undefined}
+                onDragLeave={selectedFiles.length < 3 ? handleDragLeave : undefined}
+                onDrop={selectedFiles.length < 3 ? handleDrop : undefined}
+              >
                 {/* Preview Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {previews.map((preview, index) => (
@@ -271,26 +283,32 @@ const ScreenshotUploadPage: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Add Another Button - Below previews */}
+                {/* Add Another Button or drop hint */}
                 {selectedFiles.length < 3 && (
-                  <label htmlFor="screenshot-upload" className="block">
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="lg"
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-                      disabled={isUploading}
-                      data-testid="button-add-another"
-                      asChild
-                    >
-                      <span className="cursor-pointer flex items-center justify-center gap-2">
-                        <Upload className="h-5 w-5" />
-                        Add Another Screenshot ({3 - selectedFiles.length} remaining)
-                      </span>
-                    </Button>
-                  </label>
+                  isDragging ? (
+                    <p className="text-center text-sm font-medium text-primary py-2">
+                      Drop to add screenshot ({3 - selectedFiles.length} remaining)
+                    </p>
+                  ) : (
+                    <label htmlFor="screenshot-upload" className="block">
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="lg"
+                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                        disabled={isUploading}
+                        data-testid="button-add-another"
+                        asChild
+                      >
+                        <span className="cursor-pointer flex items-center justify-center gap-2">
+                          <Upload className="h-5 w-5" />
+                          Add Another Screenshot ({3 - selectedFiles.length} remaining)
+                        </span>
+                      </Button>
+                    </label>
+                  )
                 )}
-              </>
+              </div>
             )}
           </div>
 
