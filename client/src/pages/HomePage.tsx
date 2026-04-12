@@ -16,6 +16,7 @@ import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
 import { useLocation, Link } from "wouter";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
+import { NewUserScrollBanner } from "@/components/layout/NewUserScrollBanner";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient as globalQueryClient } from "@/lib/queryClient";
@@ -798,6 +799,9 @@ const HomePage = () => {
           </TabsContent>
         </Tabs>
       </section>
+
+      {/* New User Joined Banner */}
+      <NewUserScrollBanner />
 
       {/* Recommended for You Section - Only show for authenticated users */}
       {user && <RecommendedForYou userId={user.id} />}

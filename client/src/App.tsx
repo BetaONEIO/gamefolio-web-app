@@ -34,7 +34,6 @@ import Sidebar from "./components/layout/Sidebar";
 import MobileNav from "./components/layout/MobileNav";
 import MobileMenu from "./components/layout/MobileMenu";
 import { ActivityScrollBanner } from "./components/layout/ActivityScrollBanner";
-import { NewUserScrollBanner } from "./components/layout/NewUserScrollBanner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, X } from "lucide-react";
 import { Link } from "wouter";
@@ -235,9 +234,6 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
       {/* Activity Scroll Banner - Only show on home page */}
       {location === "/" && <ActivityScrollBanner />}
-
-      {/* New User Scroll Banner - Only show on home page */}
-      {location === "/" && <NewUserScrollBanner />}
 
       {/* Dynamic Banner */}
       {!isLoadingBanner && bannerSettings && bannerSettings.isEnabled && !isBannerDismissed && (
