@@ -4968,6 +4968,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get recent user signups for new user banner
+  app.get("/api/recent-signups", async (req, res) => {
+    try {
+      const recentUsers = await storage.getRecentUsers(15);
+      const signups = recentUsers.map(user => ({
+        userId: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
+        joinedAt: user.createdAt,
+      }));
+      res.json(signups);
+    } catch (err) {
+      console.error("Error fetching recent signups:", err);
+      return res.status(500).json({ message: "Error fetching recent signups" });
+    }
+  });
+
   // Get all clips (latest first)
   app.get("/api/clips", async (req, res) => {
     try {
