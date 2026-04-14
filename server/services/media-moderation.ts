@@ -8,6 +8,7 @@ import type {
   ProviderRawLabel,
 } from "./moderation-providers/types";
 import { StubModerationProvider } from "./moderation-providers/stub";
+import { RekognitionModerationProvider } from "./moderation-providers/rekognition";
 
 const PROVIDER_TIMEOUT_MS = Number(process.env.MODERATION_TIMEOUT_MS || 5000);
 
@@ -33,8 +34,9 @@ function selectProvider(): ModerationProvider {
   switch (name) {
     case "stub":
       return new StubModerationProvider();
-    // case "rekognition":
-    //   return new RekognitionModerationProvider();
+    case "rekognition":
+    case "aws-rekognition":
+      return new RekognitionModerationProvider();
     default:
       console.warn(`[moderation] Unknown MODERATION_PROVIDER=${name}, falling back to stub`);
       return new StubModerationProvider();
