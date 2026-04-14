@@ -1,6 +1,13 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json, unique, real, uniqueIndex, uuid, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, unique, real, uniqueIndex, uuid, index, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Shape of a moderation label returned by the provider and stored on media rows.
+export type ModerationLabel = {
+  name: string;
+  confidence: number;
+  parentName?: string;
+};
 
 // Users table
 export const users = pgTable("users", {
@@ -148,6 +155,11 @@ export const users = pgTable("users", {
   // Referral System
   referralCode: text("referral_code").unique(), // User's unique referral code
   referredBy: text("referred_by"), // The referral code used when this user signed up
+  // Avatar moderation
+  avatarModerationStatus: text("avatar_moderation_status").default("approved").notNull(),
+  avatarModerationLabels: json("avatar_moderation_labels").$type<ModerationLabel[]>(),
+  avatarModeratedAt: timestamp("avatar_moderated_at"),
+  avatarModerationProvider: text("avatar_moderation_provider"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -185,6 +197,10 @@ export const clips = pgTable("clips", {
   ageRestricted: boolean("age_restricted").default(false).notNull(),
   shareCode: text("share_code").unique(),
   pinnedAt: timestamp("pinned_at"),
+  moderationStatus: text("moderation_status").default("pending").notNull(),
+  moderationLabels: json("moderation_labels").$type<ModerationLabel[]>(),
+  moderatedAt: timestamp("moderated_at"),
+  moderationProvider: text("moderation_provider"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -228,6 +244,10 @@ export const screenshots = pgTable("screenshots", {
   ageRestricted: boolean("age_restricted").default(false).notNull(),
   shareCode: text("share_code").unique(),
   pinnedAt: timestamp("pinned_at"),
+  moderationStatus: text("moderation_status").default("pending").notNull(),
+  moderationLabels: json("moderation_labels").$type<ModerationLabel[]>(),
+  moderatedAt: timestamp("moderated_at"),
+  moderationProvider: text("moderation_provider"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1567,4 +1587,82 @@ export const serverSettings = pgTable("server_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 export type ServerSetting = typeof serverSettings.$inferSelect;
+
+// Media moderation review queue. Populated when a media item is flagged or rejected
+// by the automated provider and needs human review (or audit record).
+export const mediaModerationQueue = pgTable("media_moderation_queue", {
+  id: serial("id").primaryKey(),
+  contentType: text("content_type").notNull(), // "clip" | "screenshot" | "avatar" | "reel"
+  contentId: integer("content_id").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("open"), // "open" | "resolved"
+  autoAction: text("auto_action").notNull(), // "flagged" | "rejected" | "pending"
+  labels: json("labels").$type<ModerationLabel[]>(),
+  confidenceMax: numeric("confidence_max"),
+  provider: text("provider"),
+  reviewedBy: integer("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewDecision: text("review_decision"), // "approve" | "reject" | null
+  reviewerNotes: text("reviewer_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  statusIdx: index("media_moderation_queue_status_idx").on(table.status, table.createdAt),
+  userIdIdx: index("media_moderation_queue_user_id_idx").on(table.userId),
+  contentIdx: index("media_moderation_queue_content_idx").on(table.contentType, table.contentId),
+}));
+
+export const insertMediaModerationQueueSchema = createInsertSchema(mediaModerationQueue).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  reviewedBy: true,
+  reviewedAt: true,
+  reviewDecision: true,
+  reviewerNotes: true,
+});
+export type MediaModerationQueueEntry = typeof mediaModerationQueue.$inferSelect;
+export type InsertMediaModerationQueueEntry = z.infer<typeof insertMediaModerationQueueSchema>;
+
+// User appeals against an automated moderation decision. Linked to a queue entry.
+export const mediaModerationAppeals = pgTable("media_moderation_appeals", {
+  id: serial("id").primaryKey(),
+  queueId: integer("queue_id").notNull().references(() => mediaModerationQueue.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  message: text("message").notNull(),
+  status: text("status").notNull().default("open"), // "open" | "resolved"
+  resolution: text("resolution"), // "approved" | "rejected" | null
+  resolvedBy: integer("resolved_by").references(() => users.id, { onDelete: "set null" }),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  statusIdx: index("media_moderation_appeals_status_idx").on(table.status, table.createdAt),
+  userIdIdx: index("media_moderation_appeals_user_id_idx").on(table.userId),
+}));
+
+export const insertMediaModerationAppealSchema = createInsertSchema(mediaModerationAppeals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  resolvedBy: true,
+  resolvedAt: true,
+  resolution: true,
+  status: true,
+});
+export type MediaModerationAppeal = typeof mediaModerationAppeals.$inferSelect;
+export type InsertMediaModerationAppeal = z.infer<typeof insertMediaModerationAppealSchema>;
+
+// Per-label threshold overrides used by the moderation service to decide reject vs flag.
+// Rows not present here fall back to defaults baked into the service.
+export const mediaModerationThresholds = pgTable("media_moderation_thresholds", {
+  id: serial("id").primaryKey(),
+  label: text("label").notNull().unique(), // e.g., "Explicit Nudity", "Violence"
+  rejectThreshold: numeric("reject_threshold").notNull(), // confidence >= this → reject
+  flagThreshold: numeric("flag_threshold").notNull(), // confidence >= this (and < reject) → flag
+  gamingSuppressed: boolean("gaming_suppressed").default(false).notNull(), // raise bar on gameplay content
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type MediaModerationThreshold = typeof mediaModerationThresholds.$inferSelect;
 export type XpSetting = typeof xpSettings.$inferSelect;

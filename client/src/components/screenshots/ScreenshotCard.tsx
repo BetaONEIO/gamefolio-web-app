@@ -6,6 +6,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ReportDialog } from '@/components/content/ReportDialog';
 import { LazyImage } from '@/components/ui/lazy-image';
 import { useSignedUrl } from '@/hooks/use-signed-url';
+import { AppealDialog } from '@/components/moderation/AppealDialog';
 import { Link } from 'wouter';
 
 interface ScreenshotCardProps {
@@ -60,6 +61,37 @@ export function ScreenshotCard({
         {screenshot.ageRestricted && (
           <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-bold shadow-lg z-20">
             18+
+          </div>
+        )}
+
+        {/* Moderation status badge — owner-only, with Appeal button */}
+        {isOwnProfile && screenshot.moderationStatus && screenshot.moderationStatus !== 'approved' && (
+          <div className="absolute bottom-2 left-2 flex items-center gap-2 z-20" onClick={(e) => e.stopPropagation()}>
+            <div
+              className={`text-white text-xs px-2 py-1 rounded font-semibold shadow-lg ${
+                screenshot.moderationStatus === 'rejected' ? 'bg-red-600' : 'bg-amber-600'
+              }`}
+              title={
+                screenshot.moderationStatus === 'rejected'
+                  ? 'Removed by content moderation'
+                  : 'Pending review — only visible to you until approved'
+              }
+            >
+              {screenshot.moderationStatus === 'rejected' ? 'Removed' : 'Pending review'}
+            </div>
+            <AppealDialog
+              contentType="screenshot"
+              contentId={screenshot.id}
+              trigger={
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-6 px-2 text-xs bg-black/70 hover:bg-black/90 text-white border-white/20"
+                >
+                  Appeal
+                </Button>
+              }
+            />
           </div>
         )}
 

@@ -910,18 +910,19 @@ export class DatabaseStorage implements IStorage {
       sql`${clips.gameId} IS NULL`,
       sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
     );
+    const approvedModeration = eq(clips.moderationStatus, 'approved');
 
-    const clipIds = dateFilter 
+    const clipIds = dateFilter
       ? await db
           .select()
           .from(clips)
-          .where(and(gt(clips.createdAt, dateFilter), approvedGamesFilter))
+          .where(and(gt(clips.createdAt, dateFilter), approvedGamesFilter, approvedModeration))
           .orderBy(desc(clips.createdAt), desc(clips.id))
           .limit(limit)
       : await db
           .select()
           .from(clips)
-          .where(approvedGamesFilter)
+          .where(and(approvedGamesFilter, approvedModeration))
           .orderBy(desc(clips.createdAt), desc(clips.id))
           .limit(limit);
 
@@ -1948,6 +1949,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(games, eq(clips.gameId, games.id))
       .where(and(
         eq(clips.videoType, 'clip'),
+        eq(clips.moderationStatus, 'approved'),
         sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
       ))
       .orderBy(desc(clips.createdAt), desc(clips.id))
@@ -4244,9 +4246,12 @@ export class DatabaseStorage implements IStorage {
         .leftJoin(users, eq(screenshots.userId, users.id))
         .leftJoin(games, eq(screenshots.gameId, games.id))
         .where(
-          or(
-            sql`${screenshots.gameId} IS NULL`,
-            sql`${games.is_approved} IS NULL OR ${games.is_approved} = true`
+          and(
+            eq(screenshots.moderationStatus, 'approved'),
+            or(
+              sql`${screenshots.gameId} IS NULL`,
+              sql`${games.is_approved} IS NULL OR ${games.is_approved} = true`
+            )
           )
         )
         .orderBy(desc(screenshots.createdAt), desc(screenshots.id)) // Stable pagination with tie-breaker

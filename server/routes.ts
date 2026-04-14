@@ -49,6 +49,8 @@ import { getDemoUser, getDemoUserWithStats, getDemoClips, getDemoFavoriteGames }
 import axios from "axios";
 import adminRouter from "./routes/admin";
 import adminContentFilterRouter from "./routes/admin-content-filter";
+import adminModerationRouter from "./routes/admin-moderation";
+import moderationRouter from "./routes/moderation";
 import twitchGamesRouter from "./routes/twitch-games";
 import authRouter from "./routes/auth-routes";
 import tokenAuthRouter from "./routes/token-auth";
@@ -9992,6 +9994,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount admin routes
   app.use('/api/admin', adminRouter);
   app.use('/api/admin/content-filter', adminContentFilterRouter);
+  app.use('/api/admin/moderation', adminModerationRouter);
+  app.use('/api/moderation', moderationRouter);
 
   // Mount support routes
   app.use('/api/support', supportRouter);

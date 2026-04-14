@@ -16,6 +16,10 @@ import { hybridFullAccess } from '../middleware/hybrid-auth';
 import { LeaderboardService, POINT_VALUES } from '../leaderboard-service';
 import { BonusEventsService } from '../bonus-events-service';
 import { CreatorMilestoneService } from '../creator-milestone-service';
+import { mediaModerationService } from '../services/media-moderation';
+import { db } from '../db';
+import { clips as clipsTable, screenshots as screenshotsTable, users as usersTable } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 
 const router = express.Router();
 
@@ -479,6 +483,24 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
       .jpeg({ quality: 80 })
       .toBuffer();
 
+    // Content moderation — synchronous scan before we touch storage. A
+    // clear-reject never lands in Supabase; a flag lands but stays hidden
+    // pending admin review.
+    const moderation = await mediaModerationService.moderateImage(processedBuffer, {
+      userId: req.user!.id,
+      contentType: 'screenshot',
+      isGaming: !!finalGameId,
+    });
+
+    if (moderation.status === 'rejected') {
+      if (req.file?.path) fs.unlink(req.file.path, () => {});
+      return res.status(422).json({
+        error: 'MODERATION_REJECTED',
+        message: "This image can't be uploaded because it appears to violate our content policy. If you believe this is a mistake, you can submit an appeal.",
+        labels: moderation.labels,
+      });
+    }
+
     // Upload to Supabase
     const [imageResult, thumbnailResult] = await Promise.all([
       supabaseStorage.uploadBuffer(
@@ -504,16 +526,28 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 
     // Generate share code for screenshot
     const shareCode = nanoid(8);
-    
+
     // Save to database
     const screenshotDataWithShareCode = {
       ...screenshotData,
       imageUrl: imageResult.url,
       thumbnailUrl: thumbnailResult.url,
-      shareCode: shareCode
+      shareCode: shareCode,
+      moderationStatus: moderation.status === 'approved' ? 'approved' : moderation.status,
+      moderationLabels: moderation.labels,
+      moderatedAt: moderation.scannedAt,
+      moderationProvider: moderation.provider,
     };
 
     const screenshot = await storage.createScreenshot(screenshotDataWithShareCode);
+
+    if (moderation.status !== 'approved') {
+      await mediaModerationService.recordQueueEntry(
+        moderation,
+        { userId: req.user!.id, contentType: 'screenshot', contentId: screenshot.id, isGaming: !!finalGameId },
+        screenshot.id,
+      );
+    }
 
     // Increment daily upload count
     await storage.incrementDailyUploadCount(req.user!.id, 'screenshot');
@@ -564,7 +598,10 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
       xpGained: POINT_VALUES['screenshot_upload'] ?? 100,
       userXP: user?.totalXP || 0,
       userLevel: user?.level || 1,
-      message: 'Screenshot uploaded successfully'
+      moderationStatus: moderation.status,
+      message: moderation.status === 'flagged'
+        ? 'Screenshot uploaded and is pending review. It will be visible to others once approved.'
+        : 'Screenshot uploaded successfully'
     };
     
     console.log(`🎯 XP Debug - Screenshot response: xpGained=${responseData.xpGained}, userXP=${responseData.userXP}, userLevel=${responseData.userLevel}`);
@@ -762,6 +799,7 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
     let processedVideoUrl = uploadResult.url; // Default to original
     let thumbnailUrl = '';
     let actualDuration = 0; // Initialize actual duration
+    let moderationFrames: Buffer[] = []; // Captured below before temp-file cleanup
 
     // Helper function to generate share code
     const generateShareCode = () => {
@@ -848,6 +886,15 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
             `${videoType}_thumb`
           );
           console.log(`✅ Clip thumbnail generated: ${thumbnailUrl ? thumbnailUrl.substring(0, 60) + '...' : 'NONE'}`);
+        }
+
+        // Extract sample frames for content moderation BEFORE we delete the
+        // temp video. This reuses ffmpeg (same dep as thumbnail generation).
+        try {
+          moderationFrames = await VideoProcessor.extractModerationFrames(tempVideoPath, 6);
+          console.log(`🛡️ Extracted ${moderationFrames.length} frames for moderation scan`);
+        } catch (frameError) {
+          console.warn('Could not extract moderation frames:', frameError);
         }
 
         // Clean up temp video file
@@ -967,8 +1014,82 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
 
     const validatedClipData = insertClipSchema.parse(finalClipData);
 
-    // Create the clip
+    // Create the clip (moderation_status defaults to 'pending')
     const clip = await storage.createClip(validatedClipData);
+
+    // Fire-and-forget moderation. We don't block the response — the clip is
+    // inserted as 'pending' and hidden from public feeds until the scan
+    // finishes. On rejection the video and DB row are deleted.
+    if (moderationFrames.length > 0) {
+      const framesForScan = moderationFrames;
+      const userIdForScan = req.user!.id;
+      const clipIdForScan = clip.id;
+      const contentTypeForScan: 'clip' | 'reel' = videoType === 'reel' ? 'reel' : 'clip';
+      const isGamingForScan = !!finalGameId;
+      const videoUrlForScan = processedVideoUrl;
+
+      setImmediate(async () => {
+        try {
+          const result = await mediaModerationService.moderateVideo(framesForScan, {
+            userId: userIdForScan,
+            contentType: contentTypeForScan,
+            contentId: clipIdForScan,
+            isGaming: isGamingForScan,
+          });
+
+          await db.update(clipsTable)
+            .set({
+              moderationStatus: result.status,
+              moderationLabels: result.labels,
+              moderatedAt: result.scannedAt,
+              moderationProvider: result.provider,
+            })
+            .where(eq(clipsTable.id, clipIdForScan));
+
+          if (result.status !== 'approved') {
+            await mediaModerationService.recordQueueEntry(
+              result,
+              { userId: userIdForScan, contentType: contentTypeForScan, contentId: clipIdForScan, isGaming: isGamingForScan },
+              clipIdForScan,
+            );
+          }
+
+          if (result.status === 'rejected') {
+            try {
+              await supabaseStorage.deleteFileByPublicUrl(videoUrlForScan);
+            } catch (deleteErr) {
+              console.warn(`[moderation] failed to delete rejected video ${videoUrlForScan}`, deleteErr);
+            }
+            console.log(`🛡️ Clip ${clipIdForScan} auto-rejected by moderation`);
+          } else if (result.status === 'flagged') {
+            console.log(`🛡️ Clip ${clipIdForScan} flagged for review (confidence ${result.confidenceMax})`);
+          } else {
+            console.log(`🛡️ Clip ${clipIdForScan} approved by moderation`);
+          }
+        } catch (modErr) {
+          console.error(`[moderation] async scan failed for clip ${clipIdForScan}:`, modErr);
+        }
+      });
+    } else {
+      // No frames captured — leave status as 'pending' and log for admin review.
+      console.warn(`🛡️ No moderation frames for clip ${clip.id}; marking pending for manual review`);
+      await mediaModerationService.recordQueueEntry(
+        {
+          status: 'pending',
+          labels: [],
+          provider: mediaModerationService.providerName,
+          scannedAt: new Date(),
+          confidenceMax: 0,
+        },
+        {
+          userId: req.user!.id,
+          contentType: videoType === 'reel' ? 'reel' : 'clip',
+          contentId: clip.id,
+          isGaming: !!finalGameId,
+        },
+        clip.id,
+      );
+    }
 
     // Increment daily upload count
     const uploadContentType = isReel ? 'reel' : 'clip';
@@ -1011,7 +1132,8 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
       xpGained: POINT_VALUES['upload'] ?? 200,
       userXP: user?.totalXP || 0,
       userLevel: user?.level || 1,
-      message: 'Video processed successfully'
+      moderationStatus: 'pending',
+      message: "We're reviewing your video — it will go live once it passes our content check."
     };
     
     console.log(`🎯 XP Debug - Response data: xpGained=${responseData.xpGained}, userXP=${responseData.userXP}, userLevel=${responseData.userLevel}`);
@@ -1172,6 +1294,24 @@ router.post('/avatar', fullAccessMiddleware, avatarUpload.single('avatar'), asyn
       mimeType = 'image/jpeg';
     }
 
+    // Content moderation — synchronous. Clear-reject avatars never touch
+    // storage. Flagged avatars are stored but the user's avatarUrl is not
+    // updated until admin approves; we still record the queue entry.
+    const moderation = await mediaModerationService.moderateImage(processedBuffer, {
+      userId: req.user!.id,
+      contentType: 'avatar',
+      isGaming: false,
+    });
+
+    if (moderation.status === 'rejected') {
+      if (req.file?.path) fs.unlink(req.file.path, () => {});
+      return res.status(422).json({
+        error: 'MODERATION_REJECTED',
+        message: "This image can't be used as a profile picture because it appears to violate our content policy. If you believe this is a mistake, you can submit an appeal.",
+        labels: moderation.labels,
+      });
+    }
+
     // Upload to Supabase
     const uploadResult = await supabaseStorage.uploadBuffer(
       processedBuffer,
@@ -1186,13 +1326,36 @@ router.post('/avatar', fullAccessMiddleware, avatarUpload.single('avatar'), asyn
       if (err) console.warn('Could not delete temp avatar file:', err);
     });
 
-    // Save avatar URL to user's profile in the database
-    await storage.updateUser(req.user!.id, { avatarUrl: uploadResult.url });
+    // Persist moderation result on the user row. For a clean approval we also
+    // update avatarUrl. Flagged avatars are stored but NOT shown publicly
+    // until admin approves — we only record the pending avatar URL alongside
+    // the moderation status so admins can review and promote it.
+    const avatarUpdate: Record<string, any> = {
+      avatarModerationStatus: moderation.status,
+      avatarModerationLabels: moderation.labels,
+      avatarModeratedAt: moderation.scannedAt,
+      avatarModerationProvider: moderation.provider,
+    };
+    if (moderation.status === 'approved') {
+      avatarUpdate.avatarUrl = uploadResult.url;
+    }
+    await storage.updateUser(req.user!.id, avatarUpdate);
+
+    if (moderation.status !== 'approved') {
+      await mediaModerationService.recordQueueEntry(
+        moderation,
+        { userId: req.user!.id, contentType: 'avatar', isGaming: false },
+        req.user!.id, // for avatars we reuse the userId as the content id
+      );
+    }
 
     res.json({
       success: true,
-      avatarUrl: uploadResult.url,
-      message: 'Avatar uploaded successfully'
+      avatarUrl: moderation.status === 'approved' ? uploadResult.url : null,
+      moderationStatus: moderation.status,
+      message: moderation.status === 'flagged'
+        ? 'Your new profile picture is pending review and will be visible once approved.'
+        : 'Avatar uploaded successfully'
     });
 
   } catch (error) {
@@ -1263,6 +1426,71 @@ router.use((error: any, req: any, res: any, next: any) => {
 
   // If it's not a multer error, pass it to the next error handler
   next(error);
+});
+
+// Lightweight status endpoints for client polling during async video moderation.
+// Owner-only: returns the current moderation_status + any labels. Used by the
+// upload UI to flip from "pending review" to live without a full page refresh.
+router.get('/clips/:id/status', fullAccessMiddleware, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid clip id' });
+
+    const [row] = await db
+      .select({
+        id: clipsTable.id,
+        userId: clipsTable.userId,
+        moderationStatus: clipsTable.moderationStatus,
+        moderationLabels: clipsTable.moderationLabels,
+        moderatedAt: clipsTable.moderatedAt,
+      })
+      .from(clipsTable)
+      .where(eq(clipsTable.id, id));
+
+    if (!row) return res.status(404).json({ error: 'Clip not found' });
+    if (row.userId !== req.user!.id) return res.status(403).json({ error: 'Forbidden' });
+
+    res.json({
+      id: row.id,
+      moderationStatus: row.moderationStatus,
+      moderationLabels: row.moderationLabels,
+      moderatedAt: row.moderatedAt,
+    });
+  } catch (error) {
+    console.error('Clip status fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch clip status' });
+  }
+});
+
+router.get('/screenshots/:id/status', fullAccessMiddleware, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid screenshot id' });
+
+    const [row] = await db
+      .select({
+        id: screenshotsTable.id,
+        userId: screenshotsTable.userId,
+        moderationStatus: screenshotsTable.moderationStatus,
+        moderationLabels: screenshotsTable.moderationLabels,
+        moderatedAt: screenshotsTable.moderatedAt,
+      })
+      .from(screenshotsTable)
+      .where(eq(screenshotsTable.id, id));
+
+    if (!row) return res.status(404).json({ error: 'Screenshot not found' });
+    if (row.userId !== req.user!.id) return res.status(403).json({ error: 'Forbidden' });
+
+    res.json({
+      id: row.id,
+      moderationStatus: row.moderationStatus,
+      moderationLabels: row.moderationLabels,
+      moderatedAt: row.moderatedAt,
+    });
+  } catch (error) {
+    console.error('Screenshot status fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch screenshot status' });
+  }
 });
 
 export default router;

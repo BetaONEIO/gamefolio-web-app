@@ -325,6 +325,31 @@ export class SupabaseStorage {
   }
 
   /**
+   * Delete a file given its public URL. Handles both public and signed URLs
+   * by extracting the bucket-relative path and delegating to deleteFile.
+   */
+  async deleteFileByPublicUrl(publicUrl: string): Promise<boolean> {
+    try {
+      if (!publicUrl) return false;
+      // Match both /object/public/<bucket>/<path> and /object/sign/<bucket>/<path>
+      const match = publicUrl.match(/\/object\/(?:public|sign)\/([^/]+)\/(.+?)(?:\?|$)/);
+      if (!match) {
+        console.warn('deleteFileByPublicUrl: could not parse URL:', publicUrl);
+        return false;
+      }
+      const [, bucket, pathPart] = match;
+      const relativePath = decodeURIComponent(pathPart);
+      if (bucket !== this.bucketName) {
+        console.warn(`deleteFileByPublicUrl: URL bucket "${bucket}" does not match current bucket "${this.bucketName}"`);
+      }
+      return await this.deleteFile(relativePath);
+    } catch (error) {
+      console.error('Error deleting file by public URL:', error);
+      return false;
+    }
+  }
+
+  /**
    * Get file URL from Supabase storage
    */
   getFileUrl(filePath: string): string {

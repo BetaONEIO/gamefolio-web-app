@@ -4,6 +4,7 @@ import { getQueryFn } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
+import AdminContentModeration from "./AdminContentModeration";
 import { UserWithBadges, BannerSettings, Badge as BadgeType, assetTypes, AssetType, Game } from "@shared/schema";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -2690,6 +2691,7 @@ const AdminPage = () => {
           <TabsTrigger value="users" className="text-xs px-3 py-1.5">Users</TabsTrigger>
           <TabsTrigger value="content" className="text-xs px-3 py-1.5">Content</TabsTrigger>
           <TabsTrigger value="content-filter" className="text-xs px-3 py-1.5">Filter</TabsTrigger>
+          <TabsTrigger value="moderation" className="text-xs px-3 py-1.5">Moderation</TabsTrigger>
           <TabsTrigger value="banner" className="text-xs px-3 py-1.5">Banner</TabsTrigger>
           <TabsTrigger value="badges" className="text-xs px-3 py-1.5">Badges</TabsTrigger>
           <TabsTrigger value="levels" className="text-xs px-3 py-1.5">Levels</TabsTrigger>
@@ -3223,6 +3225,11 @@ const AdminPage = () => {
         {/* Content Filter Tab */}
         <TabsContent value="content-filter" className="space-y-4">
           <AdminContentFilter />
+        </TabsContent>
+
+        {/* Content Moderation Tab */}
+        <TabsContent value="moderation" className="space-y-4">
+          <AdminContentModeration />
         </TabsContent>
 
         {/* Banner Management Tab */}

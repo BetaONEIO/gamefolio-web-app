@@ -71,14 +71,24 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         body: formData,
       });
       if (!response.ok) {
-        throw new Error('Screenshot upload failed');
+        const errBody = await response.json().catch(() => ({}));
+        const err = new Error(errBody?.message || errBody?.error || 'Screenshot upload failed');
+        (err as any).code = errBody?.error;
+        throw err;
       }
       return response.json();
     },
     onSuccess: (data) => {
       setUploadStatus('success');
       setUploadResult(data);
-      toast({ title: 'Success', description: 'Screenshot uploaded successfully!' });
+      if (data.moderationStatus === 'flagged' || data.moderationStatus === 'pending') {
+        toast({
+          title: 'Pending review',
+          description: data.message || 'Your screenshot is pending review and will be visible once approved.',
+        });
+      } else {
+        toast({ title: 'Success', description: 'Screenshot uploaded successfully!' });
+      }
       queryClient.invalidateQueries({ queryKey: ['/api/screenshots'] });
       setTimeout(() => {
         onClose();
@@ -87,9 +97,17 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         setLocation(`/upload-success/screenshot/${data.id}`);
       }, 2000);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       setUploadStatus('error');
-      toast({ title: 'Error', description: 'Screenshot upload failed', variant: 'gamefolioError' });
+      if (error?.code === 'MODERATION_REJECTED') {
+        toast({
+          title: 'Upload blocked',
+          description: error.message,
+          variant: 'gamefolioError',
+        });
+      } else {
+        toast({ title: 'Error', description: error?.message || 'Screenshot upload failed', variant: 'gamefolioError' });
+      }
       console.error('Screenshot upload error:', error);
     }
   });
@@ -105,14 +123,24 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         body: JSON.stringify(data),
       });
       if (!response.ok) {
-        throw new Error('Video processing failed');
+        const errBody = await response.json().catch(() => ({}));
+        const err = new Error(errBody?.message || errBody?.error || 'Video processing failed');
+        (err as any).code = errBody?.error;
+        throw err;
       }
       return response.json();
     },
     onSuccess: (data) => {
       setUploadStatus('success');
       setUploadResult(data);
-      toast({ title: 'Success', description: 'Video processed successfully!' });
+      if (data.moderationStatus === 'pending' || data.moderationStatus === 'flagged') {
+        toast({
+          title: 'Reviewing your video',
+          description: data.message || "We're reviewing your video — it will go live once it passes our content check.",
+        });
+      } else {
+        toast({ title: 'Success', description: 'Video processed successfully!' });
+      }
       queryClient.invalidateQueries({ queryKey: ['/api/clips'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reels'] });
       setTimeout(() => {
@@ -123,9 +151,17 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         setLocation(`/upload-success/${contentType}/${data.id}`);
       }, 2000);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       setUploadStatus('error');
-      toast({ title: 'Error', description: 'Video processing failed', variant: 'gamefolioError' });
+      if (error?.code === 'MODERATION_REJECTED') {
+        toast({
+          title: 'Upload blocked',
+          description: error.message,
+          variant: 'gamefolioError',
+        });
+      } else {
+        toast({ title: 'Error', description: error?.message || 'Video processing failed', variant: 'gamefolioError' });
+      }
       console.error('Video processing error:', error);
     }
   });

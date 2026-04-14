@@ -20,6 +20,8 @@ import { useLikeClip } from "@/hooks/use-clips";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { useSignedUrl } from "@/hooks/use-signed-url";
+import { AppealDialog } from "@/components/moderation/AppealDialog";
+import { Button } from "@/components/ui/button";
 
 interface VideoClipCardProps {
   clip: ClipWithUser;
@@ -167,7 +169,7 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
           <div className="absolute top-2 right-2 flex items-center gap-1">
             <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-md font-medium">
               {formatDuration(
-                clip.trimEnd && clip.trimEnd > 0 
+                clip.trimEnd && clip.trimEnd > 0
                   ? clip.trimEnd - (clip.trimStart || 0)
                   : clip.duration || 0
               )}
@@ -177,6 +179,44 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
               {(clip.views ?? 0) > 1000 ? `${((clip.views ?? 0) / 1000).toFixed(1)}K` : (clip.views ?? 0)}
             </div>
           </div>
+
+          {/* Moderation status badge — shown only to the owner on non-approved content.
+              Rejected/flagged items get an inline Appeal button. */}
+          {user?.id === clip.userId && (clip as any).moderationStatus && (clip as any).moderationStatus !== 'approved' && (
+            <div className="absolute top-2 left-2 flex items-center gap-2 z-20" onClick={(e) => e.stopPropagation()}>
+              <div
+                className={`text-white text-xs px-2 py-1 rounded-md font-semibold shadow-lg ${
+                  (clip as any).moderationStatus === 'rejected' ? 'bg-red-600' :
+                  (clip as any).moderationStatus === 'pending' ? 'bg-blue-600' : 'bg-amber-600'
+                }`}
+                title={
+                  (clip as any).moderationStatus === 'rejected'
+                    ? 'Removed by content moderation'
+                    : (clip as any).moderationStatus === 'pending'
+                    ? 'Your video is being reviewed — it will go live once approved'
+                    : 'Pending review — only visible to you until approved'
+                }
+              >
+                {(clip as any).moderationStatus === 'rejected' ? 'Removed' :
+                 (clip as any).moderationStatus === 'pending' ? 'Reviewing' : 'Pending review'}
+              </div>
+              {((clip as any).moderationStatus === 'rejected' || (clip as any).moderationStatus === 'flagged') && (
+                <AppealDialog
+                  contentType={clip.videoType === 'reel' ? 'reel' : 'clip'}
+                  contentId={clip.id}
+                  trigger={
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="h-6 px-2 text-xs bg-black/70 hover:bg-black/90 text-white border-white/20"
+                    >
+                      Appeal
+                    </Button>
+                  }
+                />
+              )}
+            </div>
+          )}
           
           {/* Bottom right badges container */}
           <div className="absolute bottom-2 right-2 flex items-center gap-1">

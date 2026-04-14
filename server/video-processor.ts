@@ -555,4 +555,63 @@ export class VideoProcessor {
       });
     });
   }
+
+  // Sample N frames evenly across a video and return them as JPEG buffers.
+  // Used by the moderation service — cheaper and simpler than calling a
+  // provider's full video API, and good enough for UGC game clips.
+  static async extractModerationFrames(videoPath: string, count: number = 6): Promise<Buffer[]> {
+    await this.ensureDirectories();
+
+    let duration = 0;
+    try {
+      const info = await this.getVideoInfo(videoPath);
+      duration = info.duration;
+    } catch (err) {
+      console.warn('[moderation-frames] ffprobe failed, falling back to fixed offsets', err);
+    }
+
+    // Evenly space frames between 10% and 90% of the duration so we skip
+    // title cards / outros at the boundaries.
+    const offsets: number[] = [];
+    if (duration > 0 && count > 0) {
+      const start = duration * 0.1;
+      const end = duration * 0.9;
+      if (count === 1) {
+        offsets.push((start + end) / 2);
+      } else {
+        const step = (end - start) / (count - 1);
+        for (let i = 0; i < count; i++) offsets.push(start + step * i);
+      }
+    } else {
+      // Fallback: sample at fixed seconds if we can't read duration.
+      for (let i = 0; i < count; i++) offsets.push(1 + i * 2);
+    }
+
+    const buffers: Buffer[] = [];
+    for (let i = 0; i < offsets.length; i++) {
+      const outPath = path.join(
+        this.TEMP_DIR,
+        `modframe_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 8)}.jpg`,
+      );
+      try {
+        await new Promise<void>((resolve, reject) => {
+          ffmpeg(videoPath)
+            .seekInput(offsets[i])
+            .frames(1)
+            .size('640x?')
+            .output(outPath)
+            .on('end', () => resolve())
+            .on('error', (err: any) => reject(err))
+            .run();
+        });
+        const buf = await fs.readFile(outPath);
+        buffers.push(buf);
+      } catch (err) {
+        console.warn(`[moderation-frames] failed to extract frame at ${offsets[i]}s`, err);
+      } finally {
+        try { await fs.unlink(outPath); } catch {}
+      }
+    }
+    return buffers;
+  }
 }
