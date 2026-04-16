@@ -268,9 +268,11 @@ const GameSelector = ({ games, selectedGame, onSelect }: GameSelectorProps) => {
                             />
                             <span className="font-medium text-base sm:text-sm truncate">{game.name}</span>
                           </div>
-                          <span className="text-sm sm:text-xs text-muted-foreground pl-7 sm:pl-6">
-                            {(game as any).isUserAdded ? "Community added" : `Twitch ID: ${game.id}`}
-                          </span>
+                          {(game as any).isUserAdded && (
+                            <span className="text-sm sm:text-xs text-muted-foreground pl-7 sm:pl-6">
+                              Community added
+                            </span>
+                          )}
                         </div>
                       </div>
                     </CommandItem>
