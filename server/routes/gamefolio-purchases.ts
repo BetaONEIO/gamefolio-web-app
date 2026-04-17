@@ -142,15 +142,7 @@ async function finalizePurchaseDb(opts: {
   }
 
   if (type === 'border') {
-    // Borders use the same unlocked-border helper as the verify endpoint.
-    if ((storage as any).unlockBorderForUser) {
-      await (storage as any).unlockBorderForUser(userId, itemRefId);
-    } else {
-      // Fallback: write directly into user_unlocked_borders.
-      await db.execute(
-        sql`INSERT INTO user_unlocked_borders (user_id, border_id) VALUES (${userId}, ${itemRefId}) ON CONFLICT DO NOTHING`
-      );
-    }
+    await storage.unlockBorderForUser(userId, itemRefId);
     return { ok: true, message: 'Border unlocked' };
   }
 
@@ -465,7 +457,7 @@ export async function reconcileStuckGamefolioPurchases(): Promise<{
 }> {
   const errors: string[] = [];
   let scanned = 0, consumed = 0, refunded = 0, refundFailed = 0, skipped = 0;
-  const GRACE_MINUTES = 5;
+  const GRACE_MINUTES = 10;
   try {
     // Also pick up rows stuck in transient claim states ('finalizing', 'refunding')
     // — these mean the original handler crashed mid-step.
