@@ -1424,6 +1424,28 @@ export interface UploadLimits {
   maxScreenshotsTotal: number;
 }
 
+// Linked external wallets - addresses the user has cryptographically proven control of.
+// Used to bind external NFT mint payments to the authenticated user (Task #38).
+export const linkedWallets = pgTable("linked_wallets", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  walletAddress: text("wallet_address").notNull(), // canonical lowercase
+  chainId: integer("chain_id"),
+  verifiedAt: timestamp("verified_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueUserAddress: unique().on(table.userId, table.walletAddress),
+  addressIdx: index("linked_wallets_address_idx").on(table.walletAddress),
+}));
+
+export const insertLinkedWalletSchema = createInsertSchema(linkedWallets).omit({
+  id: true,
+  verifiedAt: true,
+  createdAt: true,
+});
+export type LinkedWallet = typeof linkedWallets.$inferSelect;
+export type InsertLinkedWallet = z.infer<typeof insertLinkedWalletSchema>;
+
 // GF Token Orders table - for tracking GF token purchases via Stripe
 export const gfOrders = pgTable("gf_orders", {
   id: uuid("id").primaryKey().defaultRandom(),

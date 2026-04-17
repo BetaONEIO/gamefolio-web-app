@@ -58,6 +58,7 @@ import viewRouter from "./routes/view";
 import supportRouter from "./routes/support";
 import { reportsRouter } from "./routes/reports";
 import mintNftRouter from "./routes/mint-nft";
+import linkedWalletsRouter from "./routes/linked-wallets";
 import quickSellRouter from "./routes/quick-sell";
 import adminNftSeedRouter from "./routes/admin-nft-seed";
 import { twitchApi } from "./services/twitch-api";
@@ -10007,6 +10008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Mount mint NFT routes
   app.use(mintNftRouter);
+  app.use(linkedWalletsRouter);
 
   // Mount quick sell routes
   app.use(quickSellRouter);

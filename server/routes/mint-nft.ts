@@ -14,6 +14,7 @@ import {
 import { privateKeyToAccount } from 'viem/accounts';
 import { encryptPrivateKey } from '../wallet-crypto';
 import { writeContractWithPoW, writeContractWithPoWFromRawKey, publicClient } from '../skale-pow';
+import { isWalletLinkedToUser } from './linked-wallets';
 
 (async () => {
   try {
@@ -494,6 +495,18 @@ router.post('/api/mint/external-finalize', async (req: Request, res: Response) =
     }
     if (!validTransfer) {
       return res.status(400).json({ error: 'Could not verify GFT payment from your wallet to treasury for the required amount.' });
+    }
+
+    // Bind the payment cryptographically to the signed-in user: the payer wallet
+    // must be a verified linked wallet on this account. Without this, anyone
+    // could claim credit for someone else's on-chain payment by passing the txHash.
+    const isLinked = await isWalletLinkedToUser(userId, payerLower);
+    if (!isLinked) {
+      return res.status(403).json({
+        error: 'This wallet is not linked to your account. Please verify ownership of the wallet before minting.',
+        code: 'PAYER_NOT_VERIFIED',
+        payerAddress: payerLower,
+      });
     }
 
     // Atomic idempotency: try to claim this payment tx. UNIQUE constraint on payment_tx_hash

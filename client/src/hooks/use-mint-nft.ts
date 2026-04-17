@@ -264,6 +264,67 @@ export function useMintNFT(fallbackAddress?: string | null) {
     }
   }, [toast, fetchOnChainData, handleServerError]);
 
+  const ensureWalletLinked = useCallback(async (address: Address): Promise<boolean> => {
+    if (!walletClient) return false;
+
+    // One full request (nonce -> sign -> verify). Returns:
+    //   'ok'     -> linked successfully
+    //   'retry'  -> nonce expired between issuance and verify; safe to try once more
+    //   'fail'   -> any other error; surface to user and stop
+    const attempt = async (): Promise<'ok' | 'retry' | 'fail'> => {
+      const nonceRes = await apiRequest('POST', '/api/wallet/link/nonce', { address });
+      const { message } = await nonceRes.json();
+      if (!message) throw new Error('Could not start wallet verification.');
+
+      const signature = await walletClient.signMessage({ account: address, message });
+
+      const verifyRes = await apiRequest('POST', '/api/wallet/link/verify', { address, signature });
+      const verifyData = await verifyRes.json();
+      if (verifyData.success) return 'ok';
+      if (verifyData.code === 'NONCE_EXPIRED') return 'retry';
+      throw new Error(verifyData.error || 'Wallet verification failed.');
+    };
+
+    try {
+      // Already linked?
+      const listRes = await fetch('/api/wallet/linked', { credentials: 'include' });
+      if (listRes.ok) {
+        const { wallets } = await listRes.json();
+        const lower = address.toLowerCase();
+        if (Array.isArray(wallets) && wallets.some((w: any) => String(w.walletAddress).toLowerCase() === lower)) {
+          return true;
+        }
+      }
+
+      toast({
+        title: 'Verify your wallet',
+        description: 'Sign the message in your wallet to link it to your Gamefolio account. This is free and one-time per wallet.',
+      });
+
+      let outcome = await attempt();
+      if (outcome === 'retry') {
+        toast({
+          title: 'Verification timed out',
+          description: 'The challenge expired. Please sign the new message we just generated.',
+        });
+        outcome = await attempt();
+      }
+      if (outcome !== 'ok') throw new Error('Wallet verification failed.');
+      return true;
+    } catch (err: any) {
+      const raw = err?.message || '';
+      const lower = raw.toLowerCase();
+      let message: string;
+      if (lower.includes('user rejected') || lower.includes('user denied')) {
+        message = 'Wallet verification was cancelled. You need to sign the message to mint from this wallet.';
+      } else {
+        message = raw || 'Could not verify wallet.';
+      }
+      toast({ title: 'Wallet verification failed', description: message, variant: 'destructive' });
+      return false;
+    }
+  }, [walletClient, toast]);
+
   const externalMint = useCallback(async (quantity: number): Promise<MintResult | null> => {
     if (!walletClient || !publicClient || !externalAddress) {
       toast({
@@ -276,6 +337,14 @@ export function useMintNFT(fallbackAddress?: string | null) {
     try {
       setMintTxState('sending');
       setError(null);
+
+      // Bind the wallet to the user before spending: prevents a different
+      // signed-in user from claiming credit for this on-chain payment.
+      const linked = await ensureWalletLinked(externalAddress);
+      if (!linked) {
+        setMintTxState('error');
+        return null;
+      }
 
       const totalCost = onChainPricePerMint * quantity;
       const amountRaw = parseUnits(String(totalCost), 18);
@@ -331,7 +400,7 @@ export function useMintNFT(fallbackAddress?: string | null) {
       toast({ title: 'Mint Failed', description: message, variant: 'destructive' });
       return null;
     }
-  }, [walletClient, publicClient, externalAddress, onChainPricePerMint, fetchOnChainData, toast]);
+  }, [walletClient, publicClient, externalAddress, onChainPricePerMint, fetchOnChainData, toast, ensureWalletLinked]);
 
   const approve = useCallback(async () => {
     if (!useServerSigning) {
