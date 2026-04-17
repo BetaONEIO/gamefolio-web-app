@@ -20,11 +20,20 @@ interface OwnedNFT {
   rarity: string | null;
 }
 
+interface WalletBreakdownEntry {
+  address: string;
+  balance: string;
+  isPrimary: boolean;
+  isRetired: boolean;
+  isCustodial: boolean;
+}
+
 interface WalletHomepageProps {
   gfBalance?: number;
   onChainBalance?: string;
   offChainBalance?: number;
   walletAddress?: string;
+  wallets?: WalletBreakdownEntry[];
   stakedAmount?: number;
   nftsOwned?: number;
   ownedNFTs?: OwnedNFT[];
@@ -42,6 +51,7 @@ export default function WalletHomepage({
   onChainBalance = "0",
   offChainBalance = 0,
   walletAddress = "",
+  wallets = [],
   stakedAmount = 0,
   nftsOwned = 0,
   ownedNFTs = [],
@@ -454,6 +464,7 @@ export default function WalletHomepage({
                 background: '#0f172a',
                 border: '1px solid rgba(30, 41, 59, 0.5)'
               }}
+              data-testid="card-wallet-address"
             >
               <div className="flex items-center justify-between gap-3 w-full">
                 <div className="flex flex-col gap-0.5 min-w-0 flex-1">
@@ -487,6 +498,96 @@ export default function WalletHomepage({
                 </button>
               </div>
             </div>
+
+            {/* Wallet Breakdown Card - shows all wallets (primary + retired) */}
+            {wallets.length > 0 && (
+              <div
+                className="rounded-2xl p-5 flex flex-col gap-4 w-full"
+                style={{
+                  background: '#0f172a',
+                  border: '1px solid rgba(30, 41, 59, 0.5)',
+                }}
+                data-testid="card-wallet-breakdown"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-bold" style={{ color: '#f8fafc' }}>
+                    Your Wallets
+                  </span>
+                  <span style={{ color: '#94a3b8', fontSize: '12px' }}>
+                    {wallets.length} {wallets.length === 1 ? 'wallet' : 'wallets'}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {wallets.map((w) => {
+                    const balanceNum = parseFloat(w.balance) || 0;
+                    const retiredWithBalance = w.isRetired && balanceNum > 0;
+                    return (
+                      <div
+                        key={w.address}
+                        className="rounded-xl p-3 flex items-center justify-between gap-3"
+                        style={{
+                          background: retiredWithBalance ? 'rgba(245, 158, 11, 0.08)' : 'rgba(2, 6, 23, 0.5)',
+                          border: retiredWithBalance
+                            ? '1px solid rgba(245, 158, 11, 0.5)'
+                            : '1px solid #1e293b',
+                        }}
+                        data-testid={`wallet-entry-${w.address}`}
+                      >
+                        <div className="flex flex-col gap-1 min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide"
+                              style={{
+                                background: w.isPrimary
+                                  ? 'rgba(74, 222, 128, 0.15)'
+                                  : 'rgba(148, 163, 184, 0.15)',
+                                color: w.isPrimary ? '#4ade80' : '#94a3b8',
+                                border: w.isPrimary
+                                  ? '1px solid rgba(74, 222, 128, 0.3)'
+                                  : '1px solid rgba(148, 163, 184, 0.3)',
+                              }}
+                              data-testid={`wallet-label-${w.address}`}
+                            >
+                              {w.isPrimary ? 'Primary' : 'Retired'}
+                            </span>
+                            {retiredWithBalance && (
+                              <span
+                                className="text-[10px] font-bold uppercase tracking-wide"
+                                style={{ color: '#f59e0b' }}
+                              >
+                                Has balance
+                              </span>
+                            )}
+                          </div>
+                          <span
+                            className="font-mono text-xs break-all"
+                            style={{ color: '#f8fafc', fontFamily: 'JetBrains Mono, monospace' }}
+                          >
+                            {w.address}
+                          </span>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <span
+                            className="font-bold"
+                            style={{
+                              color: retiredWithBalance ? '#f59e0b' : '#4ade80',
+                              fontSize: '14px',
+                            }}
+                            data-testid={`wallet-balance-${w.address}`}
+                          >
+                            {balanceNum.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
+                          <span style={{ color: '#94a3b8', fontSize: '11px' }}> GFT</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

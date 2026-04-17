@@ -107,7 +107,17 @@ export default function WalletPage() {
     enabled: !!user,
   });
 
-  const { data: onChainData } = useQuery<{ balance: string; walletAddress: string | null }>({
+  const { data: onChainData } = useQuery<{
+    balance: string;
+    walletAddress: string | null;
+    wallets?: Array<{
+      address: string;
+      balance: string;
+      isPrimary: boolean;
+      isRetired: boolean;
+      isCustodial: boolean;
+    }>;
+  }>({
     queryKey: ['/api/token/on-chain-balance'],
     queryFn: async () => {
       const res = await fetch('/api/token/on-chain-balance', { credentials: 'include' });
@@ -119,6 +129,7 @@ export default function WalletPage() {
   });
 
   const onChainBalance = onChainData?.balance || '0';
+  const walletBreakdown = onChainData?.wallets || [];
 
   const { 
     createWallet, 
@@ -289,6 +300,7 @@ export default function WalletPage() {
       <WalletHomepage
         walletAddress={displayWalletAddress}
         onChainBalance={onChainBalance}
+        wallets={walletBreakdown}
         offChainBalance={userGftBalance}
         fiatValue={userGftBalance * 0.01}
         stakedAmount={stakedAmount}
