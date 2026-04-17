@@ -1692,6 +1692,27 @@ const AdminAlertsSection = () => {
     }
   };
 
+  const [retryingId, setRetryingId] = useState<number | null>(null);
+  const retryAlert = async (id: number) => {
+    setRetryingId(id);
+    try {
+      const res = await apiRequest("POST", `/api/admin/alerts/${id}/retry`);
+      const body = (await res.json()) as { alert?: AdminAlertRow };
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/alerts"] });
+      const updated = body.alert?.deliveries;
+      const stillFailed =
+        (updated?.emails.filter((d) => !d.ok).length || 0) +
+        (updated?.slack.filter((d) => !d.ok).length || 0);
+      toast({
+        title: stillFailed === 0 ? "All retries delivered" : `Retry done — ${stillFailed} still failing`,
+      });
+    } catch (err: any) {
+      toast({ title: "Failed to retry alert", description: err?.message || "", variant: "destructive" });
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
   const alerts = (data?.alerts || []).filter((a) => showResolved || !a.resolvedAt);
 
   return (
@@ -1761,11 +1782,30 @@ const AdminAlertsSection = () => {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    {!a.resolvedAt && (
-                      <Button size="sm" variant="outline" onClick={() => resolveAlert(a.id)}>
-                        Resolve
-                      </Button>
-                    )}
+                    <div className="flex justify-end gap-2">
+                      {(() => {
+                        const failedCount =
+                          (a.deliveries?.emails.filter((d) => !d.ok).length || 0) +
+                          (a.deliveries?.slack.filter((d) => !d.ok).length || 0);
+                        if (failedCount === 0) return null;
+                        return (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={retryingId === a.id}
+                            onClick={() => retryAlert(a.id)}
+                            data-testid={`button-retry-alert-${a.id}`}
+                          >
+                            {retryingId === a.id ? "Retrying…" : `Retry failed (${failedCount})`}
+                          </Button>
+                        );
+                      })()}
+                      {!a.resolvedAt && (
+                        <Button size="sm" variant="outline" onClick={() => resolveAlert(a.id)}>
+                          Resolve
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

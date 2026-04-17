@@ -2354,4 +2354,21 @@ adminRouter.post("/alerts/:id/resolve", async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/admin/alerts/:id/retry - re-send the alert to its previously failed destinations
+adminRouter.post("/alerts/:id/retry", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ message: "Invalid alert id" });
+    }
+    const { retryFailedAlertDeliveries } = await import("../admin-alert-service");
+    const updated = await retryFailedAlertDeliveries(id);
+    if (!updated) return res.status(404).json({ message: "Alert not found" });
+    res.json({ alert: updated });
+  } catch (err) {
+    console.error("Error retrying admin alert deliveries:", err);
+    res.status(500).json({ message: "Error retrying admin alert deliveries" });
+  }
+});
+
 export default adminRouter;

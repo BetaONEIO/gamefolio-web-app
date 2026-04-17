@@ -104,6 +104,42 @@ export async function listRecentAdminAlerts(limit = 50): Promise<AdminAlert[]> {
   return db.select().from(adminAlerts).orderBy(desc(adminAlerts.createdAt)).limit(limit);
 }
 
+export async function retryFailedAlertDeliveries(id: number): Promise<AdminAlert | null> {
+  await adminAlertsReady;
+  const [alert] = await db.select().from(adminAlerts).where(eq(adminAlerts.id, id));
+  if (!alert) return null;
+
+  const existing: AlertDeliveryLog = alert.deliveries ?? { emails: [], slack: [] };
+  const failedEmails = existing.emails.filter((d) => !d.ok).map((d) => d.target);
+  const failedSlack = existing.slack.filter((d) => !d.ok).map((d) => d.target);
+  if (failedEmails.length === 0 && failedSlack.length === 0) {
+    return alert;
+  }
+
+  const details = (alert.details ?? undefined) as Record<string, unknown> | undefined;
+
+  const [emailResults, slackResults] = await Promise.all([
+    Promise.all(failedEmails.map((to) => sendAdminEmail(to, alert.subject, alert.message, details))),
+    Promise.all(failedSlack.map((url) => postSlack(url, alert.subject, alert.message, details))),
+  ]);
+
+  const emailOutcome = new Map(failedEmails.map((t, i) => [t, !!emailResults[i]] as const));
+  const slackOutcome = new Map(failedSlack.map((t, i) => [t, !!slackResults[i]] as const));
+
+  const updated: AlertDeliveryLog = {
+    emails: existing.emails.map((d) =>
+      emailOutcome.has(d.target) ? { target: d.target, ok: emailOutcome.get(d.target)! } : d,
+    ),
+    slack: existing.slack.map((d) =>
+      slackOutcome.has(d.target) ? { target: d.target, ok: slackOutcome.get(d.target)! } : d,
+    ),
+  };
+
+  await recordAlertDeliveries(id, updated);
+  const [refreshed] = await db.select().from(adminAlerts).where(eq(adminAlerts.id, id));
+  return refreshed ?? null;
+}
+
 export async function resolveAdminAlert(id: number, resolvedBy: number): Promise<AdminAlert | null> {
   await adminAlertsReady;
   const [row] = await db
