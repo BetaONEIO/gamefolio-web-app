@@ -57,6 +57,7 @@ import { sendAdminAlert } from '../admin-alert-service';
     // case-insensitive functional unique index as defense-in-depth.
     await db.execute(sql`UPDATE nft_mint_payments SET payment_tx_hash = lower(payment_tx_hash) WHERE payment_tx_hash <> lower(payment_tx_hash)`);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS nft_mint_payments_tx_lower_uniq ON nft_mint_payments ((lower(payment_tx_hash)))`);
+    await db.execute(sql`ALTER TABLE nft_mint_payments ADD COLUMN IF NOT EXISTS dismissed_at TIMESTAMP`);
   } catch (err) {
     console.error('Failed to create nft_mint_payments table:', err);
   }
@@ -905,6 +906,7 @@ router.get('/api/mint/my-payments', async (req: Request, res: Response) => {
 
     const limitRaw = parseInt((req.query.limit as string) || '20', 10);
     const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 50) : 20;
+    const includeDismissed = String(req.query.includeDismissed || '').toLowerCase() === 'true';
 
     const rowsRes: any = await db.execute(sql`
       SELECT
@@ -919,6 +921,7 @@ router.get('/api/mint/my-payments', async (req: Request, res: Response) => {
         p.error,
         p.created_at,
         p.updated_at,
+        p.dismissed_at,
         r.refund_tx_hash,
         r.refund_status,
         r.mint_error AS refund_reason
@@ -932,6 +935,7 @@ router.get('/api/mint/my-payments', async (req: Request, res: Response) => {
         LIMIT 1
       ) r ON TRUE
       WHERE p.user_id = ${userId}
+        ${includeDismissed ? sql`` : sql`AND p.dismissed_at IS NULL`}
       ORDER BY p.created_at DESC
       LIMIT ${limit}
     `);
@@ -949,15 +953,90 @@ router.get('/api/mint/my-payments', async (req: Request, res: Response) => {
       error: row.error || null,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      dismissedAt: row.dismissed_at || null,
       refundTxHash: row.refund_tx_hash || null,
       refundStatus: (row.refund_status as 'success' | 'failed' | null) || null,
       refundReason: row.refund_reason || null,
     }));
 
-    return res.json({ payments });
+    // Always report the user's dismissed count so the UI can surface the
+    // "Show dismissed" toggle even when the default (non-dismissed) page is
+    // empty or full of newer entries that crowd out older dismissed ones.
+    const countRes: any = await db.execute(sql`
+      SELECT COUNT(*)::int AS cnt
+      FROM nft_mint_payments
+      WHERE user_id = ${userId} AND dismissed_at IS NOT NULL
+    `);
+    const countRows = (countRes?.rows || countRes || []) as any[];
+    const dismissedCount = Number(countRows[0]?.cnt || 0);
+
+    return res.json({ payments, dismissedCount });
   } catch (err: any) {
     console.error('my-payments list error:', err);
     return res.status(500).json({ error: err?.message || 'Failed to list mint payments' });
+  }
+});
+
+// User-facing: dismiss a recent mint activity entry so it stops appearing in
+// the default list. Scoped to the signed-in user; idempotent.
+router.post('/api/mint/my-payments/:id/dismiss', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isFinite(id) || id <= 0) {
+      return res.status(400).json({ error: 'Invalid payment id' });
+    }
+    const result: any = await db.execute(sql`
+      UPDATE nft_mint_payments
+      SET dismissed_at = NOW()
+      WHERE id = ${id} AND user_id = ${userId} AND dismissed_at IS NULL
+      RETURNING id
+    `);
+    const rows = (result?.rows || result || []) as any[];
+    if (rows.length === 0) {
+      // Either not found, not yours, or already dismissed — treat the
+      // already-dismissed case as success so retries are idempotent.
+      const checkRes: any = await db.execute(sql`
+        SELECT id FROM nft_mint_payments WHERE id = ${id} AND user_id = ${userId} LIMIT 1
+      `);
+      const checkRows = (checkRes?.rows || checkRes || []) as any[];
+      if (checkRows.length === 0) {
+        return res.status(404).json({ error: 'Payment not found' });
+      }
+    }
+    return res.json({ success: true });
+  } catch (err: any) {
+    console.error('dismiss payment error:', err);
+    return res.status(500).json({ error: err?.message || 'Failed to dismiss payment' });
+  }
+});
+
+// User-facing: undo a dismissal so the entry shows up again in the default list.
+router.post('/api/mint/my-payments/:id/restore', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isFinite(id) || id <= 0) {
+      return res.status(400).json({ error: 'Invalid payment id' });
+    }
+    const checkRes: any = await db.execute(sql`
+      SELECT id FROM nft_mint_payments WHERE id = ${id} AND user_id = ${userId} LIMIT 1
+    `);
+    const checkRows = (checkRes?.rows || checkRes || []) as any[];
+    if (checkRows.length === 0) {
+      return res.status(404).json({ error: 'Payment not found' });
+    }
+    await db.execute(sql`
+      UPDATE nft_mint_payments
+      SET dismissed_at = NULL
+      WHERE id = ${id} AND user_id = ${userId}
+    `);
+    return res.json({ success: true });
+  } catch (err: any) {
+    console.error('restore payment error:', err);
+    return res.status(500).json({ error: err?.message || 'Failed to restore payment' });
   }
 });
 
