@@ -1288,7 +1288,6 @@ export default function StorePage() {
           {/* Buy NFT Section */}
           {activeTab === "buy" && (
             <div className="space-y-6">
-              {user && walletMode === 'gamefolio' && <GamefolioActivityPanel />}
               <div className="mb-4 md:mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
