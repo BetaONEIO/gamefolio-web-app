@@ -2191,4 +2191,39 @@ adminRouter.post("/xp-config/seed", async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/admin/alerts - list recent admin alerts
+adminRouter.get("/alerts", async (req: Request, res: Response) => {
+  try {
+    const { listRecentAdminAlerts } = await import("../admin-alert-service");
+    const parsedLimit = parseInt(req.query.limit as string);
+    const limit = Math.max(1, Math.min(Number.isFinite(parsedLimit) ? parsedLimit : 50, 200));
+    const alerts = await listRecentAdminAlerts(limit);
+    res.json({ alerts });
+  } catch (err) {
+    console.error("Error fetching admin alerts:", err);
+    res.status(500).json({ message: "Error fetching admin alerts" });
+  }
+});
+
+// POST /api/admin/alerts/:id/resolve - mark an admin alert as resolved
+adminRouter.post("/alerts/:id/resolve", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ message: "Invalid alert id" });
+    }
+    const { resolveAdminAlert } = await import("../admin-alert-service");
+    const adminUserId = (req as any).user?.id;
+    if (!Number.isFinite(adminUserId)) {
+      return res.status(401).json({ message: "Authenticated admin required" });
+    }
+    const updated = await resolveAdminAlert(id, adminUserId);
+    if (!updated) return res.status(404).json({ message: "Alert not found" });
+    res.json({ alert: updated });
+  } catch (err) {
+    console.error("Error resolving admin alert:", err);
+    res.status(500).json({ message: "Error resolving admin alert" });
+  }
+});
+
 export default adminRouter;

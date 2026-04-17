@@ -1,4 +1,55 @@
 import { sendEmail } from './email-service';
+import { db } from './db';
+import { sql } from 'drizzle-orm';
+import { adminAlerts, type AdminAlert } from '@shared/schema';
+import { desc, eq } from 'drizzle-orm';
+
+const adminAlertsReady: Promise<void> = (async () => {
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS admin_alerts (
+        id SERIAL PRIMARY KEY,
+        subject TEXT NOT NULL,
+        message TEXT NOT NULL,
+        details JSON,
+        created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+        resolved_at TIMESTAMP,
+        resolved_by INTEGER
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS admin_alerts_created_at_idx ON admin_alerts (created_at)`);
+  } catch (err) {
+    console.error('Failed to create admin_alerts table:', err);
+  }
+})();
+
+async function persistAdminAlert(params: AdminAlertParams): Promise<void> {
+  try {
+    await adminAlertsReady;
+    await db.insert(adminAlerts).values({
+      subject: params.subject,
+      message: params.message,
+      details: params.details ?? null,
+    });
+  } catch (err) {
+    console.error('Admin alert: failed to persist alert row:', err);
+  }
+}
+
+export async function listRecentAdminAlerts(limit = 50): Promise<AdminAlert[]> {
+  await adminAlertsReady;
+  return db.select().from(adminAlerts).orderBy(desc(adminAlerts.createdAt)).limit(limit);
+}
+
+export async function resolveAdminAlert(id: number, resolvedBy: number): Promise<AdminAlert | null> {
+  await adminAlertsReady;
+  const [row] = await db
+    .update(adminAlerts)
+    .set({ resolvedAt: new Date(), resolvedBy })
+    .where(eq(adminAlerts.id, id))
+    .returning();
+  return row ?? null;
+}
 
 export interface AdminAlertParams {
   subject: string;
@@ -70,6 +121,8 @@ export async function sendAdminAlert(params: AdminAlertParams): Promise<{ slack:
   }
 
   console.error(`🚨 ADMIN ALERT: ${params.subject} — ${params.message}`, params.details || {});
+
+  await persistAdminAlert(params);
 
   const slackWebhook = process.env.ADMIN_ALERT_SLACK_WEBHOOK_URL;
   const adminEmail = process.env.ADMIN_ALERT_EMAIL;

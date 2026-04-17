@@ -1614,4 +1614,22 @@ export const userWallets = pgTable("user_wallets", {
 export type UserWallet = typeof userWallets.$inferSelect;
 export type InsertUserWallet = typeof userWallets.$inferInsert;
 
+// Admin alerts - persisted history of operational alerts (e.g. stuck mint
+// payments) so the admin dashboard has an in-app log instead of relying on
+// email/Slack only.
+export const adminAlerts = pgTable("admin_alerts", {
+  id: serial("id").primaryKey(),
+  subject: text("subject").notNull(),
+  message: text("message").notNull(),
+  details: json("details").$type<Record<string, unknown> | null>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: integer("resolved_by"),
+}, (table) => ({
+  createdAtIdx: index("admin_alerts_created_at_idx").on(table.createdAt),
+}));
+
+export type AdminAlert = typeof adminAlerts.$inferSelect;
+export type InsertAdminAlert = typeof adminAlerts.$inferInsert;
+
 export type XpSetting = typeof xpSettings.$inferSelect;

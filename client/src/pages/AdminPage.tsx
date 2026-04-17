@@ -1604,6 +1604,116 @@ const AdminGamesTab = () => {
   );
 };
 
+interface AdminAlertRow {
+  id: number;
+  subject: string;
+  message: string;
+  details: Record<string, unknown> | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  resolvedBy: number | null;
+}
+
+const AdminAlertsSection = () => {
+  const { toast } = useToast();
+  const [showResolved, setShowResolved] = useState(false);
+  const { data, isLoading } = useQuery<{ alerts: AdminAlertRow[] }>({
+    queryKey: ["/api/admin/alerts"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    refetchInterval: 30000,
+  });
+
+  const resolveAlert = async (id: number) => {
+    try {
+      await apiRequest("POST", `/api/admin/alerts/${id}/resolve`);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/alerts"] });
+      toast({ title: "Alert resolved" });
+    } catch (err: any) {
+      toast({ title: "Failed to resolve alert", description: err?.message || "", variant: "destructive" });
+    }
+  };
+
+  const alerts = (data?.alerts || []).filter((a) => showResolved || !a.resolvedAt);
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <div>
+          <CardTitle>Admin Alerts</CardTitle>
+          <CardDescription>
+            Recent operational alerts (e.g. stuck NFT mint payments). Mark as
+            resolved once you've investigated.
+          </CardDescription>
+        </div>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="show-resolved-alerts" className="text-sm">Show resolved</Label>
+          <Switch
+            id="show-resolved-alerts"
+            checked={showResolved}
+            onCheckedChange={setShowResolved}
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="text-sm text-muted-foreground">Loading alerts…</div>
+        ) : alerts.length === 0 ? (
+          <div className="text-sm text-muted-foreground">No alerts to show.</div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>When</TableHead>
+                <TableHead>Subject</TableHead>
+                <TableHead>Message</TableHead>
+                <TableHead>Details</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {alerts.map((a) => (
+                <TableRow key={a.id}>
+                  <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                    {new Date(a.createdAt).toLocaleString()}
+                  </TableCell>
+                  <TableCell className="font-medium max-w-xs">{a.subject}</TableCell>
+                  <TableCell className="max-w-md text-sm whitespace-pre-wrap">{a.message}</TableCell>
+                  <TableCell className="max-w-md">
+                    {a.details ? (
+                      <pre className="text-[11px] bg-muted/40 rounded p-2 overflow-auto max-h-40">
+                        {JSON.stringify(a.details, null, 2)}
+                      </pre>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {a.resolvedAt ? (
+                      <Badge variant="secondary">
+                        Resolved {new Date(a.resolvedAt).toLocaleDateString()}
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive">Open</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {!a.resolvedAt && (
+                      <Button size="sm" variant="outline" onClick={() => resolveAlert(a.id)}>
+                        Resolve
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
 const AdminPage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -2703,7 +2813,12 @@ const AdminPage = () => {
           <TabsTrigger value="pro-subscribers" className="text-xs px-3 py-1.5">Pro</TabsTrigger>
           <TabsTrigger value="settings" className="text-xs px-3 py-1.5">Settings</TabsTrigger>
           <TabsTrigger value="games" className="text-xs px-3 py-1.5">Games</TabsTrigger>
+          <TabsTrigger value="alerts" className="text-xs px-3 py-1.5">Alerts</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="alerts" className="space-y-4">
+          <AdminAlertsSection />
+        </TabsContent>
 
         {/* Dashboard Tab */}
         <TabsContent value="dashboard" className="space-y-4">
