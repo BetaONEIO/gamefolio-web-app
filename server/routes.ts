@@ -11272,20 +11272,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/token/balance", authMiddleware, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const user = await storage.getUser(userId);
+      const { getAggregatedGfBalance } = await import('./wallet-service');
+      const aggregated = await getAggregatedGfBalance(userId);
 
-      if (!user?.walletAddress) {
-        return res.status(404).json({ 
+      if (aggregated.perWallet.length === 0) {
+        return res.status(404).json({
           message: "No wallet found",
-          balance: "0"
+          balance: "0",
         });
       }
 
-      const balance = await getTokenBalance(user.walletAddress);
-      
       res.json({
-        balance,
-        walletAddress: user.walletAddress,
+        balance: aggregated.total,
+        walletAddress: aggregated.primaryAddress,
+        wallets: aggregated.perWallet,
         contractAddress: "0x9c4aC24c7bb36AA3772ccd5aCBCB48a20a1704B7",
       });
     } catch (error) {

@@ -24,15 +24,20 @@ const publicClient = createPublicClient({
   transport: http(),
 });
 
+// Throws on RPC failure. Use getOnChainGfBalanceSafe when a fallback to 0 is acceptable.
 export async function getOnChainGfBalance(address: string): Promise<bigint> {
+  const raw = await publicClient.readContract({
+    address: GF_TOKEN_ADDRESS,
+    abi: GF_TOKEN_ABI,
+    functionName: 'balanceOf',
+    args: [address as Address],
+  });
+  return raw as bigint;
+}
+
+export async function getOnChainGfBalanceSafe(address: string): Promise<bigint> {
   try {
-    const raw = await publicClient.readContract({
-      address: GF_TOKEN_ADDRESS,
-      abi: GF_TOKEN_ABI,
-      functionName: 'balanceOf',
-      args: [address as Address],
-    });
-    return raw as bigint;
+    return await getOnChainGfBalance(address);
   } catch (e) {
     console.error('[WalletService] balanceOf failed for', address, e);
     return 0n;
@@ -92,7 +97,7 @@ export async function getAggregatedGfBalance(
 
   const balances = await Promise.all(
     wallets.map(async (w) => {
-      const raw = await getOnChainGfBalance(w.address);
+      const raw = await getOnChainGfBalanceSafe(w.address);
       return { wallet: w, raw };
     }),
   );
@@ -207,7 +212,19 @@ export async function setPrimaryWallet(
   let sweepAmount: string | undefined;
 
   if (existingPrimary) {
-    const oldBalance = await getOnChainGfBalance(existingPrimary.address);
+    let oldBalance: bigint;
+    try {
+      // Fail closed: if we can't read the balance, do NOT switch — otherwise
+      // we could leave funds stranded on a wallet we believed was empty.
+      oldBalance = await getOnChainGfBalance(existingPrimary.address);
+    } catch (e: any) {
+      console.error('[WalletService] Could not read old wallet balance:', e);
+      return {
+        success: false,
+        error: 'Could not verify the balance on your current wallet right now. Please try again in a moment.',
+        oldWalletAddress: existingPrimary.address,
+      };
+    }
 
     if (oldBalance > 0n) {
       if (existingPrimary.isCustodial && existingPrimary.encryptedPrivateKey) {
