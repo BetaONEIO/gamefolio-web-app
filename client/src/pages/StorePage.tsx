@@ -40,6 +40,8 @@ import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from "@shared/co
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+import { useWallet } from "@/hooks/use-wallet";
 import { useTokenBalance } from "@/hooks/use-token";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 
@@ -165,6 +167,25 @@ export default function StorePage() {
   const chainId = useChainId();
   const { setOpenConnectModal } = useOpenConnectModal();
   const { data: tokenBalance } = useTokenBalance();
+  const { walletMode, setWalletMode } = useWallet();
+
+  const requireExternalWallet = (purchaseLabel: string): boolean => {
+    if (walletMode === 'gamefolio') {
+      toast({
+        title: "External wallet required",
+        description: `${purchaseLabel} currently requires an external wallet (MetaMask, Coinbase, etc.). Switch to External wallet mode to continue.`,
+        variant: "destructive",
+        action: (
+          <ToastAction altText="Switch to External" onClick={() => { setWalletMode('external'); setOpenConnectModal(true); }}>
+            Switch & Connect
+          </ToastAction>
+        ),
+      });
+      return false;
+    }
+    setOpenConnectModal(true);
+    return false;
+  };
 
   const [brokenNameTagImages, setBrokenNameTagImages] = useState<Set<number>>(new Set());
   const [brokenBorderImages, setBrokenBorderImages] = useState<Set<number>>(new Set());
@@ -289,8 +310,7 @@ export default function StorePage() {
       return;
     }
     if (!isConnected || !walletClient || !publicClient) {
-      setOpenConnectModal(true);
-      return;
+      if (!requireExternalWallet("Buying NFTs from the marketplace")) return;
     }
     if (chainId !== SKALE_CHAIN_ID) {
       toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
@@ -360,8 +380,7 @@ export default function StorePage() {
     }
 
     if (!isConnected || !walletClient || !publicClient) {
-      setOpenConnectModal(true);
-      return;
+      if (!requireExternalWallet("Buying store items")) return;
     }
 
     if (chainId !== SKALE_CHAIN_ID) {
@@ -439,8 +458,7 @@ export default function StorePage() {
   const handlePurchaseNameTagOnChain = async (nameTagId: number) => {
     if (!user) { openModal(); return; }
     if (!isConnected || !walletClient || !publicClient) {
-      setOpenConnectModal(true);
-      return;
+      if (!requireExternalWallet("Buying name tags")) return;
     }
     if (chainId !== SKALE_CHAIN_ID) {
       toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
@@ -497,8 +515,7 @@ export default function StorePage() {
   const handlePurchaseBorderOnChain = async (borderId: number) => {
     if (!user) { openModal(); return; }
     if (!isConnected || !walletClient || !publicClient) {
-      setOpenConnectModal(true);
-      return;
+      if (!requireExternalWallet("Buying borders")) return;
     }
     if (chainId !== SKALE_CHAIN_ID) {
       toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });

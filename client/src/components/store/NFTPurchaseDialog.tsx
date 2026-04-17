@@ -325,13 +325,12 @@ export function NFTPurchaseDialog({
                 <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-[17px] flex flex-col gap-4">
                   {/* Wallet mode picker */}
                   <RadioGroup
-                    value={walletMode}
-                    onValueChange={(v) => setWalletMode(v as 'auto' | 'gamefolio' | 'external')}
-                    className="grid grid-cols-3 gap-2"
+                    value={walletMode === 'auto' ? 'gamefolio' : walletMode}
+                    onValueChange={(v) => setWalletMode(v as 'gamefolio' | 'external')}
+                    className="grid grid-cols-2 gap-2"
                     data-testid="wallet-mode-picker"
                   >
                     {[
-                      { val: 'auto', label: 'Auto' },
                       { val: 'gamefolio', label: 'Gamefolio' },
                       { val: 'external', label: 'External' },
                     ].map((opt) => (
