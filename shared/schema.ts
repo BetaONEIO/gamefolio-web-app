@@ -1701,11 +1701,22 @@ export type InsertUserWallet = typeof userWallets.$inferInsert;
 // Admin alerts - persisted history of operational alerts (e.g. stuck mint
 // payments) so the admin dashboard has an in-app log instead of relying on
 // email/Slack only.
+export interface AlertDeliveryAttempt {
+  target: string;
+  ok: boolean;
+}
+
+export interface AlertDeliveryLog {
+  emails: AlertDeliveryAttempt[];
+  slack: AlertDeliveryAttempt[];
+}
+
 export const adminAlerts = pgTable("admin_alerts", {
   id: serial("id").primaryKey(),
   subject: text("subject").notNull(),
   message: text("message").notNull(),
   details: json("details").$type<Record<string, unknown> | null>(),
+  deliveries: json("deliveries").$type<AlertDeliveryLog | null>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   resolvedAt: timestamp("resolved_at"),
   resolvedBy: integer("resolved_by"),

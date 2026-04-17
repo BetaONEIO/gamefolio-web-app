@@ -1605,14 +1605,72 @@ const AdminGamesTab = () => {
   );
 };
 
+interface AlertDeliveryAttempt {
+  target: string;
+  ok: boolean;
+}
+
+interface AlertDeliveryLog {
+  emails: AlertDeliveryAttempt[];
+  slack: AlertDeliveryAttempt[];
+}
+
 interface AdminAlertRow {
   id: number;
   subject: string;
   message: string;
   details: Record<string, unknown> | null;
+  deliveries: AlertDeliveryLog | null;
   createdAt: string;
   resolvedAt: string | null;
   resolvedBy: number | null;
+}
+
+function maskWebhook(url: string): string {
+  try {
+    const u = new URL(url);
+    const tail = u.pathname.split("/").filter(Boolean).pop() || "";
+    return `${u.host}/…/${tail.slice(-6)}`;
+  } catch {
+    return url.length > 40 ? `${url.slice(0, 20)}…${url.slice(-10)}` : url;
+  }
+}
+
+function DeliveryList({ deliveries }: { deliveries: AlertDeliveryLog | null }) {
+  if (!deliveries) {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+  const rows: { kind: "email" | "slack"; target: string; ok: boolean }[] = [
+    ...deliveries.emails.map((d) => ({ kind: "email" as const, target: d.target, ok: d.ok })),
+    ...deliveries.slack.map((d) => ({ kind: "slack" as const, target: d.target, ok: d.ok })),
+  ];
+  if (rows.length === 0) {
+    return <span className="text-xs text-muted-foreground">No destinations</span>;
+  }
+  return (
+    <div className="space-y-1">
+      {rows.map((r, i) => (
+        <div
+          key={`${r.kind}-${r.target}-${i}`}
+          className="flex items-center gap-1 text-xs"
+          data-testid={`delivery-${r.kind}-${r.ok ? "ok" : "fail"}`}
+        >
+          <Badge variant="outline" className="text-[10px] px-1 py-0">
+            {r.kind === "email" ? "email" : "slack"}
+          </Badge>
+          <span className="truncate max-w-[180px] font-mono" title={r.target}>
+            {r.kind === "slack" ? maskWebhook(r.target) : r.target}
+          </span>
+          <Badge
+            variant={r.ok ? "secondary" : "destructive"}
+            className="text-[10px] px-1 py-0"
+          >
+            {r.ok ? "delivered" : "failed"}
+          </Badge>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 const AdminAlertsSection = () => {
@@ -1668,6 +1726,7 @@ const AdminAlertsSection = () => {
                 <TableHead>Subject</TableHead>
                 <TableHead>Message</TableHead>
                 <TableHead>Details</TableHead>
+                <TableHead>Deliveries</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Action</TableHead>
               </TableRow>
@@ -1688,6 +1747,9 @@ const AdminAlertsSection = () => {
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
+                  </TableCell>
+                  <TableCell className="max-w-xs" data-testid={`cell-deliveries-${a.id}`}>
+                    <DeliveryList deliveries={a.deliveries} />
                   </TableCell>
                   <TableCell>
                     {a.resolvedAt ? (

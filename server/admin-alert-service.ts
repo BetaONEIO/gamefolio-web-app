@@ -2,7 +2,7 @@ import { sendEmail } from './email-service';
 import { storage } from './storage';
 import { db } from './db';
 import { sql } from 'drizzle-orm';
-import { adminAlerts, type AdminAlert, type AlertRoutingRule } from '@shared/schema';
+import { adminAlerts, type AdminAlert, type AlertRoutingRule, type AlertDeliveryLog } from '@shared/schema';
 import { desc, eq } from 'drizzle-orm';
 
 export interface AdminAlertParams {
@@ -50,6 +50,7 @@ const adminAlertsReady: Promise<void> = (async () => {
       )
     `);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS admin_alerts_created_at_idx ON admin_alerts (created_at)`);
+    await db.execute(sql`ALTER TABLE IF EXISTS admin_alerts ADD COLUMN IF NOT EXISTS deliveries JSON`);
     // Ensure the per-type routing rules column exists on the settings table.
     // (The settings table itself is managed via drizzle-kit; this ALTER is idempotent.)
     await db.execute(sql`
@@ -72,19 +73,29 @@ const adminAlertSettingsReady: Promise<void> = (async () => {
   }
 })();
 
-async function persistAdminAlert(params: AdminAlertParams): Promise<void> {
+async function persistAdminAlert(params: AdminAlertParams): Promise<number | null> {
   try {
     await adminAlertsReady;
     const detailsWithType = params.type
       ? { ...(params.details ?? {}), alertType: params.type }
       : params.details ?? null;
-    await db.insert(adminAlerts).values({
+    const [row] = await db.insert(adminAlerts).values({
       subject: params.subject,
       message: params.message,
       details: detailsWithType,
-    });
+    }).returning({ id: adminAlerts.id });
+    return row?.id ?? null;
   } catch (err) {
     console.error('Admin alert: failed to persist alert row:', err);
+    return null;
+  }
+}
+
+async function recordAlertDeliveries(id: number, deliveries: AlertDeliveryLog): Promise<void> {
+  try {
+    await db.update(adminAlerts).set({ deliveries }).where(eq(adminAlerts.id, id));
+  } catch (err) {
+    console.error('Admin alert: failed to record delivery results:', err);
   }
 }
 
@@ -323,7 +334,7 @@ export async function sendAdminAlert(params: AdminAlertParams): Promise<AdminAle
   const alertType = params.type || 'general';
   console.error(`🚨 ADMIN ALERT [${alertType}]: ${params.subject} — ${params.message}`, params.details || {});
 
-  await persistAdminAlert(params);
+  const persistedId = await persistAdminAlert(params);
 
   const { emails, slackWebhooks, smsNumbers, pagerDutyKey } = await resolveDestinations(alertType);
 
@@ -344,6 +355,15 @@ export async function sendAdminAlert(params: AdminAlertParams): Promise<AdminAle
     Promise.all(smsTasks),
     pagerDutyTask,
   ]);
+
+  const deliveries: AlertDeliveryLog = {
+    emails: emails.map((target, i) => ({ target, ok: !!emailResults[i] })),
+    slack: slackWebhooks.map((target, i) => ({ target, ok: !!slackResults[i] })),
+  };
+
+  if (persistedId != null) {
+    await recordAlertDeliveries(persistedId, deliveries);
+  }
 
   return {
     slack: slackResults.some((r) => r),
