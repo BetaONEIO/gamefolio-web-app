@@ -53,7 +53,9 @@ import {
   type InsertScreenshot as InsertScreenshotData,
   type ScreenshotComment, type InsertScreenshotComment,
   type ScreenshotCommentWithUser,
-  type XpSetting, type InsertXpSetting
+  type XpSetting, type InsertXpSetting,
+  adminAlertSettings,
+  type AdminAlertSettings, type InsertAdminAlertSettings
 } from "@shared/schema";
 
 export interface IStorage {
@@ -321,6 +323,10 @@ export interface IStorage {
   getBannerSettings(): Promise<BannerSettings | null>;
   updateBannerSettings(settings: Partial<BannerSettings>): Promise<BannerSettings | null>;
   createBannerSettings(settings: InsertBannerSettings): Promise<BannerSettings>;
+
+  // Admin alert destination settings
+  getAdminAlertSettings(): Promise<AdminAlertSettings | null>;
+  upsertAdminAlertSettings(settings: InsertAdminAlertSettings): Promise<AdminAlertSettings>;
 
   // Screenshot operations
   getScreenshot(id: number): Promise<Screenshot | null>;

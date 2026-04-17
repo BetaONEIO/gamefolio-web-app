@@ -1,8 +1,34 @@
 import { sendEmail } from './email-service';
+import { storage } from './storage';
 import { db } from './db';
 import { sql } from 'drizzle-orm';
 import { adminAlerts, type AdminAlert } from '@shared/schema';
 import { desc, eq } from 'drizzle-orm';
+
+export interface AdminAlertParams {
+  subject: string;
+  message: string;
+  details?: Record<string, unknown>;
+  dedupeKey?: string;
+  dedupeWindowMs?: number;
+}
+
+const DEFAULT_DEDUPE_WINDOW_MS = 10 * 60 * 1000;
+const recentAlerts = new Map<string, number>();
+
+function shouldSuppress(key: string, windowMs: number): boolean {
+  const now = Date.now();
+  const last = recentAlerts.get(key);
+  if (last && now - last < windowMs) return true;
+  recentAlerts.set(key, now);
+  if (recentAlerts.size > 500) {
+    const cutoff = now - windowMs;
+    for (const [k, t] of recentAlerts) {
+      if (t < cutoff) recentAlerts.delete(k);
+    }
+  }
+  return false;
+}
 
 const adminAlertsReady: Promise<void> = (async () => {
   try {
@@ -51,31 +77,6 @@ export async function resolveAdminAlert(id: number, resolvedBy: number): Promise
   return row ?? null;
 }
 
-export interface AdminAlertParams {
-  subject: string;
-  message: string;
-  details?: Record<string, unknown>;
-  dedupeKey?: string;
-  dedupeWindowMs?: number;
-}
-
-const DEFAULT_DEDUPE_WINDOW_MS = 10 * 60 * 1000;
-const recentAlerts = new Map<string, number>();
-
-function shouldSuppress(key: string, windowMs: number): boolean {
-  const now = Date.now();
-  const last = recentAlerts.get(key);
-  if (last && now - last < windowMs) return true;
-  recentAlerts.set(key, now);
-  if (recentAlerts.size > 500) {
-    const cutoff = now - windowMs;
-    for (const [k, t] of recentAlerts) {
-      if (t < cutoff) recentAlerts.delete(k);
-    }
-  }
-  return false;
-}
-
 function formatDetailsAsText(details?: Record<string, unknown>): string {
   if (!details) return '';
   return Object.entries(details)
@@ -94,7 +95,7 @@ function formatDetailsAsHtml(details?: Record<string, unknown>): string {
   return `<table style="border-collapse:collapse;margin-top:12px;">${rows}</table>`;
 }
 
-async function postSlack(webhook: string, subject: string, message: string, details?: Record<string, unknown>): Promise<boolean> {
+export async function postSlack(webhook: string, subject: string, message: string, details?: Record<string, unknown>): Promise<boolean> {
   try {
     const text = `*${subject}*\n${message}${details ? '\n```\n' + formatDetailsAsText(details) + '\n```' : ''}`;
     const res = await fetch(webhook, {
@@ -113,6 +114,60 @@ async function postSlack(webhook: string, subject: string, message: string, deta
   }
 }
 
+export async function sendAdminEmail(to: string, subject: string, message: string, details?: Record<string, unknown>): Promise<boolean> {
+  const html = `<p>${message.replace(/\n/g, '<br>')}</p>${formatDetailsAsHtml(details)}`;
+  try {
+    return await sendEmail({
+      to,
+      subject: `[Gamefolio Admin] ${subject}`,
+      html,
+    });
+  } catch (err) {
+    console.error('Admin alert: email send failed:', err);
+    return false;
+  }
+}
+
+interface ResolvedDestinations {
+  emails: string[];
+  slackWebhooks: string[];
+}
+
+async function resolveDestinations(): Promise<ResolvedDestinations> {
+  let configuredEmails: string[] = [];
+  let configuredWebhooks: string[] = [];
+  let useEnvFallback = true;
+
+  try {
+    const settings = await storage.getAdminAlertSettings();
+    if (settings) {
+      configuredEmails = settings.emailRecipients || [];
+      configuredWebhooks = settings.slackWebhooks || [];
+      useEnvFallback = settings.useEnvFallback ?? true;
+    }
+  } catch (err) {
+    console.error('Admin alert: failed to load configured destinations, falling back to env:', err);
+  }
+
+  const envEmail = process.env.ADMIN_ALERT_EMAIL;
+  const envWebhook = process.env.ADMIN_ALERT_SLACK_WEBHOOK_URL;
+
+  const hasConfigured = configuredEmails.length > 0 || configuredWebhooks.length > 0;
+  const includeEnv = useEnvFallback || !hasConfigured;
+
+  const emails = new Set<string>(configuredEmails);
+  const slackWebhooks = new Set<string>(configuredWebhooks);
+  if (includeEnv) {
+    if (envEmail) emails.add(envEmail);
+    if (envWebhook) slackWebhooks.add(envWebhook);
+  }
+
+  return {
+    emails: Array.from(emails),
+    slackWebhooks: Array.from(slackWebhooks),
+  };
+}
+
 export async function sendAdminAlert(params: AdminAlertParams): Promise<{ slack: boolean; email: boolean; suppressed: boolean }> {
   const dedupeKey = params.dedupeKey || params.subject;
   const dedupeWindow = params.dedupeWindowMs ?? DEFAULT_DEDUPE_WINDOW_MS;
@@ -124,32 +179,23 @@ export async function sendAdminAlert(params: AdminAlertParams): Promise<{ slack:
 
   await persistAdminAlert(params);
 
-  const slackWebhook = process.env.ADMIN_ALERT_SLACK_WEBHOOK_URL;
-  const adminEmail = process.env.ADMIN_ALERT_EMAIL;
+  const { emails, slackWebhooks } = await resolveDestinations();
 
-  const tasks: Promise<boolean>[] = [];
-  if (slackWebhook) {
-    tasks.push(postSlack(slackWebhook, params.subject, params.message, params.details));
-  } else {
-    tasks.push(Promise.resolve(false));
-  }
+  const slackTasks = slackWebhooks.map((url) =>
+    postSlack(url, params.subject, params.message, params.details),
+  );
+  const emailTasks = emails.map((to) =>
+    sendAdminEmail(to, params.subject, params.message, params.details),
+  );
 
-  if (adminEmail) {
-    const html = `<p>${params.message.replace(/\n/g, '<br>')}</p>${formatDetailsAsHtml(params.details)}`;
-    tasks.push(
-      sendEmail({
-        to: adminEmail,
-        subject: `[Gamefolio Admin] ${params.subject}`,
-        html,
-      }).catch((err) => {
-        console.error('Admin alert: email send failed:', err);
-        return false;
-      }),
-    );
-  } else {
-    tasks.push(Promise.resolve(false));
-  }
+  const [slackResults, emailResults] = await Promise.all([
+    Promise.all(slackTasks),
+    Promise.all(emailTasks),
+  ]);
 
-  const [slack, email] = await Promise.all(tasks);
-  return { slack, email, suppressed: false };
+  return {
+    slack: slackResults.some((r) => r),
+    email: emailResults.some((r) => r),
+    suppressed: false,
+  };
 }

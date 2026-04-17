@@ -645,6 +645,29 @@ export const bannerSettings = pgTable("banner_settings", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Admin alert destination settings (email + Slack webhook routing)
+export const adminAlertSettings = pgTable("admin_alert_settings", {
+  id: serial("id").primaryKey(),
+  emailRecipients: text("email_recipients").array().notNull().default([] as unknown as string[]),
+  slackWebhooks: text("slack_webhooks").array().notNull().default([] as unknown as string[]),
+  useEnvFallback: boolean("use_env_fallback").default(true).notNull(),
+  updatedBy: integer("updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertAdminAlertSettingsSchema = createInsertSchema(adminAlertSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  emailRecipients: z.array(z.string().email("Invalid email")).max(50, "Maximum 50 recipients"),
+  slackWebhooks: z.array(z.string().url("Invalid URL").startsWith("https://", "Webhook must be HTTPS")).max(20, "Maximum 20 webhooks"),
+});
+
+export type AdminAlertSettings = typeof adminAlertSettings.$inferSelect;
+export type InsertAdminAlertSettings = z.infer<typeof insertAdminAlertSettingsSchema>;
+
 // User uploaded banners table for banner history
 export const uploadedBanners = pgTable("uploaded_banners", {
   id: serial("id").primaryKey(),

@@ -85,6 +85,7 @@ import {
   bannedWords,
   heroTextSettings,
   bannerSettings,
+  adminAlertSettings,
   uploadedBanners,
   clipMentions,
   nftWatchlist,
@@ -4622,6 +4623,34 @@ export class DatabaseStorage implements IStorage {
       console.error('Error updating banner settings:', error);
       return null;
     }
+  }
+
+  // Admin alert destination settings
+  async getAdminAlertSettings(): Promise<AdminAlertSettings | null> {
+    try {
+      const [settings] = await db.select().from(adminAlertSettings).limit(1);
+      return settings || null;
+    } catch (error) {
+      console.error('Error fetching admin alert settings:', error);
+      return null;
+    }
+  }
+
+  async upsertAdminAlertSettings(settings: InsertAdminAlertSettings): Promise<AdminAlertSettings> {
+    const existing = await this.getAdminAlertSettings();
+    if (existing) {
+      const [updated] = await db
+        .update(adminAlertSettings)
+        .set({ ...settings, updatedAt: new Date() })
+        .where(eq(adminAlertSettings.id, existing.id))
+        .returning();
+      return updated;
+    }
+    const [created] = await db
+      .insert(adminAlertSettings)
+      .values(settings)
+      .returning();
+    return created;
   }
 
   // Asset reward operations

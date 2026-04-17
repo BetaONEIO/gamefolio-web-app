@@ -7,7 +7,8 @@ import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
 import { ContentFilterService } from '../services/content-filter';
-import { insertBannerSettingsSchema, insertAssetRewardSchema, insertHeroSlideSchema, heroSlides } from '@shared/schema';
+import { insertBannerSettingsSchema, insertAssetRewardSchema, insertHeroSlideSchema, heroSlides, insertAdminAlertSettingsSchema } from '@shared/schema';
+import { sendAdminAlert, postSlack, sendAdminEmail } from '../admin-alert-service';
 import { POINT_VALUES, XP_SETTINGS_DEFINITION, updatePointValue } from '../leaderboard-service';
 import { z } from 'zod';
 import { supabaseStorage } from '../supabase-storage';
@@ -1226,6 +1227,76 @@ adminRouter.post("/banner-settings/reset", async (req: Request, res: Response) =
   } catch (err) {
     console.error("Error resetting banner settings:", err);
     res.status(500).json({ message: "Error resetting banner settings" });
+  }
+});
+
+// GET /api/admin/alert-settings - Fetch admin alert destinations
+adminRouter.get("/alert-settings", async (_req: Request, res: Response) => {
+  try {
+    const settings = await storage.getAdminAlertSettings();
+    res.json({
+      emailRecipients: settings?.emailRecipients ?? [],
+      slackWebhooks: settings?.slackWebhooks ?? [],
+      useEnvFallback: settings?.useEnvFallback ?? true,
+      envEmail: process.env.ADMIN_ALERT_EMAIL || null,
+      envSlackWebhookConfigured: !!process.env.ADMIN_ALERT_SLACK_WEBHOOK_URL,
+      updatedAt: settings?.updatedAt ?? null,
+    });
+  } catch (err) {
+    console.error("Error fetching alert settings:", err);
+    res.status(500).json({ message: "Error fetching alert settings" });
+  }
+});
+
+// PUT /api/admin/alert-settings - Update admin alert destinations
+adminRouter.put("/alert-settings", async (req: Request, res: Response) => {
+  try {
+    const parsed = insertAdminAlertSettingsSchema.parse({
+      emailRecipients: req.body.emailRecipients ?? [],
+      slackWebhooks: req.body.slackWebhooks ?? [],
+      useEnvFallback: req.body.useEnvFallback ?? true,
+      updatedBy: req.user!.id,
+    });
+    const updated = await storage.upsertAdminAlertSettings(parsed);
+    res.json(updated);
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ message: "Invalid alert settings", errors: err.errors });
+    }
+    console.error("Error updating alert settings:", err);
+    res.status(500).json({ message: "Error updating alert settings" });
+  }
+});
+
+// POST /api/admin/alert-settings/test - Send a test alert to a single destination
+adminRouter.post("/alert-settings/test", async (req: Request, res: Response) => {
+  try {
+    const schema = z.object({
+      channel: z.enum(["email", "slack"]),
+      target: z.string().min(1),
+    });
+    const { channel, target } = schema.parse(req.body);
+
+    const subject = "Test alert";
+    const message = `This is a test alert sent by ${req.user!.username} at ${new Date().toISOString()}.`;
+
+    if (channel === "email") {
+      const ok = z.string().email().safeParse(target);
+      if (!ok.success) return res.status(400).json({ message: "Invalid email address" });
+      const success = await sendAdminEmail(target, subject, message);
+      return res.json({ success });
+    } else {
+      const ok = z.string().url().startsWith("https://").safeParse(target);
+      if (!ok.success) return res.status(400).json({ message: "Webhook must be an HTTPS URL" });
+      const success = await postSlack(target, subject, message);
+      return res.json({ success });
+    }
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ message: "Invalid request", errors: err.errors });
+    }
+    console.error("Error sending test alert:", err);
+    res.status(500).json({ message: "Error sending test alert" });
   }
 });
 
