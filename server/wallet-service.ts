@@ -2,9 +2,9 @@ import { db } from './db';
 import { users, userWallets } from '@shared/schema';
 import { and, eq } from 'drizzle-orm';
 import { decryptPrivateKey } from './wallet-crypto';
+import { writeContractWithPoW, publicClient as skalePublicClient } from './skale-pow';
 import {
   createPublicClient,
-  createWalletClient,
   http,
   formatUnits,
   type Address,
@@ -140,32 +140,29 @@ async function sweepCustodialBalance(
   toAddress: string,
   amount: bigint,
 ): Promise<string> {
+  // Verify the stored key actually controls the wallet we're sweeping from.
   const privateKey = decryptPrivateKey(fromEncryptedKey);
   const formattedKey = (privateKey.startsWith('0x')
     ? privateKey
     : `0x${privateKey}`) as `0x${string}`;
   const account = privateKeyToAccount(formattedKey);
-
   if (account.address.toLowerCase() !== fromAddress.toLowerCase()) {
     throw new Error(
       'Stored private key does not match wallet address; refusing to sweep.',
     );
   }
 
-  const walletClient = createWalletClient({
-    account,
-    chain: SKALE_BASE_MAINNET,
-    transport: http(),
-  });
-
-  const hash = await walletClient.writeContract({
-    address: GF_TOKEN_ADDRESS as Address,
+  // writeContractWithPoW handles sFUEL gas top-up from treasury before
+  // submitting the transfer.
+  const hash = await writeContractWithPoW({
+    encryptedPrivateKey: fromEncryptedKey,
+    contractAddress: GF_TOKEN_ADDRESS as Address,
     abi: GF_TOKEN_ABI,
     functionName: 'transfer',
     args: [toAddress as Address, amount],
   });
 
-  const receipt = await publicClient.waitForTransactionReceipt({
+  const receipt = await skalePublicClient.waitForTransactionReceipt({
     hash,
     timeout: 90_000,
   });

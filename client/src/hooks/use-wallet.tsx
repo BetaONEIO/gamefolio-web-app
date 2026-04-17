@@ -86,9 +86,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         .then(({ ok, data }) => {
           if (ok) {
             if (data?.sweepAmount) {
+              const txShort = data?.sweepTxHash
+                ? ` (tx ${String(data.sweepTxHash).slice(0, 10)}…)`
+                : '';
               toast({
                 title: 'Wallet linked',
-                description: `${data.sweepAmount} GFT was moved over from your previous wallet.`,
+                description: `${data.sweepAmount} GFT was moved over from your previous wallet${txShort}.`,
                 variant: 'gamefolioSuccess',
               });
             }

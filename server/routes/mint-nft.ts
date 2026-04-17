@@ -319,25 +319,38 @@ router.post('/api/mint/regenerate-wallet', async (req: Request, res: Response) =
     }
 
     const { ethers } = await import('ethers');
+    const { setPrimaryWallet } = await import('../wallet-service');
     const wallet = ethers.Wallet.createRandom();
     const newAddress = wallet.address.toLowerCase();
 
-    await db
-      .update(users)
-      .set({
-        walletAddress: newAddress,
-        walletChain: 'skale-nebula-testnet',
-        walletCreatedAt: new Date(),
-        encryptedPrivateKey: encryptPrivateKey(wallet.privateKey),
-      })
-      .where(eq(users.id, userId));
+    const result = await setPrimaryWallet({
+      userId,
+      newAddress,
+      isCustodial: true,
+      newEncryptedPrivateKey: encryptPrivateKey(wallet.privateKey),
+    });
+
+    if (!result.success) {
+      return res.status(409).json({
+        success: false,
+        error: result.error,
+        needsManualMove: result.needsManualMove,
+        oldWalletAddress: result.oldWalletAddress,
+        oldWalletBalance: result.oldWalletBalance,
+      });
+    }
 
     console.log(`Wallet regenerated for user ${userId}: ${newAddress}`);
 
     return res.json({
       success: true,
       address: newAddress,
-      message: 'Wallet regenerated successfully',
+      message: result.sweepTxHash
+        ? `Wallet regenerated. ${result.sweepAmount} GFT moved from previous wallet.`
+        : 'Wallet regenerated successfully',
+      sweepTxHash: result.sweepTxHash,
+      sweepAmount: result.sweepAmount,
+      previousWalletAddress: result.oldWalletAddress,
     });
   } catch (error: any) {
     console.error('Wallet regeneration error:', error);
