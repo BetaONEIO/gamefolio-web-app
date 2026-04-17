@@ -1542,6 +1542,36 @@ export const insertStorePurchaseSchema = createInsertSchema(storePurchases).omit
 export type InsertStorePurchase = z.infer<typeof insertStorePurchaseSchema>;
 export type StorePurchase = typeof storePurchases.$inferSelect;
 
+// Tracking table for server-signed (Gamefolio custodial wallet) purchases.
+// Covers store items, name tags, borders, and marketplace NFTs so a single
+// reconciler can recover from crashes and refund failed attempts.
+export const gamefolioPurchases = pgTable("gamefolio_purchases", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }).notNull(),
+  // 'store_item' | 'name_tag' | 'border' | 'marketplace_nft'
+  purchaseType: text("purchase_type").notNull(),
+  // store_items.id, name_tags.id, profile_borders.id, or NFT tokenId
+  itemRefId: integer("item_ref_id").notNull(),
+  // For marketplace_nft: the seller user id (so payout can be retried).
+  sellerId: integer("seller_id"),
+  walletAddress: text("wallet_address").notNull(),
+  gfAmount: real("gf_amount").notNull(),
+  // pending | tx_sent | completed | failed | refunded | refund_failed
+  status: text("status").notNull().default("pending"),
+  txHash: text("tx_hash"),
+  payoutTxHash: text("payout_tx_hash"),
+  refundTxHash: text("refund_tx_hash"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+}, (table) => ({
+  userIdx: index("gamefolio_purchases_user_idx").on(table.userId),
+  statusIdx: index("gamefolio_purchases_status_idx").on(table.status),
+}));
+
+export type GamefolioPurchase = typeof gamefolioPurchases.$inferSelect;
+
 export const heroSlides = pgTable("hero_slides", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),

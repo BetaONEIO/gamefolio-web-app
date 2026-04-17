@@ -139,6 +139,92 @@ function MarketplaceNftImage({ tokenId }: { tokenId: number }) {
   );
 }
 
+interface GamefolioActivityRow {
+  id: string;
+  purchaseType: string;
+  itemRefId: number;
+  status: string;
+  txHash: string | null;
+  payoutTxHash: string | null;
+  refundTxHash: string | null;
+  gfAmount: number;
+  errorMessage: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  store_item: "Store item",
+  name_tag: "Name tag",
+  border: "Border",
+  marketplace_nft: "NFT",
+};
+
+const STATUS_STYLES: Record<string, string> = {
+  pending: "bg-yellow-500/20 text-yellow-300 border-yellow-500/40",
+  tx_sent: "bg-blue-500/20 text-blue-300 border-blue-500/40",
+  completed: "bg-green-500/20 text-green-300 border-green-500/40",
+  failed: "bg-red-500/20 text-red-300 border-red-500/40",
+  refunded: "bg-orange-500/20 text-orange-300 border-orange-500/40",
+  refund_failed: "bg-red-700/30 text-red-200 border-red-700/50",
+};
+
+function GamefolioActivityPanel() {
+  const { data: rows = [], isLoading } = useQuery<GamefolioActivityRow[]>({
+    queryKey: ["/api/store/gamefolio-activity"],
+    queryFn: async () => {
+      const res = await fetch("/api/store/gamefolio-activity", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load activity");
+      return res.json();
+    },
+    refetchInterval: (q) => {
+      const data = q.state.data as GamefolioActivityRow[] | undefined;
+      const stillPending = data?.some(r => r.status === 'pending' || r.status === 'tx_sent');
+      return stillPending ? 5000 : 30000;
+    },
+  });
+
+  if (isLoading) return null;
+  if (!rows || rows.length === 0) return null;
+
+  return (
+    <Card className="bg-gray-900/60 border-gray-800 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Wallet className="h-4 w-4 text-green-400" />
+          <h3 className="text-sm font-semibold text-white">Recent Wallet Activity</h3>
+        </div>
+        <span className="text-xs text-gray-500">Gamefolio wallet</span>
+      </div>
+      <div className="space-y-2 max-h-64 overflow-y-auto">
+        {rows.slice(0, 8).map((r) => {
+          const label = ACTIVITY_LABELS[r.purchaseType] || r.purchaseType;
+          const statusClass = STATUS_STYLES[r.status] || "bg-gray-500/20 text-gray-300 border-gray-500/40";
+          return (
+            <div key={r.id} className="flex items-center justify-between gap-3 p-2 rounded-md bg-gray-800/40 border border-gray-800/60 text-xs">
+              <div className="flex flex-col min-w-0">
+                <span className="text-white truncate">{label} #{r.itemRefId} — {Number(r.gfAmount).toFixed(0)} GFT</span>
+                <span className="text-gray-500 truncate">
+                  {new Date(r.createdAt).toLocaleString()}
+                  {r.txHash && (
+                    <> · tx <span className="font-mono">{r.txHash.slice(0, 8)}…{r.txHash.slice(-4)}</span></>
+                  )}
+                  {r.errorMessage && r.status !== 'completed' && (
+                    <> · {r.errorMessage.slice(0, 80)}</>
+                  )}
+                </span>
+              </div>
+              <span className={`px-2 py-0.5 rounded-full border text-[10px] uppercase tracking-wide whitespace-nowrap ${statusClass}`}>
+                {r.status.replace(/_/g, ' ')}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
 export default function StorePage() {
   const { user } = useAuth();
   const { wallet } = useCrossmint();
@@ -309,6 +395,27 @@ export default function StorePage() {
       openModal();
       return;
     }
+
+    // Gamefolio (custodial) wallet path — server signs with user's stored key.
+    if (walletMode === 'gamefolio') {
+      setBuyingTokenId(tokenId);
+      try {
+        toast({ title: "Processing purchase...", description: "Sending GFT from your Gamefolio wallet" });
+        const data: any = await apiRequest("POST", "/api/marketplace/server-buy", { tokenId, sellerId });
+        toast({ title: "NFT Purchased!", description: data?.message || "Purchase complete" });
+        queryClient.invalidateQueries({ queryKey: ["/api/marketplace/listings"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/nfts/owned"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/token/balance"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/store/gamefolio-activity"] });
+      } catch (error: any) {
+        toast({ title: "Purchase Failed", description: error?.message || "Transaction failed", variant: "destructive" });
+      } finally {
+        setBuyingTokenId(null);
+      }
+      return;
+    }
+
     if (!isConnected || !walletClient || !publicClient) {
       if (!requireExternalWallet("Buying NFTs from the marketplace")) return;
     }
@@ -376,6 +483,30 @@ export default function StorePage() {
   const handlePurchaseWithGF = async (item: StoreItem) => {
     if (!user) {
       openModal();
+      return;
+    }
+
+    if (ownedItemIds.has(item.id)) {
+      toast({ title: "Already owned", description: "You already own this item", variant: "destructive" });
+      return;
+    }
+
+    if (walletMode === 'gamefolio') {
+      setPurchasingItemId(item.id);
+      try {
+        toast({ title: "Processing purchase...", description: `Sending GFT from your Gamefolio wallet` });
+        const data: any = await apiRequest("POST", "/api/store/server-purchase", { itemId: item.id });
+        toast({ title: "Item unlocked!", description: `You now own ${item.name}` });
+        refetchOwned();
+        queryClient.invalidateQueries({ queryKey: ["/api/store/owned"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/token/balance"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/store/gamefolio-activity"] });
+      } catch (error: any) {
+        toast({ title: "Purchase failed", description: error?.message || "Transaction failed", variant: "destructive" });
+      } finally {
+        setPurchasingItemId(null);
+      }
       return;
     }
 
@@ -457,6 +588,25 @@ export default function StorePage() {
 
   const handlePurchaseNameTagOnChain = async (nameTagId: number) => {
     if (!user) { openModal(); return; }
+
+    if (walletMode === 'gamefolio') {
+      setPurchasingNameTagId(nameTagId);
+      try {
+        toast({ title: "Processing purchase...", description: "Sending GFT from your Gamefolio wallet" });
+        const data: any = await apiRequest("POST", "/api/store/server-name-tag-purchase", { nameTagId });
+        toast({ title: "Name tag unlocked!", description: data?.message || "You now own this name tag" });
+        queryClient.invalidateQueries({ queryKey: ["/api/store/name-tags"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/user/name-tags"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/token/balance"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/store/gamefolio-activity"] });
+      } catch (error: any) {
+        toast({ title: "Purchase failed", description: error?.message || "Transaction failed", variant: "destructive" });
+      } finally {
+        setPurchasingNameTagId(null);
+      }
+      return;
+    }
+
     if (!isConnected || !walletClient || !publicClient) {
       if (!requireExternalWallet("Buying name tags")) return;
     }
@@ -514,6 +664,26 @@ export default function StorePage() {
 
   const handlePurchaseBorderOnChain = async (borderId: number) => {
     if (!user) { openModal(); return; }
+
+    if (walletMode === 'gamefolio') {
+      setPurchasingBorderId(borderId);
+      try {
+        toast({ title: "Processing purchase...", description: "Sending GFT from your Gamefolio wallet" });
+        const data: any = await apiRequest("POST", "/api/store/server-border-purchase", { borderId });
+        toast({ title: "Border unlocked!", description: data?.message || "You now own this border" });
+        queryClient.invalidateQueries({ queryKey: ["/api/store/borders"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/user/avatar-borders"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/token/balance"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/store/gamefolio-activity"] });
+        setBorderDialogOpen(false);
+      } catch (error: any) {
+        toast({ title: "Purchase failed", description: error?.message || "Transaction failed", variant: "destructive" });
+      } finally {
+        setPurchasingBorderId(null);
+      }
+      return;
+    }
+
     if (!isConnected || !walletClient || !publicClient) {
       if (!requireExternalWallet("Buying borders")) return;
     }
@@ -1118,6 +1288,7 @@ export default function StorePage() {
           {/* Buy NFT Section */}
           {activeTab === "buy" && (
             <div className="space-y-6">
+              {user && walletMode === 'gamefolio' && <GamefolioActivityPanel />}
               <div className="mb-4 md:mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">

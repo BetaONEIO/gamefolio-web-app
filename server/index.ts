@@ -43,6 +43,7 @@ import proSubscriptionRoutes from './routes/pro-subscription';
 import gfWebhookRoutes from './routes/gf-webhook';
 import gfStakingRoutes from './routes/gf-staking';
 import storeRoutes from './routes/store';
+import gamefolioPurchaseRoutes from './routes/gamefolio-purchases';
 import revenuecatRoutes from './routes/revenuecat';
 import { createOGMetaMiddleware } from './og-meta';
 import { storage } from './storage';
@@ -184,6 +185,7 @@ app.use((req, res, next) => {
     app.use(proSubscriptionRoutes);
     app.use(gfStakingRoutes);
     app.use(storeRoutes);
+    app.use(gamefolioPurchaseRoutes);
     app.use(revenuecatRoutes);
 
     // Social media preview route - must be before Vite middleware
@@ -355,6 +357,24 @@ app.use((req, res, next) => {
         setTimeout(tick, 60 * 1000);
         setInterval(tick, RECONCILE_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule mint reconciler:', err));
+
+      // Same idea for Gamefolio (custodial) purchases — store items, name
+      // tags, borders, marketplace NFTs. Refunds GFT if the on-chain transfer
+      // succeeded but the DB unlock failed.
+      import('./routes/gamefolio-purchases').then(({ reconcileStuckGamefolioPurchases }) => {
+        const RECONCILE_INTERVAL_MS = 5 * 60 * 1000;
+        const tick = () => {
+          reconcileStuckGamefolioPurchases()
+            .then((r) => {
+              if (r.scanned > 0 || r.errors.length > 0) {
+                log(`gamefolio-reconcile: scanned=${r.scanned} consumed=${r.consumed} refunded=${r.refunded} refundFailed=${r.refundFailed} skipped=${r.skipped} errors=${r.errors.length}`);
+              }
+            })
+            .catch((err) => console.error('gamefolio-reconcile failed:', err));
+        };
+        setTimeout(tick, 90 * 1000);
+        setInterval(tick, RECONCILE_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule gamefolio reconciler:', err));
     });
   } catch (error) {
     console.error("Fatal server error:", error);
