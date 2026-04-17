@@ -427,15 +427,19 @@ async function processServerPurchaseInner(req: Request, res: Response, type: Pur
   } catch (err: any) {
     console.error(`[gamefolio-purchases] ${type} purchase error:`, err);
     // If the tx hash was never set, the GFT never moved — just mark failed.
+    // For marketplace_nft, also restore the listing we pre-claimed so the
+    // seller's NFT doesn't get permanently de-listed by a buyer-side error.
     if (!txHash) {
       await db.update(gamefolioPurchases).set({
         status: 'failed',
         errorMessage: err?.shortMessage || err?.message || 'Failed to send transfer',
         updatedAt: new Date(),
       }).where(eq(gamefolioPurchases.id, pending.id));
+      await restoreListing();
       return res.status(500).json({ error: err?.shortMessage || err?.message || 'Failed to process purchase' });
     }
-    // Otherwise leave row as tx_sent so the reconciler can recover.
+    // Otherwise leave row as tx_sent so the reconciler can recover (and the
+    // reconciler restores the listing if it ends up failing/refunding).
     return res.status(500).json({ error: err?.message || 'Purchase pending — will be reconciled', txHash });
   }
 }
