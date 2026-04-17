@@ -21,12 +21,29 @@ interface MintResult {
 }
 
 export function useMintNFT(fallbackAddress?: string | null) {
-  const { walletAddress, publicClient, isReady } = useWallet();
+  const { walletAddress, publicClient, isReady, walletMode } = useWallet();
   const { data: walletClient } = useWalletClient();
   const { toast } = useToast();
 
-  const effectiveAddress = walletAddress || (fallbackAddress as `0x${string}` | null) || null;
-  const useServerSigning = !!effectiveAddress && !walletClient;
+  const externalAddress = walletAddress || null;
+  const custodialAddress = (fallbackAddress as `0x${string}` | null) || null;
+
+  // Address used for the active flow depends on the picker.
+  let effectiveAddress: `0x${string}` | null;
+  if (walletMode === 'gamefolio') {
+    effectiveAddress = custodialAddress;
+  } else if (walletMode === 'external') {
+    effectiveAddress = externalAddress;
+  } else {
+    effectiveAddress = externalAddress || custodialAddress;
+  }
+
+  const useServerSigning =
+    walletMode === 'gamefolio'
+      ? !!custodialAddress
+      : walletMode === 'external'
+      ? false
+      : !!effectiveAddress && !walletClient;
 
   const [allowanceState, setAllowanceState] = useState<AllowanceState>('checking');
   const [mintTxState, setMintTxState] = useState<MintTxState>('idle');
@@ -247,13 +264,88 @@ export function useMintNFT(fallbackAddress?: string | null) {
     }
   }, [toast, fetchOnChainData, handleServerError]);
 
+  const externalMint = useCallback(async (quantity: number): Promise<MintResult | null> => {
+    if (!walletClient || !publicClient || !externalAddress) {
+      toast({
+        title: 'External wallet not ready',
+        description: 'Connect an external wallet or switch to your Gamefolio wallet.',
+        variant: 'destructive',
+      });
+      return null;
+    }
+    try {
+      setMintTxState('sending');
+      setError(null);
+
+      const totalCost = onChainPricePerMint * quantity;
+      const amountRaw = parseUnits(String(totalCost), 18);
+
+      const treasuryRes = await fetch('/api/mint/treasury-address', { credentials: 'include' });
+      if (!treasuryRes.ok) throw new Error('Could not determine treasury address.');
+      const { treasuryAddress } = await treasuryRes.json();
+      if (!treasuryAddress) throw new Error('Treasury address unavailable.');
+
+      // 2) Send GFT payment to treasury from the external wallet.
+      const paymentTx = await walletClient.writeContract({
+        address: GF_TOKEN_ADDRESS as Address,
+        abi: GF_TOKEN_ABI,
+        functionName: 'transfer',
+        args: [treasuryAddress as Address, amountRaw],
+      });
+      setMintTxState('confirming');
+      await publicClient.waitForTransactionReceipt({ hash: paymentTx, timeout: 120_000 });
+
+      // 3) Ask server to verify payment + mint NFT (with refund safety net).
+      const res = await apiRequest('POST', '/api/mint/external-finalize', {
+        txHash: paymentTx,
+        quantity,
+        payerAddress: externalAddress,
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        const result: MintResult = { txHash: data.txHash, tokenIds: data.tokenIds || [] };
+        setMintResult(result);
+        setMintTxState('confirmed');
+        await fetchOnChainData();
+        await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        return result;
+      }
+      throw new Error(data.error || data.message || 'External mint failed');
+    } catch (err: any) {
+      console.error('External mint error:', err);
+      setMintTxState('error');
+      const raw = err?.message || '';
+      const lower = raw.toLowerCase();
+      let message: string;
+      if (lower.includes('user rejected') || lower.includes('user denied')) {
+        message = 'Transaction was cancelled.';
+      } else if (lower.includes('refund')) {
+        message = raw;
+      } else if (lower.includes('insufficient')) {
+        message = 'Insufficient GFT in your external wallet.';
+      } else {
+        message = raw || 'External mint failed.';
+      }
+      setError(message);
+      toast({ title: 'Mint Failed', description: message, variant: 'destructive' });
+      return null;
+    }
+  }, [walletClient, publicClient, externalAddress, onChainPricePerMint, fetchOnChainData, toast]);
+
   const approve = useCallback(async () => {
+    if (!useServerSigning) {
+      // External path doesn't need pre-approval (uses direct transfer).
+      setAllowanceState('approved');
+      return true;
+    }
     return serverApprove();
-  }, [serverApprove]);
+  }, [serverApprove, useServerSigning]);
 
   const mint = useCallback(async (quantity: number): Promise<MintResult | null> => {
-    return serverMint(quantity);
-  }, [serverMint]);
+    if (useServerSigning) return serverMint(quantity);
+    return externalMint(quantity);
+  }, [serverMint, externalMint, useServerSigning]);
 
   const regenerateWallet = useCallback(async (): Promise<boolean> => {
     try {

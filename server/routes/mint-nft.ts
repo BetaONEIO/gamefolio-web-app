@@ -15,7 +15,96 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { encryptPrivateKey } from '../wallet-crypto';
 import { writeContractWithPoW, writeContractWithPoWFromRawKey, publicClient } from '../skale-pow';
 
+(async () => {
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS nft_mint_refunds (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        wallet_address VARCHAR(255) NOT NULL,
+        amount_gft NUMERIC NOT NULL,
+        transfer_tx_hash VARCHAR(255),
+        mint_error TEXT,
+        refund_tx_hash VARCHAR(255),
+        refund_status VARCHAR(32) NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+  } catch (err) {
+    console.error('Failed to create nft_mint_refunds table:', err);
+  }
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS nft_mint_payments (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        payer_address VARCHAR(255) NOT NULL,
+        payment_tx_hash VARCHAR(255) NOT NULL UNIQUE,
+        quantity INTEGER NOT NULL,
+        amount_gft NUMERIC NOT NULL,
+        status VARCHAR(32) NOT NULL DEFAULT 'pending',
+        mint_tx_hash VARCHAR(255),
+        token_ids INTEGER[],
+        error TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    // Backfill any historical rows to canonical lowercase, then add a
+    // case-insensitive functional unique index as defense-in-depth.
+    await db.execute(sql`UPDATE nft_mint_payments SET payment_tx_hash = lower(payment_tx_hash) WHERE payment_tx_hash <> lower(payment_tx_hash)`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS nft_mint_payments_tx_lower_uniq ON nft_mint_payments ((lower(payment_tx_hash)))`);
+  } catch (err) {
+    console.error('Failed to create nft_mint_payments table:', err);
+  }
+})();
+
 const router = Router();
+
+async function refundFailedMint(opts: {
+  userId: number;
+  userAddress: Address;
+  totalCost: number;
+  costInWei: bigint;
+  transferHash: string;
+  treasuryPrivateKey: string;
+  mintError: string;
+  mintTxHash: string | null;
+}): Promise<{ refundStatus: 'success' | 'failed'; refundTxHash: string | null }> {
+  const { userId, userAddress, totalCost, costInWei, transferHash, treasuryPrivateKey, mintError, mintTxHash } = opts;
+  console.error(`⚠️ Mint failed after GFT transfer succeeded. Refunding ${totalCost} GFT to ${userAddress}. Reason: ${mintError}`);
+  let refundStatus: 'success' | 'failed' = 'failed';
+  let refundTxHash: string | null = null;
+  try {
+    refundTxHash = await writeContractWithPoWFromRawKey({
+      privateKeyRaw: treasuryPrivateKey,
+      contractAddress: GF_TOKEN_ADDRESS as Address,
+      abi: GF_TOKEN_ABI,
+      functionName: 'transfer',
+      args: [userAddress, costInWei],
+    });
+    const refundReceipt = await publicClient.waitForTransactionReceipt({ hash: refundTxHash, timeout: 60_000 });
+    if (refundReceipt.status === 'success') {
+      refundStatus = 'success';
+      console.log(`✅ Refund of ${totalCost} GFT to ${userAddress} confirmed. TX: ${refundTxHash}`);
+    } else {
+      console.error(`❌ Refund transaction reverted. TX: ${refundTxHash}`);
+    }
+  } catch (err) {
+    console.error(`❌ Refund transfer failed:`, err);
+  }
+  try {
+    await db.execute(sql`
+      INSERT INTO nft_mint_refunds
+        (user_id, wallet_address, amount_gft, transfer_tx_hash, mint_error, refund_tx_hash, refund_status)
+      VALUES
+        (${userId}, ${userAddress}, ${totalCost}, ${transferHash}, ${`${mintError}${mintTxHash ? ` (mintTx: ${mintTxHash})` : ''}`}, ${refundTxHash}, ${refundStatus})
+    `);
+  } catch (dbErr) {
+    console.error('Failed to record nft_mint_refunds row:', dbErr);
+  }
+  return { refundStatus, refundTxHash };
+}
 
 (async () => {
   try {
@@ -239,22 +328,47 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
     console.log(`✅ GFT transferred to treasury. TX: ${transferHash}`);
 
     console.log(`🎨 Treasury minting ${quantity} NFT(s) to ${userAddress}`);
-    const hash = await writeContractWithPoWFromRawKey({
-      privateKeyRaw: treasuryPrivateKey,
-      contractAddress: NFT_CONTRACT_ADDRESS as Address,
-      abi: NFT_ABI,
-      functionName: 'mint',
-      args: [userAddress, BigInt(quantity)],
-    });
+
+    let hash: `0x${string}` | null = null;
+    let mintFailureReason: string | null = null;
+    try {
+      hash = await writeContractWithPoWFromRawKey({
+        privateKeyRaw: treasuryPrivateKey,
+        contractAddress: NFT_CONTRACT_ADDRESS as Address,
+        abi: NFT_ABI,
+        functionName: 'mint',
+        args: [userAddress, BigInt(quantity)],
+      });
+      const mintReceipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
+      if (mintReceipt.status !== 'success') {
+        mintFailureReason = 'Mint transaction reverted on-chain';
+      }
+    } catch (mintErr: any) {
+      mintFailureReason = mintErr?.message || 'Mint transaction send/wait failed';
+    }
+
+    if (mintFailureReason) {
+      const refund = await refundFailedMint({
+        userId, userAddress, totalCost, costInWei, transferHash, treasuryPrivateKey,
+        mintError: mintFailureReason, mintTxHash: hash,
+      });
+      return res.status(502).json({
+        error: refund.refundStatus === 'success'
+          ? 'Mint failed; payment refunded.'
+          : 'Mint failed; refund did not confirm. Support has been notified.',
+        code: refund.refundStatus === 'success' ? 'MINT_FAILED_REFUNDED' : 'MINT_FAILED_REFUND_PENDING',
+        mintError: mintFailureReason,
+        mintTxHash: hash,
+        refundStatus: refund.refundStatus,
+        refundTxHash: refund.refundTxHash,
+        transferTxHash: transferHash,
+      });
+    }
 
     const receipt = await publicClient.waitForTransactionReceipt({
-      hash,
+      hash: hash!,
       timeout: 60_000,
     });
-
-    if (receipt.status !== 'success') {
-      return res.status(400).json({ error: 'Mint transaction reverted', txHash: hash });
-    }
 
     console.log(`✅ NFT minted successfully via treasury wallet.`);
 
@@ -303,6 +417,224 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Server-side mint error:', error);
     return res.status(500).json({ error: error.message || 'Mint failed' });
+  }
+});
+
+router.get('/api/mint/treasury-address', async (_req: Request, res: Response) => {
+  try {
+    const treasuryPrivateKey = process.env.TREASURY_PRIVATE_KEY;
+    if (!treasuryPrivateKey) return res.status(500).json({ error: 'Treasury wallet not configured' });
+    const formatted = treasuryPrivateKey.startsWith('0x')
+      ? (treasuryPrivateKey as `0x${string}`)
+      : (`0x${treasuryPrivateKey}` as `0x${string}`);
+    const address = privateKeyToAccount(formatted).address;
+    return res.json({ treasuryAddress: address });
+  } catch (e: any) {
+    return res.status(500).json({ error: e?.message || 'Failed to derive treasury address' });
+  }
+});
+
+router.post('/api/mint/external-finalize', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    const rawTxHash = (req.body?.txHash || '').toString();
+    const rawPayer = (req.body?.payerAddress || '').toString();
+    const quantity = req.body?.quantity as number | undefined;
+
+    // Canonicalize: tx hashes and addresses are case-insensitive on-chain. Lowercase them
+    // before any storage/comparison so "0xABC..." can't bypass the UNIQUE replay guard.
+    if (!rawTxHash || !/^0x[0-9a-fA-F]{64}$/.test(rawTxHash)) {
+      return res.status(400).json({ error: 'Valid 32-byte txHash required' });
+    }
+    if (!rawPayer || !/^0x[0-9a-fA-F]{40}$/.test(rawPayer)) {
+      return res.status(400).json({ error: 'Valid payerAddress required' });
+    }
+    if (!quantity || quantity < 1 || quantity > MINT_CONFIG.maxPerTx) {
+      return res.status(400).json({ error: `Quantity must be between 1 and ${MINT_CONFIG.maxPerTx}` });
+    }
+    const txHash = rawTxHash.toLowerCase() as `0x${string}`;
+    const payerLower = rawPayer.toLowerCase();
+
+    const treasuryPrivateKey = process.env.TREASURY_PRIVATE_KEY;
+    if (!treasuryPrivateKey) return res.status(500).json({ error: 'Treasury wallet not configured' });
+    const formattedTreasuryKey = treasuryPrivateKey.startsWith('0x')
+      ? (treasuryPrivateKey as `0x${string}`)
+      : (`0x${treasuryPrivateKey}` as `0x${string}`);
+    const treasuryAddress = privateKeyToAccount(formattedTreasuryKey).address;
+
+    const totalCost = quantity * MINT_CONFIG.pricePerMint;
+    const costInWei = parseUnits(String(totalCost), 18);
+    const payer = payerLower as Address;
+
+    // Verify the user-paid GFT transfer to treasury
+    const transferReceipt = await publicClient.getTransactionReceipt({ hash: txHash });
+    if (transferReceipt.status !== 'success') {
+      return res.status(400).json({ error: 'Payment transaction reverted on-chain', txHash });
+    }
+
+    let validTransfer = false;
+    for (const log of transferReceipt.logs) {
+      if (log.address.toLowerCase() !== GF_TOKEN_ADDRESS.toLowerCase()) continue;
+      try {
+        const decoded = decodeEventLog({ abi: GF_TOKEN_ABI, data: log.data, topics: log.topics });
+        if (decoded.eventName === 'Transfer') {
+          const { from, to, value } = decoded.args as { from: Address; to: Address; value: bigint };
+          if (
+            from.toLowerCase() === payerLower &&
+            to.toLowerCase() === treasuryAddress.toLowerCase() &&
+            value >= costInWei
+          ) {
+            validTransfer = true;
+            break;
+          }
+        }
+      } catch { continue; }
+    }
+    if (!validTransfer) {
+      return res.status(400).json({ error: 'Could not verify GFT payment from your wallet to treasury for the required amount.' });
+    }
+
+    // Atomic idempotency: try to claim this payment tx. UNIQUE constraint on payment_tx_hash
+    // prevents replay (and concurrent races) regardless of mint outcome.
+    let claimed = false;
+    try {
+      await db.execute(sql`
+        INSERT INTO nft_mint_payments
+          (user_id, payer_address, payment_tx_hash, quantity, amount_gft, status)
+        VALUES
+          (${userId}, ${payer}, ${txHash}, ${quantity}, ${totalCost}, 'pending')
+      `);
+      claimed = true;
+    } catch (insertErr: any) {
+      // Unique violation -> txHash already claimed. Return prior terminal state.
+      const priorRes: any = await db.execute(sql`
+        SELECT user_id, status, mint_tx_hash, token_ids, error
+        FROM nft_mint_payments WHERE payment_tx_hash = ${txHash} LIMIT 1
+      `);
+      const prior = (priorRes?.rows || priorRes || [])[0];
+      if (!prior) {
+        console.error('Insert failed but no prior row found:', insertErr);
+        return res.status(500).json({ error: 'Payment claim failed; please retry.' });
+      }
+      if (prior.status === 'consumed') {
+        return res.status(409).json({
+          error: 'This payment was already used to mint.',
+          code: 'PAYMENT_ALREADY_CONSUMED',
+          mintTxHash: prior.mint_tx_hash,
+          tokenIds: prior.token_ids || [],
+        });
+      }
+      if (prior.status === 'refunded' || prior.status === 'failed') {
+        return res.status(409).json({
+          error: 'This payment was already processed and refunded; it cannot be reused.',
+          code: 'PAYMENT_ALREADY_REFUNDED',
+        });
+      }
+      // 'pending' from another in-flight call
+      return res.status(409).json({ error: 'This payment is being processed; please wait.', code: 'PAYMENT_PENDING' });
+    }
+    void claimed;
+
+    // Mint
+    let hash: `0x${string}` | null = null;
+    let mintFailureReason: string | null = null;
+    try {
+      hash = await writeContractWithPoWFromRawKey({
+        privateKeyRaw: treasuryPrivateKey,
+        contractAddress: NFT_CONTRACT_ADDRESS as Address,
+        abi: NFT_ABI,
+        functionName: 'mint',
+        args: [payer, BigInt(quantity)],
+      });
+      const mintReceipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
+      if (mintReceipt.status !== 'success') mintFailureReason = 'Mint transaction reverted on-chain';
+    } catch (mintErr: any) {
+      mintFailureReason = mintErr?.message || 'Mint transaction send/wait failed';
+    }
+
+    if (mintFailureReason) {
+      const refund = await refundFailedMint({
+        userId, userAddress: payer, totalCost, costInWei,
+        transferHash: txHash, treasuryPrivateKey,
+        mintError: mintFailureReason, mintTxHash: hash,
+      });
+      try {
+        await db.execute(sql`
+          UPDATE nft_mint_payments
+          SET status = ${refund.refundStatus === 'success' ? 'refunded' : 'failed'},
+              mint_tx_hash = ${hash},
+              error = ${mintFailureReason},
+              updated_at = NOW()
+          WHERE payment_tx_hash = ${txHash}
+        `);
+      } catch (e) { console.error('Failed to update nft_mint_payments after refund:', e); }
+      return res.status(502).json({
+        error: refund.refundStatus === 'success'
+          ? 'Mint failed; payment refunded.'
+          : 'Mint failed; refund did not confirm. Support has been notified.',
+        code: refund.refundStatus === 'success' ? 'MINT_FAILED_REFUNDED' : 'MINT_FAILED_REFUND_PENDING',
+        mintError: mintFailureReason,
+        mintTxHash: hash,
+        refundStatus: refund.refundStatus,
+        refundTxHash: refund.refundTxHash,
+        transferTxHash: txHash,
+      });
+    }
+
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: hash!, timeout: 60_000 });
+    const tokenIds: number[] = [];
+    for (const log of receipt.logs) {
+      try {
+        if (log.address.toLowerCase() !== NFT_CONTRACT_ADDRESS.toLowerCase()) continue;
+        const decoded = decodeEventLog({
+          abi: [{
+            anonymous: false,
+            inputs: [
+              { indexed: true, name: 'from', type: 'address' },
+              { indexed: true, name: 'to', type: 'address' },
+              { indexed: true, name: 'tokenId', type: 'uint256' },
+            ],
+            name: 'Transfer',
+            type: 'event',
+          }],
+          data: log.data,
+          topics: log.topics,
+        });
+        if (decoded.eventName === 'Transfer') tokenIds.push(Number((decoded.args as any).tokenId));
+      } catch { continue; }
+    }
+
+    try {
+      await db.execute(sql`
+        UPDATE nft_mint_payments
+        SET status = 'consumed',
+            mint_tx_hash = ${hash},
+            token_ids = ${tokenIds.length > 0 ? sql`ARRAY[${sql.join(tokenIds.map(t => sql`${t}`), sql`, `)}]::integer[]` : sql`ARRAY[]::integer[]`},
+            updated_at = NOW()
+        WHERE payment_tx_hash = ${txHash}
+      `);
+    } catch (e) {
+      console.error('Failed to update nft_mint_payments to consumed:', e);
+    }
+
+    if (tokenIds.length > 0) {
+      try {
+        for (const tokenId of tokenIds) {
+          await db.execute(
+            sql`INSERT INTO user_nfts (user_id, token_id, tx_hash) VALUES (${userId}, ${tokenId}, ${txHash}) ON CONFLICT (user_id, token_id) DO NOTHING`
+          );
+        }
+      } catch (dbErr) {
+        console.error('Failed to save externally minted NFTs to DB:', dbErr);
+      }
+    }
+
+    return res.json({ success: true, txHash: hash, tokenIds });
+  } catch (error: any) {
+    console.error('External-finalize mint error:', error);
+    return res.status(500).json({ error: error.message || 'External finalize failed' });
   }
 });
 

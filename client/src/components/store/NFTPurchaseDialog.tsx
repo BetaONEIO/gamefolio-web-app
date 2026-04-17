@@ -16,6 +16,9 @@ import { useWalletClient, usePublicClient, useChainId } from "wagmi";
 import { parseUnits, type Address } from "viem";
 import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import { useTokenBalance } from "@/hooks/use-token";
+import { useWallet } from "@/hooks/use-wallet";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 interface NFT {
   id: number;
@@ -56,9 +59,16 @@ export function NFTPurchaseDialog({
   const publicClient = usePublicClient();
   const chainId = useChainId();
   const { data: tokenBalance } = useTokenBalance();
+  const { walletMode, setWalletMode } = useWallet();
 
   const effectiveAddress = user?.walletAddress;
-  const useServerSigning = !!effectiveAddress && !walletClient;
+  const useServerSigning =
+    walletMode === 'gamefolio'
+      ? !!effectiveAddress
+      : walletMode === 'external'
+      ? false
+      : !!effectiveAddress && !walletClient;
+  const externalUnavailable = walletMode === 'external' && !walletClient;
 
   const SKALE_CHAIN_ID = SKALE_NEBULA_TESTNET.id;
   const GF_DECIMALS = 18;
@@ -114,6 +124,10 @@ export function NFTPurchaseDialog({
     }
     if (!effectiveAddress) {
       toast({ title: "No wallet found", description: "Please set up your wallet first.", variant: "destructive" });
+      return;
+    }
+    if (externalUnavailable) {
+      toast({ title: "External wallet not connected", description: "Connect an external wallet or switch to your Gamefolio wallet.", variant: "destructive" });
       return;
     }
     setIsPurchasing(true);
@@ -309,6 +323,38 @@ export function NFTPurchaseDialog({
                   Wallet Balance
                 </span>
                 <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-[17px] flex flex-col gap-4">
+                  {/* Wallet mode picker */}
+                  <RadioGroup
+                    value={walletMode}
+                    onValueChange={(v) => setWalletMode(v as 'auto' | 'gamefolio' | 'external')}
+                    className="grid grid-cols-3 gap-2"
+                    data-testid="wallet-mode-picker"
+                  >
+                    {[
+                      { val: 'auto', label: 'Auto' },
+                      { val: 'gamefolio', label: 'Gamefolio' },
+                      { val: 'external', label: 'External' },
+                    ].map((opt) => (
+                      <Label
+                        key={opt.val}
+                        htmlFor={`wm-${opt.val}`}
+                        className={`cursor-pointer rounded-xl border px-3 py-2 text-center text-xs font-bold transition-colors ${
+                          walletMode === opt.val
+                            ? 'border-[#4ade80] bg-[#4ade80]/10 text-[#4ade80]'
+                            : 'border-[#1e293b] text-[#94a3b8] hover:text-[#f8fafc]'
+                        }`}
+                      >
+                        <RadioGroupItem id={`wm-${opt.val}`} value={opt.val} className="sr-only" />
+                        {opt.label}
+                      </Label>
+                    ))}
+                  </RadioGroup>
+                  {externalUnavailable && (
+                    <div className="text-[10px] text-amber-400 px-1">
+                      External wallet selected but not connected. Connect one or switch to Gamefolio.
+                    </div>
+                  )}
+
                   {/* Wallet row */}
                   <div className="flex items-center justify-between h-10">
                     <div className="flex items-center gap-3">

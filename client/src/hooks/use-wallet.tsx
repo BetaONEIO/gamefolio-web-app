@@ -13,6 +13,19 @@ const useConnectModal: () => { setOpenConnectModal: (open: boolean) => void } = 
 
 export const skaleTestnet = skaleNebulaTestnet;
 
+export type WalletMode = 'auto' | 'gamefolio' | 'external';
+
+const WALLET_MODE_STORAGE_KEY = 'gf:wallet-mode';
+
+function readStoredWalletMode(): WalletMode {
+  if (typeof window === 'undefined') return 'auto';
+  try {
+    const v = window.localStorage.getItem(WALLET_MODE_STORAGE_KEY);
+    if (v === 'auto' || v === 'gamefolio' || v === 'external') return v;
+  } catch {}
+  return 'auto';
+}
+
 interface WalletContextType {
   walletAddress: Address | null;
   isReady: boolean;
@@ -22,6 +35,8 @@ interface WalletContextType {
   isEmbeddedWallet: boolean;
   connect: () => void;
   disconnect: () => void;
+  walletMode: WalletMode;
+  setWalletMode: (mode: WalletMode) => void;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -57,6 +72,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const lastSavedAddress = useRef<string | null>(null);
   const [userInitiatedConnect, setUserInitiatedConnect] = useState(false);
+  const [walletMode, setWalletModeState] = useState<WalletMode>(() => readStoredWalletMode());
+
+  const setWalletMode = useCallback((mode: WalletMode) => {
+    setWalletModeState(mode);
+    try {
+      window.localStorage.setItem(WALLET_MODE_STORAGE_KEY, mode);
+    } catch {}
+  }, []);
 
   const { address, isConnected, isConnecting: wagmiIsConnecting } = useAccount();
   const { disconnect: wagmiDisconnect } = useDisconnect();
@@ -149,6 +172,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     isEmbeddedWallet,
     connect,
     disconnect,
+    walletMode,
+    setWalletMode,
   };
 
   return (

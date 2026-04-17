@@ -28,7 +28,7 @@ export default function MintNFTPage() {
   const { user } = useAuth();
   const { wallet } = useCrossmint();
   const { toast } = useToast();
-  const { walletAddress: wagmiWallet, isReady: walletReady, connect: connectWallet } = useWallet();
+  const { walletAddress: wagmiWallet, isReady: walletReady, connect: connectWallet, walletMode, setWalletMode } = useWallet();
 
   const crossmintAddress = wallet?.address || user?.walletAddress;
 
@@ -789,6 +789,38 @@ export default function MintNFTPage() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-[1.2px]">
+                Pay With
+              </span>
+              <div className="grid grid-cols-3 gap-2" data-testid="wallet-mode-picker">
+                {([
+                  { val: 'auto', label: 'Auto' },
+                  { val: 'gamefolio', label: 'Gamefolio' },
+                  { val: 'external', label: 'External' },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.val}
+                    type="button"
+                    onClick={() => setWalletMode(opt.val)}
+                    className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
+                      walletMode === opt.val
+                        ? 'border-[#4ade80] bg-[#4ade80]/10 text-[#4ade80]'
+                        : 'border-[#1e293b] text-[#94a3b8] hover:text-[#f8fafc]'
+                    }`}
+                    data-testid={`wallet-mode-${opt.val}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {walletMode === 'external' && useServerSigning === false && !walletReady && (
+                <div className="text-[10px] text-amber-400">
+                  External wallet selected but not connected. Connect one or switch to Gamefolio.
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-4">
