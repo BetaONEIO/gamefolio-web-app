@@ -7,7 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
 import { ContentFilterService } from '../services/content-filter';
-import { insertBannerSettingsSchema, insertAssetRewardSchema, insertHeroSlideSchema, heroSlides, insertAdminAlertSettingsSchema } from '@shared/schema';
+import { insertBannerSettingsSchema, insertAssetRewardSchema, insertHeroSlideSchema, heroSlides, insertAdminAlertSettingsSchema, KNOWN_ADMIN_ALERT_TYPES } from '@shared/schema';
 import { sendAdminAlert, postSlack, sendAdminEmail } from '../admin-alert-service';
 import { POINT_VALUES, XP_SETTINGS_DEFINITION, updatePointValue } from '../leaderboard-service';
 import { z } from 'zod';
@@ -1238,6 +1238,8 @@ adminRouter.get("/alert-settings", async (_req: Request, res: Response) => {
       emailRecipients: settings?.emailRecipients ?? [],
       slackWebhooks: settings?.slackWebhooks ?? [],
       useEnvFallback: settings?.useEnvFallback ?? true,
+      routingRules: settings?.routingRules ?? {},
+      knownAlertTypes: KNOWN_ADMIN_ALERT_TYPES,
       envEmail: process.env.ADMIN_ALERT_EMAIL || null,
       envSlackWebhookConfigured: !!process.env.ADMIN_ALERT_SLACK_WEBHOOK_URL,
       updatedAt: settings?.updatedAt ?? null,
@@ -1255,8 +1257,26 @@ adminRouter.put("/alert-settings", async (req: Request, res: Response) => {
       emailRecipients: req.body.emailRecipients ?? [],
       slackWebhooks: req.body.slackWebhooks ?? [],
       useEnvFallback: req.body.useEnvFallback ?? true,
+      routingRules: req.body.routingRules ?? {},
       updatedBy: req.user!.id,
     });
+
+    // Validate that every routing rule's selected emails/webhooks reference a configured destination.
+    const allowedEmails = new Set(parsed.emailRecipients);
+    const allowedWebhooks = new Set(parsed.slackWebhooks);
+    for (const [type, rule] of Object.entries(parsed.routingRules || {})) {
+      for (const e of rule.emails || []) {
+        if (!allowedEmails.has(e)) {
+          return res.status(400).json({ message: `Routing rule for "${type}" references unknown email: ${e}` });
+        }
+      }
+      for (const w of rule.slackWebhooks || []) {
+        if (!allowedWebhooks.has(w)) {
+          return res.status(400).json({ message: `Routing rule for "${type}" references unknown webhook` });
+        }
+      }
+    }
+
     const updated = await storage.upsertAdminAlertSettings(parsed);
     res.json(updated);
   } catch (err) {

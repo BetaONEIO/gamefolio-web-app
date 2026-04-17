@@ -847,6 +847,7 @@ export async function reconcileStuckMintPayments(): Promise<ReconcileResult> {
           result.refundFailed += 1;
           console.error(`❌ Reconciled stuck payment ${txHash} → refund FAILED for ${payer}`);
           await sendAdminAlert({
+            type: 'stuck_payment',
             subject: 'Stuck mint payment: auto-refund failed',
             message: `The reconciler attempted to refund a stuck NFT mint payment but the refund transfer did not confirm. An operator needs to investigate (treasury balance, network, or contract state) and refund manually.`,
             details: {
@@ -871,6 +872,7 @@ export async function reconcileStuckMintPayments(): Promise<ReconcileResult> {
         reconcileErrorCounts.set(txHash, count);
         if (count >= RECONCILE_ALERT_ERROR_THRESHOLD) {
           await sendAdminAlert({
+            type: 'stuck_payment',
             subject: 'Stuck mint payment: repeated reconciliation errors',
             message: `Reconciliation has failed ${count} consecutive times for the same mint payment row. The auto-recovery loop cannot make progress without intervention.`,
             details: {

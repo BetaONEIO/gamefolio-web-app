@@ -2,7 +2,7 @@ import { sendEmail } from './email-service';
 import { storage } from './storage';
 import { db } from './db';
 import { sql } from 'drizzle-orm';
-import { adminAlerts, type AdminAlert } from '@shared/schema';
+import { adminAlerts, type AdminAlert, type AlertRoutingRule } from '@shared/schema';
 import { desc, eq } from 'drizzle-orm';
 
 export interface AdminAlertParams {
@@ -11,6 +11,12 @@ export interface AdminAlertParams {
   details?: Record<string, unknown>;
   dedupeKey?: string;
   dedupeWindowMs?: number;
+  /**
+   * Tag identifying the kind of alert (e.g. "stuck_payment", "moderation").
+   * Used by the per-type routing rules in admin alert settings to decide which
+   * destinations should receive this alert. Defaults to "general".
+   */
+  type?: string;
 }
 
 const DEFAULT_DEDUPE_WINDOW_MS = 10 * 60 * 1000;
@@ -44,6 +50,12 @@ const adminAlertsReady: Promise<void> = (async () => {
       )
     `);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS admin_alerts_created_at_idx ON admin_alerts (created_at)`);
+    // Ensure the per-type routing rules column exists on the settings table.
+    // (The settings table itself is managed via drizzle-kit; this ALTER is idempotent.)
+    await db.execute(sql`
+      ALTER TABLE IF EXISTS admin_alert_settings
+      ADD COLUMN IF NOT EXISTS routing_rules JSON NOT NULL DEFAULT '{}'::json
+    `);
   } catch (err) {
     console.error('Failed to create admin_alerts table:', err);
   }
@@ -52,10 +64,13 @@ const adminAlertsReady: Promise<void> = (async () => {
 async function persistAdminAlert(params: AdminAlertParams): Promise<void> {
   try {
     await adminAlertsReady;
+    const detailsWithType = params.type
+      ? { ...(params.details ?? {}), alertType: params.type }
+      : params.details ?? null;
     await db.insert(adminAlerts).values({
       subject: params.subject,
       message: params.message,
-      details: params.details ?? null,
+      details: detailsWithType,
     });
   } catch (err) {
     console.error('Admin alert: failed to persist alert row:', err);
@@ -133,10 +148,11 @@ interface ResolvedDestinations {
   slackWebhooks: string[];
 }
 
-async function resolveDestinations(): Promise<ResolvedDestinations> {
+async function resolveDestinations(alertType: string): Promise<ResolvedDestinations> {
   let configuredEmails: string[] = [];
   let configuredWebhooks: string[] = [];
   let useEnvFallback = true;
+  let rule: AlertRoutingRule | undefined;
 
   try {
     const settings = await storage.getAdminAlertSettings();
@@ -144,19 +160,34 @@ async function resolveDestinations(): Promise<ResolvedDestinations> {
       configuredEmails = settings.emailRecipients || [];
       configuredWebhooks = settings.slackWebhooks || [];
       useEnvFallback = settings.useEnvFallback ?? true;
+      const rules = (settings.routingRules || {}) as Record<string, AlertRoutingRule>;
+      rule = rules[alertType];
     }
   } catch (err) {
     console.error('Admin alert: failed to load configured destinations, falling back to env:', err);
   }
 
+  // Apply per-type routing rule, if any. Unknown types or rules in `all` mode keep the
+  // legacy fan-out behavior; `selected` mode restricts to the listed destinations
+  // (intersected with what's still configured globally).
+  let typeEmails = configuredEmails;
+  let typeWebhooks = configuredWebhooks;
+  if (rule && rule.mode === 'selected') {
+    const allowedEmails = new Set(rule.emails || []);
+    const allowedWebhooks = new Set(rule.slackWebhooks || []);
+    typeEmails = configuredEmails.filter((e) => allowedEmails.has(e));
+    typeWebhooks = configuredWebhooks.filter((w) => allowedWebhooks.has(w));
+  }
+
   const envEmail = process.env.ADMIN_ALERT_EMAIL;
   const envWebhook = process.env.ADMIN_ALERT_SLACK_WEBHOOK_URL;
 
-  const hasConfigured = configuredEmails.length > 0 || configuredWebhooks.length > 0;
-  const includeEnv = useEnvFallback || !hasConfigured;
+  const hasConfigured = typeEmails.length > 0 || typeWebhooks.length > 0;
+  const envForType = rule?.includeEnv ?? useEnvFallback;
+  const includeEnv = envForType || !hasConfigured;
 
-  const emails = new Set<string>(configuredEmails);
-  const slackWebhooks = new Set<string>(configuredWebhooks);
+  const emails = new Set<string>(typeEmails);
+  const slackWebhooks = new Set<string>(typeWebhooks);
   if (includeEnv) {
     if (envEmail) emails.add(envEmail);
     if (envWebhook) slackWebhooks.add(envWebhook);
@@ -175,11 +206,12 @@ export async function sendAdminAlert(params: AdminAlertParams): Promise<{ slack:
     return { slack: false, email: false, suppressed: true };
   }
 
-  console.error(`🚨 ADMIN ALERT: ${params.subject} — ${params.message}`, params.details || {});
+  const alertType = params.type || 'general';
+  console.error(`🚨 ADMIN ALERT [${alertType}]: ${params.subject} — ${params.message}`, params.details || {});
 
   await persistAdminAlert(params);
 
-  const { emails, slackWebhooks } = await resolveDestinations();
+  const { emails, slackWebhooks } = await resolveDestinations(alertType);
 
   const slackTasks = slackWebhooks.map((url) =>
     postSlack(url, params.subject, params.message, params.details),
