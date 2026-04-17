@@ -854,7 +854,7 @@ router.get('/api/admin/mint/stuck-payments', adminMiddleware, async (_req: Reque
       SELECT id, user_id, payer_address, payment_tx_hash, quantity, amount_gft,
              status, mint_tx_hash, error, created_at, updated_at
       FROM nft_mint_payments
-      WHERE status = 'pending'
+      WHERE status IN ('pending', 'processing')
       ORDER BY created_at ASC
       LIMIT 200
     `);
