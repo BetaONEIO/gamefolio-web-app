@@ -52,3 +52,7 @@ APP_BASE_URL = "https://c9fa12a0-25f6-499c-85a1-3fdaf44e555f-00-2i2gmevrrbqn1.ri
 
 [userenv.production]
 APP_BASE_URL = "https://app.gamefolio.com"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
