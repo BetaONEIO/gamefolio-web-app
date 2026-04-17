@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import MultiMintSuccessScreen from "@/components/mint/MultiMintSuccessScreen";
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
+import RecentMintActivity from "@/components/mint/RecentMintActivity";
 import { useMintNFT } from "@/hooks/use-mint-nft";
 import { formatUnits } from "viem";
 import { useWallet } from "@/hooks/use-wallet";
@@ -843,6 +844,8 @@ export default function MintNFTPage() {
                     : "Mint NFT"}
                 </button>
             </div>
+
+            <RecentMintActivity />
 
           </div>
         </div>

@@ -847,6 +847,73 @@ export async function reconcileStuckMintPayments(): Promise<ReconcileResult> {
   }
 }
 
+// User-facing: list the signed-in user's recent NFT mint payments. Joins to
+// nft_mint_refunds so the UI can show why a refund happened.
+router.get('/api/mint/my-payments', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const limitRaw = parseInt((req.query.limit as string) || '20', 10);
+    const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 50) : 20;
+
+    const rowsRes: any = await db.execute(sql`
+      SELECT
+        p.id,
+        p.payer_address,
+        p.payment_tx_hash,
+        p.quantity,
+        p.amount_gft,
+        p.status,
+        p.mint_tx_hash,
+        p.token_ids,
+        p.error,
+        p.created_at,
+        p.updated_at,
+        r.refund_tx_hash,
+        r.refund_status,
+        r.mint_error AS refund_reason
+      FROM nft_mint_payments p
+      LEFT JOIN LATERAL (
+        SELECT refund_tx_hash, refund_status, mint_error
+        FROM nft_mint_refunds
+        WHERE wallet_address = p.payer_address
+          AND transfer_tx_hash = p.payment_tx_hash
+        ORDER BY created_at DESC
+        LIMIT 1
+      ) r ON TRUE
+      WHERE p.user_id = ${userId}
+      ORDER BY p.created_at DESC
+      LIMIT ${limit}
+    `);
+    const rows = (rowsRes?.rows || rowsRes || []) as any[];
+
+    const payments = rows.map((row) => ({
+      id: Number(row.id),
+      payerAddress: row.payer_address,
+      paymentTxHash: row.payment_tx_hash,
+      quantity: Number(row.quantity),
+      amountGft: Number(row.amount_gft),
+      status: row.status as 'pending' | 'processing' | 'consumed' | 'refunded' | 'failed',
+      mintTxHash: row.mint_tx_hash || null,
+      tokenIds: Array.isArray(row.token_ids) ? row.token_ids.map((t: any) => Number(t)) : [],
+      error: row.error || null,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      refundTxHash: row.refund_tx_hash || null,
+      refundStatus: (row.refund_status as 'success' | 'failed' | null) || null,
+      refundReason: row.refund_reason || null,
+    }));
+
+    return res.json({ payments });
+  } catch (err: any) {
+    console.error('my-payments list error:', err);
+    return res.status(500).json({ error: err?.message || 'Failed to list mint payments' });
+  }
+});
+
 // Admin: list currently stuck pending payments (no time filter — show everything).
 router.get('/api/admin/mint/stuck-payments', adminMiddleware, async (_req: Request, res: Response) => {
   try {
