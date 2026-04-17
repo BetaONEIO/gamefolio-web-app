@@ -1547,7 +1547,7 @@ export type StorePurchase = typeof storePurchases.$inferSelect;
 // reconciler can recover from crashes and refund failed attempts.
 export const gamefolioPurchases = pgTable("gamefolio_purchases", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   // 'store_item' | 'name_tag' | 'border' | 'marketplace_nft'
   purchaseType: text("purchase_type").notNull(),
   // store_items.id, name_tags.id, profile_borders.id, or NFT tokenId
