@@ -358,16 +358,31 @@ export interface AdminAlertResult {
   sms: boolean;
   pagerduty: boolean;
   suppressed: boolean;
+  alertType: string;
+  destinations: {
+    emails: { target: string; ok: boolean }[];
+    slackWebhooks: { target: string; ok: boolean }[];
+    smsNumbers: { target: string; ok: boolean }[];
+    pagerDuty: { target: string; ok: boolean }[];
+  };
 }
 
 export async function sendAdminAlert(params: AdminAlertParams): Promise<AdminAlertResult> {
+  const alertType = params.type || 'general';
   const dedupeKey = params.dedupeKey || params.subject;
   const dedupeWindow = params.dedupeWindowMs ?? DEFAULT_DEDUPE_WINDOW_MS;
   if (shouldSuppress(dedupeKey, dedupeWindow)) {
-    return { slack: false, email: false, sms: false, pagerduty: false, suppressed: true };
+    return {
+      slack: false,
+      email: false,
+      sms: false,
+      pagerduty: false,
+      suppressed: true,
+      alertType,
+      destinations: { emails: [], slackWebhooks: [], smsNumbers: [], pagerDuty: [] },
+    };
   }
 
-  const alertType = params.type || 'general';
   console.error(`🚨 ADMIN ALERT [${alertType}]: ${params.subject} — ${params.message}`, params.details || {});
 
   const persistedId = await persistAdminAlert(params);
@@ -407,5 +422,12 @@ export async function sendAdminAlert(params: AdminAlertParams): Promise<AdminAle
     sms: smsResults.some((r) => r),
     pagerduty,
     suppressed: false,
+    alertType,
+    destinations: {
+      emails: emails.map((target, i) => ({ target, ok: emailResults[i] })),
+      slackWebhooks: slackWebhooks.map((target, i) => ({ target, ok: slackResults[i] })),
+      smsNumbers: smsNumbers.map((target, i) => ({ target, ok: smsResults[i] })),
+      pagerDuty: pagerDutyKey ? [{ target: pagerDutyKey, ok: pagerduty }] : [],
+    },
   };
 }

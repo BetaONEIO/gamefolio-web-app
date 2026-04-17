@@ -1313,6 +1313,58 @@ adminRouter.put("/alert-settings", async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/admin/alert-settings/test-routed - Fire a test alert through sendAdminAlert so per-type routing rules are exercised end-to-end.
+adminRouter.post("/alert-settings/test-routed", async (req: Request, res: Response) => {
+  try {
+    const schema = z.object({
+      type: z.string().trim().min(1).max(64).regex(/^[a-z0-9_]+$/i, "Use letters, digits, or underscores"),
+    });
+    const { type } = schema.parse(req.body);
+    const normalizedType = type.toLowerCase();
+
+    const subject = `Test alert (${normalizedType})`;
+    const message = `Routed test alert sent by ${req.user!.username} at ${new Date().toISOString()}.`;
+
+    const result = await sendAdminAlert({
+      subject,
+      message,
+      type: normalizedType,
+      details: { triggeredBy: req.user!.username, test: true },
+      // Use a unique dedupe key so repeated tests are never suppressed.
+      dedupeKey: `test-routed:${normalizedType}:${Date.now()}:${Math.random()}`,
+    });
+
+    const matchedCount =
+      result.destinations.emails.length +
+      result.destinations.slackWebhooks.length +
+      result.destinations.smsNumbers.length +
+      result.destinations.pagerDuty.length;
+    const successCount =
+      result.destinations.emails.filter((d) => d.ok).length +
+      result.destinations.slackWebhooks.filter((d) => d.ok).length +
+      result.destinations.smsNumbers.filter((d) => d.ok).length +
+      result.destinations.pagerDuty.filter((d) => d.ok).length;
+    res.json({
+      success: !result.suppressed && successCount > 0,
+      alertType: result.alertType,
+      destinations: result.destinations,
+      matchedCount,
+      successCount,
+      slackAnyOk: result.slack,
+      emailAnyOk: result.email,
+      smsAnyOk: result.sms,
+      pagerDutyAnyOk: result.pagerduty,
+      suppressed: result.suppressed,
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ message: "Invalid request", errors: err.errors });
+    }
+    console.error("Error sending routed test alert:", err);
+    res.status(500).json({ message: "Error sending routed test alert" });
+  }
+});
+
 // POST /api/admin/alert-settings/test - Send a test alert to a single destination
 adminRouter.post("/alert-settings/test", async (req: Request, res: Response) => {
   try {

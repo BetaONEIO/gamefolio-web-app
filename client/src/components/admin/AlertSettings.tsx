@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Plus, Send, Mail, MessageSquare, Smartphone, Siren, Route } from "lucide-react";
+import { Trash2, Plus, Send, Mail, MessageSquare, Smartphone, Siren, Route, Zap, CheckCircle2, XCircle } from "lucide-react";
 
 type RoutingMode = "all" | "selected";
 
@@ -60,6 +60,16 @@ export function AlertSettings() {
   const [newWebhook, setNewWebhook] = useState("");
   const [newType, setNewType] = useState("");
   const [newSms, setNewSms] = useState("");
+  const [routedTestType, setRoutedTestType] = useState<string>("");
+  const [lastRoutedTest, setLastRoutedTest] = useState<{
+    alertType: string;
+    destinations: {
+      emails: { target: string; ok: boolean }[];
+      slackWebhooks: { target: string; ok: boolean }[];
+      smsNumbers: { target: string; ok: boolean }[];
+      pagerDuty: { target: string; ok: boolean }[];
+    };
+  } | null>(null);
 
   useEffect(() => {
     if (data) {
@@ -122,6 +132,53 @@ export function AlertSettings() {
       toast({
         title: "Test failed",
         description: err?.message || "Could not send test alert",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const routedTestMutation = useMutation({
+    mutationFn: async (type: string) => {
+      const res = await apiRequest("POST", "/api/admin/alert-settings/test-routed", { type });
+      return res.json() as Promise<{
+        success: boolean;
+        alertType: string;
+        suppressed: boolean;
+        matchedCount: number;
+        successCount: number;
+        destinations: {
+          emails: { target: string; ok: boolean }[];
+          slackWebhooks: { target: string; ok: boolean }[];
+          smsNumbers: { target: string; ok: boolean }[];
+          pagerDuty: { target: string; ok: boolean }[];
+        };
+      }>;
+    },
+    onSuccess: (result) => {
+      setLastRoutedTest({ alertType: result.alertType, destinations: result.destinations });
+      if (result.matchedCount === 0) {
+        toast({
+          title: "No destinations matched",
+          description: `Routing rules for "${result.alertType}" produced no destinations.`,
+          variant: "destructive",
+        });
+      } else if (result.successCount === 0) {
+        toast({
+          title: "All deliveries failed",
+          description: `Matched ${result.matchedCount} destination(s) for "${result.alertType}", but none accepted the alert.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Routed test sent",
+          description: `Delivered "${result.alertType}" to ${result.successCount}/${result.matchedCount} destination(s).`,
+        });
+      }
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Routed test failed",
+        description: err?.message || "Could not send routed test alert",
         variant: "destructive",
       });
     },
@@ -242,6 +299,7 @@ export function AlertSettings() {
   const knownTypes = data?.knownAlertTypes ?? [];
   const ruleTypes = Object.keys(routingRules).sort();
   const suggestableTypes = knownTypes.filter((t) => !routingRules[t]);
+  const routedTestTypes = Array.from(new Set([...knownTypes, ...Object.keys(routingRules)])).sort();
 
   return (
     <Card data-testid="card-alert-settings">
@@ -666,6 +724,146 @@ export function AlertSettings() {
               <Plus className="h-4 w-4 mr-1" /> Add rule
             </Button>
           </div>
+        </section>
+
+        <section className="space-y-3 border-t pt-4" data-testid="section-routed-test">
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            <h4 className="font-semibold">Send test alert (routed)</h4>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Fire a real <code>sendAdminAlert</code> for the chosen type so per-type routing rules
+            are exercised end-to-end. Unlike the per-destination Test buttons above, this respects
+            your rules and reports which destinations actually received it.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={routedTestType} onValueChange={setRoutedTestType}>
+              <SelectTrigger className="w-[260px]" data-testid="select-routed-test-type">
+                <SelectValue placeholder="Choose alert type..." />
+              </SelectTrigger>
+              <SelectContent>
+                {routedTestTypes.length === 0 && (
+                  <SelectItem value="general">general</SelectItem>
+                )}
+                {routedTestTypes.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                    {knownTypes.includes(t) ? " (built-in)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              placeholder="or type a custom type"
+              value={routedTestType}
+              onChange={(e) => setRoutedTestType(e.target.value)}
+              className="w-[220px]"
+              data-testid="input-routed-test-type"
+            />
+            <Button
+              type="button"
+              onClick={() => {
+                const t = routedTestType.trim().toLowerCase().replace(/\s+/g, "_");
+                if (!t) {
+                  toast({
+                    title: "Pick a type",
+                    description: "Select or enter an alert type to test.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                setLastRoutedTest(null);
+                routedTestMutation.mutate(t);
+              }}
+              disabled={routedTestMutation.isPending}
+              data-testid="button-send-routed-test"
+            >
+              <Send className="h-4 w-4 mr-1" />
+              {routedTestMutation.isPending ? "Sending..." : "Send test alert"}
+            </Button>
+          </div>
+
+          {lastRoutedTest && (
+            <div className="rounded-md border p-3 space-y-2" data-testid="routed-test-result">
+              <div className="text-sm">
+                Last test for <Badge variant="secondary">{lastRoutedTest.alertType}</Badge>{" "}
+                reached{" "}
+                {lastRoutedTest.destinations.emails.length +
+                  lastRoutedTest.destinations.slackWebhooks.length +
+                  lastRoutedTest.destinations.smsNumbers.length +
+                  lastRoutedTest.destinations.pagerDuty.length}{" "}
+                destination(s):
+              </div>
+              {lastRoutedTest.destinations.emails.length === 0 &&
+                lastRoutedTest.destinations.slackWebhooks.length === 0 &&
+                lastRoutedTest.destinations.smsNumbers.length === 0 &&
+                lastRoutedTest.destinations.pagerDuty.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No destinations matched these routing rules.
+                  </p>
+                )}
+              {lastRoutedTest.destinations.emails.map((d) => (
+                <div
+                  key={`email-${d.target}`}
+                  className="flex items-center gap-2 text-sm"
+                  data-testid={`routed-test-email-${d.target}`}
+                >
+                  {d.ok ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-600" />
+                  )}
+                  <Mail className="h-4 w-4" />
+                  <span className="truncate">{d.target}</span>
+                </div>
+              ))}
+              {lastRoutedTest.destinations.slackWebhooks.map((d) => (
+                <div
+                  key={`slack-${d.target}`}
+                  className="flex items-center gap-2 text-sm"
+                  data-testid={`routed-test-slack-${d.target}`}
+                >
+                  {d.ok ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-600" />
+                  )}
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="truncate font-mono text-xs">{d.target}</span>
+                </div>
+              ))}
+              {lastRoutedTest.destinations.smsNumbers.map((d) => (
+                <div
+                  key={`sms-${d.target}`}
+                  className="flex items-center gap-2 text-sm"
+                  data-testid={`routed-test-sms-${d.target}`}
+                >
+                  {d.ok ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-600" />
+                  )}
+                  <Smartphone className="h-4 w-4" />
+                  <span className="truncate font-mono text-xs">{d.target}</span>
+                </div>
+              ))}
+              {lastRoutedTest.destinations.pagerDuty.map((d) => (
+                <div
+                  key={`pagerduty-${d.target}`}
+                  className="flex items-center gap-2 text-sm"
+                  data-testid="routed-test-pagerduty"
+                >
+                  {d.ok ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-600" />
+                  )}
+                  <Siren className="h-4 w-4" />
+                  <span className="truncate font-mono text-xs">PagerDuty</span>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="space-y-3 border-t pt-4">
