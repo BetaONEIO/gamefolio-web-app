@@ -101,8 +101,8 @@ async function checkEligibility(
   const listing = await db.execute(
     sql`SELECT listed_price FROM user_nfts WHERE token_id = ${itemRefId} AND user_id = ${sellerId} AND sold = true AND listing_active = true LIMIT 1`
   );
-  const rows = (listing as any).rows || listing;
-  if (!rows || rows.length === 0) {
+  const rows = rowsOf(listing);
+  if (rows.length === 0) {
     return { ok: false, status: 404, error: 'Listing not found or already sold' };
   }
   const price = Number(rows[0].listed_price) || 0;
@@ -213,7 +213,30 @@ async function attemptRefund(row: {
   }
 }
 
+// Drizzle's db.execute returns a node-postgres-like result with a typed `rows`
+// array; this small helper avoids `as any` and keeps callers type-safe.
+type SqlRow = Record<string, unknown>;
+function rowsOf(result: unknown): SqlRow[] {
+  if (Array.isArray(result)) return result as SqlRow[];
+  if (result && typeof result === 'object' && Array.isArray((result as { rows?: SqlRow[] }).rows)) {
+    return (result as { rows: SqlRow[] }).rows;
+  }
+  return [];
+}
+
 async function processServerPurchase(req: Request, res: Response, type: PurchaseType) {
+  // Top-level guard so any throw becomes a deterministic HTTP response.
+  try {
+    return await processServerPurchaseInner(req, res, type);
+  } catch (err: any) {
+    console.error(`[gamefolio-purchases] Unhandled error in ${type} flow:`, err);
+    if (!res.headersSent) {
+      return res.status(500).json({ error: err?.message || 'Unexpected purchase error' });
+    }
+  }
+}
+
+async function processServerPurchaseInner(req: Request, res: Response, type: PurchaseType) {
   const userId = authRequired(req, res);
   if (!userId) return;
 
@@ -274,8 +297,8 @@ async function processServerPurchase(req: Request, res: Response, type: Purchase
         AND listing_active = true
       RETURNING token_id
     `);
-    const claimRows = ((claimRes as any).rows || claimRes) as any[];
-    if (!claimRows || claimRows.length === 0) {
+    const claimRows = rowsOf(claimRes);
+    if (claimRows.length === 0) {
       await db.update(gamefolioPurchases).set({
         status: 'failed',
         errorMessage: 'Listing already sold or unavailable',
@@ -468,8 +491,23 @@ export async function reconcileStuckGamefolioPurchases(): Promise<{
       ORDER BY created_at ASC
       LIMIT 50
     `);
-    const rows = ((stuck as any).rows || stuck) as any[];
+    const rows = rowsOf(stuck);
     scanned = rows.length;
+
+    // For marketplace rows that end up failed/refunded, the seller's listing
+    // (which was atomically claimed during the buy attempt) needs to be
+    // restored so it can be sold again.
+    const restoreMarketplaceListing = async (r: SqlRow) => {
+      if (r.purchase_type !== 'marketplace_nft' || r.seller_id == null) return;
+      try {
+        await db.execute(sql`
+          UPDATE user_nfts SET listing_active = true
+          WHERE token_id = ${r.item_ref_id} AND user_id = ${r.seller_id} AND sold = true
+        `);
+      } catch (e) {
+        console.error('[gamefolio-purchases] reconciler restoreListing failed:', e);
+      }
+    };
 
     for (const row of rows) {
       try {
@@ -480,6 +518,7 @@ export async function reconcileStuckGamefolioPurchases(): Promise<{
             errorMessage: 'Stuck before tx send; auto-failed by reconciler',
             updatedAt: new Date(),
           }).where(and(eq(gamefolioPurchases.id, row.id), eq(gamefolioPurchases.status, 'pending')));
+          await restoreMarketplaceListing(row);
           skipped++;
           continue;
         }
@@ -500,13 +539,14 @@ export async function reconcileStuckGamefolioPurchases(): Promise<{
           continue;
         }
         if (wasRefunding) {
-          const r = await attemptRefund({ id: row.id, userId: row.user_id, walletAddress: row.wallet_address, gfAmount: Number(row.gf_amount), txHash: row.tx_hash, errorReason: 'Reconciler: resume interrupted refund' });
+          const r = await attemptRefund({ id: row.id, userId: row.user_id as number, walletAddress: row.wallet_address as string, gfAmount: Number(row.gf_amount), txHash: row.tx_hash as string | null, errorReason: 'Reconciler: resume interrupted refund' });
           await db.update(gamefolioPurchases).set({
             status: r.refunded ? 'refunded' : 'refund_failed',
             refundTxHash: r.refundTxHash,
             errorMessage: 'Reconciler: resumed refund',
             updatedAt: new Date(),
-          }).where(eq(gamefolioPurchases.id, row.id));
+          }).where(eq(gamefolioPurchases.id, row.id as string));
+          await restoreMarketplaceListing(row);
           if (r.refunded) refunded++; else refundFailed++;
           continue;
         }
@@ -528,7 +568,8 @@ export async function reconcileStuckGamefolioPurchases(): Promise<{
             status: 'failed',
             errorMessage: 'Reconciler: tx reverted on-chain',
             updatedAt: new Date(),
-          }).where(eq(gamefolioPurchases.id, row.id));
+          }).where(eq(gamefolioPurchases.id, row.id as string));
+          await restoreMarketplaceListing(row);
           continue;
         }
 
@@ -550,48 +591,50 @@ export async function reconcileStuckGamefolioPurchases(): Promise<{
         }
 
         if (!valid) {
-          const r = await attemptRefund({ id: row.id, userId: row.user_id, walletAddress: row.wallet_address, gfAmount: Number(row.gf_amount), txHash: row.tx_hash, errorReason: 'Reconciler: invalid Transfer event' });
+          const r = await attemptRefund({ id: row.id as string, userId: row.user_id as number, walletAddress: row.wallet_address as string, gfAmount: Number(row.gf_amount), txHash: row.tx_hash as string | null, errorReason: 'Reconciler: invalid Transfer event' });
           await db.update(gamefolioPurchases).set({
             status: r.refunded ? 'refunded' : 'refund_failed',
             refundTxHash: r.refundTxHash,
             errorMessage: 'Reconciler: invalid Transfer event',
             updatedAt: new Date(),
-          }).where(eq(gamefolioPurchases.id, row.id));
+          }).where(eq(gamefolioPurchases.id, row.id as string));
+          await restoreMarketplaceListing(row);
           if (r.refunded) refunded++; else refundFailed++;
           continue;
         }
 
         // Tx is good — try to finalize DB writes.
         const fin = await finalizePurchaseDb({
-          userId: row.user_id,
+          userId: row.user_id as number,
           type: row.purchase_type as PurchaseType,
-          itemRefId: row.item_ref_id,
-          sellerId: row.seller_id,
-          txHash: row.tx_hash,
-          walletAddress: row.wallet_address,
+          itemRefId: row.item_ref_id as number,
+          sellerId: row.seller_id as number | null,
+          txHash: row.tx_hash as string,
+          walletAddress: row.wallet_address as string,
           gfAmount: Number(row.gf_amount),
-          purchaseId: row.id,
-        }).catch((err) => ({ ok: false as const, error: err?.message || 'finalize threw' }));
+          purchaseId: row.id as string,
+        }).catch((err: any) => ({ ok: false as const, error: err?.message || 'finalize threw' }));
 
         if (fin.ok) {
           await db.update(gamefolioPurchases).set({
             status: 'completed',
             completedAt: new Date(),
             updatedAt: new Date(),
-          }).where(eq(gamefolioPurchases.id, row.id));
+          }).where(eq(gamefolioPurchases.id, row.id as string));
           consumed++;
         } else {
-          const r = await attemptRefund({ id: row.id, userId: row.user_id, walletAddress: row.wallet_address, gfAmount: Number(row.gf_amount), txHash: row.tx_hash, errorReason: fin.error });
+          const r = await attemptRefund({ id: row.id as string, userId: row.user_id as number, walletAddress: row.wallet_address as string, gfAmount: Number(row.gf_amount), txHash: row.tx_hash as string | null, errorReason: fin.error });
           await db.update(gamefolioPurchases).set({
             status: r.refunded ? 'refunded' : 'refund_failed',
             refundTxHash: r.refundTxHash,
             errorMessage: `Reconciler finalize failed: ${fin.error}`,
             updatedAt: new Date(),
-          }).where(eq(gamefolioPurchases.id, row.id));
+          }).where(eq(gamefolioPurchases.id, row.id as string));
+          await restoreMarketplaceListing(row);
           if (r.refunded) refunded++; else refundFailed++;
         }
       } catch (err: any) {
-        errors.push(`${row.id}: ${err?.message || String(err)}`);
+        errors.push(`${String(row.id)}: ${err?.message || String(err)}`);
       }
     }
   } catch (err: any) {
