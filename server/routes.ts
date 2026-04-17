@@ -8786,8 +8786,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           return b;
         });
-      
-      res.json(filteredBadges);
+
+      const badgesWithSignedUrls = await Promise.all(
+        filteredBadges.map(async (b) => {
+          if (b.imageUrl && b.imageUrl.includes('supabase.co/storage')) {
+            const signed = await supabaseStorage.convertToSignedUrl(b.imageUrl, 3600);
+            if (signed) return { ...b, imageUrl: signed };
+          }
+          return b;
+        })
+      );
+
+      res.json(badgesWithSignedUrls);
     } catch (err) {
       console.error("Error fetching unlocked verification badges:", err);
       return res.status(500).json({ message: "Error fetching unlocked verification badges" });
