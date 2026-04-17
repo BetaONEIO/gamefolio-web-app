@@ -488,6 +488,26 @@ router.get('/api/token/on-chain-balance', hybridAuth, async (req: Request, res: 
       return res.status(401).json({ error: 'Authentication required' });
     }
 
+    // Aggregate across all wallets the user has ever owned so balances on
+    // retired wallets are still visible to the user.
+    try {
+      const { getAggregatedGfBalance } = await import('../wallet-service');
+      const aggregated = await getAggregatedGfBalance(userId);
+      if (aggregated.perWallet.length > 0) {
+        return res.json({
+          balance: aggregated.total,
+          walletAddress: aggregated.primaryAddress,
+          source: 'aggregated',
+          wallets: aggregated.perWallet,
+          explorerUrl: aggregated.primaryAddress
+            ? `https://base.explorer.mainnet.skalenodes.com/address/${aggregated.primaryAddress}`
+            : undefined,
+        });
+      }
+    } catch (aggErr: any) {
+      console.error('[on-chain-balance] aggregated path failed, falling back:', aggErr?.message);
+    }
+
     const [user] = await db.select({
       walletAddress: users.walletAddress,
     }).from(users).where(eq(users.id, userId));

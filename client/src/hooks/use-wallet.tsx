@@ -31,7 +31,9 @@ const publicClient = createPublicClient({
   transport: http(SKALE_RPC_URL),
 });
 
-async function updateWalletAddressOnServer(walletAddress: string): Promise<void> {
+async function updateWalletAddressOnServer(
+  walletAddress: string,
+): Promise<{ ok: boolean; data: any }> {
   try {
     const response = await fetch('/api/wallet/address', {
       method: 'POST',
@@ -39,11 +41,14 @@ async function updateWalletAddressOnServer(walletAddress: string): Promise<void>
       credentials: 'include',
       body: JSON.stringify({ walletAddress }),
     });
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      console.error('Failed to update wallet address on server');
+      console.error('Failed to update wallet address on server', data);
     }
+    return { ok: response.ok, data };
   } catch (error) {
     console.error('Error updating wallet address:', error);
+    return { ok: false, data: { message: 'Network error' } };
   }
 }
 
@@ -78,7 +83,34 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       isUpdatingWallet.current = true;
       lastSavedAddress.current = walletAddress;
       updateWalletAddressOnServer(walletAddress)
-        .then(() => refreshUser())
+        .then(({ ok, data }) => {
+          if (ok) {
+            if (data?.sweepAmount) {
+              toast({
+                title: 'Wallet linked',
+                description: `${data.sweepAmount} GFT was moved over from your previous wallet.`,
+                variant: 'gamefolioSuccess',
+              });
+            }
+            return refreshUser();
+          }
+          if (data?.needsManualMove && data?.oldWalletBalance) {
+            toast({
+              title: 'Move existing balance first',
+              description: `Your previous wallet still holds ${data.oldWalletBalance} GFT. Send those tokens to ${walletAddress} from that wallet, then reconnect.`,
+              variant: 'destructive',
+            });
+            // Allow another attempt after the user moves funds.
+            lastSavedAddress.current = null;
+          } else if (data?.message) {
+            toast({
+              title: 'Could not link wallet',
+              description: data.message,
+              variant: 'destructive',
+            });
+            lastSavedAddress.current = null;
+          }
+        })
         .finally(() => { isUpdatingWallet.current = false; });
     }
   }, [isReady, walletAddress, user?.id, refreshUser]);

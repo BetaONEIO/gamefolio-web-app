@@ -47,7 +47,9 @@ export function useAutoWallet(): UseAutoWalletResult {
       if (!data.isExisting) {
         toast({
           title: 'Wallet Created!',
-          description: 'Your wallet has been created and linked to your account',
+          description: data.sweepAmount
+            ? `Wallet created. ${data.sweepAmount} GFT was moved over from your previous wallet.`
+            : 'Your wallet has been created and linked to your account',
           variant: 'gamefolioSuccess',
         });
       }

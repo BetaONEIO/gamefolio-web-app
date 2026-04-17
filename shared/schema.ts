@@ -110,6 +110,7 @@ export const users = pgTable("users", {
   walletChain: text("wallet_chain").default("skale-nebula-testnet"),
   walletCreatedAt: timestamp("wallet_created_at"),
   encryptedPrivateKey: text("encrypted_private_key"),
+  // See user_wallets table for full wallet history; the fields above mirror the current primary wallet.
   // GF Token Balance
   gfTokenBalance: real("gf_token_balance").default(0).notNull(),
   // Gamefolio Pro subscription
@@ -1567,4 +1568,28 @@ export const serverSettings = pgTable("server_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 export type ServerSetting = typeof serverSettings.$inferSelect;
+
+// User wallets - tracks every wallet address ever associated with a user.
+// The "primary" row mirrors users.walletAddress; retired rows preserve the
+// encrypted private key so any stranded balance can still be moved later.
+export const userWallets = pgTable("user_wallets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  address: text("address").notNull(),
+  chain: text("chain").notNull().default("skale-nebula-testnet"),
+  isPrimary: boolean("is_primary").notNull().default(false),
+  isCustodial: boolean("is_custodial").notNull().default(false),
+  encryptedPrivateKey: text("encrypted_private_key"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  retiredAt: timestamp("retired_at"),
+  retiredSweepTxHash: text("retired_sweep_tx_hash"),
+}, (table) => ({
+  userIdx: index("user_wallets_user_id_idx").on(table.userId),
+  addressIdx: index("user_wallets_address_idx").on(table.address),
+  uniqueUserAddress: unique("user_wallets_user_address_unique").on(table.userId, table.address),
+}));
+
+export type UserWallet = typeof userWallets.$inferSelect;
+export type InsertUserWallet = typeof userWallets.$inferInsert;
+
 export type XpSetting = typeof xpSettings.$inferSelect;

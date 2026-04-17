@@ -11142,25 +11142,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate a new wallet using ethers.js
       const { encryptPrivateKey } = await import('./wallet-crypto');
+      const { setPrimaryWallet } = await import('./wallet-service');
       const { ethers } = await import('ethers');
       const wallet = ethers.Wallet.createRandom();
       const walletAddress = wallet.address.toLowerCase();
 
-      // Save wallet to database with encrypted private key
-      await storage.updateUser(userId, {
-        walletAddress: walletAddress,
-        walletChain: 'skale-nebula-testnet',
-        walletCreatedAt: new Date(),
-        encryptedPrivateKey: encryptPrivateKey(wallet.privateKey),
+      const result = await setPrimaryWallet({
+        userId,
+        newAddress: walletAddress,
+        isCustodial: true,
+        newEncryptedPrivateKey: encryptPrivateKey(wallet.privateKey),
       });
+
+      if (!result.success) {
+        return res.status(409).json({
+          error: result.error,
+          needsManualMove: result.needsManualMove,
+          oldWalletAddress: result.oldWalletAddress,
+          oldWalletBalance: result.oldWalletBalance,
+        });
+      }
 
       console.log(`Wallet created for user ${userId}: ${walletAddress}`);
 
       res.json({
         address: walletAddress,
         chain: 'skale-nebula-testnet',
-        message: "Wallet created successfully",
-        isExisting: false
+        message: result.sweepTxHash
+          ? `Wallet created. ${result.sweepAmount} GFT moved from your previous wallet.`
+          : "Wallet created successfully",
+        isExisting: false,
+        sweepTxHash: result.sweepTxHash,
+        sweepAmount: result.sweepAmount,
+        previousWalletAddress: result.oldWalletAddress,
       });
     } catch (error) {
       console.error("Error creating wallet:", error);
@@ -11185,22 +11199,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const normalizedAddress = walletAddress.toLowerCase();
 
-      const user = await storage.getUser(userId);
-      const updateData: { walletAddress: string; walletChain: string; walletCreatedAt?: Date } = {
-        walletAddress: normalizedAddress,
-        walletChain: 'skale-nebula-testnet',
-      };
+      const { setPrimaryWallet } = await import('./wallet-service');
+      const result = await setPrimaryWallet({
+        userId,
+        newAddress: normalizedAddress,
+        isCustodial: false,
+      });
 
-      if (!user?.walletAddress) {
-        updateData.walletCreatedAt = new Date();
+      if (!result.success) {
+        return res.status(409).json({
+          success: false,
+          message: result.error,
+          needsManualMove: result.needsManualMove,
+          oldWalletAddress: result.oldWalletAddress,
+          oldWalletBalance: result.oldWalletBalance,
+        });
       }
-
-      await storage.updateUser(userId, updateData);
 
       res.json({
         success: true,
         walletAddress: normalizedAddress,
-        message: "Wallet address updated successfully",
+        message: result.sweepTxHash
+          ? `Wallet linked. ${result.sweepAmount} GFT moved from your previous wallet.`
+          : "Wallet address updated successfully",
+        sweepTxHash: result.sweepTxHash,
+        sweepAmount: result.sweepAmount,
+        previousWalletAddress: result.oldWalletAddress,
       });
     } catch (error) {
       console.error("Error updating wallet address:", error);
