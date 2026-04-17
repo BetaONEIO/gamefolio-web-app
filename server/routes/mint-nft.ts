@@ -341,6 +341,15 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
         functionName: 'mint',
         args: [userAddress, BigInt(quantity)],
       });
+      // Persist mint_tx_hash early so a crash during the receipt wait doesn't
+      // leave us unable to tell whether the mint actually went through.
+      try {
+        await db.execute(sql`
+          UPDATE nft_mint_payments
+          SET mint_tx_hash = ${hash}, updated_at = NOW()
+          WHERE payment_tx_hash = ${transferHash} AND mint_tx_hash IS NULL
+        `);
+      } catch (e) { console.error('Failed to persist mint_tx_hash early (custodial):', e); }
       const mintReceipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
       if (mintReceipt.status !== 'success') {
         mintFailureReason = 'Mint transaction reverted on-chain';
@@ -562,6 +571,16 @@ router.post('/api/mint/external-finalize', async (req: Request, res: Response) =
         functionName: 'mint',
         args: [payer, BigInt(quantity)],
       });
+      // Persist the mint tx hash IMMEDIATELY (before waiting for the receipt)
+      // so that if the server dies during the wait the reconciler can still
+      // see the in-flight tx and avoid issuing a duplicate refund.
+      try {
+        await db.execute(sql`
+          UPDATE nft_mint_payments
+          SET mint_tx_hash = ${hash}, updated_at = NOW()
+          WHERE payment_tx_hash = ${txHash} AND mint_tx_hash IS NULL
+        `);
+      } catch (e) { console.error('Failed to persist mint_tx_hash early:', e); }
       const mintReceipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
       if (mintReceipt.status !== 'success') mintFailureReason = 'Mint transaction reverted on-chain';
     } catch (mintErr: any) {
@@ -660,6 +679,11 @@ router.post('/api/mint/external-finalize', async (req: Request, res: Response) =
 // or refunds the GFT, ending the row in a terminal state.
 
 const RECONCILE_GRACE_MS = 10 * 60 * 1000; // pending rows older than this are eligible
+// If a previous reconciliation pass crashed mid-flight it leaves a row marked
+// 'processing'. After this longer grace window we re-claim it so the system
+// still self-heals; the window is intentionally generous so it never races
+// with a still-running reconciler tick.
+const PROCESSING_RECLAIM_MS = 30 * 60 * 1000;
 const RECONCILE_BATCH = 25;
 let reconcileInFlight = false;
 
@@ -688,17 +712,30 @@ export async function reconcileStuckMintPayments(): Promise<ReconcileResult> {
       return result;
     }
 
-    const cutoffMs = RECONCILE_GRACE_MS;
-    // FOR UPDATE SKIP LOCKED so multiple server processes (reusePort) don't
-    // try to refund/finalize the same row at the same time.
+    const pendingCutoffSec = Math.floor(RECONCILE_GRACE_MS / 1000);
+    const processingCutoffSec = Math.floor(PROCESSING_RECLAIM_MS / 1000);
+    // Atomically CLAIM a batch of stuck rows by transitioning their status to
+    // 'processing' and returning the row data. This is a single statement, so
+    // the row-level locks taken by the inner SELECT FOR UPDATE SKIP LOCKED are
+    // held for the duration of the UPDATE — which means concurrent reconciler
+    // ticks (whether in-process or in another reusePort worker) will never
+    // claim the same row. Rows marked 'processing' are off-limits to other
+    // ticks until the reclaim window expires.
     const stuckRes: any = await db.execute(sql`
-      SELECT id, user_id, payer_address, payment_tx_hash, quantity, amount_gft, mint_tx_hash, created_at
-      FROM nft_mint_payments
-      WHERE status = 'pending'
-        AND created_at < NOW() - (${`${Math.floor(cutoffMs / 1000)} seconds`}::interval)
-      ORDER BY created_at ASC
-      LIMIT ${RECONCILE_BATCH}
-      FOR UPDATE SKIP LOCKED
+      UPDATE nft_mint_payments
+      SET status = 'processing', updated_at = NOW()
+      WHERE id IN (
+        SELECT id FROM nft_mint_payments
+        WHERE (
+          (status = 'pending'    AND created_at < NOW() - (${`${pendingCutoffSec} seconds`}::interval))
+          OR
+          (status = 'processing' AND updated_at < NOW() - (${`${processingCutoffSec} seconds`}::interval))
+        )
+        ORDER BY created_at ASC
+        LIMIT ${RECONCILE_BATCH}
+        FOR UPDATE SKIP LOCKED
+      )
+      RETURNING id, user_id, payer_address, payment_tx_hash, quantity, amount_gft, mint_tx_hash, created_at
     `);
     const rows = (stuckRes?.rows || stuckRes || []) as any[];
     result.scanned = rows.length;
@@ -750,6 +787,7 @@ export async function reconcileStuckMintPayments(): Promise<ReconcileResult> {
             await db.execute(sql`
               UPDATE nft_mint_payments
               SET status = 'consumed',
+                  mint_tx_hash = ${mintTxHash},
                   token_ids = ${tokenIds.length > 0 ? sql`ARRAY[${sql.join(tokenIds.map(t => sql`${t}`), sql`, `)}]::integer[]` : sql`ARRAY[]::integer[]`},
                   updated_at = NOW()
               WHERE payment_tx_hash = ${txHash}
