@@ -18,13 +18,19 @@ export type WalletMode = 'auto' | 'gamefolio' | 'external';
 const WALLET_MODE_STORAGE_KEY = 'gf:wallet-mode';
 
 function readStoredWalletMode(): WalletMode {
-  // Default to the built-in Gamefolio (custodial) wallet so first-time users
-  // can mint without being pushed into the Sequence "log in" flow. Anyone who
-  // wants to use an external wallet can flip the toggle and we'll persist it.
+  // Default to the built-in Gamefolio (custodial) wallet so users can mint
+  // without being pushed into the Sequence "log in" flow. Anyone who wants to
+  // use an external wallet can flip the toggle and we'll persist it.
+  // NOTE: existing browsers may have 'auto' stored from before — treat that as
+  // gamefolio so they get the new default too.
   if (typeof window === 'undefined') return 'gamefolio';
   try {
     const v = window.localStorage.getItem(WALLET_MODE_STORAGE_KEY);
-    if (v === 'auto' || v === 'gamefolio' || v === 'external') return v;
+    if (v === 'gamefolio' || v === 'external') return v;
+    if (v === 'auto') {
+      window.localStorage.setItem(WALLET_MODE_STORAGE_KEY, 'gamefolio');
+      return 'gamefolio';
+    }
   } catch {}
   return 'gamefolio';
 }
