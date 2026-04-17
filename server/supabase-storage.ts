@@ -50,7 +50,7 @@ export class SupabaseStorage {
 
     // Enforce strict Supabase-only storage rules
     this.bucketName = 'gamefolio-media';
-    this.allowedBuckets = ['gamefolio-media', 'gamefolio-assets', 'gamefolio-name-tags', 'gamefolio-profile-borders', 'gamefolio-backgrounds'];
+    this.allowedBuckets = ['gamefolio-media', 'gamefolio-assets', 'gamefolio-name-tags', 'gamefolio-profile-borders', 'gamefolio-backgrounds', 'gamefolio-verification'];
     this.disallowedBuckets = ['gamefoliowebappmediacontent', 'gamefolio-media-v2'];
     this.strictMode = true;
     this.preventLocalStorageFallback = true;
@@ -494,9 +494,10 @@ export class SupabaseStorage {
   extractStorageInfo(publicUrl: string): { bucket: string; path: string } | null {
     if (!publicUrl) return null;
     
-    const match = publicUrl.match(/(gamefolio-media|gamefolio-assets|gamefolio-name-tags|gamefolio-profile-borders)\/(.+)$/);
+    const match = publicUrl.match(/(gamefolio-media|gamefolio-assets|gamefolio-name-tags|gamefolio-profile-borders|gamefolio-verification)\/(.+)$/);
     if (match) {
-      return { bucket: match[1], path: match[2] };
+      const path = match[2].split('?')[0];
+      return { bucket: match[1], path };
     }
     return null;
   }
