@@ -61,6 +61,17 @@ const adminAlertsReady: Promise<void> = (async () => {
   }
 })();
 
+// Ensure SMS / PagerDuty columns exist on existing admin_alert_settings rows.
+// (The base table is owned by the alert-routing migration in HEAD.)
+const adminAlertSettingsReady: Promise<void> = (async () => {
+  try {
+    await db.execute(sql`ALTER TABLE admin_alert_settings ADD COLUMN IF NOT EXISTS sms_numbers TEXT[] NOT NULL DEFAULT '{}'`);
+    await db.execute(sql`ALTER TABLE admin_alert_settings ADD COLUMN IF NOT EXISTS pagerduty_routing_key TEXT`);
+  } catch (err) {
+    console.error('Failed to ensure admin_alert_settings SMS/PagerDuty columns:', err);
+  }
+})();
+
 async function persistAdminAlert(params: AdminAlertParams): Promise<void> {
   try {
     await adminAlertsReady;
@@ -143,14 +154,91 @@ export async function sendAdminEmail(to: string, subject: string, message: strin
   }
 }
 
+export async function sendSms(toNumber: string, subject: string, message: string): Promise<boolean> {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_FROM_NUMBER;
+  if (!accountSid || !authToken || !fromNumber) {
+    console.error('Admin alert: SMS skipped — TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM_NUMBER not configured');
+    return false;
+  }
+  try {
+    const body = new URLSearchParams({
+      To: toNumber,
+      From: fromNumber,
+      // Cap body well under Twilio's 1600-char hard limit.
+      Body: `[Gamefolio Admin] ${subject}\n${message}`.slice(0, 1500),
+    });
+    const auth = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.error(`Admin alert: Twilio SMS returned ${res.status} for ${toNumber}: ${text}`);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error(`Admin alert: Twilio SMS failed for ${toNumber}:`, err);
+    return false;
+  }
+}
+
+export async function postPagerDuty(
+  routingKey: string,
+  subject: string,
+  message: string,
+  details: Record<string, unknown> | undefined,
+  dedupeKey: string,
+): Promise<boolean> {
+  try {
+    const res = await fetch('https://events.pagerduty.com/v2/enqueue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        routing_key: routingKey,
+        event_action: 'trigger',
+        dedup_key: dedupeKey,
+        payload: {
+          summary: `${subject} — ${message}`.slice(0, 1024),
+          source: 'gamefolio',
+          severity: 'error',
+          custom_details: details ?? {},
+        },
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.error(`Admin alert: PagerDuty returned ${res.status}: ${text}`);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Admin alert: PagerDuty enqueue failed:', err);
+    return false;
+  }
+}
+
 interface ResolvedDestinations {
   emails: string[];
   slackWebhooks: string[];
+  smsNumbers: string[];
+  pagerDutyKey: string | null;
 }
 
 async function resolveDestinations(alertType: string): Promise<ResolvedDestinations> {
+  await adminAlertSettingsReady;
+
   let configuredEmails: string[] = [];
   let configuredWebhooks: string[] = [];
+  let configuredSms: string[] = [];
+  let configuredPagerDuty: string | null = null;
   let useEnvFallback = true;
   let rule: AlertRoutingRule | undefined;
 
@@ -159,6 +247,8 @@ async function resolveDestinations(alertType: string): Promise<ResolvedDestinati
     if (settings) {
       configuredEmails = settings.emailRecipients || [];
       configuredWebhooks = settings.slackWebhooks || [];
+      configuredSms = (settings as any).smsNumbers || [];
+      configuredPagerDuty = (settings as any).pagerDutyRoutingKey || null;
       useEnvFallback = settings.useEnvFallback ?? true;
       const rules = (settings.routingRules || {}) as Record<string, AlertRoutingRule>;
       rule = rules[alertType];
@@ -169,41 +259,65 @@ async function resolveDestinations(alertType: string): Promise<ResolvedDestinati
 
   // Apply per-type routing rule, if any. Unknown types or rules in `all` mode keep the
   // legacy fan-out behavior; `selected` mode restricts to the listed destinations
-  // (intersected with what's still configured globally).
+  // (intersected with what's still configured globally). PagerDuty is only included for
+  // `selected` rules when `includePagerDuty` is true.
   let typeEmails = configuredEmails;
   let typeWebhooks = configuredWebhooks;
+  let typeSms = configuredSms;
+  let typePagerDuty: string | null = configuredPagerDuty;
   if (rule && rule.mode === 'selected') {
     const allowedEmails = new Set(rule.emails || []);
     const allowedWebhooks = new Set(rule.slackWebhooks || []);
+    const allowedSms = new Set(rule.smsNumbers || []);
     typeEmails = configuredEmails.filter((e) => allowedEmails.has(e));
     typeWebhooks = configuredWebhooks.filter((w) => allowedWebhooks.has(w));
+    typeSms = configuredSms.filter((n) => allowedSms.has(n));
+    typePagerDuty = rule.includePagerDuty ? configuredPagerDuty : null;
   }
 
   const envEmail = process.env.ADMIN_ALERT_EMAIL;
   const envWebhook = process.env.ADMIN_ALERT_SLACK_WEBHOOK_URL;
+  const envPagerDuty = process.env.PAGERDUTY_ROUTING_KEY;
 
-  const hasConfigured = typeEmails.length > 0 || typeWebhooks.length > 0;
+  const hasConfigured =
+    typeEmails.length > 0 ||
+    typeWebhooks.length > 0 ||
+    typeSms.length > 0 ||
+    !!typePagerDuty;
   const envForType = rule?.includeEnv ?? useEnvFallback;
   const includeEnv = envForType || !hasConfigured;
 
   const emails = new Set<string>(typeEmails);
   const slackWebhooks = new Set<string>(typeWebhooks);
+  const smsNumbers = Array.from(new Set<string>(typeSms));
+  let pagerDutyKey: string | null = typePagerDuty;
   if (includeEnv) {
     if (envEmail) emails.add(envEmail);
     if (envWebhook) slackWebhooks.add(envWebhook);
+    if (!pagerDutyKey && envPagerDuty) pagerDutyKey = envPagerDuty;
   }
 
   return {
     emails: Array.from(emails),
     slackWebhooks: Array.from(slackWebhooks),
+    smsNumbers,
+    pagerDutyKey,
   };
 }
 
-export async function sendAdminAlert(params: AdminAlertParams): Promise<{ slack: boolean; email: boolean; suppressed: boolean }> {
+export interface AdminAlertResult {
+  slack: boolean;
+  email: boolean;
+  sms: boolean;
+  pagerduty: boolean;
+  suppressed: boolean;
+}
+
+export async function sendAdminAlert(params: AdminAlertParams): Promise<AdminAlertResult> {
   const dedupeKey = params.dedupeKey || params.subject;
   const dedupeWindow = params.dedupeWindowMs ?? DEFAULT_DEDUPE_WINDOW_MS;
   if (shouldSuppress(dedupeKey, dedupeWindow)) {
-    return { slack: false, email: false, suppressed: true };
+    return { slack: false, email: false, sms: false, pagerduty: false, suppressed: true };
   }
 
   const alertType = params.type || 'general';
@@ -211,7 +325,7 @@ export async function sendAdminAlert(params: AdminAlertParams): Promise<{ slack:
 
   await persistAdminAlert(params);
 
-  const { emails, slackWebhooks } = await resolveDestinations(alertType);
+  const { emails, slackWebhooks, smsNumbers, pagerDutyKey } = await resolveDestinations(alertType);
 
   const slackTasks = slackWebhooks.map((url) =>
     postSlack(url, params.subject, params.message, params.details),
@@ -219,15 +333,23 @@ export async function sendAdminAlert(params: AdminAlertParams): Promise<{ slack:
   const emailTasks = emails.map((to) =>
     sendAdminEmail(to, params.subject, params.message, params.details),
   );
+  const smsTasks = smsNumbers.map((n) => sendSms(n, params.subject, params.message));
+  const pagerDutyTask = pagerDutyKey
+    ? postPagerDuty(pagerDutyKey, params.subject, params.message, params.details, dedupeKey)
+    : Promise.resolve(false);
 
-  const [slackResults, emailResults] = await Promise.all([
+  const [slackResults, emailResults, smsResults, pagerduty] = await Promise.all([
     Promise.all(slackTasks),
     Promise.all(emailTasks),
+    Promise.all(smsTasks),
+    pagerDutyTask,
   ]);
 
   return {
     slack: slackResults.some((r) => r),
     email: emailResults.some((r) => r),
+    sms: smsResults.some((r) => r),
+    pagerduty,
     suppressed: false,
   };
 }

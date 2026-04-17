@@ -654,12 +654,15 @@ export const KNOWN_ADMIN_ALERT_TYPES = [
 export type KnownAdminAlertType = typeof KNOWN_ADMIN_ALERT_TYPES[number];
 
 // Per-alert-type routing rule. `mode: "all"` means deliver to every configured destination
-// (legacy behavior). `mode: "selected"` restricts delivery to the listed emails / webhooks.
+// (legacy behavior). `mode: "selected"` restricts delivery to the listed emails / webhooks /
+// SMS numbers (and the PagerDuty routing key, if `includePagerDuty` is true).
 // `includeEnv` (when present) overrides the global `useEnvFallback` for this type.
 export const alertRoutingRuleSchema = z.object({
   mode: z.enum(["all", "selected"]).default("all"),
   emails: z.array(z.string().email()).default([]),
   slackWebhooks: z.array(z.string().url().startsWith("https://")).default([]),
+  smsNumbers: z.array(z.string().regex(/^\+[1-9]\d{6,14}$/)).default([]),
+  includePagerDuty: z.boolean().optional(),
   includeEnv: z.boolean().optional(),
 });
 export type AlertRoutingRule = z.infer<typeof alertRoutingRuleSchema>;
@@ -667,11 +670,13 @@ export type AlertRoutingRule = z.infer<typeof alertRoutingRuleSchema>;
 export const alertRoutingRulesSchema = z.record(z.string().min(1).max(64), alertRoutingRuleSchema);
 export type AlertRoutingRules = z.infer<typeof alertRoutingRulesSchema>;
 
-// Admin alert destination settings (email + Slack webhook routing)
+// Admin alert destination settings (email + Slack webhook + SMS + PagerDuty routing)
 export const adminAlertSettings = pgTable("admin_alert_settings", {
   id: serial("id").primaryKey(),
   emailRecipients: text("email_recipients").array().notNull().default([] as unknown as string[]),
   slackWebhooks: text("slack_webhooks").array().notNull().default([] as unknown as string[]),
+  smsNumbers: text("sms_numbers").array().notNull().default([] as unknown as string[]),
+  pagerDutyRoutingKey: text("pagerduty_routing_key"),
   useEnvFallback: boolean("use_env_fallback").default(true).notNull(),
   routingRules: json("routing_rules").$type<AlertRoutingRules>().notNull().default({} as AlertRoutingRules),
   updatedBy: integer("updated_by").references(() => users.id),
@@ -686,6 +691,8 @@ export const insertAdminAlertSettingsSchema = createInsertSchema(adminAlertSetti
 }).extend({
   emailRecipients: z.array(z.string().email("Invalid email")).max(50, "Maximum 50 recipients"),
   slackWebhooks: z.array(z.string().url("Invalid URL").startsWith("https://", "Webhook must be HTTPS")).max(20, "Maximum 20 webhooks"),
+  smsNumbers: z.array(z.string().regex(/^\+[1-9]\d{6,14}$/, "SMS numbers must be in E.164 format, e.g. +14155551234")).max(20, "Maximum 20 SMS numbers"),
+  pagerDutyRoutingKey: z.string().min(1).max(200).nullable().optional(),
   routingRules: alertRoutingRulesSchema.default({}),
 });
 

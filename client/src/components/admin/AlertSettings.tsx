@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Plus, Send, Mail, MessageSquare, Route } from "lucide-react";
+import { Trash2, Plus, Send, Mail, MessageSquare, Smartphone, Siren, Route } from "lucide-react";
 
 type RoutingMode = "all" | "selected";
 
@@ -18,23 +18,31 @@ interface AlertRoutingRule {
   mode: RoutingMode;
   emails: string[];
   slackWebhooks: string[];
+  smsNumbers: string[];
+  includePagerDuty?: boolean;
   includeEnv?: boolean;
 }
 
 interface AlertSettings {
   emailRecipients: string[];
   slackWebhooks: string[];
+  smsNumbers: string[];
+  pagerDutyRoutingKey: string | null;
   useEnvFallback: boolean;
   routingRules: Record<string, AlertRoutingRule>;
   knownAlertTypes: string[];
   envEmail: string | null;
   envSlackWebhookConfigured: boolean;
+  envPagerDutyRoutingKeyConfigured: boolean;
+  twilioConfigured: boolean;
   updatedAt: string | null;
 }
 
 function defaultRule(): AlertRoutingRule {
-  return { mode: "all", emails: [], slackWebhooks: [] };
+  return { mode: "all", emails: [], slackWebhooks: [], smsNumbers: [] };
 }
+
+type Channel = "email" | "slack" | "sms" | "pagerduty";
 
 export function AlertSettings() {
   const { toast } = useToast();
@@ -44,16 +52,21 @@ export function AlertSettings() {
 
   const [emails, setEmails] = useState<string[]>([]);
   const [webhooks, setWebhooks] = useState<string[]>([]);
+  const [smsNumbers, setSmsNumbers] = useState<string[]>([]);
+  const [pagerDutyKey, setPagerDutyKey] = useState<string>("");
   const [useEnvFallback, setUseEnvFallback] = useState(true);
   const [routingRules, setRoutingRules] = useState<Record<string, AlertRoutingRule>>({});
   const [newEmail, setNewEmail] = useState("");
   const [newWebhook, setNewWebhook] = useState("");
   const [newType, setNewType] = useState("");
+  const [newSms, setNewSms] = useState("");
 
   useEffect(() => {
     if (data) {
       setEmails(data.emailRecipients);
       setWebhooks(data.slackWebhooks);
+      setSmsNumbers(data.smsNumbers || []);
+      setPagerDutyKey(data.pagerDutyRoutingKey || "");
       setUseEnvFallback(data.useEnvFallback);
       setRoutingRules(data.routingRules || {});
     }
@@ -64,6 +77,8 @@ export function AlertSettings() {
       return apiRequest("PUT", "/api/admin/alert-settings", {
         emailRecipients: emails,
         slackWebhooks: webhooks,
+        smsNumbers,
+        pagerDutyRoutingKey: pagerDutyKey.trim() === "" ? null : pagerDutyKey.trim(),
         useEnvFallback,
         routingRules,
       });
@@ -82,15 +97,23 @@ export function AlertSettings() {
   });
 
   const testMutation = useMutation({
-    mutationFn: async (vars: { channel: "email" | "slack"; target: string }) => {
+    mutationFn: async (vars: { channel: Channel; target: string }) => {
       const res = await apiRequest("POST", "/api/admin/alert-settings/test", vars);
       return res.json() as Promise<{ success: boolean }>;
     },
     onSuccess: (result, vars) => {
+      const where =
+        vars.channel === "email"
+          ? vars.target
+          : vars.channel === "slack"
+            ? "your Slack channel"
+            : vars.channel === "sms"
+              ? vars.target
+              : "your PagerDuty service";
       toast({
         title: result.success ? "Test sent" : "Test failed",
         description: result.success
-          ? `Check ${vars.channel === "email" ? vars.target : "your Slack channel"} for the message.`
+          ? `Check ${where} for the alert.`
           : "Destination did not accept the test alert. See server logs.",
         variant: result.success ? "default" : "destructive",
       });
@@ -149,6 +172,36 @@ export function AlertSettings() {
     });
   };
 
+  const addSms = () => {
+    const v = newSms.trim();
+    if (!v) return;
+    if (!/^\+[1-9]\d{6,14}$/.test(v)) {
+      toast({
+        title: "Invalid number",
+        description: "SMS numbers must be in E.164 format, e.g. +14155551234",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (smsNumbers.includes(v)) {
+      toast({ title: "Already added", description: v, variant: "destructive" });
+      return;
+    }
+    setSmsNumbers([...smsNumbers, v]);
+    setNewSms("");
+  };
+
+  const removeSms = (n: string) => {
+    setSmsNumbers(smsNumbers.filter((x) => x !== n));
+    setRoutingRules((prev) => {
+      const next: Record<string, AlertRoutingRule> = {};
+      for (const [t, r] of Object.entries(prev)) {
+        next[t] = { ...r, smsNumbers: (r.smsNumbers || []).filter((x) => x !== n) };
+      }
+      return next;
+    });
+  };
+
   const updateRule = (type: string, patch: Partial<AlertRoutingRule>) => {
     setRoutingRules((prev) => ({
       ...prev,
@@ -195,7 +248,8 @@ export function AlertSettings() {
       <CardHeader>
         <CardTitle>Admin Alert Routing</CardTitle>
         <CardDescription>
-          Configure where admin alerts are delivered. Use the per-type rules below to send specific
+          Configure where admin alerts are delivered. Email and Slack provide awareness; SMS (Twilio) and
+          PagerDuty page on-call admins for urgent response. Use the per-type rules below to send specific
           alert categories (e.g. <code>stuck_payment</code>, <code>moderation</code>) to a subset of
           destinations. Types without a rule fan out to every destination (legacy behavior).
         </CardDescription>
@@ -307,6 +361,108 @@ export function AlertSettings() {
           </div>
         </section>
 
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Smartphone className="h-4 w-4" />
+            <h4 className="font-semibold">SMS numbers (Twilio)</h4>
+            {data && !data.twilioConfigured && (
+              <Badge variant="outline" className="text-xs">
+                Twilio env vars not set — sends will be skipped
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Pages on-call admins via SMS for urgent stuck-payment alerts. Numbers must be in E.164 format (e.g.{" "}
+            <code>+14155551234</code>). Requires <code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code>, and{" "}
+            <code>TWILIO_FROM_NUMBER</code> env secrets.
+          </p>
+          <div className="space-y-2">
+            {smsNumbers.length === 0 && (
+              <p className="text-sm text-muted-foreground">No SMS numbers configured.</p>
+            )}
+            {smsNumbers.map((n) => (
+              <div key={n} className="flex items-center gap-2" data-testid={`row-sms-${n}`}>
+                <Input value={n} readOnly className="flex-1 font-mono text-xs" />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => testMutation.mutate({ channel: "sms", target: n })}
+                  disabled={testMutation.isPending || (data && !data.twilioConfigured)}
+                  data-testid={`button-test-sms-${n}`}
+                >
+                  <Send className="h-4 w-4 mr-1" /> Test
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => removeSms(n)}
+                  data-testid={`button-remove-sms-${n}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="tel"
+              placeholder="+14155551234"
+              value={newSms}
+              onChange={(e) => setNewSms(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addSms();
+                }
+              }}
+              data-testid="input-new-sms"
+            />
+            <Button type="button" onClick={addSms} data-testid="button-add-sms">
+              <Plus className="h-4 w-4 mr-1" /> Add
+            </Button>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Siren className="h-4 w-4" />
+            <h4 className="font-semibold">PagerDuty Events v2 routing key</h4>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Triggers a PagerDuty incident for urgent stuck-payment alerts. Paste the integration routing key from your
+            service's Events API v2 integration. The alert dedupe key is reused so repeated alerts roll up into the
+            same incident.
+          </p>
+          <div className="flex items-center gap-2">
+            <Input
+              type="text"
+              placeholder="32-character integration routing key"
+              value={pagerDutyKey}
+              onChange={(e) => setPagerDutyKey(e.target.value)}
+              data-testid="input-pagerduty-key"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                testMutation.mutate({ channel: "pagerduty", target: pagerDutyKey.trim() })
+              }
+              disabled={testMutation.isPending || pagerDutyKey.trim().length === 0}
+              data-testid="button-test-pagerduty"
+            >
+              <Send className="h-4 w-4 mr-1" /> Test
+            </Button>
+          </div>
+          {data?.envPagerDutyRoutingKeyConfigured && (
+            <Badge variant="outline" data-testid="badge-env-pagerduty" className="text-xs">
+              PAGERDUTY_ROUTING_KEY env fallback is configured
+            </Badge>
+          )}
+        </section>
+
         <section className="space-y-3 border-t pt-4">
           <div className="flex items-center gap-2">
             <Route className="h-4 w-4" />
@@ -361,60 +517,108 @@ export function AlertSettings() {
                   </div>
 
                   {rule.mode === "selected" && (
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Emails
-                        </Label>
-                        {emails.length === 0 && (
-                          <p className="text-xs text-muted-foreground">Add emails above first.</p>
-                        )}
-                        {emails.map((email) => {
-                          const checked = rule.emails.includes(email);
-                          return (
-                            <label key={email} className="flex items-center gap-2 text-sm">
-                              <Checkbox
-                                checked={checked}
-                                onCheckedChange={(v) => {
-                                  const next = v
-                                    ? [...rule.emails, email]
-                                    : rule.emails.filter((e) => e !== email);
-                                  updateRule(type, { emails: next });
-                                }}
-                                data-testid={`checkbox-email-${type}-${email}`}
-                              />
-                              <span className="truncate">{email}</span>
-                            </label>
-                          );
-                        })}
+                    <>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                            Emails
+                          </Label>
+                          {emails.length === 0 && (
+                            <p className="text-xs text-muted-foreground">Add emails above first.</p>
+                          )}
+                          {emails.map((email) => {
+                            const checked = rule.emails.includes(email);
+                            return (
+                              <label key={email} className="flex items-center gap-2 text-sm">
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(v) => {
+                                    const next = v
+                                      ? [...rule.emails, email]
+                                      : rule.emails.filter((e) => e !== email);
+                                    updateRule(type, { emails: next });
+                                  }}
+                                  data-testid={`checkbox-email-${type}-${email}`}
+                                />
+                                <span className="truncate">{email}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                            Slack webhooks
+                          </Label>
+                          {webhooks.length === 0 && (
+                            <p className="text-xs text-muted-foreground">Add webhooks above first.</p>
+                          )}
+                          {webhooks.map((url) => {
+                            const checked = rule.slackWebhooks.includes(url);
+                            return (
+                              <label key={url} className="flex items-center gap-2 text-sm">
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(v) => {
+                                    const next = v
+                                      ? [...rule.slackWebhooks, url]
+                                      : rule.slackWebhooks.filter((w) => w !== url);
+                                    updateRule(type, { slackWebhooks: next });
+                                  }}
+                                  data-testid={`checkbox-webhook-${type}`}
+                                />
+                                <span className="truncate font-mono text-xs">{url}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Slack webhooks
-                        </Label>
-                        {webhooks.length === 0 && (
-                          <p className="text-xs text-muted-foreground">Add webhooks above first.</p>
-                        )}
-                        {webhooks.map((url) => {
-                          const checked = rule.slackWebhooks.includes(url);
-                          return (
-                            <label key={url} className="flex items-center gap-2 text-sm">
-                              <Checkbox
-                                checked={checked}
-                                onCheckedChange={(v) => {
-                                  const next = v
-                                    ? [...rule.slackWebhooks, url]
-                                    : rule.slackWebhooks.filter((w) => w !== url);
-                                  updateRule(type, { slackWebhooks: next });
-                                }}
-                                data-testid={`checkbox-webhook-${type}`}
-                              />
-                              <span className="truncate font-mono text-xs">{url}</span>
-                            </label>
-                          );
-                        })}
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                            SMS numbers
+                          </Label>
+                          {smsNumbers.length === 0 && (
+                            <p className="text-xs text-muted-foreground">Add SMS numbers above first.</p>
+                          )}
+                          {smsNumbers.map((n) => {
+                            const checked = (rule.smsNumbers || []).includes(n);
+                            return (
+                              <label key={n} className="flex items-center gap-2 text-sm">
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(v) => {
+                                    const cur = rule.smsNumbers || [];
+                                    const next = v ? [...cur, n] : cur.filter((x) => x !== n);
+                                    updateRule(type, { smsNumbers: next });
+                                  }}
+                                  data-testid={`checkbox-sms-${type}-${n}`}
+                                />
+                                <span className="truncate font-mono text-xs">{n}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                            PagerDuty
+                          </Label>
+                          <label className="flex items-center gap-2 text-sm">
+                            <Checkbox
+                              checked={!!rule.includePagerDuty}
+                              onCheckedChange={(v) => updateRule(type, { includePagerDuty: !!v })}
+                              disabled={!pagerDutyKey.trim()}
+                              data-testid={`checkbox-pagerduty-${type}`}
+                            />
+                            <span>
+                              Also page PagerDuty for this alert type
+                              {!pagerDutyKey.trim() && (
+                                <span className="text-xs text-muted-foreground"> (configure routing key above)</span>
+                              )}
+                            </span>
+                          </label>
+                        </div>
                       </div>
-                    </div>
+                    </>
                   )}
 
                   <label className="flex items-center gap-2 text-sm">
@@ -471,9 +675,10 @@ export function AlertSettings() {
                 Also send to environment-variable destinations (default)
               </Label>
               <p className="text-sm text-muted-foreground">
-                When enabled, alerts are also sent to <code>ADMIN_ALERT_EMAIL</code> and{" "}
-                <code>ADMIN_ALERT_SLACK_WEBHOOK_URL</code>. When disabled, only the recipients above are used. If
-                no recipients are configured, env destinations are always used regardless of this setting.
+                When enabled, alerts are also sent to <code>ADMIN_ALERT_EMAIL</code>,{" "}
+                <code>ADMIN_ALERT_SLACK_WEBHOOK_URL</code>, and the <code>PAGERDUTY_ROUTING_KEY</code> env fallback
+                (when no key is set above). When disabled, only the destinations above are used. If no destinations
+                are configured at all, env fallbacks are always used regardless of this setting.
                 Per-type rules can override this with their own checkbox.
               </p>
               <div className="mt-2 flex flex-wrap gap-2">

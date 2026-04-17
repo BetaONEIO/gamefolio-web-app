@@ -29,6 +29,14 @@ Gamefolio is a comprehensive gaming portfolio and social platform for gamers to 
 - Prioritize data integrity and security
 - Prefer comprehensive solutions over quick fixes
 
+## Recent Changes (Apr 2026 - Admin Alert Routing: SMS + PagerDuty)
+- **New table** `admin_alert_settings` (singleton row id=1) with `email_recipients` (text[]), `slack_webhook_url`, `sms_numbers` (text[]), `pagerduty_routing_key`, `updated_at`. Bootstrap is auto-run by `server/admin-alert-service.ts`.
+- **`sendAdminAlert`** now reads destinations from this table (env vars `ADMIN_ALERT_EMAIL`, `ADMIN_ALERT_SLACK_WEBHOOK_URL`, `PAGERDUTY_ROUTING_KEY` still serve as fallbacks) and fans out to email, Slack, SMS (Twilio REST API), and PagerDuty Events v2 in parallel. Returns `{ slack, email, sms, pagerduty, suppressed }`.
+- **SMS** uses Twilio REST API directly via fetch — requires `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` env secrets.
+- **PagerDuty** uses Events API v2 (`https://events.pagerduty.com/v2/enqueue`) with `dedup_key` matching the alert dedupe key for incident grouping.
+- **Admin endpoints**: `GET /api/admin/alert-settings`, `PUT /api/admin/alert-settings` (Zod-validated; emails as RFC, SMS as E.164), `POST /api/admin/alert-settings/test` with `{ channel: 'slack'|'email'|'sms'|'pagerduty' }`.
+- **UI**: New `client/src/components/admin/AlertSettings.tsx` Alert Routing card rendered above the alerts table on the Admin → Alerts tab. Per-channel Test send buttons; chip inputs for emails and SMS numbers.
+
 ## Recent Changes (Mar 2026 - Streamer Profile Type)
 - **Streamer Profile Features**: Added dedicated Streamer profile type functionality
   - **DB**: Added `stream_platform` (text: 'twitch'|'kick'), `stream_channel_name` (text), `show_live_overlay` (boolean) columns to `users` table

@@ -8,7 +8,7 @@ import fs from 'fs';
 import multer from 'multer';
 import { ContentFilterService } from '../services/content-filter';
 import { insertBannerSettingsSchema, insertAssetRewardSchema, insertHeroSlideSchema, heroSlides, insertAdminAlertSettingsSchema, KNOWN_ADMIN_ALERT_TYPES } from '@shared/schema';
-import { sendAdminAlert, postSlack, sendAdminEmail } from '../admin-alert-service';
+import { sendAdminAlert, postSlack, sendAdminEmail, sendSms, postPagerDuty } from '../admin-alert-service';
 import { POINT_VALUES, XP_SETTINGS_DEFINITION, updatePointValue } from '../leaderboard-service';
 import { z } from 'zod';
 import { supabaseStorage } from '../supabase-storage';
@@ -1237,11 +1237,19 @@ adminRouter.get("/alert-settings", async (_req: Request, res: Response) => {
     res.json({
       emailRecipients: settings?.emailRecipients ?? [],
       slackWebhooks: settings?.slackWebhooks ?? [],
+      smsNumbers: (settings as any)?.smsNumbers ?? [],
+      pagerDutyRoutingKey: (settings as any)?.pagerDutyRoutingKey ?? null,
       useEnvFallback: settings?.useEnvFallback ?? true,
       routingRules: settings?.routingRules ?? {},
       knownAlertTypes: KNOWN_ADMIN_ALERT_TYPES,
       envEmail: process.env.ADMIN_ALERT_EMAIL || null,
       envSlackWebhookConfigured: !!process.env.ADMIN_ALERT_SLACK_WEBHOOK_URL,
+      envPagerDutyRoutingKeyConfigured: !!process.env.PAGERDUTY_ROUTING_KEY,
+      twilioConfigured: !!(
+        process.env.TWILIO_ACCOUNT_SID &&
+        process.env.TWILIO_AUTH_TOKEN &&
+        process.env.TWILIO_FROM_NUMBER
+      ),
       updatedAt: settings?.updatedAt ?? null,
     });
   } catch (err) {
@@ -1256,14 +1264,21 @@ adminRouter.put("/alert-settings", async (req: Request, res: Response) => {
     const parsed = insertAdminAlertSettingsSchema.parse({
       emailRecipients: req.body.emailRecipients ?? [],
       slackWebhooks: req.body.slackWebhooks ?? [],
+      smsNumbers: req.body.smsNumbers ?? [],
+      pagerDutyRoutingKey:
+        typeof req.body.pagerDutyRoutingKey === "string" && req.body.pagerDutyRoutingKey.trim() === ""
+          ? null
+          : req.body.pagerDutyRoutingKey ?? null,
       useEnvFallback: req.body.useEnvFallback ?? true,
       routingRules: req.body.routingRules ?? {},
       updatedBy: req.user!.id,
     });
 
-    // Validate that every routing rule's selected emails/webhooks reference a configured destination.
+    // Validate that every routing rule's selected emails/webhooks/SMS numbers reference a
+    // configured destination, and that includePagerDuty rules have a routing key set.
     const allowedEmails = new Set(parsed.emailRecipients);
     const allowedWebhooks = new Set(parsed.slackWebhooks);
+    const allowedSms = new Set(parsed.smsNumbers);
     for (const [type, rule] of Object.entries(parsed.routingRules || {})) {
       for (const e of rule.emails || []) {
         if (!allowedEmails.has(e)) {
@@ -1274,6 +1289,16 @@ adminRouter.put("/alert-settings", async (req: Request, res: Response) => {
         if (!allowedWebhooks.has(w)) {
           return res.status(400).json({ message: `Routing rule for "${type}" references unknown webhook` });
         }
+      }
+      for (const n of rule.smsNumbers || []) {
+        if (!allowedSms.has(n)) {
+          return res.status(400).json({ message: `Routing rule for "${type}" references unknown SMS number: ${n}` });
+        }
+      }
+      if (rule.includePagerDuty && !parsed.pagerDutyRoutingKey) {
+        return res.status(400).json({
+          message: `Routing rule for "${type}" includes PagerDuty but no routing key is configured`,
+        });
       }
     }
 
@@ -1292,7 +1317,7 @@ adminRouter.put("/alert-settings", async (req: Request, res: Response) => {
 adminRouter.post("/alert-settings/test", async (req: Request, res: Response) => {
   try {
     const schema = z.object({
-      channel: z.enum(["email", "slack"]),
+      channel: z.enum(["email", "slack", "sms", "pagerduty"]),
       target: z.string().min(1),
     });
     const { channel, target } = schema.parse(req.body);
@@ -1305,10 +1330,22 @@ adminRouter.post("/alert-settings/test", async (req: Request, res: Response) => 
       if (!ok.success) return res.status(400).json({ message: "Invalid email address" });
       const success = await sendAdminEmail(target, subject, message);
       return res.json({ success });
-    } else {
+    } else if (channel === "slack") {
       const ok = z.string().url().startsWith("https://").safeParse(target);
       if (!ok.success) return res.status(400).json({ message: "Webhook must be an HTTPS URL" });
       const success = await postSlack(target, subject, message);
+      return res.json({ success });
+    } else if (channel === "sms") {
+      const ok = z.string().regex(/^\+[1-9]\d{6,14}$/).safeParse(target);
+      if (!ok.success) return res.status(400).json({ message: "SMS number must be in E.164 format, e.g. +14155551234" });
+      const success = await sendSms(target, subject, message);
+      return res.json({ success });
+    } else {
+      // pagerduty
+      if (target.length < 1 || target.length > 200) {
+        return res.status(400).json({ message: "Invalid PagerDuty routing key" });
+      }
+      const success = await postPagerDuty(target, subject, message, undefined, `gamefolio-test-${Date.now()}`);
       return res.json({ success });
     }
   } catch (err) {

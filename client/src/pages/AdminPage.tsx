@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
+import { AlertSettings } from "@/components/admin/AlertSettings";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
-import { AlertSettings } from "@/components/admin/AlertSettings";
 import { UserWithBadges, BannerSettings, Badge as BadgeType, assetTypes, AssetType, Game } from "@shared/schema";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -2818,6 +2818,7 @@ const AdminPage = () => {
         </TabsList>
 
         <TabsContent value="alerts" className="space-y-4">
+          <AlertSettings />
           <AdminAlertsSection />
         </TabsContent>
 
@@ -6068,7 +6069,6 @@ const AdminPage = () => {
 
         {/* Settings Tab */}
         <TabsContent value="settings" className="space-y-4">
-          <AlertSettings />
           <Card>
             <CardHeader>
               <CardTitle>Admin Settings</CardTitle>
