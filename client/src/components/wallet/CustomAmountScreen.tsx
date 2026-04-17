@@ -7,6 +7,7 @@ interface CustomAmountScreenProps {
 
 const GFT_RATE = 0.01;
 const MIN_AMOUNT = 5;
+const MAX_AMOUNT = 10000;
 
 export default function CustomAmountScreen({
   onBack,
@@ -28,7 +29,8 @@ export default function CustomAmountScreen({
 
   const amount = parseFloat(amountString) || 0;
   const gftReceived = amount / GFT_RATE;
-  const isValidAmount = amount >= MIN_AMOUNT;
+  const isValidAmount = amount >= MIN_AMOUNT && amount <= MAX_AMOUNT;
+  const isOverMax = amount > MAX_AMOUNT;
 
   const handleKeyPress = (key: string) => {
     if (key === "backspace") {
@@ -253,8 +255,20 @@ export default function CustomAmountScreen({
               </svg>
             </div>
             <p className="text-xs leading-5" style={{ color: "#94a3b8" }}>
-              The minimum purchase amount is{" "}
-              <span className="font-bold text-white">£5.00</span>. Transaction fees are calculated at the next step.
+              {isOverMax ? (
+                <>
+                  The maximum purchase amount is{" "}
+                  <span className="font-bold text-white">
+                    £{MAX_AMOUNT.toLocaleString()}.00
+                  </span>
+                  . Please lower the amount to continue.
+                </>
+              ) : (
+                <>
+                  The minimum purchase amount is{" "}
+                  <span className="font-bold text-white">£5.00</span>. Transaction fees are calculated at the next step.
+                </>
+              )}
             </p>
           </div>
 

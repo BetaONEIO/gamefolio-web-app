@@ -11,14 +11,16 @@ const SKALE_NEBULA_TESTNET_CHAIN_ID = 1187947933;
 
 const router = Router();
 
-const ALLOWED_GBP_AMOUNTS = [5, 10, 25, 50, 100] as const;
+const MIN_GBP_AMOUNT = 5;
+const MAX_GBP_AMOUNT = 10000;
 const GF_PRICE_GBP = 0.01; // Fixed price: 1 GF = £0.01
 
 const checkoutSchema = z.object({
-  gbpAmount: z.number().refine(
-    (val) => ALLOWED_GBP_AMOUNTS.includes(val as any),
-    { message: `gbpAmount must be one of: ${ALLOWED_GBP_AMOUNTS.join(', ')}` }
-  ),
+  gbpAmount: z.number()
+    .finite({ message: 'gbpAmount must be a valid number' })
+    .min(MIN_GBP_AMOUNT, { message: `Minimum purchase is £${MIN_GBP_AMOUNT}` })
+    .max(MAX_GBP_AMOUNT, { message: `Maximum purchase is £${MAX_GBP_AMOUNT}` })
+    .transform((val) => Math.round(val * 100) / 100),
 });
 
 router.post('/api/gf/checkout', hybridAuth, async (req: Request, res: Response) => {

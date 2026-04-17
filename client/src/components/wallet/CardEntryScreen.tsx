@@ -269,8 +269,18 @@ export default function CardEntryScreen(props: CardEntryScreenProps) {
       credentials: "include",
       body: JSON.stringify({ gbpAmount: props.amount }),
     })
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to initialize payment");
+      .then(async (res) => {
+        if (!res.ok) {
+          let message = "Failed to initialize payment";
+          try {
+            const body = await res.json();
+            const detailMsg = body?.details?.[0]?.message;
+            message = detailMsg || body?.message || body?.error || message;
+          } catch {
+            // ignore JSON parse errors and use default message
+          }
+          throw new Error(message);
+        }
         return res.json();
       })
       .then((data) => setClientSecret(data.clientSecret))
