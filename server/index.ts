@@ -335,6 +335,26 @@ app.use((req, res, next) => {
         LeaderboardService.processPeriodicLeaderboardClosures()
           .catch((err) => console.error('Leaderboard closures check failed:', err));
       }, 6 * 60 * 60 * 1000);
+
+      // Auto-recover stuck NFT mint payments. Runs every 5 minutes; the
+      // reconciler itself only touches rows that have been pending past a
+      // grace window, so this short interval just lets us catch up quickly
+      // after a crash without thrashing.
+      import('./routes/mint-nft').then(({ reconcileStuckMintPayments }) => {
+        const RECONCILE_INTERVAL_MS = 5 * 60 * 1000;
+        const tick = () => {
+          reconcileStuckMintPayments()
+            .then((r) => {
+              if (r.scanned > 0 || r.errors.length > 0) {
+                log(`mint-reconcile: scanned=${r.scanned} consumed=${r.consumed} refunded=${r.refunded} refundFailed=${r.refundFailed} skipped=${r.skipped} errors=${r.errors.length}`);
+              }
+            })
+            .catch((err) => console.error('mint-reconcile failed:', err));
+        };
+        // Delay first run so the app is fully warm.
+        setTimeout(tick, 60 * 1000);
+        setInterval(tick, RECONCILE_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule mint reconciler:', err));
     });
   } catch (error) {
     console.error("Fatal server error:", error);

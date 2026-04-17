@@ -15,6 +15,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { encryptPrivateKey } from '../wallet-crypto';
 import { writeContractWithPoW, writeContractWithPoWFromRawKey, publicClient } from '../skale-pow';
 import { isWalletLinkedToUser } from './linked-wallets';
+import { adminMiddleware } from '../middleware/admin';
 
 (async () => {
   try {
@@ -648,6 +649,197 @@ router.post('/api/mint/external-finalize', async (req: Request, res: Response) =
   } catch (error: any) {
     console.error('External-finalize mint error:', error);
     return res.status(500).json({ error: error.message || 'External finalize failed' });
+  }
+});
+
+// ─── Stuck-payment reconciliation ────────────────────────────────────────────
+// If the server crashes between inserting an `nft_mint_payments` row and
+// finishing the mint/refund, the row stays in `pending` and the user's funds
+// sit in the treasury. The reconciler scans for those rows after a grace
+// period and either finalizes the mint (if it actually went through on-chain)
+// or refunds the GFT, ending the row in a terminal state.
+
+const RECONCILE_GRACE_MS = 10 * 60 * 1000; // pending rows older than this are eligible
+const RECONCILE_BATCH = 25;
+let reconcileInFlight = false;
+
+interface ReconcileResult {
+  scanned: number;
+  consumed: number;
+  refunded: number;
+  refundFailed: number;
+  skipped: number;
+  errors: string[];
+}
+
+export async function reconcileStuckMintPayments(): Promise<ReconcileResult> {
+  const result: ReconcileResult = { scanned: 0, consumed: 0, refunded: 0, refundFailed: 0, skipped: 0, errors: [] };
+
+  if (reconcileInFlight) {
+    result.errors.push('Reconciliation already in flight; skipping this cycle.');
+    return result;
+  }
+  reconcileInFlight = true;
+
+  try {
+    const treasuryPrivateKey = process.env.TREASURY_PRIVATE_KEY;
+    if (!treasuryPrivateKey) {
+      result.errors.push('TREASURY_PRIVATE_KEY not configured');
+      return result;
+    }
+
+    const cutoffMs = RECONCILE_GRACE_MS;
+    // FOR UPDATE SKIP LOCKED so multiple server processes (reusePort) don't
+    // try to refund/finalize the same row at the same time.
+    const stuckRes: any = await db.execute(sql`
+      SELECT id, user_id, payer_address, payment_tx_hash, quantity, amount_gft, mint_tx_hash, created_at
+      FROM nft_mint_payments
+      WHERE status = 'pending'
+        AND created_at < NOW() - (${`${Math.floor(cutoffMs / 1000)} seconds`}::interval)
+      ORDER BY created_at ASC
+      LIMIT ${RECONCILE_BATCH}
+      FOR UPDATE SKIP LOCKED
+    `);
+    const rows = (stuckRes?.rows || stuckRes || []) as any[];
+    result.scanned = rows.length;
+
+    for (const row of rows) {
+      const userId = Number(row.user_id);
+      const payer = String(row.payer_address).toLowerCase() as Address;
+      const txHash = String(row.payment_tx_hash) as `0x${string}`;
+      const quantity = Number(row.quantity);
+      const totalCost = Number(row.amount_gft);
+      const costInWei = parseUnits(String(totalCost), 18);
+      const mintTxHash = row.mint_tx_hash ? (String(row.mint_tx_hash) as `0x${string}`) : null;
+
+      try {
+        // Case 1: a mint tx was already sent. See if it actually landed.
+        if (mintTxHash) {
+          let mintReceipt: any = null;
+          try {
+            mintReceipt = await publicClient.getTransactionReceipt({ hash: mintTxHash });
+          } catch {
+            // Not yet mined / unknown — leave it for the next cycle so we don't
+            // double-spend by issuing a refund while a mint is still in flight.
+            result.skipped += 1;
+            continue;
+          }
+
+          if (mintReceipt?.status === 'success') {
+            const tokenIds: number[] = [];
+            for (const log of mintReceipt.logs) {
+              try {
+                if (log.address.toLowerCase() !== NFT_CONTRACT_ADDRESS.toLowerCase()) continue;
+                const decoded = decodeEventLog({
+                  abi: [{
+                    anonymous: false,
+                    inputs: [
+                      { indexed: true, name: 'from', type: 'address' },
+                      { indexed: true, name: 'to', type: 'address' },
+                      { indexed: true, name: 'tokenId', type: 'uint256' },
+                    ],
+                    name: 'Transfer',
+                    type: 'event',
+                  }],
+                  data: log.data,
+                  topics: log.topics,
+                });
+                if (decoded.eventName === 'Transfer') tokenIds.push(Number((decoded.args as any).tokenId));
+              } catch { continue; }
+            }
+            await db.execute(sql`
+              UPDATE nft_mint_payments
+              SET status = 'consumed',
+                  token_ids = ${tokenIds.length > 0 ? sql`ARRAY[${sql.join(tokenIds.map(t => sql`${t}`), sql`, `)}]::integer[]` : sql`ARRAY[]::integer[]`},
+                  updated_at = NOW()
+              WHERE payment_tx_hash = ${txHash}
+            `);
+            for (const tokenId of tokenIds) {
+              try {
+                await db.execute(sql`
+                  INSERT INTO user_nfts (user_id, token_id, tx_hash) VALUES (${userId}, ${tokenId}, ${mintTxHash})
+                  ON CONFLICT (user_id, token_id) DO NOTHING
+                `);
+              } catch (dbErr) {
+                console.error('reconcile: failed to record user_nfts row:', dbErr);
+              }
+            }
+            result.consumed += 1;
+            console.log(`✅ Reconciled stuck payment ${txHash} → consumed (mint ${mintTxHash}, ${tokenIds.length} token(s))`);
+            continue;
+          }
+          // mint tx exists but reverted -> fall through to refund.
+        }
+
+        // Case 2: no mint tx (or it reverted). Refund the GFT.
+        const refund = await refundFailedMint({
+          userId,
+          userAddress: payer,
+          totalCost,
+          costInWei,
+          transferHash: txHash,
+          treasuryPrivateKey,
+          mintError: mintTxHash ? 'Reconciled: mint reverted' : 'Reconciled: mint never completed',
+          mintTxHash,
+        });
+        await db.execute(sql`
+          UPDATE nft_mint_payments
+          SET status = ${refund.refundStatus === 'success' ? 'refunded' : 'failed'},
+              error = ${`auto-recovered ${new Date().toISOString()}`},
+              updated_at = NOW()
+          WHERE payment_tx_hash = ${txHash}
+        `);
+        if (refund.refundStatus === 'success') {
+          result.refunded += 1;
+          console.log(`✅ Reconciled stuck payment ${txHash} → refunded ${totalCost} GFT to ${payer} (tx ${refund.refundTxHash})`);
+        } else {
+          result.refundFailed += 1;
+          console.error(`❌ Reconciled stuck payment ${txHash} → refund FAILED for ${payer}`);
+        }
+      } catch (err: any) {
+        const msg = err?.message || String(err);
+        result.errors.push(`${txHash}: ${msg}`);
+        console.error(`reconcile error for ${txHash}:`, err);
+      }
+    }
+
+    return result;
+  } finally {
+    reconcileInFlight = false;
+  }
+}
+
+// Admin: list currently stuck pending payments (no time filter — show everything).
+router.get('/api/admin/mint/stuck-payments', adminMiddleware, async (_req: Request, res: Response) => {
+  try {
+    const rowsRes: any = await db.execute(sql`
+      SELECT id, user_id, payer_address, payment_tx_hash, quantity, amount_gft,
+             status, mint_tx_hash, error, created_at, updated_at
+      FROM nft_mint_payments
+      WHERE status = 'pending'
+      ORDER BY created_at ASC
+      LIMIT 200
+    `);
+    const rows = (rowsRes?.rows || rowsRes || []) as any[];
+    return res.json({
+      count: rows.length,
+      graceSeconds: Math.floor(RECONCILE_GRACE_MS / 1000),
+      payments: rows,
+    });
+  } catch (err: any) {
+    console.error('stuck-payments list error:', err);
+    return res.status(500).json({ error: err?.message || 'Failed to list stuck payments' });
+  }
+});
+
+// Admin: trigger a reconciliation pass on demand.
+router.post('/api/admin/mint/reconcile', adminMiddleware, async (_req: Request, res: Response) => {
+  try {
+    const result = await reconcileStuckMintPayments();
+    return res.json({ success: true, result });
+  } catch (err: any) {
+    console.error('manual reconcile error:', err);
+    return res.status(500).json({ error: err?.message || 'Reconciliation failed' });
   }
 });
 
