@@ -278,6 +278,8 @@ export default function StorePage() {
   const [purchasingNameTagId, setPurchasingNameTagId] = useState<number | null>(null);
   const [purchasingBorderId, setPurchasingBorderId] = useState<number | null>(null);
   const [purchasingBadgeId, setPurchasingBadgeId] = useState<number | null>(null);
+  const [pendingNftPurchase, setPendingNftPurchase] = useState<{ tokenId: number; sellerId: number } | null>(null);
+  const [purchaseConfirmOpen, setPurchaseConfirmOpen] = useState(false);
 
   const { data: storeItems = [], isLoading: isLoadingItems } = useQuery<StoreItem[]>({
     queryKey: ["/api/store/items"],
@@ -390,19 +392,28 @@ export default function StorePage() {
 
   const [buyingTokenId, setBuyingTokenId] = useState<number | null>(null);
 
-  const handleBuyMarketplaceNft = async ({ tokenId, sellerId }: { tokenId: number; sellerId: number }) => {
+  const handleBuyMarketplaceNft = ({ tokenId, sellerId }: { tokenId: number; sellerId: number }) => {
     if (!user) {
       openModal();
       return;
     }
+
+    setPendingNftPurchase({ tokenId, sellerId });
+    setPurchaseConfirmOpen(true);
+  };
+
+  const confirmMarketplacePurchase = async () => {
+    if (!pendingNftPurchase) return;
+    const { tokenId, sellerId } = pendingNftPurchase;
+    setPurchaseConfirmOpen(false);
 
     // Gamefolio (custodial) wallet path — server signs with user's stored key.
     if (walletMode === 'gamefolio') {
       setBuyingTokenId(tokenId);
       try {
         toast({ title: "Processing purchase...", description: "Sending GFT from your Gamefolio wallet" });
-        const data: any = await apiRequest("POST", "/api/marketplace/server-buy", { tokenId, sellerId });
-        toast({ title: "NFT Purchased!", description: data?.message || "Purchase complete" });
+        await apiRequest("POST", "/api/marketplace/server-buy", { tokenId, sellerId });
+        toast({ title: "NFT Purchased!", description: "Purchase complete" });
         queryClient.invalidateQueries({ queryKey: ["/api/marketplace/listings"] });
         queryClient.invalidateQueries({ queryKey: ["/api/nfts/owned"] });
         queryClient.invalidateQueries({ queryKey: ["/api/token/balance"] });
@@ -478,6 +489,8 @@ export default function StorePage() {
     }
   };
 
+  const purchaseConfirmTitle = pendingNftPurchase ? `Buy NFT #${pendingNftPurchase.tokenId}?` : "Buy NFT?";
+
   const { openModal } = useAuthModal();
 
   const handlePurchaseWithGF = async (item: StoreItem) => {
@@ -495,7 +508,7 @@ export default function StorePage() {
       setPurchasingItemId(item.id);
       try {
         toast({ title: "Processing purchase...", description: `Sending GFT from your Gamefolio wallet` });
-        const data: any = await apiRequest("POST", "/api/store/server-purchase", { itemId: item.id });
+        await apiRequest("POST", "/api/store/server-purchase", { itemId: item.id });
         toast({ title: "Item unlocked!", description: `You now own ${item.name}` });
         refetchOwned();
         queryClient.invalidateQueries({ queryKey: ["/api/store/owned"] });
@@ -585,6 +598,12 @@ export default function StorePage() {
       setPurchasingItemId(null);
     }
   };
+
+  const closePurchaseConfirm = () => {
+    setPurchaseConfirmOpen(false);
+    setPendingNftPurchase(null);
+  };
+
 
   const handlePurchaseNameTagOnChain = async (nameTagId: number) => {
     if (!user) { openModal(); return; }
@@ -2128,6 +2147,32 @@ export default function StorePage() {
               }}
             >
               Go to Wallet
+            </Button>
+          </WalletDialogFooter>
+        </WalletDialogContent>
+      </WalletDialog>
+
+      <WalletDialog open={purchaseConfirmOpen} onOpenChange={(open) => (open ? setPurchaseConfirmOpen(true) : closePurchaseConfirm())}>
+        <WalletDialogContent className="bg-[#0f172a] border-gray-700 text-white max-w-sm">
+          <WalletDialogHeader>
+            <WalletDialogTitle className="text-white text-lg">Confirm NFT Purchase</WalletDialogTitle>
+            <WalletDialogDescription className="text-gray-400">
+              {pendingNftPurchase ? `Are you sure you want to buy NFT #${pendingNftPurchase.tokenId}?` : "Are you sure you want to buy this NFT?"}
+            </WalletDialogDescription>
+          </WalletDialogHeader>
+          <WalletDialogFooter>
+            <Button
+              variant="outline"
+              className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+              onClick={closePurchaseConfirm}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#4ade80] hover:bg-[#22c55e] text-black font-bold"
+              onClick={confirmMarketplacePurchase}
+            >
+              Buy Now
             </Button>
           </WalletDialogFooter>
         </WalletDialogContent>
