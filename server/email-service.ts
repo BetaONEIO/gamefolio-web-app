@@ -95,7 +95,7 @@ async function loadTemplate(templateName: string, variables: Record<string, stri
   }
 }
 
-async function sendEmail(params: EmailParams): Promise<boolean> {
+export async function sendEmail(params: EmailParams): Promise<boolean> {
   if (!process.env.BREVO_API_KEY) {
     console.log('Email sending disabled - BREVO_API_KEY not configured');
     console.log('Would send email:', params);

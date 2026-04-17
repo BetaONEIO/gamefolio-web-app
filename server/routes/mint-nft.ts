@@ -16,6 +16,7 @@ import { encryptPrivateKey } from '../wallet-crypto';
 import { writeContractWithPoW, writeContractWithPoWFromRawKey, publicClient } from '../skale-pow';
 import { isWalletLinkedToUser } from './linked-wallets';
 import { adminMiddleware } from '../middleware/admin';
+import { sendAdminAlert } from '../admin-alert-service';
 
 (async () => {
   try {
@@ -72,11 +73,12 @@ async function refundFailedMint(opts: {
   treasuryPrivateKey: string;
   mintError: string;
   mintTxHash: string | null;
-}): Promise<{ refundStatus: 'success' | 'failed'; refundTxHash: string | null }> {
+}): Promise<{ refundStatus: 'success' | 'failed'; refundTxHash: string | null; refundError: string | null }> {
   const { userId, userAddress, totalCost, costInWei, transferHash, treasuryPrivateKey, mintError, mintTxHash } = opts;
   console.error(`⚠️ Mint failed after GFT transfer succeeded. Refunding ${totalCost} GFT to ${userAddress}. Reason: ${mintError}`);
   let refundStatus: 'success' | 'failed' = 'failed';
   let refundTxHash: string | null = null;
+  let refundError: string | null = null;
   try {
     refundTxHash = await writeContractWithPoWFromRawKey({
       privateKeyRaw: treasuryPrivateKey,
@@ -90,9 +92,11 @@ async function refundFailedMint(opts: {
       refundStatus = 'success';
       console.log(`✅ Refund of ${totalCost} GFT to ${userAddress} confirmed. TX: ${refundTxHash}`);
     } else {
+      refundError = 'Refund transaction reverted on-chain';
       console.error(`❌ Refund transaction reverted. TX: ${refundTxHash}`);
     }
-  } catch (err) {
+  } catch (err: any) {
+    refundError = err?.shortMessage || err?.message || String(err);
     console.error(`❌ Refund transfer failed:`, err);
   }
   try {
@@ -105,7 +109,7 @@ async function refundFailedMint(opts: {
   } catch (dbErr) {
     console.error('Failed to record nft_mint_refunds row:', dbErr);
   }
-  return { refundStatus, refundTxHash };
+  return { refundStatus, refundTxHash, refundError };
 }
 
 (async () => {
@@ -678,6 +682,12 @@ router.post('/api/mint/external-finalize', async (req: Request, res: Response) =
 // period and either finalizes the mint (if it actually went through on-chain)
 // or refunds the GFT, ending the row in a terminal state.
 
+// Track consecutive reconciliation errors per payment row so that we only
+// alert once a row has been failing repeatedly (avoids paging on a single
+// transient RPC blip).
+const reconcileErrorCounts = new Map<string, number>();
+const RECONCILE_ALERT_ERROR_THRESHOLD = 3;
+
 const RECONCILE_GRACE_MS = 10 * 60 * 1000; // pending rows older than this are eligible
 // If a previous reconciliation pass crashed mid-flight it leaves a row marked
 // 'processing'. After this longer grace window we re-claim it so the system
@@ -803,6 +813,7 @@ export async function reconcileStuckMintPayments(): Promise<ReconcileResult> {
               }
             }
             result.consumed += 1;
+            reconcileErrorCounts.delete(txHash);
             console.log(`✅ Reconciled stuck payment ${txHash} → consumed (mint ${mintTxHash}, ${tokenIds.length} token(s))`);
             continue;
           }
@@ -829,15 +840,51 @@ export async function reconcileStuckMintPayments(): Promise<ReconcileResult> {
         `);
         if (refund.refundStatus === 'success') {
           result.refunded += 1;
+          reconcileErrorCounts.delete(txHash);
           console.log(`✅ Reconciled stuck payment ${txHash} → refunded ${totalCost} GFT to ${payer} (tx ${refund.refundTxHash})`);
         } else {
           result.refundFailed += 1;
           console.error(`❌ Reconciled stuck payment ${txHash} → refund FAILED for ${payer}`);
+          await sendAdminAlert({
+            subject: 'Stuck mint payment: auto-refund failed',
+            message: `The reconciler attempted to refund a stuck NFT mint payment but the refund transfer did not confirm. An operator needs to investigate (treasury balance, network, or contract state) and refund manually.`,
+            details: {
+              paymentTxHash: txHash,
+              payerAddress: payer,
+              userId,
+              quantity,
+              amountGFT: totalCost,
+              mintTxHash: mintTxHash || 'none',
+              refundTxHash: refund.refundTxHash || 'none',
+              refundError: refund.refundError || 'unknown',
+              reason: mintTxHash ? 'mint reverted' : 'mint never completed',
+            },
+            dedupeKey: `refund-failed:${txHash}`,
+          }).catch((e) => console.error('admin alert dispatch failed:', e));
         }
       } catch (err: any) {
         const msg = err?.message || String(err);
         result.errors.push(`${txHash}: ${msg}`);
         console.error(`reconcile error for ${txHash}:`, err);
+        const count = (reconcileErrorCounts.get(txHash) || 0) + 1;
+        reconcileErrorCounts.set(txHash, count);
+        if (count >= RECONCILE_ALERT_ERROR_THRESHOLD) {
+          await sendAdminAlert({
+            subject: 'Stuck mint payment: repeated reconciliation errors',
+            message: `Reconciliation has failed ${count} consecutive times for the same mint payment row. The auto-recovery loop cannot make progress without intervention.`,
+            details: {
+              paymentTxHash: txHash,
+              payerAddress: payer,
+              userId,
+              quantity,
+              amountGFT: totalCost,
+              mintTxHash: mintTxHash || 'none',
+              consecutiveErrors: count,
+              lastError: msg,
+            },
+            dedupeKey: `reconcile-errors:${txHash}`,
+          }).catch((e) => console.error('admin alert dispatch failed:', e));
+        }
       }
     }
 
