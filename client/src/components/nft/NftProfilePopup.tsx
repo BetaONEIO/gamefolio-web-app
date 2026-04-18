@@ -7,6 +7,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 interface NftAttribute {
   trait_type: string;
   value: string;
+  rarity?: string;
+  rarity_percent?: string;
 }
 
 interface NftProfilePopupProps {
@@ -225,8 +227,15 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
               </span>
               <div className={`grid ${manyTraits ? 'grid-cols-3' : 'grid-cols-2'} gap-1.5`}>
                 {allAttributes.map((attr: NftAttribute, index: number) => {
-                  const rarityKey = getTraitRarity(attr.trait_type, attr.value);
-                  const rarity = RARITY_MAP[rarityKey];
+                  const normalized = attr.rarity ? attr.rarity.toLowerCase() : null;
+                  const serverKey = normalized && (normalized in RARITY_MAP)
+                    ? (normalized as keyof typeof RARITY_MAP)
+                    : null;
+                  const rarityKey = serverKey || getTraitRarity(attr.trait_type, attr.value);
+                  const rarity = {
+                    ...RARITY_MAP[rarityKey],
+                    percent: attr.rarity_percent || RARITY_MAP[rarityKey].percent,
+                  };
                   return (
                     <div
                       key={index}

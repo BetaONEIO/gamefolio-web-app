@@ -1432,13 +1432,19 @@ router.post('/api/nft/metadata/batch', async (req: Request, res: Response) => {
               if (metadata.image) {
                 metadata.image = ipfsToProxyUrl(metadata.image);
               }
+              metadata.attributes = annotateAttributes(tokenId, metadata.attributes);
               return { tokenId, ...metadata };
             }
           } catch {
             continue;
           }
         }
-        return { tokenId, name: `Gamefolio Genesis #${tokenId}`, image: null };
+        return {
+          tokenId,
+          name: `Gamefolio Genesis #${tokenId}`,
+          image: null,
+          attributes: annotateAttributes(tokenId, null),
+        };
       })
     );
 
@@ -1489,6 +1495,7 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
           tokenId,
           name: `Gamefolio Genesis #${tokenId}`,
           image: null,
+          attributes: annotateAttributes(tokenId, null),
           txHash: dbRow?.txHash || '',
           mintedAt: dbRow?.mintedAt || '',
           sold: dbRow?.sold || false,
@@ -1522,6 +1529,7 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
                 if (metadata.image) {
                   metadata.image = ipfsToProxyUrl(metadata.image);
                 }
+                metadata.attributes = annotateAttributes(tokenId, metadata.attributes);
                 return {
                   ...fallbackData,
                   ...metadata,
@@ -1546,6 +1554,7 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
         tokenId,
         name: `Gamefolio Genesis #${tokenId}`,
         image: null,
+        attributes: annotateAttributes(tokenId, null),
         txHash: dbRow?.txHash || '',
         mintedAt: dbRow?.mintedAt || '',
         sold: dbRow?.sold || false,
@@ -1612,7 +1621,7 @@ router.get('/api/nfts/user/:userId', async (req: Request, res: Response) => {
                 tokenId,
                 name: metadata.name || `Gamefolio Genesis #${tokenId}`,
                 image: metadata.image || null,
-                attributes: metadata.attributes || [],
+                attributes: annotateAttributes(tokenId, metadata.attributes),
                 mintedAt: dbRow?.mintedAt || '',
                 listedPrice: dbRow?.listedPrice || null,
                 listingActive: dbRow?.listingActive || false,
@@ -1626,7 +1635,7 @@ router.get('/api/nfts/user/:userId', async (req: Request, res: Response) => {
           tokenId,
           name: `Gamefolio Genesis #${tokenId}`,
           image: null,
-          attributes: [],
+          attributes: annotateAttributes(tokenId, null),
           mintedAt: dbRow?.mintedAt || '',
           listedPrice: dbRow?.listedPrice || null,
           listingActive: dbRow?.listingActive || false,
@@ -1795,7 +1804,14 @@ router.get('/api/nft/profile-picture/:userId', async (req: Request, res: Respons
       return res.json({ hasNftProfile: false });
     }
 
-    let metadata = null;
+    type NftMetadata = {
+      name?: string;
+      image?: string;
+      description?: string;
+      attributes?: Array<{ trait_type: string; value: string | number; rarity?: string }>;
+      [key: string]: unknown;
+    };
+    let metadata: NftMetadata | null = null;
     try {
       const tokenURI = await publicClient.readContract({
         address: NFT_CONTRACT_ADDRESS as `0x${string}`,
@@ -1809,7 +1825,7 @@ router.get('/api/nft/profile-picture/:userId', async (req: Request, res: Respons
           const url = ipfsToHttp(tokenURI as string, i) + '.json';
           const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
           if (response.ok) {
-            metadata = await response.json();
+            metadata = (await response.json()) as NftMetadata;
             if (metadata.image) {
               metadata.image = ipfsToProxyUrl(metadata.image);
             }
@@ -1822,6 +1838,9 @@ router.get('/api/nft/profile-picture/:userId', async (req: Request, res: Respons
     } catch (err) {
       console.error('Failed to fetch NFT metadata for profile:', err);
     }
+
+    if (!metadata) metadata = {};
+    metadata.attributes = annotateAttributes(user.nftProfileTokenId, metadata.attributes);
 
     return res.json({
       hasNftProfile: true,
