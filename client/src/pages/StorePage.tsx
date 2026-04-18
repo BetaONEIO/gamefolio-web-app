@@ -44,6 +44,7 @@ import { ToastAction } from "@/components/ui/toast";
 import { useWallet } from "@/hooks/use-wallet";
 import { useTokenBalance } from "@/hooks/use-token";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
+import { useMarketplacePurchase, MarketplacePurchaseDialog } from "@/hooks/use-marketplace-purchase";
 
 const rarityGradients: Record<string, string> = {
   legendary: "from-amber-500 via-yellow-400 to-amber-600",
@@ -278,8 +279,15 @@ export default function StorePage() {
   const [purchasingNameTagId, setPurchasingNameTagId] = useState<number | null>(null);
   const [purchasingBorderId, setPurchasingBorderId] = useState<number | null>(null);
   const [purchasingBadgeId, setPurchasingBadgeId] = useState<number | null>(null);
-  const [pendingNftPurchase, setPendingNftPurchase] = useState<{ tokenId: number; sellerId: number } | null>(null);
-  const [purchaseConfirmOpen, setPurchaseConfirmOpen] = useState(false);
+  const {
+    pendingNftPurchase,
+    purchaseConfirmOpen,
+    buyingTokenId,
+    requestBuy: handleBuyMarketplaceNft,
+    confirmPurchase: confirmMarketplacePurchase,
+    closePurchaseConfirm,
+    setPurchaseConfirmOpen,
+  } = useMarketplacePurchase();
 
   const { data: storeItems = [], isLoading: isLoadingItems } = useQuery<StoreItem[]>({
     queryKey: ["/api/store/items"],
@@ -390,107 +398,6 @@ export default function StorePage() {
     enabled: !!user,
   });
 
-  const [buyingTokenId, setBuyingTokenId] = useState<number | null>(null);
-
-  const handleBuyMarketplaceNft = ({ tokenId, sellerId }: { tokenId: number; sellerId: number }) => {
-    if (!user) {
-      openModal();
-      return;
-    }
-
-    setPendingNftPurchase({ tokenId, sellerId });
-    setPurchaseConfirmOpen(true);
-  };
-
-  const confirmMarketplacePurchase = async () => {
-    if (!pendingNftPurchase) return;
-    const { tokenId, sellerId } = pendingNftPurchase;
-    setPurchaseConfirmOpen(false);
-
-    // Gamefolio (custodial) wallet path — server signs with user's stored key.
-    if (walletMode === 'gamefolio') {
-      setBuyingTokenId(tokenId);
-      try {
-        toast({ title: "Processing purchase...", description: "Sending GFT from your Gamefolio wallet" });
-        await apiRequest("POST", "/api/marketplace/server-buy", { tokenId, sellerId });
-        toast({ title: "NFT Purchased!", description: "Purchase complete" });
-        queryClient.invalidateQueries({ queryKey: ["/api/marketplace/listings"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/nfts/owned"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/token/balance"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/store/gamefolio-activity"] });
-      } catch (error: any) {
-        toast({ title: "Purchase Failed", description: error?.message || "Transaction failed", variant: "destructive" });
-      } finally {
-        setBuyingTokenId(null);
-      }
-      return;
-    }
-
-    if (!isConnected || !walletClient || !publicClient) {
-      if (!requireExternalWallet("Buying NFTs from the marketplace")) return;
-    }
-    if (chainId !== SKALE_CHAIN_ID) {
-      toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
-      return;
-    }
-    setBuyingTokenId(tokenId);
-    try {
-      const intentRes = await fetch("/api/marketplace/buy-intent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ tokenId, sellerId }),
-      });
-      if (!intentRes.ok) {
-        const error = await intentRes.json();
-        throw new Error(error.error || "Failed to create purchase intent");
-      }
-      const { price, treasuryAddress } = await intentRes.json();
-
-      toast({ title: "Confirm transaction", description: `Sending ${price} GFT tokens...` });
-      const amountRaw = parseUnits(String(price), GF_DECIMALS);
-      const txHash = await walletClient.writeContract({
-        address: GF_TOKEN_ADDRESS,
-        abi: GF_TOKEN_ABI,
-        functionName: "transfer",
-        args: [treasuryAddress as Address, amountRaw],
-      });
-
-      toast({ title: "Verifying purchase...", description: "Please wait while we confirm your transaction" });
-      await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
-
-      const verifyRes = await fetch("/api/marketplace/verify-buy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ tokenId, sellerId, txHash }),
-      });
-      if (!verifyRes.ok) {
-        const error = await verifyRes.json();
-        throw new Error(error.error || "Failed to verify purchase");
-      }
-      const result = await verifyRes.json();
-      toast({ title: "NFT Purchased!", description: result.message });
-      queryClient.invalidateQueries({ queryKey: ["/api/marketplace/listings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/nfts/owned"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/token/balance"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-    } catch (error: any) {
-      let description = error.message || "Transaction failed";
-      if (error.message?.includes("user rejected") || error.message?.includes("User rejected")) {
-        description = "Transaction was cancelled";
-      } else if (error.message?.includes("insufficient")) {
-        description = "Insufficient GFT balance";
-      }
-      toast({ title: "Purchase Failed", description, variant: "destructive" });
-    } finally {
-      setBuyingTokenId(null);
-    }
-  };
-
-  const purchaseConfirmTitle = pendingNftPurchase ? `Buy NFT #${pendingNftPurchase.tokenId}?` : "Buy NFT?";
-
   const { openModal } = useAuthModal();
 
   const handlePurchaseWithGF = async (item: StoreItem) => {
@@ -598,12 +505,6 @@ export default function StorePage() {
       setPurchasingItemId(null);
     }
   };
-
-  const closePurchaseConfirm = () => {
-    setPurchaseConfirmOpen(false);
-    setPendingNftPurchase(null);
-  };
-
 
   const handlePurchaseNameTagOnChain = async (nameTagId: number) => {
     if (!user) { openModal(); return; }
@@ -1420,7 +1321,18 @@ export default function StorePage() {
                   return (
                     <div
                       key={`nft-${listing.token_id}-${listing.user_id}`}
-                      className={`rounded-2xl overflow-hidden bg-slate-900 transition-all duration-200 hover:scale-[1.03] ${
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigate(`/nft/${listing.token_id}?from=store`)}
+                      onKeyDown={(e) => {
+                        if (e.target !== e.currentTarget) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          navigate(`/nft/${listing.token_id}?from=store`);
+                        }
+                      }}
+                      data-testid={`card-nft-listing-${listing.token_id}`}
+                      className={`rounded-2xl overflow-hidden bg-slate-900 transition-all duration-200 hover:scale-[1.03] cursor-pointer ${
                         isOfficial
                           ? 'hover:shadow-[0_0_20px_rgba(74,222,128,0.3)]'
                           : 'hover:shadow-[0_0_20px_rgba(249,115,22,0.3)]'
@@ -1461,7 +1373,10 @@ export default function StorePage() {
                                 ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
                                 : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600'
                             }`}
-                            onClick={() => handleBuyMarketplaceNft({ tokenId: listing.token_id, sellerId: listing.user_id })}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleBuyMarketplaceNft({ tokenId: listing.token_id, sellerId: listing.user_id });
+                            }}
                           >
                             {buyingTokenId === listing.token_id ? (
                               <Loader2 className="h-2.5 w-2.5 animate-spin" />
@@ -2152,31 +2067,13 @@ export default function StorePage() {
         </WalletDialogContent>
       </WalletDialog>
 
-      <WalletDialog open={purchaseConfirmOpen} onOpenChange={(open) => (open ? setPurchaseConfirmOpen(true) : closePurchaseConfirm())}>
-        <WalletDialogContent className="bg-[#0f172a] border-gray-700 text-white max-w-sm">
-          <WalletDialogHeader>
-            <WalletDialogTitle className="text-white text-lg">Confirm NFT Purchase</WalletDialogTitle>
-            <WalletDialogDescription className="text-gray-400">
-              {pendingNftPurchase ? `Are you sure you want to buy NFT #${pendingNftPurchase.tokenId}?` : "Are you sure you want to buy this NFT?"}
-            </WalletDialogDescription>
-          </WalletDialogHeader>
-          <WalletDialogFooter>
-            <Button
-              variant="outline"
-              className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
-              onClick={closePurchaseConfirm}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="bg-[#4ade80] hover:bg-[#22c55e] text-black font-bold"
-              onClick={confirmMarketplacePurchase}
-            >
-              Buy Now
-            </Button>
-          </WalletDialogFooter>
-        </WalletDialogContent>
-      </WalletDialog>
+      <MarketplacePurchaseDialog
+        open={purchaseConfirmOpen}
+        onOpenChange={setPurchaseConfirmOpen}
+        pendingNftPurchase={pendingNftPurchase}
+        onConfirm={confirmMarketplacePurchase}
+        onCancel={closePurchaseConfirm}
+      />
 
       {/* Pro Upgrade Dialog for borders */}
       <ProUpgradeDialog
