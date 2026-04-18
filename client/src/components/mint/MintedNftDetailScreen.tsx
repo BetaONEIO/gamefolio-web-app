@@ -24,6 +24,7 @@ export interface BuyAction {
   sellerLabel: string;
   isOfficial: boolean;
   isSeller: boolean;
+  isAlreadyOwned?: boolean;
   isBuying: boolean;
   onBuy: () => void;
 }
@@ -189,7 +190,7 @@ export default function MintedNftDetailScreen({
                   <path d="M12.5 7.5L7.5 12.5M7.5 7.5L12.5 12.5" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               </button>
-              <span className="text-base font-bold text-[#f8fafc] leading-6">NFT Details</span>
+              <span className="text-base font-bold text-[#f8fafc] leading-6">{closeLabel || headerLabel}</span>
             </div>
             <button
               onClick={() => {
@@ -299,6 +300,12 @@ export default function MintedNftDetailScreen({
                 )}
               </div>
             </div>
+
+            {isBuyerView && description && (
+              <p className="text-sm text-[#cbd5e1] leading-relaxed" data-testid="text-nft-description">
+                {description}
+              </p>
+            )}
 
             <div className="w-full rounded-2xl bg-[#0f172a] border border-[#1e293b80] p-5">
               {isBuyerView && buyAction ? (
@@ -411,13 +418,15 @@ export default function MintedNftDetailScreen({
 
             {isBuyerView && buyAction ? (
               <div className="pt-1">
-                {buyAction.isSeller ? (
+                {buyAction.isSeller || buyAction.isAlreadyOwned ? (
                   <button
                     disabled
                     className="h-[52px] w-full rounded-xl bg-[#1e293b] border border-[#334155] flex items-center justify-center gap-2 cursor-not-allowed"
                     data-testid="button-your-listing"
                   >
-                    <span className="text-sm font-bold text-[#94a3b8] leading-5">This is your listing</span>
+                    <span className="text-sm font-bold text-[#94a3b8] leading-5">
+                      {buyAction.isAlreadyOwned ? "You already own this NFT" : "This is your listing"}
+                    </span>
                   </button>
                 ) : (
                   <button

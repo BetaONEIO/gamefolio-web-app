@@ -110,8 +110,8 @@ export default function NFTDetailsPage() {
 
   const isOwned = !!ownedNft;
   const isOfficial = listing?.username === "GamefolioStore";
-  const isSeller =
-    (!!listing && !!user && listing.user_id === user.id) || (!!user && isOwned);
+  const isSeller = !!listing && !!user && listing.user_id === user.id;
+  const isAlreadyOwned = !!user && isOwned && !isSeller;
 
   const {
     pendingNftPurchase,
@@ -225,6 +225,7 @@ export default function NFTDetailsPage() {
                 sellerLabel,
                 isOfficial,
                 isSeller,
+                isAlreadyOwned,
                 isBuying: isBuyingThis,
                 onBuy: () =>
                   requestBuy({
