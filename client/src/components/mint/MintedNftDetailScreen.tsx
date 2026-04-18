@@ -19,9 +19,18 @@ interface NftDetailData {
   attributes?: NftAttribute[];
 }
 
+export interface BuyAction {
+  price: number;
+  sellerLabel: string;
+  isOfficial: boolean;
+  isSeller: boolean;
+  isBuying: boolean;
+  onBuy: () => void;
+}
+
 interface MintedNftDetailScreenProps {
   nft: NftDetailData;
-  txHash: string;
+  txHash?: string;
   walletAddress?: string;
   ownerUsername?: string;
   onClose: () => void;
@@ -32,6 +41,10 @@ interface MintedNftDetailScreenProps {
   soldAt?: string | null;
   listedPrice?: number | null;
   listingActive?: boolean;
+  viewerRole?: "owner" | "buyer";
+  buyAction?: BuyAction;
+  description?: string;
+  closeLabel?: string;
 }
 
 const NFT_CONTRACT_ADDRESS = "0x6Ca4376A68907A404981e7701055813F9cE13FB3";
@@ -69,18 +82,24 @@ export default function MintedNftDetailScreen({
   soldAt,
   listedPrice,
   listingActive,
+  viewerRole = "owner",
+  buyAction,
+  description,
+  closeLabel,
 }: MintedNftDetailScreenProps) {
   const [showQuickSell, setShowQuickSell] = useState(false);
   const [sold, setSold] = useState(initialSold);
   const { toast } = useToast();
   const { user } = useAuth();
+  const isBuyerView = viewerRole === "buyer";
   const displayName = nft.name || `Gamefolio Genesis ${getTokenIdPadded(nft.id)}`;
-  const isOwner = walletAddress && user?.walletAddress && walletAddress.toLowerCase() === user.walletAddress.toLowerCase();
-  const ownerDisplay = isOwner ? `You (${formatAddress(walletAddress)})` : ownerUsername ? `@${ownerUsername}` : formatAddress(walletAddress || "");
+  const isOwner = !isBuyerView && !!(walletAddress && user?.walletAddress && walletAddress.toLowerCase() === user.walletAddress.toLowerCase());
+  const ownerDisplay = isOwner ? `You (${formatAddress(walletAddress!)})` : ownerUsername ? `@${ownerUsername}` : formatAddress(walletAddress || "");
   const mintDate = formatDate(mintedAt);
   const soldDate = soldAt ? formatDate(soldAt) : null;
   const isListedOnMarketplace = sold && (listingActive === true);
   const isNftProfilePic = user?.activeProfilePicType === 'nft' && user?.nftProfileTokenId === nft.id;
+  const headerLabel = isBuyerView ? "Listing Detail" : "Minted NFT Detail";
 
   const setProfilePictureMutation = useMutation({
     mutationFn: async () => {
@@ -154,7 +173,7 @@ export default function MintedNftDetailScreen({
   return (
     <div className="fixed inset-0 z-[110] bg-[#101D27] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
       <div className="w-full max-w-[430px] md:max-w-5xl mx-auto px-6 pt-16 md:pt-20 pb-1">
-        <span className="text-sm font-medium text-[#64748b] tracking-wide">Minted NFT Detail</span>
+        <span className="text-sm font-medium text-[#64748b] tracking-wide">{headerLabel}</span>
       </div>
 
       <header className="z-40 flex-shrink-0">
@@ -175,7 +194,10 @@ export default function MintedNftDetailScreen({
             <button
               onClick={() => {
                 if (navigator.share) {
-                  navigator.share({ title: displayName, url: `${SKALE_EXPLORER_BASE_URL}/tx/${txHash}` });
+                  const shareUrl = txHash
+                    ? `${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`
+                    : window.location.href;
+                  navigator.share({ title: displayName, url: shareUrl });
                 }
               }}
               className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#1e293b] transition-colors"
@@ -217,11 +239,19 @@ export default function MintedNftDetailScreen({
                     </span>
                   </div>
                 )}
-                {!sold && (
+                {!sold && !isBuyerView && (
                   <div className="absolute top-4 left-4 backdrop-blur-lg bg-black/40 rounded-2xl flex items-center gap-2 px-3 py-1.5">
                     <div className="w-2 h-2 rounded-full bg-[#4ade80]" />
                     <span className="text-[10px] font-bold text-white uppercase tracking-[0.5px] leading-[15px]">
                       Newly Minted
+                    </span>
+                  </div>
+                )}
+                {isBuyerView && buyAction && !sold && (
+                  <div className="absolute top-4 left-4 backdrop-blur-lg bg-black/40 rounded-2xl flex items-center gap-2 px-3 py-1.5">
+                    <div className={`w-2 h-2 rounded-full ${buyAction.isOfficial ? "bg-[#4ade80]" : "bg-orange-400"}`} />
+                    <span className="text-[10px] font-bold text-white uppercase tracking-[0.5px] leading-[15px]">
+                      {buyAction.isOfficial ? "Official Listing" : "Resale Listing"}
                     </span>
                   </div>
                 )}
@@ -244,10 +274,15 @@ export default function MintedNftDetailScreen({
               </h1>
 
               <div className="flex items-center gap-2 mt-1">
-                <div className={`w-6 h-6 rounded-full border-2 border-[#101D27] flex items-center justify-center overflow-hidden ${sold ? 'bg-amber-500/20' : 'bg-[#4ade80]/20'}`}>
-                  <div className={`w-full h-full opacity-60 ${sold ? 'bg-gradient-to-br from-amber-500 to-orange-500' : 'bg-gradient-to-br from-[#4ade80] to-[#22c55e]'}`} />
+                <div className={`w-6 h-6 rounded-full border-2 border-[#101D27] flex items-center justify-center overflow-hidden ${sold ? 'bg-amber-500/20' : isBuyerView && buyAction && !buyAction.isOfficial ? 'bg-orange-500/20' : 'bg-[#4ade80]/20'}`}>
+                  <div className={`w-full h-full opacity-60 ${sold ? 'bg-gradient-to-br from-amber-500 to-orange-500' : isBuyerView && buyAction && !buyAction.isOfficial ? 'bg-gradient-to-br from-orange-500 to-amber-500' : 'bg-gradient-to-br from-[#4ade80] to-[#22c55e]'}`} />
                 </div>
-                {sold ? (
+                {isBuyerView && buyAction ? (
+                  <>
+                    <span className="text-sm font-normal text-[#94a3b8] leading-5">Listed by</span>
+                    <span className="text-sm font-normal text-[#f8fafc] leading-5" data-testid="text-seller-name">{buyAction.sellerLabel}</span>
+                  </>
+                ) : sold ? (
                   <>
                     <span className="text-sm font-normal text-[#94a3b8] leading-5">
                       {isListedOnMarketplace ? 'Listed on Marketplace' : 'Sold'}
@@ -266,7 +301,22 @@ export default function MintedNftDetailScreen({
             </div>
 
             <div className="w-full rounded-2xl bg-[#0f172a] border border-[#1e293b80] p-5">
-              {sold ? (
+              {isBuyerView && buyAction ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">Price</span>
+                    <span className={`text-2xl font-bold leading-7 ${buyAction.isOfficial ? "text-[#4ade80]" : "text-orange-400"}`} data-testid="text-listing-price">
+                      {buyAction.price} GFT
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1 text-right">
+                    <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">Listing</span>
+                    <span className={`text-sm font-bold leading-5 ${buyAction.isOfficial ? "text-[#4ade80]" : "text-orange-400"}`}>
+                      {buyAction.isOfficial ? "Official" : "Resale"}
+                    </span>
+                  </div>
+                </div>
+              ) : sold ? (
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-1">
@@ -359,6 +409,42 @@ export default function MintedNftDetailScreen({
               </button>
             )}
 
+            {isBuyerView && buyAction ? (
+              <div className="pt-1">
+                {buyAction.isSeller ? (
+                  <button
+                    disabled
+                    className="h-[52px] w-full rounded-xl bg-[#1e293b] border border-[#334155] flex items-center justify-center gap-2 cursor-not-allowed"
+                    data-testid="button-your-listing"
+                  >
+                    <span className="text-sm font-bold text-[#94a3b8] leading-5">This is your listing</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={buyAction.onBuy}
+                    disabled={buyAction.isBuying}
+                    className={`h-[60px] w-full rounded-2xl flex items-center justify-center gap-2 text-lg font-bold transition-colors disabled:opacity-50 ${
+                      buyAction.isOfficial
+                        ? "bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22]"
+                        : "bg-orange-500 hover:bg-orange-600 text-white"
+                    }`}
+                    data-testid="button-buy-nft"
+                  >
+                    {buyAction.isBuying ? (
+                      <>
+                        <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <span>Buy for {buyAction.price} GFT</span>
+                    )}
+                  </button>
+                )}
+                <p className="text-[11px] text-[#94a3b8] text-center leading-relaxed mt-3">
+                  Purchasing transfers GFT from your wallet and assigns ownership of this NFT to your account.
+                </p>
+              </div>
+            ) : (
             <div className={`grid ${sold || !isOwner ? 'grid-cols-1' : 'grid-cols-2'} gap-3 pt-1`}>
               {!sold && isOwner && (
                 <button
@@ -409,6 +495,7 @@ export default function MintedNftDetailScreen({
                 </button>
               )}
             </div>
+            )}
 
             <div className="flex flex-col gap-4 pt-2">
               <span className="text-sm font-bold text-[#94a3b8] uppercase tracking-[0.7px] leading-5">
