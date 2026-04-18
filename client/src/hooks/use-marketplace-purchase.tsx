@@ -212,6 +212,10 @@ export function MarketplacePurchaseDialog({
   onConfirm,
   onCancel,
 }: MarketplacePurchaseDialogProps) {
+  const currentBalance =
+    typeof pendingNftPurchase?.currentBalance === "number"
+      ? pendingNftPurchase.currentBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })
+      : pendingNftPurchase?.currentBalance || "0";
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : onCancel())}>
       <DialogContent className="bg-[#0f172a] border-gray-700 text-white max-w-sm">
@@ -237,7 +241,7 @@ export function MarketplacePurchaseDialog({
                 <p className="text-sm font-semibold text-white">
                   {pendingNftPurchase.nftName || `NFT #${pendingNftPurchase.tokenId}`}
                 </p>
-                <p className="text-xs text-gray-400 line-clamp-3">
+                <p className="text-xs text-gray-400">
                   {pendingNftPurchase.nftDescription || "No description available."}
                 </p>
               </div>
@@ -252,7 +256,7 @@ export function MarketplacePurchaseDialog({
               <div className="rounded-lg bg-black/20 p-3">
                 <p className="text-gray-400 text-xs">Your balance</p>
                 <p className="text-white font-semibold">
-                  {pendingNftPurchase.currentBalance ?? "—"} GFT
+                  {currentBalance} GFT
                 </p>
               </div>
             </div>
