@@ -1345,6 +1345,91 @@ function annotateAttributes(tokenId: number, raw: any): Array<{ trait_type: stri
   return computeGenesisAttributes(tokenId);
 }
 
+type CachedTokenMetadata = {
+  tokenId: number;
+  tokenURI: string;
+  name: string;
+  image: string | null;
+  description?: string;
+  attributes: Array<{ trait_type: string; value: string | number; rarity: string }>;
+  raw: any;
+};
+
+const TOKEN_METADATA_TTL_MS = 24 * 60 * 60 * 1000;
+const tokenMetadataCache = new Map<number, { value: CachedTokenMetadata; expiresAt: number }>();
+const tokenMetadataInflight = new Map<number, Promise<CachedTokenMetadata | null>>();
+
+async function fetchAndAnnotateTokenMetadata(tokenId: number): Promise<CachedTokenMetadata | null> {
+  let tokenURI: string | null = null;
+  try {
+    tokenURI = await publicClient.readContract({
+      address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+      abi: NFT_ABI,
+      functionName: 'tokenURI',
+      args: [BigInt(tokenId)],
+    }) as string;
+  } catch {
+    console.warn(`Contract tokenURI failed for ${tokenId}, using default baseURI`);
+    tokenURI = `${MINT_CONFIG.baseURI}${tokenId}`;
+  }
+  if (!tokenURI) return null;
+
+  let metadata: any = null;
+  for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
+    try {
+      const url = ipfsToHttp(tokenURI, i) + '.json';
+      const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (response.ok) {
+        metadata = await response.json();
+        break;
+      }
+    } catch {
+      continue;
+    }
+  }
+  if (!metadata) return null;
+
+  if (metadata.image) {
+    metadata.image = ipfsToProxyUrl(metadata.image);
+  }
+  const attributes = annotateAttributes(tokenId, metadata.attributes);
+  return {
+    tokenId,
+    tokenURI,
+    name: metadata.name || `Gamefolio Genesis #${tokenId}`,
+    image: metadata.image || null,
+    description: metadata.description,
+    attributes,
+    raw: { ...metadata, attributes },
+  };
+}
+
+async function getCachedTokenMetadata(tokenId: number): Promise<CachedTokenMetadata | null> {
+  const now = Date.now();
+  const cached = tokenMetadataCache.get(tokenId);
+  if (cached && cached.expiresAt > now) return cached.value;
+
+  const inflight = tokenMetadataInflight.get(tokenId);
+  if (inflight) return inflight;
+
+  const promise = fetchAndAnnotateTokenMetadata(tokenId)
+    .then((value) => {
+      if (value) {
+        tokenMetadataCache.set(tokenId, { value, expiresAt: Date.now() + TOKEN_METADATA_TTL_MS });
+      }
+      return value;
+    })
+    .catch((err) => {
+      console.error(`Metadata cache fetch failed for token ${tokenId}:`, err);
+      return null;
+    })
+    .finally(() => {
+      tokenMetadataInflight.delete(tokenId);
+    });
+  tokenMetadataInflight.set(tokenId, promise);
+  return promise;
+}
+
 router.get('/api/nft/metadata/:tokenId', async (req: Request, res: Response) => {
   try {
     const tokenId = parseInt(req.params.tokenId);
@@ -1352,54 +1437,16 @@ router.get('/api/nft/metadata/:tokenId', async (req: Request, res: Response) => 
       return res.status(400).json({ error: 'Invalid token ID' });
     }
 
-    let tokenURI: string | null = null;
-    try {
-      tokenURI = await publicClient.readContract({
-        address: NFT_CONTRACT_ADDRESS as `0x${string}`,
-        abi: NFT_ABI,
-        functionName: 'tokenURI',
-        args: [BigInt(tokenId)],
-      }) as string;
-    } catch (contractErr) {
-      console.warn(`Contract tokenURI failed for ${tokenId}, using default baseURI`);
-      tokenURI = `${MINT_CONFIG.baseURI}${tokenId}`;
-    }
-
-    if (!tokenURI) {
-      return res.status(404).json({ error: 'Token URI not found' });
-    }
-
-    const metadataUrl = ipfsToHttp(tokenURI) + '.json';
-
-    let metadata: any = null;
-    for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
-      try {
-        const url = ipfsToHttp(tokenURI, i) + '.json';
-        const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
-        if (response.ok) {
-          metadata = await response.json();
-          break;
-        }
-      } catch {
-        continue;
-      }
-    }
-
-    if (!metadata) {
+    const cached = await getCachedTokenMetadata(tokenId);
+    if (!cached) {
       return res.status(502).json({ error: 'Failed to fetch metadata from IPFS' });
     }
 
-    if (metadata.image) {
-      metadata.image = ipfsToProxyUrl(metadata.image);
-    }
-
-    const attributes = annotateAttributes(tokenId, metadata.attributes);
-
     return res.json({
       tokenId,
-      tokenURI,
-      ...metadata,
-      attributes,
+      tokenURI: cached.tokenURI,
+      ...cached.raw,
+      attributes: cached.attributes,
     });
   } catch (error: any) {
     console.error('NFT metadata fetch error:', error);
@@ -1416,35 +1463,11 @@ router.post('/api/nft/metadata/batch', async (req: Request, res: Response) => {
 
     const results = await Promise.allSettled(
       tokenIds.map(async (tokenId: number) => {
-        const tokenURI = await publicClient.readContract({
-          address: NFT_CONTRACT_ADDRESS as `0x${string}`,
-          abi: NFT_ABI,
-          functionName: 'tokenURI',
-          args: [BigInt(tokenId)],
-        });
-
-        for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
-          try {
-            const url = ipfsToHttp(tokenURI as string, i) + '.json';
-            const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
-            if (response.ok) {
-              const metadata = await response.json();
-              if (metadata.image) {
-                metadata.image = ipfsToProxyUrl(metadata.image);
-              }
-              metadata.attributes = annotateAttributes(tokenId, metadata.attributes);
-              return { tokenId, ...metadata };
-            }
-          } catch {
-            continue;
-          }
+        const cached = await getCachedTokenMetadata(tokenId);
+        if (cached) {
+          return { tokenId, ...cached.raw, attributes: cached.attributes };
         }
-        return {
-          tokenId,
-          name: `Gamefolio Genesis #${tokenId}`,
-          image: null,
-          attributes: annotateAttributes(tokenId, null),
-        };
+        return { tokenId, name: `Gamefolio Genesis #${tokenId}`, image: null };
       })
     );
 
@@ -1495,7 +1518,6 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
           tokenId,
           name: `Gamefolio Genesis #${tokenId}`,
           image: null,
-          attributes: annotateAttributes(tokenId, null),
           txHash: dbRow?.txHash || '',
           mintedAt: dbRow?.mintedAt || '',
           sold: dbRow?.sold || false,
@@ -1505,39 +1527,13 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
         };
 
         try {
-          let tokenURI: string | null = null;
-          try {
-            tokenURI = await publicClient.readContract({
-              address: NFT_CONTRACT_ADDRESS as `0x${string}`,
-              abi: NFT_ABI,
-              functionName: 'tokenURI',
-              args: [BigInt(tokenId)],
-            }) as string;
-          } catch (contractErr) {
-            console.warn(`Contract tokenURI failed for ${tokenId}, using default baseURI`);
-            tokenURI = `${MINT_CONFIG.baseURI}${tokenId}`;
-          }
-
-          if (!tokenURI) return fallbackData;
-
-          for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
-            try {
-              const url = ipfsToHttp(tokenURI, i) + '.json';
-              const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
-              if (response.ok) {
-                const metadata = await response.json();
-                if (metadata.image) {
-                  metadata.image = ipfsToProxyUrl(metadata.image);
-                }
-                metadata.attributes = annotateAttributes(tokenId, metadata.attributes);
-                return {
-                  ...fallbackData,
-                  ...metadata,
-                };
-              }
-            } catch {
-              continue;
-            }
+          const cached = await getCachedTokenMetadata(tokenId);
+          if (cached) {
+            return {
+              ...fallbackData,
+              ...cached.raw,
+              attributes: cached.attributes,
+            };
           }
         } catch (err) {
           console.error(`Error processing token ${tokenId}:`, err);
@@ -1554,7 +1550,6 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
         tokenId,
         name: `Gamefolio Genesis #${tokenId}`,
         image: null,
-        attributes: annotateAttributes(tokenId, null),
         txHash: dbRow?.txHash || '',
         mintedAt: dbRow?.mintedAt || '',
         sold: dbRow?.sold || false,
@@ -1601,41 +1596,23 @@ router.get('/api/nfts/user/:userId', async (req: Request, res: Response) => {
     const metadataResults = await Promise.allSettled(
       ownedTokenIds.slice(0, 50).map(async (tokenId: number) => {
         const dbRow = rowMap.get(tokenId);
-        const tokenURI = await publicClient.readContract({
-          address: NFT_CONTRACT_ADDRESS as `0x${string}`,
-          abi: NFT_ABI,
-          functionName: 'tokenURI',
-          args: [BigInt(tokenId)],
-        });
-
-        for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
-          try {
-            const url = ipfsToHttp(tokenURI as string, i) + '.json';
-            const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
-            if (response.ok) {
-              const metadata = await response.json();
-              if (metadata.image) {
-                metadata.image = ipfsToProxyUrl(metadata.image);
-              }
-              return {
-                tokenId,
-                name: metadata.name || `Gamefolio Genesis #${tokenId}`,
-                image: metadata.image || null,
-                attributes: annotateAttributes(tokenId, metadata.attributes),
-                mintedAt: dbRow?.mintedAt || '',
-                listedPrice: dbRow?.listedPrice || null,
-                listingActive: dbRow?.listingActive || false,
-              };
-            }
-          } catch {
-            continue;
-          }
+        const cached = await getCachedTokenMetadata(tokenId);
+        if (cached) {
+          return {
+            tokenId,
+            name: cached.name,
+            image: cached.image,
+            attributes: cached.attributes,
+            mintedAt: dbRow?.mintedAt || '',
+            listedPrice: dbRow?.listedPrice || null,
+            listingActive: dbRow?.listingActive || false,
+          };
         }
         return {
           tokenId,
           name: `Gamefolio Genesis #${tokenId}`,
           image: null,
-          attributes: annotateAttributes(tokenId, null),
+          attributes: [],
           mintedAt: dbRow?.mintedAt || '',
           listedPrice: dbRow?.listedPrice || null,
           listingActive: dbRow?.listingActive || false,
@@ -1804,43 +1781,15 @@ router.get('/api/nft/profile-picture/:userId', async (req: Request, res: Respons
       return res.json({ hasNftProfile: false });
     }
 
-    type NftMetadata = {
-      name?: string;
-      image?: string;
-      description?: string;
-      attributes?: Array<{ trait_type: string; value: string | number; rarity?: string }>;
-      [key: string]: unknown;
-    };
-    let metadata: NftMetadata | null = null;
+    let metadata: any = null;
     try {
-      const tokenURI = await publicClient.readContract({
-        address: NFT_CONTRACT_ADDRESS as `0x${string}`,
-        abi: NFT_ABI,
-        functionName: 'tokenURI',
-        args: [BigInt(user.nftProfileTokenId)],
-      });
-
-      for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
-        try {
-          const url = ipfsToHttp(tokenURI as string, i) + '.json';
-          const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
-          if (response.ok) {
-            metadata = (await response.json()) as NftMetadata;
-            if (metadata.image) {
-              metadata.image = ipfsToProxyUrl(metadata.image);
-            }
-            break;
-          }
-        } catch {
-          continue;
-        }
+      const cached = await getCachedTokenMetadata(user.nftProfileTokenId);
+      if (cached) {
+        metadata = { ...cached.raw, attributes: cached.attributes };
       }
     } catch (err) {
       console.error('Failed to fetch NFT metadata for profile:', err);
     }
-
-    if (!metadata) metadata = {};
-    metadata.attributes = annotateAttributes(user.nftProfileTokenId, metadata.attributes);
 
     return res.json({
       hasNftProfile: true,
