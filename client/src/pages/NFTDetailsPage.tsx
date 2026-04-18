@@ -26,8 +26,16 @@ interface NFTMetadata {
   name?: string;
   image?: string;
   description?: string;
-  attributes?: Array<{ trait_type: string; value: string | number }>;
+  attributes?: Array<{ trait_type: string; value: string | number; rarity?: string }>;
 }
+
+const RARITY_TEXT_COLORS: Record<string, string> = {
+  common: "text-[#94a3b8]",
+  uncommon: "text-[#4ade80]",
+  rare: "text-[#38bdf8]",
+  epic: "text-[#a78bfa]",
+  legendary: "text-[#fbbf24]",
+};
 
 interface OwnedNftRow {
   tokenId: number;
@@ -360,30 +368,57 @@ export default function NFTDetailsPage() {
             </div>
           )}
 
-          {metadata?.attributes && metadata.attributes.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-[#94a3b8] uppercase tracking-wider">
-                Properties
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                {metadata.attributes.map((prop, index) => (
-                  <div
-                    key={index}
-                    className="rounded-2xl p-3 space-y-1"
-                    style={{
-                      background: "#0f172a",
-                      border: "1px solid rgba(30, 41, 59, 0.5)",
-                    }}
-                  >
-                    <p className="text-[10px] font-bold text-[#94a3b8] uppercase">
-                      {prop.trait_type}
-                    </p>
-                    <p className="text-sm text-[#f8fafc]">{String(prop.value)}</p>
-                  </div>
-                ))}
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-[#94a3b8] uppercase tracking-wider">
+              Properties
+            </h3>
+            {metadata?.attributes && metadata.attributes.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3" data-testid="grid-properties">
+                {metadata.attributes.map((prop, index) => {
+                  const rarityKey = (prop.rarity || "").toLowerCase();
+                  const rarityColor =
+                    RARITY_TEXT_COLORS[rarityKey] || "text-[#94a3b8]";
+                  return (
+                    <div
+                      key={index}
+                      className="rounded-2xl p-3 space-y-1"
+                      style={{
+                        background: "#0f172a",
+                        border: "1px solid rgba(30, 41, 59, 0.5)",
+                      }}
+                      data-testid={`property-${prop.trait_type}`}
+                    >
+                      <p className="text-[10px] font-bold text-[#94a3b8] uppercase">
+                        {prop.trait_type}
+                      </p>
+                      <p className="text-sm text-[#f8fafc]">
+                        {String(prop.value)}
+                      </p>
+                      {prop.rarity && (
+                        <p
+                          className={`text-[10px] font-semibold uppercase tracking-wider ${rarityColor}`}
+                          data-testid={`property-rarity-${prop.trait_type}`}
+                        >
+                          {prop.rarity}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            </div>
-          )}
+            ) : (
+              <div
+                className="rounded-2xl p-4 text-sm text-[#94a3b8]"
+                style={{
+                  background: "#0f172a",
+                  border: "1px solid rgba(30, 41, 59, 0.5)",
+                }}
+                data-testid="text-no-properties"
+              >
+                No traits available for this NFT.
+              </div>
+            )}
+          </div>
 
           <div className="space-y-4 pt-2">
             <h3 className="text-sm font-bold text-[#94a3b8] uppercase tracking-wider">

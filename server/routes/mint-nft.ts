@@ -1279,6 +1279,72 @@ router.get('/api/nft/test-render', (req: Request, res: Response) => {
 </body></html>`);
 });
 
+const GENESIS_TRAIT_DEFINITIONS: Array<{ trait_type: string; values: string[] }> = [
+  { trait_type: 'Class', values: ['Warrior', 'Mage', 'Ranger', 'Rogue', 'Paladin', 'Druid', 'Monk', 'Necromancer'] },
+  { trait_type: 'Element', values: ['Fire', 'Water', 'Earth', 'Air', 'Lightning', 'Shadow', 'Light', 'Arcane'] },
+  { trait_type: 'Aura', values: ['Mystic', 'Radiant', 'Shadowed', 'Ethereal', 'Cosmic', 'Verdant'] },
+  { trait_type: 'Background', values: ['Nebula', 'Crimson Sky', 'Emerald Forest', 'Onyx Void', 'Solar Flare', 'Frostbite'] },
+];
+
+const GENESIS_RARITY_TIERS: Array<{ label: string; threshold: number }> = [
+  { label: 'Common', threshold: 60 },
+  { label: 'Uncommon', threshold: 85 },
+  { label: 'Rare', threshold: 95 },
+  { label: 'Epic', threshold: 99 },
+  { label: 'Legendary', threshold: 100 },
+];
+
+function fnv1aHash(input: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return Math.abs(h | 0);
+}
+
+function rarityForRoll(roll: number): string {
+  for (const tier of GENESIS_RARITY_TIERS) {
+    if (roll < tier.threshold) return tier.label;
+  }
+  return GENESIS_RARITY_TIERS[GENESIS_RARITY_TIERS.length - 1].label;
+}
+
+function computeGenesisAttributes(tokenId: number): Array<{ trait_type: string; value: string; rarity: string }> {
+  const attrs = GENESIS_TRAIT_DEFINITIONS.map(({ trait_type, values }) => {
+    const value = values[fnv1aHash(`${tokenId}|${trait_type}|value`) % values.length];
+    const rarity = rarityForRoll(fnv1aHash(`${tokenId}|${trait_type}|${value}|rarity`) % 100);
+    return { trait_type, value, rarity };
+  });
+  const overallScore = attrs.reduce((sum, a) => {
+    const idx = GENESIS_RARITY_TIERS.findIndex(t => t.label === a.rarity);
+    return sum + (idx < 0 ? 0 : idx);
+  }, 0);
+  const overallIdx = Math.min(
+    GENESIS_RARITY_TIERS.length - 1,
+    Math.round(overallScore / GENESIS_TRAIT_DEFINITIONS.length),
+  );
+  const overall = GENESIS_RARITY_TIERS[overallIdx].label;
+  attrs.push({ trait_type: 'Rarity', value: overall, rarity: overall });
+  return attrs;
+}
+
+function annotateAttributes(tokenId: number, raw: any): Array<{ trait_type: string; value: string | number; rarity: string }> {
+  if (Array.isArray(raw) && raw.length > 0) {
+    return raw
+      .filter((a: any) => a && a.trait_type !== undefined && a.value !== undefined)
+      .map((a: any) => {
+        const trait_type = String(a.trait_type);
+        const value = a.value;
+        const rarity = a.rarity
+          ? String(a.rarity)
+          : rarityForRoll(fnv1aHash(`${tokenId}|${trait_type}|${String(value)}|rarity`) % 100);
+        return { trait_type, value, rarity };
+      });
+  }
+  return computeGenesisAttributes(tokenId);
+}
+
 router.get('/api/nft/metadata/:tokenId', async (req: Request, res: Response) => {
   try {
     const tokenId = parseInt(req.params.tokenId);
@@ -1327,10 +1393,13 @@ router.get('/api/nft/metadata/:tokenId', async (req: Request, res: Response) => 
       metadata.image = ipfsToProxyUrl(metadata.image);
     }
 
+    const attributes = annotateAttributes(tokenId, metadata.attributes);
+
     return res.json({
       tokenId,
       tokenURI,
       ...metadata,
+      attributes,
     });
   } catch (error: any) {
     console.error('NFT metadata fetch error:', error);
