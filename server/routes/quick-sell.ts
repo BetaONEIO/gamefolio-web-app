@@ -6,6 +6,7 @@ import { createPublicClient, http, decodeEventLog, parseUnits, type Address } fr
 import { privateKeyToAccount } from 'viem/accounts';
 import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, NFT_CONTRACT_ADDRESS, NFT_ABI, SKALE_NEBULA_TESTNET } from '../../shared/contracts';
 import { transferGfTokens } from '../gf-token-service';
+import { invalidateTokenMetadata } from './mint-nft';
 
 const GF_DECIMALS = 18;
 const PLATFORM_FEE_PERCENT = 5;
@@ -99,6 +100,7 @@ router.post('/api/nft/quick-sell', async (req: Request, res: Response) => {
       sql`UPDATE user_nfts SET sold = true, sold_at = NOW(), listing_active = true, listed_price = ${QUICK_SELL_PRICE}, tx_hash = ${txHash} WHERE user_id = ${userId} AND token_id = ${tokenId}`
     );
 
+    invalidateTokenMetadata(tokenId);
     console.log(`[Quick Sell] User ${userId} transferred NFT #${tokenId} on-chain to treasury. Tx: ${txHash}`);
 
     return res.json({
@@ -146,6 +148,7 @@ router.post('/api/nft/server-sell', async (req: Request, res: Response) => {
       sql`UPDATE user_nfts SET sold = true, sold_at = NOW(), listing_active = true, listed_price = ${QUICK_SELL_PRICE} WHERE user_id = ${userId} AND token_id = ${tokenId} AND sold = false`
     );
 
+    invalidateTokenMetadata(tokenId);
     console.log(`[NFT Server Sell] NFT #${tokenId} listed for ${QUICK_SELL_PRICE} GFT by user ${userId}`);
 
     if (user.walletAddress) {
@@ -295,6 +298,7 @@ router.post('/api/marketplace/verify-buy', async (req: Request, res: Response) =
       );
     }
 
+    invalidateTokenMetadata(tokenId);
     console.log(`[Marketplace] User ${buyerId} bought NFT #${tokenId} from user ${sellerId} for ${price} GFT (tx: ${txHash})`);
     return res.json({
       success: true,

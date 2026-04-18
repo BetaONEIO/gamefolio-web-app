@@ -427,6 +427,7 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
       } catch (dbErr) {
         console.error('Failed to save minted NFTs to database:', dbErr);
       }
+      invalidateTokenMetadata(tokenIds);
     }
 
     return res.json({ success: true, txHash: hash, tokenIds });
@@ -667,6 +668,7 @@ router.post('/api/mint/external-finalize', async (req: Request, res: Response) =
       } catch (dbErr) {
         console.error('Failed to save externally minted NFTs to DB:', dbErr);
       }
+      invalidateTokenMetadata(tokenIds);
     }
 
     return res.json({ success: true, txHash: hash, tokenIds });
@@ -813,6 +815,7 @@ export async function reconcileStuckMintPayments(): Promise<ReconcileResult> {
                 console.error('reconcile: failed to record user_nfts row:', dbErr);
               }
             }
+            invalidateTokenMetadata(tokenIds);
             result.consumed += 1;
             reconcileErrorCounts.delete(txHash);
             console.log(`✅ Reconciled stuck payment ${txHash} → consumed (mint ${mintTxHash}, ${tokenIds.length} token(s))`);
@@ -1404,6 +1407,32 @@ async function fetchAndAnnotateTokenMetadata(tokenId: number): Promise<CachedTok
   };
 }
 
+export function invalidateTokenMetadata(tokenIds: number | number[]): void {
+  const ids = Array.isArray(tokenIds) ? tokenIds : [tokenIds];
+  for (const id of ids) {
+    if (typeof id !== 'number' || !Number.isFinite(id)) continue;
+    tokenMetadataCache.delete(id);
+    tokenMetadataInflight.delete(id);
+  }
+}
+
+export function clearTokenMetadataCache(): { cleared: number } {
+  const cleared = tokenMetadataCache.size;
+  tokenMetadataCache.clear();
+  tokenMetadataInflight.clear();
+  return { cleared };
+}
+
+export async function refreshTokenMetadata(tokenIds: number | number[]): Promise<void> {
+  invalidateTokenMetadata(tokenIds);
+  const ids = Array.isArray(tokenIds) ? tokenIds : [tokenIds];
+  await Promise.all(
+    ids
+      .filter((id) => typeof id === 'number' && Number.isFinite(id))
+      .map((id) => getCachedTokenMetadata(id).catch(() => null)),
+  );
+}
+
 async function getCachedTokenMetadata(tokenId: number): Promise<CachedTokenMetadata | null> {
   const now = Date.now();
   const cached = tokenMetadataCache.get(tokenId);
@@ -1451,6 +1480,28 @@ router.get('/api/nft/metadata/:tokenId', async (req: Request, res: Response) => 
   } catch (error: any) {
     console.error('NFT metadata fetch error:', error);
     return res.status(500).json({ error: error.message || 'Failed to fetch metadata' });
+  }
+});
+
+router.post('/api/admin/nft/cache/flush', adminMiddleware, async (req: Request, res: Response) => {
+  try {
+    const rawIds = req.body?.tokenIds;
+    if (Array.isArray(rawIds) && rawIds.length > 0) {
+      const ids: number[] = [];
+      for (const v of rawIds) {
+        const n = typeof v === 'number' ? v : parseInt(String(v), 10);
+        if (Number.isFinite(n) && n >= 0) ids.push(n);
+      }
+      invalidateTokenMetadata(ids);
+      console.log(`[NFT Cache] Admin flushed ${ids.length} token(s): [${ids.join(', ')}]`);
+      return res.json({ success: true, flushed: ids.length, tokenIds: ids });
+    }
+    const result = clearTokenMetadataCache();
+    console.log(`[NFT Cache] Admin flushed entire metadata cache (${result.cleared} entr${result.cleared === 1 ? 'y' : 'ies'})`);
+    return res.json({ success: true, cleared: result.cleared });
+  } catch (error: any) {
+    console.error('[NFT Cache] Flush error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to flush cache' });
   }
 });
 
@@ -1648,6 +1699,7 @@ router.post('/api/admin/nfts/backfill', async (req: Request, res: Response) => {
     );
     const userRows = (allUsers as any).rows || allUsers;
     let totalBackfilled = 0;
+    const backfilledTokenIds = new Set<number>();
 
     for (const u of userRows) {
       const walletAddress = u.wallet_address;
@@ -1705,11 +1757,17 @@ router.post('/api/admin/nfts/backfill', async (req: Request, res: Response) => {
           await db.execute(
             sql`INSERT INTO user_nfts (user_id, token_id, tx_hash) VALUES (${u.id}, ${tokenId}, ${'backfill'}) ON CONFLICT (user_id, token_id) DO NOTHING`
           );
+          backfilledTokenIds.add(tokenId);
           totalBackfilled++;
         }
       } catch (err) {
         console.error(`Backfill error for user ${u.id}:`, err);
       }
+    }
+
+    if (backfilledTokenIds.size > 0) {
+      invalidateTokenMetadata(Array.from(backfilledTokenIds));
+      console.log(`[NFT Backfill] Invalidated metadata cache for ${backfilledTokenIds.size} token(s)`);
     }
 
     return res.json({ success: true, totalBackfilled });

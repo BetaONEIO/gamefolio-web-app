@@ -3,6 +3,7 @@ import { db } from '../db';
 import { users } from '@shared/schema';
 import { sql, eq } from 'drizzle-orm';
 import { adminMiddleware } from '../middleware/admin';
+import { invalidateTokenMetadata } from './mint-nft';
 
 const router = Router();
 
@@ -50,7 +51,9 @@ router.post('/api/admin/nft-seed', adminMiddleware, async (req: Request, res: Re
       seededCount++;
     }
 
-    console.log(`[NFT Seed] Seeded ${seededCount} NFTs for platform store user ${platformUserId}`);
+    const seededTokenIds = Array.from({ length: SEED_COUNT }, (_, i) => i + 1);
+    invalidateTokenMetadata(seededTokenIds);
+    console.log(`[NFT Seed] Seeded ${seededCount} NFTs for platform store user ${platformUserId} (cache invalidated)`);
 
     const countResult = await db.execute(
       sql`SELECT COUNT(*) as cnt FROM user_nfts WHERE user_id = ${platformUserId} AND listing_active = true`
