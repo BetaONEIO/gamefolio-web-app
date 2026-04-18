@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useParams, useLocation, useSearch, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Share2, ExternalLink, CheckCircle, ShoppingCart, Loader2, Sparkles } from "lucide-react";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
@@ -94,6 +95,15 @@ export default function NFTDetailsPage() {
       return res.json();
     },
     enabled: !!user && isValidTokenId,
+  });
+  const { data: tokenBalanceData } = useQuery<{ balance: string }>({
+    queryKey: ["/api/token/balance"],
+    queryFn: async () => {
+      const res = await fetch("/api/token/balance", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load token balance");
+      return res.json();
+    },
+    enabled: !!user,
   });
 
   const listing = useMemo(
@@ -189,6 +199,7 @@ export default function NFTDetailsPage() {
     : null;
   const showBuy = !!listing && !isSeller && !isOwned;
   const isBuyingThis = buyingTokenId === tokenId;
+  const userBalance = tokenBalanceData?.balance || "0";
 
   return (
     <div className="min-h-screen bg-[#101D27] text-white font-['Plus_Jakarta_Sans']">
@@ -333,7 +344,15 @@ export default function NFTDetailsPage() {
                     className="w-full h-[60px] rounded-2xl bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] text-lg font-bold disabled:opacity-50"
                     disabled={isBuyingThis}
                     onClick={() =>
-                      requestBuy({ tokenId, sellerId: listing.user_id })
+                      requestBuy({
+                        tokenId,
+                        sellerId: listing.user_id,
+                        nftName: displayName,
+                        nftDescription: description,
+                        nftImage: displayImage,
+                        currentBalance: userBalance,
+                        price: listing.listed_price,
+                      })
                     }
                     data-testid="button-buy-nft"
                   >

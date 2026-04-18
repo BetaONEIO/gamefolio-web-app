@@ -26,6 +26,11 @@ const SKALE_CHAIN_ID = SKALE_NEBULA_TESTNET.id;
 export interface PendingNftPurchase {
   tokenId: number;
   sellerId: number;
+  nftName?: string;
+  nftDescription?: string;
+  nftImage?: string;
+  currentBalance?: string | number;
+  price?: number;
 }
 
 export interface UseMarketplacePurchaseOptions {
@@ -214,10 +219,45 @@ export function MarketplacePurchaseDialog({
           <DialogTitle className="text-white text-lg">Confirm NFT Purchase</DialogTitle>
           <DialogDescription className="text-gray-400">
             {pendingNftPurchase
-              ? `Are you sure you want to buy NFT #${pendingNftPurchase.tokenId}?`
+              ? `Review ${pendingNftPurchase.nftName || `NFT #${pendingNftPurchase.tokenId}`} before buying.`
               : "Are you sure you want to buy this NFT?"}
           </DialogDescription>
         </DialogHeader>
+        {pendingNftPurchase && (
+          <div className="space-y-3 rounded-xl bg-slate-900/60 p-4 border border-slate-700">
+            <div className="flex gap-3">
+              {pendingNftPurchase.nftImage && (
+                <img
+                  src={pendingNftPurchase.nftImage}
+                  alt={pendingNftPurchase.nftName || `NFT #${pendingNftPurchase.tokenId}`}
+                  className="w-16 h-16 rounded-lg object-cover"
+                />
+              )}
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-white">
+                  {pendingNftPurchase.nftName || `NFT #${pendingNftPurchase.tokenId}`}
+                </p>
+                <p className="text-xs text-gray-400 line-clamp-3">
+                  {pendingNftPurchase.nftDescription || "No description available."}
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="rounded-lg bg-black/20 p-3">
+                <p className="text-gray-400 text-xs">Cost</p>
+                <p className="text-white font-semibold">
+                  {typeof pendingNftPurchase.price === "number" ? `${pendingNftPurchase.price} GFT` : "—"}
+                </p>
+              </div>
+              <div className="rounded-lg bg-black/20 p-3">
+                <p className="text-gray-400 text-xs">Your balance</p>
+                <p className="text-white font-semibold">
+                  {pendingNftPurchase.currentBalance ?? "—"} GFT
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         <DialogFooter>
           <Button
             variant="outline"
