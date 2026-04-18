@@ -5,6 +5,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Share2, ExternalLink, CheckCircle, ShoppingCart, Loader2, Sparkles } from "lucide-react";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
+import { SKALE_EXPLORER_BASE_URL } from "../../../config/web3";
+import { NFT_CONTRACT_ADDRESS } from "@shared/contracts";
 import {
   useMarketplacePurchase,
   MarketplacePurchaseDialog,
@@ -404,18 +406,41 @@ export default function NFTDetailsPage() {
                 <span className="text-sm text-[#94a3b8]">Token Standard</span>
                 <span className="text-sm text-[#f8fafc] font-mono">ERC-721</span>
               </div>
-              <div className="flex justify-between items-center px-4 py-4">
+              <div className="flex justify-between items-center px-4 py-4 border-b border-[#1e293b]/30">
                 <span className="text-sm text-[#94a3b8]">Network</span>
                 <span className="text-sm text-[#f8fafc]">SKALE Nebula</span>
               </div>
+              <div className="flex justify-between items-center px-4 py-4 gap-3">
+                <span className="text-sm text-[#94a3b8]">Contract</span>
+                <span
+                  className="text-sm text-[#f8fafc] font-mono truncate"
+                  title={NFT_CONTRACT_ADDRESS}
+                  data-testid="text-contract-address"
+                >
+                  {`${NFT_CONTRACT_ADDRESS.slice(0, 6)}…${NFT_CONTRACT_ADDRESS.slice(-4)}`}
+                </span>
+              </div>
             </div>
+
+            <a
+              href={`${SKALE_EXPLORER_BASE_URL}/token/${NFT_CONTRACT_ADDRESS}/instance/${tokenId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 h-[52px] rounded-2xl bg-[#1e293b]/50 hover:bg-[#1e293b] transition-colors"
+              data-testid="button-view-explorer"
+            >
+              <ExternalLink className="w-4 h-4 text-[#f8fafc]" />
+              <span className="text-sm font-bold text-[#f8fafc]">
+                View on SKALE Explorer
+              </span>
+            </a>
 
             <Link href={backHref}>
               <button
                 className="w-full flex items-center justify-center gap-2 h-[52px] rounded-2xl bg-[#1e293b]/30 hover:bg-[#1e293b]/50 transition-colors"
                 data-testid="button-back-bottom"
               >
-                <ExternalLink className="w-4 h-4 text-[#94a3b8]" />
+                <ArrowLeft className="w-4 h-4 text-[#94a3b8]" />
                 <span className="text-sm text-[#94a3b8]">{backLabel}</span>
               </button>
             </Link>
