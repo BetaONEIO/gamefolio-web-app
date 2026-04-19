@@ -9159,6 +9159,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No screenshot file provided" });
       }
 
+      // Enforce per-tier screenshot size cap
+      const screenshotLimits = await storage.getUploadLimits(req.user!.id);
+      const maxScreenshotMB = screenshotLimits.maxScreenshotSizeMB;
+      const fileSizeMB = req.file.size / (1024 * 1024);
+      if (fileSizeMB > maxScreenshotMB) {
+        if (req.file?.path) fs.unlink(req.file.path, () => {});
+        return res.status(403).json({
+          error: 'File size exceeds limit',
+          message: `Maximum screenshot size is ${maxScreenshotMB}MB.${screenshotLimits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`,
+          limits: screenshotLimits
+        });
+      }
+
       const { gameId, description, title, tags, gameName, gameImageUrl } = req.body;
 
       if (!gameId) {

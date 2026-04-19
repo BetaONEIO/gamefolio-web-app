@@ -163,11 +163,17 @@ const tusServer = new TusServer({
         },
         body: JSON.stringify({ success: true, result })
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('TUS upload finish error:', error);
+      const message = error?.message || 'Upload processing failed';
+      // Surface limit errors as 4xx so the client gets a clear, actionable message.
+      const isLimitError = typeof message === 'string' && message.startsWith('Maximum ');
       return {
-        status_code: 500,
-        body: JSON.stringify({ error: 'Upload processing failed' })
+        status_code: isLimitError ? 403 : 500,
+        body: JSON.stringify({
+          error: isLimitError ? 'Upload exceeds tier limit' : 'Upload processing failed',
+          message
+        })
       };
     }
   }
@@ -590,6 +596,8 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
     const limits = await storage.getUploadLimits(req.user!.id);
     const isReel = videoType === 'reel';
     const maxDurationSeconds = isReel ? limits.maxReelDurationSeconds : limits.maxClipDurationSeconds;
+    const maxSizeMB = isReel ? limits.maxReelSizeMB : limits.maxClipSizeMB;
+    const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
     // Handle game ID - ensure game exists in database
     let finalGameId = null;
@@ -731,6 +739,18 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
       if (videoResponse.ok) {
         const videoBuffer = await videoResponse.arrayBuffer();
         console.log(`📦 Video downloaded: ${(videoBuffer.byteLength / (1024 * 1024)).toFixed(2)} MB`);
+
+        // Enforce per-tier size cap (defense in depth — also checked at upload time).
+        if (videoBuffer.byteLength > maxSizeBytes) {
+          // Best-effort cleanup of the orphaned Supabase object
+          try { await supabaseStorage.deleteFile(uploadResult.path); } catch {}
+          return res.status(403).json({
+            error: 'File size exceeds limit',
+            message: `Maximum ${isReel ? 'reel' : 'clip'} size is ${maxSizeMB}MB.${limits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`,
+            limits
+          });
+        }
+
         await fs.promises.writeFile(tempVideoPath, Buffer.from(videoBuffer));
 
         // Get actual video duration first
