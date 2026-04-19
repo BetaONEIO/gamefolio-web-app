@@ -120,14 +120,36 @@ const tusServer = new TusServer({
 
       const uploadType = upload.metadata?.uploadType === 'reel' ? 'reel' : 'video';
 
-      // Validate file size against the user's tier limit (clip vs reel).
-      // Duration is enforced later in /process-video where the file can be probed.
+      // Validate against the user's tier limits (clip vs reel).
       const limits = await storage.getUploadLimits(userId);
       const isReel = uploadType === 'reel';
+      const contentType = isReel ? 'reel' : 'clip';
       const maxSizeMB = isReel ? limits.maxReelSizeMB : limits.maxClipSizeMB;
+      const maxDurationSeconds = isReel ? limits.maxReelDurationSeconds : limits.maxClipDurationSeconds;
       const maxSize = maxSizeMB * 1024 * 1024;
+      const proHint = limits.isPro ? '' : ' Upgrade to Pro for larger uploads.';
+
       if (upload.size && upload.size > maxSize) {
-        throw new Error(`File size exceeds maximum allowed size of ${maxSizeMB}MB${limits.isPro ? '' : ' (upgrade to Pro for larger uploads)'}`);
+        // Best-effort cleanup of the TUS temp file so we don't leak disk
+        try { await supabaseTusStore.remove(upload.id); } catch {}
+        throw new Error(`Maximum ${contentType} size is ${maxSizeMB}MB.${proHint}`);
+      }
+
+      // Probe duration from the local TUS temp file before uploading to Supabase
+      const tusTempPath = path.join(tempDir, upload.id);
+      if (fs.existsSync(tusTempPath)) {
+        try {
+          const videoInfo = await VideoProcessor.getVideoInfo(tusTempPath);
+          const durationSeconds = Math.round(videoInfo.duration || 0);
+          if (durationSeconds > maxDurationSeconds) {
+            try { await supabaseTusStore.remove(upload.id); } catch {}
+            throw new Error(`Maximum ${contentType} duration is ${maxDurationSeconds} seconds (your video is ${durationSeconds}s).${proHint}`);
+          }
+        } catch (probeErr: any) {
+          // If the message looks like our own enforcement message, re-throw it.
+          if (probeErr?.message?.startsWith('Maximum ')) throw probeErr;
+          console.warn('TUS duration probe failed, allowing upload to proceed:', probeErr?.message || probeErr);
+        }
       }
 
       // Upload to Supabase

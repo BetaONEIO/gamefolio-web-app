@@ -349,7 +349,7 @@ const UploadPage = () => {
     const isReelUpload = contentType === 'reels';
     const maxSizeMB = uploadLimits
       ? (isReelUpload ? uploadLimits.maxReelSizeMB : uploadLimits.maxClipSizeMB)
-      : 500;
+      : (isReelUpload ? 50 : 100);
     const maxSize = maxSizeMB * 1024 * 1024;
     if (selectedFile.size > maxSize) {
       console.log('File too large:', selectedFile.size, 'bytes');
@@ -414,7 +414,7 @@ const UploadPage = () => {
       }
       
       // Validate file size against the user's tier screenshot cap.
-      const maxImageMB = uploadLimits?.maxScreenshotSizeMB ?? 100;
+      const maxImageMB = uploadLimits?.maxScreenshotSizeMB ?? 10;
       const maxSize = maxImageMB * 1024 * 1024;
       if (file.size > maxSize) {
         setScreenshotError(`Each image must be less than ${maxImageMB}MB${uploadLimits && !uploadLimits.isPro ? ' — upgrade to Pro for larger uploads.' : '.'}`);
@@ -753,7 +753,7 @@ const UploadPage = () => {
     const isReelSubmit = contentType === 'reels';
     const maxDurationSec = uploadLimits
       ? (isReelSubmit ? uploadLimits.maxReelDurationSeconds : uploadLimits.maxClipDurationSeconds)
-      : (isReelSubmit ? 60 : 300);
+      : (isReelSubmit ? 60 : 180);
     if (videoDuration > maxDurationSec) {
       const limitLabel = maxDurationSec >= 60
         ? `${Math.round(maxDurationSec / 60 * 10) / 10} minutes`
@@ -1015,7 +1015,7 @@ const UploadPage = () => {
                                   const isReelLoad = contentType === 'reels';
                                   const maxDurLoad = uploadLimits
                                     ? (isReelLoad ? uploadLimits.maxReelDurationSeconds : uploadLimits.maxClipDurationSeconds)
-                                    : (isReelLoad ? 60 : 300);
+                                    : (isReelLoad ? 60 : 180);
                                   if (duration > maxDurLoad) {
                                     const label = maxDurLoad >= 60
                                       ? `${Math.round(maxDurLoad / 60 * 10) / 10} minutes`
