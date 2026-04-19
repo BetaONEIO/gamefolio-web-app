@@ -127,7 +127,7 @@ const UploadPage = () => {
     return () => window.removeEventListener('upload-type-change', handleTypeChange);
   }, []);
 
-  // Screenshot-specific state - supports multiple screenshots (up to 3)
+  // Screenshot-specific state - supports multiple screenshots
   const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
   const [screenshotPreviews, setScreenshotPreviews] = useState<string[]>([]);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
@@ -387,23 +387,13 @@ const UploadPage = () => {
     return Math.abs(aspectRatio - targetRatio) <= tolerance ? 'reel' : 'clip';
   };
 
-  // Screenshot file handling - supports adding multiple files (up to 3)
+  // Screenshot file handling - supports adding multiple files
   const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
-    
+
     setScreenshotError(null);
-    
-    // Validate total number of files
-    if (screenshotFiles.length + files.length > 3) {
-      toast({
-        title: "Too many files",
-        description: "You can upload a maximum of 3 screenshots at once",
-        variant: "destructive",
-      });
-      return;
-    }
-    
+
     // Validate each file
     for (const file of files) {
       // Validate file type
@@ -1910,7 +1900,7 @@ const UploadPage = () => {
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Supports JPEG, PNG, or JPG formats • Up to 3 screenshots</p>
+                          <p>Supports JPEG, PNG, or JPG formats</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -1961,7 +1951,7 @@ const UploadPage = () => {
                       <Image className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
                       <p className="font-medium">Drag and drop your screenshots or click to browse</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        JPEG, PNG, or JPG up to {uploadLimits?.maxScreenshotSizeMB ?? 10}MB • Select up to 3 screenshots
+                        JPEG, PNG, or JPG up to {uploadLimits?.maxScreenshotSizeMB ?? 10}MB each
                       </p>
                     </label>
                   ) : (
