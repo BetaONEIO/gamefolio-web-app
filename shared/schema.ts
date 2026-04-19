@@ -1457,25 +1457,15 @@ export interface FireLimits {
 }
 
 // Upload limits configuration type
+// Free vs Pro users are limited only by file size and (for video) duration.
+// There is no per-day or total upload count cap — those have been removed.
 export interface UploadLimits {
   isPro: boolean;
-  maxClipsPerDay: number;
-  maxReelsPerDay: number;
-  maxScreenshotsPerDay: number;
-  maxVideoSizeMB: number;
-  maxImageSizeMB: number;
-  clipsUploadedToday: number;
-  reelsUploadedToday: number;
-  screenshotsUploadedToday: number;
-  canUploadClip: boolean;
-  canUploadReel: boolean;
-  canUploadScreenshot: boolean;
-  totalClipsExisting: number;
-  totalReelsExisting: number;
-  totalScreenshotsExisting: number;
-  maxClipsTotal: number;
-  maxReelsTotal: number;
-  maxScreenshotsTotal: number;
+  maxClipSizeMB: number;
+  maxReelSizeMB: number;
+  maxScreenshotSizeMB: number;
+  maxClipDurationSeconds: number;
+  maxReelDurationSeconds: number;
 }
 
 // Linked external wallets - addresses the user has cryptographically proven control of.

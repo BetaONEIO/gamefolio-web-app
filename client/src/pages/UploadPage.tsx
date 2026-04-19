@@ -216,20 +216,14 @@ const UploadPage = () => {
 
   const userId = user?.id;
 
-  // Fetch upload limits
+  // Fetch upload limits (size + duration only — no count caps)
   const { data: uploadLimits, isLoading: limitsLoading } = useQuery<{
     isPro: boolean;
-    maxClipsPerDay: number;
-    maxReelsPerDay: number;
-    maxScreenshotsPerDay: number;
-    maxVideoSizeMB: number;
-    maxImageSizeMB: number;
-    clipsUploadedToday: number;
-    reelsUploadedToday: number;
-    screenshotsUploadedToday: number;
-    canUploadClip: boolean;
-    canUploadReel: boolean;
-    canUploadScreenshot: boolean;
+    maxClipSizeMB: number;
+    maxReelSizeMB: number;
+    maxScreenshotSizeMB: number;
+    maxClipDurationSeconds: number;
+    maxReelDurationSeconds: number;
   }>({
     queryKey: ['/api/upload/limits'],
     enabled: !!userId,
@@ -351,11 +345,15 @@ const UploadPage = () => {
       return;
     }
 
-    // Validate file size (500MB limit)
-    const maxSize = 500 * 1024 * 1024; // 500MB in bytes
+    // Validate file size against the user's tier limit (clip vs reel).
+    const isReelUpload = contentType === 'reels';
+    const maxSizeMB = uploadLimits
+      ? (isReelUpload ? uploadLimits.maxReelSizeMB : uploadLimits.maxClipSizeMB)
+      : 500;
+    const maxSize = maxSizeMB * 1024 * 1024;
     if (selectedFile.size > maxSize) {
       console.log('File too large:', selectedFile.size, 'bytes');
-      setFileError("File size must be less than 500MB");
+      setFileError(`File size must be less than ${maxSizeMB}MB${uploadLimits && !uploadLimits.isPro ? ' — upgrade to Pro for larger uploads.' : '.'}`);
       return;
     }
     
@@ -415,10 +413,11 @@ const UploadPage = () => {
         return;
       }
       
-      // Validate file size (100MB limit for images)
-      const maxSize = 100 * 1024 * 1024;
+      // Validate file size against the user's tier screenshot cap.
+      const maxImageMB = uploadLimits?.maxScreenshotSizeMB ?? 100;
+      const maxSize = maxImageMB * 1024 * 1024;
       if (file.size > maxSize) {
-        setScreenshotError("Each image must be less than 100MB");
+        setScreenshotError(`Each image must be less than ${maxImageMB}MB${uploadLimits && !uploadLimits.isPro ? ' — upgrade to Pro for larger uploads.' : '.'}`);
         return;
       }
     }
@@ -750,11 +749,18 @@ const UploadPage = () => {
     
     console.log('Content type for validation:', contentType);
     
-    // Validate video duration for clips (5 minutes max)
-    if (contentType === 'clips' && videoDuration > 300) {
+    // Validate video duration against the user's tier limit.
+    const isReelSubmit = contentType === 'reels';
+    const maxDurationSec = uploadLimits
+      ? (isReelSubmit ? uploadLimits.maxReelDurationSeconds : uploadLimits.maxClipDurationSeconds)
+      : (isReelSubmit ? 60 : 300);
+    if (videoDuration > maxDurationSec) {
+      const limitLabel = maxDurationSec >= 60
+        ? `${Math.round(maxDurationSec / 60 * 10) / 10} minutes`
+        : `${maxDurationSec} seconds`;
       toast({
         title: "Video too long",
-        description: `Your video is ${Math.round(videoDuration / 60 * 10) / 10} minutes long. Clips must be 5 minutes or less.`,
+        description: `Your video is ${Math.round(videoDuration / 60 * 10) / 10} minutes long. ${isReelSubmit ? 'Reels' : 'Clips'} must be ${limitLabel} or less${uploadLimits && !uploadLimits.isPro ? ' — upgrade to Pro for longer videos.' : '.'}`,
         variant: "gamefolioError",
       });
       return;
@@ -793,18 +799,6 @@ const UploadPage = () => {
       return;
     }
 
-    // Check upload limits (client-side validation)
-    if (uploadLimits && !uploadLimits.isPro) {
-      const isReel = contentType === 'reels';
-      if (isReel && !uploadLimits.canUploadReel) {
-        setShowProUpgrade(true);
-        return;
-      }
-      if (!isReel && !uploadLimits.canUploadClip) {
-        setShowProUpgrade(true);
-        return;
-      }
-    }
 
     // Validate required fields
     if (!file) {
@@ -862,37 +856,33 @@ const UploadPage = () => {
       
       <EmailVerificationBanner />
 
-      {/* Upload Limits Display */}
+      {/* Upload Limits Display — unlimited uploads, capped by file size & duration */}
       {!limitsLoading && uploadLimits && !uploadLimits.isPro && (
         <Alert className="mb-4">
           <Info className="h-4 w-4" />
-          <AlertTitle>Daily Upload Limits</AlertTitle>
+          <AlertTitle>Upload Limits</AlertTitle>
           <AlertDescription>
-            <div className="flex flex-wrap gap-4 mt-2 text-sm">
-              <span className={uploadLimits.canUploadClip ? "" : "text-destructive font-medium"}>
-                Clips: {uploadLimits.clipsUploadedToday}/{uploadLimits.maxClipsPerDay}
-              </span>
-              <span className={uploadLimits.canUploadReel ? "" : "text-destructive font-medium"}>
-                Reels: {uploadLimits.reelsUploadedToday}/{uploadLimits.maxReelsPerDay}
-              </span>
-              <span className={uploadLimits.canUploadScreenshot ? "" : "text-destructive font-medium"}>
-                Screenshots: {uploadLimits.screenshotsUploadedToday}/{uploadLimits.maxScreenshotsPerDay}
-              </span>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm">
+              <span>Clips: up to {uploadLimits.maxClipSizeMB}MB · {Math.round(uploadLimits.maxClipDurationSeconds / 60)} min</span>
+              <span>Reels: up to {uploadLimits.maxReelSizeMB}MB · {uploadLimits.maxReelDurationSeconds}s</span>
+              <span>Screenshots: up to {uploadLimits.maxScreenshotSizeMB}MB</span>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Max file sizes: Videos {uploadLimits.maxVideoSizeMB}MB, Images {uploadLimits.maxImageSizeMB}MB. 
-              <a href="/pro" className="text-primary ml-1 underline">Upgrade to Pro</a> for unlimited uploads and larger files.
+              Upload as many as you like.
+              <a href="/pro" className="text-primary ml-1 underline">Upgrade to Pro</a> for larger files and longer videos.
             </p>
           </AlertDescription>
         </Alert>
       )}
-      
+
       {uploadLimits?.isPro && (
         <Alert className="mb-4 border-purple-500/50 bg-purple-500/10">
           <Check className="h-4 w-4 text-purple-500" />
           <AlertTitle className="text-purple-500">Pro Member</AlertTitle>
           <AlertDescription>
-            Unlimited uploads with max file sizes: Videos {uploadLimits.maxVideoSizeMB}MB, Images {uploadLimits.maxImageSizeMB}MB
+            Clips up to {uploadLimits.maxClipSizeMB}MB / {Math.round(uploadLimits.maxClipDurationSeconds / 60)} min,
+            Reels up to {uploadLimits.maxReelSizeMB}MB / {uploadLimits.maxReelDurationSeconds}s,
+            Screenshots up to {uploadLimits.maxScreenshotSizeMB}MB.
           </AlertDescription>
         </Alert>
       )}
@@ -931,7 +921,7 @@ const UploadPage = () => {
                         <TooltipTrigger asChild>
                           <div className="flex items-center text-xs text-muted-foreground">
                             <Info className="h-3 w-3 mr-1" />
-                            <span>Maximum 500MB</span>
+                            <span>Maximum {uploadLimits?.maxClipSizeMB ?? 100}MB · {Math.round((uploadLimits?.maxClipDurationSeconds ?? 180) / 60)} min</span>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -1021,9 +1011,16 @@ const UploadPage = () => {
                                   const duration = videoRef.current.duration;
                                   console.log('Setting video duration:', duration, 'seconds');
                                   
-                                  // Validate video duration - 5 minutes (300 seconds) max for clips
-                                  if (contentType === 'clips' && duration > 300) {
-                                    setFileError(`Video duration is ${Math.round(duration / 60 * 10) / 10} minutes. Clips must be 5 minutes or less.`);
+                                  // Validate duration against the user's tier limit.
+                                  const isReelLoad = contentType === 'reels';
+                                  const maxDurLoad = uploadLimits
+                                    ? (isReelLoad ? uploadLimits.maxReelDurationSeconds : uploadLimits.maxClipDurationSeconds)
+                                    : (isReelLoad ? 60 : 300);
+                                  if (duration > maxDurLoad) {
+                                    const label = maxDurLoad >= 60
+                                      ? `${Math.round(maxDurLoad / 60 * 10) / 10} minutes`
+                                      : `${maxDurLoad} seconds`;
+                                    setFileError(`Video duration is ${Math.round(duration / 60 * 10) / 10} minutes. ${isReelLoad ? 'Reels' : 'Clips'} must be ${label} or less${uploadLimits && !uploadLimits.isPro ? ' — upgrade to Pro for longer videos.' : '.'}`);
                                     setFile(null);
                                     return;
                                   }
@@ -1189,7 +1186,7 @@ const UploadPage = () => {
                         <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
                         <p className="font-medium">Drag and drop your video or click to browse</p>
                         <p className="text-sm text-muted-foreground mt-1">
-                          MP4, WebM, or MOV up to 500MB
+                          MP4, WebM, or MOV up to {uploadLimits?.maxClipSizeMB ?? 100}MB · {Math.round((uploadLimits?.maxClipDurationSeconds ?? 180) / 60)} min
                         </p>
                       </div>
                     )}
@@ -1357,7 +1354,7 @@ const UploadPage = () => {
                         <TooltipTrigger asChild>
                           <div className="flex items-center text-xs text-muted-foreground">
                             <Info className="h-3 w-3 mr-1" />
-                            <span>Maximum 500MB • Auto-converted to 9:16</span>
+                            <span>Maximum {uploadLimits?.maxReelSizeMB ?? 50}MB · {uploadLimits?.maxReelDurationSeconds ?? 60}s • Auto-converted to 9:16</span>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -1724,7 +1721,7 @@ const UploadPage = () => {
                         <Camera className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
                         <p className="font-medium">Drag and drop your video or click to browse</p>
                         <p className="text-sm text-muted-foreground mt-1">
-                          MP4, WebM, or MOV up to 500MB • Videos automatically converted to 9:16 reel format
+                          MP4, WebM, or MOV up to {uploadLimits?.maxReelSizeMB ?? 50}MB · {uploadLimits?.maxReelDurationSeconds ?? 60}s • Videos automatically converted to 9:16 reel format
                         </p>
                       </div>
                     )}
@@ -1899,12 +1896,6 @@ const UploadPage = () => {
                 }
                 
                 
-                // Check upload limits (client-side validation)
-                if (uploadLimits && !uploadLimits.isPro && !uploadLimits.canUploadScreenshot) {
-                  setShowProUpgrade(true);
-                  return;
-                }
-                
                 screenshotUploadMutation.mutate();
               }} className="space-y-6">
                 <div className="space-y-2">
@@ -1915,7 +1906,7 @@ const UploadPage = () => {
                         <TooltipTrigger asChild>
                           <div className="flex items-center text-xs text-muted-foreground">
                             <Info className="h-3 w-3 mr-1" />
-                            <span>Maximum 100MB each</span>
+                            <span>Maximum {uploadLimits?.maxScreenshotSizeMB ?? 10}MB each</span>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -1970,7 +1961,7 @@ const UploadPage = () => {
                       <Image className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
                       <p className="font-medium">Drag and drop your screenshots or click to browse</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        JPEG, PNG, or JPG up to 100MB • Select up to 3 screenshots
+                        JPEG, PNG, or JPG up to {uploadLimits?.maxScreenshotSizeMB ?? 10}MB • Select up to 3 screenshots
                       </p>
                     </label>
                   ) : (

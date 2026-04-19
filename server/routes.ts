@@ -10055,38 +10055,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, error: 'Invalid video type. Must be "clip" or "reel"' });
       }
 
-      // Check upload limits
+      // Check upload limits (size + duration only — no count caps)
       const limits = await storage.getUploadLimits(req.user!.id);
       const isReel = videoType === 'reel';
-
-      if (!limits.isPro) {
-        if (isReel && !limits.canUploadReel) {
-          if (req.file?.path) fs.unlink(req.file.path, () => {});
-          return res.status(403).json({ 
-            success: false,
-            error: 'Daily reel upload limit reached',
-            message: `Free users can upload ${limits.maxReelsPerDay} reels per day. Upgrade to Pro for unlimited uploads.`
-          });
-        }
-        if (!isReel && !limits.canUploadClip) {
-          if (req.file?.path) fs.unlink(req.file.path, () => {});
-          return res.status(403).json({ 
-            success: false,
-            error: 'Daily clip upload limit reached',
-            message: `Free users can upload ${limits.maxClipsPerDay} clips per day. Upgrade to Pro for unlimited uploads.`
-          });
-        }
-      }
+      const maxVideoSizeMB = isReel ? limits.maxReelSizeMB : limits.maxClipSizeMB;
+      const maxDurationSeconds = isReel ? limits.maxReelDurationSeconds : limits.maxClipDurationSeconds;
 
       // Check file size limit
       const fileSizeMB = req.file.size / (1024 * 1024);
-      if (fileSizeMB > limits.maxVideoSizeMB) {
+      if (fileSizeMB > maxVideoSizeMB) {
         if (req.file?.path) fs.unlink(req.file.path, () => {});
-        return res.status(403).json({ 
+        return res.status(403).json({
           success: false,
           error: 'File size exceeds limit',
-          message: `Maximum video size is ${limits.maxVideoSizeMB}MB.`
+          message: `Maximum ${isReel ? 'reel' : 'clip'} size is ${maxVideoSizeMB}MB.${limits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`
         });
+      }
+
+      // Check video duration limit (best-effort — file is on disk locally)
+      try {
+        const probeInfo = await VideoProcessor.getVideoInfo(req.file.path);
+        const probedDuration = Math.round(probeInfo.duration || 0);
+        if (probedDuration > maxDurationSeconds) {
+          if (req.file?.path) fs.unlink(req.file.path, () => {});
+          return res.status(403).json({
+            success: false,
+            error: 'Video duration exceeds limit',
+            message: `Maximum ${isReel ? 'reel' : 'clip'} duration is ${maxDurationSeconds} seconds (your video is ${probedDuration}s).${limits.isPro ? '' : ' Upgrade to Pro for longer videos.'}`
+          });
+        }
+      } catch (probeErr) {
+        console.warn('Could not probe video duration before upload:', probeErr);
       }
 
       // Handle game ID - ensure game exists in database (same logic as process-video)
@@ -10247,11 +10246,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedClipData = insertClipSchema.parse(clipData);
       const clip = await storage.createClip(validatedClipData);
-
-      // Increment daily upload count
-      const contentType = isReel ? 'reel' : 'clip';
-      await storage.incrementDailyUploadCount(req.user!.id, contentType);
-      console.log(`📊 Incremented ${contentType} upload count for user ${req.user!.id}`);
 
       // Award upload points
       const leaderboardService = new LeaderboardService();

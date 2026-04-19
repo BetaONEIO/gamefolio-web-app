@@ -120,10 +120,14 @@ const tusServer = new TusServer({
 
       const uploadType = upload.metadata?.uploadType === 'reel' ? 'reel' : 'video';
 
-      // Validate file size based on type
-      const maxSize = 500 * 1024 * 1024; // 500MB
+      // Validate file size against the user's tier limit (clip vs reel).
+      // Duration is enforced later in /process-video where the file can be probed.
+      const limits = await storage.getUploadLimits(userId);
+      const isReel = uploadType === 'reel';
+      const maxSizeMB = isReel ? limits.maxReelSizeMB : limits.maxClipSizeMB;
+      const maxSize = maxSizeMB * 1024 * 1024;
       if (upload.size && upload.size > maxSize) {
-        throw new Error(`File size exceeds maximum allowed size of 500MB`);
+        throw new Error(`File size exceeds maximum allowed size of ${maxSizeMB}MB${limits.isPro ? '' : ' (upgrade to Pro for larger uploads)'}`);
       }
 
       // Upload to Supabase
@@ -170,56 +174,35 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
     const limits = await storage.getUploadLimits(req.user!.id);
     const isReel = uploadType === 'reel';
     const contentType = isReel ? 'reel' : 'clip';
-    
-    // Check daily and concurrent content limits
-    if (!limits.isPro) {
-      if (isReel) {
-        if (limits.totalReelsExisting >= limits.maxReelsTotal) {
-          if (req.file?.path) fs.unlink(req.file.path, () => {});
-          return res.status(403).json({
-            error: 'Reel storage limit reached',
-            message: `You have reached the limit of ${limits.maxReelsTotal} reels. Delete some reels to upload more, or upgrade to Gamefolio Pro for unlimited uploads.`,
-            limits
-          });
-        }
-        if (!limits.canUploadReel) {
-          if (req.file?.path) fs.unlink(req.file.path, () => {});
-          return res.status(403).json({ 
-            error: 'Daily reel upload limit reached',
-            message: `Free users can upload ${limits.maxReelsPerDay} reels per day. Upgrade to Pro for unlimited uploads.`,
-            limits
-          });
-        }
-      } else {
-        if (limits.totalClipsExisting >= limits.maxClipsTotal) {
-          if (req.file?.path) fs.unlink(req.file.path, () => {});
-          return res.status(403).json({
-            error: 'Clip storage limit reached',
-            message: `You have reached the limit of ${limits.maxClipsTotal} clips. Delete some clips to upload more, or upgrade to Gamefolio Pro for unlimited uploads.`,
-            limits
-          });
-        }
-        if (!limits.canUploadClip) {
-          if (req.file?.path) fs.unlink(req.file.path, () => {});
-          return res.status(403).json({ 
-            error: 'Daily clip upload limit reached',
-            message: `Free users can upload ${limits.maxClipsPerDay} clips per day. Upgrade to Pro for unlimited uploads.`,
-            limits
-          });
-        }
-      }
-    }
-    
-    // Check file size limit
+    const maxVideoSizeMB = isReel ? limits.maxReelSizeMB : limits.maxClipSizeMB;
+    const maxDurationSeconds = isReel ? limits.maxReelDurationSeconds : limits.maxClipDurationSeconds;
+
+    // Check file size limit (per-content-type)
     const fileSizeMB = req.file.size / (1024 * 1024);
-    if (fileSizeMB > limits.maxVideoSizeMB) {
-      // Clean up temp file
+    if (fileSizeMB > maxVideoSizeMB) {
       if (req.file?.path) fs.unlink(req.file.path, () => {});
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: 'File size exceeds limit',
-        message: `Maximum video size is ${limits.maxVideoSizeMB}MB. ${limits.isPro ? '' : 'Upgrade to Pro for larger uploads (up to 500MB).'}`,
+        message: `Maximum ${contentType} size is ${maxVideoSizeMB}MB.${limits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`,
         limits
       });
+    }
+
+    // Check video duration limit (per-content-type)
+    try {
+      const videoInfo = await VideoProcessor.getVideoInfo(req.file.path);
+      const durationSeconds = Math.round(videoInfo.duration || 0);
+      if (durationSeconds > maxDurationSeconds) {
+        if (req.file?.path) fs.unlink(req.file.path, () => {});
+        return res.status(403).json({
+          error: 'Video duration exceeds limit',
+          message: `Maximum ${contentType} duration is ${maxDurationSeconds} seconds (your video is ${durationSeconds}s).${limits.isPro ? '' : ' Upgrade to Pro for longer videos.'}`,
+          limits
+        });
+      }
+    } catch (durationCheckError) {
+      console.warn('Could not determine video duration before upload:', durationCheckError);
+      // Fall through — allow upload; size cap and downstream processing still apply.
     }
 
     // Read the uploaded file
@@ -250,10 +233,6 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
     }
 
     console.log('✅ Video uploaded successfully:', result.url);
-
-    // Increment daily upload count
-    await storage.incrementDailyUploadCount(req.user!.id, contentType);
-    console.log(`📊 Incremented ${contentType} upload count for user ${req.user!.id}`);
 
     // Clean up temp file immediately after successful Supabase upload
     fs.unlink(req.file.path, (err) => {
@@ -320,38 +299,14 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
       return res.status(400).json({ error: 'No screenshot file provided' });
     }
 
-    // Check upload limits before processing
+    // Check upload limits before processing (file size only)
     const limits = await storage.getUploadLimits(req.user!.id);
-    
-    // Check daily and concurrent content limits
-    if (!limits.isPro) {
-      if (limits.totalScreenshotsExisting >= limits.maxScreenshotsTotal) {
-        if (req.file?.path) fs.unlink(req.file.path, () => {});
-        return res.status(403).json({
-          error: 'Screenshot storage limit reached',
-          message: `You have reached the limit of ${limits.maxScreenshotsTotal} screenshots. Delete some screenshots to upload more, or upgrade to Gamefolio Pro for unlimited uploads.`,
-          limits
-        });
-      }
-      if (!limits.canUploadScreenshot) {
-        // Clean up temp file
-        if (req.file?.path) fs.unlink(req.file.path, () => {});
-        return res.status(403).json({ 
-          error: 'Daily screenshot upload limit reached',
-          message: `Free users can upload ${limits.maxScreenshotsPerDay} screenshots per day. Upgrade to Pro for unlimited uploads.`,
-          limits
-        });
-      }
-    }
-    
-    // Check file size limit
     const fileSizeMB = req.file.size / (1024 * 1024);
-    if (fileSizeMB > limits.maxImageSizeMB) {
-      // Clean up temp file
+    if (fileSizeMB > limits.maxScreenshotSizeMB) {
       if (req.file?.path) fs.unlink(req.file.path, () => {});
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: 'File size exceeds limit',
-        message: `Maximum image size is ${limits.maxImageSizeMB}MB. ${limits.isPro ? '' : 'Upgrade to Pro for larger uploads (up to 100MB).'}`,
+        message: `Maximum screenshot size is ${limits.maxScreenshotSizeMB}MB.${limits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`,
         limits
       });
     }
@@ -515,10 +470,6 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 
     const screenshot = await storage.createScreenshot(screenshotDataWithShareCode);
 
-    // Increment daily upload count
-    await storage.incrementDailyUploadCount(req.user!.id, 'screenshot');
-    console.log(`📊 Incremented screenshot upload count for user ${req.user!.id}`);
-
     // Award upload points to the user (screenshots are worth 100 XP)
     await LeaderboardService.awardPoints(
       req.user!.id,
@@ -612,44 +563,11 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
       return res.status(400).json({ error: 'Invalid video type. Must be "clip" or "reel"' });
     }
 
-    // Check upload limits before processing
+    // Check upload limits before processing (size already validated in /video-direct;
+    // duration is enforced after we have the actual video info below).
     const limits = await storage.getUploadLimits(req.user!.id);
     const isReel = videoType === 'reel';
-    
-    // Check daily and concurrent content limits
-    if (!limits.isPro) {
-      if (isReel) {
-        if (limits.totalReelsExisting >= limits.maxReelsTotal) {
-          return res.status(403).json({
-            error: 'Reel storage limit reached',
-            message: `You have reached the limit of ${limits.maxReelsTotal} reels. Delete some reels to upload more, or upgrade to Gamefolio Pro for unlimited uploads.`,
-            limits
-          });
-        }
-        if (!limits.canUploadReel) {
-          return res.status(403).json({ 
-            error: 'Daily reel upload limit reached',
-            message: `Free users can upload ${limits.maxReelsPerDay} reels per day. Upgrade to Pro for unlimited uploads.`,
-            limits
-          });
-        }
-      } else {
-        if (limits.totalClipsExisting >= limits.maxClipsTotal) {
-          return res.status(403).json({
-            error: 'Clip storage limit reached',
-            message: `You have reached the limit of ${limits.maxClipsTotal} clips. Delete some clips to upload more, or upgrade to Gamefolio Pro for unlimited uploads.`,
-            limits
-          });
-        }
-        if (!limits.canUploadClip) {
-          return res.status(403).json({ 
-            error: 'Daily clip upload limit reached',
-            message: `Free users can upload ${limits.maxClipsPerDay} clips per day. Upgrade to Pro for unlimited uploads.`,
-            limits
-          });
-        }
-      }
-    }
+    const maxDurationSeconds = isReel ? limits.maxReelDurationSeconds : limits.maxClipDurationSeconds;
 
     // Handle game ID - ensure game exists in database
     let finalGameId = null;
@@ -801,6 +719,16 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
         } catch (durationError) {
           console.warn('Failed to extract video duration, using fallback:', durationError);
           actualDuration = 60; // Fallback to 60 seconds if extraction fails
+        }
+
+        // Enforce per-tier duration cap (defense in depth — also checked at upload time).
+        if (actualDuration > maxDurationSeconds) {
+          fs.unlink(tempVideoPath, () => {});
+          return res.status(403).json({
+            error: 'Video duration exceeds limit',
+            message: `Maximum ${isReel ? 'reel' : 'clip'} duration is ${maxDurationSeconds} seconds (your video is ${actualDuration}s).${limits.isPro ? '' : ' Upgrade to Pro for longer videos.'}`,
+            limits
+          });
         }
 
         // Create a temporary clip ID for processing
@@ -969,11 +897,6 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
 
     // Create the clip
     const clip = await storage.createClip(validatedClipData);
-
-    // Increment daily upload count
-    const uploadContentType = isReel ? 'reel' : 'clip';
-    await storage.incrementDailyUploadCount(req.user!.id, uploadContentType);
-    console.log(`📊 Incremented ${uploadContentType} upload count for user ${req.user!.id}`);
 
     // Award upload points to the user
     await LeaderboardService.awardPoints(

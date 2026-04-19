@@ -5250,16 +5250,18 @@ export class DatabaseStorage implements IStorage {
   // ==================== DAILY UPLOAD QUOTA OPERATIONS ====================
 
   // Upload limit constants
-  private readonly FREE_MAX_CLIPS_PER_DAY = 3;
-  private readonly FREE_MAX_REELS_PER_DAY = 3;
-  private readonly FREE_MAX_SCREENSHOTS_PER_DAY = 3;
-  private readonly FREE_MAX_VIDEO_SIZE_MB = 100;
-  private readonly FREE_MAX_IMAGE_SIZE_MB = 10;
-  private readonly PRO_MAX_VIDEO_SIZE_MB = 500;
-  private readonly PRO_MAX_IMAGE_SIZE_MB = 100;
-  private readonly FREE_MAX_CLIPS_TOTAL = 15;
-  private readonly FREE_MAX_REELS_TOTAL = 15;
-  private readonly FREE_MAX_SCREENSHOTS_TOTAL = 10;
+  // Upload limits — count caps removed. Free vs Pro is enforced via file size
+  // and (for video) duration only. See shared/schema.ts UploadLimits.
+  private readonly FREE_MAX_CLIP_SIZE_MB = 100;
+  private readonly FREE_MAX_REEL_SIZE_MB = 50;
+  private readonly FREE_MAX_SCREENSHOT_SIZE_MB = 10;
+  private readonly FREE_MAX_CLIP_DURATION_SECONDS = 180; // 3 minutes
+  private readonly FREE_MAX_REEL_DURATION_SECONDS = 60;  // 60 seconds
+  private readonly PRO_MAX_CLIP_SIZE_MB = 500;
+  private readonly PRO_MAX_REEL_SIZE_MB = 250;
+  private readonly PRO_MAX_SCREENSHOT_SIZE_MB = 50;
+  private readonly PRO_MAX_CLIP_DURATION_SECONDS = 600; // 10 minutes
+  private readonly PRO_MAX_REEL_DURATION_SECONDS = 180; // 3 minutes
 
   private getTodayDateString(): string {
     const now = new Date();
@@ -5348,75 +5350,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUploadLimits(userId: number): Promise<UploadLimits> {
-    // Get user to check Pro status
+    // Get user to check Pro status (admins are treated as Pro for upload caps).
     const user = await this.getUser(userId);
     const isPro = user?.isPro || user?.role === 'admin' || false;
-    
-    // Get today's upload counts
-    const today = this.getTodayDateString();
-    const [dailyUploads, existingCounts] = await Promise.all([
-      this.getUserDailyUploads(userId, today),
-      this.getUserExistingContentCounts(userId),
-    ]);
-    
-    const clipsUploadedToday = dailyUploads?.clipsCount || 0;
-    const reelsUploadedToday = dailyUploads?.reelsCount || 0;
-    const screenshotsUploadedToday = dailyUploads?.screenshotsCount || 0;
 
-    const { totalClips, totalReels, totalScreenshots } = existingCounts;
-    
     if (isPro) {
-      // Pro users have unlimited uploads
       return {
         isPro: true,
-        maxClipsPerDay: -1, // -1 means unlimited
-        maxReelsPerDay: -1,
-        maxScreenshotsPerDay: -1,
-        maxVideoSizeMB: this.PRO_MAX_VIDEO_SIZE_MB,
-        maxImageSizeMB: this.PRO_MAX_IMAGE_SIZE_MB,
-        clipsUploadedToday,
-        reelsUploadedToday,
-        screenshotsUploadedToday,
-        canUploadClip: true,
-        canUploadReel: true,
-        canUploadScreenshot: true,
-        totalClipsExisting: totalClips,
-        totalReelsExisting: totalReels,
-        totalScreenshotsExisting: totalScreenshots,
-        maxClipsTotal: -1,
-        maxReelsTotal: -1,
-        maxScreenshotsTotal: -1,
-      };
-    } else {
-      // Free users have daily limits AND concurrent content limits
-      const withinDailyClip = clipsUploadedToday < this.FREE_MAX_CLIPS_PER_DAY;
-      const withinDailyReel = reelsUploadedToday < this.FREE_MAX_REELS_PER_DAY;
-      const withinDailyScreenshot = screenshotsUploadedToday < this.FREE_MAX_SCREENSHOTS_PER_DAY;
-      const withinTotalClip = totalClips < this.FREE_MAX_CLIPS_TOTAL;
-      const withinTotalReel = totalReels < this.FREE_MAX_REELS_TOTAL;
-      const withinTotalScreenshot = totalScreenshots < this.FREE_MAX_SCREENSHOTS_TOTAL;
-
-      return {
-        isPro: false,
-        maxClipsPerDay: this.FREE_MAX_CLIPS_PER_DAY,
-        maxReelsPerDay: this.FREE_MAX_REELS_PER_DAY,
-        maxScreenshotsPerDay: this.FREE_MAX_SCREENSHOTS_PER_DAY,
-        maxVideoSizeMB: this.FREE_MAX_VIDEO_SIZE_MB,
-        maxImageSizeMB: this.FREE_MAX_IMAGE_SIZE_MB,
-        clipsUploadedToday,
-        reelsUploadedToday,
-        screenshotsUploadedToday,
-        canUploadClip: withinDailyClip && withinTotalClip,
-        canUploadReel: withinDailyReel && withinTotalReel,
-        canUploadScreenshot: withinDailyScreenshot && withinTotalScreenshot,
-        totalClipsExisting: totalClips,
-        totalReelsExisting: totalReels,
-        totalScreenshotsExisting: totalScreenshots,
-        maxClipsTotal: this.FREE_MAX_CLIPS_TOTAL,
-        maxReelsTotal: this.FREE_MAX_REELS_TOTAL,
-        maxScreenshotsTotal: this.FREE_MAX_SCREENSHOTS_TOTAL,
+        maxClipSizeMB: this.PRO_MAX_CLIP_SIZE_MB,
+        maxReelSizeMB: this.PRO_MAX_REEL_SIZE_MB,
+        maxScreenshotSizeMB: this.PRO_MAX_SCREENSHOT_SIZE_MB,
+        maxClipDurationSeconds: this.PRO_MAX_CLIP_DURATION_SECONDS,
+        maxReelDurationSeconds: this.PRO_MAX_REEL_DURATION_SECONDS,
       };
     }
+
+    return {
+      isPro: false,
+      maxClipSizeMB: this.FREE_MAX_CLIP_SIZE_MB,
+      maxReelSizeMB: this.FREE_MAX_REEL_SIZE_MB,
+      maxScreenshotSizeMB: this.FREE_MAX_SCREENSHOT_SIZE_MB,
+      maxClipDurationSeconds: this.FREE_MAX_CLIP_DURATION_SECONDS,
+      maxReelDurationSeconds: this.FREE_MAX_REEL_DURATION_SECONDS,
+    };
   }
 
   // ==================== PRO LOOTBOX GRANT OPERATIONS ====================

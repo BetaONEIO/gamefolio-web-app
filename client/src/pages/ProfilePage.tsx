@@ -3822,10 +3822,9 @@ const ProfilePage = () => {
           className="w-full"
         >
           {(() => {
-            const clipsCount = clips?.filter(c => c.videoType === 'clip').length ?? 0;
-            const reelsCount = clips?.filter(c => c.videoType === 'reel').length ?? 0;
-            const screenshotsCount = screenshots?.length ?? 0;
-            const showLimits = isOwnProfile && !currentUser?.isPro;
+            // Per-tab count pills were removed when upload count caps were dropped.
+            // `showLimits` is kept as `false` so the existing tab sizing branches stay intact.
+            const showLimits = false;
             const showXboxTab = profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0;
             const showPsnTab = profile?.showPsnTrophies && Array.isArray(profile?.psnTrophyData) && profile.psnTrophyData.length > 0;
             const showScrollArrows = showXboxTab || showPsnTab;
@@ -3867,11 +3866,6 @@ const ProfilePage = () => {
               ) : (
                 <span className="flex flex-col items-center leading-none gap-0.5">
                   <span className={`font-black ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'uppercase tracking-[0.5px]' : ''} ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'clips' ? '#1a1a1a' : '#ef4444' } : undefined}>Clips</span>
-                  {showLimits && (
-                    <span className={`text-[10px] font-normal ${clipsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: clipsCount >= 15 ? undefined : isMacTheme ? (activeTab === 'clips' ? '#555' : '#888') : activeTab === 'clips' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
-                      {clipsCount}/15
-                    </span>
-                  )}
                 </span>
               )}
             </TabsTrigger>
@@ -3887,11 +3881,6 @@ const ProfilePage = () => {
               ) : (
                 <span className="flex flex-col items-center leading-none gap-0.5">
                   <span className={`font-black ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'uppercase tracking-[0.5px]' : ''} ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'reels' ? '#1a1a1a' : '#3b82f6' } : undefined}>Reels</span>
-                  {showLimits && (
-                    <span className={`text-[10px] font-normal ${reelsCount >= 15 ? 'text-red-400' : ''}`} style={{ color: reelsCount >= 15 ? undefined : isMacTheme ? (activeTab === 'reels' ? '#555' : '#888') : activeTab === 'reels' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
-                      {reelsCount}/15
-                    </span>
-                  )}
                 </span>
               )}
             </TabsTrigger>
@@ -3945,11 +3934,6 @@ const ProfilePage = () => {
                                         : activeTab === 'screenshots' ? '#ffffff' : 'rgba(255,255,255,0.5)',
                     }}
                   />
-                  {showLimits && (
-                    <span className={`text-[10px] font-normal ${screenshotsCount >= 10 ? 'text-red-400' : ''}`} style={{ color: screenshotsCount >= 10 ? undefined : isMacTheme ? (activeTab === 'screenshots' ? '#555' : '#888') : activeTab === 'screenshots' ? 'rgba(255,255,255,0.7)' : isLightBackground ? '#6b7280' : undefined }}>
-                      {screenshotsCount}/10
-                    </span>
-                  )}
                 </span>
               )}
             </TabsTrigger>
