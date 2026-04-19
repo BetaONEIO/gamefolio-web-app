@@ -56,6 +56,44 @@ export default function CustomAmountScreen({
     }
   };
 
+  useEffect(() => {
+    const handlePhysicalKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key >= "0" && e.key <= "9") {
+        e.preventDefault();
+        handleKeyPress(e.key);
+      } else if (e.key === "." || e.key === ",") {
+        e.preventDefault();
+        handleKeyPress(".");
+      } else if (e.key === "Backspace" || e.key === "Delete") {
+        e.preventDefault();
+        handleKeyPress("backspace");
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (amount >= MIN_AMOUNT && amount <= MAX_AMOUNT) {
+          onApply(amount);
+        }
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        onBack();
+      }
+    };
+
+    window.addEventListener("keydown", handlePhysicalKey);
+    return () => window.removeEventListener("keydown", handlePhysicalKey);
+  }, [amountString, amount, onApply, onBack]);
+
   const keypadLayout = [
     ["1", "2", "3"],
     ["4", "5", "6"],
