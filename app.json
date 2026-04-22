@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Gamefolio",
+    "slug": "gamefolio",
+    "owner": "adminbetaone",
+    "version": "1.0.0",
+    "ios": {
+      "bundleIdentifier": "com.gamefolio.app"
+    },
+    "android": {
+      "package": "com.gamefolio.app",
+      "versionCode": 4
+    },
+    "extra": {
+      "eas": {
+        "projectId": "92cffca8-1288-4541-9bdc-4a39bfdeaf6b"
+      }
+    }
+  }
+}
