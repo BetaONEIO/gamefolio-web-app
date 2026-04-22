@@ -1,0 +1,52 @@
+# EAS Build archive ignore — shrinks upload size dramatically.
+#
+# Web build happens LOCALLY via `npm run mobile:build` (vite build && cap sync)
+# before EAS runs, so the web bundle is already baked into:
+#   - android/app/src/main/assets/public/
+#   - ios/App/App/public/
+# EAS only needs to compile the native Android/iOS projects; it does NOT need
+# client/, attached_assets/, server/, or the web toolchain sources.
+
+# Large artifacts / caches
+dist/
+node_modules/
+.git/
+attached_assets/
+generated-icon.png
+bun.lockb
+bun.lock
+
+# Web app sources — not needed for native build (already bundled into android/ios public/)
+client/
+shared/
+server/
+
+# Non-mobile project files
+migrations/
+tests/
+
+# Test + dev output
+/test-results
+/temp
+/playwright-report
+fresh_cookies.txt
+
+# Development-only files + secrets
+*.log
+.env*
+!.env.example
+
+# iOS / Android build artifacts (regenerated fresh on EAS)
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/
+android/.gradle/
+android/build/
+android/app/build/
+android/captures/
+
+# Misc debug
+nft_test_debug.png
+*.mp4
+*.mov
+*.webm
