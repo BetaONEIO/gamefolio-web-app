@@ -9,7 +9,8 @@ import { ClipDialogProvider } from "@/hooks/use-clip-dialog";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { AuthModalProvider, useAuthModal } from "@/hooks/use-auth-modal";
 import { SequenceConnect } from "@0xsequence/connect";
-import { sequenceConfig } from "@/lib/sequence-config";
+import { WagmiProvider } from "wagmi";
+import { sequenceConfig, fallbackWagmiConfig } from "@/lib/sequence-config";
 import { WalletProvider } from "@/hooks/use-wallet";
 import { CrossmintProvider } from "@/hooks/use-crossmint";
 import { RevenueCatProvider } from "@/hooks/use-revenuecat";
@@ -17,6 +18,7 @@ import { LevelTrackerProvider } from "@/hooks/use-level-tracker";
 import { WelcomePackProvider, useWelcomePack } from "@/hooks/use-welcome-pack";
 import { DailyStreakProvider } from "@/hooks/use-daily-streak";
 import { useVersionCheck } from "@/hooks/use-version-check";
+import { useAndroidBackButton } from "@/hooks/use-android-back-button";
 import AuthModal from "@/components/auth/auth-modal";
 import { WelcomePackDialog } from "@/components/welcome-pack/WelcomePackDialog";
 import DailyXpBonus from "@/components/gamification/DailyXpBonus";
@@ -151,6 +153,9 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   
   // Version checking for cache busting
   useVersionCheck();
+
+  // Android hardware back button → go back in history, or exit at root
+  useAndroidBackButton();
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -420,6 +425,7 @@ function App() {
               <RevenueCatProvider>
                 <LevelTrackerProvider>
                   <WelcomePackProvider>
+                    {sequenceConfig ? (
                     <SequenceConnect config={sequenceConfig}>
                       <WalletProvider>
                         <CrossmintProvider>
@@ -439,6 +445,27 @@ function App() {
                         </CrossmintProvider>
                       </WalletProvider>
                     </SequenceConnect>
+                    ) : (
+                      <WagmiProvider config={fallbackWagmiConfig}>
+                        <WalletProvider>
+                          <CrossmintProvider>
+                            <AuthModalProvider>
+                              <ClipDialogProvider>
+                                <MainLayout>
+                                  <ErrorBoundary level="feature">
+                                    <Router />
+                                  </ErrorBoundary>
+                                </MainLayout>
+                                <WelcomePackComponents />
+                                <DailyXpBonus />
+                                <DailyStreakOverlay />
+                              </ClipDialogProvider>
+                              <Toaster />
+                            </AuthModalProvider>
+                          </CrossmintProvider>
+                        </WalletProvider>
+                      </WagmiProvider>
+                    )}
                   </WelcomePackProvider>
                 </LevelTrackerProvider>
               </RevenueCatProvider>

@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from './use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { openExternal } from '@/lib/platform';
 
 interface CreateCheckoutResponse {
   orderId: string;
@@ -29,7 +30,7 @@ export function usePurchaseGFT() {
     onSuccess: (data: CreateCheckoutResponse) => {
       setOrderId(data.orderId);
       if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
+        void openExternal(data.checkoutUrl);
       }
     },
     onError: (error: any) => {

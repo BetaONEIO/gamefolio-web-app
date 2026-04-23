@@ -1,5 +1,8 @@
 node_modules
 dist
+.env
+.env.*
+!.env.example
 .DS_Store
 **/.DS_Store
 server/public
@@ -11,6 +14,8 @@ vite.config.ts.*
 fresh_cookies.txt
 
 # EAS Build artifacts + credentials (never commit service account keys or certificates)
+*.jks
+android/keystore.properties
 .eas/
 eas-build-local-*/
 android-service-account.json

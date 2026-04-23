@@ -3,6 +3,8 @@
  * Similar to Firebase setup but for Discord OAuth 2.0
  */
 
+import { openExternal } from './platform';
+
 interface DiscordUser {
   id: string;
   username: string;
@@ -80,8 +82,8 @@ export const signInWithDiscord = async (): Promise<void> => {
   authUrl.searchParams.set('state', state);
   authUrl.searchParams.set('prompt', 'consent');
 
-  // Redirect to Discord OAuth
-  window.location.href = authUrl.toString();
+  // Redirect to Discord OAuth (in-app browser on native, same-window on web)
+  await openExternal(authUrl.toString());
 };
 
 /**

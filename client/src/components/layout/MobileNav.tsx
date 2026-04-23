@@ -56,7 +56,10 @@ const MobileNav = () => {
         />
       )}
 
-      <div className="fixed bottom-14 left-0 right-0 z-50 flex justify-center pointer-events-none">
+      <div
+        className="fixed left-0 right-0 z-50 flex justify-center pointer-events-none"
+        style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))' }}
+      >
         <div className="relative w-0 h-0">
           {uploadOptions.map((option, index) => {
             const total = uploadOptions.length;
@@ -97,7 +100,7 @@ const MobileNav = () => {
         </div>
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-area-bottom">
         <div className="flex justify-around py-3">
           {navItems.map((item) => {
             if (item.isUpload) {

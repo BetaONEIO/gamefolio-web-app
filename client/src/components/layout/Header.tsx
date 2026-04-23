@@ -175,7 +175,7 @@ const Header = () => {
   };
 
   return (
-    <header className="bg-card shadow-md sticky top-0 z-50 w-full">
+    <header className="bg-card shadow-md sticky top-0 z-50 w-full safe-area-top">
       <div className="w-full px-3 sm:px-4 lg:px-8 py-3 sm:py-4 md:py-6 flex items-center justify-between">
         {/* Header left section */}
         <div className="flex items-center flex-shrink-0">

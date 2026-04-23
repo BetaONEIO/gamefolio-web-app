@@ -5,7 +5,11 @@ import { createPublicClient, http, type PublicClient, type Address } from 'viem'
 import { useAuth } from './use-auth';
 import { useToast } from './use-toast';
 import { SKALE_CHAIN_ID, SKALE_RPC_URL, SKALE_EXPLORER_BASE_URL } from '../../../config/web3';
-import { skaleNebulaTestnet } from '../lib/sequence-config';
+import { skaleNebulaTestnet, sequenceConfig } from '../lib/sequence-config';
+
+const useConnectModal: () => { setOpenConnectModal: (open: boolean) => void } = sequenceConfig
+  ? useOpenConnectModal
+  : () => ({ setOpenConnectModal: () => {} });
 
 export const skaleTestnet = skaleNebulaTestnet;
 
@@ -53,7 +57,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const { disconnect: wagmiDisconnect } = useDisconnect();
   const { data: walletClient } = useWalletClient();
   const chainId = useChainId();
-  const { setOpenConnectModal } = useOpenConnectModal();
+  const { setOpenConnectModal } = useConnectModal();
 
   const walletAddress = (address as Address) || null;
   const isReady = isConnected && !!address;

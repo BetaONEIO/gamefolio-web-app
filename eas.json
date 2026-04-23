@@ -23,7 +23,8 @@
       "distribution": "internal",
       "ios": {
         "simulator": false,
-        "resourceClass": "m-medium"
+        "resourceClass": "m-medium",
+        "scheme": "App"
       },
       "android": {
         "buildType": "app-bundle",

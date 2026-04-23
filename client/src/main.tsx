@@ -2,6 +2,11 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 import { initEmailJS } from "./services/email-service";
+import { installNativeFetchPatch } from "./lib/platform";
+import { initMobileShell } from "./lib/mobile-init";
+
+installNativeFetchPatch();
+void initMobileShell();
 
 // Set page title
 document.title = "Gamefolio - Share Your Gaming Moments";

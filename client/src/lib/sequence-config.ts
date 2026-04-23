@@ -1,4 +1,5 @@
 import { createConfig } from "@0xsequence/connect";
+import { createConfig as createWagmiConfig } from "wagmi";
 import { http } from "viem";
 import { defineChain } from "viem";
 import { SKALE_CHAIN_ID, SKALE_RPC_URL, SKALE_EXPLORER_BASE_URL } from "../../../config/web3";
@@ -32,22 +33,31 @@ if (!waasConfigKey) {
   console.warn("VITE_SEQUENCE_WAAS_CONFIG_KEY is not set - embedded wallet will not work");
 }
 
-export const sequenceConfig = createConfig("waas", {
-  projectAccessKey,
-  defaultTheme: "dark",
-  signIn: {
-    projectName: "Gamefolio",
-    logoUrl: "/logo.png",
+export const fallbackWagmiConfig = createWagmiConfig({
+  chains: [skaleBaseMainnet],
+  transports: {
+    [SKALE_CHAIN_ID]: http(SKALE_RPC_URL),
   },
-  appName: "Gamefolio",
-  defaultChainId: SKALE_CHAIN_ID,
-  waasConfigKey,
-  guest: true,
-  email: true,
-  wagmiConfig: {
-    chains: [skaleBaseMainnet],
-    transports: {
-      [SKALE_CHAIN_ID]: http(SKALE_RPC_URL),
-    },
-  } as any,
 });
+
+export const sequenceConfig = projectAccessKey && waasConfigKey
+  ? createConfig("waas", {
+      projectAccessKey,
+      defaultTheme: "dark",
+      signIn: {
+        projectName: "Gamefolio",
+        logoUrl: "/logo.png",
+      },
+      appName: "Gamefolio",
+      defaultChainId: SKALE_CHAIN_ID,
+      waasConfigKey,
+      guest: true,
+      email: true,
+      wagmiConfig: {
+        chains: [skaleBaseMainnet],
+        transports: {
+          [SKALE_CHAIN_ID]: http(SKALE_RPC_URL),
+        },
+      } as any,
+    })
+  : null;

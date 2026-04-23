@@ -93,7 +93,7 @@ app.use((req, res, next) => {
   const allowedOrigins = [
     '.replit.app',
     '.repl.co',
-    'localhost',
+    'localhost',        // also matches capacitor://localhost and https://localhost (Capacitor iOS/Android webview)
     'localhost:8081',   // Expo local development
     'localhost:19006',  // Expo web development
     '.gamefolio.com',

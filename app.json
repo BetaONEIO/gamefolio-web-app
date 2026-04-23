@@ -5,11 +5,12 @@
     "owner": "adminbetaone",
     "version": "1.0.0",
     "ios": {
-      "bundleIdentifier": "com.gamefolio.app"
+      "bundleIdentifier": "com.gamefolio.app",
+      "buildNumber": "6"
     },
     "android": {
       "package": "com.gamefolio.app",
-      "versionCode": 4
+      "versionCode": 6
     },
     "extra": {
       "eas": {

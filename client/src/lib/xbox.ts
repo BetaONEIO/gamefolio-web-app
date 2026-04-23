@@ -1,3 +1,5 @@
+import { openExternal } from './platform';
+
 interface XboxUser {
   xuid: string;
   gamertag: string;
@@ -41,7 +43,7 @@ function clearOAuthState(): void {
 }
 
 function navigateToXboxAuth(url: string): void {
-  window.location.href = url;
+  void openExternal(url);
 }
 
 function buildXboxAuthUrl(state: string): string {
