@@ -29,6 +29,8 @@ android-service-account.json
 application-*.aab
 application-*.apk
 build-*.aab
+*.ipa
+application-*.ipa
 
 # Capacitor native build artifacts
 ios/App/Pods/
@@ -36,6 +38,8 @@ ios/App/build/
 ios/App/App/public/
 ios/DerivedData/
 ios/App/output/
+ios/build/
+ios/ExportOptions.plist
 android/.gradle/
 android/build/
 android/app/build/
