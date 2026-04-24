@@ -37,7 +37,6 @@ import {
   AssetRewardClaim, InsertAssetRewardClaim,
   AssetRewardWithClaims,
   UserDailyLootbox, InsertUserDailyLootbox,
-  UserDailyUploads, InsertUserDailyUploads,
   ProLootboxGrant, InsertProLootboxGrant,
   UploadLimits,
   NameTag, InsertNameTag,
@@ -100,7 +99,6 @@ import {
   assetRewards,
   assetRewardClaims,
   userDailyLootbox,
-  userDailyUploads,
   userDailyFires,
   proLootboxGrants,
   userUnlockedBanners,
@@ -5263,67 +5261,9 @@ export class DatabaseStorage implements IStorage {
   private readonly PRO_MAX_CLIP_DURATION_SECONDS = 600; // 10 minutes
   private readonly PRO_MAX_REEL_DURATION_SECONDS = 180; // 3 minutes
 
-  private getTodayDateString(): string {
-    const now = new Date();
-    return now.toISOString().split('T')[0]; // YYYY-MM-DD in UTC
-  }
-
   private getCurrentMonthString(): string {
     const now = new Date();
     return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`; // YYYY-MM
-  }
-
-  async getUserDailyUploads(userId: number, date: string): Promise<UserDailyUploads | null> {
-    const [record] = await db
-      .select()
-      .from(userDailyUploads)
-      .where(and(
-        eq(userDailyUploads.userId, userId),
-        eq(userDailyUploads.uploadDate, date)
-      ))
-      .limit(1);
-    return record || null;
-  }
-
-  async incrementDailyUploadCount(userId: number, contentType: 'clip' | 'reel' | 'screenshot'): Promise<UserDailyUploads> {
-    const today = this.getTodayDateString();
-    
-    // Try to get existing record for today
-    const existing = await this.getUserDailyUploads(userId, today);
-    
-    if (existing) {
-      // Update existing record
-      const updates: Partial<UserDailyUploads> = { updatedAt: new Date() };
-      if (contentType === 'clip') {
-        updates.clipsCount = existing.clipsCount + 1;
-      } else if (contentType === 'reel') {
-        updates.reelsCount = existing.reelsCount + 1;
-      } else if (contentType === 'screenshot') {
-        updates.screenshotsCount = existing.screenshotsCount + 1;
-      }
-      
-      const [updated] = await db
-        .update(userDailyUploads)
-        .set(updates)
-        .where(eq(userDailyUploads.id, existing.id))
-        .returning();
-      return updated;
-    } else {
-      // Create new record for today
-      const newRecord: any = {
-        userId,
-        uploadDate: today,
-        clipsCount: contentType === 'clip' ? 1 : 0,
-        reelsCount: contentType === 'reel' ? 1 : 0,
-        screenshotsCount: contentType === 'screenshot' ? 1 : 0,
-      };
-      
-      const [created] = await db
-        .insert(userDailyUploads)
-        .values(newRecord)
-        .returning();
-      return created;
-    }
   }
 
   private async getUserExistingContentCounts(userId: number): Promise<{ totalClips: number; totalReels: number; totalScreenshots: number }> {

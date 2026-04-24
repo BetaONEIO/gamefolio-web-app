@@ -2,7 +2,7 @@ import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
   monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, userXPHistory, notifications, userBadges, contentFilterSettings, bannedWords,
   heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions, nftWatchlist, assetRewards, assetRewardClaims,
-  userDailyUploads, proLootboxGrants, nameTags, userUnlockedNameTags, userDailyFires, profileBorders, userUnlockedBorders, verificationBadges, userUnlockedVerificationBadges, xpSettings,
+  proLootboxGrants, nameTags, userUnlockedNameTags, userDailyFires, profileBorders, userUnlockedBorders, verificationBadges, userUnlockedVerificationBadges, xpSettings,
   type User, type InsertUser,
   type Game, type InsertGame,
   type Clip, type InsertClip,
@@ -32,7 +32,6 @@ import {
   type AssetReward, type InsertAssetReward,
   type AssetRewardClaim, type InsertAssetRewardClaim,
   type AssetRewardWithClaims,
-  type UserDailyUploads, type InsertUserDailyUploads,
   type ProLootboxGrant, type InsertProLootboxGrant,
   type UploadLimits,
   type UserDailyFires, type InsertUserDailyFires,
@@ -448,8 +447,6 @@ export interface IStorage {
   getRecentContentCount(contentType?: string): Promise<number>;
 
   // Daily upload quota operations
-  getUserDailyUploads(userId: number, date: string): Promise<UserDailyUploads | null>;
-  incrementDailyUploadCount(userId: number, contentType: 'clip' | 'reel' | 'screenshot'): Promise<UserDailyUploads>;
   getUploadLimits(userId: number): Promise<UploadLimits>;
 
   // Pro lootbox grant operations
