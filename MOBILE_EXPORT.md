@@ -83,6 +83,12 @@ All prefixed with `/api`:
 - `POST /screenshots/:id/like`
 - `DELETE /screenshots/:id/like`
 
+**Uploads (used by the Upload screens)**
+- `GET /upload/limits` — current user's upload limits (see "Upload limits & error handling" section)
+- `POST /upload/video-direct` — direct video/reel upload (multipart form, field `file`, body field `uploadType: 'clip' | 'reel'`)
+- `POST /upload/process-video` — finalise a video upload after it has been uploaded to storage
+- `POST /upload/screenshot` — direct screenshot upload (multipart form, field `screenshot`)
+
 **Comments**
 - `GET /clips/:id/comments` — get comments
 - `POST /clips/:id/comments` — post comment
@@ -364,6 +370,73 @@ EXPO_PUBLIC_API_URL=https://YOUR-BACKEND-URL.replit.app
 8. Notifications (push + in-app)
 9. Gamification (XP, streak, loot box)
 10. Store, wallet, leaderboard
+
+---
+
+## Upload limits & error handling
+
+The Upload screen must (a) show the current user's upload limits **before** they pick a file and (b) surface the server's friendly tier-aware error when an upload is rejected. The backend already returns everything you need.
+
+### 1. Fetch limits before file selection
+
+`GET /api/upload/limits` (auth required) returns the per-user limits:
+
+```typescript
+type UploadLimits = {
+  isPro: boolean;
+  maxClipSizeMB: number;          // e.g. 100 for Free, 500 for Pro
+  maxReelSizeMB: number;
+  maxScreenshotSizeMB: number;
+  maxClipDurationSeconds: number; // e.g. 180 for Free, 600 for Pro
+  maxReelDurationSeconds: number;
+};
+```
+
+Render a short, always-visible hint on the Upload screen **before the user picks a file**, e.g.:
+
+- Free user, Clip tab: `Free users: clips up to 100 MB / 3 min. Upgrade to Pro for larger uploads.`
+- Free user, Reel tab: `Free users: reels up to 100 MB / 3 min. Upgrade to Pro for larger uploads.`
+- Free user, Screenshot tab: `Free users: screenshots up to 10 MB. Upgrade to Pro for larger uploads.`
+- Pro user: `Pro: clips up to 500 MB / 10 min.` (no upgrade CTA)
+
+Use the values from `/api/upload/limits` rather than hard-coding numbers — Free/Pro limits can change. When `isPro === false`, also render an "Upgrade to Pro" link/button next to the hint.
+
+### 2. Friendly error from upload endpoints
+
+`POST /api/upload/video-direct`, `POST /api/upload/screenshot`, `POST /api/upload/process-video` and the global multer handler all return a structured payload on size/duration rejections:
+
+```json
+{
+  "error": "File size exceeds limit",
+  "message": "Maximum clip size is 100MB (your file is 142.3MB). Upgrade to Pro for larger uploads.",
+  "limits": { "isPro": false, "maxClipSizeMB": 100, ... }
+}
+```
+
+- HTTP status is `403` for tier-limit rejections and `413` from the multer hard cap.
+- `message` already includes the offending size/duration **and** the Pro upgrade CTA for Free users — show it verbatim in your toast/alert (do not generate your own "Upload failed" string).
+- When `limits.isPro === false`, also show an "Upgrade to Pro" CTA in the toast/alert that opens your in-app Pro upgrade flow.
+
+Recommended pattern (axios):
+
+```typescript
+try {
+  await api.post('/upload/video-direct', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+} catch (err) {
+  const data = err?.response?.data;
+  if (data?.message) {
+    showToast(data.message, {
+      action: data.limits && data.limits.isPro === false
+        ? { label: 'Upgrade to Pro', onPress: openProUpgrade }
+        : undefined,
+    });
+  } else {
+    showToast('Upload failed. Please try again.');
+  }
+}
+```
+
+Invalidate the `/upload/limits` query after every successful upload so the hint stays accurate.
 
 ---
 

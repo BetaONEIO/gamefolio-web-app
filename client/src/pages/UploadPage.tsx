@@ -50,6 +50,29 @@ import SimpleVideoPlayer from "@/components/shared/SimpleVideoPlayer";
 import { ShareDialog } from "@/components/shared/ShareDialog";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { XPGainedDialog } from "@/components/gamification/XPGainedDialog";
+import { ToastAction } from "@/components/ui/toast";
+import type { UploadLimits } from "@shared/schema";
+
+// Shape of the structured payload the server returns from /api/upload/* and
+// /api/screenshots/upload when an upload is rejected for a tier limit.
+interface UploadErrorPayload {
+  error?: string;
+  message?: string;
+  limits?: UploadLimits;
+}
+
+// Error thrown by upload mutations when the server returns the structured
+// payload above. Carrying `limits` lets the onError handler surface a
+// Pro-upgrade CTA when the rejection is a Free-user tier-limit failure
+// (HTTP 403 / 413) rather than a generic transport error.
+class UploadLimitError extends Error {
+  limits?: UploadLimits;
+  constructor(message: string, limits?: UploadLimits) {
+    super(message);
+    this.name = "UploadLimitError";
+    this.limits = limits;
+  }
+}
 
 // Define filter options
 const FILTERS = [
@@ -463,8 +486,17 @@ const UploadPage = () => {
         });
         
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || "Failed to upload screenshot");
+          // Server returns the structured { error, message, limits } payload
+          // for tier-limit rejections. Surface the friendly tier-aware
+          // message and forward `limits` so the toast can render a
+          // Pro-upgrade CTA for Free users.
+          const errorData: UploadErrorPayload = await response.json().catch(
+            (): UploadErrorPayload => ({}),
+          );
+          throw new UploadLimitError(
+            errorData.message || errorData.error || "Failed to upload screenshot",
+            errorData.limits,
+          );
         }
         
         return response.json();
@@ -503,10 +535,20 @@ const UploadPage = () => {
       setXpDialogOpen(true);
     },
     onError: (error: Error) => {
+      const limits = error instanceof UploadLimitError ? error.limits : undefined;
+      const showUpgradeCta = limits ? limits.isPro === false : false;
       toast({
         title: "Upload failed",
         description: error.message,
         variant: "gamefolioError",
+        action: showUpgradeCta ? (
+          <ToastAction
+            altText="Upgrade to Pro"
+            onClick={() => setShowProUpgrade(true)}
+          >
+            Upgrade to Pro
+          </ToastAction>
+        ) : undefined,
       });
     },
   });
@@ -645,8 +687,17 @@ const UploadPage = () => {
           });
           
           if (!processResponse.ok) {
-            const errorData = await processResponse.json();
-            throw new Error(errorData.error || 'Video processing failed');
+            // /api/upload/process-video returns { error, message, limits }
+            // for tier-limit rejections (HTTP 403). Use the friendly
+            // tier-aware `message` and forward `limits` so the toast can
+            // render an Upgrade-to-Pro CTA for Free users.
+            const errorData: UploadErrorPayload = await processResponse.json().catch(
+              (): UploadErrorPayload => ({}),
+            );
+            throw new UploadLimitError(
+              errorData.message || errorData.error || 'Video processing failed',
+              errorData.limits,
+            );
           }
           
           const processResult = await processResponse.json();
@@ -703,10 +754,20 @@ const UploadPage = () => {
     },
     onError: (error: Error) => {
       console.error('Upload mutation error:', error);
+      const limits = error instanceof UploadLimitError ? error.limits : undefined;
+      const showUpgradeCta = limits ? limits.isPro === false : false;
       toast({
         title: "Upload failed",
         description: error.message,
         variant: "gamefolioError",
+        action: showUpgradeCta ? (
+          <ToastAction
+            altText="Upgrade to Pro"
+            onClick={() => setShowProUpgrade(true)}
+          >
+            Upgrade to Pro
+          </ToastAction>
+        ) : undefined,
       });
       setIsUploading(false);
       setUploadProgress(0);

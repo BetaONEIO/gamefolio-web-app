@@ -1,16 +1,36 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useQuery } from '@tanstack/react-query';
 import { Redirect, useLocation } from 'wouter';
-import { Loader2, Upload, Image as ImageIcon, X } from 'lucide-react';
+import { Loader2, Upload, Image as ImageIcon, X, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ToastAction } from '@/components/ui/toast';
+import ProUpgradeDialog from '@/components/ProUpgradeDialog';
+import type { UploadLimits } from '@shared/schema';
+
+// Shape of the structured error payload returned by /api/screenshots/upload
+// and /api/upload/* when an upload is rejected for a tier limit.
+interface UploadErrorPayload {
+  error?: string;
+  message?: string;
+  limits?: UploadLimits;
+}
+
+class UploadLimitError extends Error {
+  limits?: UploadLimits;
+  constructor(message: string, limits?: UploadLimits) {
+    super(message);
+    this.name = 'UploadLimitError';
+    this.limits = limits;
+  }
+}
 
 const ScreenshotUploadPage: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -23,6 +43,7 @@ const ScreenshotUploadPage: React.FC = () => {
   const [description, setDescription] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [showProUpgrade, setShowProUpgrade] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const dragCounterRef = React.useRef(0);
 
@@ -33,6 +54,14 @@ const ScreenshotUploadPage: React.FC = () => {
       const response = await apiRequest('GET', '/api/games');
       return response.json();
     }
+  });
+
+  // Fetch the current user's tier-aware upload limits so we can render a
+  // short hint before file selection. Falls back to a sensible Free-tier
+  // copy until the limits arrive.
+  const { data: uploadLimits } = useQuery<UploadLimits>({
+    queryKey: ['/api/upload/limits'],
+    enabled: !!user,
   });
 
   if (isLoading) {
@@ -170,13 +199,27 @@ const ScreenshotUploadPage: React.FC = () => {
         });
 
         if (!response.ok) {
-          throw new Error('Upload failed');
+          // Server returns { error, message, limits } for tier-limit
+          // rejections (HTTP 403/413). Surface the friendly message and
+          // the limits payload so the catch block can show an Upgrade-to-Pro
+          // CTA for Free users instead of a generic "Upload failed".
+          const errorData: UploadErrorPayload = await response.json().catch(
+            (): UploadErrorPayload => ({}),
+          );
+          throw new UploadLimitError(
+            errorData.message || errorData.error || 'Upload failed',
+            errorData.limits,
+          );
         }
 
         return response.json();
       });
 
       await Promise.all(uploadPromises);
+
+      // Refresh tier-aware upload limits so the hint reflects any change
+      // (e.g. user just hit their cap or upgraded to Pro mid-session).
+      queryClient.invalidateQueries({ queryKey: ['/api/upload/limits'] });
 
       toast({
         title: "Success",
@@ -195,10 +238,22 @@ const ScreenshotUploadPage: React.FC = () => {
 
     } catch (error) {
       console.error('Upload error:', error);
+      const limits = error instanceof UploadLimitError ? error.limits : undefined;
+      const showUpgradeCta = limits ? limits.isPro === false : false;
       toast({
         title: "Upload failed",
-        description: "Failed to upload screenshots. Please try again.",
+        description: (error instanceof Error && error.message)
+          ? error.message
+          : "Failed to upload screenshots. Please try again.",
         variant: "destructive",
+        action: showUpgradeCta ? (
+          <ToastAction
+            altText="Upgrade to Pro"
+            onClick={() => setShowProUpgrade(true)}
+          >
+            Upgrade to Pro
+          </ToastAction>
+        ) : undefined,
       });
     } finally {
       setIsUploading(false);
@@ -214,6 +269,42 @@ const ScreenshotUploadPage: React.FC = () => {
           <CardTitle>Share your gaming moments</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Tier-aware upload-limit hint shown BEFORE the user opens
+              the file picker, so they know whether their screenshot will
+              fit. Falls back to the Free-tier defaults until /api/upload/limits
+              resolves. */}
+          {(() => {
+            const limits = uploadLimits;
+            const maxMB = limits?.maxScreenshotSizeMB ?? 10;
+            const isPro = limits?.isPro === true;
+            const hint = isPro
+              ? `Pro: screenshots up to ${maxMB} MB.`
+              : `Free users: screenshots up to ${maxMB} MB. Upgrade to Pro for larger uploads.`;
+            return (
+              <div
+                className="flex items-start gap-2 rounded-md border border-muted-foreground/20 bg-muted/40 p-3 text-sm"
+                data-testid="upload-limits-hint"
+              >
+                <Info className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                <div className="flex-1">
+                  <span className="text-muted-foreground">{hint}</span>
+                  {!isPro && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 ml-2 align-baseline"
+                      onClick={() => setShowProUpgrade(true)}
+                      data-testid="button-upgrade-pro-hint"
+                    >
+                      Upgrade to Pro
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* File Upload Area - Always Show */}
           <div className="space-y-4">
             <Label>Screenshots ({selectedFiles.length}/3 selected)</Label>
@@ -380,6 +471,12 @@ const ScreenshotUploadPage: React.FC = () => {
           </Button>
         </CardContent>
       </Card>
+
+      <ProUpgradeDialog
+        open={showProUpgrade}
+        onOpenChange={setShowProUpgrade}
+        subtitle="Get larger screenshot uploads"
+      />
     </div>
   );
 };

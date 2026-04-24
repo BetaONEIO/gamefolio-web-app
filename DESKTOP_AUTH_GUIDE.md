@@ -346,6 +346,72 @@ If you're migrating an existing web application:
 4. No changes needed to existing API endpoints
 5. Desktop apps simply include `Authorization` header instead of cookies
 
+## Uploads: tier limits & friendly errors
+
+The desktop helper's upload screen must (a) show the current user's upload limits **before** they pick a file and (b) surface the server's friendly tier-aware error when an upload is rejected, instead of a generic 403/413.
+
+### 1. Fetch limits before file selection
+
+`GET /api/upload/limits` (auth required, `Authorization: Bearer <accessToken>`) returns:
+
+```typescript
+type UploadLimits = {
+  isPro: boolean;
+  maxClipSizeMB: number;          // e.g. 100 for Free, 500 for Pro
+  maxReelSizeMB: number;
+  maxScreenshotSizeMB: number;
+  maxClipDurationSeconds: number; // e.g. 180 for Free, 600 for Pro
+  maxReelDurationSeconds: number;
+};
+```
+
+Render a short hint on the upload screen **before the user opens the file picker**. Example copy:
+
+- Free user, clip: `Free users: clips up to 100 MB / 3 min. Upgrade to Pro for larger uploads.`
+- Free user, reel: `Free users: reels up to 100 MB / 3 min. Upgrade to Pro for larger uploads.`
+- Pro user, clip: `Pro: clips up to 500 MB / 10 min.` (no upgrade CTA)
+
+Use the values returned by `/api/upload/limits` rather than hard-coding numbers; Free/Pro caps can change. When `isPro === false`, render an "Upgrade to Pro" link/button next to the hint that opens the user's account page in their default browser.
+
+### 2. Friendly error from upload endpoints
+
+`POST /api/videos/upload`, `POST /api/upload/video-direct`, `POST /api/upload/screenshot`, `POST /api/upload/process-video` and the global multer handler all return a structured payload on size/duration rejections:
+
+```json
+{
+  "error": "File size exceeds limit",
+  "message": "Maximum clip size is 100MB (your file is 142.3MB). Upgrade to Pro for larger uploads.",
+  "limits": { "isPro": false, "maxClipSizeMB": 100, "maxClipDurationSeconds": 180, ... }
+}
+```
+
+- HTTP status is `403` for tier-limit rejections and `413` from the multer hard cap.
+- `message` already contains the offending size/duration **and** the Pro upgrade CTA for Free users — show it verbatim in your toast/dialog. Do not replace it with a generic "Upload failed" string.
+- When `limits.isPro === false`, also show an "Upgrade to Pro" button in the dialog that opens the upgrade page.
+
+Recommended pattern:
+
+```javascript
+async uploadClip(formData) {
+  const response = await this.makeAuthenticatedRequest('/api/upload/video-direct', {
+    method: 'POST',
+    body: formData,
+    headers: {} // FormData sets Content-Type automatically
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    const message = data.message || `Upload failed (${response.status})`;
+    const showUpgrade = data.limits && data.limits.isPro === false;
+    throw new UploadError(message, { showUpgrade, limits: data.limits });
+  }
+
+  return response.json();
+}
+```
+
+Re-fetch `/api/upload/limits` after every successful upload so the hint stays accurate.
+
 ## Support
 
 For questions or issues with authentication:
