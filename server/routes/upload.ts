@@ -211,7 +211,7 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
       if (req.file?.path) fs.unlink(req.file.path, () => {});
       return res.status(403).json({
         error: 'File size exceeds limit',
-        message: `Maximum ${contentType} size is ${maxVideoSizeMB}MB.${limits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`,
+        message: `Maximum ${contentType} size is ${maxVideoSizeMB}MB (your file is ${fileSizeMB.toFixed(1)}MB).${limits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`,
         limits
       });
     }
@@ -334,7 +334,7 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
       if (req.file?.path) fs.unlink(req.file.path, () => {});
       return res.status(403).json({
         error: 'File size exceeds limit',
-        message: `Maximum screenshot size is ${limits.maxScreenshotSizeMB}MB.${limits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`,
+        message: `Maximum screenshot size is ${limits.maxScreenshotSizeMB}MB (your file is ${fileSizeMB.toFixed(1)}MB).${limits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`,
         limits
       });
     }
@@ -744,9 +744,10 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
         if (videoBuffer.byteLength > maxSizeBytes) {
           // Best-effort cleanup of the orphaned Supabase object
           try { await supabaseStorage.deleteFile(uploadResult.path); } catch {}
+          const actualSizeMB = (videoBuffer.byteLength / (1024 * 1024)).toFixed(1);
           return res.status(403).json({
             error: 'File size exceeds limit',
-            message: `Maximum ${isReel ? 'reel' : 'clip'} size is ${maxSizeMB}MB.${limits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`,
+            message: `Maximum ${isReel ? 'reel' : 'clip'} size is ${maxSizeMB}MB (your file is ${actualSizeMB}MB).${limits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`,
             limits
           });
         }
@@ -1177,8 +1178,14 @@ router.post('/avatar', fullAccessMiddleware, avatarUpload.single('avatar'), asyn
 });
 
 // Global error handler for multer errors
-router.use((error: any, req: any, res: any, next: any) => {
+router.use(async (error: any, req: any, res: any, next: any) => {
   if (error instanceof multer.MulterError) {
+    // Best-effort: include the user's upload limits so clients can render a
+    // friendly tier-aware message + Pro upgrade CTA instead of a generic 413.
+    let userLimits: any = undefined;
+    try {
+      if (req.user?.id) userLimits = await storage.getUploadLimits(req.user.id);
+    } catch {}
     // Try to get file size from multiple sources
     let fileSizeMB = 'N/A';
     let attemptedFileSize = 'Unknown';
@@ -1211,18 +1218,36 @@ router.use((error: any, req: any, res: any, next: any) => {
                     error.message.includes('5') ? '5MB' : 'the allowed size';
       
       console.error(`📊 File size limit exceeded: User attempted to upload ${attemptedFileSize}, limit is ${limit}`);
-      
+
+      // Pick a tier-aware message when we know the user's limits.
+      const isReel = req.body?.uploadType === 'reel';
+      const isScreenshot = (req.path || '').includes('screenshot');
+      const tierMaxMB = userLimits
+        ? (isScreenshot
+            ? userLimits.maxScreenshotSizeMB
+            : (isReel ? userLimits.maxReelSizeMB : userLimits.maxClipSizeMB))
+        : null;
+      const contentLabel = isScreenshot ? 'screenshot' : (isReel ? 'reel' : 'clip');
+      const proHint = userLimits && !userLimits.isPro ? ' Upgrade to Pro for larger uploads.' : '';
+      const friendly = tierMaxMB
+        ? `Maximum ${contentLabel} size is ${tierMaxMB}MB (your file is ~${attemptedFileSize}).${proHint}`
+        : `File too large. Maximum size is ${limit}.`;
+
       return res.status(413).json({
-        error: `File too large. Maximum size is ${limit}.`,
+        error: 'File size exceeds limit',
+        message: friendly,
         code: 'LIMIT_FILE_SIZE',
         details: error.message,
-        attemptedSize: attemptedFileSize
+        attemptedSize: attemptedFileSize,
+        limits: userLimits
       });
     }
 
     return res.status(400).json({
       error: error.message || 'File upload error',
-      code: error.code
+      message: error.message || 'File upload error',
+      code: error.code,
+      limits: userLimits
     });
   }
 

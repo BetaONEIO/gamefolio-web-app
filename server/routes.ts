@@ -10039,7 +10039,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Desktop app video upload endpoint - combines upload and processing in one step
   // Expected by desktop app: POST /api/videos/upload with multipart/form-data
-  app.post('/api/videos/upload', hybridAuth, videoUpload.single('video'), async (req: Request, res: Response) => {
+  const desktopVideoUpload = (req: Request, res: Response, next: any) => {
+    videoUpload.single('video')(req, res, async (err: any) => {
+      if (!err) return next();
+      const code = err?.code;
+      // Best-effort: attach the requesting user's tier limits so the desktop
+      // helper can show "Free users: clips up to X MB / Y min" + upgrade CTA.
+      let limits: any = undefined;
+      try {
+        if (req.user?.id) limits = await storage.getUploadLimits(req.user.id);
+      } catch {}
+      if (code === 'LIMIT_FILE_SIZE') {
+        const contentLength = parseInt(String(req.headers['content-length'] || '0'), 10);
+        const attemptedMB = contentLength ? (contentLength / (1024 * 1024)).toFixed(1) : null;
+        const isReel = req.body?.videoType === 'reel';
+        const maxMB = limits ? (isReel ? limits.maxReelSizeMB : limits.maxClipSizeMB) : 500;
+        const proHint = limits && !limits.isPro ? ' Upgrade to Pro for larger uploads.' : '';
+        return res.status(403).json({
+          success: false,
+          error: 'File size exceeds limit',
+          message: `Maximum ${isReel ? 'reel' : 'clip'} size is ${maxMB}MB${attemptedMB ? ` (your file is ~${attemptedMB}MB)` : ''}.${proHint}`,
+          code,
+          limits,
+        });
+      }
+      console.error('❌ Desktop multer error:', err);
+      return res.status(400).json({
+        success: false,
+        error: err?.message || 'File upload error',
+        code,
+        limits,
+      });
+    });
+  };
+  app.post('/api/videos/upload', hybridAuth, desktopVideoUpload, async (req: Request, res: Response) => {
     try {
       console.log('📹 Desktop video upload request received:', {
         fileProvided: !!req.file,
@@ -10081,7 +10114,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({
           success: false,
           error: 'File size exceeds limit',
-          message: `Maximum ${isReel ? 'reel' : 'clip'} size is ${maxVideoSizeMB}MB.${limits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`
+          message: `Maximum ${isReel ? 'reel' : 'clip'} size is ${maxVideoSizeMB}MB (your file is ${fileSizeMB.toFixed(1)}MB).${limits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`,
+          limits
         });
       }
 
@@ -10094,7 +10128,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(403).json({
             success: false,
             error: 'Video duration exceeds limit',
-            message: `Maximum ${isReel ? 'reel' : 'clip'} duration is ${maxDurationSeconds} seconds (your video is ${probedDuration}s).${limits.isPro ? '' : ' Upgrade to Pro for longer videos.'}`
+            message: `Maximum ${isReel ? 'reel' : 'clip'} duration is ${maxDurationSeconds} seconds (your video is ${probedDuration}s).${limits.isPro ? '' : ' Upgrade to Pro for longer videos.'}`,
+            limits
           });
         }
       } catch (probeErr) {
