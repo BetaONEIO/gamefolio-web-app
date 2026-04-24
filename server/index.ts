@@ -49,6 +49,7 @@ import { createOGMetaMiddleware } from './og-meta';
 import { storage } from './storage';
 import { LeaderboardService, loadXpSettingsFromDB } from './leaderboard-service';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
@@ -133,8 +134,20 @@ app.use(gfWebhookRoutes);
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ extended: false, limit: '500mb' }));
 
-// Serve attached assets (including videos) as static files
-app.use('/attached_assets', express.static('attached_assets'));
+// Serve attached assets (including videos) as static files.
+// Served from the repo-root folder if present (dev + deploys that ship it);
+// a subset is also copied into dist/public/attached_assets at build time via
+// client/public/attached_assets and served by serveStatic as a fallback.
+const attachedAssetsPath = path.resolve(process.cwd(), 'attached_assets');
+if (fs.existsSync(attachedAssetsPath) && fs.statSync(attachedAssetsPath).isDirectory()) {
+  const count = fs.readdirSync(attachedAssetsPath).length;
+  console.log(`📁 attached_assets present at ${attachedAssetsPath} (${count} files)`);
+} else {
+  console.warn(
+    `⚠️  attached_assets folder not found at ${attachedAssetsPath} — falling back to bundled copies in dist/public/attached_assets`
+  );
+}
+app.use('/attached_assets', express.static(attachedAssetsPath));
 
 app.use((req, res, next) => {
   const start = Date.now();

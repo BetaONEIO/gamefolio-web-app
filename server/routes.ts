@@ -317,18 +317,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication middleware is defined later in the file
 
   // Setup session and passport
+  const isProd = process.env.NODE_ENV === "production";
+  if (isProd && !process.env.SESSION_SECRET) {
+    throw new Error(
+      "SESSION_SECRET must be set in production — falling back to a default would silently invalidate all sessions on redeploy."
+    );
+  }
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET ?? "development-secret-key",
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
+    proxy: isProd,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // Enable secure in production
+      secure: isProd,
       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Allow cross-site in production
-      httpOnly: true, // Secure in production
+      sameSite: isProd ? "none" : "lax",
+      httpOnly: true,
     },
   };
+  console.log(
+    `🍪 Session config: secure=${sessionSettings.cookie?.secure} sameSite=${sessionSettings.cookie?.sameSite} proxy=${sessionSettings.proxy} secretSource=${process.env.SESSION_SECRET ? "env" : "default"}`
+  );
 
   app.use(session(sessionSettings));
   app.use(passport.initialize());
