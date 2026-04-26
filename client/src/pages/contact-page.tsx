@@ -125,6 +125,7 @@ export default function ContactPage() {
       setIsSubmitting(false);
     },
     onError: (error) => {
+      console.error("Support submit failed", error);
       toast({
         title: "Failed to submit",
         description: error.message,
@@ -175,6 +176,12 @@ export default function ContactPage() {
       });
     } catch (error) {
       console.error('Support submission error:', error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      toast({
+        title: "Failed to submit",
+        description: message,
+        variant: "gamefolioError",
+      });
       setIsSubmitting(false);
     }
   };
