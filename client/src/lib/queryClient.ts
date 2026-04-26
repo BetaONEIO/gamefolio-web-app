@@ -12,6 +12,9 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  if (url === "POST" || url === "GET" || url === "PUT" || url === "PATCH" || url === "DELETE") {
+    throw new Error(`Invalid apiRequest usage: expected (method, url, data), got (${method}, ${url}, ...)`);
+  }
   const headers: Record<string, string> = data ? { "Content-Type": "application/json" } : {};
 
   const res = await fetch(url, {
