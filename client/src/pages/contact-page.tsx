@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function ContactPage() {
   const { user } = useAuth();
@@ -80,8 +81,8 @@ export default function ContactPage() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to upload attachments');
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to upload attachments');
       }
 
       const result = await response.json();
@@ -98,26 +99,14 @@ export default function ContactPage() {
       message: string;
       attachmentUrls?: string[];
     }) => {
-      const response = await fetch('/api/support', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: data.username,
-          email: data.email,
-          category: 'Tech Support',
-          subject: data.subject,
-          message: data.message,
-          attachmentUrls: data.attachmentUrls || [],
-        }),
-        credentials: 'include',
+      const response = await apiRequest("POST", "/api/support", {
+        username: data.username,
+        email: data.email,
+        category: "Tech Support",
+        subject: data.subject,
+        message: data.message,
+        attachmentUrls: data.attachmentUrls || [],
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to submit support request');
-      }
 
       return response.json();
     },
