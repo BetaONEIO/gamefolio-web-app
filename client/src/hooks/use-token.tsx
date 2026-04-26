@@ -9,10 +9,19 @@ interface TokenInfo {
   contractAddress: string;
 }
 
+interface WalletInfo {
+  address: string;
+  balance: string;
+  isPrimary: boolean;
+  isRetired: boolean;
+  isCustodial?: boolean;
+}
+
 interface TokenBalance {
   balance: string;
   walletAddress: string;
   contractAddress: string;
+  wallets?: WalletInfo[];
 }
 
 export function useTokenInfo() {

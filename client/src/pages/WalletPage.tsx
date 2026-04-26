@@ -45,6 +45,18 @@ export default function WalletPage() {
   const [gftAmount, setGftAmount] = useState(0);
   const { data: tokenBalanceData } = useTokenBalance();
   const userGftBalance = parseFloat(tokenBalanceData?.balance || '0');
+  // Staking signs from the user's primary on-chain wallet only, so we must
+  // surface the balance of THAT wallet (not the aggregate across retired
+  // wallets) to the staking UI. Otherwise the user sees a higher "Available"
+  // number than they can actually stake and the contract reverts with
+  // "ERC20: transfer amount exceeds balance".
+  const stakingWalletBalance = (() => {
+    const wallets = tokenBalanceData?.wallets;
+    if (!wallets || wallets.length === 0) return userGftBalance;
+    const primary = wallets.find((w) => w.isPrimary && !w.isRetired);
+    if (primary) return parseFloat(primary.balance || '0');
+    return userGftBalance;
+  })();
   const { stakedAmount, earnedRewards, estimatedApy, stake, unstake, claimRewards, isStaking, isClaiming, stakeHistory } = useStaking();
   const { createOrder, isCreatingOrder, checkOrderStatus, refreshBalances } = usePurchaseGFT();
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
@@ -225,7 +237,7 @@ export default function WalletPage() {
         totalStaked={stakedAmount}
         rewardsEarned={earnedRewards}
         estimatedApy={estimatedApy}
-        availableGft={userGftBalance}
+        availableGft={stakingWalletBalance}
         stakeHistory={stakeHistory}
         onStake={stake}
         onUnstake={unstake}

@@ -6,7 +6,6 @@ import { parseUnits, formatUnits, maxUint256, type Address } from 'viem';
 import { writeContractWithPoW, publicClient } from '../skale-pow';
 import { GF_STAKING_ADDRESS, GF_STAKING_ABI, GF_TOKEN_ADDRESS, GF_TOKEN_ABI } from '../../shared/contracts';
 import { getStakingStats, getStakePosition } from '../gf-staking-service';
-import { getTokenBalance } from '../blockchain';
 
 const router = Router();
 const GF_DECIMALS = 18;
@@ -79,12 +78,26 @@ router.post('/api/staking/stake', async (req: Request, res: Response) => {
 
     const userAddress = user.walletAddress as Address;
 
-    const onChainBalanceStr = await getTokenBalance(userAddress);
-    const onChainBalance = parseFloat(onChainBalanceStr);
-    if (onChainBalance < amountFloat) {
+    // Read on-chain balance in raw wei and compare against amountRaw.
+    // Comparing as JS floats can incorrectly pass when the wallet is short by
+    // a few wei (the float rounds up to the requested amount), causing the
+    // staking contract's transferFrom to revert with
+    // "ERC20: transfer amount exceeds balance".
+    const onChainBalanceRaw = await publicClient.readContract({
+      address: GF_TOKEN_ADDRESS as Address,
+      abi: GF_TOKEN_ABI,
+      functionName: 'balanceOf',
+      args: [userAddress],
+    }) as bigint;
+
+    if (onChainBalanceRaw < amountRaw) {
+      const haveStr = formatUnits(onChainBalanceRaw, GF_DECIMALS);
       return res.status(400).json({
-        error: `Insufficient on-chain GFT balance. Have: ${onChainBalance.toFixed(2)} GFT, Need: ${amountFloat} GFT`,
+        error: `Insufficient on-chain GFT balance on staking wallet ${userAddress}. Have: ${haveStr} GFT, Need: ${amountFloat} GFT. (If your wallet shows a higher total, some GFT may sit on a previously-linked wallet.)`,
         code: 'INSUFFICIENT_BALANCE',
+        haveRaw: onChainBalanceRaw.toString(),
+        needRaw: amountRaw.toString(),
+        walletAddress: userAddress,
       });
     }
 
@@ -109,6 +122,37 @@ router.post('/api/staking/stake', async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Token approval failed', txHash: approveHash });
       }
       console.log(`[Staking] Approved. TX: ${approveHash}`);
+    }
+
+    // Simulate the stake before broadcasting so we can return a clean revert
+    // reason (instead of a raw ERC20 error string surfacing later).
+    try {
+      await publicClient.simulateContract({
+        address: GF_STAKING_ADDRESS as Address,
+        abi: GF_STAKING_ABI,
+        functionName: 'stake',
+        args: [amountRaw],
+        account: userAddress,
+      });
+    } catch (simErr: any) {
+      const reason =
+        simErr?.cause?.reason ||
+        simErr?.shortMessage ||
+        simErr?.message ||
+        'Unknown revert reason';
+      console.error(`[Staking] Stake simulation failed for ${userAddress}: ${reason}`);
+      // Re-read balance for an accurate error in case it changed between the
+      // initial guard and the simulation.
+      const latestBalanceRaw = (await publicClient.readContract({
+        address: GF_TOKEN_ADDRESS as Address,
+        abi: GF_TOKEN_ABI,
+        functionName: 'balanceOf',
+        args: [userAddress],
+      })) as bigint;
+      return res.status(400).json({
+        error: `Stake would fail: ${reason}. Wallet ${userAddress} currently holds ${formatUnits(latestBalanceRaw, GF_DECIMALS)} GFT.`,
+        code: 'SIMULATE_FAILED',
+      });
     }
 
     console.log(`[Staking] Staking ${amountFloat} GFT on-chain for user ${userId}`);

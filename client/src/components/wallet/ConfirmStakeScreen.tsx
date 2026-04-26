@@ -30,7 +30,11 @@ export default function ConfirmStakeScreen({
   const newTotalBalance = currentStake + numericAmount;
 
   const handleMaxClick = () => {
-    setAmount(availableBalance.toString());
+    // Truncate to 6 decimals to avoid sending a value that, due to JS float
+    // precision, ends up slightly greater than the user's actual on-chain
+    // balance (which would then revert with "transfer amount exceeds balance").
+    const safeMax = Math.floor(availableBalance * 1_000_000) / 1_000_000;
+    setAmount(safeMax.toString());
   };
 
   const handleConfirm = async () => {
