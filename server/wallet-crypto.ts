@@ -58,3 +58,11 @@ export function getUserWalletClient(encryptedPrivateKey: string) {
     transport: http(SKALE_NEBULA_TESTNET.rpcUrls.default.http[0]),
   });
 }
+
+export function getAddressFromEncryptedKey(encryptedPrivateKey: string): `0x${string}` {
+  const privateKey = decryptPrivateKey(encryptedPrivateKey);
+  const formattedKey = privateKey.startsWith('0x')
+    ? (privateKey as `0x${string}`)
+    : (`0x${privateKey}` as `0x${string}`);
+  return privateKeyToAccount(formattedKey).address;
+}

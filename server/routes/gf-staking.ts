@@ -6,9 +6,25 @@ import { parseUnits, formatUnits, maxUint256, type Address } from 'viem';
 import { writeContractWithPoW, publicClient } from '../skale-pow';
 import { GF_STAKING_ADDRESS, GF_STAKING_ABI, GF_TOKEN_ADDRESS, GF_TOKEN_ABI } from '../../shared/contracts';
 import { getStakingStats, getStakePosition } from '../gf-staking-service';
+import { getAddressFromEncryptedKey } from '../wallet-crypto';
 
 const router = Router();
 const GF_DECIMALS = 18;
+
+function assertKeyMatchesWallet(
+  encryptedPrivateKey: string,
+  walletAddress: string,
+): { ok: true } | { ok: false; derivedAddress: string } {
+  try {
+    const derived = getAddressFromEncryptedKey(encryptedPrivateKey);
+    if (derived.toLowerCase() !== walletAddress.toLowerCase()) {
+      return { ok: false, derivedAddress: derived };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, derivedAddress: '0x0000000000000000000000000000000000000000' };
+  }
+}
 
 router.get('/api/staking/position/:address', async (req: Request, res: Response) => {
   try {
@@ -74,6 +90,21 @@ router.post('/api/staking/stake', async (req: Request, res: Response) => {
 
     if (!user.walletAddress || !user.encryptedPrivateKey) {
       return res.status(400).json({ error: 'No server-side wallet available', code: 'NO_WALLET' });
+    }
+
+    const keyCheck = assertKeyMatchesWallet(user.encryptedPrivateKey, user.walletAddress);
+    if (!keyCheck.ok) {
+      console.error(
+        `[Staking] KEY_WALLET_MISMATCH user=${userId} stored=${user.walletAddress} derived=${keyCheck.derivedAddress}`,
+      );
+      return res.status(400).json({
+        error:
+          'Wallet data integrity error: the stored signing key does not control your displayed wallet address. ' +
+          'Please contact support — no transaction was sent.',
+        code: 'KEY_WALLET_MISMATCH',
+        storedWalletAddress: user.walletAddress,
+        derivedAddress: keyCheck.derivedAddress,
+      });
     }
 
     const userAddress = user.walletAddress as Address;
@@ -233,6 +264,23 @@ router.post('/api/staking/unstake', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'No server-side wallet available', code: 'NO_WALLET' });
     }
 
+    {
+      const keyCheck = assertKeyMatchesWallet(user.encryptedPrivateKey, user.walletAddress);
+      if (!keyCheck.ok) {
+        console.error(
+          `[Staking] KEY_WALLET_MISMATCH (unstake) user=${userId} stored=${user.walletAddress} derived=${keyCheck.derivedAddress}`,
+        );
+        return res.status(400).json({
+          error:
+            'Wallet data integrity error: the stored signing key does not control your displayed wallet address. ' +
+            'Please contact support — no transaction was sent.',
+          code: 'KEY_WALLET_MISMATCH',
+          storedWalletAddress: user.walletAddress,
+          derivedAddress: keyCheck.derivedAddress,
+        });
+      }
+    }
+
     const stakesResult = await publicClient.readContract({
       address: GF_STAKING_ADDRESS as Address,
       abi: GF_STAKING_ABI,
@@ -333,6 +381,23 @@ router.post('/api/staking/claim', async (req: Request, res: Response) => {
 
     if (!user.walletAddress || !user.encryptedPrivateKey) {
       return res.status(400).json({ error: 'No server-side wallet available', code: 'NO_WALLET' });
+    }
+
+    {
+      const keyCheck = assertKeyMatchesWallet(user.encryptedPrivateKey, user.walletAddress);
+      if (!keyCheck.ok) {
+        console.error(
+          `[Staking] KEY_WALLET_MISMATCH (claim) user=${userId} stored=${user.walletAddress} derived=${keyCheck.derivedAddress}`,
+        );
+        return res.status(400).json({
+          error:
+            'Wallet data integrity error: the stored signing key does not control your displayed wallet address. ' +
+            'Please contact support — no transaction was sent.',
+          code: 'KEY_WALLET_MISMATCH',
+          storedWalletAddress: user.walletAddress,
+          derivedAddress: keyCheck.derivedAddress,
+        });
+      }
     }
 
     const [position] = await db.select().from(userStaking).where(eq(userStaking.userId, userId)).limit(1);
