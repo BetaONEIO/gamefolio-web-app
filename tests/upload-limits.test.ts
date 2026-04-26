@@ -7,16 +7,24 @@ import * as http from 'node:http';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { randomBytes, scrypt as scryptCallback } from 'node:crypto';
+import { promisify } from 'node:util';
 import { spawnSync } from 'node:child_process';
 import { users, type UploadLimits } from '../shared/schema';
+import { tusOnUploadFinish } from '../server/routes/upload';
 
 // Pin the upload-error contract returned by /api/upload/video-direct,
-// /api/upload/screenshot, the multer hard cap, and the duration check.
-// Desktop and mobile clients render `data.message` verbatim in their toasts
-// and rely on `data.limits` to gate their "Upgrade to Pro" CTA — see
-// MOBILE_EXPORT.md §"Upload limits & error handling" and DESKTOP_AUTH_GUIDE.md.
+// /api/upload/screenshot, the multer hard cap, the duration check, the TUS
+// resumable finisher (`onUploadFinish`) and the `/api/upload/process-video`
+// finalize endpoint that the desktop helper and mobile clients call after
+// Supabase signed-URL uploads. Desktop and mobile clients render `data.message`
+// verbatim in their toasts and rely on `data.limits` to gate their
+// "Upgrade to Pro" CTA — see MOBILE_EXPORT.md §"Upload limits & error
+// handling" and DESKTOP_AUTH_GUIDE.md.
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const scrypt = promisify(scryptCallback);
+const TEST_USER_PASSWORD = 'UploadLimits!Pwd_2025';
 
 const FREE_MAX_CLIP_SIZE_MB = 100;
 const FREE_MAX_SCREENSHOT_SIZE_MB = 10;
@@ -229,12 +237,183 @@ async function postFileFromDisk(opts: {
   });
 }
 
+// --- Password hashing helper ---------------------------------------------
+// The `users.password` column is non-null, so we hash a placeholder value
+// using the same scrypt format the server uses (server/routes.ts:hashPassword).
+// We don't log in as these users — the JWT bearer token is sufficient for the
+// HTTP-tested endpoints, and the TUS handler is invoked directly.
+async function hashScryptPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString('hex');
+  const buf = (await scrypt(password, salt, 64)) as Buffer;
+  return `${buf.toString('hex')}.${salt}`;
+}
+
+function postJson(opts: {
+  pathname: string;
+  body: any;
+  headers?: Record<string, string>;
+}): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: any }> {
+  const baseUrl = new URL(process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:5000');
+  const payload = Buffer.from(JSON.stringify(opts.body), 'utf8');
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      {
+        hostname: baseUrl.hostname,
+        port: Number(baseUrl.port) || 5000,
+        method: 'POST',
+        path: opts.pathname,
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': payload.length.toString(),
+          ...(opts.headers || {}),
+        },
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c) => chunks.push(c));
+        res.on('end', () => {
+          const text = Buffer.concat(chunks).toString('utf8');
+          let body: any = text;
+          try { body = JSON.parse(text); } catch { /* keep as text */ }
+          resolve({ status: res.statusCode || 0, headers: res.headers, body });
+        });
+      },
+    );
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+}
+
+// --- TUS direct-invoke helper ---------------------------------------------
+// The TUS HTTP layer (`@tus/server` v2 + srvx) requires
+// `process.getBuiltinModule`, which Node 20.12.2 doesn't ship — so HTTP-level
+// TUS tests are infeasible in this environment. Instead we exercise the
+// exported `tusOnUploadFinish` handler directly, which is what produces the
+// upload-error contract the desktop and mobile clients render. This still
+// pins the contract end-to-end from the route's perspective.
+interface TusFinishInvocation {
+  status: number;
+  body: any;
+}
+
+async function invokeTusOnUploadFinish(opts: {
+  userId: number;
+  uploadType: 'video' | 'reel';
+  size: number;
+}): Promise<TusFinishInvocation> {
+  const fakeUploadId = `tus-test-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const result = await tusOnUploadFinish(
+    { user: { id: opts.userId } },
+    {
+      id: fakeUploadId,
+      size: opts.size,
+      metadata: { uploadType: opts.uploadType, filename: `${fakeUploadId}.mp4`, filetype: 'video/mp4' },
+    },
+  );
+  let body: any = result.body;
+  try { body = JSON.parse(result.body); } catch { /* keep as text */ }
+  return { status: result.status_code, body };
+}
+
+// --- Local payload server for /api/upload/process-video tests --------------
+// /api/upload/process-video downloads the video from the URL it's given and
+// then enforces size + duration. We stand up a tiny HTTP server that serves:
+//   - GET /oversized-clip   -> 105 MB of zeros
+//   - GET /oversized-reel   -> 255 MB of zeros
+//   - GET /long-video       -> contents of the ffmpeg-generated long video
+// All payloads are streamed (no buffering) so the test process stays small.
+interface PayloadServer {
+  baseUrl: string;
+  close: () => Promise<void>;
+}
+
+function startPayloadServer(longPath: string): Promise<PayloadServer> {
+  return new Promise((resolve, reject) => {
+    const server = http.createServer((req, res) => {
+      const url = req.url || '/';
+      if (req.method !== 'GET') {
+        res.statusCode = 405;
+        res.end();
+        return;
+      }
+      const streamZeros = (totalBytes: number) => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'video/mp4');
+        res.setHeader('Content-Length', totalBytes.toString());
+        const CHUNK_SIZE = 256 * 1024;
+        const reusable = Buffer.alloc(CHUNK_SIZE, 0);
+        let written = 0;
+        const pump = () => {
+          while (written < totalBytes) {
+            const remaining = totalBytes - written;
+            const len = Math.min(remaining, CHUNK_SIZE);
+            const chunk = len === CHUNK_SIZE ? reusable : reusable.subarray(0, len);
+            const ok = res.write(chunk);
+            written += len;
+            if (!ok) {
+              res.once('drain', pump);
+              return;
+            }
+          }
+          res.end();
+        };
+        pump();
+      };
+
+      if (url.startsWith('/oversized-clip')) {
+        streamZeros((FREE_MAX_CLIP_SIZE_MB + 5) * 1024 * 1024);
+        return;
+      }
+      if (url.startsWith('/oversized-reel')) {
+        streamZeros((PRO_MAX_REEL_SIZE_MB + 5) * 1024 * 1024);
+        return;
+      }
+      if (url.startsWith('/long-video')) {
+        const stat = fs.statSync(longPath);
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'video/mp4');
+        res.setHeader('Content-Length', stat.size.toString());
+        fs.createReadStream(longPath).pipe(res);
+        return;
+      }
+      res.statusCode = 404;
+      res.end();
+    });
+    server.on('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const addr = server.address();
+      if (addr && typeof addr === 'object') {
+        resolve({
+          baseUrl: `http://127.0.0.1:${addr.port}`,
+          close: () => new Promise<void>((res) => server.close(() => res())),
+        });
+      } else {
+        reject(new Error('Failed to start test payload server'));
+      }
+    });
+  });
+}
+
 let connection: ReturnType<typeof postgres>;
 let db: ReturnType<typeof drizzle>;
 let freeUserId = 0;
 let proUserId = 0;
+let payloadServer: PayloadServer | null = null;
 let longVideoPath = '';
 let smallImagePath = '';
+
+async function safeDeleteUser(userId: number) {
+  if (!userId) return;
+  try {
+    await db.delete(users).where(eq(users.id, userId));
+  } catch (err: any) {
+    // Foreign-key references (e.g. monthly_leaderboard, xp_history) may pin the
+    // user even after the test finishes — best-effort cleanup, don't fail the
+    // suite. Only log so future debug runs see it.
+    console.warn(`[upload-limits] best-effort user delete failed for ${userId}: ${err?.message || err}`);
+  }
+}
 
 test.describe.configure({ mode: 'serial' });
 
@@ -248,11 +427,16 @@ test.describe('Upload error contract @integration', () => {
 
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
 
+    // The `users.password` column is non-null. Tests sign their own JWT bearer
+    // tokens (HTTP endpoints) and call `tusOnUploadFinish` directly (TUS), so
+    // no real login flow runs — but a valid scrypt hash still has to be stored.
+    const hashedPassword = await hashScryptPassword(TEST_USER_PASSWORD);
+
     const [free] = await db
       .insert(users)
       .values({
         username: `upload_free_${suffix}`,
-        password: 'placeholder-not-used-for-jwt',
+        password: hashedPassword,
         displayName: 'Upload Free Test',
         email: `upload_free_${suffix}@example.test`,
         emailVerified: true,
@@ -267,7 +451,7 @@ test.describe('Upload error contract @integration', () => {
       .insert(users)
       .values({
         username: `upload_pro_${suffix}`,
-        password: 'placeholder-not-used-for-jwt',
+        password: hashedPassword,
         displayName: 'Upload Pro Test',
         email: `upload_pro_${suffix}@example.test`,
         emailVerified: true,
@@ -305,14 +489,19 @@ test.describe('Upload error contract @integration', () => {
     // Content-Length via the streaming helper to fake an oversized payload).
     smallImagePath = path.join(os.tmpdir(), `upload-tiny-${suffix}.png`);
     fs.writeFileSync(smallImagePath, Buffer.alloc(0));
+
+    // Spin up a tiny HTTP server that serves the payloads /api/upload/process-video
+    // will fetch and re-validate against the user's tier limits.
+    payloadServer = await startPayloadServer(longVideoPath);
   });
 
   test.afterAll(async () => {
-    try {
-      if (freeUserId) await db.delete(users).where(eq(users.id, freeUserId));
-      if (proUserId) await db.delete(users).where(eq(users.id, proUserId));
-    } finally {
-      await connection?.end({ timeout: 5 });
+    await safeDeleteUser(freeUserId);
+    await safeDeleteUser(proUserId);
+    await connection?.end({ timeout: 5 });
+    if (payloadServer) {
+      try { await payloadServer.close(); } catch { /* ignore */ }
+      payloadServer = null;
     }
     for (const p of [longVideoPath, smallImagePath]) {
       if (p && fs.existsSync(p)) {
@@ -433,6 +622,136 @@ test.describe('Upload error contract @integration', () => {
       mimeType: 'video/mp4',
       totalFileSize: oversizedBytes,
       extraFields: { uploadType: 'reel' },
+    });
+
+    expect(res.status).toBe(403);
+    expect(res.body).toHaveProperty('error');
+    expect(typeof res.body.message).toBe('string');
+    expect(res.body.message).toContain(`${PRO_MAX_REEL_SIZE_MB}MB`);
+    expect(res.body.message).toMatch(/255\.\dMB/);
+    // Pro users must NOT see the upgrade CTA.
+    expect(res.body.message).not.toContain(PRO_UPGRADE_HINT);
+    expectLimitsShape(res.body.limits);
+    expect(res.body.limits.isPro).toBe(true);
+    expect(res.body.limits.maxReelSizeMB).toBe(PRO_MAX_REEL_SIZE_MB);
+  });
+
+  // ------------------------------------------------------------------------
+  // TUS resumable upload (`onUploadFinish`)
+  // ------------------------------------------------------------------------
+
+  test('TUS Free user: oversized clip rejected by onUploadFinish returns 403 with full contract', async () => {
+    const oversizedBytes = (FREE_MAX_CLIP_SIZE_MB + 5) * 1024 * 1024;
+    const res = await invokeTusOnUploadFinish({
+      userId: freeUserId,
+      uploadType: 'video',
+      size: oversizedBytes,
+    });
+
+    expect(res.status).toBe(403);
+    expect(res.body).toHaveProperty('error');
+    expect(typeof res.body.message).toBe('string');
+    expect(res.body.message).toContain(`${FREE_MAX_CLIP_SIZE_MB}MB`);
+    // Offending file size is reported with one decimal in the route, e.g. "105.0MB".
+    expect(res.body.message).toMatch(/105\.\dMB/);
+    expect(res.body.message.trim().endsWith(`${PRO_UPGRADE_HINT} for larger uploads.`)).toBe(true);
+    expectLimitsShape(res.body.limits);
+    expect(res.body.limits.isPro).toBe(false);
+    expect(res.body.limits.maxClipSizeMB).toBe(FREE_MAX_CLIP_SIZE_MB);
+  });
+
+  test('TUS Pro user: oversized reel rejected by onUploadFinish returns 403 without Pro CTA', async () => {
+    const oversizedBytes = (PRO_MAX_REEL_SIZE_MB + 5) * 1024 * 1024;
+    const res = await invokeTusOnUploadFinish({
+      userId: proUserId,
+      uploadType: 'reel',
+      size: oversizedBytes,
+    });
+
+    expect(res.status).toBe(403);
+    expect(res.body).toHaveProperty('error');
+    expect(typeof res.body.message).toBe('string');
+    expect(res.body.message).toContain(`${PRO_MAX_REEL_SIZE_MB}MB`);
+    expect(res.body.message).toMatch(/255\.\dMB/);
+    // Pro users must NOT see the upgrade CTA.
+    expect(res.body.message).not.toContain(PRO_UPGRADE_HINT);
+    expectLimitsShape(res.body.limits);
+    expect(res.body.limits.isPro).toBe(true);
+    expect(res.body.limits.maxReelSizeMB).toBe(PRO_MAX_REEL_SIZE_MB);
+  });
+
+  // ------------------------------------------------------------------------
+  // /api/upload/process-video finalize endpoint
+  // ------------------------------------------------------------------------
+
+  test('process-video Free user: oversized clip is rejected with 403 and full contract', async () => {
+    test.setTimeout(120_000);
+    expect(payloadServer, 'payload server must be running').toBeTruthy();
+    const res = await postJson({
+      pathname: '/api/upload/process-video',
+      headers: { Authorization: `Bearer ${makeAccessToken(freeUserId)}` },
+      body: {
+        uploadResult: {
+          url: `${payloadServer!.baseUrl}/oversized-clip`,
+          path: 'users/0/test-oversized-clip.mp4',
+        },
+        title: 'Oversized clip via process-video',
+        videoType: 'clip',
+      },
+    });
+
+    expect(res.status).toBe(403);
+    expect(res.body).toHaveProperty('error');
+    expect(typeof res.body.message).toBe('string');
+    expect(res.body.message).toContain(`${FREE_MAX_CLIP_SIZE_MB}MB`);
+    expect(res.body.message).toMatch(/105\.\dMB/);
+    expect(res.body.message.trim().endsWith(`${PRO_UPGRADE_HINT} for larger uploads.`)).toBe(true);
+    expectLimitsShape(res.body.limits);
+    expect(res.body.limits.isPro).toBe(false);
+    expect(res.body.limits.maxClipSizeMB).toBe(FREE_MAX_CLIP_SIZE_MB);
+  });
+
+  test('process-video Free user: too-long video is rejected with 403 and full contract', async () => {
+    test.setTimeout(60_000);
+    expect(payloadServer, 'payload server must be running').toBeTruthy();
+    const res = await postJson({
+      pathname: '/api/upload/process-video',
+      headers: { Authorization: `Bearer ${makeAccessToken(freeUserId)}` },
+      body: {
+        uploadResult: {
+          url: `${payloadServer!.baseUrl}/long-video`,
+          path: 'users/0/test-long-video.mp4',
+        },
+        title: 'Too-long clip via process-video',
+        videoType: 'clip',
+      },
+    });
+
+    expect(res.status).toBe(403);
+    expect(res.body).toHaveProperty('error');
+    expect(typeof res.body.message).toBe('string');
+    expect(res.body.message).toContain(`${FREE_MAX_CLIP_DURATION_SECONDS} seconds`);
+    expect(res.body.message).toMatch(/your video is \d+s/);
+    expect(res.body.message.trim().endsWith(`${PRO_UPGRADE_HINT} for longer videos.`)).toBe(true);
+    expectLimitsShape(res.body.limits);
+    expect(res.body.limits.isPro).toBe(false);
+    expect(res.body.limits.maxClipDurationSeconds).toBe(FREE_MAX_CLIP_DURATION_SECONDS);
+  });
+
+  test('process-video Pro user: oversized reel is rejected with 403 and no Pro CTA', async () => {
+    test.setTimeout(180_000);
+    expect(payloadServer, 'payload server must be running').toBeTruthy();
+    const res = await postJson({
+      pathname: '/api/upload/process-video',
+      headers: { Authorization: `Bearer ${makeAccessToken(proUserId)}` },
+      body: {
+        uploadResult: {
+          url: `${payloadServer!.baseUrl}/oversized-reel`,
+          path: 'users/0/test-oversized-reel.mp4',
+        },
+        title: 'Oversized reel via process-video',
+        videoType: 'reel',
+      },
     });
 
     expect(res.status).toBe(403);

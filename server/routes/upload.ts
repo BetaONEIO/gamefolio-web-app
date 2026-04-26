@@ -6,7 +6,7 @@ import fs from 'fs';
 import { supabaseTusStore } from '../tus-storage';
 import { supabaseStorage } from '../supabase-storage';
 import { storage } from '../storage';
-import { insertClipSchema, insertScreenshotSchema } from '@shared/schema';
+import { insertClipSchema, insertScreenshotSchema, type UploadLimits } from '@shared/schema';
 import { VideoProcessor } from '../video-processor';
 import sharp from 'sharp';
 import { nanoid } from 'nanoid';
@@ -102,6 +102,90 @@ const avatarUpload = multer({
   }
 });
 
+// TUS `onUploadFinish` handler — exported so tests can exercise the
+// upload-error contract directly without requiring the underlying TUS HTTP
+// transport (the contract that desktop and mobile clients depend on lives in
+// the response body, which this function fully constructs).
+export async function tusOnUploadFinish(
+  req: { user?: { id: number } } & Record<string, any>,
+  upload: { id: string; size?: number; metadata?: Record<string, any> },
+): Promise<{ status_code: number; headers?: Record<string, string>; body: string }> {
+  let limits: UploadLimits | undefined;
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    const uploadType = upload.metadata?.uploadType === 'reel' ? 'reel' : 'video';
+
+    // Validate against the user's tier limits (clip vs reel).
+    limits = await storage.getUploadLimits(userId);
+    const isReel = uploadType === 'reel';
+    const contentType = isReel ? 'reel' : 'clip';
+    const maxSizeMB = isReel ? limits.maxReelSizeMB : limits.maxClipSizeMB;
+    const maxDurationSeconds = isReel ? limits.maxReelDurationSeconds : limits.maxClipDurationSeconds;
+    const maxSize = maxSizeMB * 1024 * 1024;
+    const sizeProHint = limits.isPro ? '' : ' Upgrade to Pro for larger uploads.';
+    const durationProHint = limits.isPro ? '' : ' Upgrade to Pro for longer videos.';
+
+    if (upload.size && upload.size > maxSize) {
+      // Best-effort cleanup of the TUS temp file so we don't leak disk
+      try { await supabaseTusStore.remove(upload.id); } catch {}
+      const actualSizeMB = (upload.size / (1024 * 1024)).toFixed(1);
+      throw new Error(`Maximum ${contentType} size is ${maxSizeMB}MB (your file is ${actualSizeMB}MB).${sizeProHint}`);
+    }
+
+    // Probe duration from the local TUS temp file before uploading to Supabase
+    const tusTempPath = path.join(tempDir, upload.id);
+    if (fs.existsSync(tusTempPath)) {
+      try {
+        const videoInfo = await VideoProcessor.getVideoInfo(tusTempPath);
+        const durationSeconds = Math.round(videoInfo.duration || 0);
+        if (durationSeconds > maxDurationSeconds) {
+          try { await supabaseTusStore.remove(upload.id); } catch {}
+          throw new Error(`Maximum ${contentType} duration is ${maxDurationSeconds} seconds (your video is ${durationSeconds}s).${durationProHint}`);
+        }
+      } catch (probeErr: any) {
+        // If the message looks like our own enforcement message, re-throw it.
+        if (probeErr?.message?.startsWith('Maximum ')) throw probeErr;
+        console.warn('TUS duration probe failed, allowing upload to proceed:', probeErr?.message || probeErr);
+      }
+    }
+
+    // Upload to Supabase
+    const result = await supabaseTusStore.finishUpload(upload.id, userId, uploadType);
+
+    // Return success response
+    return {
+      status_code: 200,
+      headers: {
+        'Upload-Result': JSON.stringify(result)
+      },
+      body: JSON.stringify({ success: true, result })
+    };
+  } catch (error: any) {
+    console.error('TUS upload finish error:', error);
+    const message = error?.message || 'Upload processing failed';
+    // Surface limit errors as 4xx so the client gets a clear, actionable message.
+    const isLimitError = typeof message === 'string' && message.startsWith('Maximum ');
+    const errorBody: Record<string, any> = {
+      error: isLimitError ? 'Upload exceeds tier limit' : 'Upload processing failed',
+      message,
+    };
+    // Include the user's tier limits so mobile/desktop clients can render the
+    // tier-aware "Upgrade to Pro" CTA — same contract as /video-direct,
+    // /screenshot, /process-video, and the multer hard cap (Task #77/#78).
+    if (isLimitError && limits) {
+      errorBody.limits = limits;
+    }
+    return {
+      status_code: isLimitError ? 403 : 500,
+      body: JSON.stringify(errorBody),
+    };
+  }
+}
+
 // TUS server configuration for video/reel uploads
 const tusServer = new TusServer({
   path: '/api/upload/tus',
@@ -111,72 +195,7 @@ const tusServer = new TusServer({
     // Generate unique ID for each upload
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   },
-  onUploadFinish: async (req, upload) => {
-    try {
-      const userId = (req as any).user?.id;
-      if (!userId) {
-        throw new Error('User not authenticated');
-      }
-
-      const uploadType = upload.metadata?.uploadType === 'reel' ? 'reel' : 'video';
-
-      // Validate against the user's tier limits (clip vs reel).
-      const limits = await storage.getUploadLimits(userId);
-      const isReel = uploadType === 'reel';
-      const contentType = isReel ? 'reel' : 'clip';
-      const maxSizeMB = isReel ? limits.maxReelSizeMB : limits.maxClipSizeMB;
-      const maxDurationSeconds = isReel ? limits.maxReelDurationSeconds : limits.maxClipDurationSeconds;
-      const maxSize = maxSizeMB * 1024 * 1024;
-      const proHint = limits.isPro ? '' : ' Upgrade to Pro for larger uploads.';
-
-      if (upload.size && upload.size > maxSize) {
-        // Best-effort cleanup of the TUS temp file so we don't leak disk
-        try { await supabaseTusStore.remove(upload.id); } catch {}
-        throw new Error(`Maximum ${contentType} size is ${maxSizeMB}MB.${proHint}`);
-      }
-
-      // Probe duration from the local TUS temp file before uploading to Supabase
-      const tusTempPath = path.join(tempDir, upload.id);
-      if (fs.existsSync(tusTempPath)) {
-        try {
-          const videoInfo = await VideoProcessor.getVideoInfo(tusTempPath);
-          const durationSeconds = Math.round(videoInfo.duration || 0);
-          if (durationSeconds > maxDurationSeconds) {
-            try { await supabaseTusStore.remove(upload.id); } catch {}
-            throw new Error(`Maximum ${contentType} duration is ${maxDurationSeconds} seconds (your video is ${durationSeconds}s).${proHint}`);
-          }
-        } catch (probeErr: any) {
-          // If the message looks like our own enforcement message, re-throw it.
-          if (probeErr?.message?.startsWith('Maximum ')) throw probeErr;
-          console.warn('TUS duration probe failed, allowing upload to proceed:', probeErr?.message || probeErr);
-        }
-      }
-
-      // Upload to Supabase
-      const result = await supabaseTusStore.finishUpload(upload.id, userId, uploadType);
-
-      // Return success response
-      return {
-        status_code: 200,
-        headers: {
-          'Upload-Result': JSON.stringify(result)
-        },
-        body: JSON.stringify({ success: true, result })
-      };
-    } catch (error: any) {
-      console.error('TUS upload finish error:', error);
-      const message = error?.message || 'Upload processing failed';
-      // Surface limit errors as 4xx so the client gets a clear, actionable message.
-      const isLimitError = typeof message === 'string' && message.startsWith('Maximum ');
-      return {
-        status_code: isLimitError ? 403 : 500,
-        body: JSON.stringify({
-          error: isLimitError ? 'Upload exceeds tier limit' : 'Upload processing failed',
-          message
-        })
-      };
-    }
-  }
+  onUploadFinish: (req, upload) => tusOnUploadFinish(req as any, upload as any),
 });
 
 // Direct video upload endpoint (bypassing TUS for now)
