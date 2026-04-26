@@ -245,7 +245,7 @@ export default function HelpPage() {
   }
 
   const submitSupportForm = useMutation({
-    mutationFn: (data: SupportFormData) => apiRequest('/api/support', 'POST', data),
+    mutationFn: (data: SupportFormData) => apiRequest("POST", "/api/support", data),
     onSuccess: () => {
       setIsSubmitted(true);
       form.reset({
