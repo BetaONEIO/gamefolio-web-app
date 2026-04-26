@@ -61,6 +61,7 @@ import mintNftRouter from "./routes/mint-nft";
 import linkedWalletsRouter from "./routes/linked-wallets";
 import quickSellRouter from "./routes/quick-sell";
 import adminNftSeedRouter from "./routes/admin-nft-seed";
+import adminWalletAuditRouter from "./routes/admin-wallet-audit";
 import { twitchApi } from "./services/twitch-api";
 import { VideoProcessor } from "./video-processor";
 import sharp from "sharp";
@@ -10036,6 +10037,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount quick sell routes
   app.use(quickSellRouter);
   app.use(adminNftSeedRouter);
+  app.use(adminWalletAuditRouter);
 
   // Desktop app video upload endpoint - combines upload and processing in one step
   // Expected by desktop app: POST /api/videos/upload with multipart/form-data
