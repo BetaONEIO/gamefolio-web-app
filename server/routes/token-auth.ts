@@ -153,6 +153,21 @@ router.post('/auth/token/login', async (req: Request, res: Response) => {
 });
 
 /**
+ * Issue tokens for an already session-authenticated user.
+ * Native clients hit this after the normal /api/login flow (which handles 2FA,
+ * Google, etc.) to obtain a JWT pair they can use in environments where the
+ * session cookie isn't reliable (Capacitor WebView cross-origin).
+ */
+router.post('/auth/token/issue', async (req: Request, res: Response) => {
+  if (!req.isAuthenticated() || !req.user) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+  const user = req.user as { id: number };
+  const tokens = JWTService.generateTokenPair(user);
+  return res.json(tokens);
+});
+
+/**
  * Token refresh endpoint
  * Allows desktop apps to refresh their access token using a refresh token
  */

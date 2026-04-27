@@ -12,6 +12,8 @@ import { useLocation } from "wouter";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { useDailyStreak } from "@/hooks/use-daily-streak";
+import { isNative } from "@/lib/platform";
+import { clearTokens, setTokens } from "@/lib/auth-token";
 
 type AuthContextType = {
   user: User | null;
@@ -57,6 +59,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Native (Capacitor) WebViews don't reliably persist the cross-origin
+  // session cookie, so after a successful session login we exchange the
+  // session for a JWT pair and store it. The queryClient automatically
+  // attaches it to subsequent requests and refreshes it on 401.
+  const issueNativeTokens = async () => {
+    if (!isNative) return;
+    try {
+      const res = await fetch("/api/auth/token/issue", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        accessToken?: string;
+        refreshToken?: string;
+      };
+      if (data.accessToken && data.refreshToken) {
+        await setTokens(data.accessToken, data.refreshToken);
+      }
+    } catch (e) {
+      console.warn("issueNativeTokens failed", e);
+    }
+  };
+
   // Handle Firebase authentication state changes
   useEffect(() => {
     if (!auth) {
@@ -81,6 +107,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const userData = await response.json();
 
           if (!mounted) return;
+
+          // On native, exchange the freshly-created session for a JWT pair.
+          await issueNativeTokens();
 
           const streakInfo = userData.streakInfo;
           // Mark reward as shown so the session-restore useEffect doesn't double-fire
@@ -144,8 +173,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: firebaseAuthChecked,
-    staleTime: 60000,
-    refetchInterval: 60000,
+    // Don't poll every 60s — that turned a single transient cookie/network
+    // blip into an instant logout. Refetch on focus/reconnect and let the
+    // user-driven mutations (login/logout/refreshUser) be the source of truth.
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 1,
+    retryDelay: 500,
   });
 
   useEffect(() => {
@@ -199,7 +235,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Mark reward as shown so the session-restore useEffect doesn't double-fire
       dailyRewardShownRef.current = true;
-      
+
+      // On native, grab JWT tokens before any further requests so the
+      // queryClient can use them when the session cookie is unavailable.
+      await issueNativeTokens();
+
       // Use centralized refreshUser to ensure cache consistency
       await refreshUser();
 
@@ -243,6 +283,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: async (user: User) => {
+      // On native, grab JWT tokens before any further requests.
+      await issueNativeTokens();
+
       // Use centralized refreshUser to ensure cache consistency
       await refreshUser();
 
@@ -268,7 +311,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async () => {
       await apiRequest("POST", "/api/logout");
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      await clearTokens();
       queryClient.setQueryData(["/api/user"], null);
 
       toast({

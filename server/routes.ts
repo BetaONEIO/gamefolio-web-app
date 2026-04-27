@@ -52,6 +52,7 @@ import adminContentFilterRouter from "./routes/admin-content-filter";
 import twitchGamesRouter from "./routes/twitch-games";
 import authRouter from "./routes/auth-routes";
 import tokenAuthRouter from "./routes/token-auth";
+import { JWTService } from "./services/jwt-service";
 import uploadRouter from "./routes/upload";
 import migrationRouter from "./routes/migration";
 import viewRouter from "./routes/view";
@@ -332,7 +333,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     cookie: {
       secure: isProd,
       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-      sameSite: isProd ? "none" : "lax",
+      // Web is same-origin (relative /api). SameSite=Lax avoids the third-party
+      // cookie blocking that Safari ITP / Firefox TCP / Brave apply to None,
+      // which was logging users out mid-navigation. Native mobile uses JWT
+      // (server/routes/token-auth.ts) — it does not rely on this cookie.
+      sameSite: "lax",
       httpOnly: true,
     },
   };
@@ -343,6 +348,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // Bearer-token bridge: if the session didn't authenticate the request but a
+  // valid Authorization: Bearer JWT is present, populate req.user from it.
+  // This makes every existing route (authMiddleware, inline req.isAuthenticated()
+  // checks, etc.) accept the JWT without per-route changes — needed for native
+  // Capacitor builds where the cross-origin session cookie isn't reliable.
+  app.use(async (req, res, next) => {
+    if (req.user) return next();
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return next();
+    const token = authHeader.substring(7);
+    try {
+      const payload = JWTService.verifyToken(token);
+      const userId = Number(payload.userId);
+      if (!userId || isNaN(userId)) return next();
+      const user = userId === 999 ? getDemoUser() : await storage.getUserById(userId);
+      if (user) {
+        req.user = user as any;
+      }
+    } catch {
+      // Invalid/expired token — fall through as unauthenticated; client will
+      // hit the refresh path and replay the request.
+    }
+    next();
+  });
 
   // Temporary session debugging middleware (AFTER session setup)
   app.use((req, res, next) => {

@@ -4,9 +4,11 @@ import "./index.css";
 import { initEmailJS } from "./services/email-service";
 import { installNativeFetchPatch } from "./lib/platform";
 import { initMobileShell } from "./lib/mobile-init";
+import { ensureHydrated as ensureAuthTokensHydrated } from "./lib/auth-token";
 
 installNativeFetchPatch();
 void initMobileShell();
+void ensureAuthTokensHydrated();
 
 // Set page title
 document.title = "Gamefolio - Share Your Gaming Moments";
