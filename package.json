@@ -14,14 +14,7 @@
     "mobile:build:ios": "vite build && cap sync ios",
     "mobile:ios": "cap open ios",
     "mobile:android": "cap open android",
-    "cap:sync": "cap sync",
-    "eas:build:ios": "npm run mobile:build:ios && eas build --platform ios --profile preview",
-    "eas:build:android": "npm run mobile:build:android && eas build --platform android --profile preview",
-    "eas:build:all": "npm run mobile:build && eas build --platform all --profile preview",
-    "eas:build:dev": "npm run mobile:build && eas build --platform all --profile development",
-    "eas:build:prod": "npm run mobile:build && eas build --platform all --profile production",
-    "eas:submit:ios": "eas submit --platform ios --profile preview",
-    "eas:submit:android": "eas submit --platform android --profile production"
+    "cap:sync": "cap sync"
   },
   "dependencies": {
     "@0xsequence/connect": "^5.4.8",
@@ -167,7 +160,6 @@
     "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.30.4",
-    "eas-cli": "^18.7.0",
     "esbuild": "^0.25.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.17",
