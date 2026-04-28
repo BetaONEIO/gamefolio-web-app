@@ -261,6 +261,7 @@ const ProfilePage = () => {
   
   // Profile section tab state (stats/bio vs collection)
   const [profileSectionTab, setProfileSectionTab] = useState<'stats' | 'collection'>('stats');
+  const [streamExpanded, setStreamExpanded] = useState(false);
   const [selectedProfileNft, setSelectedProfileNft] = useState<OwnedNft | null>(null);
 
   // Screenshot action handlers
@@ -3610,11 +3611,17 @@ const ProfilePage = () => {
             ? 'linear-gradient(90deg, #1a3a1a, #0f2a0f)'
             : 'linear-gradient(90deg, #1f1035, #0f0a1e)';
 
+          const showPlayer = isLive || streamExpanded;
+
           return (
           <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-4 mb-2">
             <div className="rounded-xl overflow-hidden border border-border bg-black shadow-lg">
-              {/* Header bar */}
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-border" style={{ background: headerBg }}>
+              {/* Header bar — clickable when offline to expand/collapse */}
+              <div
+                className={`flex items-center gap-2 px-3 py-2 ${showPlayer ? 'border-b border-border' : ''} ${!isLive ? 'cursor-pointer select-none hover:brightness-110 transition-all' : ''}`}
+                style={{ background: headerBg }}
+                onClick={!isLive ? () => setStreamExpanded(prev => !prev) : undefined}
+              >
                 <div className={`w-2 h-2 rounded-full ${isLive ? 'animate-pulse' : 'opacity-40'} ${isKick ? 'bg-green-500' : 'bg-purple-500'}`} />
                 <span className={`text-xs font-semibold ${isKick ? 'text-green-400' : 'text-purple-400'}`}>
                   {isKick ? 'Kick' : 'Twitch'}
@@ -3623,47 +3630,56 @@ const ProfilePage = () => {
                 {isLive ? (
                   <span className="ml-auto text-[10px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded-full">LIVE</span>
                 ) : (
-                  <span className="ml-auto text-[10px] text-muted-foreground">Offline</span>
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <span className="text-[10px] text-muted-foreground/60 italic">Offline</span>
+                    {streamExpanded
+                      ? <ChevronUp className="h-3 w-3 text-muted-foreground/60" />
+                      : <ChevronDown className="h-3 w-3 text-muted-foreground/60" />
+                    }
+                  </div>
                 )}
               </div>
 
-              {/* Player + Chat layout: side-by-side when live, full-width when offline */}
-              {isLive ? (
-                <div className="flex flex-col lg:flex-row" style={{ height: 'auto' }}>
-                  {/* Player — 16:9 aspect ratio on mobile, fixed 450px tall on desktop */}
-                  <div className="relative w-full lg:w-[65%] flex-none">
-                    <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+              {/* Player + Chat — only rendered when live or manually expanded */}
+              {showPlayer && (
+                isLive ? (
+                  <div className="flex flex-col lg:flex-row" style={{ height: 'auto' }}>
+                    {/* Player — 16:9 aspect ratio */}
+                    <div className="relative w-full lg:w-[65%] flex-none">
+                      <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                        <iframe
+                          key={`player-live-${activeChannel}`}
+                          src={playerSrc}
+                          className="absolute inset-0 w-full h-full"
+                          allowFullScreen
+                          allow="autoplay; fullscreen"
+                          title={`${activeChannel}'s stream`}
+                        />
+                      </div>
+                    </div>
+                    {/* Chat */}
+                    <div className="w-full lg:w-[35%] border-t lg:border-t-0 lg:border-l border-border" style={{ height: '300px' }}>
                       <iframe
-                        key={`player-live-${activeChannel}`}
-                        src={playerSrc}
-                        className="absolute inset-0 w-full h-full"
-                        allowFullScreen
-                        allow="autoplay; fullscreen"
-                        title={`${activeChannel}'s stream`}
+                        key={`chat-live-${activeChannel}`}
+                        src={chatSrc}
+                        className="w-full h-full"
+                        title={`${activeChannel}'s chat`}
                       />
                     </div>
                   </div>
-                  {/* Chat — full width on mobile (300px), fills player height on desktop */}
-                  <div className="w-full lg:w-[35%] border-t lg:border-t-0 lg:border-l border-border" style={{ height: '300px' }} >
+                ) : (
+                  /* Offline — greyed out player, no chat */
+                  <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                    <div className="absolute inset-0 bg-black/40 z-10 pointer-events-none" />
                     <iframe
-                      key={`chat-live-${activeChannel}`}
-                      src={chatSrc}
-                      className="w-full h-full"
-                      title={`${activeChannel}'s chat`}
+                      key={`player-offline-${activeChannel}`}
+                      src={playerSrc}
+                      className="absolute inset-0 w-full h-full opacity-60 grayscale"
+                      allowFullScreen
+                      title={`${activeChannel}'s stream`}
                     />
                   </div>
-                </div>
-              ) : (
-                /* Offline — centred player, no chat */
-                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-                  <iframe
-                    key={`player-offline-${activeChannel}`}
-                    src={playerSrc}
-                    className="absolute inset-0 w-full h-full"
-                    allowFullScreen
-                    title={`${activeChannel}'s stream`}
-                  />
-                </div>
+                )
               )}
             </div>
           </div>
