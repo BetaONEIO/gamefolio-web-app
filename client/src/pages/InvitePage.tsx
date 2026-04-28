@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { SiTwitch, SiKick } from "react-icons/si";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
-import promoVideo from "@assets/promo_vid_gif_1777411534286.gif";
 
 const PRIMARY = "#b5f23d";
 const PRIMARY_DIM = "rgba(181,242,61,0.12)";
@@ -232,7 +231,7 @@ export default function InvitePage() {
             <div className="absolute -inset-6 rounded-full bg-[#B7FF1A]/10 blur-3xl" />
             <div className="relative rounded-3xl overflow-hidden border shadow-2xl" style={{ borderColor: CARD_BORDER, background: CARD_BG }}>
               <video
-                src={promoVideo}
+                src="/promo-hero.mp4"
                 autoPlay
                 loop
                 muted
