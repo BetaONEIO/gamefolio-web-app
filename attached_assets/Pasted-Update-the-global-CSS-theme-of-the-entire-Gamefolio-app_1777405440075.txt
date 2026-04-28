@@ -1,0 +1,168 @@
+Update the global CSS/theme of the entire Gamefolio app to match a modern dark gaming SaaS style with neon green accents and Space Grotesk font.
+
+Goal:
+Restyle the entire app UI (without changing layout or functionality) to feel premium, modern, and consistent with a dark gaming aesthetic.
+
+Font:
+Use Space Grotesk as the global font.
+
+Import it:
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap');
+
+Apply globally:
+body {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+If using Tailwind, update config:
+fontFamily: {
+  sans: ['Space Grotesk', 'sans-serif'],
+}
+
+Colour palette:
+
+Primary background:
+#03080A
+
+Secondary background:
+#071013
+
+Card background:
+#0B1218
+
+Elevated surface:
+#101923
+
+Border:
+#1B2A33
+
+Muted border:
+#22313A
+
+Primary accent (neon green):
+#B7FF1A
+
+Primary hover:
+#A2F000
+
+Primary dark:
+#6FA800
+
+Text primary:
+#F5F7F2
+
+Text secondary:
+#B8C0AE
+
+Text muted:
+#7E887A
+
+Button text:
+#071013
+
+CSS variables:
+
+:root {
+  --background: #03080A;
+  --background-soft: #071013;
+  --surface: #0B1218;
+  --surface-elevated: #101923;
+  --border: #1B2A33;
+  --border-muted: #22313A;
+
+  --primary: #B7FF1A;
+  --primary-hover: #A2F000;
+  --primary-dark: #6FA800;
+
+  --text-primary: #F5F7F2;
+  --text-secondary: #B8C0AE;
+  --text-muted: #7E887A;
+
+  --button-text: #071013;
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+
+  --shadow-soft: 0 20px 60px rgba(0, 0, 0, 0.35);
+  --shadow-glow: 0 0 30px rgba(183, 255, 26, 0.22);
+}
+
+Design instructions:
+
+- Replace all existing colours with this palette
+- Use dark backgrounds instead of light themes
+- Primary buttons should use neon green (#B7FF1A) with dark text
+- Add subtle glow to primary buttons and key CTAs
+- Cards should be dark with soft borders and rounded corners
+- Use border radius between 14px and 20px
+- Use soft shadows (no harsh drop shadows)
+- Add hover states:
+  - Buttons: slightly brighter green + glow
+  - Cards: subtle lift + border highlight
+- Add smooth transitions (0.2s–0.3s ease)
+
+Components to update:
+
+- Navbar
+- Sidebar
+- Buttons (primary, secondary, ghost)
+- Cards
+- Modals
+- Forms (inputs, selects, textareas)
+- Dropdowns
+- Tabs
+- Badges
+- Links
+- Tables (if any)
+
+Inputs:
+
+- Dark background (#0B1218)
+- Light text
+- Border: #1B2A33
+- Focus state: green glow outline
+
+Focus states:
+
+- Use neon green outline or glow for accessibility
+
+Background styling:
+
+Apply a subtle gradient and glow to the app background:
+
+background:
+radial-gradient(circle at 50% 20%, rgba(183, 255, 26, 0.10), transparent 35%),
+linear-gradient(180deg, #03080A 0%, #071013 100%);
+
+Buttons:
+
+Primary:
+- Background: #B7FF1A
+- Text: #071013
+- Hover: #A2F000
+- Add glow effect
+
+Secondary:
+- Dark background
+- Border outline
+- Light text
+
+Typography:
+
+- Use Space Grotesk for all text
+- Headings should be bold and clean
+- Increase letter spacing slightly for headings
+- Keep body text readable with good contrast
+
+Overall feel:
+
+- Premium
+- Clean
+- Gaming-focused
+- Minimal but bold
+- Similar to modern SaaS landing pages
+- Consistent across all pages
+
+Do not change layout or functionality.
+Only update styling and theme to match this design system.

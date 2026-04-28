@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&display=swap');
@@ -9,8 +10,8 @@
 
 /* Text selection highlight */
 ::selection {
-  background-color: #4ADE80;
-  color: white;
+  background-color: #B7FF1A;
+  color: #071013;
 }
 
 /* HIDE ALL TAB UNDERLINES ON MOBILE */
@@ -218,22 +219,22 @@ video:focus {
 
 /* Force ShareDialog custom styling to match Gamefolio theme */
 .gamefolio-share-dialog {
-  background-color: #101D27 !important;
-  border: 2px solid #374151 !important;
-  border-color: #374151 !important;
-  color: white !important;
+  background-color: #0B1218 !important;
+  border: 2px solid #1B2A33 !important;
+  border-color: #1B2A33 !important;
+  color: #F5F7F2 !important;
 }
 
 .gamefolio-share-input {
-  background-color: #101D27 !important;
-  border: 1px solid #374151 !important;
-  color: white !important;
+  background-color: #071013 !important;
+  border: 1px solid #1B2A33 !important;
+  color: #F5F7F2 !important;
 }
 
 /* Ensure all share dialogs use Gamefolio theme */
 .share-dialog-content {
-  background-color: #101D27 !important;
-  border-color: #374151 !important;
+  background-color: #0B1218 !important;
+  border-color: #1B2A33 !important;
 }
 
 /* Profile-scoped theme variables - STRICTLY isolated to profile pages only */
@@ -255,13 +256,13 @@ video:focus {
 .clip-dialog-content {
   /* Apply global Gamefolio theme variables */
   --profile-accent-color: #6B7280 !important;
-  --profile-primary-color: #101D27 !important;
+  --profile-primary-color: #0B1218 !important;
   --profile-avatar-border-color: #6B7280 !important;
   --profile-accent-color-alpha: rgba(107, 114, 128, 0.2) !important;
-  
-  background-color: #101D27 !important;
-  border-color: #374151 !important;
-  color: white !important;
+
+  background-color: #0B1218 !important;
+  border-color: #1B2A33 !important;
+  color: #F5F7F2 !important;
 }
 
 /* Comment backgrounds - transparent to show theme-aware background */
@@ -301,46 +302,46 @@ video:focus {
 }
 
 :root {
-  /* Global Gamefolio theme - Dark background with green accents */
-  --background: 210 38% 12%;  /* Background - #101D27 */
-  --foreground: 0 0% 98%;
-  
+  /* Global Gamefolio theme - Dark gaming SaaS style with neon green accents */
+  --background: 196 56% 3%;      /* #03080A */
+  --foreground: 84 24% 96%;      /* #F5F7F2 */
+
   /* Card */
-  --card: 210 38% 12%;  /* Same as background - #101D27 */
-  --card-foreground: 0 0% 98%;
-  
+  --card: 210 37% 7%;            /* #0B1218 */
+  --card-foreground: 84 24% 96%; /* #F5F7F2 */
+
   /* Popover */
-  --popover: 210 38% 12%;  /* Dark background - #101D27 */
-  --popover-foreground: 0 0% 98%;
-  
-  /* Primary - Green accent */
-  --primary: 145 80% 66%;  /* Green accent - #4ADE80 */
-  --primary-foreground: 0 0% 10%;
-  
+  --popover: 210 37% 7%;         /* #0B1218 */
+  --popover-foreground: 84 24% 96%;
+
+  /* Primary - Neon green accent */
+  --primary: 79 100% 55%;        /* #B7FF1A */
+  --primary-foreground: 192 47% 5%; /* #071013 */
+
   /* Secondary */
-  --secondary: 210 38% 15%;  /* Slightly lighter than background */
-  --secondary-foreground: 0 0% 98%;
-  
+  --secondary: 210 37% 10%;      /* #101923 */
+  --secondary-foreground: 84 24% 96%;
+
   /* Muted */
-  --muted: 210 38% 18%;  /* Muted background */
-  --muted-foreground: 215 5% 65%;
-  
-  /* Accent - Green */
-  --accent: 145 80% 66%;  /* Green accent - #4ADE80 */
-  --accent-foreground: 0 0% 10%;
-  
+  --muted: 201 31% 15%;          /* #1B2A33 */
+  --muted-foreground: 90 5% 51%; /* #7E887A */
+
+  /* Accent - Neon green */
+  --accent: 79 100% 55%;         /* #B7FF1A */
+  --accent-foreground: 192 47% 5%;
+
   /* Destructive */
   --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 98%;
-  
+  --destructive-foreground: 84 24% 96%;
+
   /* Border */
-  --border: 210 38% 20%;  /* Dark border matching theme */
-  --input: 210 38% 20%;   /* Dark input background */
-  --ring: 145 80% 66%;    /* Green focus ring */
-  
-  /* Radius */
-  --radius: 0.5rem;
-  
+  --border: 201 31% 15%;         /* #1B2A33 */
+  --input: 210 37% 7%;           /* #0B1218 */
+  --ring: 79 100% 55%;           /* #B7FF1A */
+
+  /* Radius - premium rounded feel */
+  --radius: 0.875rem;
+
   /* Sidebar */
   --sidebar-background: var(--background);
   --sidebar-foreground: var(--foreground);
@@ -350,13 +351,30 @@ video:focus {
   --sidebar-accent-foreground: var(--accent-foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
-  
+
   /* Charts */
-  --chart-1: 145 80% 66%;  /* Green (primary) */
-  --chart-2: 196 100% 42%; /* Blue */
-  --chart-3: 32 94% 50%;   /* Yellow */
-  --chart-4: 330 81% 55%;  /* Pink */
-  --chart-5: 214 100% 55%; /* Blue */
+  --chart-1: 79 100% 55%;   /* Neon green */
+  --chart-2: 196 100% 42%;  /* Blue */
+  --chart-3: 32 94% 50%;    /* Yellow */
+  --chart-4: 330 81% 55%;   /* Pink */
+  --chart-5: 214 100% 55%;  /* Blue */
+
+  /* Design system hex tokens */
+  --ds-bg:           #03080A;
+  --ds-bg-soft:      #071013;
+  --ds-surface:      #0B1218;
+  --ds-surface-el:   #101923;
+  --ds-border:       #1B2A33;
+  --ds-border-muted: #22313A;
+  --ds-primary:      #B7FF1A;
+  --ds-primary-hov:  #A2F000;
+  --ds-primary-dark: #6FA800;
+  --ds-text:         #F5F7F2;
+  --ds-text-sec:     #B8C0AE;
+  --ds-text-muted:   #7E887A;
+  --ds-btn-text:     #071013;
+  --ds-shadow-soft:  0 20px 60px rgba(0,0,0,0.35);
+  --ds-shadow-glow:  0 0 30px rgba(183,255,26,0.22);
 }
 
 
@@ -375,7 +393,9 @@ video:focus {
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
-    background-color: #101D27 !important; /* Force Gamefolio dark background globally */
+    font-family: 'Space Grotesk', sans-serif;
+    background-color: #03080A !important;
+    background-image: radial-gradient(circle at 50% 0%, rgba(183,255,26,0.07), transparent 40%) !important;
   }
 
   /* Prevent iOS auto-zoom on input focus (triggers when font-size < 16px) */
@@ -384,14 +404,28 @@ video:focus {
   textarea {
     font-size: max(16px, 1rem);
   }
-  
+
+  /* Input focus glow */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(183,255,26,0.35);
+    border-color: rgba(183,255,26,0.5) !important;
+  }
+
+  /* Smooth transitions across interactive elements */
+  button, a, [role="button"] {
+    transition: all 0.2s ease;
+  }
+
   /* Ensure all dialogs and modals use Gamefolio theme */
   [data-radix-popper-content-wrapper],
   [role="dialog"],
   .dialog-content {
-    background-color: #101D27 !important;
-    border-color: hsl(var(--primary)) !important;
-    color: white !important;
+    background-color: #0B1218 !important;
+    border-color: #1B2A33 !important;
+    color: #F5F7F2 !important;
   }
 }
 
@@ -773,4 +807,56 @@ video:focus {
 .animate-font-swing {
   animation: font-swing 2s ease-in-out infinite;
   display: inline-block;
+}
+
+/* === Global Gamefolio Design System Component Styles === */
+
+/* Primary button — neon green with dark text and glow on hover */
+button[class*="bg-primary"],
+.btn-primary {
+  background-color: var(--ds-primary) !important;
+  color: var(--ds-btn-text) !important;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+button[class*="bg-primary"]:hover,
+.btn-primary:hover {
+  background-color: var(--ds-primary-hov) !important;
+  box-shadow: var(--ds-shadow-glow);
+}
+
+/* Card base — surface elevation + border */
+.card-base {
+  background-color: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--radius);
+  box-shadow: var(--ds-shadow-soft);
+}
+.card-base:hover {
+  border-color: var(--ds-border-muted);
+  box-shadow: var(--ds-shadow-soft), var(--ds-shadow-glow);
+  transform: translateY(-1px);
+}
+
+/* Heading hierarchy */
+h1, h2, h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--ds-text);
+}
+
+/* Neon green text helper */
+.text-neon {
+  color: var(--ds-primary);
+}
+
+/* Subtle neon glow on primary-coloured elements */
+.glow-primary {
+  box-shadow: var(--ds-shadow-glow);
+}
+
+/* Primary border highlight */
+.border-primary-glow {
+  border-color: rgba(183,255,26,0.4);
+  box-shadow: 0 0 12px rgba(183,255,26,0.15);
 }
