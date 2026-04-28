@@ -112,7 +112,7 @@ function UsernameChecker() {
   };
 
   return (
-    <div id="username-checker" className="flex flex-col items-center gap-3 w-full text-center">
+    <div className="flex flex-col items-center gap-3 w-full text-center">
       <p className="text-xs font-bold tracking-widest uppercase" style={{ color: PRIMARY }}>Identity</p>
       <h2 className="text-3xl md:text-4xl font-extrabold text-white leading-tight">Choose your alias</h2>
 
@@ -124,7 +124,7 @@ function UsernameChecker() {
           <AtSign className="h-4 w-4 flex-shrink-0" style={{ color: PRIMARY }} />
           <input
             type="text"
-            placeholder="GamerTag"
+            placeholder="username"
             value={value}
             onChange={e => handleChange(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
             maxLength={24}
@@ -153,6 +153,10 @@ function UsernameChecker() {
       {status === "idle" && (
         <p className="text-gray-500 text-xs">Enter a username to see if it's available before you register.</p>
       )}
+
+      <p className="text-gray-500 text-xs font-mono mt-1">
+        gamefolio.gg/<span style={{ color: PRIMARY }}>{value || "yourusername"}</span>
+      </p>
     </div>
   );
 }
@@ -295,26 +299,20 @@ export default function InvitePage() {
       </section>
 
       {/* Username checker */}
-      <section className="px-6 py-20 relative overflow-hidden">
+      <section id="username-checker" className="px-6 py-20 relative overflow-hidden">
         <GlowDot top="50%" left="50%" size={500} opacity={0.07} />
         <div className="relative z-10 max-w-2xl mx-auto flex flex-col items-center gap-10">
           <UsernameChecker />
 
-          {/* Info cards — centred below the checker */}
-          <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="rounded-2xl p-5 flex flex-col gap-2 text-center" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-              <p className="text-gray-400 text-xs">Profile URL</p>
-              <p className="text-white font-mono text-sm">gamefolio.gg/<span style={{ color: PRIMARY }}>yourusername</span></p>
-            </div>
-            <div className="rounded-2xl p-5 flex flex-col gap-2" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-              <p className="text-gray-400 text-xs text-center">What you get</p>
-              <div className="flex flex-col gap-1.5 items-center">
-                {["Your own public profile", "Clip gallery", "Stream integration", "Community exposure"].map(i => (
-                  <div key={i} className="flex items-center gap-2 text-gray-300 text-xs">
-                    <span style={{ color: PRIMARY }}>✓</span> {i}
-                  </div>
-                ))}
-              </div>
+          {/* What you get — centred below the checker */}
+          <div className="rounded-2xl p-5 flex flex-col gap-2 w-full max-w-sm" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+            <p className="text-gray-400 text-xs text-center">What you get</p>
+            <div className="flex flex-col gap-1.5 items-center">
+              {["Your own public profile", "Clip gallery", "Stream integration", "Community exposure"].map(i => (
+                <div key={i} className="flex items-center gap-2 text-gray-300 text-xs">
+                  <span style={{ color: PRIMARY }}>✓</span> {i}
+                </div>
+              ))}
             </div>
           </div>
         </div>
