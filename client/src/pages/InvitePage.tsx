@@ -232,15 +232,13 @@ export default function InvitePage() {
             <div
               className="absolute rounded-3xl"
               style={{
-                background: "linear-gradient(135deg, #B7FF1A 0%, #7ec800 60%, #4a8a00 100%)",
+                background: "#B7FF1A",
                 width: "88%",
                 height: "92%",
                 bottom: "-18px",
                 right: "-22px",
-                transform: "rotate(3.5deg) skewX(-1deg)",
                 zIndex: 0,
                 opacity: 0.92,
-                filter: "blur(0px)",
                 boxShadow: "0 0 60px 8px rgba(183,255,26,0.25), 0 20px 60px rgba(0,0,0,0.5)",
               }}
             />
@@ -253,7 +251,6 @@ export default function InvitePage() {
                 height: "30%",
                 top: "-12px",
                 right: "-14px",
-                transform: "rotate(-5deg)",
                 zIndex: 0,
                 opacity: 0.18,
                 filter: "blur(2px)",
