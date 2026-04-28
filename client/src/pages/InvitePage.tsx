@@ -258,7 +258,7 @@ export default function InvitePage() {
             />
             <div className="relative rounded-3xl overflow-hidden border shadow-2xl" style={{ borderColor: "rgba(183,255,26,0.25)", background: CARD_BG, zIndex: 1 }}>
               <video
-                src="/promo-hero.mp4"
+                src="@assets/promo_vid_gif_1777411534286.gif"
                 autoPlay
                 loop
                 muted
