@@ -94,6 +94,7 @@ const MessagesPage = React.lazy(() => import("./pages/MessagesPage"));
 const LatestReelsPage = React.lazy(() => import("./pages/LatestReelsPage"));
 const LatestClipsPage = React.lazy(() => import("./pages/LatestClipsPage"));
 const LatestScreenshotsPage = React.lazy(() => import("@/pages/LatestScreenshotsPage"));
+const InvitePage = React.lazy(() => import("./pages/InvitePage"));
 const NotFound = React.lazy(() => import("@/pages/not-found"));
 const AdminPage = React.lazy(() => import("./pages/AdminPage"));
 const AdminContentFilter = React.lazy(() => import("./pages/AdminContentFilter"));
@@ -223,7 +224,8 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                            location.startsWith("/verify-code") ||
                            location.startsWith("/embed/") ||
                            location.startsWith("/leaderboard/embed") ||
-                           location.startsWith("/view/");
+                           location.startsWith("/view/") ||
+                           location === "/invite";
 
   if (isAuthOrOnboarding) {
     return <>{children}</>;
@@ -365,6 +367,7 @@ function Router() {
           <Route path="/privacy" component={PrivacyPage} />
           <Route path="/contact" component={ContactPage} />
           <Route path="/help" component={HelpPage} />
+          <Route path="/invite" component={InvitePage} />
           <Route path="/store" component={StorePage} />
           <Route path="/mint-nft" component={MintNFTPage} />
           <Route path="/nft/:id" component={NFTDetailsPage} />

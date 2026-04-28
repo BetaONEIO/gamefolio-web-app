@@ -1,0 +1,160 @@
+Create a responsive one-page invite landing page for Gamefolio.
+
+Goal:
+Get streamers and gamers to register for the Gamefolio web app.
+
+Main focus:
+The main pull is the web app. Users should want to:
+1. Secure their username
+2. Upload gaming clips
+3. Connect their Twitch or Kick stream
+4. Build their gaming profile
+5. Get exposure
+
+Style:
+Dark gaming-style design, modern, clean, minimal, high-converting. Use a bold hero section, short benefit cards, clear CTA buttons, and mobile-first responsive layout.
+
+Use React with Tailwind CSS.
+
+Hero section:
+
+Headline:
+Build your gaming profile. Get seen.
+
+Subtitle:
+Gamefolio is a new web app for gamers and streamers to upload clips, connect their Twitch or Kick stream, and grow their audience.
+
+Primary CTA button:
+Secure your username
+
+Primary CTA link:
+/register
+
+Secondary CTA button:
+Upload your first clip
+
+Secondary CTA link:
+/upload
+
+Small trust/urgency line:
+We just launched. Early users get first pick of usernames and more visibility while the platform grows.
+
+Benefits section:
+
+Section title:
+What you can do on Gamefolio
+
+Benefit card 1:
+Title: Upload your clips
+Text: Keep your best gaming moments in one place and never lose them in group chats again.
+
+Benefit card 2:
+Title: Connect your stream
+Text: Connect Twitch or Kick so your live stream can appear on your Gamefolio profile.
+
+Benefit card 3:
+Title: Get exposure
+Text: Share your content with us and we may feature your clips on our social channels.
+
+Benefit card 4:
+Title: Own your profile
+Text: Create a profile that shows who you are as a gamer, streamer, or creator.
+
+Problem section:
+
+Title:
+Streaming to 1 or 2 viewers?
+
+Text:
+You’re not the problem. Discovery is. Gamefolio is being built to help smaller streamers and gamers get seen.
+
+CTA button:
+Create your free account
+
+CTA link:
+/register
+
+Early access section:
+
+Title:
+We’ve just launched
+
+Text:
+Secure your username, start building your profile, upload your clips, and be part of Gamefolio from the beginning.
+
+Include 3 short points:
+- First pick of usernames
+- More visibility while the platform grows
+- Help shape what we build next
+
+Gamefolio Pro section:
+
+Place this section near the bottom of the page. It should be visually highlighted with a subtle glow, gradient border, or premium card style, but it should not overpower the main free signup CTA.
+
+Section title:
+Want to grow faster?
+
+Subtitle:
+Upgrade to Gamefolio Pro and take your content further.
+
+Pro benefit card 1:
+Title: More exposure
+Text: Priority opportunities to have your clips featured on Gamefolio social channels.
+
+Pro benefit card 2:
+Title: Advanced clip tools
+Text: More control over how you upload, organise, and showcase your gaming content.
+
+Pro benefit card 3:
+Title: Profile customisation
+Text: Unlock extra ways to customise your Gamefolio profile and stand out.
+
+Pro benefit card 4:
+Title: Built for serious streamers
+Text: Extra features designed for streamers who want to grow their audience.
+
+Pricing text:
+Gamefolio Pro
+
+Price:
+Free during early access
+
+Small text:
+Start free. Upgrade anytime.
+
+CTA button:
+Start free
+
+CTA link:
+/register
+
+Final CTA section:
+
+Title:
+Start building your Gamefolio today
+
+Text:
+Upload your clips. Connect your stream. Secure your username before someone else does.
+
+CTA button:
+Create your free account
+
+CTA link:
+/register
+
+Footer text:
+Gamefolio helps gamers, streamers, and creators get seen.
+
+Design requirements:
+- Mobile-first responsive design
+- Dark background
+- Subtle gaming-style glow effects
+- Modern SaaS landing page feel
+- Rounded cards
+- Clear spacing
+- Strong visual hierarchy
+- Short punchy copy
+- Use icons if available
+- Add hover states to buttons and cards
+- Make CTA buttons stand out
+- Keep everything on one page
