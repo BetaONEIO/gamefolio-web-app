@@ -56,7 +56,6 @@ import {
   SiPlaystation,
   SiDiscord,
   SiEpicgames,
-  SiNintendo
 } from "react-icons/si";
 import { FaXbox, FaPlaystation, FaYoutube, FaInstagram, FaFacebook } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
@@ -2975,7 +2974,7 @@ const ProfilePage = () => {
             )}
             {profile.nintendoUsername && (
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('nintendo')}>
-                <SiNintendo className="w-2.5 h-2.5" />
+                <Gamepad2 className="w-2.5 h-2.5" />
                 <span>{profile.nintendoUsername}</span>
               </div>
             )}
@@ -3311,7 +3310,7 @@ const ProfilePage = () => {
                 )}
                 {profile.nintendoUsername && (
                   <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('nintendo')}>
-                    <SiNintendo className="w-3 h-3" />
+                    <Gamepad2 className="w-3 h-3" />
                     <span>{profile.nintendoUsername}</span>
                   </div>
                 )}

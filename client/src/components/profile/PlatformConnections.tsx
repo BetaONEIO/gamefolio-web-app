@@ -8,7 +8,8 @@ import {
 } from '@/components/ui/tooltip';
 import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord, FaInstagram, FaFacebook } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
-import { SiEpicgames, SiNintendo } from 'react-icons/si';
+import { SiEpicgames } from 'react-icons/si';
+import { Gamepad2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PlatformConnectionsProps {
@@ -60,7 +61,7 @@ const PlatformConnections: React.FC<PlatformConnectionsProps> = ({
     {
       name: 'Nintendo',
       username: profile.nintendoUsername,
-      icon: <SiNintendo className="w-5 h-5" />,
+      icon: <Gamepad2 className="w-5 h-5" />,
       url: (username: string) => `https://nintendo.com/`,
       color: 'text-[#E60012] hover:opacity-80'
     },

@@ -31,7 +31,7 @@ import { connectXboxAccount, isXboxConfigValid } from '@/lib/xbox';
 import { useTheme } from '@/hooks/use-theme';
 import { FaXTwitter } from 'react-icons/fa6';
 import gamefolioLogo from '@assets/gamefolio social logo 3d circle web.png';
-import { SiEpicgames, SiNintendo, SiTwitch, SiKick } from 'react-icons/si';
+import { SiEpicgames, SiTwitch, SiKick } from 'react-icons/si';
 import Cropper from "react-easy-crop";
 import NftProfilePopup from "@/components/nft/NftProfilePopup";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -462,7 +462,7 @@ export default function SettingsPage() {
       case 'playstation': return <FaPlaystation className="w-5 h-5 text-[#003791]" />;
       case 'discord': return <FaDiscord className="w-5 h-5 text-[#7289DA]" />;
       case 'epic': return <SiEpicgames className="w-5 h-5 text-slate-300" />;
-      case 'nintendo': return <SiNintendo className="w-5 h-5 text-[#E60012]" />;
+      case 'nintendo': return <Gamepad2 className="w-5 h-5 text-[#E60012]" />;
       case 'twitter': return <FaXTwitter className="w-5 h-5 text-white" />;
       case 'youtube': return <FaYoutube className="w-5 h-5 text-[#FF0000]" />;
       case 'rumble': return <FaYoutube className="w-5 h-5 text-[#05a34a]" />;
