@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { SiTwitch, SiKick } from "react-icons/si";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
+import promoVideo from "@assets/promo_vid_gif_1777411534286.gif";
 
 const PRIMARY = "#b5f23d";
 const PRIMARY_DIM = "rgba(181,242,61,0.12)";
@@ -185,45 +186,61 @@ export default function InvitePage() {
       </nav>
 
       {/* Hero */}
-      <section className="relative flex flex-col items-center justify-center text-center px-6 pt-40 pb-28 overflow-hidden">
+      <section className="relative px-6 pt-40 pb-28 overflow-hidden">
         <GlowDot top="30%" left="50%" size={600} opacity={0.07} />
         <GlowDot top="10%" left="20%" size={300} opacity={0.05} />
         <GlowDot top="60%" left="80%" size={250} opacity={0.05} />
 
-        <div className="relative z-10 max-w-3xl mx-auto flex flex-col items-center gap-6">
-          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold" style={{ background: PRIMARY_DIM, color: PRIMARY, border: `1px solid rgba(181,242,61,0.3)` }}>
-            <Zap className="h-3 w-3" /> Just launched — early users get first pick of usernames
+        <div className="relative z-10 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="flex flex-col items-start gap-6 text-left max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold" style={{ background: PRIMARY_DIM, color: PRIMARY, border: `1px solid rgba(181,242,61,0.3)` }}>
+              <Zap className="h-3 w-3" /> Just launched — early users get first pick of usernames
+            </div>
+
+            <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold leading-[1.05] tracking-tight">
+              Build your gaming<br />
+              <span style={{ color: PRIMARY }}>profile.</span> Get seen.
+            </h1>
+
+            <p className="text-gray-400 text-lg md:text-xl max-w-xl leading-relaxed">
+              Gamefolio is a new web app for gamers and streamers to upload clips, connect their Twitch or Kick stream, and grow their audience.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto mt-2">
+              <button
+                onClick={() => smoothScroll("username-checker")}
+                className="rounded-2xl px-8 py-4 font-bold text-base transition-all hover:brightness-110 active:scale-95"
+                style={{ background: PRIMARY, color: "#080e17" }}
+              >
+                Secure your username
+              </button>
+              <button
+                onClick={() => setLocation("/upload")}
+                className="rounded-2xl px-8 py-4 font-bold text-base border transition-all hover:bg-white/5"
+                style={{ borderColor: CARD_BORDER, color: "white" }}
+              >
+                Upload your first clip
+              </button>
+            </div>
+
+            <p className="text-gray-500 text-sm max-w-sm">
+              We just launched. Early users get first pick of usernames and more visibility while the platform grows.
+            </p>
           </div>
 
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold leading-[1.05] tracking-tight">
-            Build your gaming<br />
-            <span style={{ color: PRIMARY }}>profile.</span> Get seen.
-          </h1>
-
-          <p className="text-gray-400 text-lg md:text-xl max-w-xl leading-relaxed">
-            Gamefolio is a new web app for gamers and streamers to upload clips, connect their Twitch or Kick stream, and grow their audience.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto mt-2">
-            <button
-              onClick={() => smoothScroll("username-checker")}
-              className="rounded-2xl px-8 py-4 font-bold text-base transition-all hover:brightness-110 active:scale-95"
-              style={{ background: PRIMARY, color: "#080e17" }}
-            >
-              Secure your username
-            </button>
-            <button
-              onClick={() => setLocation("/upload")}
-              className="rounded-2xl px-8 py-4 font-bold text-base border transition-all hover:bg-white/5"
-              style={{ borderColor: CARD_BORDER, color: "white" }}
-            >
-              Upload your first clip
-            </button>
+          <div className="relative w-full">
+            <div className="absolute -inset-6 rounded-full bg-[#B7FF1A]/10 blur-3xl" />
+            <div className="relative rounded-3xl overflow-hidden border shadow-2xl" style={{ borderColor: CARD_BORDER, background: CARD_BG }}>
+              <video
+                src={promoVideo}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-[380px] md:h-[500px] object-cover"
+              />
+            </div>
           </div>
-
-          <p className="text-gray-500 text-sm max-w-sm">
-            We just launched. Early users get first pick of usernames and more visibility while the platform grows.
-          </p>
         </div>
       </section>
 
