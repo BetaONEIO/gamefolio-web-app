@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   ArrowRight,
   Zap,
+  Sparkles,
   AtSign,
   Loader2,
   Check,
@@ -239,7 +240,6 @@ export default function InvitePage() {
                 right: "-22px",
                 zIndex: 0,
                 opacity: 0.92,
-                boxShadow: "0 0 60px 8px rgba(183,255,26,0.25), 0 20px 60px rgba(0,0,0,0.5)",
               }}
             />
             {/* Secondary smaller accent shard */}
@@ -256,6 +256,9 @@ export default function InvitePage() {
                 filter: "blur(2px)",
               }}
             />
+            <div className="absolute left-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-[#B7FF1A]/40 bg-[#0B1218]/80 shadow-[0_0_18px_rgba(183,255,26,0.35)]">
+              <Sparkles className="h-5 w-5 text-[#B7FF1A]" />
+            </div>
             <div className="relative rounded-3xl overflow-hidden border shadow-2xl" style={{ borderColor: "rgba(183,255,26,0.25)", background: CARD_BG, zIndex: 1 }}>
               <video
                 src="@assets/promo_vid_gif_1777411534286.gif"
