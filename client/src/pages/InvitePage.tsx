@@ -112,11 +112,11 @@ function UsernameChecker() {
   };
 
   return (
-    <div id="username-checker" className="flex flex-col gap-3 w-full max-w-lg">
+    <div id="username-checker" className="flex flex-col items-center gap-3 w-full text-center">
       <p className="text-xs font-bold tracking-widest uppercase" style={{ color: PRIMARY }}>Identity</p>
       <h2 className="text-3xl md:text-4xl font-extrabold text-white leading-tight">Choose your alias</h2>
 
-      <div className="mt-2 flex flex-col sm:flex-row gap-3">
+      <div className="mt-2 flex flex-col sm:flex-row gap-3 w-full max-w-lg">
         <div
           className="flex items-center flex-1 rounded-xl px-4 py-3 gap-2"
           style={{ background: "#111c29", border: `1.5px solid ${CARD_BORDER}` }}
@@ -296,19 +296,19 @@ export default function InvitePage() {
 
       {/* Username checker */}
       <section className="px-6 py-20 relative overflow-hidden">
-        <GlowDot top="50%" left="30%" size={400} opacity={0.07} />
-        <div className="relative z-10 max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-12">
-          <div className="flex-1">
-            <UsernameChecker />
-          </div>
-          <div className="flex-1 hidden md:flex flex-col gap-4">
-            <div className="rounded-2xl p-5 flex flex-col gap-2" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+        <GlowDot top="50%" left="50%" size={500} opacity={0.07} />
+        <div className="relative z-10 max-w-2xl mx-auto flex flex-col items-center gap-10">
+          <UsernameChecker />
+
+          {/* Info cards — centred below the checker */}
+          <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="rounded-2xl p-5 flex flex-col gap-2 text-center" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
               <p className="text-gray-400 text-xs">Profile URL</p>
               <p className="text-white font-mono text-sm">gamefolio.gg/<span style={{ color: PRIMARY }}>yourusername</span></p>
             </div>
             <div className="rounded-2xl p-5 flex flex-col gap-2" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-              <p className="text-gray-400 text-xs">What you get</p>
-              <div className="flex flex-col gap-1.5">
+              <p className="text-gray-400 text-xs text-center">What you get</p>
+              <div className="flex flex-col gap-1.5 items-center">
                 {["Your own public profile", "Clip gallery", "Stream integration", "Community exposure"].map(i => (
                   <div key={i} className="flex items-center gap-2 text-gray-300 text-xs">
                     <span style={{ color: PRIMARY }}>✓</span> {i}
