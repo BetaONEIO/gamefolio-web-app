@@ -43,7 +43,7 @@ export function ActivityScrollBanner() {
   const duplicatedUploads = [...recentUploads, ...recentUploads];
 
   return (
-    <div className="bg-green-500 border-b border-green-600 overflow-hidden py-2">
+    <div className="bg-[#B7FF1A] border-b border-[#A2F000] overflow-hidden py-2">
       <div
         ref={scrollRef}
         className="flex gap-8 whitespace-nowrap overflow-hidden"

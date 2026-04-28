@@ -725,7 +725,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           {signedGameIconUrl && (
                             <img src={signedGameIconUrl} alt="" loading="lazy" className="w-4 h-4 rounded" />
                           )}
-                          <span className="text-green-400 text-sm font-medium drop-shadow-lg">
+                          <span className="text-[#B7FF1A] text-sm font-medium drop-shadow-lg">
                             {clip.game.name}
                           </span>
                         </div>

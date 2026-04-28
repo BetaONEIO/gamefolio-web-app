@@ -114,7 +114,7 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
           {clip.title}
         </h3>
         <Link href={`/profile/${clip.user.username}`} onClick={(e) => e.stopPropagation()}>
-          <p className={`text-white/80 hover:text-white transition-colors cursor-pointer ${compact ? 'text-xs' : 'text-sm'}`}>
+          <p className={`text-[#B7FF1A] hover:text-[#A2F000] transition-colors cursor-pointer font-medium ${compact ? 'text-xs' : 'text-sm'}`}>
             @{clip.user.username}
           </p>
         </Link>
@@ -123,7 +123,7 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
           <Link 
             href={`/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
             onClick={(e) => e.stopPropagation()}
-            className={`inline-block mt-1 bg-green-600 text-white rounded font-bold hover:bg-green-500 transition-all duration-300 ${
+            className={`inline-block mt-1 bg-[#B7FF1A] text-[#071013] rounded font-bold hover:bg-[#A2F000] transition-all duration-300 ${
               isReel ? 'text-[8px] px-1 py-0.5 md:text-[9px] md:px-1.5' : compact ? 'text-[9px] px-1.5 py-0.5 md:text-[10px] md:px-2' : 'text-[10px] px-1.5 py-0.5 md:text-xs md:px-2 md:py-1'
             }`}
           >
