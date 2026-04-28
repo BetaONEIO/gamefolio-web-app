@@ -393,8 +393,25 @@ const HomePage = () => {
   
   const isLoadingClips = isLoadingLatestClips || isLoadingLatestReels;
 
-  // Use filtered clips for the main display
-  const topClips = filteredClips;
+  // Apply game filter to latestClips for the "Latest Clips" section (same order as dedicated page)
+  const filteredLatestClips = useMemo(() => {
+    if (!latestClips.length) return [];
+    if (selectedGameFilter && selectedGameFilter !== 'all') {
+      return latestClips.filter(clip => {
+        const gameName = clip.game?.name || '';
+        const gameSlug = gameName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        return gameSlug.includes(selectedGameFilter) ||
+               selectedGameFilter.includes(gameSlug) ||
+               (selectedGameFilter === 'minecraft' &&
+                (gameName.toLowerCase().includes('minecraft') ||
+                 clip.gameId === 7 || clip.gameId === 6252));
+      });
+    }
+    return latestClips;
+  }, [latestClips, selectedGameFilter]);
+
+  // Use filtered latest clips for the main display (newest first, same as dedicated page)
+  const topClips = filteredLatestClips;
 
   // Get trending games from Twitch API (same as explore page)
   const { 
