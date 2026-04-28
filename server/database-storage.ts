@@ -993,7 +993,11 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .groupBy(clips.id)
-      .orderBy(sql`engagement desc`, desc(clips.createdAt), desc(clips.id))
+      .orderBy(
+        period === 'recent' ? desc(clips.createdAt) : sql`engagement desc`,
+        desc(clips.createdAt),
+        desc(clips.id)
+      )
       .limit(limit);
 
     const engagementResults = await clipEngagementQuery;
@@ -1088,7 +1092,11 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .groupBy(clips.id, users.id, games.id)
-      .orderBy(sql`engagement desc`, desc(clips.createdAt), desc(clips.id))
+      .orderBy(
+        period === 'recent' ? desc(clips.createdAt) : sql`engagement desc`,
+        desc(clips.createdAt),
+        desc(clips.id)
+      )
       .limit(limit);
 
     const results = await reelEngagementQuery;
