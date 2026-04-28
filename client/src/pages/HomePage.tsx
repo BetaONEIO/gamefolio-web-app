@@ -319,12 +319,42 @@ const HomePage = () => {
     };
   }, []);
 
-  // Query all clips to show in latest clips section
+  // Query all clips (used for screenshots and popular clips sections)
   const { data: userClips, isLoading: isLoadingUserClips } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/clips`, Date.now()], // Force new query every time
     staleTime: 0,
     gcTime: 0, // Don't cache at all
   });
+
+  // Latest clips — same endpoint as dedicated Latest Clips page, sorted newest first
+  const { data: latestClipsRaw, isLoading: isLoadingLatestClips } = useQuery<ClipWithUser[]>({
+    queryKey: ['/api/clips/trending', 'recent'],
+    queryFn: async () => {
+      const response = await fetch('/api/clips/trending?period=recent&limit=20', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch latest clips');
+      return response.json();
+    },
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  // Latest reels — same endpoint as dedicated Latest Reels page, sorted newest first
+  const { data: latestReelsRaw, isLoading: isLoadingLatestReels } = useQuery<ClipWithUser[]>({
+    queryKey: ['/api/reels/trending', 'recent'],
+    queryFn: async () => {
+      const response = await fetch('/api/reels/trending?period=recent&limit=20', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch latest reels');
+      return response.json();
+    },
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  // Latest clips (already sorted newest first by the backend)
+  const latestClips = latestClipsRaw ?? [];
+
+  // Latest reels (already sorted newest first by the backend)
+  const latestReels = latestReelsRaw ?? [];
   
   // Filter user clips by game name instead of ID
   const filteredClips = useMemo(() => {
@@ -352,21 +382,7 @@ const HomePage = () => {
     
     return userClips;
   }, [userClips, selectedGameFilter]);
-  
-  // Process user clips for different sections
-  const latestClips = useMemo(() => {
-    if (!userClips) {
-      return [];
-    }
-    // Sort by newest first, handle null dates
-    const sorted = [...userClips].sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA;
-    }).slice(0, 20); // Increase to 20 clips to have more content
-    return sorted;
-  }, [userClips]);
-  
+
   const popularClips = useMemo(() => {
     if (!userClips) return [];
     // Sort by most views
@@ -375,7 +391,7 @@ const HomePage = () => {
     ).slice(0, 4);
   }, [userClips]);
   
-  const isLoadingClips = isLoadingUserClips;
+  const isLoadingClips = isLoadingLatestClips || isLoadingLatestReels;
 
   // Use filtered clips for the main display
   const topClips = filteredClips;
@@ -574,7 +590,7 @@ const HomePage = () => {
 
           {/* Reels Tab Content */}
           <TabsContent value="reels" className="space-y-6" data-content-tab="reels">
-            {isLoadingClips ? (
+            {isLoadingLatestReels ? (
               <div className={isMobile ? "columns-2 gap-1" : "grid grid-cols-4 gap-4"}>
                 {Array(8).fill(0).map((_, i) => (
                   <div key={`reels-skeleton-${i}`} className={isMobile ? "break-inside-avoid mb-1 aspect-[9/16]" : "aspect-[9/16]"}>
@@ -582,18 +598,18 @@ const HomePage = () => {
                   </div>
                 ))}
               </div>
-            ) : latestClips?.filter(clip => clip.videoType === 'reel').length > 0 ? (
+            ) : latestReels.length > 0 ? (
               isMobile ? (
                 // Mobile: Masonry grid with 2 columns
                 <div className="columns-2 gap-1">
-                  {latestClips.filter(clip => clip.videoType === 'reel').map((reel, index) => {
+                  {latestReels.map((reel, index) => {
                     const aspectRatios = ['aspect-[9/14]', 'aspect-[9/16]', 'aspect-[9/18]'];
                     const aspectRatio = aspectRatios[index % aspectRatios.length];
 
                     return (
                       <div 
                         key={`reel-${reel.id}`}
-                        onClick={() => openClipDialog(reel.id, latestClips.filter(c => c.videoType === 'reel'))}
+                        onClick={() => openClipDialog(reel.id, latestReels)}
                         className="break-inside-avoid mb-1"
                       >
                         <div className={`relative ${aspectRatio} w-full rounded-sm overflow-hidden cursor-pointer group`}>
@@ -653,10 +669,10 @@ const HomePage = () => {
               ) : (
                 // Desktop: Grid with 4 columns
                 <div className="grid grid-cols-4 gap-4 w-full">
-                  {latestClips.filter(clip => clip.videoType === 'reel').map((reel) => (
+                  {latestReels.map((reel) => (
                     <div 
                       key={`reel-${reel.id}`}
-                      onClick={() => openClipDialog(reel.id, latestClips.filter(c => c.videoType === 'reel'))}
+                      onClick={() => openClipDialog(reel.id, latestReels)}
                       className="group relative bg-black rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
                     >
                       {/* Thumbnail/Video */}
@@ -750,7 +766,7 @@ const HomePage = () => {
           {/* Screenshots Tab Content */}
           <TabsContent value="screenshots" className="space-y-6" data-content-tab="screenshots">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
-              {latestClips?.filter(clip => clip.thumbnailUrl && !clip.videoUrl)?.slice(0, 12).map((screenshot, i) => (
+              {userClips?.filter(clip => clip.thumbnailUrl && !clip.videoUrl)?.slice(0, 12).map((screenshot, i) => (
                 <div 
                   key={`screenshot-${screenshot.id}`} 
                   className="relative overflow-hidden rounded-xl cursor-pointer group shadow-lg transition-all duration-500 border aspect-video"
@@ -784,7 +800,7 @@ const HomePage = () => {
                 </div>
               ))}
             </div>
-            {(!latestClips || latestClips.filter(clip => clip.thumbnailUrl && !clip.videoUrl).length === 0) && (
+            {(!userClips || userClips.filter(clip => clip.thumbnailUrl && !clip.videoUrl).length === 0) && (
               <div className="text-center py-12">
                 <Image className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No screenshots yet</h3>
