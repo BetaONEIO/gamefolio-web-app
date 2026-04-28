@@ -1,7 +1,5 @@
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Upload,
   Tv2,
@@ -10,15 +8,13 @@ import {
   CheckCircle2,
   ArrowRight,
   Zap,
-  Palette,
-  TrendingUp,
-  Wrench,
   AtSign,
   Loader2,
   Check,
   X,
 } from "lucide-react";
 import { SiTwitch, SiKick } from "react-icons/si";
+import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 
 const PRIMARY = "#b5f23d";
 const PRIMARY_DIM = "rgba(181,242,61,0.12)";
@@ -82,23 +78,6 @@ function BenefitCard({ icon, title, text }: { icon: React.ReactNode; title: stri
   );
 }
 
-function ProCard({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
-  return (
-    <div
-      className="rounded-2xl p-5 flex flex-col gap-2"
-      style={{
-        background: "rgba(181,242,61,0.05)",
-        border: `1px solid rgba(181,242,61,0.18)`,
-      }}
-    >
-      <div className="flex items-center gap-2">
-        <span style={{ color: PRIMARY }}>{icon}</span>
-        <h4 className="text-white font-semibold text-sm">{title}</h4>
-      </div>
-      <p className="text-gray-400 text-xs leading-relaxed">{text}</p>
-    </div>
-  );
-}
 
 function UsernameChecker() {
   const [, setLocation] = useLocation();
@@ -342,46 +321,120 @@ export default function InvitePage() {
       </section>
 
       {/* Pro section */}
-      <section id="pro" className="px-6 py-20 max-w-5xl mx-auto">
+      <section id="pro" className="px-6 py-20 max-w-6xl mx-auto">
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold mb-4" style={{ background: PRIMARY_DIM, color: PRIMARY, border: `1px solid rgba(181,242,61,0.3)` }}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path fillRule="evenodd" clipRule="evenodd" d="M13.3953 9.55057L13.524 8.28791C13.5926 7.61391 13.6373 7.16924 13.602 6.88858H13.6153C14.196 6.88858 14.6673 6.39124 14.6673 5.77791C14.6673 5.16458 14.196 4.66658 13.6146 4.66658C13.0333 4.66658 12.562 5.16391 12.562 5.77791C12.562 6.05524 12.6586 6.30924 12.818 6.50391C12.5893 6.65258 12.29 6.96724 11.8393 7.44058C11.4926 7.80524 11.3193 7.98724 11.126 8.01591C11.0186 8.03123 10.909 8.01502 10.8106 7.96924C10.632 7.88658 10.5126 7.66124 10.2746 7.20991L9.01864 4.83325C8.87197 4.55525 8.74864 4.32258 8.63731 4.13525C9.09264 3.88991 9.40397 3.39058 9.40397 2.81525C9.40397 1.99592 8.77597 1.33325 8.00064 1.33325C7.22531 1.33325 6.59731 1.99658 6.59731 2.81458C6.59731 3.39058 6.90864 3.88991 7.36398 4.13458C7.25264 4.32258 7.12998 4.55525 6.98264 4.83325L5.72731 7.21058C5.48864 7.66124 5.36931 7.88658 5.19065 7.96991C5.09227 8.01568 4.98272 8.0319 4.87531 8.01657C4.68198 7.98791 4.50865 7.80524 4.16198 7.44058C3.71131 6.96724 3.41198 6.65258 3.18331 6.50391C3.34331 6.30924 3.43931 6.05524 3.43931 5.77725C3.43931 5.16458 2.96732 4.66658 2.38598 4.66658C1.80598 4.66658 1.33398 5.16391 1.33398 5.77791C1.33398 6.39124 1.80532 6.88858 2.38665 6.88858H2.39932C2.36332 7.16858 2.40865 7.61391 2.47732 8.28791L2.60598 9.55057C2.67732 10.2512 2.73665 10.9179 2.80998 11.5186H13.1913C13.2646 10.9186 13.324 10.2512 13.3953 9.55057Z" fill={PRIMARY}/><path fillRule="evenodd" clipRule="evenodd" d="M7.23731 14.6666H8.76397C10.754 14.6666 11.7493 14.6666 12.4133 14.0399C12.7026 13.7652 12.8866 13.2719 13.0186 12.6292H2.98265C3.11465 13.2719 3.29798 13.7652 3.58798 14.0392C4.25198 14.6666 5.24731 14.6666 7.23731 14.6666Z" fill={PRIMARY}/></svg>
+            Gamefolio Pro
+          </div>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-3">
+            Unlock <span style={{ color: PRIMARY }}>Gamefolio Pro</span>
+          </h2>
+          <p className="text-gray-400 text-base max-w-lg mx-auto">Premium features designed for elite creators who want to stand out and grow.</p>
+        </div>
+
         <div
-          className="rounded-3xl p-8 md:p-12 relative overflow-hidden"
+          className="rounded-3xl overflow-hidden relative"
           style={{
-            background: "linear-gradient(135deg, #0d1520 0%, #111e2c 100%)",
-            border: `1px solid rgba(181,242,61,0.25)`,
-            boxShadow: `0 0 60px rgba(181,242,61,0.08)`,
+            background: "linear-gradient(135deg, #0d1520 0%, #0a1118 100%)",
+            border: `1px solid rgba(181,242,61,0.2)`,
+            boxShadow: `0 0 80px rgba(181,242,61,0.07), 0 40px 80px rgba(0,0,0,0.5)`,
           }}
         >
-          <GlowDot top="0%" left="100%" size={400} opacity={0.08} />
-          <div className="relative z-10 flex flex-col gap-8">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-              <div className="flex flex-col gap-2">
-                <p className="text-xs font-bold tracking-widest uppercase" style={{ color: PRIMARY }}>Gamefolio Pro</p>
-                <h2 className="text-3xl md:text-4xl font-extrabold text-white leading-tight">Want to grow faster?</h2>
-                <p className="text-gray-400">Upgrade to Gamefolio Pro and take your content further.</p>
+          <div className="flex flex-col md:flex-row">
+            {/* Left — hero image panel */}
+            <div className="relative md:w-[42%] min-h-[280px] md:min-h-[520px] flex-shrink-0 overflow-hidden">
+              <img
+                src={proHeroImage}
+                alt="Gamefolio Pro"
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ objectPosition: "center 70%" }}
+              />
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(8,14,23,0.95) 0%, rgba(8,14,23,0.4) 50%, transparent 100%)" }} />
+              <div className="absolute inset-0 hidden md:block" style={{ background: "linear-gradient(to right, transparent 60%, rgba(13,21,32,0.9) 100%)" }} />
+
+              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+                <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 mb-3 text-xs font-bold uppercase tracking-wider" style={{ background: "rgba(181,242,61,0.15)", border: "1px solid rgba(181,242,61,0.3)", color: PRIMARY }}>
+                  Exclusive Offer
+                </div>
+                <h3 className="text-2xl font-extrabold text-white leading-tight mb-1">
+                  Elite gaming<br />identity
+                </h3>
+                <p className="text-gray-400 text-sm max-w-[240px]">Everything you need to stand out and grow your audience.</p>
               </div>
-              <div className="flex flex-col items-start md:items-end gap-1 flex-shrink-0">
-                <div className="flex items-baseline gap-1">
+            </div>
+
+            {/* Right — benefits + CTA */}
+            <div className="flex-1 flex flex-col gap-6 p-6 md:p-10">
+              <div className="grid grid-cols-1 gap-3">
+                {[
+                  {
+                    title: "Unlimited upload space",
+                    description: "Share clips without limits or storage restrictions",
+                    icon: (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 16V8M12 8L9 11M12 8L15 11" stroke={PRIMARY} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M22 12C22 17.523 17.523 22 12 22C6.477 22 2 17.523 2 12C2 6.477 6.477 2 12 2C17.523 2 22 6.477 22 12Z" stroke={PRIMARY} strokeWidth="1.5"/></svg>
+                    ),
+                  },
+                  {
+                    title: "Animated profile customisation",
+                    description: "Custom banners, borders & neon effects",
+                    icon: (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 3.5V2M15 3.5V2M9 21.5V20M15 21.5V20M20.5 9H22M20.5 15H22M3.5 9H2M3.5 15H2M12 8L13.5 11H16L14 13.5L15 17L12 15L9 17L10 13.5L8 11H10.5L12 8Z" stroke={PRIMARY} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    ),
+                  },
+                  {
+                    title: "100s of exclusive assets",
+                    description: "Premium stickers, badges & unique themes",
+                    icon: (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 21C12 21 3 13.5 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 12 5C12.09 3.81 13.76 3 15.5 3C18.58 3 21 5.42 21 8.5C21 13.5 12 21 12 21Z" stroke={PRIMARY} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    ),
+                  },
+                  {
+                    title: "Store discounts",
+                    description: "Save up to 20% on games and merchandise",
+                    icon: (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 15L15 9M21.41 11.41L12.58 2.58C12.21 2.21 11.7 2 11.17 2H4C2.9 2 2 2.9 2 4V11.17C2 11.7 2.21 12.21 2.59 12.58L11.41 21.41C12.19 22.2 13.45 22.2 14.24 21.41L21.41 14.24C22.2 13.45 22.2 12.19 21.41 11.41Z" stroke={PRIMARY} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><circle cx="7" cy="7" r="1.5" fill={PRIMARY}/></svg>
+                    ),
+                  },
+                  {
+                    title: "Ad-free experience",
+                    description: "Pro subscribers are exempt from all video ads",
+                    icon: (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22Z" stroke={PRIMARY} strokeWidth="1.5"/><path d="M4 4L20 20" stroke={PRIMARY} strokeWidth="1.5" strokeLinecap="round"/><path d="M10 9V15L15 12L10 9Z" stroke={PRIMARY} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    ),
+                  },
+                ].map((benefit) => (
+                  <div
+                    key={benefit.title}
+                    className="flex items-start gap-3 rounded-xl p-4"
+                    style={{ background: "rgba(181,242,61,0.04)", border: "1px solid rgba(181,242,61,0.1)" }}
+                  >
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(181,242,61,0.1)" }}>
+                      {benefit.icon}
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold text-sm">{benefit.title}</p>
+                      <p className="text-gray-400 text-xs leading-relaxed mt-0.5">{benefit.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-3 pt-2">
+                <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-extrabold" style={{ color: PRIMARY }}>Free</span>
                   <span className="text-gray-400 text-sm">during early access</span>
                 </div>
-                <p className="text-gray-500 text-xs">Start free. Upgrade anytime.</p>
+                <button
+                  onClick={() => setLocation("/register")}
+                  className="w-full rounded-2xl h-14 font-bold text-base transition-all hover:brightness-110 active:scale-95 flex items-center justify-center gap-2"
+                  style={{ background: PRIMARY, color: "#080e17", boxShadow: "0 10px 30px -8px rgba(181,242,61,0.5)" }}
+                >
+                  Unlock Pro — Start free <ArrowRight className="h-5 w-5" />
+                </button>
+                <p className="text-gray-500 text-xs text-center">No credit card required. Upgrade anytime.</p>
               </div>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <ProCard icon={<TrendingUp className="h-4 w-4" />} title="More exposure" text="Priority opportunities to have your clips featured on Gamefolio social channels." />
-              <ProCard icon={<Wrench className="h-4 w-4" />} title="Advanced clip tools" text="More control over how you upload, organise, and showcase your gaming content." />
-              <ProCard icon={<Palette className="h-4 w-4" />} title="Profile customisation" text="Unlock extra ways to customise your Gamefolio profile and stand out." />
-              <ProCard icon={<Tv2 className="h-4 w-4" />} title="Built for serious streamers" text="Extra features designed for streamers who want to grow their audience." />
-            </div>
-
-            <button
-              onClick={() => setLocation("/register")}
-              className="self-start rounded-2xl px-8 py-4 font-bold text-base transition-all hover:brightness-110 active:scale-95"
-              style={{ background: PRIMARY, color: "#080e17" }}
-            >
-              Start free
-            </button>
           </div>
         </div>
       </section>
