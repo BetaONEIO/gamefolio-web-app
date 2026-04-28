@@ -228,8 +228,38 @@ export default function InvitePage() {
           </div>
 
           <div className="relative w-full">
-            <div className="absolute -inset-6 rounded-full bg-[#B7FF1A]/10 blur-3xl" />
-            <div className="relative rounded-3xl overflow-hidden border shadow-2xl" style={{ borderColor: CARD_BORDER, background: CARD_BG }}>
+            {/* Abstract green background shape — off-centre for depth */}
+            <div
+              className="absolute rounded-3xl"
+              style={{
+                background: "linear-gradient(135deg, #B7FF1A 0%, #7ec800 60%, #4a8a00 100%)",
+                width: "88%",
+                height: "92%",
+                bottom: "-18px",
+                right: "-22px",
+                transform: "rotate(3.5deg) skewX(-1deg)",
+                zIndex: 0,
+                opacity: 0.92,
+                filter: "blur(0px)",
+                boxShadow: "0 0 60px 8px rgba(183,255,26,0.25), 0 20px 60px rgba(0,0,0,0.5)",
+              }}
+            />
+            {/* Secondary smaller accent shard */}
+            <div
+              className="absolute rounded-2xl"
+              style={{
+                background: "#B7FF1A",
+                width: "40%",
+                height: "30%",
+                top: "-12px",
+                right: "-14px",
+                transform: "rotate(-5deg)",
+                zIndex: 0,
+                opacity: 0.18,
+                filter: "blur(2px)",
+              }}
+            />
+            <div className="relative rounded-3xl overflow-hidden border shadow-2xl" style={{ borderColor: "rgba(183,255,26,0.25)", background: CARD_BG, zIndex: 1 }}>
               <video
                 src="/promo-hero.mp4"
                 autoPlay
