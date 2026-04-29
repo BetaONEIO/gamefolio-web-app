@@ -82,14 +82,14 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
             <TabsList className="grid w-full grid-cols-2 mb-6 gap-2 p-1.5 bg-black/60 rounded-xl">
               <TabsTrigger
                 value="login"
-                className="rounded-lg font-semibold transition-all duration-150 data-[state=active]:bg-primary data-[state=active]:text-black data-[state=inactive]:bg-black data-[state=inactive]:text-white"
+                className="rounded-lg font-semibold transition-all duration-150 bg-black text-white data-[state=active]:bg-primary data-[state=active]:text-black data-[state=active]:shadow-none"
                 data-testid="tab-login"
               >
                 Login
               </TabsTrigger>
               <TabsTrigger
                 value="register"
-                className="rounded-lg font-semibold transition-all duration-150 data-[state=active]:bg-primary data-[state=active]:text-black data-[state=inactive]:bg-black data-[state=inactive]:text-white"
+                className="rounded-lg font-semibold transition-all duration-150 bg-black text-white data-[state=active]:bg-primary data-[state=active]:text-black data-[state=active]:shadow-none"
                 data-testid="tab-register"
               >
                 Register
