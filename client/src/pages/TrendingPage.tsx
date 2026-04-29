@@ -659,7 +659,7 @@ const TrendingPage: React.FC = () => {
 
         {/* Floating controls — hidden when comment panel is open */}
         <div
-          className="fixed z-[70] flex flex-col items-center gap-2.5"
+          className="fixed z-[70] flex flex-col items-end gap-2.5"
           style={{ top: 16, right: 12, opacity: commentsOpen ? 0 : 1, pointerEvents: commentsOpen ? 'none' : 'auto', transition: 'opacity 0.2s' }}
           onClick={(e) => e.stopPropagation()}
         >
