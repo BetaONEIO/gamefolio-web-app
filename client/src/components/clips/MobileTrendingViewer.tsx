@@ -60,12 +60,14 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
 
   const [showShare, setShowShare] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
   // Reset overlay states when switching between content items
   useEffect(() => {
     setShowComments(false);
     setShowShare(false);
     setIsPlaying(true);
+    setShowFullDescription(false);
   }, [currentIndex]);
 
   // Prevent body scroll when mobile viewer is open
@@ -340,70 +342,83 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
           </button>
         </div>}
 
-        {/* ── Bottom-left info overlay — hidden when comments open ─── */}
+        {/* ── Bottom info overlay — full-width gradient, hidden when comments open ─── */}
         {!showComments && (
-          <div className="absolute bottom-0 left-0 z-10 px-4 pb-6 pt-16 bg-gradient-to-t from-black/85 via-black/30 to-transparent" style={{ right: 60 }}>
-            {/* User row: avatar + @username (link) + Follow button (separate) */}
-            <div className="flex items-center gap-2 mb-2">
-              <Link
-                href={`/profile/${currentItem.user.username}`}
-                className="flex items-center gap-2 no-underline flex-shrink-0"
-                data-testid={`link-user-${currentItem.user.username}`}
-              >
-                <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid #fff' }}>
-                  <img
-                    src={currentItem.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                    alt={currentItem.user.displayName}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <span className="text-white font-bold text-sm drop-shadow leading-tight">
-                  @{currentItem.user.username}
-                </span>
-              </Link>
-              {!isSelf && (
-                <button
-                  onClick={handleFollowPress}
-                  disabled={followMutation.isPending}
-                  className="text-xs font-bold px-2.5 py-0.5 rounded-md flex-shrink-0 transition-all"
-                  style={isFollowing
-                    ? { background: 'transparent', border: '1px solid rgba(255,255,255,0.5)', color: '#fff' }
-                    : { background: '#4ADE80', color: '#000', border: '1px solid transparent' }
-                  }
+          <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-24 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent">
+            {/* Text content — pr-16 keeps it clear of the right action column */}
+            <div className="pr-16">
+              {/* User row */}
+              <div className="flex items-center gap-2 mb-2">
+                <Link
+                  href={`/profile/${currentItem.user.username}`}
+                  className="flex items-center gap-2 no-underline flex-shrink-0"
+                  data-testid={`link-user-${currentItem.user.username}`}
                 >
-                  {followMutation.isPending ? '…' : isFollowing ? 'Following' : 'Follow'}
-                </button>
-              )}
-            </div>
+                  <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid #fff' }}>
+                    <img
+                      src={currentItem.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                      alt={currentItem.user.displayName}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <span className="text-white font-bold text-sm drop-shadow leading-tight">
+                    @{currentItem.user.username}
+                  </span>
+                </Link>
+                {!isSelf && (
+                  <button
+                    onClick={handleFollowPress}
+                    disabled={followMutation.isPending}
+                    className="text-xs font-bold px-2.5 py-0.5 rounded-md flex-shrink-0 transition-all"
+                    style={isFollowing
+                      ? { background: 'transparent', border: '1px solid rgba(255,255,255,0.5)', color: '#fff' }
+                      : { background: '#4ADE80', color: '#000', border: '1px solid transparent' }
+                    }
+                  >
+                    {followMutation.isPending ? '…' : isFollowing ? 'Following' : 'Follow'}
+                  </button>
+                )}
+              </div>
 
-            {/* Title */}
-            <p className="text-white font-bold text-sm drop-shadow mb-0.5 leading-snug">
-              {currentItem.title}
-            </p>
-
-            {/* Description (if any) */}
-            {(currentItem as any).description && (
-              <p className="text-white/75 text-xs drop-shadow mb-1 line-clamp-1">
-                {(currentItem as any).description}
+              {/* Title */}
+              <p className="text-white font-bold text-sm drop-shadow mb-0.5 leading-snug">
+                {currentItem.title}
               </p>
-            )}
 
-            {/* Game */}
-            {currentItem.game?.name && (
-              <div className="flex items-center gap-1 mb-1">
-                <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#4ADE80' }} />
-                <span className="text-xs font-semibold" style={{ color: '#4ADE80' }}>
-                  {currentItem.game.name}
+              {/* Description with "see more" */}
+              {(currentItem as any).description && (
+                <div className="mb-1">
+                  <p className={`text-white/75 text-xs drop-shadow leading-snug ${showFullDescription ? '' : 'line-clamp-2'}`}>
+                    {(currentItem as any).description}
+                  </p>
+                  {(currentItem as any).description.length > 80 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowFullDescription(v => !v); }}
+                      className="text-white/50 text-xs mt-0.5"
+                    >
+                      {showFullDescription ? 'see less' : 'see more'}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Game */}
+              {currentItem.game?.name && (
+                <div className="flex items-center gap-1 mb-1">
+                  <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#4ADE80' }} />
+                  <span className="text-xs font-semibold" style={{ color: '#4ADE80' }}>
+                    {currentItem.game.name}
+                  </span>
+                </div>
+              )}
+
+              {/* Original audio */}
+              <div className="flex items-center gap-1">
+                <Music className="h-3 w-3 text-white/65 flex-shrink-0" />
+                <span className="text-white/65 text-xs truncate">
+                  Original audio · {currentItem.user.displayName || currentItem.user.username}
                 </span>
               </div>
-            )}
-
-            {/* Original audio */}
-            <div className="flex items-center gap-1">
-              <Music className="h-3 w-3 text-white/65 flex-shrink-0" />
-              <span className="text-white/65 text-xs truncate">
-                Original audio · {currentItem.user.displayName || currentItem.user.username}
-              </span>
             </div>
           </div>
         )}
