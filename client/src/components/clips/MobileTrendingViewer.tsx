@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { ChevronLeft, Heart, MessageCircle, Share2, User, Play, Pause, Flag, Eye, Gamepad2 } from "lucide-react";
+import { ChevronLeft, Heart, MessageCircle, Share2, User, Play, Pause, Flag, Eye, Gamepad2, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
@@ -240,102 +240,112 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
           </div>
         )}
 
-        {/* Bottom overlay with user info and controls */}
-        <div className="absolute bottom-0 left-0 right-0 px-4 pb-6 pt-20 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
-          <div className="flex justify-between items-end gap-3">
-            {/* Left side - User info and content details */}
-            <div className="flex-1 min-w-0">
-              {/* User row: avatar + username + follow */}
-              <Link 
-                href={`/profile/${currentItem.user.username}`}
-                className="flex items-center gap-2 mb-2 no-underline"
-                data-testid={`link-user-${currentItem.user.username}`}
-              >
-                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '1.5px solid #fff' }}>
-                  <img
-                    src={currentItem.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                    alt={currentItem.user.displayName}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <span className="text-white font-bold text-sm drop-shadow">
-                  @{currentItem.user.username}
-                </span>
-                <span
-                  className="text-black text-xs font-bold px-2.5 py-0.5 rounded flex-shrink-0"
-                  style={{ background: '#4ADE80' }}
-                >
-                  Follow
-                </span>
-              </Link>
+        {/* ── Right edge action column ────────────────────────────────────── */}
+        <div className="absolute right-3 z-10 flex flex-col items-center gap-5" style={{ bottom: 120 }}>
+          {/* Views */}
+          <div className="flex flex-col items-center gap-0.5">
+            <Eye className="h-7 w-7 text-white drop-shadow" />
+            <span className="text-white text-[11px] font-semibold drop-shadow">{formatNumber(stats.views)}</span>
+          </div>
 
-              {/* Title */}
-              <h3 className="text-white font-semibold mb-1.5 line-clamp-2 text-sm drop-shadow">
-                {currentItem.title}
-              </h3>
+          {/* Likes */}
+          <div className="flex flex-col items-center gap-0.5">
+            <LikeButton
+              contentId={currentItem.id}
+              contentType={isVideoContent(currentItem) ? "clip" : "screenshot"}
+              contentOwnerId={currentItem.user.id}
+              initialLiked={false}
+              initialCount={stats.likes}
+              size="lg"
+            />
+          </div>
 
-              {/* Game info */}
-              {currentItem.game?.name && (
-                <div className="flex items-center gap-1 mb-1">
-                  <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#4ADE80' }} />
-                  <span className="text-xs font-semibold truncate" style={{ color: '#4ADE80' }}>
-                    {currentItem.game.name}
-                  </span>
-                </div>
-              )}
+          {/* Fires */}
+          <div className="flex flex-col items-center gap-0.5">
+            <FireButton
+              contentId={currentItem.id}
+              contentType={isVideoContent(currentItem) ? "clip" : "screenshot"}
+              contentOwnerId={currentItem.user.id}
+              initialFired={false}
+              initialCount={(currentItem as any)._count?.reactions || 0}
+              size="lg"
+            />
+          </div>
 
-              {/* Views */}
-              <div className="flex items-center gap-1 text-white/60 text-xs">
-                <Eye className="h-3 w-3" />
-                {formatNumber(stats.views)} views
-              </div>
+          {/* Comments */}
+          <button
+            onClick={() => { if (!user) { openDialog('comment'); } else { setShowComments(true); } }}
+            className="flex flex-col items-center gap-0.5"
+            data-testid="button-comments"
+          >
+            <MessageCircle className="h-7 w-7 text-white drop-shadow" />
+            <span className="text-white text-[11px] font-semibold drop-shadow">{formatNumber(stats.comments)}</span>
+          </button>
+
+          {/* Share */}
+          <button
+            onClick={() => setShowShare(true)}
+            className="flex flex-col items-center gap-0.5"
+            data-testid="button-share"
+          >
+            <Share2 className="h-7 w-7 text-white drop-shadow" />
+          </button>
+        </div>
+
+        {/* ── Bottom-left info overlay ─────────────────────────────────────── */}
+        <div className="absolute bottom-0 left-0 z-10 px-4 pb-6 pt-16 bg-gradient-to-t from-black/85 via-black/30 to-transparent" style={{ right: 60 }}>
+          {/* User row: avatar + @username + Follow */}
+          <Link
+            href={`/profile/${currentItem.user.username}`}
+            className="flex items-center gap-2 mb-2 no-underline"
+            data-testid={`link-user-${currentItem.user.username}`}
+          >
+            <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid #fff' }}>
+              <img
+                src={currentItem.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                alt={currentItem.user.displayName}
+                className="w-full h-full object-cover"
+              />
             </div>
+            <span className="text-white font-bold text-sm drop-shadow leading-tight">
+              @{currentItem.user.username}
+            </span>
+            <span
+              className="text-black text-xs font-bold px-2.5 py-0.5 rounded-md flex-shrink-0"
+              style={{ background: '#4ADE80' }}
+            >
+              Follow
+            </span>
+          </Link>
 
-            {/* Right side - Action column */}
-            <div className="flex flex-col items-center gap-5 flex-shrink-0 pb-1">
-              {/* Like */}
-              <div className="flex flex-col items-center gap-1">
-                <LikeButton
-                  contentId={currentItem.id}
-                  contentType={isVideoContent(currentItem) ? "clip" : "screenshot"}
-                  contentOwnerId={currentItem.user.id}
-                  initialLiked={false}
-                  initialCount={stats.likes}
-                  size="lg"
-                />
-              </div>
+          {/* Title */}
+          <p className="text-white font-bold text-sm drop-shadow mb-0.5 leading-snug">
+            {currentItem.title}
+          </p>
 
-              {/* Fire */}
-              <div className="flex flex-col items-center gap-1">
-                <FireButton
-                  contentId={currentItem.id}
-                  contentType={isVideoContent(currentItem) ? "clip" : "screenshot"}
-                  contentOwnerId={currentItem.user.id}
-                  initialFired={false}
-                  initialCount={(currentItem as any)._count?.reactions || 0}
-                  size="lg"
-                />
-              </div>
+          {/* Description (if any) */}
+          {(currentItem as any).description && (
+            <p className="text-white/75 text-xs drop-shadow mb-1 line-clamp-1">
+              {(currentItem as any).description}
+            </p>
+          )}
 
-              {/* Comments */}
-              <button
-                onClick={() => { if (!user) { openDialog('comment'); } else { setShowComments(true); } }}
-                className="flex flex-col items-center gap-1"
-                data-testid="button-comments"
-              >
-                <MessageCircle className="h-7 w-7 text-white drop-shadow" />
-                <span className="text-white text-xs font-semibold drop-shadow">{formatNumber(stats.comments)}</span>
-              </button>
-
-              {/* Share */}
-              <button
-                onClick={() => setShowShare(true)}
-                className="flex flex-col items-center gap-1"
-                data-testid="button-share"
-              >
-                <Share2 className="h-7 w-7 text-white drop-shadow" />
-              </button>
+          {/* Game */}
+          {currentItem.game?.name && (
+            <div className="flex items-center gap-1 mb-1">
+              <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#4ADE80' }} />
+              <span className="text-xs font-semibold" style={{ color: '#4ADE80' }}>
+                {currentItem.game.name}
+              </span>
             </div>
+          )}
+
+          {/* Original audio */}
+          <div className="flex items-center gap-1">
+            <Music className="h-3 w-3 text-white/65 flex-shrink-0" />
+            <span className="text-white/65 text-xs truncate">
+              Original audio · {currentItem.user.displayName || currentItem.user.username}
+            </span>
           </div>
         </div>
 
