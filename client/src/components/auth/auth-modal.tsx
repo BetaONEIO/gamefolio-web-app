@@ -79,17 +79,30 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
             onValueChange={(value) => setActiveTab(value as "login" | "register")}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsList
+              className="grid w-full grid-cols-2 mb-6 gap-2 p-1.5 bg-black/60 rounded-xl"
+              style={{ boxShadow: "inset 0 3px 8px rgba(0,0,0,0.8), inset 0 1px 3px rgba(0,0,0,0.6)" }}
+            >
               <TabsTrigger
                 value="login"
-                className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-none"
+                className="rounded-lg font-semibold transition-all duration-150 data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=inactive]:text-white/60"
+                style={{
+                  boxShadow: activeTab === "login"
+                    ? "0 1px 3px rgba(0,0,0,0.4)"
+                    : "inset 2px 2px 5px rgba(0,0,0,0.7), inset -1px -1px 2px rgba(255,255,255,0.04)"
+                }}
                 data-testid="tab-login"
               >
                 Login
               </TabsTrigger>
               <TabsTrigger
                 value="register"
-                className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-none"
+                className="rounded-lg font-semibold transition-all duration-150 data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=inactive]:text-white/60"
+                style={{
+                  boxShadow: activeTab === "register"
+                    ? "0 1px 3px rgba(0,0,0,0.4)"
+                    : "inset 2px 2px 5px rgba(0,0,0,0.7), inset -1px -1px 2px rgba(255,255,255,0.04)"
+                }}
                 data-testid="tab-register"
               >
                 Register
