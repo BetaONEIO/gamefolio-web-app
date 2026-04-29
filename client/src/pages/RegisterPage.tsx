@@ -92,17 +92,6 @@ export default function RegisterPage() {
           <div className="w-full">
             {/* Header */}
             <div className="mb-8">
-              <div
-                className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-4"
-                style={{
-                  background: "rgba(183,255,26,0.12)",
-                  color: PRIMARY,
-                  border: "1px solid rgba(183,255,26,0.25)",
-                }}
-              >
-                <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: PRIMARY }} />
-                Free during early access
-              </div>
               <h1 className="text-3xl font-extrabold text-white mb-2 tracking-tight">
                 Create your account
               </h1>
