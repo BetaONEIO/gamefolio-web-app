@@ -163,6 +163,12 @@ const TrendingPage: React.FC = () => {
   const [showMobileViewer, setShowMobileViewer] = useState(false);
   const [showContentDropdown, setShowContentDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
+  const [showGameFilter, setShowGameFilter] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
+  const [selectedGameName, setSelectedGameName] = useState<string | null>(null);
+  const [gameSearchQuery, setGameSearchQuery] = useState('');
+  const [debouncedGameQuery, setDebouncedGameQuery] = useState('');
   const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotWithUser | null>(null);
   const { signedUrl: screenshotSignedUrl } = useSignedUrl(selectedScreenshot?.imageUrl);
   const [ageRestrictionAccepted, setAgeRestrictionAccepted] = useState(false);
@@ -194,6 +200,37 @@ const TrendingPage: React.FC = () => {
       setIsFollowingAuthor(followStatus.following);
     }
   }, [followStatus]);
+
+  // Debounce game search query for filter modal
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedGameQuery(gameSearchQuery), 300);
+    return () => clearTimeout(t);
+  }, [gameSearchQuery]);
+
+  // Game search results for filter modal
+  const { data: gameSearchResults, isLoading: isGameSearchLoading } = useQuery<{ id: number; name: string; imageUrl?: string }[]>({
+    queryKey: ['/api/twitch/games/search', debouncedGameQuery],
+    queryFn: async () => {
+      if (debouncedGameQuery.length < 2) return [];
+      const res = await fetch(`/api/twitch/games/search?q=${encodeURIComponent(debouncedGameQuery)}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.map((g: any) => ({ id: g.id, name: g.name, imageUrl: g.imageUrl || g.box_art_url }));
+    },
+    enabled: debouncedGameQuery.length >= 2,
+    staleTime: 60000,
+  });
+
+  // Trending games for filter modal when no search query
+  const { data: trendingGames } = useQuery<{ id: number; name: string; imageUrl?: string }[]>({
+    queryKey: ['/api/games/trending'],
+    queryFn: async () => {
+      const res = await fetch('/api/games/trending?limit=20');
+      if (!res.ok) return [];
+      return res.json();
+    },
+    staleTime: 120000,
+  });
 
   // Follow/unfollow mutation
   const followMutation = useMutation({
@@ -272,12 +309,10 @@ const TrendingPage: React.FC = () => {
 
   // Fetch trending clips using the working endpoint
   const { data: trendingClips, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
-    queryKey: ['/api/clips/trending', timePeriod],
+    queryKey: ['/api/clips/trending', timePeriod, selectedGameId],
     queryFn: async () => {
-      const params = new URLSearchParams({
-        period: timePeriod,
-        limit: '20',
-      });
+      const params = new URLSearchParams({ period: timePeriod, limit: '20' });
+      if (selectedGameId) params.set('gameId', String(selectedGameId));
       const response = await fetch(`/api/clips/trending?${params}`);
       if (!response.ok) throw new Error('Failed to fetch trending clips');
       return response.json();
@@ -287,12 +322,10 @@ const TrendingPage: React.FC = () => {
 
   // Fetch trending reels using the trending reels endpoint with period support
   const { data: trendingReels, isLoading: isLoadingReels } = useQuery<ClipWithUser[]>({
-    queryKey: ['/api/reels/trending', timePeriod],
+    queryKey: ['/api/reels/trending', timePeriod, selectedGameId],
     queryFn: async () => {
-      const params = new URLSearchParams({
-        period: timePeriod,
-        limit: '20',
-      });
+      const params = new URLSearchParams({ period: timePeriod, limit: '20' });
+      if (selectedGameId) params.set('gameId', String(selectedGameId));
       const response = await fetch(`/api/reels/trending?${params}`);
       if (!response.ok) throw new Error('Failed to fetch trending reels');
       return response.json();
@@ -302,12 +335,10 @@ const TrendingPage: React.FC = () => {
 
   // Fetch trending screenshots using the working API endpoint
   const { data: trendingScreenshots, isLoading: isLoadingScreenshots } = useQuery<ScreenshotWithUser[]>({
-    queryKey: ['/api/trending/screenshots', timePeriod],
+    queryKey: ['/api/trending/screenshots', timePeriod, selectedGameId],
     queryFn: async () => {
-      const params = new URLSearchParams({
-        period: timePeriod,
-        limit: '20',
-      });
+      const params = new URLSearchParams({ period: timePeriod, limit: '20' });
+      if (selectedGameId) params.set('gameId', String(selectedGameId));
       const response = await fetch(`/api/trending/screenshots?${params}`);
       if (!response.ok) throw new Error('Failed to fetch trending screenshots');
       return response.json();
@@ -623,85 +654,194 @@ const TrendingPage: React.FC = () => {
           style={{ top: 16, right: 12 }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* 1. Eye / discover circle (green border, decorative) */}
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ border: '2px solid #4ADE80', background: 'rgba(30,41,59,0.7)' }}
+          {/* 1. Eye circle — toggles the rest of the controls */}
+          <button
+            onClick={() => {
+              setControlsVisible((v) => !v);
+              setShowContentDropdown(false);
+              setShowTimeDropdown(false);
+              setShowGameFilter(false);
+            }}
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
+            style={{
+              border: `2px solid ${controlsVisible ? '#4ADE80' : 'rgba(74,222,128,0.35)'}`,
+              background: 'rgba(30,41,59,0.7)',
+            }}
           >
-            <Eye className="h-5 w-5" style={{ color: '#4ADE80' }} />
-          </div>
+            <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#4ADE80' : 'rgba(74,222,128,0.5)' }} />
+          </button>
 
-          {/* 2. Content-type pill with dropdown */}
-          <div className="flex flex-col items-end gap-1.5">
-            <button
-              onClick={() => { setShowContentDropdown(!showContentDropdown); setShowTimeDropdown(false); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-white text-xs font-semibold"
-              style={{ background: 'rgba(30,41,59,0.88)', border: '1px solid rgba(74,222,128,0.4)' }}
-            >
-              <ActiveIcon className="h-3.5 w-3.5" />
-              {activeLabel}
-              <ChevronDown className="h-3.5 w-3.5" />
-            </button>
+          {controlsVisible && (
+            <>
+              {/* 2. Content-type pill with dropdown */}
+              <div className="flex flex-col items-end gap-1.5">
+                <button
+                  onClick={() => { setShowContentDropdown(!showContentDropdown); setShowTimeDropdown(false); setShowGameFilter(false); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-white text-xs font-semibold"
+                  style={{ background: 'rgba(30,41,59,0.88)', border: '1px solid rgba(74,222,128,0.4)' }}
+                >
+                  <ActiveIcon className="h-3.5 w-3.5" />
+                  {activeLabel}
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
 
-            {/* Content-type dropdown */}
-            {showContentDropdown && (
-              <div className="rounded-xl overflow-hidden min-w-[155px]" style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(74,222,128,0.25)' }}>
-                {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
-                  <button
-                    key={type}
-                    className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                    style={activeTab === type ? { background: 'rgba(74,222,128,0.15)', color: '#4ADE80' } : { color: '#94A3B8' }}
-                    onClick={() => { setActiveTab(type); setShowContentDropdown(false); }}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {label}
-                    {activeTab === type && <Check className="h-3 w-3 ml-auto" />}
-                  </button>
-                ))}
+                {showContentDropdown && (
+                  <div className="rounded-xl overflow-hidden min-w-[155px]" style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(74,222,128,0.25)' }}>
+                    {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
+                      <button
+                        key={type}
+                        className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                        style={activeTab === type ? { background: 'rgba(74,222,128,0.15)', color: '#4ADE80' } : { color: '#94A3B8' }}
+                        onClick={() => { setActiveTab(type); setShowContentDropdown(false); }}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {label}
+                        {activeTab === type && <Check className="h-3 w-3 ml-auto" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* 3. Gamepad circle (visual / future game-filter) */}
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ background: 'rgba(30,41,59,0.88)', border: '1px solid rgba(74,222,128,0.3)' }}
-          >
-            <Gamepad2 className="h-5 w-5 text-white" />
-          </div>
+              {/* 3. Gamepad circle — game filter */}
+              <button
+                onClick={() => { setShowGameFilter(true); setShowContentDropdown(false); setShowTimeDropdown(false); }}
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
+                style={{
+                  background: selectedGameId ? 'rgba(74,222,128,0.18)' : 'rgba(30,41,59,0.88)',
+                  border: selectedGameId ? '1px solid #4ADE80' : '1px solid rgba(74,222,128,0.3)',
+                }}
+              >
+                <Gamepad2 className="h-5 w-5" style={{ color: selectedGameId ? '#4ADE80' : '#fff' }} />
+              </button>
 
-          {/* 4. Clock circle (time-period filter) */}
-          <div className="flex flex-col items-end gap-1.5">
-            <button
-              onClick={() => { setShowTimeDropdown(!showTimeDropdown); setShowContentDropdown(false); }}
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{
-                background: showTimeDropdown ? 'rgba(74,222,128,0.18)' : 'rgba(30,41,59,0.88)',
-                border: showTimeDropdown ? '1px solid #4ADE80' : '1px solid rgba(74,222,128,0.3)',
-              }}
-            >
-              <Clock className="h-5 w-5" style={{ color: showTimeDropdown ? '#4ADE80' : '#fff' }} />
-            </button>
+              {/* 4. Clock circle (time-period filter) */}
+              <div className="flex flex-col items-end gap-1.5">
+                <button
+                  onClick={() => { setShowTimeDropdown(!showTimeDropdown); setShowContentDropdown(false); setShowGameFilter(false); }}
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  style={{
+                    background: showTimeDropdown ? 'rgba(74,222,128,0.18)' : 'rgba(30,41,59,0.88)',
+                    border: showTimeDropdown ? '1px solid #4ADE80' : '1px solid rgba(74,222,128,0.3)',
+                  }}
+                >
+                  <Clock className="h-5 w-5" style={{ color: showTimeDropdown ? '#4ADE80' : '#fff' }} />
+                </button>
 
-            {/* Time dropdown */}
-            {showTimeDropdown && (
-              <div className="rounded-xl overflow-hidden min-w-[148px]" style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(74,222,128,0.25)' }}>
-                <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>Time Period</p>
-                {(Object.entries(timeMeta) as [TimePeriod, string][]).map(([period, label]) => (
-                  <button
-                    key={period}
-                    className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                    style={timePeriod === period ? { background: 'rgba(74,222,128,0.15)', color: '#4ADE80' } : { color: '#94A3B8' }}
-                    onClick={() => { setTimePeriod(period); setShowTimeDropdown(false); }}
-                  >
-                    {label}
-                    {timePeriod === period && <Check className="h-3 w-3 ml-auto" />}
-                  </button>
-                ))}
+                {showTimeDropdown && (
+                  <div className="rounded-xl overflow-hidden min-w-[148px]" style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(74,222,128,0.25)' }}>
+                    <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>Time Period</p>
+                    {(Object.entries(timeMeta) as [TimePeriod, string][]).map(([period, label]) => (
+                      <button
+                        key={period}
+                        className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                        style={timePeriod === period ? { background: 'rgba(74,222,128,0.15)', color: '#4ADE80' } : { color: '#94A3B8' }}
+                        onClick={() => { setTimePeriod(period); setShowTimeDropdown(false); }}
+                      >
+                        {label}
+                        {timePeriod === period && <Check className="h-3 w-3 ml-auto" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
+
+        {/* Game filter bottom-sheet modal */}
+        {showGameFilter && (
+          <div
+            className="fixed inset-0 z-[80] flex items-end"
+            style={{ background: 'rgba(0,0,0,0.6)' }}
+            onClick={() => { setShowGameFilter(false); setGameSearchQuery(''); }}
+          >
+            <div
+              className="w-full rounded-t-2xl overflow-hidden flex flex-col"
+              style={{ background: '#131F2A', maxHeight: '75vh', border: '1px solid rgba(74,222,128,0.2)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pt-5 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                <div className="flex items-center gap-2">
+                  <Gamepad2 className="h-5 w-5" style={{ color: '#4ADE80' }} />
+                  <span className="text-white font-bold text-base">Filter by Game</span>
+                </div>
+                <button
+                  onClick={() => { setShowGameFilter(false); setGameSearchQuery(''); }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ background: 'rgba(255,255,255,0.08)' }}
+                >
+                  <X className="h-4 w-4 text-white/70" />
+                </button>
+              </div>
+
+              {/* Search input */}
+              <div className="px-5 py-3">
+                <input
+                  autoFocus
+                  value={gameSearchQuery}
+                  onChange={(e) => setGameSearchQuery(e.target.value)}
+                  placeholder="Search games…"
+                  className="w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/40 outline-none"
+                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(74,222,128,0.25)' }}
+                />
+              </div>
+
+              {/* Game list */}
+              <div className="flex-1 overflow-y-auto px-3 pb-6">
+                {/* "All Games" clear option */}
+                <button
+                  className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl mb-1"
+                  style={!selectedGameId ? { background: 'rgba(74,222,128,0.15)' } : {}}
+                  onClick={() => { setSelectedGameId(null); setSelectedGameName(null); setShowGameFilter(false); setGameSearchQuery(''); }}
+                >
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.25)' }}>
+                    <Gamepad2 className="h-4 w-4" style={{ color: '#4ADE80' }} />
+                  </div>
+                  <span className="text-sm font-semibold" style={{ color: !selectedGameId ? '#4ADE80' : '#fff' }}>All Games</span>
+                  {!selectedGameId && <Check className="h-4 w-4 ml-auto" style={{ color: '#4ADE80' }} />}
+                </button>
+
+                {/* Search results or trending games */}
+                {isGameSearchLoading && (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-5 h-5 border-2 border-[#4ADE80] border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+                {(() => {
+                  const gameList = debouncedGameQuery.length >= 2
+                    ? (gameSearchResults || [])
+                    : (trendingGames || []);
+                  return gameList.map((game) => (
+                    <button
+                      key={game.id}
+                      className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl mb-1"
+                      style={selectedGameId === game.id ? { background: 'rgba(74,222,128,0.15)' } : {}}
+                      onClick={() => { setSelectedGameId(game.id); setSelectedGameName(game.name); setShowGameFilter(false); setGameSearchQuery(''); }}
+                    >
+                      {game.imageUrl ? (
+                        <img
+                          src={game.imageUrl.replace('{width}', '40').replace('{height}', '54')}
+                          alt={game.name}
+                          className="w-9 h-9 rounded-lg object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                          <Gamepad2 className="h-4 w-4 text-white/40" />
+                        </div>
+                      )}
+                      <span className="text-sm font-medium text-left leading-snug" style={{ color: selectedGameId === game.id ? '#4ADE80' : '#CBD5E1' }}>
+                        {game.name}
+                      </span>
+                      {selectedGameId === game.id && <Check className="h-4 w-4 ml-auto flex-shrink-0" style={{ color: '#4ADE80' }} />}
+                    </button>
+                  ));
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
       </>
     );
   }
