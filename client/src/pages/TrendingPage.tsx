@@ -655,7 +655,7 @@ const TrendingPage: React.FC = () => {
           </div>
         )}
 
-        {/* Floating controls — top-right vertical stack matching mobile app */}
+        {/* Floating controls — top-right vertical stack */}
         <div
           className="fixed z-[70] flex flex-col items-center gap-2.5"
           style={{ top: 16, right: 12 }}
@@ -678,82 +678,90 @@ const TrendingPage: React.FC = () => {
             <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#4ADE80' : 'rgba(74,222,128,0.5)' }} />
           </button>
 
-          {controlsVisible && (
-            <>
-              {/* 2. Content-type pill with dropdown */}
-              <div className="flex flex-col items-end gap-1.5">
-                <button
-                  onClick={() => { setShowContentDropdown(!showContentDropdown); setShowTimeDropdown(false); setShowGameFilter(false); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-white text-xs font-semibold"
-                  style={{ background: 'rgba(30,41,59,0.88)', border: '1px solid rgba(74,222,128,0.4)' }}
-                >
-                  <ActiveIcon className="h-3.5 w-3.5" />
-                  {activeLabel}
-                  <ChevronDown className="h-3.5 w-3.5" />
-                </button>
-
-                {showContentDropdown && (
-                  <div className="rounded-xl overflow-hidden min-w-[155px]" style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(74,222,128,0.25)' }}>
-                    {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
-                      <button
-                        key={type}
-                        className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                        style={activeTab === type ? { background: 'rgba(74,222,128,0.15)', color: '#4ADE80' } : { color: '#94A3B8' }}
-                        onClick={() => { setActiveTab(type); setShowContentDropdown(false); }}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        {label}
-                        {activeTab === type && <Check className="h-3 w-3 ml-auto" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* 3. Gamepad circle — game filter */}
-              <button
-                onClick={() => { setShowGameFilter(true); setShowContentDropdown(false); setShowTimeDropdown(false); }}
-                className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
-                style={{
-                  background: selectedGameId ? 'rgba(74,222,128,0.18)' : 'rgba(30,41,59,0.88)',
-                  border: selectedGameId ? '1px solid #4ADE80' : '1px solid rgba(74,222,128,0.3)',
-                }}
+          {/* 2. Content-type pill — always in DOM, opacity-hidden when controls are off */}
+          <div
+            className="relative flex items-center justify-end transition-all duration-200"
+            style={{ opacity: controlsVisible ? 1 : 0, pointerEvents: controlsVisible ? 'auto' : 'none' }}
+          >
+            <button
+              onClick={() => { setShowContentDropdown(!showContentDropdown); setShowTimeDropdown(false); setShowGameFilter(false); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-white text-xs font-semibold"
+              style={{ background: 'rgba(30,41,59,0.88)', border: '1px solid rgba(74,222,128,0.4)' }}
+            >
+              <ActiveIcon className="h-3.5 w-3.5" />
+              {activeLabel}
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+            {showContentDropdown && (
+              <div
+                className="absolute top-full mt-1.5 right-0 rounded-xl overflow-hidden min-w-[155px]"
+                style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(74,222,128,0.25)', zIndex: 90 }}
               >
-                <Gamepad2 className="h-5 w-5" style={{ color: selectedGameId ? '#4ADE80' : '#fff' }} />
-              </button>
-
-              {/* 4. Clock circle (time-period filter) */}
-              <div className="flex flex-col items-end gap-1.5">
-                <button
-                  onClick={() => { setShowTimeDropdown(!showTimeDropdown); setShowContentDropdown(false); setShowGameFilter(false); }}
-                  className="w-10 h-10 rounded-full flex items-center justify-center"
-                  style={{
-                    background: showTimeDropdown ? 'rgba(74,222,128,0.18)' : 'rgba(30,41,59,0.88)',
-                    border: showTimeDropdown ? '1px solid #4ADE80' : '1px solid rgba(74,222,128,0.3)',
-                  }}
-                >
-                  <Clock className="h-5 w-5" style={{ color: showTimeDropdown ? '#4ADE80' : '#fff' }} />
-                </button>
-
-                {showTimeDropdown && (
-                  <div className="rounded-xl overflow-hidden min-w-[148px]" style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(74,222,128,0.25)' }}>
-                    <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>Time Period</p>
-                    {(Object.entries(timeMeta) as [TimePeriod, string][]).map(([period, label]) => (
-                      <button
-                        key={period}
-                        className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                        style={timePeriod === period ? { background: 'rgba(74,222,128,0.15)', color: '#4ADE80' } : { color: '#94A3B8' }}
-                        onClick={() => { setTimePeriod(period); setShowTimeDropdown(false); }}
-                      >
-                        {label}
-                        {timePeriod === period && <Check className="h-3 w-3 ml-auto" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
+                  <button
+                    key={type}
+                    className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                    style={activeTab === type ? { background: 'rgba(74,222,128,0.15)', color: '#4ADE80' } : { color: '#94A3B8' }}
+                    onClick={() => { setActiveTab(type); setShowContentDropdown(false); }}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {label}
+                    {activeTab === type && <Check className="h-3 w-3 ml-auto" />}
+                  </button>
+                ))}
               </div>
-            </>
-          )}
+            )}
+          </div>
+
+          {/* 3. Gamepad circle — always in DOM */}
+          <button
+            onClick={() => { setShowGameFilter(true); setShowContentDropdown(false); setShowTimeDropdown(false); }}
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200"
+            style={{
+              background: selectedGameId ? 'rgba(74,222,128,0.18)' : 'rgba(30,41,59,0.88)',
+              border: selectedGameId ? '1px solid #4ADE80' : '1px solid rgba(74,222,128,0.3)',
+              opacity: controlsVisible ? 1 : 0,
+              pointerEvents: controlsVisible ? 'auto' : 'none',
+            }}
+          >
+            <Gamepad2 className="h-5 w-5" style={{ color: selectedGameId ? '#4ADE80' : '#fff' }} />
+          </button>
+
+          {/* 4. Clock circle — always in DOM */}
+          <div
+            className="relative flex items-center justify-end transition-all duration-200"
+            style={{ opacity: controlsVisible ? 1 : 0, pointerEvents: controlsVisible ? 'auto' : 'none' }}
+          >
+            <button
+              onClick={() => { setShowTimeDropdown(!showTimeDropdown); setShowContentDropdown(false); setShowGameFilter(false); }}
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{
+                background: showTimeDropdown ? 'rgba(74,222,128,0.18)' : 'rgba(30,41,59,0.88)',
+                border: showTimeDropdown ? '1px solid #4ADE80' : '1px solid rgba(74,222,128,0.3)',
+              }}
+            >
+              <Clock className="h-5 w-5" style={{ color: showTimeDropdown ? '#4ADE80' : '#fff' }} />
+            </button>
+            {showTimeDropdown && (
+              <div
+                className="absolute top-full mt-1.5 right-0 rounded-xl overflow-hidden min-w-[148px]"
+                style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(74,222,128,0.25)', zIndex: 90 }}
+              >
+                <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>Time Period</p>
+                {(Object.entries(timeMeta) as [TimePeriod, string][]).map(([period, label]) => (
+                  <button
+                    key={period}
+                    className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                    style={timePeriod === period ? { background: 'rgba(74,222,128,0.15)', color: '#4ADE80' } : { color: '#94A3B8' }}
+                    onClick={() => { setTimePeriod(period); setShowTimeDropdown(false); }}
+                  >
+                    {label}
+                    {timePeriod === period && <Check className="h-3 w-3 ml-auto" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Game filter bottom-sheet modal */}
