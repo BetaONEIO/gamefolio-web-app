@@ -336,23 +336,36 @@ const TrendingPage: React.FC = () => {
     enabled: activeTab === 'screenshots' || (isMobile && showMobileViewer),
   });
 
-  // Available games derived from loaded trending content — placed here so all three queries are in scope
+  // All games across every tab — collected from all three sources
   const [availableGames, setAvailableGames] = useState<{ id: number; name: string; imageUrl?: string }[]>([]);
+  // Game IDs that have content in the currently active tab (others are greyed out)
+  const [activeTabGameIds, setActiveTabGameIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    if (selectedGameId !== null) return; // persist list while a filter is active
-    const sources =
+    // Rebuild full cross-tab list only when no filter is active (so the picker persists while filtered)
+    if (selectedGameId !== null) return;
+    const allSeen = new Map<number, { id: number; name: string; imageUrl?: string }>();
+    for (const item of [...(trendingClips || []), ...(trendingReels || []), ...(trendingScreenshots || [])]) {
+      const g = (item as any).game;
+      if (g?.id && g?.name) allSeen.set(g.id, { id: g.id, name: g.name, imageUrl: g.imageUrl ?? undefined });
+    }
+    const games = Array.from(allSeen.values());
+    if (games.length > 0) setAvailableGames(games);
+  }, [trendingClips, trendingReels, trendingScreenshots, selectedGameId]);
+
+  useEffect(() => {
+    // Always track which games are in the current tab so we can grey out the rest
+    const currentSources =
       activeTab === 'clips'  ? (trendingClips      || []) :
       activeTab === 'reels'  ? (trendingReels       || []) :
                                (trendingScreenshots || []);
-    const seen = new Map<number, { id: number; name: string; imageUrl?: string }>();
-    for (const item of sources) {
+    const ids = new Set<number>();
+    for (const item of currentSources) {
       const g = (item as any).game;
-      if (g?.id && g?.name) seen.set(g.id, { id: g.id, name: g.name, imageUrl: g.imageUrl ?? undefined });
+      if (g?.id) ids.add(g.id);
     }
-    const games = Array.from(seen.values());
-    if (games.length > 0) setAvailableGames(games);
-  }, [activeTab, trendingClips, trendingReels, trendingScreenshots, selectedGameId]);
+    setActiveTabGameIds(ids);
+  }, [activeTab, trendingClips, trendingReels, trendingScreenshots]);
 
   const getPeriodIcon = (period: TimePeriod) => {
     switch (period) {
@@ -824,10 +837,11 @@ const TrendingPage: React.FC = () => {
                 )}
 
                 <div className="grid grid-cols-3 gap-2">
-                  {/* "All Games" card — always first */}
+                  {/* "All Games" card — always first, 4:3 */}
                   <button
-                    className="relative rounded-2xl overflow-hidden aspect-square flex flex-col items-center justify-center transition-all"
+                    className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center transition-all"
                     style={{
+                      aspectRatio: '4/3',
                       background: '#1A2736',
                       border: !selectedGameId ? '2.5px solid #4ADE80' : '2px solid rgba(255,255,255,0.08)',
                     }}
@@ -841,8 +855,8 @@ const TrendingPage: React.FC = () => {
                         <Check className="h-3 w-3 text-black" strokeWidth={3} />
                       </div>
                     )}
-                    <Gamepad2 className="h-8 w-8 mb-1.5" style={{ color: '#4ADE80' }} />
-                    <span className="text-white text-xs font-bold text-center px-1 leading-tight">All Games</span>
+                    <Gamepad2 className="h-7 w-7 mb-1" style={{ color: '#4ADE80' }} />
+                    <span className="text-white text-[11px] font-bold text-center px-1 leading-tight">All Games</span>
                   </button>
 
                   {/* Empty state when no games and no search */}
@@ -860,18 +874,30 @@ const TrendingPage: React.FC = () => {
                       : availableGames;
                     return gameList.map((game: { id: number; name: string; imageUrl?: string }) => {
                       const isSelected = selectedGameId === game.id;
+                      const isInCurrentTab = activeTabGameIds.has(game.id);
                       const imgSrc = game.imageUrl
-                        ? game.imageUrl.replace('{width}', '144').replace('{height}', '192')
+                        ? game.imageUrl.replace('{width}', '192').replace('{height}', '144')
                         : null;
                       return (
                         <button
                           key={game.id}
-                          className="relative rounded-2xl overflow-hidden aspect-square flex flex-col justify-end transition-all"
+                          className="relative rounded-xl overflow-hidden flex flex-col justify-end transition-all"
                           style={{
+                            aspectRatio: '4/3',
                             background: '#1A2736',
                             border: isSelected ? '2.5px solid #4ADE80' : '2px solid rgba(255,255,255,0.08)',
+                            opacity: isInCurrentTab ? 1 : 0.4,
+                            filter: isInCurrentTab ? 'none' : 'grayscale(70%)',
+                            cursor: isInCurrentTab ? 'pointer' : 'not-allowed',
                           }}
-                          onClick={() => { setSelectedGameId(game.id); setSelectedGameName(game.name); setShowGameFilter(false); setGameSearchQuery(''); }}
+                          disabled={!isInCurrentTab}
+                          onClick={() => {
+                            if (!isInCurrentTab) return;
+                            setSelectedGameId(game.id);
+                            setSelectedGameName(game.name);
+                            setShowGameFilter(false);
+                            setGameSearchQuery('');
+                          }}
                         >
                           {/* Cover art */}
                           {imgSrc && (
