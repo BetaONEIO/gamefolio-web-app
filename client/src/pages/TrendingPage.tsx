@@ -221,29 +221,6 @@ const TrendingPage: React.FC = () => {
     staleTime: 60000,
   });
 
-  // Available games derived from the currently loaded trending content (no extra API call needed)
-  const [availableGames, setAvailableGames] = useState<{ id: number; name: string; imageUrl?: string }[]>([]);
-
-  useEffect(() => {
-    // Only rebuild the list when there is NO active game filter — so the list persists while filtered
-    if (selectedGameId !== null) return;
-
-    const sources =
-      activeTab === 'clips'       ? (trendingClips       || []) :
-      activeTab === 'reels'       ? (trendingReels        || []) :
-                                    (trendingScreenshots  || []);
-
-    const seen = new Map<number, { id: number; name: string; imageUrl?: string }>();
-    for (const item of sources) {
-      const g = (item as any).game;
-      if (g?.id && g?.name) {
-        seen.set(g.id, { id: g.id, name: g.name, imageUrl: g.imageUrl ?? undefined });
-      }
-    }
-    const games = Array.from(seen.values());
-    if (games.length > 0) setAvailableGames(games);
-  }, [activeTab, trendingClips, trendingReels, trendingScreenshots, selectedGameId]);
-
   // Follow/unfollow mutation
   const followMutation = useMutation({
     mutationFn: async (targetUserId: number) => {
@@ -357,6 +334,24 @@ const TrendingPage: React.FC = () => {
     },
     enabled: activeTab === 'screenshots' || (isMobile && showMobileViewer),
   });
+
+  // Available games derived from loaded trending content — placed here so all three queries are in scope
+  const [availableGames, setAvailableGames] = useState<{ id: number; name: string; imageUrl?: string }[]>([]);
+
+  useEffect(() => {
+    if (selectedGameId !== null) return; // persist list while a filter is active
+    const sources =
+      activeTab === 'clips'  ? (trendingClips      || []) :
+      activeTab === 'reels'  ? (trendingReels       || []) :
+                               (trendingScreenshots || []);
+    const seen = new Map<number, { id: number; name: string; imageUrl?: string }>();
+    for (const item of sources) {
+      const g = (item as any).game;
+      if (g?.id && g?.name) seen.set(g.id, { id: g.id, name: g.name, imageUrl: g.imageUrl ?? undefined });
+    }
+    const games = Array.from(seen.values());
+    if (games.length > 0) setAvailableGames(games);
+  }, [activeTab, trendingClips, trendingReels, trendingScreenshots, selectedGameId]);
 
   const getPeriodIcon = (period: TimePeriod) => {
     switch (period) {
