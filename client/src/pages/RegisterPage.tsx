@@ -55,44 +55,19 @@ export default function RegisterPage() {
           </Link>
         </div>
 
-        {/* Promo image */}
-        <div className="relative z-10 flex-1 flex items-center justify-center px-10 pb-10">
-          <div className="relative w-full max-w-md">
-            {/* Offset green shape behind image */}
-            <div
-              className="absolute rounded-3xl"
-              style={{
-                background: PRIMARY,
-                width: "85%",
-                height: "90%",
-                bottom: "-16px",
-                right: "-16px",
-                zIndex: 0,
-                opacity: 0.9,
-              }}
-            />
-            <div
-              className="relative rounded-3xl overflow-hidden border shadow-2xl"
-              style={{
-                borderColor: "rgba(183,255,26,0.2)",
-                background: CARD_BG,
-                zIndex: 1,
-              }}
-            >
-              <img
-                src={proHeroImage}
-                alt="Gamefolio Pro"
-                className="w-full object-cover"
-              />
-            </div>
+        {/* Promo image — fills the full left half */}
+        <div className="relative z-10 flex-1 overflow-hidden">
+          <img
+            src={proHeroImage}
+            alt="Gamefolio Pro"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          {/* Bottom tagline overlay */}
+          <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/70 to-transparent">
+            <p className="text-white/80 text-sm leading-relaxed">
+              Upload clips, connect your stream, build your profile — all in one place.
+            </p>
           </div>
-        </div>
-
-        {/* Bottom tagline */}
-        <div className="relative z-10 px-10 pb-10">
-          <p className="text-white/60 text-sm leading-relaxed max-w-xs">
-            Upload clips, connect your stream, build your profile — all in one place.
-          </p>
         </div>
       </div>
 
