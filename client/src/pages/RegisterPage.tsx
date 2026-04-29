@@ -28,7 +28,7 @@ export default function RegisterPage() {
       style={{ background: BG, fontFamily: "'Space Grotesk', sans-serif" }}
     >
       {/* Left panel — promo image */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col">
+      <div className="hidden lg:flex w-1/2 relative overflow-hidden flex-col">
         {/* Neon glow backdrop */}
         <div
           className="absolute inset-0"
@@ -98,7 +98,7 @@ export default function RegisterPage() {
 
       {/* Right panel — registration form */}
       <div
-        className="flex-1 lg:w-1/2 flex flex-col overflow-y-auto"
+        className="flex-1 lg:flex-none lg:w-1/2 flex flex-col overflow-y-auto"
         style={{ background: CARD_BG }}
       >
         {/* Mobile logo */}
@@ -113,8 +113,8 @@ export default function RegisterPage() {
           </Link>
         </div>
 
-        <div className="flex-1 flex flex-col justify-center px-6 sm:px-10 lg:px-14 py-10">
-          <div className="w-full max-w-md mx-auto">
+        <div className="flex-1 flex flex-col justify-center px-8 sm:px-12 lg:px-16 py-10">
+          <div className="w-full">
             {/* Header */}
             <div className="mb-8">
               <div
