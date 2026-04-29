@@ -215,7 +215,7 @@ export default function InvitePage() {
                 Secure your username
               </button>
               <button
-                onClick={() => setLocation("/upload")}
+              onClick={() => setLocation("/register")}
                 className="rounded-2xl px-8 py-4 font-bold text-base border transition-all hover:bg-white/5"
                 style={{ borderColor: CARD_BORDER, color: "white" }}
               >
