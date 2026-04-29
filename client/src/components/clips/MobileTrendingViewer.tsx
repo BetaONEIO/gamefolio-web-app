@@ -10,6 +10,8 @@ import CommentSection from "@/components/clips/CommentSection";
 import ShareMenu from "@/components/clips/ShareMenu";
 import { useAuth } from "@/hooks/use-auth";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/content/ReportDialog";
@@ -69,9 +71,48 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   }, []);
   const containerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { isOpen: isJoinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
 
+  // Declare currentItem here so it's available to hooks below
   const currentItem = content[currentIndex];
+
+  // ── Follow state for current content item's author ─────────────────────
+  const currentAuthorUsername = currentItem?.user?.username;
+  const currentAuthorId = currentItem?.user?.id;
+  const isSelf = user && currentAuthorId && user.id === currentAuthorId;
+
+  const { data: followStatusData } = useQuery({
+    queryKey: ['/api/users/follow-status', currentAuthorUsername],
+    queryFn: async () => {
+      const res = await fetch(`/api/users/${currentAuthorUsername}/follow-status`, { credentials: 'include' });
+      if (!res.ok) return { isFollowing: false };
+      return res.json();
+    },
+    enabled: !!user && !!currentAuthorUsername && !isSelf,
+    staleTime: 30000,
+  });
+
+  const isFollowing = followStatusData?.isFollowing ?? false;
+
+  const followMutation = useMutation({
+    mutationFn: async () => {
+      const method = isFollowing ? 'DELETE' : 'POST';
+      return apiRequest(method, `/api/users/${currentAuthorUsername}/follow`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users/follow-status', currentAuthorUsername] });
+    },
+    onError: () => {},
+  });
+
+  const handleFollowPress = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) { openDialog('follow'); return; }
+    if (isSelf) return;
+    followMutation.mutate();
+  };
 
   // Early return if no content or invalid index
   if (!currentItem || currentIndex < 0 || currentIndex >= content.length) {
@@ -249,28 +290,26 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
           </div>
 
           {/* Likes */}
-          <div className="flex flex-col items-center gap-0.5">
-            <LikeButton
-              contentId={currentItem.id}
-              contentType={isVideoContent(currentItem) ? "clip" : "screenshot"}
-              contentOwnerId={currentItem.user.id}
-              initialLiked={false}
-              initialCount={stats.likes}
-              size="lg"
-            />
-          </div>
+          <LikeButton
+            contentId={currentItem.id}
+            contentType={isVideoContent(currentItem) ? "clip" : "screenshot"}
+            contentOwnerId={currentItem.user.id}
+            initialLiked={(currentItem as any).isLiked ?? false}
+            initialCount={stats.likes}
+            size="lg"
+            variant="vertical"
+          />
 
           {/* Fires */}
-          <div className="flex flex-col items-center gap-0.5">
-            <FireButton
-              contentId={currentItem.id}
-              contentType={isVideoContent(currentItem) ? "clip" : "screenshot"}
-              contentOwnerId={currentItem.user.id}
-              initialFired={false}
-              initialCount={(currentItem as any)._count?.reactions || 0}
-              size="lg"
-            />
-          </div>
+          <FireButton
+            contentId={currentItem.id}
+            contentType={isVideoContent(currentItem) ? "clip" : "screenshot"}
+            contentOwnerId={currentItem.user.id}
+            initialFired={(currentItem as any).isFired ?? false}
+            initialCount={(currentItem as any)._count?.fires || (currentItem as any)._count?.reactions || 0}
+            size="lg"
+            variant="vertical"
+          />
 
           {/* Comments */}
           <button
@@ -294,29 +333,38 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
 
         {/* ── Bottom-left info overlay ─────────────────────────────────────── */}
         <div className="absolute bottom-0 left-0 z-10 px-4 pb-6 pt-16 bg-gradient-to-t from-black/85 via-black/30 to-transparent" style={{ right: 60 }}>
-          {/* User row: avatar + @username + Follow */}
-          <Link
-            href={`/profile/${currentItem.user.username}`}
-            className="flex items-center gap-2 mb-2 no-underline"
-            data-testid={`link-user-${currentItem.user.username}`}
-          >
-            <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid #fff' }}>
-              <img
-                src={currentItem.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                alt={currentItem.user.displayName}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <span className="text-white font-bold text-sm drop-shadow leading-tight">
-              @{currentItem.user.username}
-            </span>
-            <span
-              className="text-black text-xs font-bold px-2.5 py-0.5 rounded-md flex-shrink-0"
-              style={{ background: '#4ADE80' }}
+          {/* User row: avatar + @username (link) + Follow button (separate) */}
+          <div className="flex items-center gap-2 mb-2">
+            <Link
+              href={`/profile/${currentItem.user.username}`}
+              className="flex items-center gap-2 no-underline flex-shrink-0"
+              data-testid={`link-user-${currentItem.user.username}`}
             >
-              Follow
-            </span>
-          </Link>
+              <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid #fff' }}>
+                <img
+                  src={currentItem.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                  alt={currentItem.user.displayName}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <span className="text-white font-bold text-sm drop-shadow leading-tight">
+                @{currentItem.user.username}
+              </span>
+            </Link>
+            {!isSelf && (
+              <button
+                onClick={handleFollowPress}
+                disabled={followMutation.isPending}
+                className="text-xs font-bold px-2.5 py-0.5 rounded-md flex-shrink-0 transition-all"
+                style={isFollowing
+                  ? { background: 'transparent', border: '1px solid rgba(255,255,255,0.5)', color: '#fff' }
+                  : { background: '#4ADE80', color: '#000', border: '1px solid transparent' }
+                }
+              >
+                {followMutation.isPending ? '…' : isFollowing ? 'Following' : 'Follow'}
+              </button>
+            )}
+          </div>
 
           {/* Title */}
           <p className="text-white font-bold text-sm drop-shadow mb-0.5 leading-snug">
