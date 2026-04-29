@@ -120,15 +120,7 @@ export default function RegisterPage() {
             </div>
 
             {/* Registration form — reuses the existing validated component */}
-            <div
-              className="rounded-2xl p-6 sm:p-8"
-              style={{
-                background: BG,
-                border: `1px solid ${CARD_BORDER}`,
-              }}
-            >
-              <RegisterForm onSuccess={() => {}} />
-            </div>
+            <RegisterForm onSuccess={() => {}} />
 
             <p className="text-center text-gray-600 text-xs mt-6">
               By creating an account you agree to our{" "}
