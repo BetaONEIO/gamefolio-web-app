@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { ChevronLeft, Heart, MessageCircle, Share2, User, Play, Pause, Flag, Eye } from "lucide-react";
+import { ChevronLeft, Heart, MessageCircle, Share2, User, Play, Pause, Flag, Eye, Gamepad2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
@@ -209,7 +209,8 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   return (
     <div 
       ref={containerRef}
-      className={embedded ? "relative w-full h-full bg-black" : "fixed inset-0 z-[60] bg-black flex items-center justify-center"}
+      className={embedded ? "relative w-full h-full" : "fixed inset-0 z-[60] flex items-center justify-center"}
+      style={{ background: '#131F2A' }}
       data-testid="mobile-trending-viewer"
     >
       {/* Content - Full mobile screen 9:16 format */}
@@ -240,61 +241,60 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         )}
 
         {/* Bottom overlay with user info and controls */}
-        <div className="absolute bottom-4 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
-          <div className="flex justify-between items-end">
+        <div className="absolute bottom-0 left-0 right-0 px-4 pb-6 pt-20 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
+          <div className="flex justify-between items-end gap-3">
             {/* Left side - User info and content details */}
-            <div className="flex-1 pr-4">
-              {/* User info */}
+            <div className="flex-1 min-w-0">
+              {/* User row: avatar + username + follow */}
               <Link 
                 href={`/profile/${currentItem.user.username}`}
-                className="flex items-center gap-3 mb-3 no-underline"
+                className="flex items-center gap-2 mb-2 no-underline"
                 data-testid={`link-user-${currentItem.user.username}`}
               >
-                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/50">
+                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '1.5px solid #fff' }}>
                   <img
                     src={currentItem.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
                     alt={currentItem.user.displayName}
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <span className="text-white font-semibold">
-                  {currentItem.user.displayName || currentItem.user.username}
+                <span className="text-white font-bold text-sm drop-shadow">
+                  @{currentItem.user.username}
+                </span>
+                <span
+                  className="text-black text-xs font-bold px-2.5 py-0.5 rounded flex-shrink-0"
+                  style={{ background: '#4ADE80' }}
+                >
+                  Follow
                 </span>
               </Link>
 
               {/* Title */}
-              <h3 className="text-white font-semibold mb-2 line-clamp-2 text-sm">
+              <h3 className="text-white font-semibold mb-1.5 line-clamp-2 text-sm drop-shadow">
                 {currentItem.title}
               </h3>
 
               {/* Game info */}
               {currentItem.game?.name && (
-                <div className="text-white/80 text-xs mb-2">
-                  <span>#{currentItem.game.name}</span>
+                <div className="flex items-center gap-1 mb-1">
+                  <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#4ADE80' }} />
+                  <span className="text-xs font-semibold truncate" style={{ color: '#4ADE80' }}>
+                    {currentItem.game.name}
+                  </span>
                 </div>
               )}
 
-              {/* Stats */}
-              <div className="flex items-center gap-4 text-white/70 text-xs">
-                <span className="flex items-center gap-1">
-                  <Eye className="h-3 w-3" />
-                  {formatNumber(stats.views)}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Heart className="h-3 w-3" />
-                  {formatNumber(stats.likes)}
-                </span>
-                <span className="flex items-center gap-1">
-                  <MessageCircle className="h-3 w-3" />
-                  {formatNumber(stats.comments)}
-                </span>
+              {/* Views */}
+              <div className="flex items-center gap-1 text-white/60 text-xs">
+                <Eye className="h-3 w-3" />
+                {formatNumber(stats.views)} views
               </div>
             </div>
 
-            {/* Right side - Engagement buttons */}
-            <div className="flex flex-col items-center gap-4">
-              {/* Like button */}
-              <div className="flex flex-col items-center">
+            {/* Right side - Action column */}
+            <div className="flex flex-col items-center gap-5 flex-shrink-0 pb-1">
+              {/* Like */}
+              <div className="flex flex-col items-center gap-1">
                 <LikeButton
                   contentId={currentItem.id}
                   contentType={isVideoContent(currentItem) ? "clip" : "screenshot"}
@@ -305,8 +305,8 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                 />
               </div>
 
-              {/* Fire button */}
-              <div className="flex flex-col items-center">
+              {/* Fire */}
+              <div className="flex flex-col items-center gap-1">
                 <FireButton
                   contentId={currentItem.id}
                   contentType={isVideoContent(currentItem) ? "clip" : "screenshot"}
@@ -317,59 +317,26 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                 />
               </div>
 
-              {/* Comments button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  if (!user) {
-                    openDialog('comment');
-                  } else {
-                    setShowComments(true);
-                  }
-                }}
-                className="text-white hover:bg-white/20 flex flex-col items-center gap-1"
+              {/* Comments */}
+              <button
+                onClick={() => { if (!user) { openDialog('comment'); } else { setShowComments(true); } }}
+                className="flex flex-col items-center gap-1"
                 data-testid="button-comments"
               >
-                <MessageCircle className="h-6 w-6" />
-                <span className="text-xs">{formatNumber(stats.comments)}</span>
-              </Button>
+                <MessageCircle className="h-7 w-7 text-white drop-shadow" />
+                <span className="text-white text-xs font-semibold drop-shadow">{formatNumber(stats.comments)}</span>
+              </button>
 
-              {/* Share button */}
-              <Button
-                variant="ghost"
-                size="sm"
+              {/* Share */}
+              <button
                 onClick={() => setShowShare(true)}
-                className="text-white hover:bg-white/20"
+                className="flex flex-col items-center gap-1"
                 data-testid="button-share"
               >
-                <Share2 className="h-6 w-6" />
-              </Button>
-
-              {/* Report button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white hover:bg-white/20"
-                data-testid="button-report"
-              >
-                <Flag className="h-6 w-6" />
-              </Button>
+                <Share2 className="h-7 w-7 text-white drop-shadow" />
+              </button>
             </div>
           </div>
-        </div>
-
-        {/* Navigation indicators */}
-        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex flex-col gap-1">
-          {content.map((_, index) => (
-            <div
-              key={index}
-              className={cn(
-                "w-1 h-8 rounded-full transition-colors",
-                index === currentIndex ? "bg-white" : "bg-white/30"
-              )}
-            />
-          ))}
         </div>
 
         {/* Video play/pause overlay for video content */}

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useLikeScreenshot } from '@/hooks/use-clips';
 import { useToast } from '@/hooks/use-toast';
 import { ClipWithUser } from '@shared/schema';
-import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Share2, Heart, Play, MessageCircle, AlertTriangle } from 'lucide-react';
+import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Share2, Heart, Play, MessageCircle, AlertTriangle, Film, Video, Camera, ChevronDown, Check } from 'lucide-react';
 import { formatDuration } from '@/lib/constants';
 import { formatDistance } from 'date-fns';
 import { useClipDialog } from '@/hooks/use-clip-dialog';
@@ -161,6 +161,8 @@ const TrendingPage: React.FC = () => {
   const [filter, setFilter] = useState<FilterType>('likes');
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('recent');
   const [showMobileViewer, setShowMobileViewer] = useState(false);
+  const [showContentDropdown, setShowContentDropdown] = useState(false);
+  const [showTimeDropdown, setShowTimeDropdown] = useState(false);
   const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotWithUser | null>(null);
   const { signedUrl: screenshotSignedUrl } = useSignedUrl(selectedScreenshot?.imageUrl);
   const [ageRestrictionAccepted, setAgeRestrictionAccepted] = useState(false);
@@ -558,6 +560,133 @@ const TrendingPage: React.FC = () => {
       setShowMobileViewer(true);
     }
   }, [isMobile, activeTab, activeTabContent.length]);
+
+  // ── Mobile: full-screen immersive layout matching mobile app ─────────────
+  if (isMobile) {
+    const contentMeta: Record<ContentType, { label: string; Icon: React.ElementType }> = {
+      reels:       { label: 'Reels',       Icon: Film   },
+      clips:       { label: 'Clips',       Icon: Video  },
+      screenshots: { label: 'Screenshots', Icon: Camera },
+    };
+    const timeMeta: Record<TimePeriod, string> = {
+      recent: 'Most Recent',
+      '1w':   '1 Week',
+      '1m':   '1 Month',
+      ever:   'All Time',
+    };
+    const activeContent: any[] =
+      activeTab === 'clips'       ? (trendingClips       || []) :
+      activeTab === 'reels'       ? (trendingReels        || []) :
+                                    (trendingScreenshots  || []);
+    const isLoadingContent =
+      activeTab === 'clips' ? isLoadingClips :
+      activeTab === 'reels' ? isLoadingReels : isLoadingScreenshots;
+
+    const { label: activeLabel, Icon: ActiveIcon } = contentMeta[activeTab];
+
+    return (
+      <>
+        {/* Full-screen viewer */}
+        {activeContent.length > 0 && !isLoadingContent && (
+          <MobileTrendingViewer
+            key={activeTab}
+            content={activeContent}
+            onClose={() => {}}
+            hideCloseButton={true}
+          />
+        )}
+
+        {/* Loading */}
+        {isLoadingContent && (
+          <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ background: '#131F2A' }}>
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-8 h-8 border-2 border-[#4ADE80] border-t-transparent rounded-full animate-spin" />
+              <p className="text-white/60 text-sm">Loading {activeLabel.toLowerCase()}…</p>
+            </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!isLoadingContent && activeContent.length === 0 && (
+          <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ background: '#131F2A' }}>
+            <div className="text-center px-8">
+              <TrendingUp className="h-14 w-14 mx-auto mb-4" style={{ color: '#4ADE80' }} />
+              <p className="text-white font-semibold mb-1">No trending {activeLabel.toLowerCase()}</p>
+              <p className="text-white/50 text-sm">Check back later!</p>
+            </div>
+          </div>
+        )}
+
+        {/* Floating content-type + time-filter controls */}
+        <div
+          className="fixed right-0 z-[70] pt-14 pr-4 flex flex-col items-end gap-2"
+          style={{ top: 0 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Content-type pill */}
+          <button
+            onClick={() => { setShowContentDropdown(!showContentDropdown); setShowTimeDropdown(false); }}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-full text-white text-sm font-semibold"
+            style={{ background: 'rgba(30,41,59,0.9)', border: '1px solid rgba(74,222,128,0.3)' }}
+          >
+            <ActiveIcon className="h-4 w-4" />
+            {activeLabel}
+            <ChevronDown className="h-4 w-4" />
+          </button>
+
+          {/* Content-type dropdown */}
+          {showContentDropdown && (
+            <div className="rounded-xl overflow-hidden min-w-[165px]" style={{ background: 'rgba(30,41,59,0.97)', border: '1px solid rgba(74,222,128,0.2)' }}>
+              {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
+                <button
+                  key={type}
+                  className="flex items-center gap-3 px-4 py-3 w-full text-left text-sm font-medium"
+                  style={activeTab === type ? { background: 'rgba(74,222,128,0.15)', color: '#4ADE80' } : { color: '#94A3B8' }}
+                  onClick={() => { setActiveTab(type); setShowContentDropdown(false); }}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                  {activeTab === type && <Check className="h-3.5 w-3.5 ml-auto" />}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Time-filter pill */}
+          <button
+            onClick={() => { setShowTimeDropdown(!showTimeDropdown); setShowContentDropdown(false); }}
+            className="p-2 rounded-full"
+            style={{
+              background: showTimeDropdown ? 'rgba(74,222,128,0.15)' : 'rgba(30,41,59,0.9)',
+              border: showTimeDropdown ? '1px solid #4ADE80' : '1px solid rgba(74,222,128,0.3)',
+            }}
+          >
+            <Clock className="h-5 w-5" style={{ color: showTimeDropdown ? '#4ADE80' : '#fff' }} />
+          </button>
+
+          {/* Time dropdown */}
+          {showTimeDropdown && (
+            <div className="rounded-xl overflow-hidden min-w-[150px]" style={{ background: 'rgba(30,41,59,0.97)', border: '1px solid rgba(74,222,128,0.2)' }}>
+              <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.4)', borderBottom: '1px solid #1E293B' }}>Time Period</p>
+              {(Object.entries(timeMeta) as [TimePeriod, string][]).map(([period, label]) => (
+                <button
+                  key={period}
+                  className="flex items-center gap-3 px-4 py-3 w-full text-left text-sm font-medium"
+                  style={timePeriod === period ? { background: 'rgba(74,222,128,0.15)', color: '#4ADE80' } : { color: '#94A3B8' }}
+                  onClick={() => { setTimePeriod(period); setShowTimeDropdown(false); }}
+                >
+                  <Clock className="h-4 w-4" />
+                  {label}
+                  {timePeriod === period && <Check className="h-3.5 w-3.5 ml-auto" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </>
+    );
+  }
+  // ── End mobile layout ──────────────────────────────────────────────────────
 
   return (
     <div className="container mx-auto px-4 py-4 md:px-6 md:py-6 max-w-7xl">
