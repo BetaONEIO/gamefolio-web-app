@@ -56,11 +56,11 @@ export default function RegisterPage() {
         </div>
 
         {/* Promo image — fills the full left half */}
-        <div className="relative z-10 flex-1 overflow-hidden -mt-[18%]">
+        <div className="relative z-10 flex-1 overflow-hidden -mt-[8%]">
           <img
             src={proHeroImage}
             alt="Gamefolio Pro"
-            className="absolute inset-0 w-full h-[125%] object-cover object-top"
+            className="absolute inset-0 w-full h-[108%] object-cover object-top"
           />
           {/* Bottom tagline overlay */}
           <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/70 to-transparent">
