@@ -165,6 +165,7 @@ const TrendingPage: React.FC = () => {
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
   const [showGameFilter, setShowGameFilter] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
   const [selectedGameName, setSelectedGameName] = useState<string | null>(null);
   const [gameSearchQuery, setGameSearchQuery] = useState('');
@@ -631,6 +632,7 @@ const TrendingPage: React.FC = () => {
             content={activeContent}
             onClose={() => {}}
             hideCloseButton={true}
+            onCommentsVisibilityChange={setCommentsOpen}
           />
         )}
 
@@ -655,10 +657,10 @@ const TrendingPage: React.FC = () => {
           </div>
         )}
 
-        {/* Floating controls — top-right vertical stack */}
+        {/* Floating controls — hidden when comment panel is open */}
         <div
           className="fixed z-[70] flex flex-col items-center gap-2.5"
-          style={{ top: 16, right: 12 }}
+          style={{ top: 16, right: 12, opacity: commentsOpen ? 0 : 1, pointerEvents: commentsOpen ? 'none' : 'auto', transition: 'opacity 0.2s' }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* 1. Eye circle — toggles the rest of the controls */}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { ChevronLeft, Heart, MessageCircle, Share2, User, Play, Pause, Flag, Eye, Gamepad2, Music } from "lucide-react";
+import { ChevronLeft, Heart, MessageCircle, Share2, User, Play, Pause, Flag, Eye, Gamepad2, Music, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
@@ -47,11 +47,17 @@ interface MobileTrendingViewerProps {
   onClose: () => void;
   hideCloseButton?: boolean;
   embedded?: boolean;
+  onCommentsVisibilityChange?: (open: boolean) => void;
 }
 
-export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideCloseButton = false, embedded = false }: MobileTrendingViewerProps) {
+export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideCloseButton = false, embedded = false, onCommentsVisibilityChange }: MobileTrendingViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showComments, setShowComments] = useState(false);
+
+  useEffect(() => {
+    onCommentsVisibilityChange?.(showComments);
+  }, [showComments]);
+
   const [showShare, setShowShare] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
 
@@ -250,16 +256,19 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   return (
     <div 
       ref={containerRef}
-      className={embedded ? "relative w-full h-full" : "fixed inset-0 z-[60] flex items-center justify-center"}
+      className={embedded ? "relative w-full h-full flex flex-col" : "fixed inset-0 z-[60] flex flex-col"}
       style={{ background: '#131F2A' }}
       data-testid="mobile-trending-viewer"
     >
-      {/* Content - Full mobile screen 9:16 format */}
-      <div className="relative w-full h-full">
+      {/* Content - shrinks when comments panel is open */}
+      <div
+        className="relative w-full flex-shrink-0 overflow-hidden"
+        style={{ height: (showComments && !embedded) ? '38%' : '100%', flex: (showComments && !embedded) ? 'none' : '1' }}
+      >
         {renderContent()}
 
-        {/* Top overlay with close button */}
-        {!hideCloseButton && (
+        {/* Top overlay with close button — hidden when comments open */}
+        {!hideCloseButton && !showComments && (
           <div className="absolute top-0 left-0 right-0 flex justify-between items-center p-4 bg-gradient-to-b from-black/60 to-transparent z-10">
             <Button
               variant="ghost"
@@ -281,8 +290,8 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
           </div>
         )}
 
-        {/* ── Right edge action column ────────────────────────────────────── */}
-        <div className="absolute right-3 z-10 flex flex-col items-center gap-5" style={{ bottom: 120 }}>
+        {/* ── Right edge action column — hidden when comments open ─── */}
+        {!showComments && <div className="absolute right-3 z-10 flex flex-col items-center gap-5" style={{ bottom: 120 }}>
           {/* Views */}
           <div className="flex flex-col items-center gap-0.5">
             <Eye className="h-7 w-7 text-white drop-shadow" />
@@ -329,76 +338,78 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
           >
             <Share2 className="h-7 w-7 text-white drop-shadow" />
           </button>
-        </div>
+        </div>}
 
-        {/* ── Bottom-left info overlay ─────────────────────────────────────── */}
-        <div className="absolute bottom-0 left-0 z-10 px-4 pb-6 pt-16 bg-gradient-to-t from-black/85 via-black/30 to-transparent" style={{ right: 60 }}>
-          {/* User row: avatar + @username (link) + Follow button (separate) */}
-          <div className="flex items-center gap-2 mb-2">
-            <Link
-              href={`/profile/${currentItem.user.username}`}
-              className="flex items-center gap-2 no-underline flex-shrink-0"
-              data-testid={`link-user-${currentItem.user.username}`}
-            >
-              <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid #fff' }}>
-                <img
-                  src={currentItem.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                  alt={currentItem.user.displayName}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <span className="text-white font-bold text-sm drop-shadow leading-tight">
-                @{currentItem.user.username}
-              </span>
-            </Link>
-            {!isSelf && (
-              <button
-                onClick={handleFollowPress}
-                disabled={followMutation.isPending}
-                className="text-xs font-bold px-2.5 py-0.5 rounded-md flex-shrink-0 transition-all"
-                style={isFollowing
-                  ? { background: 'transparent', border: '1px solid rgba(255,255,255,0.5)', color: '#fff' }
-                  : { background: '#4ADE80', color: '#000', border: '1px solid transparent' }
-                }
+        {/* ── Bottom-left info overlay — hidden when comments open ─── */}
+        {!showComments && (
+          <div className="absolute bottom-0 left-0 z-10 px-4 pb-6 pt-16 bg-gradient-to-t from-black/85 via-black/30 to-transparent" style={{ right: 60 }}>
+            {/* User row: avatar + @username (link) + Follow button (separate) */}
+            <div className="flex items-center gap-2 mb-2">
+              <Link
+                href={`/profile/${currentItem.user.username}`}
+                className="flex items-center gap-2 no-underline flex-shrink-0"
+                data-testid={`link-user-${currentItem.user.username}`}
               >
-                {followMutation.isPending ? '…' : isFollowing ? 'Following' : 'Follow'}
-              </button>
-            )}
-          </div>
+                <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid #fff' }}>
+                  <img
+                    src={currentItem.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                    alt={currentItem.user.displayName}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <span className="text-white font-bold text-sm drop-shadow leading-tight">
+                  @{currentItem.user.username}
+                </span>
+              </Link>
+              {!isSelf && (
+                <button
+                  onClick={handleFollowPress}
+                  disabled={followMutation.isPending}
+                  className="text-xs font-bold px-2.5 py-0.5 rounded-md flex-shrink-0 transition-all"
+                  style={isFollowing
+                    ? { background: 'transparent', border: '1px solid rgba(255,255,255,0.5)', color: '#fff' }
+                    : { background: '#4ADE80', color: '#000', border: '1px solid transparent' }
+                  }
+                >
+                  {followMutation.isPending ? '…' : isFollowing ? 'Following' : 'Follow'}
+                </button>
+              )}
+            </div>
 
-          {/* Title */}
-          <p className="text-white font-bold text-sm drop-shadow mb-0.5 leading-snug">
-            {currentItem.title}
-          </p>
-
-          {/* Description (if any) */}
-          {(currentItem as any).description && (
-            <p className="text-white/75 text-xs drop-shadow mb-1 line-clamp-1">
-              {(currentItem as any).description}
+            {/* Title */}
+            <p className="text-white font-bold text-sm drop-shadow mb-0.5 leading-snug">
+              {currentItem.title}
             </p>
-          )}
 
-          {/* Game */}
-          {currentItem.game?.name && (
-            <div className="flex items-center gap-1 mb-1">
-              <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#4ADE80' }} />
-              <span className="text-xs font-semibold" style={{ color: '#4ADE80' }}>
-                {currentItem.game.name}
+            {/* Description (if any) */}
+            {(currentItem as any).description && (
+              <p className="text-white/75 text-xs drop-shadow mb-1 line-clamp-1">
+                {(currentItem as any).description}
+              </p>
+            )}
+
+            {/* Game */}
+            {currentItem.game?.name && (
+              <div className="flex items-center gap-1 mb-1">
+                <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#4ADE80' }} />
+                <span className="text-xs font-semibold" style={{ color: '#4ADE80' }}>
+                  {currentItem.game.name}
+                </span>
+              </div>
+            )}
+
+            {/* Original audio */}
+            <div className="flex items-center gap-1">
+              <Music className="h-3 w-3 text-white/65 flex-shrink-0" />
+              <span className="text-white/65 text-xs truncate">
+                Original audio · {currentItem.user.displayName || currentItem.user.username}
               </span>
             </div>
-          )}
-
-          {/* Original audio */}
-          <div className="flex items-center gap-1">
-            <Music className="h-3 w-3 text-white/65 flex-shrink-0" />
-            <span className="text-white/65 text-xs truncate">
-              Original audio · {currentItem.user.displayName || currentItem.user.username}
-            </span>
           </div>
-        </div>
+        )}
 
-        {/* Video play/pause overlay for video content */}
-        {isVideoContent(currentItem) && (
+        {/* Video play/pause overlay — hidden when comments open */}
+        {!showComments && isVideoContent(currentItem) && (
           <div className="absolute inset-0 flex items-center justify-center">
             <Button
               variant="ghost"
@@ -413,21 +424,36 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         )}
       </div>
 
-      {/* Comments overlay */}
-      {showComments && isVideoContent(currentItem) && (
-        <div className="absolute inset-0 bg-black/90 z-20 flex flex-col">
-          <div className="flex justify-between items-center p-4 border-b border-white/20">
-            <h3 className="text-white text-lg font-semibold">Comments</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowComments(false)}
-              className="text-white hover:bg-white/20"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
+      {/* Comments bottom sheet — slides up, video visible above */}
+      {showComments && !embedded && (
+        <div
+          className="flex-1 flex flex-col overflow-hidden"
+          style={{ background: '#0F1923', borderRadius: '20px 20px 0 0' }}
+        >
+          {/* Drag handle */}
+          <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+            <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
           </div>
-          <CommentSection clipId={currentItem.id} />
+
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            <h3 className="text-white font-bold text-base">
+              Comments{' '}
+              <span className="text-white/45 font-normal text-sm">{stats.comments}</span>
+            </h3>
+            <button
+              onClick={() => setShowComments(false)}
+              className="w-8 h-8 flex items-center justify-center rounded-full"
+              style={{ background: 'rgba(255,255,255,0.08)' }}
+            >
+              <X className="h-4 w-4 text-white/70" />
+            </button>
+          </div>
+
+          {/* Comment list + input */}
+          <div className="flex-1 overflow-y-auto px-4 py-2">
+            {isVideoContent(currentItem) && <CommentSection clipId={currentItem.id} />}
+          </div>
         </div>
       )}
 
