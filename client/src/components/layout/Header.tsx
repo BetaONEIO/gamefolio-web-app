@@ -63,7 +63,7 @@ const Header = () => {
   };
   const { toggle } = useMobileMenu();
   const isMobile = useMobile();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const searchRef = useRef<HTMLDivElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
 
@@ -173,6 +173,8 @@ const Header = () => {
       .toUpperCase()
       .slice(0, 2) || 'U';
   };
+
+  if (isMobile && location === '/trending') return null;
 
   return (
     <header className="bg-card shadow-md sticky top-0 z-50 w-full safe-area-top">

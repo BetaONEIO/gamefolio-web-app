@@ -619,7 +619,7 @@ const TrendingPage: React.FC = () => {
 
         {/* Floating content-type + time-filter controls */}
         <div
-          className="fixed right-0 z-[70] pt-14 pr-4 flex flex-col items-end gap-2"
+          className="fixed right-0 z-[70] pt-4 pr-4 flex flex-col items-end gap-2"
           style={{ top: 0 }}
           onClick={(e) => e.stopPropagation()}
         >
