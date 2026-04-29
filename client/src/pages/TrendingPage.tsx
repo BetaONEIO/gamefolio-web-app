@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useLikeScreenshot } from '@/hooks/use-clips';
 import { useToast } from '@/hooks/use-toast';
 import { ClipWithUser } from '@shared/schema';
-import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Share2, Heart, Play, MessageCircle, AlertTriangle, Film, Video, Camera, ChevronDown, Check } from 'lucide-react';
+import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Share2, Heart, Play, MessageCircle, AlertTriangle, Film, Video, Camera, ChevronDown, Check, Search } from 'lucide-react';
 import { formatDuration } from '@/lib/constants';
 import { formatDistance } from 'date-fns';
 import { useClipDialog } from '@/hooks/use-clip-dialog';
@@ -753,91 +753,129 @@ const TrendingPage: React.FC = () => {
         {showGameFilter && (
           <div
             className="fixed inset-0 z-[80] flex items-end"
-            style={{ background: 'rgba(0,0,0,0.6)' }}
+            style={{ background: 'rgba(0,0,0,0.65)' }}
             onClick={() => { setShowGameFilter(false); setGameSearchQuery(''); }}
           >
             <div
-              className="w-full rounded-t-2xl overflow-hidden flex flex-col"
-              style={{ background: '#131F2A', maxHeight: '75vh', border: '1px solid rgba(74,222,128,0.2)' }}
+              className="w-full rounded-t-3xl flex flex-col"
+              style={{ background: '#0F1923', maxHeight: '82vh' }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-5 pt-5 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                <div className="flex items-center gap-2">
-                  <Gamepad2 className="h-5 w-5" style={{ color: '#4ADE80' }} />
-                  <span className="text-white font-bold text-base">Filter by Game</span>
+              <div className="flex items-center justify-between px-5 pt-5 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <Gamepad2 className="h-6 w-6" style={{ color: '#4ADE80' }} />
+                  <span className="text-white font-bold text-lg">
+                    Filter {activeLabel} by Game
+                  </span>
                 </div>
                 <button
                   onClick={() => { setShowGameFilter(false); setGameSearchQuery(''); }}
-                  className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ background: 'rgba(255,255,255,0.08)' }}
+                  className="text-white/70 hover:text-white transition-colors"
                 >
-                  <X className="h-4 w-4 text-white/70" />
+                  <X className="h-6 w-6" />
                 </button>
               </div>
 
               {/* Search input */}
-              <div className="px-5 py-3">
-                <input
-                  autoFocus
-                  value={gameSearchQuery}
-                  onChange={(e) => setGameSearchQuery(e.target.value)}
-                  placeholder="Search games…"
-                  className="w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/40 outline-none"
-                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(74,222,128,0.25)' }}
-                />
+              <div className="px-4 pb-4">
+                <div
+                  className="flex items-center gap-3 rounded-2xl px-4 py-3"
+                  style={{ background: 'rgba(255,255,255,0.07)', border: '1.5px solid rgba(74,222,128,0.35)' }}
+                >
+                  <Search className="h-4 w-4 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.4)' }} />
+                  <input
+                    autoFocus
+                    value={gameSearchQuery}
+                    onChange={(e) => setGameSearchQuery(e.target.value)}
+                    placeholder="Search for games..."
+                    className="flex-1 bg-transparent text-sm text-white outline-none"
+                    style={{ color: '#fff' }}
+                  />
+                </div>
               </div>
 
-              {/* Game list */}
-              <div className="flex-1 overflow-y-auto px-3 pb-6">
-                {/* "All Games" clear option */}
-                <button
-                  className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl mb-1"
-                  style={!selectedGameId ? { background: 'rgba(74,222,128,0.15)' } : {}}
-                  onClick={() => { setSelectedGameId(null); setSelectedGameName(null); setShowGameFilter(false); setGameSearchQuery(''); }}
-                >
-                  <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.25)' }}>
-                    <Gamepad2 className="h-4 w-4" style={{ color: '#4ADE80' }} />
-                  </div>
-                  <span className="text-sm font-semibold" style={{ color: !selectedGameId ? '#4ADE80' : '#fff' }}>All Games</span>
-                  {!selectedGameId && <Check className="h-4 w-4 ml-auto" style={{ color: '#4ADE80' }} />}
-                </button>
+              {/* Section label */}
+              <p className="px-4 pb-3 text-white font-semibold text-base">Available Games</p>
 
-                {/* Search results or trending games */}
+              {/* 3-column game grid */}
+              <div className="flex-1 overflow-y-auto px-3 pb-8">
                 {isGameSearchLoading && (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="w-5 h-5 border-2 border-[#4ADE80] border-t-transparent rounded-full animate-spin" />
+                  <div className="flex items-center justify-center py-10">
+                    <div className="w-6 h-6 border-2 border-[#4ADE80] border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
-                {(() => {
-                  const gameList = debouncedGameQuery.length >= 2
-                    ? (gameSearchResults || [])
-                    : (trendingGames || []);
-                  return gameList.map((game) => (
-                    <button
-                      key={game.id}
-                      className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl mb-1"
-                      style={selectedGameId === game.id ? { background: 'rgba(74,222,128,0.15)' } : {}}
-                      onClick={() => { setSelectedGameId(game.id); setSelectedGameName(game.name); setShowGameFilter(false); setGameSearchQuery(''); }}
-                    >
-                      {game.imageUrl ? (
-                        <img
-                          src={game.imageUrl.replace('{width}', '40').replace('{height}', '54')}
-                          alt={game.name}
-                          className="w-9 h-9 rounded-lg object-cover flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,255,255,0.07)' }}>
-                          <Gamepad2 className="h-4 w-4 text-white/40" />
-                        </div>
-                      )}
-                      <span className="text-sm font-medium text-left leading-snug" style={{ color: selectedGameId === game.id ? '#4ADE80' : '#CBD5E1' }}>
-                        {game.name}
-                      </span>
-                      {selectedGameId === game.id && <Check className="h-4 w-4 ml-auto flex-shrink-0" style={{ color: '#4ADE80' }} />}
-                    </button>
-                  ));
-                })()}
+
+                <div className="grid grid-cols-3 gap-2">
+                  {/* "All Games" card — always first */}
+                  <button
+                    className="relative rounded-2xl overflow-hidden aspect-square flex flex-col items-center justify-center transition-all"
+                    style={{
+                      background: '#1A2736',
+                      border: !selectedGameId ? '2.5px solid #4ADE80' : '2px solid rgba(255,255,255,0.08)',
+                    }}
+                    onClick={() => { setSelectedGameId(null); setSelectedGameName(null); setShowGameFilter(false); setGameSearchQuery(''); }}
+                  >
+                    {!selectedGameId && (
+                      <div
+                        className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
+                        style={{ background: '#4ADE80' }}
+                      >
+                        <Check className="h-3 w-3 text-black" strokeWidth={3} />
+                      </div>
+                    )}
+                    <Gamepad2 className="h-8 w-8 mb-1.5" style={{ color: '#4ADE80' }} />
+                    <span className="text-white text-xs font-bold text-center px-1 leading-tight">All Games</span>
+                  </button>
+
+                  {/* Game cards */}
+                  {(() => {
+                    const gameList = debouncedGameQuery.length >= 2
+                      ? (gameSearchResults || [])
+                      : (trendingGames || []);
+                    return gameList.map((game) => {
+                      const isSelected = selectedGameId === game.id;
+                      const imgSrc = game.imageUrl
+                        ? game.imageUrl.replace('{width}', '144').replace('{height}', '192')
+                        : null;
+                      return (
+                        <button
+                          key={game.id}
+                          className="relative rounded-2xl overflow-hidden aspect-square flex flex-col justify-end transition-all"
+                          style={{
+                            background: '#1A2736',
+                            border: isSelected ? '2.5px solid #4ADE80' : '2px solid rgba(255,255,255,0.08)',
+                          }}
+                          onClick={() => { setSelectedGameId(game.id); setSelectedGameName(game.name); setShowGameFilter(false); setGameSearchQuery(''); }}
+                        >
+                          {/* Cover art */}
+                          {imgSrc && (
+                            <img
+                              src={imgSrc}
+                              alt={game.name}
+                              className="absolute inset-0 w-full h-full object-cover"
+                            />
+                          )}
+                          {/* Gradient */}
+                          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 55%, transparent 100%)' }} />
+                          {/* Selected checkmark */}
+                          {isSelected && (
+                            <div
+                              className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
+                              style={{ background: '#4ADE80' }}
+                            >
+                              <Check className="h-3 w-3 text-black" strokeWidth={3} />
+                            </div>
+                          )}
+                          {/* Name */}
+                          <div className="relative z-10 px-1.5 pb-1.5">
+                            <p className="text-white text-[11px] font-bold leading-tight line-clamp-2">{game.name}</p>
+                          </div>
+                        </button>
+                      );
+                    });
+                  })()}
+                </div>
               </div>
             </div>
           </div>
