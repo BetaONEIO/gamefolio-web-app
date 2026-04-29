@@ -221,16 +221,28 @@ const TrendingPage: React.FC = () => {
     staleTime: 60000,
   });
 
-  // Trending games for filter modal when no search query
-  const { data: trendingGames } = useQuery<{ id: number; name: string; imageUrl?: string }[]>({
-    queryKey: ['/api/games/trending'],
-    queryFn: async () => {
-      const res = await fetch('/api/games/trending?limit=20');
-      if (!res.ok) return [];
-      return res.json();
-    },
-    staleTime: 120000,
-  });
+  // Available games derived from the currently loaded trending content (no extra API call needed)
+  const [availableGames, setAvailableGames] = useState<{ id: number; name: string; imageUrl?: string }[]>([]);
+
+  useEffect(() => {
+    // Only rebuild the list when there is NO active game filter — so the list persists while filtered
+    if (selectedGameId !== null) return;
+
+    const sources =
+      activeTab === 'clips'       ? (trendingClips       || []) :
+      activeTab === 'reels'       ? (trendingReels        || []) :
+                                    (trendingScreenshots  || []);
+
+    const seen = new Map<number, { id: number; name: string; imageUrl?: string }>();
+    for (const item of sources) {
+      const g = (item as any).game;
+      if (g?.id && g?.name) {
+        seen.set(g.id, { id: g.id, name: g.name, imageUrl: g.imageUrl ?? undefined });
+      }
+    }
+    const games = Array.from(seen.values());
+    if (games.length > 0) setAvailableGames(games);
+  }, [activeTab, trendingClips, trendingReels, trendingScreenshots, selectedGameId]);
 
   // Follow/unfollow mutation
   const followMutation = useMutation({
@@ -828,12 +840,20 @@ const TrendingPage: React.FC = () => {
                     <span className="text-white text-xs font-bold text-center px-1 leading-tight">All Games</span>
                   </button>
 
+                  {/* Empty state when no games and no search */}
+                  {debouncedGameQuery.length < 2 && availableGames.length === 0 && !isGameSearchLoading && (
+                    <div className="col-span-3 flex flex-col items-center justify-center py-10 gap-2">
+                      <Gamepad2 className="h-8 w-8" style={{ color: 'rgba(74,222,128,0.3)' }} />
+                      <p className="text-white/40 text-sm text-center">No games found in trending content</p>
+                    </div>
+                  )}
+
                   {/* Game cards */}
                   {(() => {
                     const gameList = debouncedGameQuery.length >= 2
                       ? (gameSearchResults || [])
-                      : (trendingGames || []);
-                    return gameList.map((game) => {
+                      : availableGames;
+                    return gameList.map((game: { id: number; name: string; imageUrl?: string }) => {
                       const isSelected = selectedGameId === game.id;
                       const imgSrc = game.imageUrl
                         ? game.imageUrl.replace('{width}', '144').replace('{height}', '192')
