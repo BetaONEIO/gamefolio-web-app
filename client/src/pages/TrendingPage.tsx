@@ -1017,9 +1017,11 @@ const TrendingPage: React.FC = () => {
           </div>
         )}
 
-        {/* Floating controls — vertical stack on Reels/Screenshots, horizontal row on Clips */}
+        {/* Floating controls — horizontal row that opens to the LEFT of the Eye on every tab */}
         {(() => {
-          const isClipsMode = activeTab === 'clips';
+          // Horizontal-left menu now used on every tab (clips, reels, screenshots).
+          // Variable name kept for minimal diff; effectively means "use horizontal layout".
+          const isClipsMode = true;
           // Slide-in transform direction depends on layout
           const hiddenTransform = isClipsMode ? 'translateX(20px)' : 'translateY(-8px)';
           const visibleTransform = 'translate(0, 0)';
@@ -1086,13 +1088,14 @@ const TrendingPage: React.FC = () => {
           >
             <button
               onClick={() => { setShowContentDropdown(!showContentDropdown); setShowTimeDropdown(false); setShowGameFilter(false); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:shadow-[0_0_12px_rgba(183,255,26,0.35)]"
+              className={`flex items-center gap-1.5 ${activeTab === 'clips' ? 'px-2 py-1.5' : 'px-3 py-1.5'} rounded-full text-xs font-semibold transition-all hover:shadow-[0_0_12px_rgba(183,255,26,0.35)]`}
               style={isClipsMode
                 ? pillBaseStyle(showContentDropdown)
                 : { background: 'rgba(30,41,59,0.88)', border: '1px solid rgba(183, 255, 26,0.4)', color: '#fff' }}
+              aria-label={activeTab === 'clips' ? `Content type: ${activeLabel}` : undefined}
             >
               <ActiveIcon className="h-3.5 w-3.5" />
-              {activeLabel}
+              {activeTab !== 'clips' && activeLabel}
               <ChevronDown className="h-3.5 w-3.5" />
             </button>
             {showContentDropdown && (
