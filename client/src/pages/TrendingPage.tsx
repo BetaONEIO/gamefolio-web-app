@@ -127,25 +127,14 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   const caption = [clip.title, clip.description].filter(Boolean).join(' — ');
   const captionTrimmed = caption.length > 120 && !showFullDesc;
 
+  const canCollapse = caption.length > 120;
+
   return (
     <div ref={cardRef} className="w-full" style={{ background: '#03080A' }}>
-      {/* ── Video (full-width, no card chrome) ── */}
-      <VideoPlayer
-        videoUrl={clip.videoUrl || ''}
-        thumbnailUrl={clip.thumbnailUrl || undefined}
-        autoPlay={false}
-        clipId={clip.id}
-        objectFit="contain"
-        autoHideControls
-        externalPaused={!isInView}
-        className="w-full"
-      />
 
-      {/* ── Post body ── */}
-      <div className="px-4 pt-4 pb-2" style={{ background: '#03080A' }}>
-
-        {/* Creator row */}
-        <div className="flex items-start gap-3 mb-2.5">
+      {/* ── Header (creator info) — X-style sits ABOVE the video ── */}
+      <div className="px-4 pt-4 pb-3">
+        <div className="flex items-start gap-3">
           <Link href={`/profile/${clip.user.username}`} className="flex-shrink-0">
             <div
               className="w-10 h-10 rounded-full overflow-hidden"
@@ -204,30 +193,25 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Caption */}
-        <div className="mb-3">
-          <p
-            className="text-[14px] leading-relaxed"
-            style={{ color: '#B8C0AE' }}
-          >
-            {captionTrimmed ? caption.slice(0, 120) : caption}
-            {captionTrimmed && (
-              <button
-                onClick={() => setShowFullDesc(true)}
-                className="font-semibold ml-0.5"
-                style={{ color: '#B7FF1A' }}
-              >
-                … more
-              </button>
-            )}
-          </p>
-        </div>
+      {/* ── Video (full-width, with breathing room above) ── */}
+      <VideoPlayer
+        videoUrl={clip.videoUrl || ''}
+        thumbnailUrl={clip.thumbnailUrl || undefined}
+        autoPlay={false}
+        clipId={clip.id}
+        objectFit="contain"
+        autoHideControls
+        externalPaused={!isInView}
+        className="w-full"
+      />
 
-        {/* Engagement row */}
+      {/* ── Engagement row sits directly under the video ── */}
+      <div className="px-4" style={{ background: '#03080A' }}>
         <div
           className="flex items-center py-2.5"
-          style={{ borderTop: '1px solid #1B2A33' }}
+          style={{ borderBottom: caption ? '1px solid #1B2A33' : 'none' }}
         >
           {/* Comments */}
           <button
@@ -291,6 +275,33 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
             <Share2 className="h-[18px] w-[18px]" />
           </button>
         </div>
+
+        {/* Caption — moved to the bottom, X-style */}
+        {caption && (
+          <div className="pt-3 pb-4">
+            <p className="text-[14px] leading-relaxed" style={{ color: '#B8C0AE' }}>
+              {captionTrimmed ? caption.slice(0, 120) : caption}
+              {captionTrimmed && (
+                <button
+                  onClick={() => setShowFullDesc(true)}
+                  className="font-semibold ml-0.5"
+                  style={{ color: '#B7FF1A' }}
+                >
+                  … more
+                </button>
+              )}
+              {!captionTrimmed && canCollapse && (
+                <button
+                  onClick={() => setShowFullDesc(false)}
+                  className="font-semibold ml-1"
+                  style={{ color: '#B7FF1A' }}
+                >
+                  See less
+                </button>
+              )}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Comments popup — opens in-place instead of navigating away */}

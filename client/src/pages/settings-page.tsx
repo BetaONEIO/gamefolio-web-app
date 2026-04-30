@@ -4279,7 +4279,7 @@ export default function SettingsPage() {
 
                   {/* Twitch OAuth connect option */}
                   {streamPlatform === 'twitch' && isStreamingEnabled && oauthConfig?.twitch && (
-                    <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.twitchVerified ? "border-primary/30 bg-primary/5' : 'border-slate-700 bg-slate-800/30'}`}>
+                    <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.twitchVerified ? 'border-primary/30 bg-primary/5' : 'border-slate-700 bg-slate-800/30'}`}>
                       {(user as any)?.twitchVerified ? (
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
