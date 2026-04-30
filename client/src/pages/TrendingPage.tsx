@@ -161,19 +161,21 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
           </Link>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <Link href={`/profile/${clip.user.username}`} className="no-underline">
-                <span className="font-bold text-[15px] leading-tight" style={{ color: '#F5F7F2' }}>
+            <div className="flex items-center gap-1.5">
+              <Link href={`/profile/${clip.user.username}`} className="no-underline min-w-0">
+                <span className="font-bold text-[15px] leading-tight truncate block" style={{ color: '#F5F7F2' }}>
                   {clip.user.displayName || clip.user.username}
                 </span>
               </Link>
               {isPro && (
                 <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#B7FF1A' }} />
               )}
-              <span className="text-[13px]" style={{ color: '#7E887A' }}>
+            </div>
+            <Link href={`/profile/${clip.user.username}`} className="no-underline">
+              <span className="text-[13px] block leading-tight mt-0.5" style={{ color: '#7E887A' }}>
                 @{clip.user.username}
               </span>
-            </div>
+            </Link>
             {clip.game?.name && gameSlug && (
               <Link
                 href={`/games/${gameSlug}`}
