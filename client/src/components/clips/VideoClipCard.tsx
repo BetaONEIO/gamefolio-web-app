@@ -144,7 +144,7 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
         }}
       >
         {/* Thumbnail with duration */}
-        <div className="relative overflow-hidden bg-gray-800" style={{ aspectRatio: clip.videoType === 'reel' ? "9/16" : "16/9" }}>
+        <div className="relative overflow-hidden bg-gray-800 aspect-video">
           {/* Default fallback - always visible as background */}
           <div className="absolute inset-0 flex items-center justify-center bg-gray-800 z-0">
             <Play className="h-12 w-12 text-gray-500" />
