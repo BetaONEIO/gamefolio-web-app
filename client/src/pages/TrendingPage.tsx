@@ -130,9 +130,9 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   const canCollapse = caption.length > 120;
 
   return (
-    <div ref={cardRef} className="relative flex flex-col justify-center flex-1 min-h-0 overflow-hidden" style={{ background: '#03080A' }}>
+    <div ref={cardRef} className="w-full flex flex-col flex-1 min-h-0" style={{ background: '#03080A' }}>
 
-      {/* ── Video — naturally centered by justify-center ── */}
+      {/* ── Video (full-width, sits at the top, auto-plays when in view) ── */}
       <VideoPlayer
         videoUrl={clip.videoUrl || ''}
         thumbnailUrl={clip.thumbnailUrl || undefined}
@@ -144,15 +144,12 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
         className="w-full"
       />
 
-      {/* ── Meta block pinned to the bottom — doesn't affect video centering ── */}
-      <div
-        className="absolute bottom-0 left-0 right-0"
-        style={{ background: '#03080A', paddingBottom: 'calc(96px + env(safe-area-inset-bottom))' }}
-      >
+      {/* Spacer pushes the meta block (header + caption + social) toward the footer */}
+      <div className="flex-1" />
 
-        {/* ── Header (creator info) ── */}
-        <div className="px-4 pt-3 pb-2">
-          <div className="flex items-start gap-3">
+      {/* ── Header (creator info) — restored BELOW the video ── */}
+      <div className="px-4 pt-3 pb-2">
+        <div className="flex items-start gap-3">
           <Link href={`/profile/${clip.user.username}`} className="flex-shrink-0">
             <div
               className="w-10 h-10 rounded-full overflow-hidden"
@@ -214,7 +211,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
       </div>
 
       {/* ── Caption (description with see less) sits above the social row ── */}
-      <div className="px-4 pb-4" style={{ background: '#03080A' }}>
+      <div className="px-4" style={{ background: '#03080A' }}>
         {caption && (
           <div className="pb-3">
             <p className="text-[14px] leading-relaxed" style={{ color: '#B8C0AE' }}>
@@ -308,8 +305,6 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
             <Share2 className="h-[18px] w-[18px]" />
           </button>
         </div>
-      </div>
-      {/* ── end of absolute meta wrapper ── */}
       </div>
 
       {/* Comments popup — opens in-place instead of navigating away */}
