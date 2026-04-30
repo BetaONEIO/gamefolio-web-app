@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import VideoClipGridItem from '@/components/clips/VideoClipGridItem';
+import VideoPlayer from '@/components/shared/VideoPlayer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
 import { useMobile } from '@/hooks/use-mobile';
@@ -63,29 +64,14 @@ interface ScreenshotWithUser {
   };
 }
 
-// Mobile clips viewer — X/Twitter-style full-screen 16:9 clip feed
-const MobileClipsViewer: React.FC<{ clips: ClipWithUser[] }> = ({ clips }) => {
+// Individual clip card — X/Twitter style with inline VideoPlayer
+const MobileClipItem: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[] }> = ({ clip, clips }) => {
   const { openClipDialog } = useClipDialog();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [showFullDesc, setShowFullDesc] = useState(false);
-  const [localFollowing, setLocalFollowing] = useState<Record<number, boolean>>({});
-  const [touchStartY, setTouchStartY] = useState(0);
-  const [touchStartTime, setTouchStartTime] = useState(0);
-
-  // Reset description expand when clip changes
-  useEffect(() => { setShowFullDesc(false); }, [currentIndex]);
-
-  // Lock body scroll while viewer is open
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
-
-  const clip = clips[currentIndex];
-  if (!clip) return null;
+  const [localFollowing, setLocalFollowing] = useState(false);
 
   const formatNum = (n: number) => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -93,20 +79,15 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[] }> = ({ clips }) => {
     return n.toString();
   };
 
-  const duration = clip.trimEnd && clip.trimEnd > 0
-    ? clip.trimEnd - (clip.trimStart || 0)
-    : clip.duration || 0;
-
   const likes    = (clip as any)._count?.likes    || 0;
   const fires    = (clip as any)._count?.fires    || (clip as any)._count?.reactions || 0;
   const comments = (clip as any)._count?.comments || 0;
   const isSelf   = user && user.id === clip.user.id;
-  const isFollowingThisUser = localFollowing[clip.user.id] ?? false;
 
   const followMutation = useMutation({
     mutationFn: () => apiRequest('POST', `/api/users/${clip.user.username}/follow`),
     onSuccess: () => {
-      setLocalFollowing(prev => ({ ...prev, [clip.user.id]: true }));
+      setLocalFollowing(true);
       queryClient.invalidateQueries({ queryKey: ['/api/users/follow-status', clip.user.username] });
     },
   });
@@ -114,85 +95,24 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[] }> = ({ clips }) => {
   const handleFollow = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) { toast({ description: 'Sign in to follow creators' }); return; }
-    if (isSelf || isFollowingThisUser) return;
+    if (isSelf || localFollowing) return;
     followMutation.mutate();
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStartY(e.touches[0].clientY);
-    setTouchStartTime(Date.now());
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const deltaY = touchStartY - e.changedTouches[0].clientY;
-    const dt = Date.now() - touchStartTime;
-    if (dt < 500 && Math.abs(deltaY) > 50) {
-      if (deltaY > 0 && currentIndex < clips.length - 1) setCurrentIndex(i => i + 1);
-      else if (deltaY < 0 && currentIndex > 0) setCurrentIndex(i => i - 1);
-    }
-  };
-
   return (
-    /* Full-screen X/Twitter-style viewer */
-    <div
-      className="fixed inset-0 z-[60] flex flex-col"
-      style={{ background: '#000' }}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
-      {/* ── Upper zone: centres the 16:9 video, black fills above & below ── */}
-      <div className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-hidden">
-        <div
-          className="w-full aspect-video relative cursor-pointer overflow-hidden"
-          onClick={() => openClipDialog(clip.id, clips)}
-        >
-          <LazyImage
-            src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
-            alt={clip.title}
-            className="w-full h-full object-cover"
-            placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='56'%3e%3crect%20width='100'%20height='56'%20fill='%23111'/%3e%3c/svg%3e"
-            showLoadingSpinner={true}
-            rootMargin="200px"
-            containerClassName="absolute inset-0"
-            fallback={
-              <div className="w-full h-full flex items-center justify-center bg-black">
-                <Play className="h-14 w-14 text-white/10" />
-              </div>
-            }
-          />
-          {/* Play button */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.50)' }}>
-              <Play className="h-7 w-7 fill-white text-white ml-0.5" />
-            </div>
-          </div>
-          {/* Duration */}
-          {duration > 0 && (
-            <div className="absolute bottom-2 right-2 bg-black/75 text-white text-xs px-2 py-0.5 rounded font-semibold">
-              {formatDuration(duration)}
-            </div>
-          )}
-          {/* Progress dots */}
-          {clips.length > 1 && (
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-              {clips.slice(0, Math.min(clips.length, 7)).map((_, i) => (
-                <div
-                  key={i}
-                  className="rounded-full transition-all"
-                  style={{
-                    width: i === currentIndex ? 16 : 5,
-                    height: 5,
-                    background: i === currentIndex ? '#B7FF1A' : 'rgba(255,255,255,0.35)',
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+    <div className="border-b" style={{ background: '#000', borderColor: 'rgba(255,255,255,0.08)' }}>
+      {/* Inline VideoPlayer — click to play/pause, shows controls, 16:9 */}
+      <VideoPlayer
+        videoUrl={clip.videoUrl || ''}
+        thumbnailUrl={clip.thumbnailUrl || undefined}
+        autoPlay={false}
+        clipId={clip.id}
+        objectFit="contain"
+        className="w-full"
+      />
 
-      {/* ── Lower zone: info panel anchored below the video ────────────── */}
-      <div className="flex-shrink-0 px-4 pt-3 pb-24" style={{ background: '#000', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      {/* Info panel below the video */}
+      <div className="px-4 pt-3 pb-4">
         {/* Creator row */}
         <div className="flex items-center gap-3 mb-2">
           <Link href={`/profile/${clip.user.username}`} className="flex items-center gap-2 flex-1 min-w-0 no-underline">
@@ -203,9 +123,14 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[] }> = ({ clips }) => {
                 className="w-full h-full object-cover"
               />
             </div>
-            <span className="text-white font-bold text-[14px] truncate">@{clip.user.username}</span>
+            <div className="min-w-0">
+              <span className="text-white font-bold text-[14px] block truncate">
+                {clip.user.displayName || clip.user.username}
+              </span>
+              <span className="text-white/50 text-[12px]">@{clip.user.username}</span>
+            </div>
           </Link>
-          {!isSelf && !isFollowingThisUser && (
+          {!isSelf && !localFollowing && (
             <button
               onClick={handleFollow}
               disabled={followMutation.isPending}
@@ -218,20 +143,20 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[] }> = ({ clips }) => {
         </div>
 
         {/* Title */}
-        <h3 className="text-white font-bold text-[15px] leading-snug mb-1">{clip.title}</h3>
+        <p className="text-white text-[15px] leading-snug mb-1">{clip.title}</p>
 
         {/* Description */}
         {clip.description && (
           <div className="mb-2">
-            <p className={`text-white/55 text-[13px] leading-snug ${showFullDesc ? '' : 'line-clamp-1'}`}>
+            <p className={`text-white/55 text-[13px] leading-snug ${showFullDesc ? '' : 'line-clamp-2'}`}>
               {clip.description}
             </p>
-            {clip.description.length > 60 && (
+            {clip.description.length > 80 && (
               <button
-                onClick={(e) => { e.stopPropagation(); setShowFullDesc(v => !v); }}
+                onClick={() => setShowFullDesc(v => !v)}
                 className="text-[#B7FF1A] text-[12px] font-semibold"
               >
-                {showFullDesc ? 'see less' : 'see more'}
+                {showFullDesc ? 'less' : '... more'}
               </button>
             )}
           </div>
@@ -246,7 +171,7 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[] }> = ({ clips }) => {
         )}
 
         {/* Engagement row */}
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-5 pt-1">
           <LikeButton
             contentId={clip.id}
             contentType="clip"
@@ -280,6 +205,15 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[] }> = ({ clips }) => {
     </div>
   );
 };
+
+// Scrollable clips feed — wraps MobileClipItem cards
+const MobileClipsViewer: React.FC<{ clips: ClipWithUser[] }> = ({ clips }) => (
+  <div className="pb-24" style={{ background: '#000' }}>
+    {clips.map((clip) => (
+      <MobileClipItem key={clip.id} clip={clip} clips={clips} />
+    ))}
+  </div>
+);
 
 // Reel card component - TikTok/YouTube Shorts style
 const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({ reel, reelsList }) => {
@@ -856,26 +790,39 @@ const TrendingPage: React.FC = () => {
 
     return (
       <>
-        {/* ── CLIPS: X/Twitter-style full-screen 16:9 viewer ──────────── */}
-        {activeTab === 'clips' && isLoadingClips && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ background: '#000' }}>
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-8 h-8 border-2 border-[#B7FF1A] border-t-transparent rounded-full animate-spin" />
-              <p className="text-white/60 text-sm">Loading clips…</p>
-            </div>
+        {/* ── CLIPS: X/Twitter-style scrollable inline clip feed ───────── */}
+        {activeTab === 'clips' && (
+          <div style={{ background: '#000', minHeight: '100dvh' }}>
+            {isLoadingClips ? (
+              /* Skeleton */
+              <div className="flex flex-col pb-24">
+                {Array(2).fill(0).map((_, i) => (
+                  <div key={i} className="border-b border-white/8">
+                    <Skeleton className="w-full aspect-video rounded-none" style={{ background: '#111' }} />
+                    <div className="px-4 pt-3 pb-4 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="w-9 h-9 rounded-full flex-shrink-0" style={{ background: '#222' }} />
+                        <div className="flex-1 space-y-1">
+                          <Skeleton className="h-3.5 w-32" style={{ background: '#222' }} />
+                          <Skeleton className="h-3 w-20" style={{ background: '#222' }} />
+                        </div>
+                      </div>
+                      <Skeleton className="h-4 w-full" style={{ background: '#222' }} />
+                      <Skeleton className="h-3 w-2/3" style={{ background: '#222' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : !trendingClips?.length ? (
+              <div className="flex flex-col items-center justify-center py-24 px-8">
+                <TrendingUp className="h-14 w-14 mb-4" style={{ color: '#B7FF1A' }} />
+                <p className="text-white font-semibold mb-1">No trending clips</p>
+                <p className="text-white/50 text-sm text-center">Check back later!</p>
+              </div>
+            ) : (
+              <MobileClipsViewer clips={trendingClips} />
+            )}
           </div>
-        )}
-        {activeTab === 'clips' && !isLoadingClips && !trendingClips?.length && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ background: '#000' }}>
-            <div className="text-center px-8">
-              <TrendingUp className="h-14 w-14 mx-auto mb-4" style={{ color: '#B7FF1A' }} />
-              <p className="text-white font-semibold mb-1">No trending clips</p>
-              <p className="text-white/50 text-sm">Check back later!</p>
-            </div>
-          </div>
-        )}
-        {activeTab === 'clips' && !isLoadingClips && trendingClips && trendingClips.length > 0 && (
-          <MobileClipsViewer clips={trendingClips} />
         )}
 
         {/* ── REELS / SCREENSHOTS: full-screen immersive viewer ─────────── */}
