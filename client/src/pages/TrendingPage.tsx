@@ -132,11 +132,11 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   return (
     <div ref={cardRef} className="w-full" style={{ background: '#03080A' }}>
 
-      {/* ── Video (full-width, sits at the top) ── */}
+      {/* ── Video (full-width, sits at the top, auto-plays when in view) ── */}
       <VideoPlayer
         videoUrl={clip.videoUrl || ''}
         thumbnailUrl={clip.thumbnailUrl || undefined}
-        autoPlay={false}
+        autoPlay={isInView}
         clipId={clip.id}
         objectFit="contain"
         autoHideControls
