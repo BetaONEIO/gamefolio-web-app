@@ -365,17 +365,14 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                     @{currentItem.user.username}
                   </span>
                 </Link>
-                {!isSelf && (
+                {!isSelf && !isFollowing && (
                   <button
                     onClick={handleFollowPress}
                     disabled={followMutation.isPending}
                     className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all"
-                    style={isFollowing
-                      ? { background: 'transparent', border: '1px solid rgba(255,255,255,0.5)', color: '#fff' }
-                      : { background: '#B7FF1A', color: '#000', border: '1px solid transparent' }
-                    }
+                    style={{ background: '#B7FF1A', color: '#000', border: '1px solid transparent' }}
                   >
-                    {followMutation.isPending ? '…' : isFollowing ? 'Following' : 'Follow'}
+                    {followMutation.isPending ? '…' : 'Follow'}
                   </button>
                 )}
               </div>
