@@ -155,8 +155,9 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
     const deltaY = touchStartY - touchEndY;
     const deltaTime = touchEndTime - touchStartTime;
     
-    // Only trigger swipe if it's a quick gesture (< 500ms) and significant distance (> 50px)
-    if (deltaTime < 500 && Math.abs(deltaY) > 50) {
+    // Trigger swipe on a clear vertical gesture — relaxed thresholds so
+    // slower swipes on screenshots/reels still navigate.
+    if (deltaTime < 1500 && Math.abs(deltaY) > 30) {
       if (deltaY > 0 && currentIndex < content.length - 1) {
         // Swipe up - next content
         setCurrentIndex(prev => prev + 1);
