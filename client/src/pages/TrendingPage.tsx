@@ -132,8 +132,20 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   return (
     <div ref={cardRef} className="w-full" style={{ background: '#03080A' }}>
 
-      {/* ── Header (creator info) — X-style sits ABOVE the video ── */}
-      <div className="px-4 pt-4 pb-3">
+      {/* ── Video (full-width, sits at the top) ── */}
+      <VideoPlayer
+        videoUrl={clip.videoUrl || ''}
+        thumbnailUrl={clip.thumbnailUrl || undefined}
+        autoPlay={false}
+        clipId={clip.id}
+        objectFit="contain"
+        autoHideControls
+        externalPaused={!isInView}
+        className="w-full"
+      />
+
+      {/* ── Header (creator info) — restored BELOW the video ── */}
+      <div className="px-4 pt-3 pb-2">
         <div className="flex items-start gap-3">
           <Link href={`/profile/${clip.user.username}`} className="flex-shrink-0">
             <div
@@ -195,19 +207,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
         </div>
       </div>
 
-      {/* ── Video (full-width, with breathing room above) ── */}
-      <VideoPlayer
-        videoUrl={clip.videoUrl || ''}
-        thumbnailUrl={clip.thumbnailUrl || undefined}
-        autoPlay={false}
-        clipId={clip.id}
-        objectFit="contain"
-        autoHideControls
-        externalPaused={!isInView}
-        className="w-full"
-      />
-
-      {/* ── Engagement row sits directly under the video ── */}
+      {/* ── Engagement row sits under the creator header ── */}
       <div className="px-4" style={{ background: '#03080A' }}>
         <div
           className="flex items-center py-2.5"
