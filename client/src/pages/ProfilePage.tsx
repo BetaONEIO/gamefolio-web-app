@@ -4052,13 +4052,13 @@ const ProfilePage = () => {
                 </div>
               </div>
             ) : isLoadingClips ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <Skeleton key={i} className="aspect-video w-full rounded-lg" />
                 ))}
               </div>
             ) : clips && clips.filter(clip => clip.videoType !== 'reel').length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {clips
                   .filter(clip => clip.videoType !== 'reel')
                   .sort((a, b) => {
