@@ -54,18 +54,18 @@ export default function AssetPurchaseProcessing({ onComplete }: AssetPurchasePro
 
           {/* Minting Asset */}
           <div className="flex items-center gap-4 p-4">
-            <div className={`flex items-center justify-center w-8 h-8 rounded-[16px] flex-shrink-0 transition-colors duration-500 ${step >= 2 ? 'bg-[#4ade801a] border border-[#4ade8033]' : 'bg-white/5 border border-white/10'}`}>
+            <div className={`flex items-center justify-center w-8 h-8 rounded-[16px] flex-shrink-0 transition-colors duration-500 ${step >= 2 ? 'bg-[#B7FF1A1a] border border-[#B7FF1A33]' : 'bg-white/5 border border-white/10'}`}>
               {step >= 2 ? (
-                <div className="w-4 h-4 rounded-full bg-[#4ade80] animate-pulse" />
+                <div className="w-4 h-4 rounded-full bg-[#B7FF1A] animate-pulse" />
               ) : (
                 <Loader2 className="w-4 h-4 text-white/20 animate-spin" />
               )}
             </div>
             <div className="flex flex-col">
-              <span className={`text-xs font-black uppercase tracking-[1.2px] transition-colors duration-500 ${step >= 2 ? 'text-[#4ade80]' : 'text-white/20'}`}>
+              <span className={`text-xs font-black uppercase tracking-[1.2px] transition-colors duration-500 ${step >= 2 ? 'text-[#B7FF1A]' : 'text-white/20'}`}>
                 Minting Asset
               </span>
-              <span className={`text-[10px] font-bold transition-colors duration-500 ${step >= 2 ? 'text-[#4ade80cc]' : 'text-white/10'}`}>
+              <span className={`text-[10px] font-bold transition-colors duration-500 ${step >= 2 ? 'text-[#B7FF1Acc]' : 'text-white/10'}`}>
                 Awaiting network confirmation
               </span>
             </div>
@@ -74,13 +74,13 @@ export default function AssetPurchaseProcessing({ onComplete }: AssetPurchasePro
 
         {/* Central Animation */}
         <div className="relative flex items-center justify-center w-56 h-56">
-          <div className="absolute inset-0 bg-[#4ade8033] blur-[40px] rounded-full" />
-          <div className="relative w-40 h-40 bg-[#0f172a] border border-[#1e293b80] rounded-full shadow-[0_25px_50px_-12px_rgba(74,222,128,0.2)] flex items-center justify-center">
-            <Loader2 className="w-20 h-20 text-[#4ade80] animate-spin" />
+          <div className="absolute inset-0 bg-[#B7FF1A33] blur-[40px] rounded-full" />
+          <div className="relative w-40 h-40 bg-[#0f172a] border border-[#1e293b80] rounded-full shadow-[0_25px_50px_-12px_rgba(183, 255, 26,0.2)] flex items-center justify-center">
+            <Loader2 className="w-20 h-20 text-[#B7FF1A] animate-spin" />
           </div>
           {/* Outer Ring */}
-          <div className="absolute w-[224px] h-[224px] border-4 border-[#4ade800d] rounded-full" />
-          <div className="absolute w-[261px] h-[261px] border-4 border-[#4ade80] rounded-full opacity-20" />
+          <div className="absolute w-[224px] h-[224px] border-4 border-[#B7FF1A0d] rounded-full" />
+          <div className="absolute w-[261px] h-[261px] border-4 border-[#B7FF1A] rounded-full opacity-20" />
         </div>
 
         {/* Footer Warning */}

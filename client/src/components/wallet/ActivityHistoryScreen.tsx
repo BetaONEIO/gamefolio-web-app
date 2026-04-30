@@ -128,8 +128,8 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
     const styles = {
       completed: {
         bg: 'rgba(20, 83, 45, 0.2)',
-        border: 'rgba(74, 222, 128, 0.2)',
-        color: '#4ade80',
+        border: 'rgba(183, 255, 26, 0.2)',
+        color: '#B7FF1A',
         text: 'COMPLETED',
       },
       pending: {
@@ -211,9 +211,9 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
               onClick={() => setActiveFilter(filter.id)}
               className="flex-shrink-0 px-4 py-3 rounded-full text-sm font-bold transition-all"
               style={{
-                background: activeFilter === filter.id ? '#4ade80' : '#1e293b',
-                border: `1px solid ${activeFilter === filter.id ? '#4ade80' : '#1e293b'}`,
-                color: activeFilter === filter.id ? '#022c22' : '#94a3b8',
+                background: activeFilter === filter.id ? '#B7FF1A' : '#1e293b',
+                border: `1px solid ${activeFilter === filter.id ? '#B7FF1A' : '#1e293b'}`,
+                color: activeFilter === filter.id ? '#071013' : '#94a3b8',
               }}
             >
               {filter.label}
@@ -226,7 +226,7 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
       <div className="flex-1 px-6 py-6 max-w-[430px] mx-auto w-full">
         {isLoading && (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#4ade80' }} />
+            <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#B7FF1A' }} />
           </div>
         )}
         {!isLoading && <div className="flex flex-col gap-8">
@@ -283,7 +283,7 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
                     <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                       <span
                         className="text-base font-bold"
-                        style={{ color: activity.isPositive ? '#4ade80' : '#f8fafc' }}
+                        style={{ color: activity.isPositive ? '#B7FF1A' : '#f8fafc' }}
                       >
                         {activity.isPositive ? '+' : '-'}{activity.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                       </span>

@@ -175,21 +175,21 @@ export function VerificationStatus({ user }: { user: any }) {
     <div className="flex items-center gap-2 text-sm">
       <div className="flex items-center gap-1">
         {user.emailVerified ? (
-          <CheckCircle2 className="w-4 h-4 text-green-500" />
+          <CheckCircle2 className="w-4 h-4 text-primary" />
         ) : (
           <AlertTriangle className="w-4 h-4 text-yellow-500" />
         )}
-        <span className={user.emailVerified ? "text-green-500" : "text-yellow-500"}>
+        <span className={user.emailVerified ? "text-primary" : "text-yellow-500"}>
           {user.emailVerified ? "Verified" : "Unverified"}
         </span>
       </div>
       <div className="flex items-center gap-1">
         {!needsOnboarding ? (
-          <CheckCircle2 className="w-4 h-4 text-green-500" />
+          <CheckCircle2 className="w-4 h-4 text-primary" />
         ) : (
           <AlertTriangle className="w-4 h-4 text-yellow-500" />
         )}
-        <span className={!needsOnboarding ? "text-green-500" : "text-yellow-500"}>
+        <span className={!needsOnboarding ? "text-primary" : "text-yellow-500"}>
           {!needsOnboarding ? "Onboarded" : "Incomplete"}
         </span>
       </div>

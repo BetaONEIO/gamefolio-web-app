@@ -473,17 +473,17 @@ function StoreManagement() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Free User Items</CardTitle>
-            <Users className="h-4 w-4 text-green-500" />
+            <Users className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-500">{freeItems}</div>
+            <div className="text-2xl font-bold text-primary">{freeItems}</div>
             <p className="text-xs text-muted-foreground">Pro users get 20% discount</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Items</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
+            <CheckCircle className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeItems}</div>
@@ -593,14 +593,14 @@ function StoreManagement() {
                       <td className="p-2 font-mono">{item.gfCost}</td>
                       <td className="p-2 font-mono">
                         {item.proDiscount ? (
-                          <span className="text-green-500 font-semibold">{Math.floor(item.gfCost * 0.8)} GF</span>
+                          <span className="text-primary font-semibold">{Math.floor(item.gfCost * 0.8)} GF</span>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </td>
                       <td className="p-2">
                         {item.isActive ? (
-                          <Badge className="bg-green-600 text-white text-xs">Active</Badge>
+                          <Badge className="bg-primary text-white text-xs">Active</Badge>
                         ) : (
                           <Badge className="bg-red-600 text-white text-xs">Inactive</Badge>
                         )}
@@ -612,12 +612,12 @@ function StoreManagement() {
                             Pro Only
                           </Badge>
                         ) : (
-                          <Badge className="bg-green-600 text-white text-xs">Free Users</Badge>
+                          <Badge className="bg-primary text-white text-xs">Free Users</Badge>
                         )}
                       </td>
                       <td className="p-2">
                         {item.availableInStore ? (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <CheckCircle className="h-4 w-4 text-primary" />
                         ) : (
                           <XCircle className="h-4 w-4 text-red-500" />
                         )}
@@ -639,7 +639,7 @@ function StoreManagement() {
                           {item.isActive ? (
                             <XCircle className="h-3.5 w-3.5 text-red-500" />
                           ) : (
-                            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                            <CheckCircle className="h-3.5 w-3.5 text-primary" />
                           )}
                         </Button>
                       </td>
@@ -712,7 +712,7 @@ function ProSubscribersManagement() {
     switch (type?.toLowerCase()) {
       case 'yearly': return 'bg-amber-500';
       case 'monthly': return 'bg-blue-500';
-      default: return 'bg-green-500';
+      default: return 'bg-primary';
     }
   };
 
@@ -725,7 +725,7 @@ function ProSubscribersManagement() {
 
   const getStatusBadge = (status: 'active' | 'cancelled' | 'expired') => {
     switch (status) {
-      case 'active': return <Badge className="bg-green-600 text-white">Active</Badge>;
+      case 'active': return <Badge className="bg-primary text-white">Active</Badge>;
       case 'cancelled': return <Badge className="bg-yellow-600 text-white">Cancelled</Badge>;
       case 'expired': return <Badge className="bg-red-600 text-white">Expired</Badge>;
     }
@@ -752,13 +752,13 @@ function ProSubscribersManagement() {
             <p className="text-2xl font-bold mt-1">{data?.total || 0}</p>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:border-green-500/50 transition-colors" onClick={() => setStatusFilter('active')}>
+        <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setStatusFilter('active')}>
           <CardContent className="pt-4 pb-3 px-4">
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">Active</p>
-              <div className="w-2 h-2 rounded-full bg-green-500" />
+              <div className="w-2 h-2 rounded-full bg-primary" />
             </div>
-            <p className="text-2xl font-bold text-green-500 mt-1">{activeCount}</p>
+            <p className="text-2xl font-bold text-primary mt-1">{activeCount}</p>
           </CardContent>
         </Card>
         <Card className="cursor-pointer hover:border-yellow-500/50 transition-colors" onClick={() => setStatusFilter('cancelled')}>
@@ -861,7 +861,7 @@ function ProSubscribersManagement() {
                           {formatDate(subscriber.proSubscriptionStartDate)}
                         </TableCell>
                         <TableCell>
-                          <span className={status === 'active' ? 'text-green-500 font-medium' : 'text-muted-foreground'}>
+                          <span className={status === 'active' ? 'text-primary font-medium' : 'text-muted-foreground'}>
                             {calculateDuration(subscriber.proSubscriptionStartDate)}
                           </span>
                         </TableCell>
@@ -1308,7 +1308,7 @@ const PendingGamesSection = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-green-600 border-green-600/40 hover:bg-green-600/10"
+                          className="text-primary border-primary/40 hover:bg-primary/10"
                           onClick={() => handleApprove(game)}
                         >
                           <CheckCircle className="h-4 w-4 mr-1" />
@@ -2630,7 +2630,7 @@ const AdminPage = () => {
 
   const getBadgeColor = (badgeType: string) => {
     switch (badgeType) {
-      case 'newcomer': return "bg-green-500";
+      case 'newcomer': return "bg-primary";
       case 'founder': return "bg-purple-500";
       case 'admin': return "bg-blue-500";
       default: return "bg-gray-500";
@@ -3549,9 +3549,9 @@ const AdminPage = () => {
                       data-testid="input-badge-image"
                     />
                     {newBadgeImageUrl && (
-                      <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+                      <div className="flex items-center gap-2 p-2 bg-primary border border-primary rounded">
                         <img src={newBadgeImageUrl} alt="Preview" className="w-8 h-8 rounded" />
-                        <span className="text-sm text-green-700">Image uploaded successfully</span>
+                        <span className="text-sm text-primary">Image uploaded successfully</span>
                       </div>
                     )}
                   </div>
@@ -3876,7 +3876,7 @@ const AdminPage = () => {
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium">Newcomer Badges</CardTitle>
-                      <Star className="h-4 w-4 text-green-500" />
+                      <Star className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
@@ -4342,7 +4342,7 @@ const AdminPage = () => {
             ];
             const colorMap: Record<string, string> = {
               blue: "text-blue-500 border-blue-200 dark:border-blue-800",
-              green: "text-green-500 border-green-200 dark:border-green-800",
+              green: "text-primary border-primary dark:border-primary",
               purple: "text-purple-500 border-purple-200 dark:border-purple-800",
               orange: "text-orange-500 border-orange-200 dark:border-orange-800",
             };
@@ -4748,7 +4748,7 @@ const AdminPage = () => {
                                   <span className={`px-2 py-1 rounded text-xs font-medium ${
                                     entry.action === 'upload' ? 'bg-blue-100 text-blue-700' :
                                     entry.action === 'like' ? 'bg-red-100 text-red-700' :
-                                    entry.action === 'comment' ? 'bg-green-100 text-green-700' :
+                                    entry.action === 'comment' ? 'bg-primary text-primary' :
                                     entry.action === 'fire' ? 'bg-orange-100 text-orange-700' :
                                     entry.action === 'view' ? 'bg-purple-100 text-purple-700' :
                                     'bg-gray-100 text-gray-700'
@@ -4757,7 +4757,7 @@ const AdminPage = () => {
                                   </span>
                                 </td>
                                 <td className="p-2 text-sm font-semibold">
-                                  <span className={entry.points >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                  <span className={entry.points >= 0 ? 'text-primary' : 'text-red-600'}>
                                     {entry.points >= 0 ? '+' : ''}{entry.points}
                                   </span>
                                 </td>
@@ -4895,7 +4895,7 @@ const AdminPage = () => {
                                 <h4 className="font-medium truncate">{slide.title}</h4>
                                 {!slide.isActive && <Badge variant="secondary" className="text-xs">Inactive</Badge>}
                                 <Badge variant="outline" className={`text-xs ${
-                                  slide.visibility === 'everyone' ? 'border-green-500 text-green-600' :
+                                  slide.visibility === 'everyone' ? 'border-primary text-primary' :
                                   slide.visibility === 'logged_in' ? 'border-blue-500 text-blue-600' :
                                   slide.visibility === 'logged_out' ? 'border-orange-500 text-orange-600' :
                                   slide.visibility === 'new_users' ? 'border-cyan-500 text-cyan-600' :
@@ -5602,7 +5602,7 @@ const AdminPage = () => {
                           </SelectItem>
                           <SelectItem value="free_item">
                             <span className="flex items-center gap-2">
-                              <Users className="h-4 w-4 text-green-500" /> Free Item (All Users)
+                              <Users className="h-4 w-4 text-primary" /> Free Item (All Users)
                             </span>
                           </SelectItem>
                           <SelectItem value="store_item">

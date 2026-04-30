@@ -127,7 +127,7 @@ export function FollowRequestsSection() {
           >
             <div className="flex items-center gap-3">
               {request.requester.nftProfileTokenId && request.requester.nftProfileImageUrl && (request.requester as any).activeProfilePicType === 'nft' ? (
-                <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40">
                   <img src={request.requester.nftProfileImageUrl} alt={request.requester.displayName} className="w-full h-full object-cover" />
                 </div>
               ) : (
@@ -153,7 +153,7 @@ export function FollowRequestsSection() {
                 size="sm"
                 onClick={() => acceptMutation.mutate(request.id)}
                 disabled={acceptMutation.isPending}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-primary hover:bg-primary"
               >
                 {acceptMutation.isPending ? (
                   <div className="w-4 h-4 rounded-full border-2 border-t-transparent border-current animate-spin" />

@@ -164,7 +164,7 @@ export function BlockedUsersSection() {
               {user?.isPrivate ? (
                 <Lock className="w-5 h-5 text-orange-600" />
               ) : (
-                <Unlock className="w-5 h-5 text-green-600" />
+                <Unlock className="w-5 h-5 text-primary" />
               )}
               <div>
                 <Label htmlFor="profile-private" className="text-sm font-medium">
@@ -202,7 +202,7 @@ export function BlockedUsersSection() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {user?.messagingEnabled ? (
-                <MessageSquare className="w-5 h-5 text-green-600" />
+                <MessageSquare className="w-5 h-5 text-primary" />
               ) : (
                 <MessageSquareOff className="w-5 h-5 text-gray-400" />
               )}
@@ -252,7 +252,7 @@ export function BlockedUsersSection() {
             {blockedUsers.map((user) => (
               <div key={user.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                 {user.nftProfileTokenId && user.nftProfileImageUrl && (user as any).activeProfilePicType === 'nft' ? (
-                  <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                  <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40">
                     <img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" />
                   </div>
                 ) : (

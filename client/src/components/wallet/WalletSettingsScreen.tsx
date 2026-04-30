@@ -79,7 +79,7 @@ export default function WalletSettingsScreen({
                 <div className="flex items-center gap-2">
                   <div
                     className="w-2 h-2 rounded-full"
-                    style={{ background: isConnected ? "#4ade80" : "#f87171" }}
+                    style={{ background: isConnected ? "#B7FF1A" : "#f87171" }}
                   />
                   <span className="text-base font-bold" style={{ color: "#fff" }}>
                     {network}
@@ -92,13 +92,13 @@ export default function WalletSettingsScreen({
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
                 style={{
                   background: "rgba(20, 83, 45, 0.2)",
-                  border: "1px solid rgba(74, 222, 128, 0.3)",
+                  border: "1px solid rgba(183, 255, 26, 0.3)",
                 }}
               >
-                <Shield className="w-3.5 h-3.5" style={{ color: "#4ade80" }} />
+                <Shield className="w-3.5 h-3.5" style={{ color: "#B7FF1A" }} />
                 <span
                   className="text-[10px] font-bold uppercase"
-                  style={{ color: "#4ade80" }}
+                  style={{ color: "#B7FF1A" }}
                 >
                   {isConnected ? "Connected" : "Disconnected"}
                 </span>
@@ -131,9 +131,9 @@ export default function WalletSettingsScreen({
                 style={{ background: "#1e293b", border: "1px solid rgba(30, 41, 59, 0.5)" }}
               >
                 {copied ? (
-                  <Check className="w-5 h-5" style={{ color: "#4ade80" }} />
+                  <Check className="w-5 h-5" style={{ color: "#B7FF1A" }} />
                 ) : (
-                  <Copy className="w-5 h-5" style={{ color: "#4ade80" }} />
+                  <Copy className="w-5 h-5" style={{ color: "#B7FF1A" }} />
                 )}
               </button>
             </div>

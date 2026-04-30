@@ -86,8 +86,8 @@ export default function VerifyEmailPage() {
 
             {verificationStatus === 'success' && (
               <>
-                <CheckCircle2 className="h-12 w-12 text-green-500" />
-                <p className="text-green-600 font-medium">{message}</p>
+                <CheckCircle2 className="h-12 w-12 text-primary" />
+                <p className="text-primary font-medium">{message}</p>
                 <p className="text-sm text-muted-foreground">
                   You can now upload clips and access all Gamefolio features.
                 </p>

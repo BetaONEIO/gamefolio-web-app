@@ -215,7 +215,7 @@ export default function BuyGFTokenDialog({ open, onOpenChange }: BuyGFTokenDialo
                   {pkg.bonus > 0 && (
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">+ {pkg.bonus} bonus tokens</span>
-                      <span className="bg-green-500/20 text-green-600 dark:text-green-400 text-xs font-semibold px-2 py-0.5 rounded-full">
+                      <span className="bg-primary/20 text-primary dark:text-primary text-xs font-semibold px-2 py-0.5 rounded-full">
                         FREE
                       </span>
                     </div>
@@ -248,7 +248,7 @@ export default function BuyGFTokenDialog({ open, onOpenChange }: BuyGFTokenDialo
                 {selectedPackage.bonus > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Bonus Tokens</span>
-                    <span className="font-medium text-green-600 dark:text-green-400">
+                    <span className="font-medium text-primary dark:text-primary">
                       +{selectedPackage.bonus.toLocaleString()} GF
                     </span>
                   </div>
@@ -346,7 +346,7 @@ export default function BuyGFTokenDialog({ open, onOpenChange }: BuyGFTokenDialo
                       {selectedPackage && selectedPackage.bonus > 0 && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Bonus</span>
-                          <span className="font-medium text-green-600 dark:text-green-400">
+                          <span className="font-medium text-primary dark:text-primary">
                             +{selectedPackage.bonus.toLocaleString()} GF
                           </span>
                         </div>

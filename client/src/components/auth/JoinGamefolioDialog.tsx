@@ -467,7 +467,7 @@ export function JoinGamefolioDialog({
 
           {/* Other Options */}
           <div className="mt-6 mb-6">
-            <p className="text-sm text-green-400 font-medium">Other Options</p>
+            <p className="text-sm text-primary font-medium">Other Options</p>
           </div>
 
           {/* Login link */}
@@ -477,7 +477,7 @@ export function JoinGamefolioDialog({
               <button
                 onClick={() => setShowLoginForm(true)}
                 data-testid="button-show-login"
-                className="text-green-400 hover:text-green-300 font-medium transition-colors"
+                className="text-primary hover:text-primary font-medium transition-colors"
               >
                 Log In here
               </button>
@@ -497,9 +497,9 @@ export function JoinGamefolioDialog({
 
             <p className="text-xs text-gray-500 mt-6 pb-0 mb-0">
               By registering, you agree to Gamefolio's{' '}
-              <span className="text-green-400 cursor-pointer hover:underline">Terms of Service</span>{' '}
+              <span className="text-primary cursor-pointer hover:underline">Terms of Service</span>{' '}
               and{' '}
-              <span className="text-green-400 cursor-pointer hover:underline">Privacy Policy</span>
+              <span className="text-primary cursor-pointer hover:underline">Privacy Policy</span>
             </p>
           </div>
         </DialogContent>

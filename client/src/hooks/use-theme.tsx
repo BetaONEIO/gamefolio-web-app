@@ -56,7 +56,7 @@ const hexToHsl = (hex: string): string => {
   return `${h} ${sPercent}% ${lPercent}%`;
 };
 
-const DEFAULT_ACCENT = "#4ADE80";
+const DEFAULT_ACCENT = "#B7FF1A";
 
 const initialState: ThemeProviderState = {
   theme: "dark",

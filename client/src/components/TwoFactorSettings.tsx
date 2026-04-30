@@ -152,7 +152,7 @@ export function TwoFactorSettings() {
             <div className="flex items-center gap-3">
               {isEnabled ? (
                 <>
-                  <ShieldCheck className="h-6 w-6 text-green-500" />
+                  <ShieldCheck className="h-6 w-6 text-primary" />
                   <div>
                     <p className="font-medium">2FA is enabled</p>
                     <p className="text-sm text-muted-foreground">Your account is protected with two-factor authentication</p>

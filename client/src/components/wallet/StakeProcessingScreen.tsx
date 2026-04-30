@@ -61,9 +61,9 @@ export default function StakeProcessingScreen({
       return (
         <div
           className="w-8 h-8 rounded-full flex items-center justify-center"
-          style={{ background: "#4ade80" }}
+          style={{ background: "#B7FF1A" }}
         >
-          <Check className="w-5 h-5" style={{ color: "#022c22" }} />
+          <Check className="w-5 h-5" style={{ color: "#071013" }} />
         </div>
       );
     }
@@ -71,9 +71,9 @@ export default function StakeProcessingScreen({
       return (
         <div
           className="w-8 h-8 rounded-full flex items-center justify-center"
-          style={{ background: "rgba(74, 222, 128, 0.2)", border: "2px solid #4ade80" }}
+          style={{ background: "rgba(183, 255, 26, 0.2)", border: "2px solid #B7FF1A" }}
         >
-          <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#4ade80" }} />
+          <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#B7FF1A" }} />
         </div>
       );
     }
@@ -88,8 +88,8 @@ export default function StakeProcessingScreen({
   };
 
   const getConnectorColor = (currentStatus: StepStatus, nextStatus: StepStatus) => {
-    if (currentStatus === "completed" && nextStatus === "completed") return "#4ade80";
-    if (currentStatus === "completed") return "rgba(74, 222, 128, 0.3)";
+    if (currentStatus === "completed" && nextStatus === "completed") return "#B7FF1A";
+    if (currentStatus === "completed") return "rgba(183, 255, 26, 0.3)";
     return "rgba(30, 41, 59, 0.5)";
   };
 
@@ -121,7 +121,7 @@ export default function StakeProcessingScreen({
             className="w-10 h-10 rounded-full flex items-center justify-center"
             style={{ background: "#1e293b", border: "1px solid #1e293b" }}
           >
-            <Info className="w-6 h-6" style={{ color: "#4ade80" }} />
+            <Info className="w-6 h-6" style={{ color: "#B7FF1A" }} />
           </button>
         </div>
       </div>
@@ -143,7 +143,7 @@ export default function StakeProcessingScreen({
           <div
             className="absolute inset-0 rounded-full blur-xl"
             style={{
-              background: "rgba(74, 222, 128, 0.2)",
+              background: "rgba(183, 255, 26, 0.2)",
               width: "160px",
               height: "160px",
               top: "-16px",
@@ -154,13 +154,13 @@ export default function StakeProcessingScreen({
             className="relative w-32 h-32 rounded-full flex items-center justify-center"
             style={{
               background: "#0f172a",
-              border: "4px solid #4ade80",
+              border: "4px solid #B7FF1A",
               boxShadow: "0 8px 25px -5px rgba(0, 0, 0, 0.1)",
             }}
           >
             <span
               className="text-4xl font-black tracking-tight"
-              style={{ color: "#4ade80", letterSpacing: "-1.8px" }}
+              style={{ color: "#B7FF1A", letterSpacing: "-1.8px" }}
             >
               GFT
             </span>
@@ -189,7 +189,7 @@ export default function StakeProcessingScreen({
                 <span
                   className="text-sm font-bold transition-colors duration-300"
                   style={{
-                    color: step.status === "active" ? "#4ade80" : step.status === "completed" ? "#f8fafc" : "#94a3b8",
+                    color: step.status === "active" ? "#B7FF1A" : step.status === "completed" ? "#f8fafc" : "#94a3b8",
                   }}
                 >
                   {step.title}
@@ -216,7 +216,7 @@ export default function StakeProcessingScreen({
             >
               Transaction Type
             </span>
-            <span className="text-sm font-bold" style={{ color: "#4ade80" }}>
+            <span className="text-sm font-bold" style={{ color: "#B7FF1A" }}>
               Staking GFT
             </span>
           </div>

@@ -2198,25 +2198,25 @@ const UploadPage = () => {
                 <span className="text-2xl sm:text-3xl font-black text-white mt-2">%</span>
               </div>
 
-              <span className="text-[#4ade80] text-xs font-bold tracking-[5px] uppercase">
+              <span className="text-[#B7FF1A] text-xs font-bold tracking-[5px] uppercase">
                 {uploadProgress < 100 ? "Upload in progress" : "Processing"}
               </span>
 
               <div className="w-full space-y-3 px-2 sm:px-4">
                 <div className="w-full h-1.5 bg-[#1e3a4a]/50 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-[#4ade80] rounded-full transition-all duration-500 ease-out"
+                    className="h-full bg-[#B7FF1A] rounded-full transition-all duration-500 ease-out"
                     style={{
                       width: `${uploadProgress}%`,
-                      boxShadow: '0 0 20px rgba(74, 222, 128, 0.6)',
+                      boxShadow: '0 0 20px rgba(183, 255, 26, 0.6)',
                     }}
                   />
                 </div>
                 <div className="flex justify-between text-[10px] font-bold tracking-[1px] uppercase text-[#4a6a7a]">
-                  <span className={uploadProgress >= 25 ? "text-[#4ade80]/60" : ""}>25%</span>
-                  <span className={uploadProgress >= 50 ? "text-[#4ade80]/60" : ""}>50%</span>
-                  <span className={uploadProgress >= 75 ? "text-[#4ade80]/60" : ""}>75%</span>
-                  <span className={uploadProgress >= 100 ? "text-[#4ade80]/60" : ""}>100%</span>
+                  <span className={uploadProgress >= 25 ? "text-[#B7FF1A]/60" : ""}>25%</span>
+                  <span className={uploadProgress >= 50 ? "text-[#B7FF1A]/60" : ""}>50%</span>
+                  <span className={uploadProgress >= 75 ? "text-[#B7FF1A]/60" : ""}>75%</span>
+                  <span className={uploadProgress >= 100 ? "text-[#B7FF1A]/60" : ""}>100%</span>
                 </div>
               </div>
 
@@ -2229,12 +2229,12 @@ const UploadPage = () => {
                 </p>
               </div>
 
-              <div className="flex items-center gap-3 bg-[#4ade80]/5 border border-[#4ade80]/10 rounded-full px-6 py-2.5">
-                <div className="w-2 h-2 bg-[#4ade80] rounded-full" style={{ boxShadow: '0 0 10px #4ade80' }} />
-                <span className="text-[#4ade80] text-[10px] font-bold tracking-[2px] uppercase">
+              <div className="flex items-center gap-3 bg-[#B7FF1A]/5 border border-[#B7FF1A]/10 rounded-full px-6 py-2.5">
+                <div className="w-2 h-2 bg-[#B7FF1A] rounded-full" style={{ boxShadow: '0 0 10px #B7FF1A' }} />
+                <span className="text-[#B7FF1A] text-[10px] font-bold tracking-[2px] uppercase">
                   Please keep this tab open while uploading
                 </span>
-                <div className="w-2 h-2 bg-[#4ade80] rounded-full" style={{ boxShadow: '0 0 10px #4ade80' }} />
+                <div className="w-2 h-2 bg-[#B7FF1A] rounded-full" style={{ boxShadow: '0 0 10px #B7FF1A' }} />
               </div>
             </div>
 
@@ -2252,9 +2252,9 @@ const UploadPage = () => {
               >
                 Cancel
               </button>
-              <div className="flex items-center gap-2.5 bg-[#4ade80]/10 border border-[#4ade80]/20 rounded-full px-8 py-4 shadow-lg">
-                <div className="w-5 h-5 border-2 border-[#4ade80]/30 border-t-[#4ade80] rounded-full animate-spin" />
-                <span className="text-[#4ade80] text-sm font-bold tracking-[1.4px] uppercase">
+              <div className="flex items-center gap-2.5 bg-[#B7FF1A]/10 border border-[#B7FF1A]/20 rounded-full px-8 py-4 shadow-lg">
+                <div className="w-5 h-5 border-2 border-[#B7FF1A]/30 border-t-[#B7FF1A] rounded-full animate-spin" />
+                <span className="text-[#B7FF1A] text-sm font-bold tracking-[1.4px] uppercase">
                   Uploading {uploadProgress}%
                 </span>
               </div>

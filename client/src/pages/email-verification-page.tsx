@@ -59,7 +59,7 @@ export default function EmailVerificationPage() {
       case 'loading':
         return <Loader2 className="w-16 h-16 text-blue-500 animate-spin" />;
       case 'success':
-        return <CheckCircle2 className="w-16 h-16 text-green-500" />;
+        return <CheckCircle2 className="w-16 h-16 text-primary" />;
       case 'error':
       case 'invalid':
         return <XCircle className="w-16 h-16 text-red-500" />;
@@ -86,7 +86,7 @@ export default function EmailVerificationPage() {
   const getStatusColor = () => {
     switch (status) {
       case 'success':
-        return 'text-green-400';
+        return 'text-primary';
       case 'error':
       case 'invalid':
         return 'text-red-400';
@@ -112,9 +112,9 @@ export default function EmailVerificationPage() {
         
         <CardContent className="space-y-4">
           {status === 'success' && (
-            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-              <h3 className="font-medium text-green-400 mb-2">What's Next?</h3>
-              <ul className="text-sm text-green-300 space-y-1">
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+              <h3 className="font-medium text-primary mb-2">What's Next?</h3>
+              <ul className="text-sm text-primary space-y-1">
                 <li>• Complete your profile setup</li>
                 <li>• Start uploading gaming clips and screenshots</li>
                 <li>• Connect with other gamers</li>

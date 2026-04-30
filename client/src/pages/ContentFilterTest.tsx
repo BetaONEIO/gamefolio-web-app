@@ -232,7 +232,7 @@ export default function ContentFilterTest() {
 
   const getResultIcon = (success: boolean) => {
     return success ? (
-      <Shield className="h-4 w-4 text-green-600" />
+      <Shield className="h-4 w-4 text-primary" />
     ) : (
       <AlertTriangle className="h-4 w-4 text-red-600" />
     );
@@ -240,7 +240,7 @@ export default function ContentFilterTest() {
 
   const getResultBadge = (success: boolean) => {
     return success ? (
-      <Badge className="bg-green-100 text-green-800">Passed</Badge>
+      <Badge className="bg-primary text-primary">Passed</Badge>
     ) : (
       <Badge className="bg-red-100 text-red-800">Blocked</Badge>
     );
@@ -294,7 +294,7 @@ export default function ContentFilterTest() {
             {results.username && (
               <div className="p-3 bg-gray-50 rounded-lg">
                 <h4 className="font-medium mb-2">Test Result:</h4>
-                <p className={results.username.success ? 'text-green-600' : 'text-red-600'}>
+                <p className={results.username.success ? 'text-primary' : 'text-red-600'}>
                   {results.username.message}
                 </p>
                 {results.username.errors && (
@@ -359,7 +359,7 @@ export default function ContentFilterTest() {
             {results.registration && (
               <div className="p-3 bg-gray-50 rounded-lg">
                 <h4 className="font-medium mb-2">Test Result:</h4>
-                <p className={results.registration.success ? 'text-green-600' : 'text-red-600'}>
+                <p className={results.registration.success ? 'text-primary' : 'text-red-600'}>
                   {results.registration.message}
                 </p>
                 {results.registration.errors && (
@@ -409,7 +409,7 @@ export default function ContentFilterTest() {
             {results.comment && (
               <div className="p-3 bg-gray-50 rounded-lg">
                 <h4 className="font-medium mb-2">Test Result:</h4>
-                <p className={results.comment.success ? 'text-green-600' : 'text-red-600'}>
+                <p className={results.comment.success ? 'text-primary' : 'text-red-600'}>
                   {results.comment.message}
                 </p>
                 {results.comment.errors && (
@@ -459,7 +459,7 @@ export default function ContentFilterTest() {
             {results.message && (
               <div className="p-3 bg-gray-50 rounded-lg">
                 <h4 className="font-medium mb-2">Test Result:</h4>
-                <p className={results.message.success ? 'text-green-600' : 'text-red-600'}>
+                <p className={results.message.success ? 'text-primary' : 'text-red-600'}>
                   {results.message.message}
                 </p>
                 {results.message.errors && (
@@ -523,7 +523,7 @@ export default function ContentFilterTest() {
             {results.profile && (
               <div className="p-3 bg-gray-50 rounded-lg">
                 <h4 className="font-medium mb-2">Test Result:</h4>
-                <p className={results.profile.success ? 'text-green-600' : 'text-red-600'}>
+                <p className={results.profile.success ? 'text-primary' : 'text-red-600'}>
                   {results.profile.message}
                 </p>
                 {results.profile.errors && (

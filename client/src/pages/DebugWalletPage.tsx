@@ -55,8 +55,8 @@ export default function DebugWalletPage() {
                 <span className="flex items-center gap-2">
                   {isReady ? (
                     <>
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      <span className="text-green-500 font-medium">Ready</span>
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                      <span className="text-primary font-medium">Ready</span>
                     </>
                   ) : (
                     <>
@@ -82,7 +82,7 @@ export default function DebugWalletPage() {
                         onClick={handleCopyAddress}
                       >
                         {copied ? (
-                          <CheckCircle2 className="h-3 w-3 text-green-500" />
+                          <CheckCircle2 className="h-3 w-3 text-primary" />
                         ) : (
                           <Copy className="h-3 w-3" />
                         )}

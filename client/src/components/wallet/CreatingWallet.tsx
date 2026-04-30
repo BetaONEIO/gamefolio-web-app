@@ -106,7 +106,7 @@ export default function CreatingWallet({
           <div 
             className="absolute inset-0 rounded-full transition-opacity duration-1000"
             style={{ 
-              background: 'rgba(74, 222, 128, 0.2)',
+              background: 'rgba(183, 255, 26, 0.2)',
               filter: 'blur(40px)',
               transform: 'scale(1.3)',
               opacity: 0.5 + (progress / 200)
@@ -123,7 +123,7 @@ export default function CreatingWallet({
               cy="96"
               r="88"
               fill="none"
-              stroke="rgba(74, 222, 128, 0.1)"
+              stroke="rgba(183, 255, 26, 0.1)"
               strokeWidth="4"
             />
           </svg>
@@ -139,14 +139,14 @@ export default function CreatingWallet({
               cy="96"
               r="88"
               fill="none"
-              stroke="#4ade80"
+              stroke="#B7FF1A"
               strokeWidth="4"
               strokeLinecap="round"
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
               style={{ 
                 transition: 'stroke-dashoffset 0.1s linear',
-                filter: 'drop-shadow(0 0 10px #4ade80)'
+                filter: 'drop-shadow(0 0 10px #B7FF1A)'
               }}
             />
           </svg>
@@ -157,7 +157,7 @@ export default function CreatingWallet({
             style={{ 
               width: '75%',
               height: '75%',
-              border: '2px solid rgba(74, 222, 128, 0.15)'
+              border: '2px solid rgba(183, 255, 26, 0.15)'
             }}
           />
 
@@ -166,13 +166,13 @@ export default function CreatingWallet({
             className="w-24 h-24 md:w-28 md:h-28 rounded-3xl flex items-center justify-center backdrop-blur-sm z-10"
             style={{ 
               background: 'rgba(20, 83, 45, 0.3)',
-              border: '1px solid rgba(74, 222, 128, 0.3)',
-              boxShadow: progress > 30 ? `0 0 ${20 + progress / 5}px rgba(74, 222, 128, ${0.2 + progress / 500})` : 'none',
+              border: '1px solid rgba(183, 255, 26, 0.3)',
+              boxShadow: progress > 30 ? `0 0 ${20 + progress / 5}px rgba(183, 255, 26, ${0.2 + progress / 500})` : 'none',
               transition: 'box-shadow 0.5s ease'
             }}
           >
             <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" clipRule="evenodd" d="M6.756 10.164C6 11.24 6 14.44 6 20.834V23.982C6 35.258 14.478 40.732 19.798 43.054C21.24 43.684 21.962 44 24 44C26.04 44 26.76 43.684 28.202 43.054C33.522 40.73 42 35.26 42 23.982V20.834C42 14.438 42 11.24 41.244 10.164C40.49 9.09 37.484 8.06 31.47 6.002L30.324 5.61C27.19 4.536 25.624 4 24 4C22.376 4 20.81 4.536 17.676 5.61L16.53 6C10.516 8.06 7.51 9.09 6.756 10.164ZM27 30C27 31.1046 26.1046 32 25 32H23C21.8954 32 21 31.1046 21 30V26C21 24.8954 21.8954 24 23 24H25C26.1046 24 27 24.8954 27 26V30ZM24 14C20.6863 14 18 16.6863 18 20V24H30V20C30 16.6863 27.3137 14 24 14Z" fill="#4ADE80" />
+              <path fillRule="evenodd" clipRule="evenodd" d="M6.756 10.164C6 11.24 6 14.44 6 20.834V23.982C6 35.258 14.478 40.732 19.798 43.054C21.24 43.684 21.962 44 24 44C26.04 44 26.76 43.684 28.202 43.054C33.522 40.73 42 35.26 42 23.982V20.834C42 14.438 42 11.24 41.244 10.164C40.49 9.09 37.484 8.06 31.47 6.002L30.324 5.61C27.19 4.536 25.624 4 24 4C22.376 4 20.81 4.536 17.676 5.61L16.53 6C10.516 8.06 7.51 9.09 6.756 10.164ZM27 30C27 31.1046 26.1046 32 25 32H23C21.8954 32 21 31.1046 21 30V26C21 24.8954 21.8954 24 23 24H25C26.1046 24 27 24.8954 27 26V30ZM24 14C20.6863 14 18 16.6863 18 20V24H30V20C30 16.6863 27.3137 14 24 14Z" fill="#B7FF1A" />
             </svg>
           </div>
         </div>
@@ -203,8 +203,8 @@ export default function CreatingWallet({
               className="h-full rounded-full"
               style={{ 
                 width: `${progress}%`,
-                background: 'linear-gradient(90deg, #4ade80 0%, #22c55e 100%)',
-                boxShadow: '0 0 12px #4ade80',
+                background: 'linear-gradient(90deg, #B7FF1A 0%, #A2F000 100%)',
+                boxShadow: '0 0 12px #B7FF1A',
                 transition: 'width 0.1s linear'
               }}
             />
@@ -241,14 +241,14 @@ export default function CreatingWallet({
                         animation: 'popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)'
                       }}
                     >
-                      <path fillRule="evenodd" clipRule="evenodd" d="M18.3334 10C18.3334 14.6025 14.6026 18.3333 10.0001 18.3333C5.39757 18.3333 1.66675 14.6025 1.66675 10C1.66675 5.39751 5.39757 1.66669 10.0001 1.66669C14.6026 1.66669 18.3334 5.39751 18.3334 10ZM13.3584 7.47501C13.6021 7.71902 13.6021 8.11432 13.3584 8.35834L9.19173 12.525C8.94772 12.7687 8.55241 12.7687 8.3084 12.525L6.64174 10.8583C6.47453 10.7025 6.4057 10.4679 6.46225 10.2464C6.5188 10.025 6.69172 9.85207 6.91316 9.79552C7.1346 9.73897 7.36918 9.8078 7.52507 9.97501L8.75007 11.2L12.475 7.47501C12.7191 7.23099 13.1144 7.23099 13.3584 7.47501Z" fill="#4ADE80" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M18.3334 10C18.3334 14.6025 14.6026 18.3333 10.0001 18.3333C5.39757 18.3333 1.66675 14.6025 1.66675 10C1.66675 5.39751 5.39757 1.66669 10.0001 1.66669C14.6026 1.66669 18.3334 5.39751 18.3334 10ZM13.3584 7.47501C13.6021 7.71902 13.6021 8.11432 13.3584 8.35834L9.19173 12.525C8.94772 12.7687 8.55241 12.7687 8.3084 12.525L6.64174 10.8583C6.47453 10.7025 6.4057 10.4679 6.46225 10.2464C6.5188 10.025 6.69172 9.85207 6.91316 9.79552C7.1346 9.73897 7.36918 9.8078 7.52507 9.97501L8.75007 11.2L12.475 7.47501C12.7191 7.23099 13.1144 7.23099 13.3584 7.47501Z" fill="#B7FF1A" />
                     </svg>
                   ) : isActive ? (
                     <div 
                       className="w-2 h-2 rounded-full"
                       style={{ 
-                        background: '#4ade80',
-                        boxShadow: '0 0 8px #4ade80',
+                        background: '#B7FF1A',
+                        boxShadow: '0 0 8px #B7FF1A',
                         animation: 'pulse 1.5s ease-in-out infinite'
                       }}
                     />
@@ -264,7 +264,7 @@ export default function CreatingWallet({
                 <span 
                   className="text-sm font-medium"
                   style={{ 
-                    color: isCompleted ? '#4ade80' : isActive ? '#f8fafc' : '#64748b',
+                    color: isCompleted ? '#B7FF1A' : isActive ? '#f8fafc' : '#64748b',
                     transition: 'color 0.3s ease'
                   }}
                 >

@@ -50,7 +50,7 @@ export default function CoinCard({
           <div className="text-white font-medium mb-1">
             ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
-          <div className={`flex items-center justify-end gap-1 text-sm ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+          <div className={`flex items-center justify-end gap-1 text-sm ${isPositive ? 'text-primary' : 'text-red-400'}`}>
             {isPositive ? (
               <TrendingUp className="w-3 h-3" />
             ) : (

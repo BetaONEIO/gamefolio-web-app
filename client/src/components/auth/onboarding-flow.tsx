@@ -69,7 +69,7 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
               onClick={() => onSelectGame(game)}
               className={`group flex flex-col items-center p-1.5 rounded-lg transition-all focus:outline-none focus:ring-2 ${
                 isSelected 
-                  ? 'bg-green-500/20 border-2 border-green-500 ring-2 ring-green-500/50' 
+                  ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/50' 
                   : 'hover:bg-primary/20 border-2 border-transparent focus:ring-primary/50'
               }`}
             >
@@ -84,11 +84,11 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
                 />
                 <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${
                   isSelected 
-                    ? 'bg-green-500/30 opacity-100' 
+                    ? 'bg-primary/30 opacity-100' 
                     : 'bg-black/50 opacity-0 group-hover:opacity-100'
                 }`}>
                   {isSelected ? (
-                    <Check className="h-6 w-6 text-green-500" />
+                    <Check className="h-6 w-6 text-primary" />
                   ) : (
                     <Plus className="h-6 w-6 text-white" />
                   )}
@@ -96,7 +96,7 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
               </div>
               <span className={`text-xs text-center line-clamp-2 w-full leading-tight transition-colors ${
                 isSelected 
-                  ? 'text-green-500 font-semibold' 
+                  ? 'text-primary font-semibold' 
                   : 'text-gray-300 group-hover:text-primary'
               }`}>
                 {game.name}
@@ -817,7 +817,7 @@ export default function OnboardingFlow({
               </div>
             </div>
 
-            <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-white text-base font-semibold py-6 mt-auto pt-8 rounded-xl shadow-[0_0_20px_rgba(74,222,128,0.3)]">
+            <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-white text-base font-semibold py-6 mt-auto pt-8 rounded-xl shadow-[0_0_20px_rgba(183, 255, 26,0.3)]">
               Get Started <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
           </div>

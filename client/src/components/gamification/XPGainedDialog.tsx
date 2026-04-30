@@ -131,8 +131,8 @@ export function XPGainedDialog({
               {/* Progress circle with gradient */}
               <defs>
                 <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#22c55e" />
-                  <stop offset="100%" stopColor="#86efac" />
+                  <stop offset="0%" stopColor="#B7FF1A" />
+                  <stop offset="100%" stopColor="#A2F000" />
                 </linearGradient>
               </defs>
               
@@ -148,7 +148,7 @@ export function XPGainedDialog({
                 strokeLinecap="round"
                 className="transition-all duration-1000 ease-out"
                 style={{
-                  filter: "drop-shadow(0 0 8px rgba(34, 197, 94, 0.6))"
+                  filter: "drop-shadow(0 0 8px rgba(183, 255, 26, 0.6))"
                 }}
               />
             </svg>
@@ -158,7 +158,7 @@ export function XPGainedDialog({
               <div className="text-5xl font-bold text-white mb-2">
                 Level {currentLevel}
               </div>
-              <div className="text-3xl font-bold text-green-400 animate-pulse">
+              <div className="text-3xl font-bold text-primary animate-pulse">
                 +{xpGained} XP
               </div>
             </div>
@@ -167,7 +167,7 @@ export function XPGainedDialog({
           {/* Continue button */}
           <Button
             onClick={handleContinue}
-            className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 text-lg font-semibold rounded-lg transition-all"
+            className="bg-primary hover:bg-primary text-white px-8 py-3 text-lg font-semibold rounded-lg transition-all"
             data-testid="button-continue-xp"
           >
             Continue

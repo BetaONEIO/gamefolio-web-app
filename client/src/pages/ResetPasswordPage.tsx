@@ -129,8 +129,8 @@ const ResetPasswordPage = () => {
             </div>
           ) : isSuccess ? (
             <div className="flex flex-col items-center gap-4 py-6">
-              <div className="rounded-full bg-green-100 p-3">
-                <Check className="h-6 w-6 text-green-600" />
+              <div className="rounded-full bg-primary p-3">
+                <Check className="h-6 w-6 text-primary" />
               </div>
               <div className="text-center">
                 <h3 className="text-xl font-semibold">Password Reset Complete</h3>

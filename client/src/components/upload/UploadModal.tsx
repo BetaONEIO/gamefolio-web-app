@@ -354,7 +354,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
   const getStatusIcon = () => {
     switch (uploadStatus) {
       case 'success':
-        return <CheckCircle className="h-6 w-6 text-green-500" />;
+        return <CheckCircle className="h-6 w-6 text-primary" />;
       case 'error':
         return <AlertCircle className="h-6 w-6 text-red-500" />;
       default:

@@ -113,7 +113,7 @@ export default function ConfirmStakeScreen({
             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
             style={{ background: "#1e293b", border: "1px solid #1e293b" }}
           >
-            <Info className="w-6 h-6" style={{ color: "#4ade80" }} />
+            <Info className="w-6 h-6" style={{ color: "#B7FF1A" }} />
           </button>
         </div>
       </div>
@@ -167,14 +167,14 @@ export default function ConfirmStakeScreen({
             />
             <span
               className="text-4xl font-bold"
-              style={{ color: "#4ade80" }}
+              style={{ color: "#B7FF1A" }}
             >
               GFT
             </span>
             <button
               onClick={handleMaxClick}
-              className="px-4 py-2 rounded-2xl font-bold text-sm transition-colors hover:bg-green-400/20"
-              style={{ background: "rgba(74, 222, 128, 0.1)", color: "#4ade80" }}
+              className="px-4 py-2 rounded-2xl font-bold text-sm transition-colors hover:bg-primary/20"
+              style={{ background: "rgba(183, 255, 26, 0.1)", color: "#B7FF1A" }}
             >
               MAX
             </button>
@@ -210,8 +210,8 @@ export default function ConfirmStakeScreen({
                 Staking Reward APY
               </span>
               <div className="flex items-center gap-1.5">
-                <TrendingUp className="w-4 h-4" style={{ color: "#4ade80" }} />
-                <span className="text-sm font-bold" style={{ color: "#4ade80" }}>
+                <TrendingUp className="w-4 h-4" style={{ color: "#B7FF1A" }} />
+                <span className="text-sm font-bold" style={{ color: "#B7FF1A" }}>
                   {apy}%
                 </span>
               </div>
@@ -231,7 +231,7 @@ export default function ConfirmStakeScreen({
                 </span>
               </div>
               <div className="flex flex-col items-end gap-0.5">
-                <span className="text-xl font-bold" style={{ color: "#4ade80" }}>
+                <span className="text-xl font-bold" style={{ color: "#B7FF1A" }}>
                   {newTotalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT
                 </span>
               </div>
@@ -244,17 +244,17 @@ export default function ConfirmStakeScreen({
           className="flex gap-4 p-4 rounded-2xl"
           style={{
             background: "rgba(20, 83, 45, 0.1)",
-            border: "1px solid rgba(74, 222, 128, 0.2)",
+            border: "1px solid rgba(183, 255, 26, 0.2)",
           }}
         >
           <div
             className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
-            style={{ background: "rgba(74, 222, 128, 0.2)" }}
+            style={{ background: "rgba(183, 255, 26, 0.2)" }}
           >
-            <Lock className="w-6 h-6" style={{ color: "#4ade80" }} />
+            <Lock className="w-6 h-6" style={{ color: "#B7FF1A" }} />
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-sm font-bold" style={{ color: "#4ade80" }}>
+            <span className="text-sm font-bold" style={{ color: "#B7FF1A" }}>
               Liquid Staking
             </span>
             <span className="text-xs leading-relaxed" style={{ color: "#94a3b8" }}>
@@ -270,9 +270,9 @@ export default function ConfirmStakeScreen({
             disabled={!isValidAmount}
             className="w-full h-[68px] rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
-              background: isValidAmount ? "#4ade80" : "rgba(74, 222, 128, 0.3)",
-              color: "#022c22",
-              boxShadow: isValidAmount ? "0 0 20px -5px #4ade80" : "none",
+              background: isValidAmount ? "#B7FF1A" : "rgba(183, 255, 26, 0.3)",
+              color: "#071013",
+              boxShadow: isValidAmount ? "0 0 20px -5px #B7FF1A" : "none",
             }}
           >
             <Lock className="w-6 h-6" />

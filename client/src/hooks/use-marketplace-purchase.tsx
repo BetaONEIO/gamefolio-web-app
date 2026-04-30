@@ -271,7 +271,7 @@ export function MarketplacePurchaseDialog({
             Cancel
           </Button>
           <Button
-            className="bg-[#4ade80] hover:bg-[#22c55e] text-black font-bold"
+            className="bg-[#B7FF1A] hover:bg-[#A2F000] text-black font-bold"
             onClick={onConfirm}
           >
             Buy Now

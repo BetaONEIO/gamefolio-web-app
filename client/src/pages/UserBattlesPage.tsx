@@ -378,7 +378,7 @@ export default function UserBattlesPage() {
                           data-testid={`checkbox-user-${user.id}`}
                         />
                         {user.nftProfileTokenId && user.nftProfileImageUrl && (user as any).activeProfilePicType === 'nft' ? (
-                          <div className="w-12 h-12 mb-2 rounded-lg overflow-hidden border border-[#4ade80]/40"><img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" /></div>
+                          <div className="w-12 h-12 mb-2 rounded-lg overflow-hidden border border-[#B7FF1A]/40"><img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" /></div>
                         ) : (
                           <Avatar className="w-12 h-12 mb-2">
                             <AvatarImage src={user.avatarUrl || undefined} />
@@ -403,14 +403,14 @@ export default function UserBattlesPage() {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="border-green-500/30 bg-green-500/5">
+          <Card className="border-primary/30 bg-primary/5">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Alive</p>
-                  <p className="text-3xl font-bold text-green-500">{aliveUsers.length}</p>
+                  <p className="text-3xl font-bold text-primary">{aliveUsers.length}</p>
                 </div>
-                <Shield className="w-10 h-10 text-green-500" />
+                <Shield className="w-10 h-10 text-primary" />
               </div>
             </CardContent>
           </Card>
@@ -521,12 +521,12 @@ export default function UserBattlesPage() {
                   >
                     <div className="relative">
                       {user.nftProfileTokenId && user.nftProfileImageUrl && (user as any).activeProfilePicType === 'nft' ? (
-                        <div className={`w-16 h-16 rounded-lg overflow-hidden border-4 border-[#4ade80]/40 shadow-2xl transition-all ${
+                        <div className={`w-16 h-16 rounded-lg overflow-hidden border-4 border-[#B7FF1A]/40 shadow-2xl transition-all ${
                           isEliminated 
                             ? 'shadow-red-500/50' 
                             : isWinner
                             ? 'shadow-yellow-500/80 animate-bounce'
-                            : 'shadow-green-500/50'
+                            : 'shadow-primary/50'
                         }`}><img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" /></div>
                       ) : (
                         <Avatar className={`w-16 h-16 border-4 shadow-2xl transition-all ${
@@ -534,7 +534,7 @@ export default function UserBattlesPage() {
                             ? 'border-red-500 shadow-red-500/50' 
                             : isWinner
                             ? 'border-yellow-500 shadow-yellow-500/80 animate-bounce'
-                            : 'border-green-500 shadow-green-500/50'
+                            : 'border-primary shadow-primary/50'
                         }`}>
                           <AvatarImage src={user.avatarUrl || undefined} />
                           <AvatarFallback className="bg-primary/20 text-lg font-bold">
@@ -564,10 +564,10 @@ export default function UserBattlesPage() {
                       {!isEliminated && !isWinner && battleActive && (
                         <>
                           <div className="absolute -top-1 -right-1 z-10">
-                            <div className="w-3 h-3 bg-green-500 rounded-full animate-ping" />
-                            <div className="w-3 h-3 bg-green-500 rounded-full absolute top-0" />
+                            <div className="w-3 h-3 bg-primary rounded-full animate-ping" />
+                            <div className="w-3 h-3 bg-primary rounded-full absolute top-0" />
                           </div>
-                          <div className="absolute inset-0 rounded-full border-2 border-green-500 animate-pulse" />
+                          <div className="absolute inset-0 rounded-full border-2 border-primary animate-pulse" />
                         </>
                       )}
                     </div>
@@ -577,7 +577,7 @@ export default function UserBattlesPage() {
                         ? 'bg-red-500/80' 
                         : isWinner 
                         ? 'bg-yellow-500/90'
-                        : 'bg-green-500/80'
+                        : 'bg-primary/80'
                     } backdrop-blur-sm`}>
                       <p className={`text-xs font-bold text-white text-center whitespace-nowrap ${
                         isEliminated ? 'line-through' : ''
@@ -688,7 +688,7 @@ export default function UserBattlesPage() {
               <Crown className="w-16 h-16 text-yellow-500 mx-auto mb-4 animate-bounce" />
               <h2 className="text-4xl font-bold mb-4 text-yellow-500">Victory Royale!</h2>
               {winner.nftProfileTokenId && winner.nftProfileImageUrl && (winner as any).activeProfilePicType === 'nft' ? (
-                <div className="w-32 h-32 mx-auto mb-4 rounded-lg overflow-hidden border-4 border-[#4ade80]/40 shadow-2xl"><img src={winner.nftProfileImageUrl} alt={winner.displayName} className="w-full h-full object-cover" /></div>
+                <div className="w-32 h-32 mx-auto mb-4 rounded-lg overflow-hidden border-4 border-[#B7FF1A]/40 shadow-2xl"><img src={winner.nftProfileImageUrl} alt={winner.displayName} className="w-full h-full object-cover" /></div>
               ) : (
                 <Avatar className="w-32 h-32 mx-auto mb-4 border-4 border-yellow-500 shadow-2xl">
                   <AvatarImage src={winner.avatarUrl || undefined} />
@@ -707,9 +707,9 @@ export default function UserBattlesPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="border-green-500/30">
+          <Card className="border-primary/30">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-500">
+              <CardTitle className="flex items-center gap-2 text-primary">
                 <Shield className="w-5 h-5" />
                 Alive ({aliveUsers.length})
               </CardTitle>
@@ -719,15 +719,15 @@ export default function UserBattlesPage() {
                 {aliveUsers.map((user, index) => (
                   <div
                     key={user.id}
-                    className="flex flex-col items-center p-4 rounded-lg bg-green-500/10 border border-green-500/30 transition-all hover:scale-105 hover:shadow-lg animate-in fade-in slide-in-from-bottom duration-300"
+                    className="flex flex-col items-center p-4 rounded-lg bg-primary/10 border border-primary/30 transition-all hover:scale-105 hover:shadow-lg animate-in fade-in slide-in-from-bottom duration-300"
                     style={{ animationDelay: `${index * 50}ms` }}
                     data-testid={`card-user-alive-${user.id}`}
                   >
                     <div className="relative">
                       {user.nftProfileTokenId && user.nftProfileImageUrl && (user as any).activeProfilePicType === 'nft' ? (
-                        <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-[#4ade80]/40 shadow-lg"><img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" /></div>
+                        <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-[#B7FF1A]/40 shadow-lg"><img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" /></div>
                       ) : (
-                        <Avatar className="w-16 h-16 border-2 border-green-500 shadow-lg">
+                        <Avatar className="w-16 h-16 border-2 border-primary shadow-lg">
                           <AvatarImage src={user.avatarUrl || undefined} />
                           <AvatarFallback className="bg-primary/20">
                             {user.displayName[0]?.toUpperCase()}
@@ -736,7 +736,7 @@ export default function UserBattlesPage() {
                       )}
                       {battleActive && (
                         <div className="absolute -top-1 -right-1">
-                          <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse" />
+                          <div className="w-4 h-4 bg-primary rounded-full animate-pulse" />
                         </div>
                       )}
                     </div>
@@ -768,7 +768,7 @@ export default function UserBattlesPage() {
                     data-testid={`card-user-eliminated-${user.id}`}
                   >
                     {user.nftProfileTokenId && user.nftProfileImageUrl && (user as any).activeProfilePicType === 'nft' ? (
-                      <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-[#4ade80]/40"><img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" /></div>
+                      <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-[#B7FF1A]/40"><img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" /></div>
                     ) : (
                       <Avatar className="w-16 h-16 border-2 border-red-500">
                         <AvatarImage src={user.avatarUrl || undefined} />

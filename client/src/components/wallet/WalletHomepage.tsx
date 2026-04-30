@@ -154,7 +154,7 @@ export default function WalletHomepage({
               </span>
               <span 
                 className="text-2xl md:text-3xl font-bold"
-                style={{ color: '#4ade80' }}
+                style={{ color: '#B7FF1A' }}
               >
                 GFT
               </span>
@@ -182,7 +182,7 @@ export default function WalletHomepage({
                   <Link href="/collection">
                     <span 
                       className="hover:opacity-80 transition-opacity cursor-pointer"
-                      style={{ color: '#4ade80', fontSize: '14px', fontWeight: 600 }}
+                      style={{ color: '#B7FF1A', fontSize: '14px', fontWeight: 600 }}
                     >
                       View All
                     </span>
@@ -199,7 +199,7 @@ export default function WalletHomepage({
                   <div className="flex items-center justify-center p-4 h-full">
                     {ownedNFTs.length === 1 ? (
                       <Link href="/collection">
-                        <div className="relative w-full max-w-[200px] aspect-square rounded-xl overflow-hidden hover:ring-2 hover:ring-[#4ade80] transition-all group cursor-pointer">
+                        <div className="relative w-full max-w-[200px] aspect-square rounded-xl overflow-hidden hover:ring-2 hover:ring-[#B7FF1A] transition-all group cursor-pointer">
                           {ownedNFTs[0].image ? (
                             <img
                               src={ownedNFTs[0].image}
@@ -216,7 +216,7 @@ export default function WalletHomepage({
                               style={{
                                 background: ownedNFTs[0].rarity === 'Legendary' ? '#a855f7' : 
                                            ownedNFTs[0].rarity === 'Epic' ? '#ec4899' : 
-                                           ownedNFTs[0].rarity === 'Rare' ? '#3b82f6' : '#4ade80',
+                                           ownedNFTs[0].rarity === 'Rare' ? '#3b82f6' : '#B7FF1A',
                                 color: '#fff'
                               }}
                             >
@@ -227,7 +227,7 @@ export default function WalletHomepage({
                       </Link>
                     ) : (
                       <Link href="/collection">
-                        <div className="relative w-full max-w-[200px] aspect-square rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-[#4ade80] transition-all group">
+                        <div className="relative w-full max-w-[200px] aspect-square rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-[#B7FF1A] transition-all group">
                           {ownedNFTs[0].image ? (
                             <img
                               src={ownedNFTs[0].image}
@@ -253,7 +253,7 @@ export default function WalletHomepage({
                     </svg>
                     <span className="mt-3" style={{ color: '#94a3b8', fontSize: '14px' }}>No NFTs yet</span>
                     <Link href="/store">
-                      <span className="hover:underline" style={{ color: '#4ade80', fontSize: '12px' }}>Browse the store</span>
+                      <span className="hover:underline" style={{ color: '#B7FF1A', fontSize: '12px' }}>Browse the store</span>
                     </Link>
                   </div>
                 )}
@@ -269,8 +269,8 @@ export default function WalletHomepage({
                 onClick={onBuyClick}
                 className="flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-bold transition-all hover:shadow-lg"
                 style={{ 
-                  background: '#4ade80',
-                  boxShadow: '0 0 20px -5px #4ade80',
+                  background: '#B7FF1A',
+                  boxShadow: '0 0 20px -5px #B7FF1A',
                   height: '58px'
                 }}
               >
@@ -279,7 +279,7 @@ export default function WalletHomepage({
                   <path fillRule="evenodd" clipRule="evenodd" d="M6.24818 14.9944C6.94007 14.9944 7.50096 15.5553 7.50096 16.2472C7.50096 16.9391 6.94007 17.5 6.24818 17.5C5.55629 17.5 4.9954 16.9391 4.9954 16.2472C4.9954 15.5553 5.55629 14.9944 6.24818 14.9944Z" fill="#022C22" />
                   <path fillRule="evenodd" clipRule="evenodd" d="M13.7649 14.9944C14.4568 14.9944 15.0176 15.5553 15.0176 16.2472C15.0176 16.9391 14.4568 17.5 13.7649 17.5C13.073 17.5 12.5121 16.9391 12.5121 16.2472C12.5121 15.5553 13.073 14.9944 13.7649 14.9944Z" fill="#022C22" />
                 </svg>
-                <span style={{ color: '#022c22', fontSize: '16px' }}>Buy GFT</span>
+                <span style={{ color: '#071013', fontSize: '16px' }}>Buy GFT</span>
               </button>
               
               <button
@@ -292,7 +292,7 @@ export default function WalletHomepage({
                 }}
               >
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M10.0001 18.3333C8.84731 18.3333 7.76398 18.1145 6.75009 17.6767C5.7362 17.2389 4.85425 16.6453 4.10425 15.8958C3.35425 15.1464 2.76064 14.2644 2.32342 13.25C1.88619 12.2356 1.6673 11.1522 1.66675 10C1.66619 8.84778 1.88508 7.76444 2.32342 6.75C2.76175 5.73555 3.35536 4.8536 4.10425 4.10416C4.85314 3.35471 5.73509 2.7611 6.75009 2.32332C7.76509 1.88555 8.84842 1.66666 10.0001 1.66666C11.1518 1.66666 12.2351 1.88555 13.2501 2.32332C14.2651 2.7611 15.147 3.35471 15.8959 4.10416C16.6448 4.8536 17.2387 5.73555 17.6776 6.75C18.1165 7.76444 18.3351 8.84778 18.3334 10C18.3318 11.1522 18.1129 12.2356 17.6768 13.25C17.2407 14.2644 16.647 15.1464 15.8959 15.8958C15.1448 16.6453 14.2629 17.2392 13.2501 17.6775C12.2373 18.1158 11.154 18.3345 10.0001 18.3333Z" fill="#4ADE80" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M10.0001 18.3333C8.84731 18.3333 7.76398 18.1145 6.75009 17.6767C5.7362 17.2389 4.85425 16.6453 4.10425 15.8958C3.35425 15.1464 2.76064 14.2644 2.32342 13.25C1.88619 12.2356 1.6673 11.1522 1.66675 10C1.66619 8.84778 1.88508 7.76444 2.32342 6.75C2.76175 5.73555 3.35536 4.8536 4.10425 4.10416C4.85314 3.35471 5.73509 2.7611 6.75009 2.32332C7.76509 1.88555 8.84842 1.66666 10.0001 1.66666C11.1518 1.66666 12.2351 1.88555 13.2501 2.32332C14.2651 2.7611 15.147 3.35471 15.8959 4.10416C16.6448 4.8536 17.2387 5.73555 17.6776 6.75C18.1165 7.76444 18.3351 8.84778 18.3334 10C18.3318 11.1522 18.1129 12.2356 17.6768 13.25C17.2407 14.2644 16.647 15.1464 15.8959 15.8958C15.1448 16.6453 14.2629 17.2392 13.2501 17.6775C12.2373 18.1158 11.154 18.3345 10.0001 18.3333Z" fill="#B7FF1A" />
                 </svg>
                 <span style={{ color: '#f8fafc', fontSize: '16px' }}>Stake GFT</span>
               </button>
@@ -310,7 +310,7 @@ export default function WalletHomepage({
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span style={{ color: '#94a3b8', fontSize: '14px' }}>GFT Balance</span>
-                  <span style={{ color: '#4ade80', fontSize: '14px', fontWeight: 600 }}>{offChainBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} GFT</span>
+                  <span style={{ color: '#B7FF1A', fontSize: '14px', fontWeight: 600 }}>{offChainBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} GFT</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span style={{ color: '#94a3b8', fontSize: '14px' }}>Staked Amount</span>
@@ -339,7 +339,7 @@ export default function WalletHomepage({
                 <button 
                   onClick={onActivityClick}
                   className="hover:opacity-80 transition-opacity"
-                  style={{ color: '#4ade80', fontSize: '14px', fontWeight: 600 }}
+                  style={{ color: '#B7FF1A', fontSize: '14px', fontWeight: 600 }}
                 >
                   View All
                 </button>
@@ -369,17 +369,17 @@ export default function WalletHomepage({
                     >
                       {tx.type === "received" && (
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path fillRule="evenodd" clipRule="evenodd" d="M18.7313 6.34474C19.0108 6.04476 19.0026 5.57727 18.7126 5.28733C18.4227 4.99739 17.9552 4.98914 17.6552 5.26868L10.5796 12.3443L6.5494 8.31415C6.33166 8.09668 6.00442 8.03168 5.7201 8.1494C5.43577 8.26713 5.25027 8.54445 5.25 8.85219V17.9886C5.25 18.4089 5.59109 18.75 6.01137 18.75H15.1478C15.4555 18.7497 15.7328 18.5642 15.8506 18.2799C15.9683 17.9956 15.9033 17.6683 15.6858 17.4506L11.6556 13.4204L18.7313 6.34474Z" fill="#4ADE80" />
+                          <path fillRule="evenodd" clipRule="evenodd" d="M18.7313 6.34474C19.0108 6.04476 19.0026 5.57727 18.7126 5.28733C18.4227 4.99739 17.9552 4.98914 17.6552 5.26868L10.5796 12.3443L6.5494 8.31415C6.33166 8.09668 6.00442 8.03168 5.7201 8.1494C5.43577 8.26713 5.25027 8.54445 5.25 8.85219V17.9886C5.25 18.4089 5.59109 18.75 6.01137 18.75H15.1478C15.4555 18.7497 15.7328 18.5642 15.8506 18.2799C15.9683 17.9956 15.9033 17.6683 15.6858 17.4506L11.6556 13.4204L18.7313 6.34474Z" fill="#B7FF1A" />
                         </svg>
                       )}
                       {tx.type === "staked" && (
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path fillRule="evenodd" clipRule="evenodd" d="M12 22C10.6167 22 9.31667 21.7373 8.1 21.212C6.88333 20.6867 5.825 19.9743 4.925 19.075C4.025 18.1757 3.31267 17.1173 2.788 15.9C2.26333 14.6827 2.00067 13.3827 2 12C1.99933 10.6173 2.262 9.31733 2.788 8.1C3.314 6.88267 4.02633 5.82433 4.925 4.925C5.82367 4.02567 6.882 3.31333 8.1 2.788C9.318 2.26267 10.618 2 12 2C13.382 2 14.682 2.26267 15.9 2.788C17.118 3.31333 18.1763 4.02567 19.075 4.925C19.9737 5.82433 20.6863 6.88267 21.213 8.1C21.7397 9.31733 22.002 10.6173 22 12C21.998 13.3827 21.7353 14.6827 21.212 15.9C20.6887 17.1173 19.9763 18.1757 19.075 19.075C18.1737 19.9743 17.1153 20.687 15.9 21.213C14.6847 21.739 13.3847 22.0013 12 22Z" fill="#4ADE80" />
+                          <path fillRule="evenodd" clipRule="evenodd" d="M12 22C10.6167 22 9.31667 21.7373 8.1 21.212C6.88333 20.6867 5.825 19.9743 4.925 19.075C4.025 18.1757 3.31267 17.1173 2.788 15.9C2.26333 14.6827 2.00067 13.3827 2 12C1.99933 10.6173 2.262 9.31733 2.788 8.1C3.314 6.88267 4.02633 5.82433 4.925 4.925C5.82367 4.02567 6.882 3.31333 8.1 2.788C9.318 2.26267 10.618 2 12 2C13.382 2 14.682 2.26267 15.9 2.788C17.118 3.31333 18.1763 4.02567 19.075 4.925C19.9737 5.82433 20.6863 6.88267 21.213 8.1C21.7397 9.31733 22.002 10.6173 22 12C21.998 13.3827 21.7353 14.6827 21.212 15.9C20.6887 17.1173 19.9763 18.1757 19.075 19.075C18.1737 19.9743 17.1153 20.687 15.9 21.213C14.6847 21.739 13.3847 22.0013 12 22Z" fill="#B7FF1A" />
                         </svg>
                       )}
                       {tx.type === "purchased" && (
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path fillRule="evenodd" clipRule="evenodd" d="M7.68765 6.015V5C7.68765 2.92893 9.36658 1.25 11.4377 1.25C13.5087 1.25 15.1877 2.92893 15.1877 5V6.015C16.4747 6.054 17.2627 6.192 17.8637 6.691C18.6967 7.383 18.9167 8.553 19.3557 10.894L20.1057 14.894C20.7227 18.186 21.0307 19.832 20.1317 20.916C19.2317 22 17.5567 22 14.2077 22H8.66765C5.31765 22 3.64365 22 2.74365 20.916C1.84365 19.832 2.15365 18.186 2.76965 14.894L3.51965 10.894C3.95965 8.554 4.17865 7.383 5.01165 6.691C5.61265 6.192 6.40065 6.054 7.68765 6.015ZM9.18765 5C9.18765 3.75736 10.195 2.75 11.4377 2.75C12.6803 2.75 13.6877 3.75736 13.6877 5V6H9.18765V5Z" fill="#4ADE80" />
+                          <path fillRule="evenodd" clipRule="evenodd" d="M7.68765 6.015V5C7.68765 2.92893 9.36658 1.25 11.4377 1.25C13.5087 1.25 15.1877 2.92893 15.1877 5V6.015C16.4747 6.054 17.2627 6.192 17.8637 6.691C18.6967 7.383 18.9167 8.553 19.3557 10.894L20.1057 14.894C20.7227 18.186 21.0307 19.832 20.1317 20.916C19.2317 22 17.5567 22 14.2077 22H8.66765C5.31765 22 3.64365 22 2.74365 20.916C1.84365 19.832 2.15365 18.186 2.76965 14.894L3.51965 10.894C3.95965 8.554 4.17865 7.383 5.01165 6.691C5.61265 6.192 6.40065 6.054 7.68765 6.015ZM9.18765 5C9.18765 3.75736 10.195 2.75 11.4377 2.75C12.6803 2.75 13.6877 3.75736 13.6877 5V6H9.18765V5Z" fill="#B7FF1A" />
                         </svg>
                       )}
                     </div>
@@ -395,7 +395,7 @@ export default function WalletHomepage({
                       <p 
                         className="font-bold"
                         style={{ 
-                          color: tx.amount >= 0 ? '#4ade80' : '#fff',
+                          color: tx.amount >= 0 ? '#B7FF1A' : '#fff',
                           fontSize: '14px'
                         }}
                       >
@@ -430,7 +430,7 @@ export default function WalletHomepage({
                   <div className="flex items-center gap-2">
                     <div 
                       className="w-2 h-2 rounded-full"
-                      style={{ background: '#4ade80' }}
+                      style={{ background: '#B7FF1A' }}
                     />
                     <span style={{ color: '#fff', fontSize: '16px', fontWeight: 500 }}>Active Wallet</span>
                   </div>
@@ -441,15 +441,15 @@ export default function WalletHomepage({
                   className="flex items-center gap-1.5 px-3 py-1 rounded-full"
                   style={{ 
                     background: 'rgba(20, 83, 45, 0.2)',
-                    border: '1px solid rgba(74, 222, 128, 0.3)'
+                    border: '1px solid rgba(183, 255, 26, 0.3)'
                   }}
                 >
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M1.9705 2.96449C1.75 3.27832 1.75 4.21166 1.75 6.07657V6.99474C1.75 10.2836 4.22275 11.8802 5.77442 12.5574C6.195 12.7412 6.40558 12.8333 7 12.8333C7.595 12.8333 7.805 12.7412 8.22558 12.5574C9.77725 11.8796 12.25 10.2842 12.25 6.99474V6.07657C12.25 4.21107 12.25 3.27832 12.0295 2.96449C11.8096 2.65124 10.9328 2.35082 9.17875 1.75057L8.8445 1.63624C7.93042 1.32299 7.47367 1.16666 7 1.16666C6.52633 1.16666 6.06958 1.32299 5.1555 1.63624L4.82125 1.74999C3.06717 2.35082 2.19042 2.65124 1.9705 2.96449ZM8.785 6.12499C8.8891 6.00828 8.92303 5.84491 8.874 5.6964C8.82498 5.5479 8.70046 5.43682 8.54734 5.40503C8.39422 5.37323 8.23576 5.42553 8.13167 5.54224L6.37525 7.51041L5.86775 6.94224C5.70629 6.76382 5.43104 6.74929 5.25169 6.90971C5.07234 7.07014 5.0562 7.34529 5.21558 7.52557L6.04858 8.45891C6.13159 8.55189 6.25032 8.60506 6.37496 8.60506C6.4996 8.60506 6.61833 8.55189 6.70133 8.45891L8.785 6.12499Z" fill="#4ADE80" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M1.9705 2.96449C1.75 3.27832 1.75 4.21166 1.75 6.07657V6.99474C1.75 10.2836 4.22275 11.8802 5.77442 12.5574C6.195 12.7412 6.40558 12.8333 7 12.8333C7.595 12.8333 7.805 12.7412 8.22558 12.5574C9.77725 11.8796 12.25 10.2842 12.25 6.99474V6.07657C12.25 4.21107 12.25 3.27832 12.0295 2.96449C11.8096 2.65124 10.9328 2.35082 9.17875 1.75057L8.8445 1.63624C7.93042 1.32299 7.47367 1.16666 7 1.16666C6.52633 1.16666 6.06958 1.32299 5.1555 1.63624L4.82125 1.74999C3.06717 2.35082 2.19042 2.65124 1.9705 2.96449ZM8.785 6.12499C8.8891 6.00828 8.92303 5.84491 8.874 5.6964C8.82498 5.5479 8.70046 5.43682 8.54734 5.40503C8.39422 5.37323 8.23576 5.42553 8.13167 5.54224L6.37525 7.51041L5.86775 6.94224C5.70629 6.76382 5.43104 6.74929 5.25169 6.90971C5.07234 7.07014 5.0562 7.34529 5.21558 7.52557L6.04858 8.45891C6.13159 8.55189 6.25032 8.60506 6.37496 8.60506C6.4996 8.60506 6.61833 8.55189 6.70133 8.45891L8.785 6.12499Z" fill="#B7FF1A" />
                   </svg>
                   <span 
                     className="text-xs font-bold uppercase"
-                    style={{ color: '#4ade80', fontSize: '10px' }}
+                    style={{ color: '#B7FF1A', fontSize: '10px' }}
                   >
                     SKALE Network
                   </span>
@@ -487,12 +487,12 @@ export default function WalletHomepage({
                 >
                   {copied ? (
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M4 10L8 14L16 6" stroke="#4ADE80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M4 10L8 14L16 6" stroke="#B7FF1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   ) : (
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path fillRule="evenodd" clipRule="evenodd" d="M12.7 1.66666H9.455C7.985 1.66666 6.82 1.66666 5.90917 1.78999C4.97083 1.91666 4.21167 2.18332 3.61333 2.78416C3.01417 3.38499 2.74833 4.14749 2.6225 5.08916C2.5 6.00416 2.5 7.17332 2.5 8.64916V13.5142C2.5 14.7708 3.26667 15.8475 4.35583 16.2992C4.3 15.5408 4.3 14.4783 4.3 13.5933V9.41832C4.3 8.35082 4.3 7.42999 4.39833 6.69332C4.50417 5.90332 4.7425 5.14666 5.35417 4.53249C5.96583 3.91832 6.72 3.67916 7.50667 3.57249C8.24 3.47416 9.15667 3.47416 10.2208 3.47416H12.7792C13.8425 3.47416 14.7575 3.47416 15.4917 3.57249C15.0416 2.42354 13.934 1.66735 12.7 1.66666Z" fill="#4ADE80" />
-                      <path fillRule="evenodd" clipRule="evenodd" d="M5.5 9.49751C5.5 7.22584 5.5 6.09001 6.20333 5.38418C6.90583 4.67834 8.03667 4.67834 10.3 4.67834H12.7C14.9625 4.67834 16.0942 4.67834 16.7975 5.38418C17.5008 6.09001 17.5 7.22584 17.5 9.49751V13.5142C17.5 15.7858 17.5 16.9217 16.7975 17.6275C16.0942 18.3333 14.9625 18.3333 12.7 18.3333H10.3C8.0375 18.3333 6.90583 18.3333 6.20333 17.6275C5.5 16.9217 5.5 15.7858 5.5 13.5142L5.5 9.49751Z" fill="#4ADE80" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M12.7 1.66666H9.455C7.985 1.66666 6.82 1.66666 5.90917 1.78999C4.97083 1.91666 4.21167 2.18332 3.61333 2.78416C3.01417 3.38499 2.74833 4.14749 2.6225 5.08916C2.5 6.00416 2.5 7.17332 2.5 8.64916V13.5142C2.5 14.7708 3.26667 15.8475 4.35583 16.2992C4.3 15.5408 4.3 14.4783 4.3 13.5933V9.41832C4.3 8.35082 4.3 7.42999 4.39833 6.69332C4.50417 5.90332 4.7425 5.14666 5.35417 4.53249C5.96583 3.91832 6.72 3.67916 7.50667 3.57249C8.24 3.47416 9.15667 3.47416 10.2208 3.47416H12.7792C13.8425 3.47416 14.7575 3.47416 15.4917 3.57249C15.0416 2.42354 13.934 1.66735 12.7 1.66666Z" fill="#B7FF1A" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M5.5 9.49751C5.5 7.22584 5.5 6.09001 6.20333 5.38418C6.90583 4.67834 8.03667 4.67834 10.3 4.67834H12.7C14.9625 4.67834 16.0942 4.67834 16.7975 5.38418C17.5008 6.09001 17.5 7.22584 17.5 9.49751V13.5142C17.5 15.7858 17.5 16.9217 16.7975 17.6275C16.0942 18.3333 14.9625 18.3333 12.7 18.3333H10.3C8.0375 18.3333 6.90583 18.3333 6.20333 17.6275C5.5 16.9217 5.5 15.7858 5.5 13.5142L5.5 9.49751Z" fill="#B7FF1A" />
                     </svg>
                   )}
                 </button>
@@ -539,11 +539,11 @@ export default function WalletHomepage({
                               className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide"
                               style={{
                                 background: w.isPrimary
-                                  ? 'rgba(74, 222, 128, 0.15)'
+                                  ? 'rgba(183, 255, 26, 0.15)'
                                   : 'rgba(148, 163, 184, 0.15)',
-                                color: w.isPrimary ? '#4ade80' : '#94a3b8',
+                                color: w.isPrimary ? '#B7FF1A' : '#94a3b8',
                                 border: w.isPrimary
-                                  ? '1px solid rgba(74, 222, 128, 0.3)'
+                                  ? '1px solid rgba(183, 255, 26, 0.3)'
                                   : '1px solid rgba(148, 163, 184, 0.3)',
                               }}
                               data-testid={`wallet-label-${w.address}`}
@@ -570,7 +570,7 @@ export default function WalletHomepage({
                           <span
                             className="font-bold"
                             style={{
-                              color: retiredWithBalance ? '#f59e0b' : '#4ade80',
+                              color: retiredWithBalance ? '#f59e0b' : '#B7FF1A',
                               fontSize: '14px',
                             }}
                             data-testid={`wallet-balance-${w.address}`}

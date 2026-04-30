@@ -18,7 +18,7 @@ const FeaturedProfileCard = ({ user }: FeaturedProfileCardProps) => {
     <div 
       className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 border border-primary/30 p-4 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 hover:border-primary/50 group"
       style={{ 
-        '--avatar-border-color': user.avatarBorderColor || '#4ADE80' 
+        '--avatar-border-color': user.avatarBorderColor || '#B7FF1A' 
       } as any}
     >
       <div className="flex flex-col items-center text-center">

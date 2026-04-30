@@ -76,7 +76,7 @@ const MobileNav = () => {
                   "bg-card border border-border",
                   "shadow-lg shadow-black/20",
                   "text-foreground",
-                  "hover:bg-green-500 active:bg-green-500",
+                  "hover:bg-primary active:bg-primary",
                   "group",
                   "transition-all duration-300 ease-out",
                   uploadMenuOpen

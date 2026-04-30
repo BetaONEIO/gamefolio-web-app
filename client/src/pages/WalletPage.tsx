@@ -210,7 +210,7 @@ export default function WalletPage() {
                 </p>
                 <Button 
                   onClick={() => openModal()}
-                  className="bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
+                  className="bg-primary hover:bg-primary text-slate-900 font-bold"
                 >
                   Log In
                 </Button>

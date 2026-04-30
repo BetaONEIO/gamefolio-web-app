@@ -50,9 +50,9 @@ const STATUS_META: Record<
   },
   consumed: {
     label: "Minted",
-    color: "text-[#4ade80]",
-    bg: "bg-[#4ade80]/10",
-    border: "border-[#4ade80]/30",
+    color: "text-[#B7FF1A]",
+    bg: "bg-[#B7FF1A]/10",
+    border: "border-[#B7FF1A]/30",
     icon: Check,
   },
   refunded: {
@@ -96,7 +96,7 @@ function ExplorerLink({ hash, label }: { hash: string; label: string }) {
       href={`${SKALE_EXPLORER_BASE_URL}/tx/${hash}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-1 text-[10px] font-mono text-[#94a3b8] hover:text-[#4ade80] transition-colors"
+      className="flex items-center gap-1 text-[10px] font-mono text-[#94a3b8] hover:text-[#B7FF1A] transition-colors"
       data-testid={`link-explorer-${hash.slice(0, 10)}`}
     >
       <span className="uppercase tracking-wider font-bold not-italic">{label}:</span>

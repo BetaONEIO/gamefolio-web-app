@@ -99,7 +99,7 @@ const ReelCard: React.FC<{ reel: any; reelsList?: any[] }> = ({ reel, reelsList 
 
         {/* Game badge */}
         {reel.game && (
-          <div className="inline-block bg-green-600 text-white text-xs px-2 py-0.5 rounded font-bold">
+          <div className="inline-block bg-primary text-white text-xs px-2 py-0.5 rounded font-bold">
             {reel.game.name}
           </div>
         )}

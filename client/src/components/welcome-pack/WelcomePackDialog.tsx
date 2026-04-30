@@ -386,7 +386,7 @@ export function WelcomePackDialog({ open, onOpenChange, onClaimComplete }: Welco
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", stiffness: 200 }}
-                  className="w-20 h-20 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/30"
+                  className="w-20 h-20 rounded-full bg-gradient-to-br from-[#B7FF1A] to-[#6FA800] flex items-center justify-center shadow-lg shadow-primary/30"
                 >
                   <Check className="w-10 h-10 text-white" />
                 </motion.div>
@@ -427,7 +427,7 @@ export function WelcomePackDialog({ open, onOpenChange, onClaimComplete }: Welco
                           {rewardTypeLabels[reward.type]?.label}
                         </p>
                       </div>
-                      <Check className="w-5 h-5 text-green-400" />
+                      <Check className="w-5 h-5 text-primary" />
                     </motion.div>
                   ))}
                 </div>

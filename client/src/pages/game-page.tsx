@@ -314,7 +314,7 @@ const GamePage = () => {
                   <SelectItem key={u.id} value={u.id.toString()} data-testid={`select-user-${u.id}`}>
                     <div className="flex items-center gap-2">
                       {u.nftProfileTokenId && u.nftProfileImageUrl && (u as any).activeProfilePicType === 'nft' ? (
-                        <div className="h-5 w-5 rounded-sm overflow-hidden border border-[#4ade80]/40"><img src={u.nftProfileImageUrl} alt={u.username} className="w-full h-full object-cover" /></div>
+                        <div className="h-5 w-5 rounded-sm overflow-hidden border border-[#B7FF1A]/40"><img src={u.nftProfileImageUrl} alt={u.username} className="w-full h-full object-cover" /></div>
                       ) : (
                         <Avatar className="h-5 w-5">
                           <AvatarImage src={u.avatarUrl || ''} alt={u.username} />

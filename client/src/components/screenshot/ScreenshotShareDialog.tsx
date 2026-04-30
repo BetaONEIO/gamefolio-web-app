@@ -222,7 +222,7 @@ export function ScreenshotShareDialog({
                   size="sm"
                   onClick={handleCopyLink}
                   className={`px-4 transition-colors ${
-                    copySuccess ? 'text-black bg-[#4ade80] border-[#4ade80]' : 'text-[#4ade80] border-[#4ade80]/50 bg-transparent hover:bg-[#4ade80] hover:text-black'
+                    copySuccess ? 'text-black bg-[#B7FF1A] border-[#B7FF1A]' : 'text-[#B7FF1A] border-[#B7FF1A]/50 bg-transparent hover:bg-[#B7FF1A] hover:text-black'
                   }`}
                   aria-label="Copy screenshot URL to clipboard"
                 >
@@ -235,7 +235,7 @@ export function ScreenshotShareDialog({
                     variant="outline"
                     size="sm"
                     onClick={handleNativeShare}
-                    className="px-4 bg-[#4ade80] text-black hover:bg-[#22c55e] border-[#4ade80]"
+                    className="px-4 bg-[#B7FF1A] text-black hover:bg-[#A2F000] border-[#B7FF1A]"
                     aria-label="Share using device's native share menu"
                   >
                     <Share2 className="h-4 w-4 mr-1" />

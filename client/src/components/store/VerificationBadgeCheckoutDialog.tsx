@@ -113,8 +113,8 @@ export function VerificationBadgeCheckoutDialog({
                       <span className="text-sm text-[#94a3b8]">Price</span>
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm font-bold text-[#f8fafc]">{badge.gfCost}</span>
-                        <div className="bg-[#4ade801a] rounded px-1.5 py-0.5">
-                          <span className="text-[10px] font-bold text-[#4ade80] uppercase">GF</span>
+                        <div className="bg-[#B7FF1A1a] rounded px-1.5 py-0.5">
+                          <span className="text-[10px] font-bold text-[#B7FF1A] uppercase">GF</span>
                         </div>
                       </div>
                     </div>
@@ -122,16 +122,16 @@ export function VerificationBadgeCheckoutDialog({
                       <span className="text-sm text-[#94a3b8]">Network Fee</span>
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm font-bold text-[#f8fafc]">{networkFee}</span>
-                        <div className="bg-[#4ade801a] rounded px-1.5 py-0.5">
-                          <span className="text-[10px] font-bold text-[#4ade80] uppercase">GF</span>
+                        <div className="bg-[#B7FF1A1a] rounded px-1.5 py-0.5">
+                          <span className="text-[10px] font-bold text-[#B7FF1A] uppercase">GF</span>
                         </div>
                       </div>
                     </div>
                     <div className="flex justify-between items-center p-5">
                       <span className="text-[16px] font-bold text-[#f8fafc] uppercase tracking-[1.4px]">Total Cost</span>
                       <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-black text-[#4ade80] tracking-[-0.5px] uppercase">{totalCost}</span>
-                        <span className="text-2xl font-black text-[#4ade80] tracking-[-0.5px] uppercase ml-1">GF</span>
+                        <span className="text-2xl font-black text-[#B7FF1A] tracking-[-0.5px] uppercase">{totalCost}</span>
+                        <span className="text-2xl font-black text-[#B7FF1A] tracking-[-0.5px] uppercase ml-1">GF</span>
                       </div>
                     </div>
                   </div>
@@ -141,7 +141,7 @@ export function VerificationBadgeCheckoutDialog({
                 <div className="space-y-4">
                   <div className="bg-[#1e293b33] border border-[#1e293b4d] rounded-[16px] p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#4ade801a] flex items-center justify-center p-2.5">
+                      <div className="w-10 h-10 rounded-full bg-[#B7FF1A1a] flex items-center justify-center p-2.5">
                         <img src={gfTokenLogo} alt="G" className="w-full h-full" />
                       </div>
                       <div className="flex flex-col">
@@ -165,8 +165,8 @@ export function VerificationBadgeCheckoutDialog({
                   disabled={!canAfford || isPurchasing}
                   className="w-full h-[68px] rounded-[16px] text-lg font-black uppercase"
                   style={{
-                    background: canAfford && !isPurchasing ? '#4ade80' : '#1e293b',
-                    color: canAfford && !isPurchasing ? '#022c22' : '#475569',
+                    background: canAfford && !isPurchasing ? '#B7FF1A' : '#1e293b',
+                    color: canAfford && !isPurchasing ? '#071013' : '#475569',
                     letterSpacing: '-0.9px',
                     cursor: canAfford && !isPurchasing ? 'pointer' : 'not-allowed',
                     opacity: canAfford && !isPurchasing ? 1 : 0.5,

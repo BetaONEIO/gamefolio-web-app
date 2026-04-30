@@ -206,7 +206,7 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
             <div className="flex items-center">
               <Link href={`/profile/${clip.user.username}`} onClick={(e) => e.stopPropagation()}>
                 {clip.user.nftProfileTokenId && clip.user.nftProfileImageUrl && (clip.user as any).activeProfilePicType === 'nft' ? (
-                  <div className="h-8 w-8 mr-3 rounded-lg overflow-hidden border border-[#4ade80]/40 hover:opacity-80 transition-opacity cursor-pointer">
+                  <div className="h-8 w-8 mr-3 rounded-lg overflow-hidden border border-[#B7FF1A]/40 hover:opacity-80 transition-opacity cursor-pointer">
                     <img src={clip.user.nftProfileImageUrl} alt={clip.user.displayName} loading="lazy" className="w-full h-full object-cover" />
                   </div>
                 ) : (
@@ -241,12 +241,12 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
           <div className="flex items-center space-x-1.5">
             <button 
               onClick={handleLikeClick}
-              className={`flex items-center text-[9px] transition-colors ${hasUserLiked ? 'text-green-500' : 'text-muted-foreground hover:text-green-500'}`}
+              className={`flex items-center text-[9px] transition-colors ${hasUserLiked ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
             >
               <Heart 
                 className={`h-2.5 w-2.5 transition-all duration-300 ${
                   hasUserLiked 
-                    ? `fill-green-500 stroke-green-500 text-green-500 ${isAnimating ? 'animate-bounce scale-125' : 'scale-110'}` 
+                    ? `fill-green-500 stroke-green-500 text-primary ${isAnimating ? 'animate-bounce scale-125' : 'scale-110'}` 
                     : 'stroke-muted-foreground hover:stroke-green-500 fill-transparent hover:scale-105'
                 }`} 
                 style={{
@@ -255,7 +255,7 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
               />
               <span className="ml-0.5">{likeCount}</span>
               {/* Debug indicator showing server state */}
-              {hasUserLiked && <span className="text-green-500 text-xs ml-1">✓</span>}
+              {hasUserLiked && <span className="text-primary text-xs ml-1">✓</span>}
             </button>
             
             <FireButton 

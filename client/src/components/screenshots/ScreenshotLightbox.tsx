@@ -230,7 +230,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                     key={dotIndex}
                     className={`rounded-full transition-all duration-300 ${
                       isActive
-                        ? "w-2 h-2 bg-green-500"
+                        ? "w-2 h-2 bg-primary"
                         : isFaded
                         ? "w-1.5 h-1.5 bg-white/20"
                         : "w-1.5 h-1.5 bg-white/60"
@@ -319,7 +319,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                         key={dotIndex}
                         className={`rounded-full transition-all duration-300 ${
                           isActive
-                            ? "w-2 h-2 bg-green-500"
+                            ? "w-2 h-2 bg-primary"
                             : isFaded
                             ? "w-1.5 h-1.5 bg-white/20"
                             : "w-1.5 h-1.5 bg-white/60"
@@ -341,7 +341,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                   onClose();
                 }}>
                   {screenshotUser?.nftProfileTokenId && screenshotUser?.nftProfileImageUrl && screenshotUser?.activeProfilePicType === 'nft' ? (
-                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#4ade80]/40 flex-shrink-0">
+                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#B7FF1A]/40 flex-shrink-0">
                       <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName || ''} className="w-full h-full object-cover" />
                     </div>
                   ) : (
@@ -399,7 +399,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
               {screenshot.gameId && games?.find((g: Game) => g.id === screenshot.gameId) && (
                 <div className="mt-2">
                   <Link href={`/games/${(games.find((g: Game) => g.id === screenshot.gameId)?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                    <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold hover:bg-green-500 cursor-pointer transition-colors">
+                    <span className="bg-primary text-white px-2 py-1 rounded text-xs font-bold hover:bg-primary cursor-pointer transition-colors">
                       {games.find((g: Game) => g.id === screenshot.gameId)?.name}
                     </span>
                   </Link>
@@ -502,7 +502,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
               <div className="flex items-center justify-between">
                 <div className="flex items-center min-w-0">
                   {screenshotUser?.nftProfileTokenId && screenshotUser?.nftProfileImageUrl && screenshotUser?.activeProfilePicType === 'nft' ? (
-                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#4ade80]/40 mr-3 flex-shrink-0">
+                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#B7FF1A]/40 mr-3 flex-shrink-0">
                       <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName || ''} className="w-full h-full object-cover" />
                     </div>
                   ) : (
@@ -566,7 +566,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                 {screenshot.gameId && games?.find((g: Game) => g.id === screenshot.gameId) && (
                   <div className="mt-2">
                     <Link href={`/games/${(games.find((g: Game) => g.id === screenshot.gameId)?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                      <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold hover:bg-green-500 cursor-pointer transition-colors">
+                      <span className="bg-primary text-white px-2 py-1 rounded text-xs font-bold hover:bg-primary cursor-pointer transition-colors">
                         {games.find((g: Game) => g.id === screenshot.gameId)?.name}
                       </span>
                     </Link>

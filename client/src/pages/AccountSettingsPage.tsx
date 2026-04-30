@@ -957,7 +957,7 @@ const AccountSettingsPage: React.FC = () => {
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
-                        <Shield className="h-5 w-5 text-green-500" />
+                        <Shield className="h-5 w-5 text-primary" />
                         Verified Badge
                       </h3>
                       <p className="text-sm text-muted-foreground">
@@ -1041,8 +1041,8 @@ const AccountSettingsPage: React.FC = () => {
                                 className={`
                                   relative p-3 rounded-lg transition-all transform hover:scale-105 flex flex-col items-center
                                   ${isSelected 
-                                    ? 'ring-2 ring-green-500 bg-green-500/20' 
-                                    : 'border border-border hover:border-green-500/50'}
+                                    ? 'ring-2 ring-primary bg-primary/20' 
+                                    : 'border border-border hover:border-primary/50'}
                                 `}
                               >
                                 <NameTagImage
@@ -1052,10 +1052,10 @@ const AccountSettingsPage: React.FC = () => {
                                 />
                                 <p className="text-xs text-center mt-1 truncate w-full">{badge.name}</p>
                                 {badge.isDefault && (
-                                  <span className="text-[10px] text-green-500 font-medium">Free</span>
+                                  <span className="text-[10px] text-primary font-medium">Free</span>
                                 )}
                                 {isSelected && (
-                                  <div className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full p-0.5">
+                                  <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
                                     <Check className="h-2.5 w-2.5" />
                                   </div>
                                 )}
@@ -1099,7 +1099,7 @@ const AccountSettingsPage: React.FC = () => {
             
             <CardContent className="space-y-6">
               {changePasswordStatus === 'success' && (
-                <Alert className="bg-green-50 text-green-800 border-green-200">
+                <Alert className="bg-primary text-primary border-primary">
                   <AlertTitle>Password Changed</AlertTitle>
                   <AlertDescription>
                     Your password has been successfully changed.
@@ -1147,7 +1147,7 @@ const AccountSettingsPage: React.FC = () => {
                           </FormControl>
                           <PasswordRequirementsDisplay 
                             requirements={requirements} 
-                            accentColor="#10b981"
+                            accentColor="#B7FF1A"
                           />
                           <FormMessage />
                         </FormItem>
@@ -1171,10 +1171,10 @@ const AccountSettingsPage: React.FC = () => {
                           </FormControl>
                           <div className="space-y-1 text-xs mt-2">
                             <div className="flex items-center gap-2">
-                              <span className={`${passwordsMatch ? 'text-green-500' : 'text-muted-foreground'}`}>
+                              <span className={`${passwordsMatch ? 'text-primary' : 'text-muted-foreground'}`}>
                                 {passwordsMatch ? '✓' : '○'}
                               </span>
-                              <span className={`${passwordsMatch ? 'text-green-500' : 'text-muted-foreground'}`}>
+                              <span className={`${passwordsMatch ? 'text-primary' : 'text-muted-foreground'}`}>
                                 Passwords match
                               </span>
                             </div>

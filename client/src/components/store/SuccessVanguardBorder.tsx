@@ -38,12 +38,12 @@ export function SuccessVanguardBorder({
         
         {/* Success Animation Header */}
         <div className="relative flex items-center justify-center w-40 h-40 mb-4">
-          <div className="absolute inset-0 bg-[#4ade804d] blur-[50px] rounded-full" />
-          <div className="relative w-28 h-28 bg-[#4ade80] rounded-full shadow-[0_25px_50px_-12px_rgba(74,222,128,0.5)] flex items-center justify-center">
+          <div className="absolute inset-0 bg-[#B7FF1A4d] blur-[50px] rounded-full" />
+          <div className="relative w-28 h-28 bg-[#B7FF1A] rounded-full shadow-[0_25px_50px_-12px_rgba(183, 255, 26,0.5)] flex items-center justify-center">
             <PartyPopper className="w-16 h-16 text-black" />
           </div>
-          <div className="absolute w-40 h-40 border-4 border-[#4ade8033] rounded-full" />
-          <div className="absolute w-[161px] h-[161px] border-4 border-[#4ade80] rounded-full animate-ping opacity-20" />
+          <div className="absolute w-40 h-40 border-4 border-[#B7FF1A33] rounded-full" />
+          <div className="absolute w-[161px] h-[161px] border-4 border-[#B7FF1A] rounded-full animate-ping opacity-20" />
         </div>
 
         {/* Success Message */}
@@ -52,7 +52,7 @@ export function SuccessVanguardBorder({
             Elite Upgrade!
           </h2>
           <p className="text-sm font-bold uppercase tracking-[-0.35px] leading-[22.75px] text-[#94a3b8]">
-            The <span className="text-[#4ade80]">{assetName}</span> Border has been added to your profile
+            The <span className="text-[#B7FF1A]">{assetName}</span> Border has been added to your profile
           </p>
         </div>
 
@@ -65,7 +65,7 @@ export function SuccessVanguardBorder({
               className="flex items-center gap-2 px-2 py-1 bg-[#1e293b80] rounded-md transition-colors hover:bg-[#1e293b]"
             >
               <span className="text-[12px] font-bold text-[#f8fafc] font-mono">{transactionId.slice(0, 8)}...</span>
-              {copied ? <Check className="w-3 h-3 text-[#4ade80]" /> : <Copy className="w-3 h-3 text-[#94a3b8]" />}
+              {copied ? <Check className="w-3 h-3 text-[#B7FF1A]" /> : <Copy className="w-3 h-3 text-[#94a3b8]" />}
             </button>
           </div>
           
@@ -73,12 +73,12 @@ export function SuccessVanguardBorder({
           
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-[1px] text-[#94a3b8]">Total Cost</span>
-            <span className="text-sm font-black text-[#4ade80]">{totalCost} GF</span>
+            <span className="text-sm font-black text-[#B7FF1A]">{totalCost} GF</span>
           </div>
         </div>
 
         {/* Asset Preview Card */}
-        <div className="w-full bg-[#0f172a] border border-[#4ade804d] rounded-[40px] overflow-hidden shadow-[0_25px_50px_-12px_rgba(74,222,128,0.1)]">
+        <div className="w-full bg-[#0f172a] border border-[#B7FF1A4d] rounded-[40px] overflow-hidden shadow-[0_25px_50px_-12px_rgba(183, 255, 26,0.1)]">
           <div className="h-[200px] bg-[#0f172b] flex items-center justify-center p-8">
             <img src={imageUrl} alt={assetName} className="w-48 h-48 object-contain" />
           </div>
@@ -87,8 +87,8 @@ export function SuccessVanguardBorder({
               <span className="text-[10px] font-black uppercase tracking-[2px] text-[#94a3b8]">Asset Name</span>
               <span className="text-2xl font-black uppercase tracking-[-1.2px] text-[#f8fafc]">{assetName}</span>
             </div>
-            <div className="bg-[#4ade801a] border border-[#4ade804d] rounded-2xl px-4 py-2 flex items-center gap-2">
-              <span className="text-[12px] font-black uppercase tracking-[1.2px] text-[#4ade80]">Border</span>
+            <div className="bg-[#B7FF1A1a] border border-[#B7FF1A4d] rounded-2xl px-4 py-2 flex items-center gap-2">
+              <span className="text-[12px] font-black uppercase tracking-[1.2px] text-[#B7FF1A]">Border</span>
             </div>
           </div>
         </div>
@@ -97,7 +97,7 @@ export function SuccessVanguardBorder({
         <div className="w-full flex flex-col gap-3 pt-4">
           <Button
             onClick={onClose}
-            className="w-full h-[68px] rounded-[16px] bg-[#4ade80] text-black text-lg font-black uppercase shadow-[0_8px_10px_-6px_rgba(74,222,128,0.2)] hover:bg-[#3dbd6d] active:scale-[0.98] transition-all"
+            className="w-full h-[68px] rounded-[16px] bg-[#B7FF1A] text-black text-lg font-black uppercase shadow-[0_8px_10px_-6px_rgba(183, 255, 26,0.2)] hover:bg-[#A2F000] active:scale-[0.98] transition-all"
             style={{ letterSpacing: '-0.9px' }}
           >
             Back to Store

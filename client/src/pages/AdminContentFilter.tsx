@@ -158,7 +158,7 @@ export default function AdminContentFilter() {
 
   const getResultIcon = (isValid: boolean) => {
     return isValid ? (
-      <Shield className="h-4 w-4 text-green-600" />
+      <Shield className="h-4 w-4 text-primary" />
     ) : (
       <AlertTriangle className="h-4 w-4 text-red-600" />
     );
@@ -340,13 +340,13 @@ export default function AdminContentFilter() {
                     {testResults[fieldType] && (
                       <div className={`p-3 rounded-lg ${
                         testResults[fieldType].isValid 
-                          ? 'bg-green-50 border border-green-200' 
+                          ? 'bg-primary border border-primary' 
                           : 'bg-red-50 border border-red-200'
                       }`}>
                         <div className="flex items-center gap-2 mb-2">
                           {getResultIcon(testResults[fieldType].isValid)}
                           <span className={`font-medium ${
-                            testResults[fieldType].isValid ? 'text-green-800' : 'text-red-800'
+                            testResults[fieldType].isValid ? 'text-primary' : 'text-red-800'
                           }`}>
                             {testResults[fieldType].isValid ? 'Content Approved' : 'Content Blocked'}
                           </span>

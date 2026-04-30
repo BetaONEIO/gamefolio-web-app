@@ -92,7 +92,7 @@ function TrendingGamesGrid({ onSelectGame, existingFavorites }: {
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
                 {isAlreadyFavorite ? (
-                  <Check className="h-8 w-8 text-green-400" />
+                  <Check className="h-8 w-8 text-primary" />
                 ) : (
                   <Plus className="h-8 w-8 text-white" />
                 )}
@@ -180,7 +180,7 @@ function SearchResults({
             />
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
               {isAlreadyFavorite ? (
-                <Check className="h-8 w-8 text-green-400" />
+                <Check className="h-8 w-8 text-primary" />
               ) : (
                 <Plus className="h-8 w-8 text-white" />
               )}

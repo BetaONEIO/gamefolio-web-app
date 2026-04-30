@@ -73,7 +73,7 @@ export default function TransactionHistoryScreen({
             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
             style={{ background: "#1e293b", border: "1px solid #1e293b" }}
           >
-            <Filter className="w-5 h-5" style={{ color: "#4ade80" }} />
+            <Filter className="w-5 h-5" style={{ color: "#B7FF1A" }} />
           </button>
         </div>
 
@@ -94,9 +94,9 @@ export default function TransactionHistoryScreen({
             onClick={() => setActiveFilter(filter.key)}
             className="flex-shrink-0 px-5 py-2 rounded-full text-xs font-bold transition-all"
             style={{
-              background: activeFilter === filter.key ? "#4ade80" : "#1e293b",
-              border: `1px solid ${activeFilter === filter.key ? "#4ade80" : "#1e293b"}`,
-              color: activeFilter === filter.key ? "#022c22" : "#94a3b8",
+              background: activeFilter === filter.key ? "#B7FF1A" : "#1e293b",
+              border: `1px solid ${activeFilter === filter.key ? "#B7FF1A" : "#1e293b"}`,
+              color: activeFilter === filter.key ? "#071013" : "#94a3b8",
             }}
           >
             {filter.label}
@@ -118,7 +118,7 @@ export default function TransactionHistoryScreen({
                 <div
                   className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
                   style={{
-                    background: tx.type === "received" ? "rgba(74, 222, 128, 0.1)" : "rgba(148, 163, 184, 0.1)",
+                    background: tx.type === "received" ? "rgba(183, 255, 26, 0.1)" : "rgba(148, 163, 184, 0.1)",
                   }}
                 >
                   {tx.type === "sent" && (
@@ -128,7 +128,7 @@ export default function TransactionHistoryScreen({
                   )}
                   {tx.type === "received" && (
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 19L12 5M12 19L6 13M12 19L18 13" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M12 19L12 5M12 19L6 13M12 19L18 13" stroke="#B7FF1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   )}
                   {tx.type === "staking" && (
@@ -148,7 +148,7 @@ export default function TransactionHistoryScreen({
                 <div className="flex flex-col items-end">
                   <span
                     className="text-sm font-bold"
-                    style={{ color: tx.amount > 0 ? "#4ade80" : "#f8fafc" }}
+                    style={{ color: tx.amount > 0 ? "#B7FF1A" : "#f8fafc" }}
                   >
                     {tx.amount > 0 ? "+" : ""}{tx.amount.toLocaleString()} GFT
                   </span>
@@ -168,7 +168,7 @@ export default function TransactionHistoryScreen({
               <div
                 className="absolute rounded-full blur-[32px]"
                 style={{
-                  background: "rgba(74, 222, 128, 0.05)",
+                  background: "rgba(183, 255, 26, 0.05)",
                   width: "144px",
                   height: "144px",
                   top: "-24px",
@@ -207,12 +207,12 @@ export default function TransactionHistoryScreen({
                     fillRule="evenodd"
                     clipRule="evenodd"
                     d="M0.833 8.75C0.833 4.378 4.378 0.833 8.75 0.833C13.122 0.833 16.667 4.378 16.667 8.75C16.667 13.122 13.122 16.667 8.75 16.667C4.378 16.667 0.833 13.122 0.833 8.75Z"
-                    stroke="#4ade80"
+                    stroke="#B7FF1A"
                     strokeWidth="1.25"
                   />
                   <path
                     d="M14.583 14.583L18.333 18.333"
-                    stroke="#4ade80"
+                    stroke="#B7FF1A"
                     strokeWidth="1.25"
                     strokeLinecap="round"
                   />
@@ -237,9 +237,9 @@ export default function TransactionHistoryScreen({
                 onClick={onStartTransaction}
                 className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl font-bold transition-all hover:opacity-90 active:scale-[0.98]"
                 style={{
-                  background: "#4ade80",
-                  boxShadow: "0 0 20px -5px #4ade80",
-                  color: "#022c22",
+                  background: "#B7FF1A",
+                  boxShadow: "0 0 20px -5px #B7FF1A",
+                  color: "#071013",
                 }}
               >
                 <Plus className="w-5 h-5" />
@@ -256,7 +256,7 @@ export default function TransactionHistoryScreen({
                   color: "#f8fafc",
                 }}
               >
-                <Sparkles className="w-5 h-5" style={{ color: "#4ade80" }} />
+                <Sparkles className="w-5 h-5" style={{ color: "#B7FF1A" }} />
                 <span>Learn how to earn GFT</span>
               </button>
             </div>

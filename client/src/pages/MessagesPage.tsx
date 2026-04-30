@@ -243,7 +243,7 @@ const MessagesPage: React.FC = () => {
       toast({
         title: "✅ User blocked successfully",
         description: `${username} has been blocked. They can no longer send you messages or interact with your content.`,
-        className: "border-green-500 bg-green-50 dark:bg-green-950",
+        className: "border-primary bg-primary dark:bg-primary",
       });
     },
     onError: (error: any) => {
@@ -277,7 +277,7 @@ const MessagesPage: React.FC = () => {
       toast({
         title: "✅ User unblocked successfully",
         description: `${username} has been unblocked. You can now send messages to each other.`,
-        className: "border-green-500 bg-green-50 dark:bg-green-950",
+        className: "border-primary bg-primary dark:bg-primary",
       });
     },
     onError: (error: any) => {
@@ -529,7 +529,7 @@ const MessagesPage: React.FC = () => {
             />
             {isSearching && (
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <div className="animate-spin h-4 w-4 border-2 border-green-600 border-t-transparent rounded-full"></div>
+                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
               </div>
             )}
           </div>
@@ -556,7 +556,7 @@ const MessagesPage: React.FC = () => {
                         }}
                       >
                         {user.nftProfileTokenId && user.nftProfileImageUrl && (user as any).activeProfilePicType === 'nft' ? (
-                          <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                          <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40">
                             <img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" />
                           </div>
                         ) : (
@@ -610,7 +610,7 @@ const MessagesPage: React.FC = () => {
             <Button
               size="sm"
               onClick={() => setIsNewConversationOpen(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-full font-medium shadow-md hover:shadow-lg transition-all"
+              className="bg-primary hover:bg-primary text-white px-3 py-1.5 rounded-full font-medium shadow-md hover:shadow-lg transition-all"
             >
               <UserPlus className="h-4 w-4 mr-1.5" />
               New
@@ -663,7 +663,7 @@ const MessagesPage: React.FC = () => {
                       key={conversation.userId}
                       className={`relative group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
                         selectedConversation === conversation.userId
-                          ? "bg-green-600/10 border border-green-600/20"
+                          ? "bg-primary/10 border border-primary/20"
                           : "hover:bg-muted"
                       }`}
                     >
@@ -676,7 +676,7 @@ const MessagesPage: React.FC = () => {
                         }}
                       >
                         {useNftAvatar ? (
-                          <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                          <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40">
                             <img src={convUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                           </div>
                         ) : (
@@ -684,7 +684,7 @@ const MessagesPage: React.FC = () => {
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <p className={`font-medium truncate ${conversation.unreadCount > 0 ? 'text-green-500' : ''}`}>{displayName}</p>
+                            <p className={`font-medium truncate ${conversation.unreadCount > 0 ? 'text-primary' : ''}`}>{displayName}</p>
                             {conversation.lastMessage && conversation.lastMessage.createdAt && (
                               <span className="text-xs text-muted-foreground">
                                 {(() => {
@@ -699,7 +699,7 @@ const MessagesPage: React.FC = () => {
                           </div>
                           <p className={`text-sm truncate flex items-center gap-1 ${conversation.unreadCount > 0 ? 'text-white font-bold' : 'text-muted-foreground'}`}>
                             {conversation.lastMessage?.senderId === user?.id && (
-                              <CornerDownRight className="h-3 w-3 flex-shrink-0 text-green-500" />
+                              <CornerDownRight className="h-3 w-3 flex-shrink-0 text-primary" />
                             )}
                             <span className="truncate">{conversation.lastMessage?.content || "No messages yet"}</span>
                             {conversation.lastMessage?.senderId === user?.id && conversation.lastMessage?.isRead && (
@@ -711,7 +711,7 @@ const MessagesPage: React.FC = () => {
                           </p>
                         </div>
                         {conversation.unreadCount > 0 && (
-                          <div className="bg-green-600 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                          <div className="bg-primary text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
                             {conversation.unreadCount}
                           </div>
                         )}
@@ -804,7 +804,7 @@ const MessagesPage: React.FC = () => {
                           {username && username !== 'unknown' ? (
                             <Link href={`/profile/${username}`} data-testid="link-profile-avatar">
                               {otherUser.nftProfileTokenId && otherUser.nftProfileImageUrl && (otherUser as any).activeProfilePicType === 'nft' ? (
-                                <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40 cursor-pointer">
+                                <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40 cursor-pointer">
                                   <img src={otherUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                                 </div>
                               ) : (
@@ -813,7 +813,7 @@ const MessagesPage: React.FC = () => {
                             </Link>
                           ) : (
                             otherUser.nftProfileTokenId && otherUser.nftProfileImageUrl && (otherUser as any).activeProfilePicType === 'nft' ? (
-                              <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                              <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40">
                                 <img src={otherUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                               </div>
                             ) : (
@@ -843,7 +843,7 @@ const MessagesPage: React.FC = () => {
                         {username && username !== 'unknown' ? (
                           <Link href={`/profile/${username}`} data-testid="link-profile-avatar">
                             {selectedUserInfo.nftProfileTokenId && selectedUserInfo.nftProfileImageUrl && (selectedUserInfo as any).activeProfilePicType === 'nft' ? (
-                              <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40 cursor-pointer">
+                              <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40 cursor-pointer">
                                 <img src={selectedUserInfo.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                               </div>
                             ) : (
@@ -852,7 +852,7 @@ const MessagesPage: React.FC = () => {
                           </Link>
                         ) : (
                           selectedUserInfo.nftProfileTokenId && selectedUserInfo.nftProfileImageUrl && (selectedUserInfo as any).activeProfilePicType === 'nft' ? (
-                            <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                            <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40">
                               <img src={selectedUserInfo.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                             </div>
                           ) : (
@@ -862,7 +862,7 @@ const MessagesPage: React.FC = () => {
                         <div>
                           <h2 className="font-semibold">{displayName}</h2>
                           <p className="text-sm text-muted-foreground">@{username}</p>
-                          <p className="text-xs text-green-600">Starting new conversation</p>
+                          <p className="text-xs text-primary">Starting new conversation</p>
                         </div>
                       </div>
 
@@ -885,7 +885,7 @@ const MessagesPage: React.FC = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="text-green-600 border-green-500 hover:bg-green-50 dark:hover:bg-green-950/20"
+                                  className="text-primary border-primary hover:bg-primary dark:hover:bg-primary/20"
                                   onClick={() => handleUnblockUser(selectedConversation)}
                                   disabled={unblockUserMutation.isPending}
                                 >
@@ -949,7 +949,7 @@ const MessagesPage: React.FC = () => {
                       {username && username !== 'unknown' ? (
                         <Link href={`/profile/${username}`} data-testid="link-profile-avatar">
                           {useNftAvatar ? (
-                            <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40 cursor-pointer">
+                            <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40 cursor-pointer">
                               <img src={conversationUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                             </div>
                           ) : (
@@ -958,7 +958,7 @@ const MessagesPage: React.FC = () => {
                         </Link>
                       ) : (
                         useNftAvatar ? (
-                          <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                          <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40">
                             <img src={conversationUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                           </div>
                         ) : (
@@ -990,7 +990,7 @@ const MessagesPage: React.FC = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-green-600 border-green-500 hover:bg-green-50 dark:hover:bg-green-950/20"
+                                className="text-primary border-primary hover:bg-primary dark:hover:bg-primary/20"
                                 onClick={() => handleUnblockUser(conversation.userId)}
                                 disabled={unblockUserMutation.isPending}
                               >
@@ -1084,7 +1084,7 @@ const MessagesPage: React.FC = () => {
                       {!isMine && (
                         <div className="flex-shrink-0">
                           {useNftInBubble ? (
-                            <div className="h-7 w-7 rounded-md overflow-hidden border border-[#4ade80]/40">
+                            <div className="h-7 w-7 rounded-md overflow-hidden border border-[#B7FF1A]/40">
                               <img src={senderUser.nftProfileImageUrl} alt={senderUser.displayName} className="w-full h-full object-cover" />
                             </div>
                           ) : (
@@ -1097,7 +1097,7 @@ const MessagesPage: React.FC = () => {
                         <div
                           className={`rounded-lg px-4 py-2 relative group ${
                             isMine
-                              ? "bg-green-600 text-white"
+                              ? "bg-primary text-white"
                               : "bg-muted"
                           }`}
                         >
@@ -1194,7 +1194,7 @@ const MessagesPage: React.FC = () => {
                         <Button
                           type="submit"
                           disabled={!newMessage.trim() || sendMessageMutation.isPending}
-                          className="bg-green-600 hover:bg-green-700 text-white px-4"
+                          className="bg-primary hover:bg-primary text-white px-4"
                         >
                           {sendMessageMutation.isPending ? (
                             <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />

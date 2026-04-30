@@ -372,7 +372,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                     className="text-xs font-bold px-2.5 py-0.5 rounded-md flex-shrink-0 transition-all"
                     style={isFollowing
                       ? { background: 'transparent', border: '1px solid rgba(255,255,255,0.5)', color: '#fff' }
-                      : { background: '#4ADE80', color: '#000', border: '1px solid transparent' }
+                      : { background: '#B7FF1A', color: '#000', border: '1px solid transparent' }
                     }
                   >
                     {followMutation.isPending ? '…' : isFollowing ? 'Following' : 'Follow'}
@@ -405,8 +405,8 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               {/* Game */}
               {currentItem.game?.name && (
                 <div className="flex items-center gap-1 mb-1">
-                  <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#4ADE80' }} />
-                  <span className="text-xs font-semibold" style={{ color: '#4ADE80' }}>
+                  <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
+                  <span className="text-xs font-semibold" style={{ color: '#B7FF1A' }}>
                     {currentItem.game.name}
                   </span>
                 </div>

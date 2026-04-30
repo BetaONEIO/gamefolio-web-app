@@ -143,12 +143,12 @@ export default function DailyStreak() {
                 key={i}
                 className={`flex-1 h-1.5 rounded-full ${
                   i < filledSegments
-                    ? "bg-[#4ade80]"
+                    ? "bg-[#B7FF1A]"
                     : "bg-slate-700/30"
                 }`}
                 style={
                   i < filledSegments
-                    ? { boxShadow: "0 0 15px rgba(74, 222, 128, 0.4)" }
+                    ? { boxShadow: "0 0 15px rgba(183, 255, 26, 0.4)" }
                     : undefined
                 }
               />
@@ -161,16 +161,16 @@ export default function DailyStreak() {
       <div className="shrink-0 backdrop-blur-xl bg-[#020617]/80 border-t border-slate-700/10 p-5 md:p-6 flex justify-center">
         <button
           onClick={dismiss}
-          className="w-full max-w-[400px] h-13 md:h-14 bg-[#4ade80] hover:bg-[#22c55e] active:scale-[0.98] transition-all rounded-full flex items-center justify-center gap-3 cursor-pointer"
-          style={{ boxShadow: "0 15px 30px rgba(74, 222, 128, 0.2)" }}
+          className="w-full max-w-[400px] h-13 md:h-14 bg-[#B7FF1A] hover:bg-[#A2F000] active:scale-[0.98] transition-all rounded-full flex items-center justify-center gap-3 cursor-pointer"
+          style={{ boxShadow: "0 15px 30px rgba(183, 255, 26, 0.2)" }}
         >
           <span
-            className="text-[#022c22] font-black uppercase tracking-[0.2em]"
+            className="text-[#071013] font-black uppercase tracking-[0.2em]"
             style={{ fontSize: "14px", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
           >
             Continue
           </span>
-          <ChevronRight className="w-5 h-5 text-[#022c22]" strokeWidth={3} />
+          <ChevronRight className="w-5 h-5 text-[#071013]" strokeWidth={3} />
         </button>
       </div>
     </div>

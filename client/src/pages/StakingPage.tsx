@@ -553,7 +553,7 @@ export default function StakingPage() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Estimated APY</p>
-                  <p className="font-semibold text-green-500">12.5%</p>
+                  <p className="font-semibold text-primary">12.5%</p>
                 </div>
               </div>
             </CardContent>

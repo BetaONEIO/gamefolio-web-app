@@ -17,9 +17,9 @@ import { useSignedUrl } from '@/hooks/use-signed-url';
 
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
   streamer: { label: "Streamer", icon: Video, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
-  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-green-500/20 text-green-400 border-green-500/30" },
+  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-primary/20 text-primary border-primary/30" },
   professional_gamer: { label: "Professional Gamer", icon: Trophy, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
-  content_creator: { label: "Content Creator", icon: Upload, color: "bg-[#4ade80]/20 text-[#4ade80] border-[#4ade80]/30" },
+  content_creator: { label: "Content Creator", icon: Upload, color: "bg-[#B7FF1A]/20 text-[#B7FF1A] border-[#B7FF1A]/30" },
   indie_developer: { label: "Indie Developer", icon: Code, color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
   viewer: { label: "Viewer", icon: Eye, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
   filthy_casual: { label: "Filthy Casual", icon: Coffee, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
@@ -183,7 +183,7 @@ export function GamefolioShareDialog({
   ];
 
   const bannerUrl = bannerSignedUrl || userProfile?.bannerUrl;
-  const themeAccent = userProfile?.accentColor || '#4ADE80';
+  const themeAccent = userProfile?.accentColor || '#B7FF1A';
   const themeBg = userProfile?.backgroundColor || '#0B2232';
 
   return (
@@ -207,7 +207,7 @@ export function GamefolioShareDialog({
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-5 py-4 sm:py-5 border-b border-[#1e293b]/50">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-[#4ADE80] shrink-0" />
+            <Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-[#B7FF1A] shrink-0" />
             <span className="text-[#f8fafc] text-base sm:text-xl font-bold truncate">Share Gamefolio</span>
           </div>
           <button
@@ -222,7 +222,7 @@ export function GamefolioShareDialog({
         <div className="p-4 sm:p-5 flex flex-col gap-5 sm:gap-6 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
-              <div className="animate-spin w-8 h-8 border-4 border-[#4ADE80] border-t-transparent rounded-full" />
+              <div className="animate-spin w-8 h-8 border-4 border-[#B7FF1A] border-t-transparent rounded-full" />
             </div>
           ) : shareData ? (
             <>
@@ -405,7 +405,7 @@ export function GamefolioShareDialog({
                         key={platform.name}
                         onClick={() => shareUrl && handleSocialShare(shareUrl)}
                         disabled={!shareUrl}
-                        className="w-14 h-14 rounded-full border-2 border-[#4ADE80] bg-transparent hover:bg-[#4ADE80]/10 text-[#f8fafc] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        className="w-14 h-14 rounded-full border-2 border-[#B7FF1A] bg-transparent hover:bg-[#B7FF1A]/10 text-[#f8fafc] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                         title={platform.name}
                       >
                         <IconComponent className="w-6 h-6" />

@@ -5,7 +5,7 @@ interface PasswordRequirementsDisplayProps {
   accentColor?: string;
 }
 
-export function PasswordRequirementsDisplay({ requirements, accentColor = "#10b981" }: PasswordRequirementsDisplayProps) {
+export function PasswordRequirementsDisplay({ requirements, accentColor = "#B7FF1A" }: PasswordRequirementsDisplayProps) {
   const getCheckIcon = (met: boolean) => met ? '✓' : '○';
   const getColor = (met: boolean) => met ? accentColor : 'rgb(107 114 128)'; // text-muted-foreground
 

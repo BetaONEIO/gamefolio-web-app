@@ -70,7 +70,7 @@ export function SuccessDashNameTag({
               className="flex items-center gap-2 px-2 py-1 bg-[#1e293b80] rounded-md transition-colors hover:bg-[#1e293b]"
             >
               <span className="text-[12px] font-bold text-[#f8fafc] font-mono">{transactionId.slice(0, 8)}...</span>
-              {copied ? <Check className="w-3 h-3 text-[#4ade80]" /> : <Copy className="w-3 h-3 text-[#94a3b8]" />}
+              {copied ? <Check className="w-3 h-3 text-[#B7FF1A]" /> : <Copy className="w-3 h-3 text-[#94a3b8]" />}
             </button>
           </div>
           

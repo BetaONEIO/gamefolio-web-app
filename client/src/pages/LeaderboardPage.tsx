@@ -212,7 +212,7 @@ const LeaderboardPage = () => {
 
           {/* Avatar */}
           {entry.user.nftProfileTokenId && entry.user.nftProfileImageUrl && (entry.user as any).activeProfilePicType === 'nft' ? (
-            <div className="w-12 h-12 rounded-lg border border-[#4ade80]/40 overflow-hidden flex-shrink-0">
+            <div className="w-12 h-12 rounded-lg border border-[#B7FF1A]/40 overflow-hidden flex-shrink-0">
               <img src={entry.user.nftProfileImageUrl} alt={entry.user.displayName} className="w-full h-full object-cover" loading="lazy" />
             </div>
           ) : (
@@ -293,7 +293,7 @@ const LeaderboardPage = () => {
         </div>
         
         {contributor.user.nftProfileTokenId && contributor.user.nftProfileImageUrl && (contributor.user as any).activeProfilePicType === 'nft' ? (
-          <div className="w-10 h-10 rounded-lg border border-[#4ade80]/40 overflow-hidden flex-shrink-0">
+          <div className="w-10 h-10 rounded-lg border border-[#B7FF1A]/40 overflow-hidden flex-shrink-0">
             <img src={contributor.user.nftProfileImageUrl} alt={contributor.user.displayName} className="w-full h-full object-cover" loading="lazy" />
           </div>
         ) : (
@@ -375,7 +375,7 @@ const LeaderboardPage = () => {
             onClick={() => setActiveTab("weekly")}
             className={`flex-1 px-4 py-2.5 rounded-full text-sm font-bold transition-colors ${
               activeTab === "weekly"
-                ? "bg-[#4ade80] text-[#022c22]"
+                ? "bg-[#B7FF1A] text-[#071013]"
                 : "text-slate-400 hover:text-slate-50"
             }`}
             data-testid="tab-weekly"
@@ -386,7 +386,7 @@ const LeaderboardPage = () => {
             onClick={() => setActiveTab("monthly")}
             className={`flex-1 px-4 py-2.5 rounded-full text-sm font-bold transition-colors ${
               activeTab === "monthly"
-                ? "bg-[#4ade80] text-[#022c22]"
+                ? "bg-[#B7FF1A] text-[#071013]"
                 : "text-slate-400 hover:text-slate-50"
             }`}
             data-testid="tab-monthly"
@@ -397,7 +397,7 @@ const LeaderboardPage = () => {
             onClick={() => setActiveTab("alltime")}
             className={`flex-1 px-4 py-2.5 rounded-full text-sm font-bold transition-colors ${
               activeTab === "alltime"
-                ? "bg-[#4ade80] text-[#022c22]"
+                ? "bg-[#B7FF1A] text-[#071013]"
                 : "text-slate-400 hover:text-slate-50"
             }`}
             data-testid="tab-alltime"
@@ -409,7 +409,7 @@ const LeaderboardPage = () => {
         {/* Section Header */}
         <div className="mb-4">
           <div className="flex items-center gap-2 mb-2">
-            <Flame className="w-5 h-5 text-[#4ade80]" />
+            <Flame className="w-5 h-5 text-[#B7FF1A]" />
             <h2 className="text-xl font-bold text-slate-50">{getSectionTitle()}</h2>
           </div>
           <p className="text-slate-400 text-xs leading-4">
@@ -538,11 +538,11 @@ const LeaderboardPage = () => {
         </div>
 
         {/* Call to Action Section */}
-        <div className="bg-gradient-to-b from-[#4ade80]/10 to-[#4ade80]/5 border border-[#4ade80]/20 rounded-2xl p-6">
+        <div className="bg-gradient-to-b from-[#B7FF1A]/10 to-[#B7FF1A]/5 border border-[#B7FF1A]/20 rounded-2xl p-6">
           <div className="flex flex-col items-center text-center">
             {/* Icon */}
-            <div className="w-16 h-16 rounded-full bg-[#4ade80]/20 flex items-center justify-center mb-4">
-              <Flame className="w-8 h-8 text-[#4ade80]" />
+            <div className="w-16 h-16 rounded-full bg-[#B7FF1A]/20 flex items-center justify-center mb-4">
+              <Flame className="w-8 h-8 text-[#B7FF1A]" />
             </div>
             
             <h3 className="text-xl font-bold text-slate-50 mb-2">
@@ -555,7 +555,7 @@ const LeaderboardPage = () => {
             {/* Buttons */}
             <div className="w-full flex flex-col lg:flex-row gap-3 lg:justify-center">
               <Link href="/upload" className="block lg:w-auto">
-                <Button className="w-full lg:w-48 h-11 rounded-full bg-[#4ade80] hover:bg-[#22c55e] text-[#022c22] font-bold text-sm">
+                <Button className="w-full lg:w-48 h-11 rounded-full bg-[#B7FF1A] hover:bg-[#A2F000] text-[#071013] font-bold text-sm">
                   Upload Your Clip
                 </Button>
               </Link>

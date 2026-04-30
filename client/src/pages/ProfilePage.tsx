@@ -169,21 +169,21 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
   legendary: {
     bg: "bg-gradient-to-b from-[#f6cfff] via-[#cefafe] to-[#fff085]",
     glow: "shadow-[0_0_25px_rgba(236,72,153,0.4)]",
-    dotColor: "bg-green-500 shadow-[0_0_8px_#22c55e]",
+    dotColor: "bg-primary shadow-[0_0_8px_#A2F000]",
     textStyle: "bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent font-black",
     nameColor: "text-slate-800",
   },
   epic: {
     bg: "bg-slate-900",
     glow: "",
-    dotColor: "bg-green-600 shadow-[0_0_8px_#16a34a]",
+    dotColor: "bg-primary shadow-[0_0_8px_#6FA800]",
     textStyle: "text-slate-400 font-normal",
     nameColor: "text-slate-50",
   },
   rare: {
-    bg: "bg-gradient-to-b from-[#4ade8033] via-[#14532d4d] to-[#4ade8033]",
+    bg: "bg-gradient-to-b from-[#B7FF1A33] via-[#14532d4d] to-[#B7FF1A33]",
     glow: "",
-    dotColor: "bg-green-400 shadow-[0_0_8px_#4ade80]",
+    dotColor: "bg-primary shadow-[0_0_8px_#B7FF1A]",
     textStyle: "text-slate-400 font-normal",
     nameColor: "text-slate-50",
   },
@@ -198,7 +198,7 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
 
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
   streamer: { label: "Streamer", icon: Video, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
-  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-green-500/20 text-green-400 border-green-500/30" },
+  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-primary/20 text-primary border-primary/30" },
   professional_gamer: { label: "Professional Gamer", icon: Trophy, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
   content_creator: { label: "Content Creator", icon: Upload, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
   indie_developer: { label: "Indie Developer", icon: Code, color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
@@ -1099,7 +1099,7 @@ const ProfilePage = () => {
   const bannerStyle = useMemo(() => ({
     backgroundImage: resolvedBannerUrl 
       ? `url(${resolvedBannerUrl})` 
-      : `linear-gradient(135deg, ${profile?.primaryColor || '#0f172a'}, ${profile?.accentColor || '#4ADE80'}, transparent)`,
+      : `linear-gradient(135deg, ${profile?.primaryColor || '#0f172a'}, ${profile?.accentColor || '#B7FF1A'}, transparent)`,
     backgroundColor: resolvedBannerUrl ? 'transparent' : (profile?.primaryColor || '#0f172a'),
     backgroundSize: 'cover',
     backgroundPosition: 'center',
@@ -1118,12 +1118,12 @@ const ProfilePage = () => {
   //     // Use requestAnimationFrame to batch updates and prevent visual flashing
   //     requestAnimationFrame(() => {
   //       // Ensure complete isolation - set CSS custom properties only on this element
-  //       scope.style.setProperty('--user-accent-color', profile.accentColor || '#4ADE80');
+  //       scope.style.setProperty('--user-accent-color', profile.accentColor || '#B7FF1A');
   //       scope.style.setProperty('--user-primary-color', profile.primaryColor || '#02172C');
-  //       scope.style.setProperty('--user-avatar-border-color', profile.avatarBorderColor || '#4ADE80');
+  //       scope.style.setProperty('--user-avatar-border-color', profile.avatarBorderColor || '#B7FF1A');
 
   //       // Calculate alpha version of accent color for subtle effects
-  //       const accentColor = profile.accentColor || '#4ADE80';
+  //       const accentColor = profile.accentColor || '#B7FF1A';
   //       const alpha = `${accentColor}33`;
   //       scope.style.setProperty('--user-accent-color-alpha', alpha);
   //     });
@@ -1303,7 +1303,7 @@ const ProfilePage = () => {
     return <NotFound />;
   }
 
-  const accentColor = profile.accentColor || '#4ADE80';
+  const accentColor = profile.accentColor || '#B7FF1A';
   const backgroundColor = profile.backgroundColor || '#121F2B';
   const cardColor = profile.cardColor || '#1E3A8A';
 
@@ -1323,9 +1323,9 @@ const ProfilePage = () => {
   const isCyberpunkTheme = !isLightBackground && accentColor?.toLowerCase() === '#00d3f2';
   const isNeoTheme = !isLightBackground && accentColor?.toLowerCase() === '#00ff41';
   const isGothicTheme = !isLightBackground && accentColor?.toLowerCase() === '#c27aff' && backgroundColor?.toLowerCase() === '#1e053a';
-  const isBlocksTheme = !isLightBackground && accentColor?.toLowerCase() === '#4ade80' && backgroundColor?.toLowerCase() === '#1a1a1a';
-  const isForestTheme = !isLightBackground && accentColor?.toLowerCase() === '#4ade80' && backgroundColor?.toLowerCase() === '#0a2f1f';
-  const isWatermelonTheme = accentColor?.toLowerCase() === '#4ade80' && backgroundColor?.toLowerCase() === '#ff4d6d';
+  const isBlocksTheme = !isLightBackground && accentColor?.toLowerCase() === '#B7FF1A' && backgroundColor?.toLowerCase() === '#1a1a1a';
+  const isForestTheme = !isLightBackground && accentColor?.toLowerCase() === '#B7FF1A' && backgroundColor?.toLowerCase() === '#0a2f1f';
+  const isWatermelonTheme = accentColor?.toLowerCase() === '#B7FF1A' && backgroundColor?.toLowerCase() === '#ff4d6d';
   const isElectricTheme = !isLightBackground && accentColor?.toLowerCase() === '#ffe033' && backgroundColor?.toLowerCase() === '#1a1200';
 
   const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isLightBackground;
@@ -1345,7 +1345,7 @@ const ProfilePage = () => {
         : isNeoTheme
           ? { backgroundColor: 'rgba(0,8,0,0.9)', color: '#00ff41', border: '1px solid #00ff4155', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.65rem', letterSpacing: '0.5px', borderRadius: '2px' }
           : isBlocksTheme
-            ? { backgroundColor: 'rgba(26,26,26,0.95)', color: '#4ade80', border: '2px solid #4ade8066', fontFamily: "'Press Start 2P', monospace", fontSize: '0.55rem', letterSpacing: '0.5px', borderRadius: '2px' }
+            ? { backgroundColor: 'rgba(26,26,26,0.95)', color: '#B7FF1A', border: '2px solid #B7FF1A66', fontFamily: "'Press Start 2P', monospace", fontSize: '0.55rem', letterSpacing: '0.5px', borderRadius: '2px' }
             : isForestTheme
               ? { backgroundColor: 'rgba(232,213,183,0.85)', color: '#6B3A1F', border: '1px solid #c4a88266', borderRadius: '6px' }
               : isGothicTheme
@@ -1387,7 +1387,7 @@ const ProfilePage = () => {
     : isZombieTheme ? '#9ae600'
     : isCyberpunkTheme ? '#00d3f2'
     : isNeoTheme ? '#9333ea'
-    : isBlocksTheme ? '#4ade80'
+    : isBlocksTheme ? '#B7FF1A'
     : isForestTheme ? '#4a7c59'
     : isGothicTheme ? '#c27aff'
     : isElectricTheme ? '#ffe033'
@@ -1421,9 +1421,9 @@ const ProfilePage = () => {
     border: '1px solid #00ff4199',
     boxShadow: '0 0 10px #00ff4144',
   } : isBlocksTheme ? {
-    color: '#4ade80',
+    color: '#B7FF1A',
     background: 'rgba(26,26,26,0.9)',
-    border: '2px solid #4ade8099',
+    border: '2px solid #B7FF1A99',
   } : isForestTheme ? {
     color: '#e8d5b7',
     background: 'rgba(14,45,28,0.85)',
@@ -1491,7 +1491,7 @@ const ProfilePage = () => {
   const blocksTabColors: Record<string, string> = {
     clips: '#ef4444',
     reels: '#3b82f6',
-    screenshots: '#4ade80',
+    screenshots: '#B7FF1A',
     favorites: '#facc15',
   };
   const cartoonTabColors: Record<string, string> = {
@@ -1533,7 +1533,7 @@ const ProfilePage = () => {
     boxShadow: '0 0 12px #00ff4122',
   } : isBlocksTheme ? {
     background: '#1a1a1a',
-    border: '3px solid #4ade80',
+    border: '3px solid #B7FF1A',
     borderRadius: '4px',
     boxShadow: '4px 4px 0 #000',
   } : isForestTheme ? {
@@ -2233,17 +2233,17 @@ const ProfilePage = () => {
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
           @keyframes blocksGlow {
-            0%,100% { box-shadow: 0 0 0 3px #4ade8066, 6px 6px 0 #000; }
-            50%      { box-shadow: 0 0 0 3px #4ade80aa, 6px 6px 0 #000; }
+            0%,100% { box-shadow: 0 0 0 3px #B7FF1A66, 6px 6px 0 #000; }
+            50%      { box-shadow: 0 0 0 3px #B7FF1Aaa, 6px 6px 0 #000; }
           }
           .blocks-stats-card {
-            border: 3px solid #4ade80 !important;
+            border: 3px solid #B7FF1A !important;
             border-radius: 4px !important;
             animation: blocksGlow 2s ease-in-out infinite;
           }
           .blocks-tab-list {
             background: #2a2a2a !important;
-            border: 3px solid #4ade80 !important;
+            border: 3px solid #B7FF1A !important;
             border-radius: 4px !important;
             box-shadow: 6px 6px 0 #000 !important;
           }
@@ -2257,10 +2257,10 @@ const ProfilePage = () => {
           .blocks-platform-section span {
             font-family: 'Press Start 2P', monospace;
             font-size: 0.5rem;
-            color: #4ade80;
+            color: #B7FF1A;
           }
           .blocks-platform-section svg {
-            color: #4ade80;
+            color: #B7FF1A;
           }
           .blocks-bg::before {
             content: '';
@@ -2345,10 +2345,10 @@ const ProfilePage = () => {
             border-radius: 9999px !important;
           }
           .watermelon-platform-section span {
-            color: #4ade80 !important;
+            color: #B7FF1A !important;
           }
           .watermelon-platform-section svg {
-            color: #4ade80 !important;
+            color: #B7FF1A !important;
           }
         `}</style>
       )}
@@ -2578,7 +2578,7 @@ const ProfilePage = () => {
               {/* Online status indicator - green circle at the edge of the circular avatar glow position */}
               {!selectedProfileNft && !lightboxData.isOpen && (
               <div className="absolute z-30" style={{ top: '-2px', right: '-2px' }}>
-                <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_0_2px_rgba(0,0,0,0.8)]"></div>
+                <div className="w-3 h-3 rounded-full bg-primary shadow-[0_0_0_2px_rgba(0,0,0,0.8)]"></div>
               </div>
               )}
               {/* Level Badge with Progress - positioned halfway on/off bottom border */}
@@ -2805,7 +2805,7 @@ const ProfilePage = () => {
                           : isNeoTheme
                             ? 'linear-gradient(180deg, #003300 0%, #001400 100%)'
                             : isBlocksTheme
-                              ? 'linear-gradient(180deg, #4ade80 0%, #22c55e 100%)'
+                              ? 'linear-gradient(180deg, #B7FF1A 0%, #A2F000 100%)'
                               : isForestTheme
                                 ? '#1d3932'
                                 : isGothicTheme
@@ -2813,8 +2813,8 @@ const ProfilePage = () => {
                                   : isCartoonTheme
                                     ? (profileSectionTab === 'collection' ? '#fffaec' : 'linear-gradient(135deg, #ff5e5e 0%, #ff7a5e 100%)')
                                     : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#4ade80' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : '#0f172b',
-                border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #4ade80' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : undefined,
+                color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : '#0f172b',
+                border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #B7FF1A' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : undefined,
                 fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : isGothicTheme ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" : isCartoonTheme ? "'Bricolage Grotesque', 'Arial Black', sans-serif" : undefined,
                 letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : isNeoTheme ? '1.5px' : isBlocksTheme ? '0.5px' : isGothicTheme ? '1.5px' : isCartoonTheme ? '-0.5px' : undefined,
                 fontWeight: isCyberpunkTheme ? '900' : isNeoTheme ? '700' : isBlocksTheme ? '400' : isCartoonTheme ? '800' : undefined,
@@ -2918,8 +2918,8 @@ const ProfilePage = () => {
                       <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWERS</span>
                     </div>
                     <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
-                      <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#4ade80' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#4ade80', color: '#1a1a1a', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWING</span>
+                      <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
+                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#B7FF1A', color: '#1a1a1a', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>FOLLOWING</span>
                     </div>
                   </div>
                   )}
@@ -2945,7 +2945,7 @@ const ProfilePage = () => {
                     </div>
                   ) : (
                   <div className="flex items-center gap-2 mt-1">
-                    <Hexagon className="w-4 h-4" style={{ color: isBlocksTheme ? '#a855f7' : isWatermelonTheme ? '#0d1a12' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isForestTheme ? '#4ade80' : undefined }} />
+                    <Hexagon className="w-4 h-4" style={{ color: isBlocksTheme ? '#a855f7' : isWatermelonTheme ? '#0d1a12' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isForestTheme ? '#B7FF1A' : undefined }} />
                     {isBlocksTheme ? (
                       <span style={{ backgroundColor: '#a855f7', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' }}>
                         {profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs OWNED
@@ -3182,7 +3182,7 @@ const ProfilePage = () => {
                             : isNeoTheme
                               ? 'linear-gradient(180deg, #003300 0%, #001400 100%)'
                               : isBlocksTheme
-                                ? 'linear-gradient(180deg, #4ade80 0%, #22c55e 100%)'
+                                ? 'linear-gradient(180deg, #B7FF1A 0%, #A2F000 100%)'
                                 : isForestTheme
                                   ? '#1d3932'
                                   : isGothicTheme
@@ -3190,8 +3190,8 @@ const ProfilePage = () => {
                                     : isCartoonTheme
                                       ? 'linear-gradient(135deg, #ff5e5e 0%, #ff7a5e 100%)'
                                       : 'linear-gradient(270deg, #5ee9b5 0%, #fff085 50%, #ffb86a 100%)',
-                  color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#4ade80' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : '#0f172b',
-                  border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #4ade80' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : undefined,
+                  color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : '#0f172b',
+                  border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #B7FF1A' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : undefined,
                   fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : isGothicTheme ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" : isCartoonTheme ? "'Bricolage Grotesque', 'Arial Black', sans-serif" : undefined,
                   letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : isNeoTheme ? '1.5px' : isBlocksTheme ? '0.5px' : isGothicTheme ? '1.5px' : isCartoonTheme ? '-0.5px' : undefined,
                   fontWeight: isCyberpunkTheme ? '900' : isNeoTheme ? '700' : isBlocksTheme ? '400' : isCartoonTheme ? '800' : undefined,
@@ -3252,13 +3252,13 @@ const ProfilePage = () => {
                         <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Followers</span>
                       </div>
                       <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
-                        <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#4ade80' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
-                        <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#4ade80', color: '#1a1a1a', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Following</span>
+                        <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
+                        <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#B7FF1A', color: '#1a1a1a', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor || '#00d5be', letterSpacing: '0.8px' }}>Following</span>
                       </div>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <Hexagon className="w-4 h-4" style={{ color: isBlocksTheme ? '#a855f7' : isWatermelonTheme ? '#0d1a12' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isForestTheme ? '#4ade80' : undefined }} />
+                      <Hexagon className="w-4 h-4" style={{ color: isBlocksTheme ? '#a855f7' : isWatermelonTheme ? '#0d1a12' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isForestTheme ? '#B7FF1A' : undefined }} />
                       {isBlocksTheme ? (
                         <span style={{ backgroundColor: '#a855f7', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' }}>
                           {profileNftData?.nfts.filter(n => !n.sold).length || 0} NFTs OWNED
@@ -3621,8 +3621,8 @@ const ProfilePage = () => {
                 style={{ background: headerBg }}
                 onClick={!isLive ? () => setStreamExpanded(prev => !prev) : undefined}
               >
-                <div className={`w-2 h-2 rounded-full ${isLive ? 'animate-pulse' : 'opacity-40'} ${isKick ? 'bg-green-500' : 'bg-purple-500'}`} />
-                <span className={`text-xs font-semibold ${isKick ? 'text-green-400' : 'text-purple-400'}`}>
+                <div className={`w-2 h-2 rounded-full ${isLive ? 'animate-pulse' : 'opacity-40'} ${isKick ? 'bg-primary' : 'bg-purple-500'}`} />
+                <span className={`text-xs font-semibold ${isKick ? 'text-primary' : 'text-purple-400'}`}>
                   {isKick ? 'Kick' : 'Twitch'}
                 </span>
                 <span className="text-xs text-muted-foreground">— {activeChannel}</span>
@@ -3769,7 +3769,7 @@ const ProfilePage = () => {
                   color: '#ffffff',
                 }}
               >
-                {isGothicTheme ? <span style={{ fontSize: '16px' }}>💎</span> : <Hexagon className={`w-4 h-4 ${isCyberpunkTheme ? 'text-[#00d3f2]' : isBlocksTheme ? 'text-[#a855f7]' : isZombieTheme ? 'text-[#9ae600]' : isNeoTheme ? 'text-[#00ff41]' : isForestTheme ? 'text-[#4ade80]' : ''}`} />}
+                {isGothicTheme ? <span style={{ fontSize: '16px' }}>💎</span> : <Hexagon className={`w-4 h-4 ${isCyberpunkTheme ? 'text-[#00d3f2]' : isBlocksTheme ? 'text-[#a855f7]' : isZombieTheme ? 'text-[#9ae600]' : isNeoTheme ? 'text-[#00ff41]' : isForestTheme ? 'text-[#B7FF1A]' : ''}`} />}
                 <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>{isGothicTheme ? 'NFT Collection' : 'NFTs'}</span>
                 {profileNftData && (
                   <span className={`text-xs opacity-80 ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`}>
@@ -3811,9 +3811,9 @@ const ProfilePage = () => {
                           <div className="flex items-center justify-between mt-1">
                             <div className="flex items-center gap-1.5">
                               <div className={`w-2 h-2 ${isBlocksTheme ? 'rounded-none bg-[#a855f7]' : isGothicTheme ? 'rounded-full bg-[#c27aff]' : `rounded-full ${styles.dotColor}`}`} />
-                              <span className={`text-[11px] uppercase tracking-tight ${isBlocksTheme ? 'text-[#4ade80]' : isGothicTheme ? '' : styles.textStyle}`} style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.45rem' } : isGothicTheme ? { color: '#c27aff99', fontSize: '0.6rem', letterSpacing: '0.5px' } : undefined}>{rarity}</span>
+                              <span className={`text-[11px] uppercase tracking-tight ${isBlocksTheme ? 'text-[#B7FF1A]' : isGothicTheme ? '' : styles.textStyle}`} style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.45rem' } : isGothicTheme ? { color: '#c27aff99', fontSize: '0.6rem', letterSpacing: '0.5px' } : undefined}>{rarity}</span>
                             </div>
-                            <span className={`text-[11px] font-medium ${isBlocksTheme ? 'text-[#4ade80]' : isGothicTheme ? '' : 'text-slate-500'}`} style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.45rem' } : isGothicTheme ? { color: '#c27aff66', fontSize: '0.65rem' } : undefined}>#{nft.tokenId}</span>
+                            <span className={`text-[11px] font-medium ${isBlocksTheme ? 'text-[#B7FF1A]' : isGothicTheme ? '' : 'text-slate-500'}`} style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.45rem' } : isGothicTheme ? { color: '#c27aff66', fontSize: '0.65rem' } : undefined}>#{nft.tokenId}</span>
                           </div>
                         </div>
                       </div>
@@ -3824,7 +3824,7 @@ const ProfilePage = () => {
                 <div className="py-12 text-center">
                   {isGothicTheme ? <span style={{ fontSize: '40px', display: 'block', marginBottom: '12px' }}>💎</span> : <Hexagon className={`w-12 h-12 mx-auto mb-3 ${isBlocksTheme ? 'text-[#a855f7]' : 'text-slate-600'}`} />}
                   <p className="text-base text-foreground/70 font-medium" style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.6rem', color: '#a855f7' } : isGothicTheme ? { fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", color: '#c27aff', letterSpacing: '1px' } : undefined}>No NFTs yet</p>
-                  {isOwnProfile && <p className="text-sm text-muted-foreground mt-1" style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.5rem', color: '#4ade80' } : isGothicTheme ? { fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", color: '#c27aff66', fontSize: '0.8rem' } : undefined}>Mint your first NFT from the store</p>}
+                  {isOwnProfile && <p className="text-sm text-muted-foreground mt-1" style={isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.5rem', color: '#B7FF1A' } : isGothicTheme ? { fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", color: '#c27aff66', fontSize: '0.8rem' } : undefined}>Mint your first NFT from the store</p>}
                 </div>
               )}
             </div>
@@ -3935,7 +3935,7 @@ const ProfilePage = () => {
                           : isZombieTheme
                             ? '#9ae600'
                             : isBlocksTheme
-                              ? (activeTab === 'screenshots' ? '#1a1a1a' : '#4ade80')
+                              ? (activeTab === 'screenshots' ? '#1a1a1a' : '#B7FF1A')
                               : isWatermelonTheme
                                 ? '#0d1a12'
                                 : isForestTheme

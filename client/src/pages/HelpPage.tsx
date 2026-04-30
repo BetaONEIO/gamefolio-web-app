@@ -311,7 +311,7 @@ export default function HelpPage() {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="text-center">
-          <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+          <CheckCircle className="h-16 w-16 text-primary mx-auto mb-4" />
           <h1 className="text-3xl font-bold mb-2">Support Request Sent!</h1>
           <p className="text-muted-foreground mb-6">
             Thank you for contacting us. We'll respond to your request as soon as possible.

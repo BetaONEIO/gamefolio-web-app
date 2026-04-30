@@ -190,15 +190,15 @@ export function NotificationBell() {
         return <Heart className="h-4 w-4 text-red-500" />;
       case 'comment':
       case 'reply':
-        return <MessageCircle className="h-4 w-4 text-[#4ade80]" />;
+        return <MessageCircle className="h-4 w-4 text-[#B7FF1A]" />;
       case 'follow':
-        return <UserPlus className="h-4 w-4 text-green-500" />;
+        return <UserPlus className="h-4 w-4 text-primary" />;
       case 'follow_request':
         return <UserPlus className="h-4 w-4 text-orange-500" />;
       case 'upload':
         return <Upload className="h-4 w-4 text-purple-500" />;
       case 'message':
-        return <MessageCircle className="h-4 w-4 text-green-500" />;
+        return <MessageCircle className="h-4 w-4 text-primary" />;
       default:
         return <Bell className="h-4 w-4 text-gray-500" />;
     }
@@ -237,7 +237,7 @@ export function NotificationBell() {
     <div className="relative">
       {/* Green popup notification */}
       {showGreenPopup && (
-        <div className="absolute -top-16 -right-2 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg animate-bounce z-50">
+        <div className="absolute -top-16 -right-2 bg-primary text-white px-4 py-2 rounded-lg shadow-lg animate-bounce z-50">
           <div className="flex items-center gap-2">
             <Bell className="h-4 w-4" />
             <span className="text-sm font-medium">New notification!</span>
@@ -358,7 +358,7 @@ export function NotificationBell() {
                               approveRequestMutation.mutate(requestId);
                             }}
                             disabled={approveRequestMutation.isPending}
-                            className="h-7 px-3 text-xs bg-green-600 hover:bg-green-700"
+                            className="h-7 px-3 text-xs bg-primary hover:bg-primary"
                           >
                             <UserCheck className="h-3 w-3 mr-1" />
                             Approve

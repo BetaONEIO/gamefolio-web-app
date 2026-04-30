@@ -88,7 +88,7 @@ export default function SpendGFTScreen({
             <span className="text-4xl font-bold" style={{ color: "#fff" }}>
               {availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
-            <span className="text-xl font-bold pb-1" style={{ color: "#4ade80" }}>
+            <span className="text-xl font-bold pb-1" style={{ color: "#B7FF1A" }}>
               GFT
             </span>
           </div>
@@ -105,25 +105,25 @@ export default function SpendGFTScreen({
             onClick={onGoToStore}
             className="flex items-center gap-4 p-5 rounded-2xl transition-all hover:opacity-90 active:scale-[0.98]"
             style={{
-              background: "#4ade80",
-              boxShadow: "0 0 25px -5px #4ade80",
+              background: "#B7FF1A",
+              boxShadow: "0 0 25px -5px #B7FF1A",
             }}
           >
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
               style={{ background: "rgba(2, 44, 34, 0.1)" }}
             >
-              <ShoppingBag className="w-8 h-8" style={{ color: "#022c22" }} />
+              <ShoppingBag className="w-8 h-8" style={{ color: "#071013" }} />
             </div>
             <div className="flex flex-col items-start gap-0.5 flex-1">
-              <span className="text-lg font-bold" style={{ color: "#022c22" }}>
+              <span className="text-lg font-bold" style={{ color: "#071013" }}>
                 Go to Store
               </span>
-              <span className="text-sm font-medium" style={{ color: "#022c22" }}>
+              <span className="text-sm font-medium" style={{ color: "#071013" }}>
                 Buy skins, boosters & items
               </span>
             </div>
-            <ChevronRight className="w-6 h-6" style={{ color: "#022c22" }} />
+            <ChevronRight className="w-6 h-6" style={{ color: "#071013" }} />
           </button>
 
           {/* View NFTs Button */}
@@ -159,7 +159,7 @@ export default function SpendGFTScreen({
             <span className="text-lg font-bold" style={{ color: "#fff" }}>
               Featured Deals
             </span>
-            <button className="text-sm" style={{ color: "#4ade80" }}>
+            <button className="text-sm" style={{ color: "#B7FF1A" }}>
               See All
             </button>
           </div>
@@ -179,7 +179,7 @@ export default function SpendGFTScreen({
                   {deal.discount && (
                     <div
                       className="absolute top-2 left-2 px-2 py-1 rounded-full text-[10px] font-bold uppercase"
-                      style={{ background: "#4ade80", color: "#022c22" }}
+                      style={{ background: "#B7FF1A", color: "#071013" }}
                     >
                       -{deal.discount}%
                     </div>
@@ -191,7 +191,7 @@ export default function SpendGFTScreen({
                   <span className="text-sm font-bold truncate" style={{ color: "#f8fafc" }}>
                     {deal.name}
                   </span>
-                  <span className="text-base font-bold" style={{ color: "#4ade80" }}>
+                  <span className="text-base font-bold" style={{ color: "#B7FF1A" }}>
                     {deal.price} GFT
                   </span>
                 </div>
@@ -206,7 +206,7 @@ export default function SpendGFTScreen({
             <span className="text-lg font-bold" style={{ color: "#fff" }}>
               Spending History
             </span>
-            <button className="text-sm" style={{ color: "#4ade80" }}>
+            <button className="text-sm" style={{ color: "#B7FF1A" }}>
               History
             </button>
           </div>

@@ -120,7 +120,7 @@ export function ScreenshotCard({
             <Link href={`/profile/${screenshotUser.username}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
               <div className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
                 {screenshotUser.nftProfileTokenId && screenshotUser.nftProfileImageUrl && (screenshotUser as any).activeProfilePicType === 'nft' ? (
-                  <div className="h-7 w-7 rounded-lg overflow-hidden border border-[#4ade80]/40 flex-shrink-0">
+                  <div className="h-7 w-7 rounded-lg overflow-hidden border border-[#B7FF1A]/40 flex-shrink-0">
                     <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName} loading="lazy" className="w-full h-full object-cover" />
                   </div>
                 ) : (
@@ -140,7 +140,7 @@ export function ScreenshotCard({
         {/* Game name with green background like clips/reels */}
         {(screenshot as any).game && (
           <div className="pt-1">
-            <span className="inline-block bg-green-600 text-white text-xs px-2 py-0.5 rounded font-medium">
+            <span className="inline-block bg-primary text-white text-xs px-2 py-0.5 rounded font-medium">
               {(screenshot as any).game.name}
             </span>
           </div>

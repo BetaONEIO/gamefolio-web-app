@@ -286,7 +286,7 @@ const PRESET_THEMES = [
   {
     name: "None",
     backgroundColor: "#121F2B",
-    accentColor: "#4ADE80",
+    accentColor: "#B7FF1A",
     gradientTopColor: "#02172C",
     primaryColor: "#02172C"
   },
@@ -325,7 +325,7 @@ const PRESET_THEMES = [
   {
     name: "Blocks",
     backgroundColor: "#1a1a1a",
-    accentColor: "#4ade80",
+    accentColor: "#B7FF1A",
     gradientTopColor: "#2d2d2d",
     primaryColor: "#2d2d2d",
     proOnly: true
@@ -333,7 +333,7 @@ const PRESET_THEMES = [
   {
     name: "Watermelon",
     backgroundColor: "#ff4d6d",
-    accentColor: "#4ade80",
+    accentColor: "#B7FF1A",
     gradientTopColor: "#1d3932",
     primaryColor: "#1d3932",
     proOnly: true
@@ -341,7 +341,7 @@ const PRESET_THEMES = [
   {
     name: "Forest",
     backgroundColor: "#0a2f1f",
-    accentColor: "#4ade80",
+    accentColor: "#B7FF1A",
     gradientTopColor: "#e8d5b7",
     primaryColor: "#e8d5b7",
     proOnly: true
@@ -725,7 +725,7 @@ export default function SettingsPage() {
     displayName: user?.displayName || "",
     bio: user?.bio || "",
     backgroundColor: user?.backgroundColor || "#121F2B",
-    accentColor: user?.accentColor || "#4ADE80",
+    accentColor: user?.accentColor || "#B7FF1A",
     bannerUrl: user?.bannerUrl || "",
     avatarUrl: user?.avatarUrl || "",
     profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
@@ -747,7 +747,7 @@ export default function SettingsPage() {
     profileFontColor: (user as any)?.profileFontColor || "#FFFFFF"
   });
   
-  const [avatarBorderColor, setAvatarBorderColor] = useState<string>(user?.avatarBorderColor || '#4ADE80');
+  const [avatarBorderColor, setAvatarBorderColor] = useState<string>(user?.avatarBorderColor || '#B7FF1A');
   const [selectedBorderId, setSelectedBorderId] = useState<number | null>(user?.selectedAvatarBorderId ?? -1);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
@@ -803,13 +803,13 @@ export default function SettingsPage() {
   // value the user hasn't touched it — safe to update. If they differ, the user
   // has an unsaved edit in flight and we must preserve it.
   const lastSyncedBorder = React.useRef({
-    avatarBorderColor: user?.avatarBorderColor || '#4ADE80',
+    avatarBorderColor: user?.avatarBorderColor || '#B7FF1A',
     selectedBorderId:  user?.selectedAvatarBorderId ?? -1,
   });
 
   const lastSyncedAppearance = React.useRef({
     backgroundColor: user?.backgroundColor || "#121F2B",
-    accentColor: user?.accentColor || "#4ADE80",
+    accentColor: user?.accentColor || "#B7FF1A",
     profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
     profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
     profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
@@ -882,7 +882,7 @@ export default function SettingsPage() {
         
         const appearanceFields = hasPendingEdits.current ? {} : {
           backgroundColor: user.backgroundColor || "#121F2B",
-          accentColor: user.accentColor || "#4ADE80",
+          accentColor: user.accentColor || "#B7FF1A",
           profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
           profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
           profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
@@ -909,7 +909,7 @@ export default function SettingsPage() {
           prevVal === lastVal ? serverVal : prevVal;
 
         const newBgColor       = user.backgroundColor || "#121F2B";
-        const newAccent        = user.accentColor || "#4ADE80";
+        const newAccent        = user.accentColor || "#B7FF1A";
         const newBgType        = (user as any)?.profileBackgroundType || "solid";
         const newBgTheme       = (user as any)?.profileBackgroundTheme || "default";
         const newBgAnim        = (user as any)?.profileBackgroundAnimation || "none";
@@ -1032,7 +1032,7 @@ export default function SettingsPage() {
     normalizeValue(profileData.displayName) !== normalizeValue(user?.displayName) ||
     normalizeValue(profileData.bio) !== normalizeValue(user?.bio) ||
     profileData.backgroundColor !== (user?.backgroundColor || "#121F2B") ||
-    profileData.accentColor !== (user?.accentColor || "#4ADE80") ||
+    profileData.accentColor !== (user?.accentColor || "#B7FF1A") ||
     normalizeValue(profileData.bannerUrl) !== normalizeValue(user?.bannerUrl) ||
     profileData.profileBackgroundType !== ((user as any)?.profileBackgroundType || "solid") ||
     profileData.profileBackgroundTheme !== ((user as any)?.profileBackgroundTheme || "default") ||
@@ -1046,7 +1046,7 @@ export default function SettingsPage() {
     profileData.profileBackgroundGradient !== ((user as any)?.profileBackgroundGradient !== false) ||
     avatarFile !== null ||
     selectedPreviousAvatar !== null ||
-    avatarBorderColor !== (user?.avatarBorderColor || '#4ADE80') ||
+    avatarBorderColor !== (user?.avatarBorderColor || '#B7FF1A') ||
     selectedBorderId !== (user?.selectedAvatarBorderId ?? -1) ||
     (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId) ||
     (pendingVerificationBadgeId !== undefined && pendingVerificationBadgeId !== (user as any)?.selectedVerificationBadgeId) ||
@@ -1711,12 +1711,12 @@ export default function SettingsPage() {
           <TabsContent value="profile">
             {/* Pro Subscription Banner */}
             {user?.isPro && (
-              <div className="mb-6 flex items-center px-4 py-3 rounded-lg bg-green-500/20 border border-green-500/40">
+              <div className="mb-6 flex items-center px-4 py-3 rounded-lg bg-primary/20 border border-primary/40">
                 <div className="flex items-center gap-2">
-                  <Crown className="h-4 w-4 text-green-400" />
-                  <span className="font-medium text-green-400">Pro</span>
-                  <span className="text-green-400">-</span>
-                  <span className="text-green-400">Active</span>
+                  <Crown className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-primary">Pro</span>
+                  <span className="text-primary">-</span>
+                  <span className="text-primary">Active</span>
                 </div>
               </div>
             )}
@@ -1746,14 +1746,14 @@ export default function SettingsPage() {
                             onClick={() => setProfilePicTab('upload')}
                             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 mb-[-1px] transition-colors ${
                               profilePicTab === 'upload'
-                                ? 'border-green-500 text-green-400'
+                                ? 'border-primary text-primary'
                                 : 'border-transparent text-muted-foreground hover:text-foreground'
                             }`}
                           >
                             <Camera className="h-4 w-4" />
                             Uploaded
                             {isUploadedActive && (
-                              <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-green-500/20 text-green-400 rounded-full">Active</span>
+                              <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-primary/20 text-primary rounded-full">Active</span>
                             )}
                           </button>
                           <button
@@ -1761,14 +1761,14 @@ export default function SettingsPage() {
                             onClick={() => setProfilePicTab('nft')}
                             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 mb-[-1px] transition-colors ${
                               profilePicTab === 'nft'
-                                ? 'border-green-500 text-green-400'
+                                ? 'border-primary text-primary'
                                 : 'border-transparent text-muted-foreground hover:text-foreground'
                             }`}
                           >
                             <Shield className="h-4 w-4" />
                             NFT
                             {isNftActive && (
-                              <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-green-500/20 text-green-400 rounded-full">Active</span>
+                              <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-primary/20 text-primary rounded-full">Active</span>
                             )}
                           </button>
                         </>
@@ -1836,7 +1836,7 @@ export default function SettingsPage() {
                                 return (
                                   <button
                                     type="button"
-                                    className="group px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                                    className="group px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-primary/20 text-primary hover:bg-red-500/20 hover:text-red-400 transition-colors"
                                     onClick={async () => {
                                       try {
                                         setDeactivatedAvatarUrl(user?.avatarUrl || null);
@@ -1870,7 +1870,7 @@ export default function SettingsPage() {
                                 return (
                                   <button
                                     type="button"
-                                    className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-slate-500/20 text-slate-400 hover:bg-green-500/20 hover:text-green-400 transition-colors"
+                                    className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-slate-500/20 text-slate-400 hover:bg-primary/20 hover:text-primary transition-colors"
                                     onClick={() => {
                                       setNftProfileMutation.mutate({ tokenId: null });
                                     }}
@@ -1887,7 +1887,7 @@ export default function SettingsPage() {
                                 return (
                                   <button
                                     type="button"
-                                    className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-slate-500/20 text-slate-400 hover:bg-green-500/20 hover:text-green-400 transition-colors"
+                                    className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-slate-500/20 text-slate-400 hover:bg-primary/20 hover:text-primary transition-colors"
                                     onClick={async () => {
                                       try {
                                         const reactivateUrl = deactivatedAvatarUrl;
@@ -1991,7 +1991,7 @@ export default function SettingsPage() {
                                       isSelected
                                         ? 'border-primary ring-2 ring-primary/30 scale-105'
                                         : isCurrent
-                                          ? 'border-green-500 ring-2 ring-green-500/30'
+                                          ? 'border-primary ring-2 ring-primary/30'
                                           : 'border-slate-700 hover:border-slate-500 hover:scale-105'
                                     }`}
                                   >
@@ -2009,7 +2009,7 @@ export default function SettingsPage() {
                                   {isCurrent ? (
                                     <button
                                       type="button"
-                                      className="group px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                                      className="group px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-primary/20 text-primary hover:bg-red-500/20 hover:text-red-400 transition-colors"
                                       onClick={async () => {
                                         try {
                                           setDeactivatedAvatarUrl(user?.avatarUrl || null);
@@ -2102,7 +2102,7 @@ export default function SettingsPage() {
                               return (
                                 <button
                                   type="button"
-                                  className="group px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                                  className="group px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-primary/20 text-primary hover:bg-red-500/20 hover:text-red-400 transition-colors"
                                   onClick={() => setNftProfileMutation.mutate({ tokenId: null })}
                                   disabled={setNftProfileMutation.isPending}
                                 >
@@ -2120,7 +2120,7 @@ export default function SettingsPage() {
                               return (
                                 <button
                                   type="button"
-                                  className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-slate-500/20 text-slate-400 hover:bg-green-500/20 hover:text-green-400 transition-colors"
+                                  className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-slate-500/20 text-slate-400 hover:bg-primary/20 hover:text-primary transition-colors"
                                   onClick={() => {
                                     setNftProfileMutation.mutate({
                                       tokenId: previewTokenId,
@@ -2143,7 +2143,7 @@ export default function SettingsPage() {
                             type="button"
                             variant="outline"
                             onClick={() => setShowNftSelector(true)}
-                            className="border-green-500/30 text-green-400 hover:bg-green-500/10 w-full"
+                            className="border-primary/30 text-primary hover:bg-primary/10 w-full"
                           >
                             <Hexagon className="h-4 w-4 mr-2" />
                             {user?.activeProfilePicType === 'nft' ? 'Change NFT' : 'Select NFT'}
@@ -2288,9 +2288,9 @@ export default function SettingsPage() {
                           <TabsContent key={category} value={category} className="mt-0">
                             {/* Pro lock overlay for animated borders */}
                             {isLocked && (
-                              <div className="mb-3 p-3 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center gap-2">
-                                <Lock className="h-4 w-4 text-green-500" />
-                                <span className="text-sm text-green-500">Upgrade to Gamefolio Pro to unlock animated borders</span>
+                              <div className="mb-3 p-3 bg-primary/10 border border-primary/30 rounded-lg flex items-center gap-2">
+                                <Lock className="h-4 w-4 text-primary" />
+                                <span className="text-sm text-primary">Upgrade to Gamefolio Pro to unlock animated borders</span>
                               </div>
                             )}
                             
@@ -2366,7 +2366,7 @@ export default function SettingsPage() {
                                       />
                                       {isLocked && (
                                         <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
-                                          <Lock className="h-5 w-5 text-green-400" />
+                                          <Lock className="h-5 w-5 text-primary" />
                                         </div>
                                       )}
                                     </div>
@@ -2374,7 +2374,7 @@ export default function SettingsPage() {
                                       {border.name}
                                     </span>
                                     {isLocked && (
-                                      <span className="text-[10px] text-green-500 text-center leading-tight mt-0.5">Upgrade Pro</span>
+                                      <span className="text-[10px] text-primary text-center leading-tight mt-0.5">Upgrade Pro</span>
                                     )}
                                   </div>
                                 ))}
@@ -2585,7 +2585,7 @@ export default function SettingsPage() {
                                   )}
                                   {isLocked && (
                                     <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center bg-gray-700/40">
-                                      <Lock className="w-3 h-3 text-green-400" />
+                                      <Lock className="w-3 h-3 text-primary" />
                                     </div>
                                   )}
                                 </div>
@@ -3036,7 +3036,7 @@ export default function SettingsPage() {
                                   </button>
                                 </div>
                                 <div className="flex flex-wrap gap-2 justify-center">
-                                  {['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0099FF', '#FF00FF', '#FFFF00', '#FF8800', '#00FFFF', '#FF69B4', '#7B68EE', '#4ADE80'].map(preset => (
+                                  {['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0099FF', '#FF00FF', '#FFFF00', '#FF8800', '#00FFFF', '#FF69B4', '#7B68EE', '#B7FF1A'].map(preset => (
                                     <button
                                       key={preset}
                                       type="button"
@@ -3179,7 +3179,7 @@ export default function SettingsPage() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <Shield className="h-5 w-5 text-green-500" />
+                        <Shield className="h-5 w-5 text-primary" />
                         Verified Badge
                       </CardTitle>
                       <CardDescription>
@@ -3263,8 +3263,8 @@ export default function SettingsPage() {
                                   className={`
                                     relative p-3 rounded-lg transition-all transform hover:scale-105 flex flex-col items-center
                                     ${isSelected 
-                                      ? 'ring-2 ring-green-500 bg-green-500/20' 
-                                      : 'border border-border hover:border-green-500/50'}
+                                      ? 'ring-2 ring-primary bg-primary/20' 
+                                      : 'border border-border hover:border-primary/50'}
                                   `}
                                 >
                                   <NameTagImage
@@ -3274,10 +3274,10 @@ export default function SettingsPage() {
                                   />
                                   <p className="text-xs text-center mt-1 truncate w-full">{badge.name}</p>
                                   {badge.isDefault && (
-                                    <span className="text-[10px] text-green-500 font-medium">Free</span>
+                                    <span className="text-[10px] text-primary font-medium">Free</span>
                                   )}
                                   {isSelected && (
-                                    <div className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full p-0.5">
+                                    <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
                                       <Check className="h-2.5 w-2.5" />
                                     </div>
                                   )}
@@ -3287,7 +3287,7 @@ export default function SettingsPage() {
                           </div>
 
                           <Link href="/store">
-                            <p className="text-sm text-muted-foreground hover:text-green-500 transition-colors cursor-pointer mt-2 text-center">
+                            <p className="text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer mt-2 text-center">
                               Browse more verification badges in our store
                             </p>
                           </Link>
@@ -3546,7 +3546,7 @@ export default function SettingsPage() {
                             <div className="flex items-center gap-2">
                               <div className="text-sm font-medium text-slate-200">{platform.label}</div>
                               {isConnected && isXboxVerified && (
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#107C10]/20 text-[#4ade80] border border-[#107C10]/30">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#107C10]/20 text-[#B7FF1A] border border-[#107C10]/30">
                                   <Check className="w-2.5 h-2.5" />
                                   Verified
                                 </span>
@@ -3560,7 +3560,7 @@ export default function SettingsPage() {
                           </div>
                           {isConnected ? (
                             <>
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
                                 <Check className="w-3 h-3" />
                                 Connected
                               </span>
@@ -4262,7 +4262,7 @@ export default function SettingsPage() {
                         !isStreamingEnabled
                           ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
                           : streamPlatform === 'kick'
-                          ? 'border-green-500 bg-green-500/20 text-green-300'
+                          ? 'border-primary bg-primary/20 text-primary'
                           : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
                       }`}
                     >
@@ -4333,15 +4333,15 @@ export default function SettingsPage() {
 
                   {/* Kick OAuth connect option */}
                   {streamPlatform === 'kick' && isStreamingEnabled && oauthConfig?.kick && (
-                    <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.kickVerified ? 'border-green-500/30 bg-green-500/5' : 'border-slate-700 bg-slate-800/30'}`}>
+                    <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.kickVerified ? 'border-primary/30 bg-primary/5' : 'border-slate-700 bg-slate-800/30'}`}>
                       {(user as any)?.kickVerified ? (
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded bg-green-500/20 flex items-center justify-center">
-                              <Check className="w-3.5 h-3.5 text-green-400" />
+                            <div className="w-6 h-6 rounded bg-primary/20 flex items-center justify-center">
+                              <Check className="w-3.5 h-3.5 text-primary" />
                             </div>
                             <div>
-                              <p className="text-xs font-medium text-green-300">Kick OAuth Verified</p>
+                              <p className="text-xs font-medium text-primary">Kick OAuth Verified</p>
                               <p className="text-[11px] text-slate-400">@{(user as any)?.streamChannelName}</p>
                             </div>
                           </div>
@@ -4632,7 +4632,7 @@ export default function SettingsPage() {
             <div className="p-4 overflow-y-auto max-h-[70vh]">
               {nftsLoading ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-green-400" />
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : !ownedNftsData?.nfts || ownedNftsData.nfts.filter((n: any) => !n.sold).length === 0 ? (
                 <div className="text-center py-12">
@@ -4664,7 +4664,7 @@ export default function SettingsPage() {
                       const cardBg: Record<string, string> = {
                         legendary: "bg-gradient-to-b from-[#f6cfff] via-[#cefafe] to-[#fff085]",
                         epic: "bg-slate-900",
-                        rare: "bg-gradient-to-b from-[#4ade8033] via-[#14532d4d] to-[#4ade8033]",
+                        rare: "bg-gradient-to-b from-[#B7FF1A33] via-[#14532d4d] to-[#B7FF1A33]",
                         common: "bg-slate-900",
                       };
                       const cardGlow: Record<string, string> = {
@@ -4674,9 +4674,9 @@ export default function SettingsPage() {
                         common: "",
                       };
                       const dotColor: Record<string, string> = {
-                        legendary: "bg-green-500 shadow-[0_0_8px_#22c55e]",
-                        epic: "bg-green-600 shadow-[0_0_8px_#16a34a]",
-                        rare: "bg-green-400 shadow-[0_0_8px_#4ade80]",
+                        legendary: "bg-primary shadow-[0_0_8px_#A2F000]",
+                        epic: "bg-primary shadow-[0_0_8px_#6FA800]",
+                        rare: "bg-primary shadow-[0_0_8px_#B7FF1A]",
                         common: "bg-slate-400/50 shadow-[0_0_8px_#1e293b]",
                       };
                       const rarityText: Record<string, string> = {
@@ -4704,7 +4704,7 @@ export default function SettingsPage() {
                           }}
                           disabled={setNftProfileMutation.isPending}
                           className={`relative rounded-2xl overflow-hidden transition-all duration-200 hover:scale-[1.03] text-left ${cardBg[rarityLabel]} ${cardGlow[rarityLabel]} ${
-                            isSelected ? 'ring-2 ring-green-500 ring-offset-2 ring-offset-[#0f172a]' : ''
+                            isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#0f172a]' : ''
                           }`}
                         >
                           <div className="relative">
@@ -4722,10 +4722,10 @@ export default function SettingsPage() {
                               )}
                             </div>
                             <div className="absolute top-2 right-2 backdrop-blur-md bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5">
-                              <span className="text-[10px] font-bold text-green-400">#{nft.tokenId}</span>
+                              <span className="text-[10px] font-bold text-primary">#{nft.tokenId}</span>
                             </div>
                             {isSelected && (
-                              <div className="absolute top-2 left-2 bg-green-500 rounded-full p-1">
+                              <div className="absolute top-2 left-2 bg-primary rounded-full p-1">
                                 <Check className="h-3 w-3 text-white" />
                               </div>
                             )}
@@ -4748,7 +4748,7 @@ export default function SettingsPage() {
             </div>
 
             {setNftProfileMutation.isPending && (
-              <div className="p-3 border-t border-slate-700 flex items-center justify-center gap-2 text-sm text-green-400">
+              <div className="p-3 border-t border-slate-700 flex items-center justify-center gap-2 text-sm text-primary">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Setting NFT as profile picture...
               </div>
@@ -4851,7 +4851,7 @@ export default function SettingsPage() {
             isZombie      ? '#9ae600' :
             isCyberpunk   ? '#00d3f2' :
             isNeo         ? '#00ff41' :
-            isBlocks      ? '#4ade80' :
+            isBlocks      ? '#B7FF1A' :
             isElectric    ? '#ffe033' :
             isGothic      ? '#c27aff' :
             '#ffffff',
@@ -4867,7 +4867,7 @@ export default function SettingsPage() {
         } : isBlocks ? {
           borderRadius: '4px',
           background: `${topColor}ee`,
-          border: '3px solid #4ade80',
+          border: '3px solid #B7FF1A',
           boxShadow: '4px 4px 0 #000',
         } : isCartoon ? {
           borderRadius: '16px',
@@ -4895,7 +4895,7 @@ export default function SettingsPage() {
         };
 
         const avatarBorderStyle: React.CSSProperties = isBlocks ? {
-          border: '4px solid #4ade80',
+          border: '4px solid #B7FF1A',
           borderRadius: '4px',
           boxShadow: '4px 4px 0 #000',
         } : isCartoon ? {
@@ -5095,9 +5095,9 @@ export default function SettingsPage() {
                     }}
                     className="flex-1 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2"
                     style={{
-                      background: isThemeLocked ? '#4ADE80' : accent,
+                      background: isThemeLocked ? '#B7FF1A' : accent,
                       color: isThemeLocked ? '#1a1a1a' : (isLight && !isGothic ? '#1d1d1f' : bg),
-                      boxShadow: isThemeLocked ? '0 8px 24px -8px #4ade8066' : `0 8px 24px -8px ${accent}`,
+                      boxShadow: isThemeLocked ? '0 8px 24px -8px #B7FF1A66' : `0 8px 24px -8px ${accent}`,
                       fontFamily: isThemeLocked ? undefined : themeFont,
                       fontSize: '0.875rem',
                       borderRadius: '12px',

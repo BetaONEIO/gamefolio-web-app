@@ -809,7 +809,7 @@ export function AlertSettings() {
                   data-testid={`routed-test-email-${d.target}`}
                 >
                   {d.ok ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
                   ) : (
                     <XCircle className="h-4 w-4 text-red-600" />
                   )}
@@ -824,7 +824,7 @@ export function AlertSettings() {
                   data-testid={`routed-test-slack-${d.target}`}
                 >
                   {d.ok ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
                   ) : (
                     <XCircle className="h-4 w-4 text-red-600" />
                   )}
@@ -839,7 +839,7 @@ export function AlertSettings() {
                   data-testid={`routed-test-sms-${d.target}`}
                 >
                   {d.ok ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
                   ) : (
                     <XCircle className="h-4 w-4 text-red-600" />
                   )}
@@ -854,7 +854,7 @@ export function AlertSettings() {
                   data-testid="routed-test-pagerduty"
                 >
                   {d.ok ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
                   ) : (
                     <XCircle className="h-4 w-4 text-red-600" />
                   )}

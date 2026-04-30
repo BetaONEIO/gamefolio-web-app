@@ -136,10 +136,10 @@ export default function TransactionErrorScreen({
             className="flex items-center justify-between pt-4"
             style={{ borderTop: "1px solid rgba(30, 41, 59, 0.3)" }}
           >
-            <span className="text-sm font-bold" style={{ color: "#4ade80" }}>
+            <span className="text-sm font-bold" style={{ color: "#B7FF1A" }}>
               Amount Needed
             </span>
-            <span className="text-lg font-black" style={{ color: "#4ade80" }}>
+            <span className="text-lg font-black" style={{ color: "#B7FF1A" }}>
               {amountNeeded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT
             </span>
           </div>
@@ -155,7 +155,7 @@ export default function TransactionErrorScreen({
         >
           <div
             className="w-5 h-5 rounded flex-shrink-0"
-            style={{ background: "#4ade80" }}
+            style={{ background: "#B7FF1A" }}
           />
           <p className="text-xs leading-relaxed" style={{ color: "#94a3b8" }}>
             GFT tokens are required for all transactions on the SKALE network. You can top up your wallet using a credit card or by bridging from another network.
@@ -169,9 +169,9 @@ export default function TransactionErrorScreen({
             onClick={onBuyGFT}
             className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl font-bold transition-all hover:opacity-90 active:scale-[0.98]"
             style={{
-              background: "#4ade80",
-              boxShadow: "0 0 20px -5px #4ade80",
-              color: "#022c22",
+              background: "#B7FF1A",
+              boxShadow: "0 0 20px -5px #B7FF1A",
+              color: "#071013",
             }}
           >
             <ShoppingCart className="w-5 h-5" />

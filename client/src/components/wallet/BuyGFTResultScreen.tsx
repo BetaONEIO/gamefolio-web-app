@@ -89,7 +89,7 @@ export default function BuyGFTResultScreen({
             <div 
               className="absolute inset-0 rounded-full animate-pulse"
               style={{ 
-                background: 'rgba(74, 222, 128, 0.1)',
+                background: 'rgba(183, 255, 26, 0.1)',
               }}
             />
             
@@ -97,15 +97,15 @@ export default function BuyGFTResultScreen({
             <div 
               className="relative w-24 h-24 rounded-full flex items-center justify-center"
               style={{ 
-                background: 'rgba(74, 222, 128, 0.2)',
-                boxShadow: '0 0 60px rgba(74, 222, 128, 0.3)'
+                background: 'rgba(183, 255, 26, 0.2)',
+                boxShadow: '0 0 60px rgba(183, 255, 26, 0.3)'
               }}
             >
               <div 
                 className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-500 ${showSuccess ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}
-                style={{ background: '#4ade80' }}
+                style={{ background: '#B7FF1A' }}
               >
-                <Check className="w-8 h-8" style={{ color: '#022c22' }} strokeWidth={3} />
+                <Check className="w-8 h-8" style={{ color: '#071013' }} strokeWidth={3} />
               </div>
             </div>
           </div>
@@ -148,14 +148,14 @@ export default function BuyGFTResultScreen({
               >
                 <span 
                   className="text-sm font-bold"
-                  style={{ color: '#4ade80' }}
+                  style={{ color: '#B7FF1A' }}
                 >
                   {transactionHash}
                 </span>
                 {copied ? (
-                  <Check className="w-4 h-4" style={{ color: '#4ade80' }} />
+                  <Check className="w-4 h-4" style={{ color: '#B7FF1A' }} />
                 ) : (
-                  <Copy className="w-4 h-4" style={{ color: '#4ade80' }} />
+                  <Copy className="w-4 h-4" style={{ color: '#B7FF1A' }} />
                 )}
               </button>
             </div>
@@ -186,9 +186,9 @@ export default function BuyGFTResultScreen({
               onClick={() => setShowSpendScreen(true)}
               className="w-full py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98]"
               style={{ 
-                background: '#4ade80',
-                color: '#022c22',
-                boxShadow: '0 0 30px -10px #4ade80'
+                background: '#B7FF1A',
+                color: '#071013',
+                boxShadow: '0 0 30px -10px #B7FF1A'
               }}
             >
               <ShoppingBag className="w-5 h-5" />
@@ -234,9 +234,9 @@ export default function BuyGFTResultScreen({
             {/* Icon */}
             <div 
               className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
-              style={{ background: 'rgba(34, 197, 94, 0.2)' }}
+              style={{ background: 'rgba(183, 255, 26, 0.2)' }}
             >
-              <Check className="w-6 h-6" style={{ color: '#22c55e' }} />
+              <Check className="w-6 h-6" style={{ color: '#A2F000' }} />
             </div>
             
             {/* Text */}
@@ -264,7 +264,7 @@ export default function BuyGFTResultScreen({
             <div 
               className="h-full rounded-full transition-all duration-300"
               style={{ 
-                background: '#22c55e',
+                background: '#A2F000',
                 width: `${progress}%`
               }}
             />

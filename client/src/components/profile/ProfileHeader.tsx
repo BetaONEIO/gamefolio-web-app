@@ -64,7 +64,7 @@ const userTypeConfig: Record<string, { label: string; icon: any; color: string }
   gamer: {
     label: "Gamer",
     icon: Gamepad2,
-    color: "bg-green-500/20 text-green-400 border-green-500/30",
+    color: "bg-primary/20 text-primary border-primary/30",
   },
   professional_gamer: {
     label: "Pro Gamer",
@@ -251,7 +251,7 @@ const ProfileHeader = ({
                   left: 0,
                   right: 0,
                   height: "1px",
-                  background: profile.accentColor || "#4ade80",
+                  background: profile.accentColor || "#B7FF1A",
                   pointerEvents: "none",
                   zIndex: 5,
                 }}
@@ -264,7 +264,7 @@ const ProfileHeader = ({
                   left: 0,
                   bottom: 0,
                   width: "1px",
-                  background: profile.accentColor || "#4ade80",
+                  background: profile.accentColor || "#B7FF1A",
                   pointerEvents: "none",
                   zIndex: 5,
                 }}
@@ -275,7 +275,7 @@ const ProfileHeader = ({
                 <div
                   className="absolute -top-3 right-0 z-10 cursor-pointer transition-opacity hover:opacity-80"
                   style={{
-                    background: profile.accentColor || "#4ade80",
+                    background: profile.accentColor || "#B7FF1A",
                     padding: "1px",
                     borderRadius: "8px",
                   }}

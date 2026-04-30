@@ -59,14 +59,14 @@ export default function ActivityDetailScreen({
   const getActivityIcon = (type: ActivityType) => {
     switch (type) {
       case "reward":
-        return <Gift className="w-10 h-10" style={{ color: '#4ade80' }} />;
+        return <Gift className="w-10 h-10" style={{ color: '#B7FF1A' }} />;
       case "stake":
       case "unstake":
-        return <TrendingUp className="w-10 h-10" style={{ color: '#4ade80' }} />;
+        return <TrendingUp className="w-10 h-10" style={{ color: '#B7FF1A' }} />;
       case "purchase":
-        return <ShoppingCart className="w-10 h-10" style={{ color: '#4ade80' }} />;
+        return <ShoppingCart className="w-10 h-10" style={{ color: '#B7FF1A' }} />;
       default:
-        return <Gift className="w-10 h-10" style={{ color: '#4ade80' }} />;
+        return <Gift className="w-10 h-10" style={{ color: '#B7FF1A' }} />;
     }
   };
 
@@ -74,8 +74,8 @@ export default function ActivityDetailScreen({
     const styles = {
       completed: {
         bg: 'rgba(20, 83, 45, 0.2)',
-        border: 'rgba(74, 222, 128, 0.2)',
-        color: '#4ade80',
+        border: 'rgba(183, 255, 26, 0.2)',
+        color: '#B7FF1A',
         text: 'COMPLETED',
       },
       pending: {
@@ -158,7 +158,7 @@ export default function ActivityDetailScreen({
             style={{
               background: '#1e293b',
               border: '1px solid #1e293b',
-              boxShadow: '0 4px 6px -4px rgba(74, 222, 128, 0.05), 0 10px 15px -3px rgba(74, 222, 128, 0.05)',
+              boxShadow: '0 4px 6px -4px rgba(183, 255, 26, 0.05), 0 10px 15px -3px rgba(183, 255, 26, 0.05)',
             }}
           >
             {getActivityIcon(activity.type)}
@@ -178,7 +178,7 @@ export default function ActivityDetailScreen({
           <div className="flex items-end gap-2">
             <span
               className="text-3xl font-bold"
-              style={{ color: activity.isPositive ? '#4ade80' : '#f8fafc' }}
+              style={{ color: activity.isPositive ? '#B7FF1A' : '#f8fafc' }}
             >
               {activity.isPositive ? '+' : '-'}{activity.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
@@ -261,7 +261,7 @@ export default function ActivityDetailScreen({
                   <div
                     className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
                     style={{
-                      background: step.status === 'completed' ? '#4ade80' : step.status === 'current' ? '#3b82f6' : '#1e293b',
+                      background: step.status === 'completed' ? '#B7FF1A' : step.status === 'current' ? '#3b82f6' : '#1e293b',
                       boxShadow: '0 0 0 4px #101D27',
                     }}
                   >
@@ -275,7 +275,7 @@ export default function ActivityDetailScreen({
                   {index < arr.length - 1 && (
                     <div
                       className="w-0.5 h-8"
-                      style={{ background: step.status === 'completed' ? '#4ade80' : '#1e293b' }}
+                      style={{ background: step.status === 'completed' ? '#B7FF1A' : '#1e293b' }}
                     />
                   )}
                 </div>
@@ -326,14 +326,14 @@ export default function ActivityDetailScreen({
               >
                 <span
                   className="text-sm font-mono"
-                  style={{ color: '#4ade80', fontFamily: 'JetBrains Mono, monospace' }}
+                  style={{ color: '#B7FF1A', fontFamily: 'JetBrains Mono, monospace' }}
                 >
                   {activity.transactionHash}
                 </span>
                 {copied === 'hash' ? (
-                  <Check className="w-4 h-4" style={{ color: '#4ade80' }} />
+                  <Check className="w-4 h-4" style={{ color: '#B7FF1A' }} />
                 ) : (
-                  <Copy className="w-4 h-4" style={{ color: '#4ade80' }} />
+                  <Copy className="w-4 h-4" style={{ color: '#B7FF1A' }} />
                 )}
               </button>
             </div>
@@ -386,7 +386,7 @@ export default function ActivityDetailScreen({
               </span>
               <span
                 className="text-sm font-bold"
-                style={{ color: activity.networkFee === 'Free' ? '#4ade80' : '#f8fafc' }}
+                style={{ color: activity.networkFee === 'Free' ? '#B7FF1A' : '#f8fafc' }}
               >
                 {activity.networkFee}
               </span>

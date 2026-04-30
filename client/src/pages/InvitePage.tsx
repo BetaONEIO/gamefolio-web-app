@@ -133,7 +133,7 @@ function UsernameChecker() {
             onKeyDown={e => e.key === "Enter" && handleClaim()}
           />
           {status === "loading" && <Loader2 className="h-4 w-4 animate-spin text-gray-500" />}
-          {status === "available" && <Check className="h-4 w-4 text-green-400" />}
+          {status === "available" && <Check className="h-4 w-4 text-primary" />}
           {status === "taken" && <X className="h-4 w-4 text-red-400" />}
         </div>
         <button
@@ -146,7 +146,7 @@ function UsernameChecker() {
       </div>
 
       {status === "available" && value && (
-        <p className="text-green-400 text-sm font-medium">✓ @{value} is available — grab it now!</p>
+        <p className="text-primary text-sm font-medium">✓ @{value} is available — grab it now!</p>
       )}
       {status === "taken" && value && (
         <p className="text-red-400 text-sm">@{value} is taken. Try another.</p>
@@ -301,7 +301,7 @@ export default function InvitePage() {
           <div className="flex items-center gap-3 text-gray-400 text-sm flex-wrap justify-center">
             <span className="flex items-center gap-1.5"><SiTwitch className="h-4 w-4 text-purple-400" /> Twitch</span>
             <span className="text-gray-600">+</span>
-            <span className="flex items-center gap-1.5"><SiKick className="h-4 w-4 text-green-400" /> Kick</span>
+            <span className="flex items-center gap-1.5"><SiKick className="h-4 w-4 text-primary" /> Kick</span>
             <span className="text-gray-600">→ your Gamefolio profile</span>
           </div>
           <button

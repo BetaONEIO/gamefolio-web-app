@@ -146,12 +146,12 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
                   fillRule="evenodd"
                   clipRule="evenodd"
                   d="M3.50016 6.70337V5.33337C3.50016 2.84809 5.51488 0.833374 8.00016 0.833374C10.4854 0.833374 12.5002 2.84809 12.5002 5.33337V6.70337C13.2435 6.75871 13.7268 6.89871 14.0808 7.25271C14.6668 7.83804 14.6668 8.78137 14.6668 10.6667C14.6668 12.552 14.6668 13.4954 14.0808 14.0807C13.4955 14.6667 12.5522 14.6667 10.6668 14.6667H5.3335C3.44816 14.6667 2.50483 14.6667 1.9195 14.0807C1.3335 13.4954 1.3335 12.552 1.3335 10.6667C1.3335 8.78137 1.3335 7.83804 1.9195 7.25271C2.27283 6.89871 2.75683 6.75871 3.50016 6.70337Z"
-                  fill="#4ADE80"
+                  fill="#B7FF1A"
                 />
               </svg>
               <span
                 className="text-[10px] font-bold uppercase"
-                style={{ color: "#4ade80", letterSpacing: "0.5px" }}
+                style={{ color: "#B7FF1A", letterSpacing: "0.5px" }}
               >
                 Secure Payment
               </span>
@@ -205,7 +205,7 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
                 <p className="text-sm font-medium" style={{ color: "#94a3b8" }}>
                   Total to Pay
                 </p>
-                <p className="text-xs font-bold" style={{ color: "#4ade80" }}>
+                <p className="text-xs font-bold" style={{ color: "#B7FF1A" }}>
                   Includes all taxes
                 </p>
               </div>
@@ -220,11 +220,11 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
               disabled={isProcessing || !stripe || !isReady}
               className="w-full flex items-center justify-center gap-2 py-5 rounded-2xl font-bold text-lg transition-all hover:opacity-90 disabled:opacity-50"
               style={{
-                background: "#4ade80",
-                boxShadow: "0 0 30px -10px #4ade80",
+                background: "#B7FF1A",
+                boxShadow: "0 0 30px -10px #B7FF1A",
               }}
             >
-              <span style={{ color: "#022c22" }}>
+              <span style={{ color: "#071013" }}>
                 {isProcessing ? "Processing..." : "Confirm & Pay"}
               </span>
               {!isProcessing && (
@@ -328,7 +328,7 @@ export default function CardEntryScreen(props: CardEntryScreenProps) {
         appearance: {
           theme: "night",
           variables: {
-            colorPrimary: "#4ade80",
+            colorPrimary: "#B7FF1A",
             colorBackground: "#1e293b",
             colorText: "#f8fafc",
             colorDanger: "#ef4444",
@@ -343,8 +343,8 @@ export default function CardEntryScreen(props: CardEntryScreenProps) {
               padding: "16px",
             },
             ".Input:focus": {
-              border: "1px solid #4ade80",
-              boxShadow: "0 0 0 1px #4ade80",
+              border: "1px solid #B7FF1A",
+              boxShadow: "0 0 0 1px #B7FF1A",
             },
             ".Label": {
               color: "#94a3b8",
@@ -365,7 +365,7 @@ export default function CardEntryScreen(props: CardEntryScreenProps) {
             },
             ".Tab--selected": {
               backgroundColor: "#334155",
-              border: "1px solid #4ade80",
+              border: "1px solid #B7FF1A",
               color: "#f8fafc",
             },
           },

@@ -216,7 +216,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
                 <img
                   src={(comment.user as any).nftProfileImageUrl}
                   alt={comment.user.username || "User"}
-                  className="h-8 w-8 rounded-lg border border-[#4ade80]/40 object-cover flex-shrink-0"
+                  className="h-8 w-8 rounded-lg border border-[#B7FF1A]/40 object-cover flex-shrink-0"
                 />
               ) : (
                 <CommentAvatar 

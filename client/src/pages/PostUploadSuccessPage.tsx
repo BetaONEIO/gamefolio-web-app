@@ -362,7 +362,7 @@ const PostUploadSuccessPage = () => {
                   alt="QR Code" 
                   className="w-32 h-32 border border-border rounded-lg bg-white p-2"
                 />
-                <p className="text-sm font-medium text-green-500">
+                <p className="text-sm font-medium text-primary">
                   Scan this QR code to view the clip on any device
                 </p>
                 <Button

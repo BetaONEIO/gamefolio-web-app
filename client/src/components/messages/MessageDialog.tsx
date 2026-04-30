@@ -118,7 +118,7 @@ export function MessageDialog({ open, onOpenChange, targetUser }: MessageDialogP
         <DialogHeader className="px-4 py-3 border-b flex-shrink-0">
           <div className="flex items-center gap-3">
             {targetUser.nftProfileTokenId && targetUser.nftProfileImageUrl && (targetUser as any).activeProfilePicType === 'nft' ? (
-              <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+              <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40">
                 <img src={targetUser.nftProfileImageUrl} alt={targetUser.displayName} className="w-full h-full object-cover" />
               </div>
             ) : (

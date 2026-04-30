@@ -136,19 +136,19 @@ export default function WalletErrorScreen({
           <div
             className="flex items-center gap-4 p-4 rounded-2xl"
             style={{
-              background: "rgba(74, 222, 128, 0.05)",
-              border: "1px solid rgba(74, 222, 128, 0.2)",
+              background: "rgba(183, 255, 26, 0.05)",
+              border: "1px solid rgba(183, 255, 26, 0.2)",
             }}
           >
             <div
               className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
-              style={{ background: "rgba(74, 222, 128, 0.1)" }}
+              style={{ background: "rgba(183, 255, 26, 0.1)" }}
             >
-              <Info className="w-5 h-5" style={{ color: "#4ade80" }} />
+              <Info className="w-5 h-5" style={{ color: "#B7FF1A" }} />
             </div>
             <div className="flex-1">
               <span className="text-xs leading-relaxed" style={{ color: "#94a3b8", lineHeight: "16.5px" }}>
-                Your funds are <span className="font-bold" style={{ color: "#4ade80" }}>safe</span> and remain on the SKALE network. This is only a display issue.
+                Your funds are <span className="font-bold" style={{ color: "#B7FF1A" }}>safe</span> and remain on the SKALE network. This is only a display issue.
               </span>
             </div>
           </div>
@@ -160,9 +160,9 @@ export default function WalletErrorScreen({
             onClick={onRetry}
             className="w-full h-14 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98]"
             style={{
-              background: "#4ade80",
-              color: "#022c22",
-              boxShadow: "0 0 20px -5px #4ade80",
+              background: "#B7FF1A",
+              color: "#071013",
+              boxShadow: "0 0 20px -5px #B7FF1A",
             }}
           >
             <RefreshCw className="w-5 h-5" />

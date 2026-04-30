@@ -112,7 +112,7 @@ const LeaderboardEmbedPage = () => {
                   </div>
                   
                   {entry.user.nftProfileTokenId && entry.user.nftProfileImageUrl && (entry.user as any).activeProfilePicType === 'nft' ? (
-                    <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#4ade80]/40">
+                    <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40">
                       <img src={entry.user.nftProfileImageUrl} alt={entry.user.displayName} className="w-full h-full object-cover" loading="lazy" />
                     </div>
                   ) : (
@@ -143,7 +143,7 @@ const LeaderboardEmbedPage = () => {
                       <span className="font-medium">{entry.likesReceived}</span>
                     </div>
                     <div className="flex items-center gap-1" title="Comments">
-                      <MessageCircle className="h-4 w-4 text-green-500" />
+                      <MessageCircle className="h-4 w-4 text-primary" />
                       <span className="font-medium">{entry.commentsReceived}</span>
                     </div>
                   </div>
@@ -161,7 +161,7 @@ const LeaderboardEmbedPage = () => {
           
           {/* Live indicator */}
           <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
             <span className="text-xs text-muted-foreground">
               Live • Last updated: {new Date().toLocaleTimeString()}
             </span>

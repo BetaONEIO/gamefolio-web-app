@@ -99,21 +99,21 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
   legendary: {
     bg: "bg-gradient-to-b from-[#f6cfff] via-[#cefafe] to-[#fff085]",
     glow: "shadow-[0_0_25px_rgba(236,72,153,0.4)]",
-    dotColor: "bg-green-500 shadow-[0_0_8px_#22c55e]",
+    dotColor: "bg-primary shadow-[0_0_8px_#A2F000]",
     textStyle: "bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent font-black",
     nameColor: "text-slate-800",
   },
   epic: {
     bg: "bg-slate-900",
     glow: "",
-    dotColor: "bg-green-600 shadow-[0_0_8px_#16a34a]",
+    dotColor: "bg-primary shadow-[0_0_8px_#6FA800]",
     textStyle: "text-slate-400 font-normal",
     nameColor: "text-slate-50",
   },
   rare: {
-    bg: "bg-gradient-to-b from-[#4ade8033] via-[#14532d4d] to-[#4ade8033]",
+    bg: "bg-gradient-to-b from-[#B7FF1A33] via-[#14532d4d] to-[#B7FF1A33]",
     glow: "",
-    dotColor: "bg-green-400 shadow-[0_0_8px_#4ade80]",
+    dotColor: "bg-primary shadow-[0_0_8px_#B7FF1A]",
     textStyle: "text-slate-400 font-normal",
     nameColor: "text-slate-50",
   },
@@ -127,9 +127,9 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
 };
 
 const rarityDotColors: Record<string, string> = {
-  legendary: "bg-green-500 shadow-[0_0_8px_#22c55e]",
-  epic: "bg-green-600 shadow-[0_0_8px_#16a34a]",
-  rare: "bg-green-400 shadow-[0_0_8px_#4ade80]",
+  legendary: "bg-primary shadow-[0_0_8px_#A2F000]",
+  epic: "bg-primary shadow-[0_0_8px_#6FA800]",
+  rare: "bg-primary shadow-[0_0_8px_#B7FF1A]",
   common: "bg-slate-400/50 shadow-[0_0_8px_#1e293b]",
 };
 
@@ -160,7 +160,7 @@ function NftCard({ nft, onClick }: { nft: OwnedNft; onClick: () => void }) {
         </div>
 
         <div className="absolute top-2 right-2 backdrop-blur-md bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5">
-          <span className="text-[10px] font-bold text-green-400">#{nft.tokenId}</span>
+          <span className="text-[10px] font-bold text-primary">#{nft.tokenId}</span>
         </div>
 
         {nft.sold && (
@@ -304,7 +304,7 @@ export default function CollectionPage() {
           <p className="text-slate-400 mb-4">Please log in to view your collection</p>
           <Button 
             onClick={() => openModal()}
-            className="bg-green-400 hover:bg-green-500 text-slate-900 font-bold"
+            className="bg-primary hover:bg-primary text-slate-900 font-bold"
           >
             Log In
           </Button>
@@ -357,7 +357,7 @@ export default function CollectionPage() {
                 onClick={() => setCollectionTab(key)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   collectionTab === key
-                    ? "bg-green-400 text-green-950 shadow-[0_0_15px_-5px_#4ade80]"
+                    ? "bg-primary text-primary shadow-[0_0_15px_-5px_#B7FF1A]"
                     : "bg-slate-800 text-slate-400 hover:text-slate-300 hover:bg-slate-700"
                 }`}
               >
@@ -370,7 +370,7 @@ export default function CollectionPage() {
 
         {collectionTab === "nfts" && (
           <>
-            <div className="bg-gradient-to-b from-green-900/10 to-transparent py-6 md:py-8 px-6 md:px-12 lg:px-16">
+            <div className="bg-gradient-to-b from-[#B7FF1A]/10 to-transparent py-6 md:py-8 px-6 md:px-12 lg:px-16">
               <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
                 <div>
                   {nftData && nftData.count > 0 && (
@@ -378,13 +378,13 @@ export default function CollectionPage() {
                       href={`${SKALE_EXPLORER_BASE_URL}/address/${NFT_CONTRACT_ADDRESS}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-[10px] text-green-400 hover:text-green-300 transition-colors mb-1.5"
+                      className="flex items-center gap-1 text-[10px] text-primary hover:text-primary transition-colors mb-1.5"
                     >
                       <ExternalLink className="w-3 h-3" />
                       <span>View Contract</span>
                     </a>
                   )}
-                  <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-1">My NFTs</p>
+                  <p className="text-xs font-bold text-primary uppercase tracking-wider mb-1">My NFTs</p>
                   <div className="flex items-end gap-2">
                     <span className="text-4xl md:text-5xl font-black text-slate-50 leading-none">
                       {nftsLoading ? "—" : nftData?.count || 0}
@@ -398,14 +398,14 @@ export default function CollectionPage() {
                     onClick={() => setNftTab("owned")}
                     className={`flex-1 md:w-44 h-10 rounded-2xl flex items-center justify-center gap-2 text-sm font-bold transition-all ${
                       nftTab === "owned"
-                        ? "bg-green-400 text-green-950 shadow-[0_0_15px_-5px_#4ade80]"
+                        ? "bg-primary text-primary shadow-[0_0_15px_-5px_#B7FF1A]"
                         : "text-slate-400 hover:text-slate-300"
                     }`}
                   >
                     <span>Owned</span>
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg ${
                       nftTab === "owned"
-                        ? "bg-green-950/20 text-green-950"
+                        ? "bg-primary/20 text-primary"
                         : "bg-slate-800 text-slate-400"
                     }`}>
                       {ownedNfts.length}
@@ -415,14 +415,14 @@ export default function CollectionPage() {
                     onClick={() => setNftTab("sold")}
                     className={`flex-1 md:w-44 h-10 rounded-2xl flex items-center justify-center gap-2 text-sm transition-all ${
                       nftTab === "sold"
-                        ? "bg-green-400 text-green-950 font-bold shadow-[0_0_15px_-5px_#4ade80]"
+                        ? "bg-primary text-primary font-bold shadow-[0_0_15px_-5px_#B7FF1A]"
                         : "text-slate-400 hover:text-slate-300"
                     }`}
                   >
                     <span>Sold</span>
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg ${
                       nftTab === "sold"
-                        ? "bg-green-950/20 text-green-950"
+                        ? "bg-primary/20 text-primary"
                         : "bg-slate-800 text-slate-400"
                     }`}>
                       {soldNfts.length}
@@ -453,7 +453,7 @@ export default function CollectionPage() {
                   </p>
                   {nftTab === "owned" && (
                     <Link href="/store">
-                      <Button variant="ghost" size="sm" className="mt-3 text-green-400 hover:text-green-300 hover:bg-green-500/10">
+                      <Button variant="ghost" size="sm" className="mt-3 text-primary hover:text-primary hover:bg-primary/10">
                         Mint NFTs
                       </Button>
                     </Link>
@@ -470,7 +470,7 @@ export default function CollectionPage() {
         {collectionTab === "borders" && (
           <div className="px-6 md:px-12 lg:px-16 pb-24 md:pb-12">
             <div className="mb-6">
-              <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-1">Profile Borders</p>
+              <p className="text-xs font-bold text-primary uppercase tracking-wider mb-1">Profile Borders</p>
               <div className="flex items-end gap-2">
                 <span className="text-4xl md:text-5xl font-black text-slate-50 leading-none">
                   {bordersLoading ? "—" : borders.length}
@@ -496,7 +496,7 @@ export default function CollectionPage() {
                 <Image className="w-12 h-12 text-slate-600 mb-3" />
                 <p className="text-slate-400 text-sm">No profile borders unlocked yet</p>
                 <Link href="/store">
-                  <Button variant="ghost" size="sm" className="mt-3 text-green-400 hover:text-green-300 hover:bg-green-500/10">
+                  <Button variant="ghost" size="sm" className="mt-3 text-primary hover:text-primary hover:bg-primary/10">
                     Browse Store
                   </Button>
                 </Link>
@@ -508,7 +508,7 @@ export default function CollectionPage() {
         {collectionTab === "nametags" && (
           <div className="px-6 md:px-12 lg:px-16 pb-24 md:pb-12">
             <div className="mb-6">
-              <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-1">Name Tags</p>
+              <p className="text-xs font-bold text-primary uppercase tracking-wider mb-1">Name Tags</p>
               <div className="flex items-end gap-2">
                 <span className="text-4xl md:text-5xl font-black text-slate-50 leading-none">
                   {nameTagsLoading ? "—" : nameTags.length}
@@ -534,7 +534,7 @@ export default function CollectionPage() {
                 <Type className="w-12 h-12 text-slate-600 mb-3" />
                 <p className="text-slate-400 text-sm">No name tags collected yet</p>
                 <Link href="/store">
-                  <Button variant="ghost" size="sm" className="mt-3 text-green-400 hover:text-green-300 hover:bg-green-500/10">
+                  <Button variant="ghost" size="sm" className="mt-3 text-primary hover:text-primary hover:bg-primary/10">
                     Browse Store
                   </Button>
                 </Link>

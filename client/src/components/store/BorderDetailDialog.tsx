@@ -34,7 +34,7 @@ interface BorderDetailDialogProps {
 function BorderFallback({ name, rarity }: { name: string; rarity: string }) {
   const bg = rarity === 'legendary' ? 'from-yellow-500 to-amber-600'
     : rarity === 'epic' ? 'from-purple-500 to-pink-600'
-    : rarity === 'rare' ? 'from-green-500 to-emerald-600'
+    : rarity === 'rare' ? 'from-[#B7FF1A] to-[#6FA800]'
     : 'from-gray-500 to-gray-600';
   return (
     <div className={`w-full h-full bg-gradient-to-br ${bg} flex items-center justify-center`}>
@@ -217,7 +217,7 @@ export function BorderDetailDialog({
             <div className="sticky bottom-0 bg-gradient-to-t from-[#101D27] via-[#101D27] to-transparent px-6 pt-4 pb-6 flex flex-col gap-4 items-center">
               {border.owned ? (
                 <Button
-                  className="w-full h-[68px] rounded-2xl text-white text-lg font-black uppercase bg-gradient-to-r from-green-500 to-emerald-600 cursor-default"
+                  className="w-full h-[68px] rounded-2xl text-[#071013] text-lg font-black uppercase bg-gradient-to-r from-[#B7FF1A] to-[#6FA800] cursor-default"
                   disabled
                   style={{ letterSpacing: '-0.9px' }}
                 >

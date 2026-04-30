@@ -64,7 +64,7 @@ export function BorderCheckoutDialog({
 
   const rarityColor = border.rarity?.toLowerCase() === 'legendary' ? '#f0b100'
     : border.rarity?.toLowerCase() === 'epic' ? '#a855f7'
-    : border.rarity?.toLowerCase() === 'rare' ? '#4ade80'
+    : border.rarity?.toLowerCase() === 'rare' ? '#B7FF1A'
     : '#94a3b8';
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -101,12 +101,12 @@ export function BorderCheckoutDialog({
               {/* Item Details Section */}
               <div className="space-y-4">
                 <span className="text-[12px] font-black text-[#94a3b8] uppercase tracking-[2.4px]">Item Details</span>
-                <div className="bg-[#0f172a] border border-[#4ade8033] rounded-[24px] p-4 flex items-center gap-4 shadow-[0_10px_15px_-3px_rgba(74,222,128,0.05)]">
+                <div className="bg-[#0f172a] border border-[#B7FF1A33] rounded-[24px] p-4 flex items-center gap-4 shadow-[0_10px_15px_-3px_rgba(183, 255, 26,0.05)]">
                   <div className="w-24 h-24 bg-[#0f172b] border border-white/10 rounded-[16px] overflow-hidden flex-shrink-0 flex items-center justify-center p-4">
                     <img src={border.imageUrl} alt={border.name} className="w-16 h-16 object-contain" />
                   </div>
                   <div className="flex flex-col justify-center">
-                    <span className="text-[10px] font-black text-[#4ade80] uppercase tracking-[1px] mb-1">Tactical Series</span>
+                    <span className="text-[10px] font-black text-[#B7FF1A] uppercase tracking-[1px] mb-1">Tactical Series</span>
                     <h3 className="text-2xl font-black text-[#f8fafc] uppercase tracking-[-1.2px] leading-tight mb-1">{border.name}</h3>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-[0.5px]">Type</span>
@@ -128,10 +128,10 @@ export function BorderCheckoutDialog({
                     <span className="text-sm text-[#94a3b8]">Network Fee</span>
                     <span className="text-sm font-bold text-[#f8fafc]">{networkFee} GF</span>
                   </div>
-                  <div className="flex justify-between items-center p-5 bg-[#4ade800d]">
+                  <div className="flex justify-between items-center p-5 bg-[#B7FF1A0d]">
                     <span className="text-sm font-black text-[#f8fafc] uppercase tracking-[1.4px]">Total</span>
                     <div className="text-right">
-                      <div className="text-2xl font-black text-[#4ade80] tracking-[-0.6px]">{totalCost} GF</div>
+                      <div className="text-2xl font-black text-[#B7FF1A] tracking-[-0.6px]">{totalCost} GF</div>
                     </div>
                   </div>
                 </div>
@@ -167,8 +167,8 @@ export function BorderCheckoutDialog({
                 disabled={!canAfford || isPurchasing}
                 className="w-full h-[68px] rounded-[24px] text-lg font-black uppercase"
                 style={{
-                  background: canAfford && !isPurchasing ? '#4ade80' : '#1e293b',
-                  color: canAfford && !isPurchasing ? '#022c22' : '#475569',
+                  background: canAfford && !isPurchasing ? '#B7FF1A' : '#1e293b',
+                  color: canAfford && !isPurchasing ? '#071013' : '#475569',
                   letterSpacing: '-0.9px',
                   cursor: canAfford && !isPurchasing ? 'pointer' : 'not-allowed',
                   opacity: canAfford && !isPurchasing ? 1 : 0.5,

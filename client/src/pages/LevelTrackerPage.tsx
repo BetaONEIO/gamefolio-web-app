@@ -146,11 +146,11 @@ const sourceLabels: Record<string, string> = {
 };
 
 const sourceColors: Record<string, string> = {
-  view: "text-[#4ade80]",
+  view: "text-[#B7FF1A]",
   lootbox: "text-purple-400",
   like_received: "text-pink-400",
   fire_received: "text-orange-400",
-  upload: "text-[#4ade80]",
+  upload: "text-[#B7FF1A]",
   daily_login: "text-yellow-400",
   welcome_bonus: "text-amber-400",
   comment_received: "text-sky-400",
@@ -159,15 +159,15 @@ const sourceColors: Record<string, string> = {
   comment: "text-sky-400",
   like: "text-pink-400",
   share_given: "text-teal-400",
-  watch_5_clips: "text-[#4ade80]",
-  watch_20_clips: "text-[#4ade80]",
+  watch_5_clips: "text-[#B7FF1A]",
+  watch_20_clips: "text-[#B7FF1A]",
   first_upload_of_day: "text-amber-400",
   weekly_uploads_5: "text-amber-400",
   weekly_uploads_10: "text-amber-400",
   first_100_views: "text-cyan-400",
   first_1000_views: "text-cyan-400",
   lootbox_bonus: "text-purple-400",
-  consecutive_upload_bonus: "text-lime-400",
+  consecutive_upload_bonus: "text-primary",
   weekend_upload_bonus: "text-rose-400",
   streak_milestone: "text-orange-400",
   referral: "text-violet-400",
@@ -210,7 +210,7 @@ function ActivityItem({
   done,
   progress,
   total,
-  color = "text-[#4ade80]",
+  color = "text-[#B7FF1A]",
 }: {
   label: string;
   xp: number;
@@ -222,12 +222,12 @@ function ActivityItem({
   return (
     <div className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
       done
-        ? "bg-[#4ade80]/8 border-[#4ade80]/20 opacity-70"
+        ? "bg-[#B7FF1A]/8 border-[#B7FF1A]/20 opacity-70"
         : "bg-muted/40 border-border/50"
     }`}>
       <div className="shrink-0">
         {done ? (
-          <CheckCircle2 className="w-5 h-5 text-[#4ade80]" />
+          <CheckCircle2 className="w-5 h-5 text-[#B7FF1A]" />
         ) : (
           <Circle className="w-5 h-5 text-muted-foreground/50" />
         )}
@@ -238,7 +238,7 @@ function ActivityItem({
           <div className="flex items-center gap-2 mt-1">
             <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#4ade80] rounded-full transition-all"
+                className="h-full bg-[#B7FF1A] rounded-full transition-all"
                 style={{ width: `${Math.min((progress / total) * 100, 100)}%` }}
               />
             </div>
@@ -387,7 +387,7 @@ export default function LevelTrackerPage() {
             <CardContent className="pt-5 pb-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-[#4ade80]" />
+                  <Calendar className="w-5 h-5 text-[#B7FF1A]" />
                   <h2 className="font-bold text-base">Daily Activity</h2>
                 </div>
                 <CountdownClock />
@@ -411,7 +411,7 @@ export default function LevelTrackerPage() {
                     done={dailyActivity?.watch5Done || false}
                     progress={Math.min(dailyActivity?.clipsWatchedToday || 0, 5)}
                     total={5}
-                    color="text-[#4ade80]"
+                    color="text-[#B7FF1A]"
                   />
                   <ActivityItem
                     label="Watch 20 Clips"
@@ -419,7 +419,7 @@ export default function LevelTrackerPage() {
                     done={dailyActivity?.watch20Done || false}
                     progress={Math.min(dailyActivity?.clipsWatchedToday || 0, 20)}
                     total={20}
-                    color="text-[#4ade80]"
+                    color="text-[#B7FF1A]"
                   />
                   <ActivityItem
                     label="Comment on a Clip"
@@ -468,10 +468,10 @@ export default function LevelTrackerPage() {
                   </div>
                   <span className="text-sm font-bold text-purple-400">+500 XP</span>
                 </div>
-                <div className={`flex items-center gap-3 px-3 py-3 rounded-xl border transition-colors ${lootboxStatus?.canOpen === false ? "bg-[#4ade80]/8 border-[#4ade80]/20 opacity-70" : "bg-muted/40 border-border/50"}`}>
+                <div className={`flex items-center gap-3 px-3 py-3 rounded-xl border transition-colors ${lootboxStatus?.canOpen === false ? "bg-[#B7FF1A]/8 border-[#B7FF1A]/20 opacity-70" : "bg-muted/40 border-border/50"}`}>
                   <div className="shrink-0">
                     {lootboxStatus?.canOpen === false ? (
-                      <CheckCircle2 className="w-5 h-5 text-[#4ade80]" />
+                      <CheckCircle2 className="w-5 h-5 text-[#B7FF1A]" />
                     ) : (
                       <Circle className="w-5 h-5 text-muted-foreground/50" />
                     )}
@@ -489,10 +489,10 @@ export default function LevelTrackerPage() {
                 {(() => {
                   const consecutiveDone = !!(xpHistory && xpHistory.some((h) => h.source === "consecutive_upload_bonus" && isToday(new Date(h.createdAt))));
                   return (
-                    <div className={`flex items-center gap-3 px-3 py-3 rounded-xl border transition-colors ${consecutiveDone ? "bg-[#4ade80]/8 border-[#4ade80]/20 opacity-70" : "bg-muted/40 border-border/50"}`}>
+                    <div className={`flex items-center gap-3 px-3 py-3 rounded-xl border transition-colors ${consecutiveDone ? "bg-[#B7FF1A]/8 border-[#B7FF1A]/20 opacity-70" : "bg-muted/40 border-border/50"}`}>
                       <div className="shrink-0">
                         {consecutiveDone ? (
-                          <CheckCircle2 className="w-5 h-5 text-[#4ade80]" />
+                          <CheckCircle2 className="w-5 h-5 text-[#B7FF1A]" />
                         ) : (
                           <Circle className="w-5 h-5 text-muted-foreground/50" />
                         )}
@@ -501,7 +501,7 @@ export default function LevelTrackerPage() {
                         <p className={`text-sm font-medium ${consecutiveDone ? "text-muted-foreground line-through" : "text-foreground"}`}>Upload Within 24h of Last Upload</p>
                         <p className="text-xs text-muted-foreground">Keep the momentum going</p>
                       </div>
-                      <span className={`text-sm font-bold shrink-0 ${consecutiveDone ? "text-muted-foreground" : "text-lime-400"}`}>+75 XP</span>
+                      <span className={`text-sm font-bold shrink-0 ${consecutiveDone ? "text-muted-foreground" : "text-primary"}`}>+75 XP</span>
                     </div>
                   );
                 })()}
@@ -696,15 +696,15 @@ export default function LevelTrackerPage() {
         {/* EARN XP — Reference grid */}
         <TabsContent value="earnxp">
           <div className="flex items-center gap-2 mb-4">
-            <Zap className="w-5 h-5 text-[#4ade80]" />
+            <Zap className="w-5 h-5 text-[#B7FF1A]" />
             <h2 className="text-lg font-bold">How to Earn XP</h2>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
             {[
-              { icon: Upload, color: "#4ade80", xp: "+200 XP", label: "Upload a Clip/Reel", sub: "Share your gaming moments" },
+              { icon: Upload, color: "#B7FF1A", xp: "+200 XP", label: "Upload a Clip/Reel", sub: "Share your gaming moments" },
               { icon: Camera, color: "#06b6d4", xp: "+100 XP", label: "Screenshot Upload", sub: "Share your best moments" },
-              { icon: Eye, color: "#4ade80", xp: "+2 XP", label: "Per View", sub: "Earn XP when others watch" },
+              { icon: Eye, color: "#B7FF1A", xp: "+2 XP", label: "Per View", sub: "Earn XP when others watch" },
               { icon: Heart, color: "#ff2056", xp: "+10 XP", label: "Like Received", sub: "Get likes on your content" },
               { icon: Flame, color: "#ff6900", xp: "+15 XP", label: "Fire Reaction", sub: "Get fire reactions on clips" },
               { icon: MessageCircle, color: "#38bdf8", xp: "+20 XP", label: "Comment Received", sub: "Get comments on your clips" },
@@ -713,7 +713,7 @@ export default function LevelTrackerPage() {
               { icon: LogIn, color: "#eab308", xp: "+25 XP", label: "Daily Login", sub: "Log in every day for streaks" },
               { icon: Gift, color: "#a855f7", xp: "+100 XP", label: "Daily Lootbox", sub: "Open your daily lootbox" },
               { icon: Star, color: "#f59e0b", xp: "+50 XP", label: "Streak Milestones", sub: "Hit login streak milestones" },
-              { icon: Share2, color: "#4ade80", xp: "+20 XP", label: "Share Given", sub: "Share someone's clip" },
+              { icon: Share2, color: "#B7FF1A", xp: "+20 XP", label: "Share Given", sub: "Share someone's clip" },
             ].map((item) => (
               <div key={item.label} className="bg-card border border-border/50 rounded-2xl p-4 flex flex-col items-center text-center">
                 <div className="w-11 h-11 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: `${item.color}18` }}>

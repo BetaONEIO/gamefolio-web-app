@@ -91,7 +91,7 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
           "absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 transition-opacity duration-200",
           isHovered ? "opacity-100" : "opacity-0"
         )}>
-          <div className="bg-emerald-500 bg-opacity-90 rounded-full p-3">
+          <div className="bg-primary bg-opacity-90 rounded-full p-3">
             <Play className="h-7 w-7 text-white" fill="white" />
           </div>
         </div>
@@ -101,7 +101,7 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
           "absolute inset-0 bg-black bg-opacity-70 p-3 flex flex-col justify-end transition-opacity duration-200",
           isHovered ? "opacity-100" : "opacity-0"
         )}>
-          <h3 className="font-medium text-emerald-400 truncate">{clip.title}</h3>
+          <h3 className="font-medium text-primary truncate">{clip.title}</h3>
           
           {/* Game name - clickable */}
           {clip.game && (
@@ -150,7 +150,7 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
                   size="sm"
                 />
               </div>
-              <div className="flex items-center cursor-pointer hover:text-[#4ade80] transition-colors" onClick={handleCommentClick}>
+              <div className="flex items-center cursor-pointer hover:text-[#B7FF1A] transition-colors" onClick={handleCommentClick}>
                 <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
                 </svg>
