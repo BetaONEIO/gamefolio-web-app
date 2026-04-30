@@ -28,7 +28,7 @@ import { UserIcon, X, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'wouter';
 import { AgeRestrictionDialog } from '@/components/content/AgeRestrictionDialog';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { ScreenshotCard } from '@/components/screenshots/ScreenshotCard';
 import { ScreenshotLightbox } from '@/components/screenshots/ScreenshotLightbox';
 
@@ -107,6 +107,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   // Follow status — hide Follow button when already following or request pending
   const { data: followStatus } = useQuery<{ following?: boolean; requested?: boolean }>({
     queryKey: [`/api/users/${clip.user.username}/follow-status`],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user && !isSelf,
     staleTime: 60_000,
   });
@@ -1016,13 +1017,44 @@ const TrendingPage: React.FC = () => {
           </div>
         )}
 
-        {/* Floating controls — hidden when reels/screenshots comments open */}
+        {/* Floating controls — vertical stack on Reels/Screenshots, horizontal row on Clips */}
+        {(() => {
+          const isClipsMode = activeTab === 'clips';
+          // Slide-in transform direction depends on layout
+          const hiddenTransform = isClipsMode ? 'translateX(20px)' : 'translateY(-8px)';
+          const visibleTransform = 'translate(0, 0)';
+          const itemTransition = 'opacity 0.22s ease, transform 0.25s ease';
+          // CSS order — only matters in clips (horizontal) mode; arranges visual L→R as Gamepad, Clock, Clips ▼, Eye
+          const orderEye         = isClipsMode ? 4 : 0;
+          const orderContentPill = isClipsMode ? 3 : 0;
+          const orderClock       = isClipsMode ? 2 : 0;
+          const orderGamepad     = isClipsMode ? 1 : 0;
+
+          // Pill / circle base styles for clips-mode hover glow
+          const pillBaseStyle = (active: boolean) => ({
+            background: active ? 'rgba(183,255,26,0.18)' : '#0B1218',
+            border: `1px solid ${active ? '#B7FF1A' : '#1B2A33'}`,
+            color: '#F5F7F2',
+            boxShadow: active ? '0 0 0 1px rgba(183,255,26,0.25), 0 0 12px rgba(183,255,26,0.18)' : 'none',
+          });
+
+          return (
         <div
-          className="fixed z-[70] flex flex-col items-end gap-2.5"
-          style={{ top: 16, right: 12, opacity: (activeTab !== 'clips' && commentsOpen) ? 0 : 1, pointerEvents: (activeTab !== 'clips' && commentsOpen) ? 'none' : 'auto', transition: 'opacity 0.2s' }}
+          className={`fixed z-[70] flex gap-2 ${
+            isClipsMode
+              ? 'flex-row items-center flex-wrap-reverse justify-end max-w-[calc(100vw-24px)]'
+              : 'flex-col items-end'
+          }`}
+          style={{
+            top: 16,
+            right: 12,
+            opacity: (activeTab !== 'clips' && commentsOpen) ? 0 : 1,
+            pointerEvents: (activeTab !== 'clips' && commentsOpen) ? 'none' : 'auto',
+            transition: 'opacity 0.2s',
+          }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* 1. Eye circle — toggles the rest of the controls */}
+          {/* 1. Eye circle — fixed position, identical across modes */}
           <button
             onClick={() => {
               setControlsVisible((v) => !v);
@@ -1030,24 +1062,34 @@ const TrendingPage: React.FC = () => {
               setShowTimeDropdown(false);
               setShowGameFilter(false);
             }}
-            className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0"
             style={{
               border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(183, 255, 26,0.35)'}`,
               background: 'rgba(30,41,59,0.7)',
+              order: orderEye,
             }}
           >
             <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(183, 255, 26,0.5)' }} />
           </button>
 
-          {/* 2. Content-type pill — always in DOM, opacity-hidden when controls are off */}
+          {/* 2. Content-type pill (Clips ▼) */}
           <div
-            className="relative flex items-center justify-end transition-all duration-200"
-            style={{ opacity: controlsVisible ? 1 : 0, pointerEvents: controlsVisible ? 'auto' : 'none' }}
+            className="relative flex items-center justify-end flex-shrink-0"
+            style={{
+              opacity: controlsVisible ? 1 : 0,
+              transform: controlsVisible ? visibleTransform : hiddenTransform,
+              pointerEvents: controlsVisible ? 'auto' : 'none',
+              transition: itemTransition,
+              transitionDelay: controlsVisible && isClipsMode ? '60ms' : '0ms',
+              order: orderContentPill,
+            }}
           >
             <button
               onClick={() => { setShowContentDropdown(!showContentDropdown); setShowTimeDropdown(false); setShowGameFilter(false); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-white text-xs font-semibold"
-              style={{ background: 'rgba(30,41,59,0.88)', border: '1px solid rgba(183, 255, 26,0.4)' }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:shadow-[0_0_12px_rgba(183,255,26,0.35)]"
+              style={isClipsMode
+                ? pillBaseStyle(showContentDropdown)
+                : { background: 'rgba(30,41,59,0.88)', border: '1px solid rgba(183, 255, 26,0.4)', color: '#fff' }}
             >
               <ActiveIcon className="h-3.5 w-3.5" />
               {activeLabel}
@@ -1074,34 +1116,56 @@ const TrendingPage: React.FC = () => {
             )}
           </div>
 
-          {/* 3. Gamepad circle — always in DOM */}
+          {/* 3. Gamepad circle (DOM order preserves Reels vertical order: Eye → Content → Gamepad → Clock) */}
           <button
             onClick={() => { setShowGameFilter(true); setShowContentDropdown(false); setShowTimeDropdown(false); }}
-            className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200"
-            style={{
-              background: selectedGameId ? 'rgba(183, 255, 26,0.18)' : 'rgba(30,41,59,0.88)',
-              border: selectedGameId ? '1px solid #B7FF1A' : '1px solid rgba(183, 255, 26,0.3)',
-              opacity: controlsVisible ? 1 : 0,
-              pointerEvents: controlsVisible ? 'auto' : 'none',
-            }}
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:shadow-[0_0_12px_rgba(183,255,26,0.35)] flex-shrink-0"
+            style={isClipsMode
+              ? {
+                  ...pillBaseStyle(!!selectedGameId),
+                  opacity: controlsVisible ? 1 : 0,
+                  transform: controlsVisible ? visibleTransform : hiddenTransform,
+                  pointerEvents: controlsVisible ? 'auto' : 'none',
+                  transition: itemTransition,
+                  transitionDelay: controlsVisible ? '180ms' : '0ms',
+                  order: orderGamepad,
+                }
+              : {
+                  background: selectedGameId ? 'rgba(183, 255, 26,0.18)' : 'rgba(30,41,59,0.88)',
+                  border: selectedGameId ? '1px solid #B7FF1A' : '1px solid rgba(183, 255, 26,0.3)',
+                  opacity: controlsVisible ? 1 : 0,
+                  transform: controlsVisible ? visibleTransform : hiddenTransform,
+                  pointerEvents: controlsVisible ? 'auto' : 'none',
+                  transition: itemTransition,
+                  order: orderGamepad,
+                }}
           >
-            <Gamepad2 className="h-5 w-5" style={{ color: selectedGameId ? '#B7FF1A' : '#fff' }} />
+            <Gamepad2 className="h-5 w-5" style={{ color: selectedGameId ? '#B7FF1A' : (isClipsMode ? '#F5F7F2' : '#fff') }} />
           </button>
 
-          {/* 4. Clock circle — always in DOM */}
+          {/* 4. Clock circle */}
           <div
-            className="relative flex items-center justify-end transition-all duration-200"
-            style={{ opacity: controlsVisible ? 1 : 0, pointerEvents: controlsVisible ? 'auto' : 'none' }}
+            className="relative flex items-center justify-end flex-shrink-0"
+            style={{
+              opacity: controlsVisible ? 1 : 0,
+              transform: controlsVisible ? visibleTransform : hiddenTransform,
+              pointerEvents: controlsVisible ? 'auto' : 'none',
+              transition: itemTransition,
+              transitionDelay: controlsVisible && isClipsMode ? '120ms' : '0ms',
+              order: orderClock,
+            }}
           >
             <button
               onClick={() => { setShowTimeDropdown(!showTimeDropdown); setShowContentDropdown(false); setShowGameFilter(false); }}
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{
-                background: showTimeDropdown ? 'rgba(183, 255, 26,0.18)' : 'rgba(30,41,59,0.88)',
-                border: showTimeDropdown ? '1px solid #B7FF1A' : '1px solid rgba(183, 255, 26,0.3)',
-              }}
+              className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:shadow-[0_0_12px_rgba(183,255,26,0.35)]"
+              style={isClipsMode
+                ? pillBaseStyle(showTimeDropdown)
+                : {
+                    background: showTimeDropdown ? 'rgba(183, 255, 26,0.18)' : 'rgba(30,41,59,0.88)',
+                    border: showTimeDropdown ? '1px solid #B7FF1A' : '1px solid rgba(183, 255, 26,0.3)',
+                  }}
             >
-              <Clock className="h-5 w-5" style={{ color: showTimeDropdown ? '#B7FF1A' : '#fff' }} />
+              <Clock className="h-5 w-5" style={{ color: showTimeDropdown ? '#B7FF1A' : (isClipsMode ? '#F5F7F2' : '#fff') }} />
             </button>
             {showTimeDropdown && (
               <div
@@ -1124,6 +1188,8 @@ const TrendingPage: React.FC = () => {
             )}
           </div>
         </div>
+          );
+        })()}
 
         {/* Game filter bottom-sheet modal */}
         {showGameFilter && (
