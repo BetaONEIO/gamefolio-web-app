@@ -130,9 +130,9 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   const canCollapse = caption.length > 120;
 
   return (
-    <div ref={cardRef} className="w-full flex flex-col flex-1 min-h-0" style={{ background: '#03080A' }}>
+    <div ref={cardRef} className="w-full" style={{ background: '#03080A' }}>
 
-      {/* ── Video (full-width, sits at the top, auto-plays when in view) ── */}
+      {/* ── Video (full-width, auto-plays when in view) ── */}
       <VideoPlayer
         videoUrl={clip.videoUrl || ''}
         thumbnailUrl={clip.thumbnailUrl || undefined}
@@ -144,10 +144,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
         className="w-full"
       />
 
-      {/* Spacer pushes the meta block (header + caption + social) toward the footer */}
-      <div className="flex-1" />
-
-      {/* ── Header (creator info) — restored BELOW the video ── */}
+      {/* ── Header (creator info) — sits directly BELOW the video ── */}
       <div className="px-4 pt-3 pb-2">
         <div className="flex items-start gap-3">
           <Link href={`/profile/${clip.user.username}`} className="flex-shrink-0">
@@ -377,7 +374,7 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void }>
         {clips.map((clip) => (
           <div
             key={clip.id}
-            className="flex flex-col"
+            className="flex flex-col justify-center"
             style={{
               scrollSnapAlign: 'start',
               scrollSnapStop: 'always',
