@@ -99,11 +99,8 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   const captionTrimmed = caption.length > 120 && !showFullDesc;
 
   return (
-    <div
-      className="overflow-hidden mx-2 rounded-xl"
-      style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
-    >
-      {/* ── Video ── */}
+    <div className="w-full" style={{ background: '#03080A' }}>
+      {/* ── Video (full-width, no card chrome) ── */}
       <VideoPlayer
         videoUrl={clip.videoUrl || ''}
         thumbnailUrl={clip.thumbnailUrl || undefined}
@@ -114,7 +111,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
       />
 
       {/* ── Post body ── */}
-      <div className="px-4 pt-3 pb-1" style={{ background: '#0B1218' }}>
+      <div className="px-4 pt-4 pb-2" style={{ background: '#03080A' }}>
 
         {/* Creator row */}
         <div className="flex items-start gap-3 mb-2.5">
@@ -310,7 +307,6 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void }>
               scrollSnapAlign: 'start',
               scrollSnapStop: 'always',
               minHeight: '100%',
-              padding: '8px 0',
             }}
           >
             <ClipFeedCard clip={clip} clips={clips} />
