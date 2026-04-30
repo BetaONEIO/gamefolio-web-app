@@ -130,12 +130,9 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   const canCollapse = caption.length > 120;
 
   return (
-    <div ref={cardRef} className="w-full flex flex-col flex-1 min-h-0" style={{ background: '#03080A' }}>
+    <div ref={cardRef} className="relative flex flex-col justify-center flex-1 min-h-0 overflow-hidden" style={{ background: '#03080A' }}>
 
-      {/* Top spacer — pairs with the spacer below the video to vertically CENTER the clip */}
-      <div className="flex-1" />
-
-      {/* ── Video (full-width, auto-plays when in view) ── */}
+      {/* ── Video — naturally centered by justify-center ── */}
       <VideoPlayer
         videoUrl={clip.videoUrl || ''}
         thumbnailUrl={clip.thumbnailUrl || undefined}
@@ -147,12 +144,15 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
         className="w-full"
       />
 
-      {/* Spacer between the clip and the meta block — pushes meta toward the footer */}
-      <div className="flex-1" />
+      {/* ── Meta block pinned to the bottom — doesn't affect video centering ── */}
+      <div
+        className="absolute bottom-0 left-0 right-0"
+        style={{ background: '#03080A', paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+      >
 
-      {/* ── Header (creator info) — sits near the footer, padded so the bottom nav doesn't cover it ── */}
-      <div className="px-4 pt-3 pb-2">
-        <div className="flex items-start gap-3">
+        {/* ── Header (creator info) ── */}
+        <div className="px-4 pt-3 pb-2">
+          <div className="flex items-start gap-3">
           <Link href={`/profile/${clip.user.username}`} className="flex-shrink-0">
             <div
               className="w-10 h-10 rounded-full overflow-hidden"
@@ -308,6 +308,8 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
             <Share2 className="h-[18px] w-[18px]" />
           </button>
         </div>
+      </div>
+      {/* ── end of absolute meta wrapper ── */}
       </div>
 
       {/* Comments popup — opens in-place instead of navigating away */}
