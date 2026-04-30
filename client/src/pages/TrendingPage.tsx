@@ -145,7 +145,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
       />
 
       {/* ── Header (creator info) — sits directly BELOW the video ── */}
-      <div className="px-4 pt-9 pb-2">
+      <div className="px-4 pt-14 pb-2">
         <div className="flex items-start gap-3">
           <Link href={`/profile/${clip.user.username}`} className="flex-shrink-0">
             <div
