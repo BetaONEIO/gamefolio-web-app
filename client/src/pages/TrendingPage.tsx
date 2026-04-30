@@ -214,7 +214,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
       </div>
 
       {/* ── Caption (description with see less) sits above the social row ── */}
-      <div className="px-4 pb-24" style={{ background: '#03080A' }}>
+      <div className="px-4 pb-4" style={{ background: '#03080A' }}>
         {caption && (
           <div className="pb-3">
             <p className="text-[14px] leading-relaxed" style={{ color: '#B8C0AE' }}>
