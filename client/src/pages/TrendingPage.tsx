@@ -22,7 +22,8 @@ import { LikeButton } from '@/components/engagement/LikeButton';
 import { FireButton } from '@/components/engagement/FireButton';
 import { ReportButton } from '@/components/reporting/ReportButton';
 import { MobileTrendingViewer } from '@/components/clips/MobileTrendingViewer';
-import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogClose, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import CommentSection from '@/components/clips/CommentSection';
 import { UserIcon, X, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'wouter';
 import { AgeRestrictionDialog } from '@/components/content/AgeRestrictionDialog';
@@ -73,6 +74,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   const [showFullDesc, setShowFullDesc] = useState(false);
   const [localFollowing, setLocalFollowing] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
 
   const fmt = (n: number) => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -86,12 +88,24 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   const views    = clip.views || 0;
   const isSelf   = user && user.id === clip.user.id;
   const isPro    = (clip.user as any).isPro;
+  const gameSlug = clip.game?.name?.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  // Follow status — hide Follow button when already following or request pending
+  const { data: followStatus } = useQuery<{ following?: boolean; requested?: boolean }>({
+    queryKey: [`/api/users/${clip.user.username}/follow-status`],
+    enabled: !!user && !isSelf,
+    staleTime: 60_000,
+  });
+  const isAlreadyFollowing =
+    localFollowing ||
+    followStatus?.following === true ||
+    followStatus?.requested === true;
 
   const followMutation = useMutation({
     mutationFn: () => apiRequest('POST', `/api/users/${clip.user.username}/follow`),
     onSuccess: () => {
       setLocalFollowing(true);
-      queryClient.invalidateQueries({ queryKey: ['/api/users/follow-status', clip.user.username] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/follow-status`] });
     },
   });
 
@@ -107,6 +121,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
         autoPlay={false}
         clipId={clip.id}
         objectFit="contain"
+        autoHideControls
         className="w-full"
       />
 
@@ -142,16 +157,19 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
                 @{clip.user.username}
               </span>
             </div>
-            {clip.game?.name && (
-              <div className="flex items-center gap-1 mt-0.5">
+            {clip.game?.name && gameSlug && (
+              <Link
+                href={`/games/${gameSlug}`}
+                className="inline-flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity"
+              >
                 <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
                 <span className="text-[12px] font-medium" style={{ color: '#B7FF1A' }}>{clip.game.name}</span>
-              </div>
+              </Link>
             )}
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            {!isSelf && !localFollowing && (
+            {!isSelf && !isAlreadyFollowing && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -197,7 +215,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
         >
           {/* Comments */}
           <button
-            onClick={() => openClipDialog(clip.id, clips)}
+            onClick={(e) => { e.stopPropagation(); setCommentsOpen(true); }}
             className="flex items-center gap-1.5 flex-1 justify-center transition-colors"
             style={{ color: '#7E887A' }}
           >
@@ -258,6 +276,30 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
           </button>
         </div>
       </div>
+
+      {/* Comments popup — opens in-place instead of navigating away */}
+      <Dialog open={commentsOpen} onOpenChange={setCommentsOpen}>
+        <DialogContent
+          className="p-0 max-w-lg w-[95vw] max-h-[85vh] flex flex-col gap-0 overflow-hidden border"
+          style={{ background: '#0B1218', borderColor: '#1B2A33' }}
+        >
+          <DialogHeader
+            className="px-4 py-3 flex-shrink-0"
+            style={{ borderBottom: '1px solid #1B2A33' }}
+          >
+            <DialogTitle className="text-base font-semibold text-left" style={{ color: '#F5F7F2' }}>
+              Comments
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-4 py-3">
+            <CommentSection
+              clipId={clip.id}
+              currentUserId={user?.id}
+              onUsernameClick={() => setCommentsOpen(false)}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

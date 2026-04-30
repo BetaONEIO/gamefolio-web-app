@@ -20,6 +20,7 @@ interface VideoPlayerProps {
   clipId?: number;
   disableAspectRatio?: boolean;
   hideControls?: boolean;
+  autoHideControls?: boolean;
   onPlayingChange?: (isPlaying: boolean) => void;
   onMutedChange?: (isMuted: boolean) => void;
   externalPaused?: boolean;
@@ -38,6 +39,7 @@ const VideoPlayer = ({
   clipId,
   disableAspectRatio = false,
   hideControls = false,
+  autoHideControls = false,
   onPlayingChange,
   onMutedChange,
   externalPaused,
@@ -48,7 +50,7 @@ const VideoPlayer = ({
   const [currentTime, setCurrentTime] = useState(initialTime);
   const [duration, setDuration] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showControls, setShowControls] = useState(true);
+  const [showControls, setShowControls] = useState(!autoHideControls);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasSetInitialTime = useRef(false);
   const hasTrackedView = useRef(false);
@@ -192,17 +194,20 @@ const VideoPlayer = ({
     }
     
     setShowControls(true);
-    console.log("Controls shown, isPlaying:", isPlaying);
     
-    // Show controls longer when not playing, keep them visible when paused
-    timeoutRef.current = setTimeout(() => {
-      if (isPlaying) {
-        console.log("Hiding controls after timeout");
+    if (autoHideControls) {
+      // Always auto-hide after a short delay, regardless of play state
+      timeoutRef.current = setTimeout(() => {
         setShowControls(false);
-      } else {
-        console.log("Keeping controls visible (not playing)");
-      }
-    }, isPlaying ? 6000 : 12000); // Much longer timeout, especially when paused
+      }, 2500);
+    } else {
+      // Original behavior: hide if playing after 6s, keep visible when paused
+      timeoutRef.current = setTimeout(() => {
+        if (isPlaying) {
+          setShowControls(false);
+        }
+      }, isPlaying ? 6000 : 12000);
+    }
   };
 
   // Effect to sync volume and mute state to video element
@@ -292,7 +297,9 @@ const VideoPlayer = ({
     video.addEventListener("ended", onVideoEnded);
     document.addEventListener("fullscreenchange", onFullscreenChange);
 
-    hideControlsTimer();
+    if (!autoHideControls) {
+      hideControlsTimer();
+    }
 
     return () => {
       video.removeEventListener("timeupdate", onTimeUpdate);
