@@ -159,7 +159,7 @@ export default function LatestReelsPage() {
                         </p>
 
                         {reel.game && (
-                          <div className="inline-block bg-primary text-white text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
+                          <div className="inline-block bg-primary text-[#071013] text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
                             {reel.game.name}
                           </div>
                         )}
@@ -222,7 +222,7 @@ export default function LatestReelsPage() {
                       </p>
 
                       {reel.game && (
-                        <div className="inline-block bg-primary text-white text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
+                        <div className="inline-block bg-primary text-[#071013] text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
                           {reel.game.name}
                         </div>
                       )}

@@ -987,7 +987,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         e.stopPropagation();
                         onClose();
                       }}>
-                        <span className="bg-primary text-white px-3 py-1.5 rounded text-sm font-bold hover:bg-primary cursor-pointer transition-colors">
+                        <span className="bg-primary text-[#071013] px-3 py-1.5 rounded text-sm font-bold hover:bg-primary cursor-pointer transition-colors">
                           {clip.game.name}
                         </span>
                       </Link>
@@ -1177,7 +1177,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           <div className="absolute bottom-8 left-8 right-8 z-[110] text-white">
             <h2 className="text-xl font-semibold mb-2">{clip.title}</h2>
             {clip.game && (
-              <span className="bg-primary text-white px-3 py-1.5 rounded text-sm font-bold">
+              <span className="bg-primary text-[#071013] px-3 py-1.5 rounded text-sm font-bold">
                 {clip.game.name}
               </span>
             )}
