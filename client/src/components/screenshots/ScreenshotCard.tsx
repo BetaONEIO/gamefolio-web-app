@@ -140,7 +140,7 @@ export function ScreenshotCard({
         {/* Game name with green background like clips/reels */}
         {(screenshot as any).game && (
           <div className="pt-1">
-            <span className="inline-block bg-primary text-white text-xs px-2 py-0.5 rounded font-medium">
+            <span className="inline-block bg-primary text-[#071013] text-xs px-2 py-0.5 rounded font-medium">
               {(screenshot as any).game.name}
             </span>
           </div>
