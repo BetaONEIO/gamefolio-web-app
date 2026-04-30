@@ -132,7 +132,10 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   return (
     <div ref={cardRef} className="w-full flex flex-col flex-1 min-h-0" style={{ background: '#03080A' }}>
 
-      {/* ── Video (full-width, sits at the top, auto-plays when in view) ── */}
+      {/* Top spacer — pairs with the spacer below the video to vertically CENTER the clip */}
+      <div className="flex-1" />
+
+      {/* ── Video (full-width, auto-plays when in view) ── */}
       <VideoPlayer
         videoUrl={clip.videoUrl || ''}
         thumbnailUrl={clip.thumbnailUrl || undefined}
@@ -144,10 +147,10 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
         className="w-full"
       />
 
-      {/* Spacer pushes the meta block (header + caption + social) toward the footer */}
+      {/* Spacer between the clip and the meta block — pushes meta toward the footer */}
       <div className="flex-1" />
 
-      {/* ── Header (creator info) — restored BELOW the video ── */}
+      {/* ── Header (creator info) — sits near the footer, padded so the bottom nav doesn't cover it ── */}
       <div className="px-4 pt-3 pb-2">
         <div className="flex items-start gap-3">
           <Link href={`/profile/${clip.user.username}`} className="flex-shrink-0">
@@ -211,7 +214,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
       </div>
 
       {/* ── Caption (description with see less) sits above the social row ── */}
-      <div className="px-4" style={{ background: '#03080A' }}>
+      <div className="px-4 pb-24" style={{ background: '#03080A' }}>
         {caption && (
           <div className="pb-3">
             <p className="text-[14px] leading-relaxed" style={{ color: '#B8C0AE' }}>
