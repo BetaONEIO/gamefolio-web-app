@@ -293,11 +293,11 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         )}
 
         {/* ── Right edge action column — hidden when comments open ─── */}
-        {!showComments && <div className="absolute right-3 z-10 flex flex-col items-center gap-5" style={{ bottom: 120 }}>
+        {!showComments && <div className="absolute right-3 z-10 flex flex-col items-center gap-3" style={{ bottom: 110 }}>
           {/* Views */}
           <div className="flex flex-col items-center gap-0.5">
-            <Eye className="h-7 w-7 text-white drop-shadow" />
-            <span className="text-white text-[11px] font-semibold drop-shadow">{formatNumber(stats.views)}</span>
+            <Eye className="h-6 w-6 text-white drop-shadow" />
+            <span className="text-white text-[10px] font-semibold drop-shadow">{formatNumber(stats.views)}</span>
           </div>
 
           {/* Likes */}
@@ -307,7 +307,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             contentOwnerId={currentItem.user.id}
             initialLiked={(currentItem as any).isLiked ?? false}
             initialCount={stats.likes}
-            size="lg"
+            size="sm"
             variant="vertical"
           />
 
@@ -318,7 +318,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             contentOwnerId={currentItem.user.id}
             initialFired={(currentItem as any).isFired ?? false}
             initialCount={(currentItem as any)._count?.fires || (currentItem as any)._count?.reactions || 0}
-            size="lg"
+            size="sm"
             variant="vertical"
           />
 
@@ -328,8 +328,8 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             className="flex flex-col items-center gap-0.5"
             data-testid="button-comments"
           >
-            <MessageCircle className="h-7 w-7 text-white drop-shadow" />
-            <span className="text-white text-[11px] font-semibold drop-shadow">{formatNumber(stats.comments)}</span>
+            <MessageCircle className="h-6 w-6 text-white drop-shadow" />
+            <span className="text-white text-[10px] font-semibold drop-shadow">{formatNumber(stats.comments)}</span>
           </button>
 
           {/* Share */}
@@ -338,7 +338,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             className="flex flex-col items-center gap-0.5"
             data-testid="button-share"
           >
-            <Share2 className="h-7 w-7 text-white drop-shadow" />
+            <Share2 className="h-6 w-6 text-white drop-shadow" />
           </button>
         </div>}
 
@@ -346,22 +346,22 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         {!showComments && (
           <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-24 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent">
             {/* Text content — pr-16 keeps it clear of the right action column */}
-            <div className="pr-16">
+            <div className="pr-14">
               {/* User row */}
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-1.5">
                 <Link
                   href={`/profile/${currentItem.user.username}`}
-                  className="flex items-center gap-2 no-underline flex-shrink-0"
+                  className="flex items-center gap-1.5 no-underline flex-shrink-0"
                   data-testid={`link-user-${currentItem.user.username}`}
                 >
-                  <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid #fff' }}>
+                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '1.5px solid #fff' }}>
                     <img
                       src={currentItem.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
                       alt={currentItem.user.displayName}
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <span className="text-white font-bold text-sm drop-shadow leading-tight">
+                  <span className="text-white font-bold text-[13px] drop-shadow leading-tight">
                     @{currentItem.user.username}
                   </span>
                 </Link>
@@ -369,7 +369,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                   <button
                     onClick={handleFollowPress}
                     disabled={followMutation.isPending}
-                    className="text-xs font-bold px-2.5 py-0.5 rounded-md flex-shrink-0 transition-all"
+                    className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all"
                     style={isFollowing
                       ? { background: 'transparent', border: '1px solid rgba(255,255,255,0.5)', color: '#fff' }
                       : { background: '#B7FF1A', color: '#000', border: '1px solid transparent' }
@@ -381,20 +381,20 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               </div>
 
               {/* Title */}
-              <p className="text-white font-bold text-sm drop-shadow mb-0.5 leading-snug">
+              <p className="text-white font-bold text-[13px] drop-shadow mb-0.5 leading-snug">
                 {currentItem.title}
               </p>
 
               {/* Description with "see more" */}
               {(currentItem as any).description && (
                 <div className="mb-1">
-                  <p className={`text-white/75 text-xs drop-shadow leading-snug ${showFullDescription ? '' : 'line-clamp-2'}`}>
+                  <p className={`text-white/75 text-[11px] drop-shadow leading-snug ${showFullDescription ? '' : 'line-clamp-2'}`}>
                     {(currentItem as any).description}
                   </p>
                   {(currentItem as any).description.length > 80 && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setShowFullDescription(v => !v); }}
-                      className="text-white/50 text-xs mt-0.5"
+                      className="text-white/50 text-[11px] mt-0.5"
                     >
                       {showFullDescription ? 'see less' : 'see more'}
                     </button>
@@ -404,9 +404,9 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
 
               {/* Game */}
               {currentItem.game?.name && (
-                <div className="flex items-center gap-1 mb-1">
+                <div className="flex items-center gap-1 mb-0.5">
                   <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-                  <span className="text-xs font-semibold" style={{ color: '#B7FF1A' }}>
+                  <span className="text-[11px] font-semibold" style={{ color: '#B7FF1A' }}>
                     {currentItem.game.name}
                   </span>
                 </div>
@@ -414,8 +414,8 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
 
               {/* Original audio */}
               <div className="flex items-center gap-1">
-                <Music className="h-3 w-3 text-white/65 flex-shrink-0" />
-                <span className="text-white/65 text-xs truncate">
+                <Music className="h-2.5 w-2.5 text-white/60 flex-shrink-0" />
+                <span className="text-white/60 text-[11px] truncate">
                   Original audio · {currentItem.user.displayName || currentItem.user.username}
                 </span>
               </div>
