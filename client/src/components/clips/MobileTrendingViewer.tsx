@@ -101,7 +101,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
     staleTime: 30000,
   });
 
-  const isFollowing = followStatusData?.isFollowing ?? false;
+  const isFollowing = followStatusData?.following ?? false;
 
   const followMutation = useMutation({
     mutationFn: async () => {
@@ -378,26 +378,39 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               </div>
 
               {/* Title */}
-              <p className="text-white font-bold text-[13px] drop-shadow mb-0.5 leading-snug">
-                {currentItem.title}
-              </p>
-
-              {/* Description with "see more" */}
-              {(currentItem as any).description && (
-                <div className="mb-1">
-                  <p className={`text-white/75 text-[11px] drop-shadow leading-snug ${showFullDescription ? '' : 'line-clamp-2'}`}>
-                    {(currentItem as any).description}
+              {(() => {
+                const titleText = currentItem.title ?? '';
+                const titleTruncated = !showFullDescription && titleText.length > 50;
+                return (
+                  <p className="text-white font-bold text-[13px] drop-shadow mb-0.5 leading-snug">
+                    {titleTruncated ? titleText.slice(0, 50) + '…' : titleText}
                   </p>
-                  {(currentItem as any).description.length > 80 && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowFullDescription(v => !v); }}
-                      className="text-white/50 text-[11px] mt-0.5"
-                    >
-                      {showFullDescription ? 'see less' : 'see more'}
-                    </button>
-                  )}
-                </div>
-              )}
+                );
+              })()}
+
+              {/* Description with "see more" — also reveals full title */}
+              {(() => {
+                const desc = (currentItem as any).description ?? '';
+                const titleText = currentItem.title ?? '';
+                const needsExpand = titleText.length > 50 || desc.length > 80;
+                return needsExpand || desc ? (
+                  <div className="mb-1">
+                    {desc ? (
+                      <p className={`text-white/75 text-[11px] drop-shadow leading-snug ${showFullDescription ? '' : 'line-clamp-2'}`}>
+                        {desc}
+                      </p>
+                    ) : null}
+                    {needsExpand && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowFullDescription(v => !v); }}
+                        className="text-white/50 text-[11px] mt-0.5"
+                      >
+                        {showFullDescription ? 'see less' : 'see more'}
+                      </button>
+                    )}
+                  </div>
+                ) : null;
+              })()}
 
               {/* Game */}
               {currentItem.game?.name && (
