@@ -147,7 +147,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
       {/* ── Meta block pinned to the bottom — doesn't affect video centering ── */}
       <div
         className="absolute bottom-0 left-0 right-0"
-        style={{ background: '#03080A', paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+        style={{ background: '#03080A', paddingBottom: 'calc(96px + env(safe-area-inset-bottom))' }}
       >
 
         {/* ── Header (creator info) ── */}
