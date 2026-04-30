@@ -156,8 +156,8 @@ const ProfileTabs = ({ username, isCyberpunkTheme = false }: ProfileTabsProps) =
                 className={cn(
                   "relative px-4 md:px-6 py-2 rounded-lg font-medium text-sm transition-all duration-200",
                   activeTab === tab.id 
-                    ? "text-[#071013] bg-primary/90 shadow-md" 
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    ? "text-[#B7FF1A] border-b-2 border-[#B7FF1A] rounded-none" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg"
                 )}
                 onClick={() => setActiveTab(tab.id)}
                 style={isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2px', fontSize: '0.65rem', fontWeight: '900' } : undefined}

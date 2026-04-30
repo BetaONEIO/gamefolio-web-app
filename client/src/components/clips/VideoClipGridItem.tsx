@@ -64,7 +64,7 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
         borderColor: customAccentColor ? `${customAccentColor}30` : 'rgba(255,255,255,0.05)',
         boxShadow: customAccentColor 
           ? `0 10px 25px -5px ${customAccentColor}40, 0 4px 6px -2px ${customAccentColor}20` 
-          : '0 4px 20px -4px rgba(183,255,26,0.30), 0 0 0 1px rgba(183,255,26,0.08)'
+          : '0 4px 20px -4px rgba(0,0,0,0.40), 0 0 0 1px rgba(255,255,255,0.05)'
       }}
       onClick={handleOpenClip}
     >
