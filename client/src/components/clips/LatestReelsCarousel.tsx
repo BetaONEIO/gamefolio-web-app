@@ -1,8 +1,11 @@
 import { useState, useRef } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import VideoClipGridItem from "./VideoClipGridItem";
+import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { ClipWithUser } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LazyImage } from "@/components/ui/lazy-image";
+import { useClipDialog } from "@/hooks/use-clip-dialog";
+import { formatNumber } from "@/lib/format";
+import { formatDuration } from "@/lib/constants";
 
 interface LatestReelsCarouselProps {
   reels: ClipWithUser[] | undefined;
@@ -15,6 +18,7 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
   const [dragStart, setDragStart] = useState(0);
   const [scrollStart, setScrollStart] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { openClipDialog } = useClipDialog();
 
   const scroll = (direction: 'left' | 'right') => {
     if (!scrollRef.current) return;
@@ -106,19 +110,71 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
         onMouseLeave={handleMouseLeave}
         data-testid="reels-carousel-container"
       >
-        {reelsArray.map((reel) => (
-          <div
-            key={`latest-reel-${reel.id}`}
-            className="w-44 sm:w-52 lg:w-56 xl:w-60 flex-shrink-0"
-          >
-            <VideoClipGridItem
-              clip={reel}
-              userId={userId}
-              compact={false}
-              reelsList={reelsArray}
-            />
-          </div>
-        ))}
+        {reelsArray.map((reel) => {
+          const actualDuration = reel.trimEnd && reel.trimEnd > 0
+            ? reel.trimEnd - (reel.trimStart || 0)
+            : reel.duration || 0;
+
+          return (
+            <div
+              key={`latest-reel-${reel.id}`}
+              onClick={() => openClipDialog(reel.id, reelsArray)}
+              className="w-44 sm:w-52 lg:w-56 xl:w-60 flex-shrink-0 cursor-pointer group"
+              data-testid={`reel-card-${reel.id}`}
+            >
+              {/* 9:16 thumbnail with duration + view pills */}
+              <div className="relative aspect-[9/16] w-full overflow-hidden rounded-xl bg-black border border-white/5">
+                {reel.thumbnailUrl ? (
+                  <LazyImage
+                    src={reel.thumbnailUrl}
+                    alt={reel.title || 'Reel thumbnail'}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    showLoadingSpinner={true}
+                    rootMargin="100px"
+                    threshold={0.1}
+                  />
+                ) : (
+                  <video
+                    src={reel.videoUrl ?? undefined}
+                    className="w-full h-full object-cover"
+                    preload="metadata"
+                    muted
+                    playsInline
+                  />
+                )}
+
+                {/* Duration pill — top left */}
+                <div className="absolute top-2 left-2 bg-black/70 text-white text-[11px] px-2 py-0.5 rounded-md font-semibold">
+                  {formatDuration(actualDuration)}
+                </div>
+
+                {/* View count pill — top right */}
+                <div className="absolute top-2 right-2 bg-black/70 text-white text-[11px] px-2 py-0.5 rounded-md font-semibold flex items-center gap-1">
+                  <Eye className="h-3 w-3" />
+                  {formatNumber(reel.views || 0)}
+                </div>
+              </div>
+
+              {/* Meta — title / username / game tag UNDER the thumbnail */}
+              <div className="pt-2 px-0.5">
+                <h3 className="text-white font-bold text-sm line-clamp-1">
+                  {reel.title}
+                </h3>
+                <p className="text-white/60 text-xs mt-0.5">
+                  @{reel.user.username}
+                </p>
+                {reel.game?.name && (
+                  <span
+                    className="inline-block mt-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded"
+                    style={{ background: '#B7FF1A', color: '#071013' }}
+                  >
+                    {reel.game.name}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
