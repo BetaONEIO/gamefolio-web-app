@@ -75,6 +75,20 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   const [localFollowing, setLocalFollowing] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [isInView, setIsInView] = useState(true);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Pause video when this card scrolls out of view, so only the visible clip plays
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsInView(entry.intersectionRatio >= 0.5),
+      { threshold: [0, 0.5, 1] }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const fmt = (n: number) => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -113,7 +127,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   const captionTrimmed = caption.length > 120 && !showFullDesc;
 
   return (
-    <div className="w-full" style={{ background: '#03080A' }}>
+    <div ref={cardRef} className="w-full" style={{ background: '#03080A' }}>
       {/* ── Video (full-width, no card chrome) ── */}
       <VideoPlayer
         videoUrl={clip.videoUrl || ''}
@@ -122,6 +136,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
         clipId={clip.id}
         objectFit="contain"
         autoHideControls
+        externalPaused={!isInView}
         className="w-full"
       />
 
