@@ -2631,7 +2631,7 @@ const AdminPage = () => {
   const getBadgeColor = (badgeType: string) => {
     switch (badgeType) {
       case 'newcomer': return "bg-primary";
-      case 'founder": return "bg-amber-500";
+      case 'founder': return "bg-amber-500";
       case 'admin': return "bg-blue-500";
       default: return "bg-gray-500";
     }
