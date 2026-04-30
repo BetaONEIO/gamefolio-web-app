@@ -649,28 +649,6 @@ const TrendingPage: React.FC = () => {
                      isLoadingScreenshots;
 
     if (isLoading) {
-      if (activeTab === 'clips') {
-        return (
-          <div className="max-w-[640px] mx-auto rounded-xl overflow-hidden" style={{ border: '1px solid #1B2A33' }}>
-            {Array(3).fill(0).map((_, i) => (
-              <div key={i} className="border-b" style={{ borderColor: '#1B2A33', background: '#03080A' }}>
-                <Skeleton className="w-full aspect-video rounded-none" style={{ background: '#0B1218' }} />
-                <div className="px-4 pt-3 pb-4 space-y-3" style={{ background: '#0B1218' }}>
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" style={{ background: '#1B2A33' }} />
-                    <div className="flex-1 space-y-1.5">
-                      <Skeleton className="h-3.5 w-32" style={{ background: '#1B2A33' }} />
-                      <Skeleton className="h-3 w-24" style={{ background: '#1B2A33' }} />
-                    </div>
-                  </div>
-                  <Skeleton className="h-4 w-full" style={{ background: '#1B2A33' }} />
-                  <Skeleton className="h-3 w-3/4" style={{ background: '#1B2A33' }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-      }
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {Array(8).fill(0).map((_, i) => (
@@ -843,28 +821,25 @@ const TrendingPage: React.FC = () => {
       );
     }
 
-    // For clips — narrow centered X/Twitter-style feed
+    // For clips
     if (!trendingClips?.length) {
       return (
-        <div className="text-center py-16 max-w-lg mx-auto">
-          <TrendingUp className="h-14 w-14 mx-auto mb-4" style={{ color: '#B7FF1A' }} />
-          <p className="text-lg font-semibold mb-1" style={{ color: '#F5F7F2' }}>No trending clips</p>
-          <p style={{ color: '#7E887A' }}>Check back later for trending content!</p>
+        <div className="text-center py-12">
+          <TrendingUp className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-2">No trending clips</h3>
+          <p className="text-muted-foreground">Check back later for trending content!</p>
         </div>
       );
     }
 
     return (
-      <div
-        className="max-w-[640px] mx-auto rounded-xl overflow-hidden"
-        style={{ border: '1px solid #1B2A33' }}
-      >
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {trendingClips.map((clip) => (
-          <ClipFeedCard
+          <VideoClipGridItem
             key={clip.id}
             clip={clip}
-            clips={trendingClips}
-            isDesktop
+            userId={user?.id}
+            clipsList={trendingClips}
           />
         ))}
       </div>
