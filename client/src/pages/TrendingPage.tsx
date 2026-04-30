@@ -63,14 +63,29 @@ interface ScreenshotWithUser {
   };
 }
 
-// Clip feed card — 16:9 horizontal gaming clip with info below
-const ClipFeedCard: React.FC<{ clip: ClipWithUser; clipsList: ClipWithUser[] }> = ({ clip, clipsList }) => {
+// Mobile clips viewer — X/Twitter-style full-screen 16:9 clip feed
+const MobileClipsViewer: React.FC<{ clips: ClipWithUser[] }> = ({ clips }) => {
   const { openClipDialog } = useClipDialog();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [showFullDesc, setShowFullDesc] = useState(false);
-  const [localFollowing, setLocalFollowing] = useState(false);
+  const [localFollowing, setLocalFollowing] = useState<Record<number, boolean>>({});
+  const [touchStartY, setTouchStartY] = useState(0);
+  const [touchStartTime, setTouchStartTime] = useState(0);
+
+  // Reset description expand when clip changes
+  useEffect(() => { setShowFullDesc(false); }, [currentIndex]);
+
+  // Lock body scroll while viewer is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  const clip = clips[currentIndex];
+  if (!clip) return null;
 
   const formatNum = (n: number) => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -86,11 +101,12 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clipsList: ClipWithUser[] }> 
   const fires    = (clip as any)._count?.fires    || (clip as any)._count?.reactions || 0;
   const comments = (clip as any)._count?.comments || 0;
   const isSelf   = user && user.id === clip.user.id;
+  const isFollowingThisUser = localFollowing[clip.user.id] ?? false;
 
   const followMutation = useMutation({
     mutationFn: () => apiRequest('POST', `/api/users/${clip.user.username}/follow`),
     onSuccess: () => {
-      setLocalFollowing(true);
+      setLocalFollowing(prev => ({ ...prev, [clip.user.id]: true }));
       queryClient.invalidateQueries({ queryKey: ['/api/users/follow-status', clip.user.username] });
     },
   });
@@ -98,65 +114,98 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clipsList: ClipWithUser[] }> 
   const handleFollow = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) { toast({ description: 'Sign in to follow creators' }); return; }
-    if (isSelf || localFollowing) return;
+    if (isSelf || isFollowingThisUser) return;
     followMutation.mutate();
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartY(e.touches[0].clientY);
+    setTouchStartTime(Date.now());
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const deltaY = touchStartY - e.changedTouches[0].clientY;
+    const dt = Date.now() - touchStartTime;
+    if (dt < 500 && Math.abs(deltaY) > 50) {
+      if (deltaY > 0 && currentIndex < clips.length - 1) setCurrentIndex(i => i + 1);
+      else if (deltaY < 0 && currentIndex > 0) setCurrentIndex(i => i - 1);
+    }
+  };
+
   return (
-    <div className="border-b border-white/5" style={{ background: '#0D1922' }}>
-      {/* 16:9 video thumbnail */}
-      <div
-        className="w-full aspect-video relative cursor-pointer overflow-hidden bg-[#1a2535]"
-        onClick={() => openClipDialog(clip.id, clipsList)}
-      >
-        <LazyImage
-          src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
-          alt={clip.title}
-          className="w-full h-full object-cover"
-          placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='56'%3e%3crect%20width='100'%20height='56'%20fill='%231a2535'/%3e%3c/svg%3e"
-          showLoadingSpinner={true}
-          rootMargin="200px"
-          containerClassName="absolute inset-0"
-          fallback={
-            <div className="w-full h-full flex items-center justify-center">
-              <Play className="h-14 w-14 text-white/10" />
+    /* Full-screen X/Twitter-style viewer */
+    <div
+      className="fixed inset-0 z-[60] flex flex-col"
+      style={{ background: '#000' }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* ── Upper zone: centres the 16:9 video, black fills above & below ── */}
+      <div className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-hidden">
+        <div
+          className="w-full aspect-video relative cursor-pointer overflow-hidden"
+          onClick={() => openClipDialog(clip.id, clips)}
+        >
+          <LazyImage
+            src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
+            alt={clip.title}
+            className="w-full h-full object-cover"
+            placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='56'%3e%3crect%20width='100'%20height='56'%20fill='%23111'/%3e%3c/svg%3e"
+            showLoadingSpinner={true}
+            rootMargin="200px"
+            containerClassName="absolute inset-0"
+            fallback={
+              <div className="w-full h-full flex items-center justify-center bg-black">
+                <Play className="h-14 w-14 text-white/10" />
+              </div>
+            }
+          />
+          {/* Play button */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.50)' }}>
+              <Play className="h-7 w-7 fill-white text-white ml-0.5" />
             </div>
-          }
-        />
-        {/* Play overlay */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.45)' }}>
-            <Play className="h-7 w-7 fill-white text-white ml-0.5" />
           </div>
-        </div>
-        {/* Duration badge */}
-        {duration > 0 && (
-          <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded font-semibold">
-            {formatDuration(duration)}
-          </div>
-        )}
-        {/* View count */}
-        <div className="absolute top-2 right-2 bg-black/60 text-white text-[11px] px-2 py-0.5 rounded flex items-center gap-1">
-          <Eye className="h-3 w-3" />
-          {formatNum(clip.views || 0)}
+          {/* Duration */}
+          {duration > 0 && (
+            <div className="absolute bottom-2 right-2 bg-black/75 text-white text-xs px-2 py-0.5 rounded font-semibold">
+              {formatDuration(duration)}
+            </div>
+          )}
+          {/* Progress dots */}
+          {clips.length > 1 && (
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+              {clips.slice(0, Math.min(clips.length, 7)).map((_, i) => (
+                <div
+                  key={i}
+                  className="rounded-full transition-all"
+                  style={{
+                    width: i === currentIndex ? 16 : 5,
+                    height: 5,
+                    background: i === currentIndex ? '#B7FF1A' : 'rgba(255,255,255,0.35)',
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Info panel below video */}
-      <div className="px-4 pt-3 pb-4">
+      {/* ── Lower zone: info panel anchored below the video ────────────── */}
+      <div className="flex-shrink-0 px-4 pt-3 pb-24" style={{ background: '#000', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         {/* Creator row */}
         <div className="flex items-center gap-3 mb-2">
           <Link href={`/profile/${clip.user.username}`} className="flex items-center gap-2 flex-1 min-w-0 no-underline">
-            <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid rgba(183,255,26,0.4)' }}>
+            <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid rgba(183,255,26,0.45)' }}>
               <img
                 src={clip.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
                 alt={clip.user.displayName || clip.user.username}
                 className="w-full h-full object-cover"
               />
             </div>
-            <span className="text-white font-bold text-sm truncate">@{clip.user.username}</span>
+            <span className="text-white font-bold text-[14px] truncate">@{clip.user.username}</span>
           </Link>
-          {!isSelf && !localFollowing && (
+          {!isSelf && !isFollowingThisUser && (
             <button
               onClick={handleFollow}
               disabled={followMutation.isPending}
@@ -174,13 +223,13 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clipsList: ClipWithUser[] }> 
         {/* Description */}
         {clip.description && (
           <div className="mb-2">
-            <p className={`text-white/55 text-[13px] leading-snug ${showFullDesc ? '' : 'line-clamp-2'}`}>
+            <p className={`text-white/55 text-[13px] leading-snug ${showFullDesc ? '' : 'line-clamp-1'}`}>
               {clip.description}
             </p>
-            {clip.description.length > 80 && (
+            {clip.description.length > 60 && (
               <button
                 onClick={(e) => { e.stopPropagation(); setShowFullDesc(v => !v); }}
-                className="text-[#B7FF1A] text-[12px] mt-0.5 font-semibold"
+                className="text-[#B7FF1A] text-[12px] font-semibold"
               >
                 {showFullDesc ? 'see less' : 'see more'}
               </button>
@@ -217,7 +266,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clipsList: ClipWithUser[] }> 
             variant="horizontal"
           />
           <button
-            onClick={() => openClipDialog(clip.id, clipsList)}
+            onClick={() => openClipDialog(clip.id, clips)}
             className="flex items-center gap-1.5 text-white/55 hover:text-white transition-colors"
           >
             <MessageCircle className="h-5 w-5" />
@@ -807,40 +856,26 @@ const TrendingPage: React.FC = () => {
 
     return (
       <>
-        {/* ── CLIPS: scrollable 16:9 horizontal gaming clip feed ─────────── */}
-        {activeTab === 'clips' && (
-          <div className="pb-24 min-h-screen" style={{ background: '#0D1922' }}>
-            {isLoadingClips ? (
-              /* Skeleton loading */
-              <div className="flex flex-col">
-                {Array(3).fill(0).map((_, i) => (
-                  <div key={i} className="border-b border-white/5">
-                    <Skeleton className="w-full aspect-video rounded-none" />
-                    <div className="px-4 pt-3 pb-4 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="w-9 h-9 rounded-full flex-shrink-0" />
-                        <Skeleton className="h-4 w-36" />
-                      </div>
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-3 w-1/2" />
-                      <Skeleton className="h-3 w-1/3" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : !trendingClips?.length ? (
-              /* Empty state */
-              <div className="flex flex-col items-center justify-center py-24 px-8">
-                <TrendingUp className="h-14 w-14 mb-4" style={{ color: '#B7FF1A' }} />
-                <p className="text-white font-semibold mb-1">No trending clips</p>
-                <p className="text-white/50 text-sm text-center">Check back later for trending content!</p>
-              </div>
-            ) : (
-              trendingClips.map((clip) => (
-                <ClipFeedCard key={clip.id} clip={clip} clipsList={trendingClips} />
-              ))
-            )}
+        {/* ── CLIPS: X/Twitter-style full-screen 16:9 viewer ──────────── */}
+        {activeTab === 'clips' && isLoadingClips && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ background: '#000' }}>
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-8 h-8 border-2 border-[#B7FF1A] border-t-transparent rounded-full animate-spin" />
+              <p className="text-white/60 text-sm">Loading clips…</p>
+            </div>
           </div>
+        )}
+        {activeTab === 'clips' && !isLoadingClips && !trendingClips?.length && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ background: '#000' }}>
+            <div className="text-center px-8">
+              <TrendingUp className="h-14 w-14 mx-auto mb-4" style={{ color: '#B7FF1A' }} />
+              <p className="text-white font-semibold mb-1">No trending clips</p>
+              <p className="text-white/50 text-sm">Check back later!</p>
+            </div>
+          </div>
+        )}
+        {activeTab === 'clips' && !isLoadingClips && trendingClips && trendingClips.length > 0 && (
+          <MobileClipsViewer clips={trendingClips} />
         )}
 
         {/* ── REELS / SCREENSHOTS: full-screen immersive viewer ─────────── */}
