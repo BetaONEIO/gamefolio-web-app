@@ -3,6 +3,8 @@ import { useLocation } from 'wouter';
 import { useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { isNative } from '@/lib/platform';
+import { setTokens } from '@/lib/auth-token';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,8 +32,29 @@ export default function TwoFactorVerifyPage() {
       const response = await apiRequest('POST', '/api/2fa/verify', data);
       return response.json();
     },
-    onSuccess: (userData) => {
+    onSuccess: async (userData) => {
       sessionStorage.removeItem('2fa_userId');
+      // On native, exchange the freshly-created session for a JWT pair so
+      // subsequent requests work even if the WebView drops the cookie.
+      if (isNative) {
+        try {
+          const res = await fetch('/api/auth/token/issue', {
+            method: 'POST',
+            credentials: 'include',
+          });
+          if (res.ok) {
+            const data = (await res.json()) as {
+              accessToken?: string;
+              refreshToken?: string;
+            };
+            if (data.accessToken && data.refreshToken) {
+              await setTokens(data.accessToken, data.refreshToken);
+            }
+          }
+        } catch (e) {
+          console.warn('issueNativeTokens after 2FA failed', e);
+        }
+      }
       queryClient.setQueryData(['/api/user'], userData);
       toast({
         title: 'Welcome back!',

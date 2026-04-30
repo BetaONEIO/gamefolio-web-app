@@ -15,6 +15,12 @@ const config: CapacitorConfig = {
     iosScheme: 'capacitor',
   },
   plugins: {
+    CapacitorHttp: {
+      enabled: true,
+    },
+    CapacitorCookies: {
+      enabled: true,
+    },
     App: {
       launchUrl: 'com.gamefolio.app://',
     },
