@@ -207,11 +207,38 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
         </div>
       </div>
 
-      {/* ── Engagement row sits under the creator header ── */}
+      {/* ── Caption (description with see less) sits above the social row ── */}
       <div className="px-4" style={{ background: '#03080A' }}>
+        {caption && (
+          <div className="pb-3">
+            <p className="text-[14px] leading-relaxed" style={{ color: '#B8C0AE' }}>
+              {captionTrimmed ? caption.slice(0, 120) : caption}
+              {captionTrimmed && (
+                <button
+                  onClick={() => setShowFullDesc(true)}
+                  className="font-semibold ml-0.5"
+                  style={{ color: '#B7FF1A' }}
+                >
+                  … more
+                </button>
+              )}
+              {!captionTrimmed && canCollapse && (
+                <button
+                  onClick={() => setShowFullDesc(false)}
+                  className="font-semibold ml-1"
+                  style={{ color: '#B7FF1A' }}
+                >
+                  See less
+                </button>
+              )}
+            </p>
+          </div>
+        )}
+
+        {/* ── Social / engagement row at the very bottom ── */}
         <div
           className="flex items-center py-2.5"
-          style={{ borderBottom: caption ? '1px solid #1B2A33' : 'none' }}
+          style={{ borderTop: '1px solid #1B2A33' }}
         >
           {/* Comments */}
           <button
@@ -275,33 +302,6 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
             <Share2 className="h-[18px] w-[18px]" />
           </button>
         </div>
-
-        {/* Caption — moved to the bottom, X-style */}
-        {caption && (
-          <div className="pt-3 pb-4">
-            <p className="text-[14px] leading-relaxed" style={{ color: '#B8C0AE' }}>
-              {captionTrimmed ? caption.slice(0, 120) : caption}
-              {captionTrimmed && (
-                <button
-                  onClick={() => setShowFullDesc(true)}
-                  className="font-semibold ml-0.5"
-                  style={{ color: '#B7FF1A' }}
-                >
-                  … more
-                </button>
-              )}
-              {!captionTrimmed && canCollapse && (
-                <button
-                  onClick={() => setShowFullDesc(false)}
-                  className="font-semibold ml-1"
-                  style={{ color: '#B7FF1A' }}
-                >
-                  See less
-                </button>
-              )}
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Comments popup — opens in-place instead of navigating away */}
