@@ -16,7 +16,7 @@ interface ProOnboardingScreenProps {
 const rarityColors: Record<string, { bg: string; border: string; text: string }> = {
   common: { bg: "bg-gray-500/20", border: "border-gray-400", text: "text-gray-300" },
   rare: { bg: "bg-blue-500/20", border: "border-blue-400", text: "text-blue-300" },
-  epic: { bg: "bg-purple-500/20", border: "border-purple-400", text: "text-purple-300" },
+  epic: { bg: "bg-orange-500/20", border: "border-orange-400", text: "text-orange-300" },
   legendary: { bg: "bg-amber-500/20", border: "border-amber-400", text: "text-amber-300" },
 };
 

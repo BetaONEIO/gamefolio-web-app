@@ -34,7 +34,7 @@ interface NameTagDetailDialogProps {
 
 function NameTagFallback({ name, rarity }: { name: string; rarity: string }) {
   const bg = rarity === 'legendary' ? 'from-yellow-500 to-amber-600'
-    : rarity === 'epic' ? 'from-purple-500 to-pink-600'
+    : rarity === 'epic' ? 'from-orange-500 to-amber-600'
     : rarity === 'rare' ? 'from-[#B7FF1A] to-[#6FA800]'
     : 'from-gray-500 to-gray-600';
   return (
@@ -75,7 +75,7 @@ export function NameTagDetailDialog({
   };
 
   const rarityColor = nameTag.rarity?.toLowerCase() === 'legendary' ? '#f0b100'
-    : nameTag.rarity?.toLowerCase() === 'epic' ? '#a855f7'
+    : nameTag.rarity?.toLowerCase() === 'epic' ? '#F97316'
     : nameTag.rarity?.toLowerCase() === 'rare' ? '#2b7fff'
     : '#94a3b8';
 
@@ -183,7 +183,7 @@ export function NameTagDetailDialog({
                   {ownerAvatarUrl ? (
                     <img src={ownerAvatarUrl} alt={ownerName || 'Owner'} className="w-7 h-7 rounded-full border-2 border-[#101D27] object-cover" />
                   ) : (
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border-2 border-[#101D27]" />
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#B7FF1A] to-[#A2F000] border-2 border-[#101D27]" />
                   )}
                   <div className="flex flex-col">
                     <span className="text-[10px] text-[#94a3b8] leading-[10px]">Owner</span>

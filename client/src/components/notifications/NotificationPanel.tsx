@@ -129,7 +129,7 @@ export function NotificationPanel({
       case 'like':
         return <span className="text-red-500">❤️</span>;
       case 'follow':
-        return <User className="h-4 w-4 text-purple-500" />;
+        return <User className="h-4 w-4 text-primary" />;
       case 'comment':
         return <MessageCircle className="h-4 w-4 text-gray-500" />;
       case 'streak':

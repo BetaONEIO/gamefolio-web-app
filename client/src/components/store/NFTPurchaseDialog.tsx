@@ -472,7 +472,7 @@ export function NFTPurchaseDialog({
                     {nft.name.replace(/^.*#/, 'Guardian #')}
                   </h1>
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border-2 border-[#101D27]" />
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#B7FF1A] to-[#A2F000] border-2 border-[#101D27]" />
                     <span className="text-sm text-[#94a3b8]">Owned by</span>
                     <span className="text-sm text-[#f8fafc]">{nft.owner}</span>
                   </div>

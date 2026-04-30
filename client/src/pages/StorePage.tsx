@@ -48,14 +48,14 @@ import { useMarketplacePurchase, MarketplacePurchaseDialog } from "@/hooks/use-m
 
 const rarityGradients: Record<string, string> = {
   legendary: "from-amber-500 via-yellow-400 to-amber-600",
-  epic: "from-purple-500 via-fuchsia-400 to-purple-600",
+  epic: "from-[#B7FF1A] via-[#A2F000] to-[#6FA800]",
   rare: "from-[#B7FF1A] via-[#A2F000] to-[#6FA800]",
   common: "from-gray-500 via-gray-400 to-gray-500",
 };
 
 const rarityBorderColors: Record<string, string> = {
   legendary: "border-amber-400",
-  epic: "border-purple-400",
+  epic: "border-orange-400",
   rare: "border-primary",
   common: "border-gray-400",
 };
@@ -1456,7 +1456,7 @@ export default function StorePage() {
                         {item.rarity && (
                           <Badge className={`mt-1 text-[10px] px-1.5 py-0.5 text-white capitalize ${
                             item.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500 to-amber-600" :
-                            item.rarity === "epic" ? "bg-gradient-to-r from-purple-500 to-pink-600" :
+                            item.rarity === "epic" ? "bg-gradient-to-r from-orange-500 to-amber-600" :
                             item.rarity === "rare" ? "bg-gradient-to-r from-[#B7FF1A] to-[#6FA800]" : "bg-gray-600"
                           }`}>
                             {item.rarity}
@@ -1522,7 +1522,7 @@ export default function StorePage() {
               {storeTab === "nametags" && accessFilter !== "pro" && (
               <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 mt-8 flex items-center gap-2">
-                <Tag className="h-4 w-4 text-purple-400" />
+                <Tag className="h-4 w-4 text-primary" />
                 Name Tags
                 <Badge className="bg-gray-600 text-[10px] px-1.5 py-0.5 text-gray-200 ml-1">
                   All Users
@@ -1554,7 +1554,7 @@ export default function StorePage() {
                       tag.owned 
                         ? "border-primary/50 hover:border-primary hover:shadow-primary/20" 
                         : tag.rarity === 'legendary' ? "hover:border-amber-500 hover:shadow-amber-500/20"
-                        : tag.rarity === 'epic' ? "hover:border-purple-500 hover:shadow-purple-500/20"
+                        : tag.rarity === 'epic' ? "hover:border-orange-500 hover:shadow-orange-500/20"
                         : tag.rarity === 'rare' ? "hover:border-primary hover:shadow-primary/20"
                         : "hover:border-gray-500 hover:shadow-gray-500/20"
                     }`}
@@ -1587,7 +1587,7 @@ export default function StorePage() {
                         <h3 className="font-semibold text-xs line-clamp-1">{tag.name}</h3>
                         <Badge className={`mt-1 text-[10px] px-1.5 py-0.5 text-white capitalize ${
                           tag.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500 to-amber-600" :
-                          tag.rarity === "epic" ? "bg-gradient-to-r from-purple-500 to-pink-600" :
+                          tag.rarity === "epic" ? "bg-gradient-to-r from-orange-500 to-amber-600" :
                           tag.rarity === "rare" ? "bg-gradient-to-r from-[#B7FF1A] to-[#6FA800]" : "bg-gray-600"
                         }`}>
                           {tag.rarity}
@@ -1605,7 +1605,7 @@ export default function StorePage() {
                                 <span className="text-xs font-bold text-primary">{cost} GF</span>
                               </div>
                             ) : (
-                              <span className="text-xs font-bold text-purple-400">{cost} GF</span>
+                              <span className="text-xs font-bold text-orange-400">{cost} GF</span>
                             )}
                           </div>
                           {(tag as any).proDiscount && (
@@ -1627,7 +1627,7 @@ export default function StorePage() {
                         ) : (
                           <Button
                             size="sm"
-                            className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white text-[10px] h-6 px-2"
+                            className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white text-[10px] h-6 px-2"
                             onClick={(e) => {
                               e.stopPropagation();
                               handlePurchaseNameTagOnChain(tag.id);
@@ -1697,7 +1697,7 @@ export default function StorePage() {
                       border.owned 
                         ? "border-primary/50 hover:border-primary hover:shadow-primary/20 hover:shadow-lg" 
                         : border.rarity === 'legendary' ? "hover:border-amber-500 hover:shadow-amber-500/20 hover:shadow-lg"
-                        : border.rarity === 'epic' ? "hover:border-purple-500 hover:shadow-purple-500/20 hover:shadow-lg"
+                        : border.rarity === 'epic' ? "hover:border-orange-500 hover:shadow-orange-500/20 hover:shadow-lg"
                         : border.rarity === 'rare' ? "hover:border-primary hover:shadow-primary/20 hover:shadow-lg"
                         : "hover:border-gray-500 hover:shadow-gray-500/20 hover:shadow-lg"
                     }`}
@@ -1743,7 +1743,7 @@ export default function StorePage() {
                         <div className="flex items-center gap-1 mt-1">
                           <Badge className={`text-[10px] px-1.5 py-0.5 text-white capitalize ${
                             border.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500 to-amber-600" :
-                            border.rarity === "epic" ? "bg-gradient-to-r from-purple-500 to-pink-600" :
+                            border.rarity === "epic" ? "bg-gradient-to-r from-orange-500 to-amber-600" :
                             border.rarity === "rare" ? "bg-gradient-to-r from-[#B7FF1A] to-[#6FA800]" : "bg-gray-600"
                           }`}>
                             {border.rarity}
@@ -1756,7 +1756,7 @@ export default function StorePage() {
                           <p className="text-[9px] text-gray-500">Price</p>
                           <div className="flex items-center gap-0.5">
                             <img src={gfTokenLogo} alt="GF" className="w-3 h-3" />
-                            <span className="text-xs font-bold text-purple-400">{cost} GF</span>
+                            <span className="text-xs font-bold text-orange-400">{cost} GF</span>
                           </div>
                         </div>
                         
@@ -1781,7 +1781,7 @@ export default function StorePage() {
                         ) : (
                           <Button
                             size="sm"
-                            className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white text-[10px] h-6 px-2"
+                            className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white text-[10px] h-6 px-2"
                             onClick={(e) => {
                             e.stopPropagation();
                             setSelectedBorder(border);
@@ -1861,7 +1861,7 @@ export default function StorePage() {
                           {!badge.isDefault && (
                             <span className={`text-[10px] font-semibold capitalize ${
                               badge.rarity === 'legendary' ? 'text-amber-400' :
-                              badge.rarity === 'epic' ? 'text-purple-400' :
+                              badge.rarity === 'epic' ? 'text-orange-400' :
                               badge.rarity === 'rare' ? 'text-blue-400' : 'text-gray-400'
                             }`}>
                               {badge.rarity}

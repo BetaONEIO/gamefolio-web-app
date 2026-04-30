@@ -47,7 +47,7 @@ const LeaderboardEmbedPage = () => {
     if (rank === 1) return "bg-gradient-to-r from-yellow-400 to-yellow-600";
     if (rank === 2) return "bg-gradient-to-r from-gray-300 to-gray-500";
     if (rank === 3) return "bg-gradient-to-r from-amber-400 to-amber-600";
-    return "bg-gradient-to-r from-blue-500 to-purple-600";
+    return "bg-gradient-to-r from-[#B7FF1A] to-[#6FA800]";
   };
 
   const getRankRowColor = (rank: number) => {

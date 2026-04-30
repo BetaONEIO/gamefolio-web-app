@@ -35,7 +35,7 @@ export default function PortfolioChart({ data }: PortfolioChartProps) {
                 initial={{ height: 0 }}
                 animate={{ height: `${height}px` }}
                 transition={{ delay: index * 0.1, duration: 0.6, ease: "easeOut" }}
-                className="w-full bg-gradient-to-t from-indigo-600 to-purple-500 rounded-t-lg relative group cursor-pointer"
+                className="w-full bg-gradient-to-t from-[#B7FF1A] to-[#6FA800] rounded-t-lg relative group cursor-pointer"
                 whileHover={{ scale: 1.05 }}
               >
                 <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-white text-slate-900 px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
@@ -55,7 +55,7 @@ export default function PortfolioChart({ data }: PortfolioChartProps) {
         ))}
       </div>
 
-      <div className="absolute inset-0 bg-gradient-to-t from-purple-600/10 to-transparent pointer-events-none rounded-lg" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#B7FF1A]/10 to-transparent pointer-events-none rounded-lg" />
     </div>
   );
 }

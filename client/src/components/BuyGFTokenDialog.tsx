@@ -192,7 +192,7 @@ export default function BuyGFTokenDialog({ open, onOpenChange }: BuyGFTokenDialo
               >
                 {pkg.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                    <span className="bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] text-[#071013] text-xs font-bold px-3 py-1 rounded-full">
                       MOST POPULAR
                     </span>
                   </div>

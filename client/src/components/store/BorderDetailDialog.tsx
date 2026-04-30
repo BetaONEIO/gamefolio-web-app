@@ -33,7 +33,7 @@ interface BorderDetailDialogProps {
 
 function BorderFallback({ name, rarity }: { name: string; rarity: string }) {
   const bg = rarity === 'legendary' ? 'from-yellow-500 to-amber-600'
-    : rarity === 'epic' ? 'from-purple-500 to-pink-600'
+    : rarity === 'epic' ? 'from-orange-500 to-amber-600'
     : rarity === 'rare' ? 'from-[#B7FF1A] to-[#6FA800]'
     : 'from-gray-500 to-gray-600';
   return (
@@ -74,7 +74,7 @@ export function BorderDetailDialog({
   };
 
   const rarityColor = border.rarity?.toLowerCase() === 'legendary' ? '#f0b100'
-    : border.rarity?.toLowerCase() === 'epic' ? '#a855f7'
+    : border.rarity?.toLowerCase() === 'epic' ? '#F97316'
     : border.rarity?.toLowerCase() === 'rare' ? '#2b7fff'
     : '#94a3b8';
 

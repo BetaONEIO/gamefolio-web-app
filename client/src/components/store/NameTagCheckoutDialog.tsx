@@ -63,7 +63,7 @@ export function NameTagCheckoutDialog({
   };
 
   const rarityColor = nameTag.rarity?.toLowerCase() === 'legendary' ? '#f0b100'
-    : nameTag.rarity?.toLowerCase() === 'epic' ? '#a855f7'
+    : nameTag.rarity?.toLowerCase() === 'epic' ? '#F97316'
     : nameTag.rarity?.toLowerCase() === 'rare' ? '#2b7fff'
     : '#94a3b8';
 

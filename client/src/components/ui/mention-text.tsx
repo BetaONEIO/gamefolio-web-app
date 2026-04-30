@@ -114,8 +114,8 @@ function GameHoverPreview({ gameName, gameSlug, onLinkClick }: { gameName: strin
                 className="w-16 h-20 rounded object-cover"
               />
             ) : (
-              <div className="w-16 h-20 rounded bg-purple-500/20 flex items-center justify-center">
-                <Gamepad2 className="w-8 h-8 text-purple-400" />
+              <div className="w-16 h-20 rounded bg-primary/20 flex items-center justify-center">
+                <Gamepad2 className="w-8 h-8 text-primary" />
               </div>
             )}
             <div>
@@ -125,8 +125,8 @@ function GameHoverPreview({ gameName, gameSlug, onLinkClick }: { gameName: strin
           </div>
         ) : (
           <div className="flex items-center space-x-3">
-            <div className="w-16 h-20 rounded bg-purple-500/20 flex items-center justify-center">
-              <Gamepad2 className="w-8 h-8 text-purple-400" />
+            <div className="w-16 h-20 rounded bg-primary/20 flex items-center justify-center">
+              <Gamepad2 className="w-8 h-8 text-primary" />
             </div>
             <p className="text-sm font-semibold text-white">{gameName}</p>
           </div>

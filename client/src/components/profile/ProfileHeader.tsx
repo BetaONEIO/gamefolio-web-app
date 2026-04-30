@@ -59,7 +59,7 @@ const userTypeConfig: Record<string, { label: string; icon: any; color: string }
   streamer: {
     label: "Streamer",
     icon: Video,
-    color: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+    color: "bg-primary/20 text-primary border-primary/30",
   },
   gamer: {
     label: "Gamer",
@@ -74,12 +74,12 @@ const userTypeConfig: Record<string, { label: string; icon: any; color: string }
   content_creator: {
     label: "Creator",
     icon: Upload,
-    color: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+    color: "bg-primary/20 text-primary border-primary/30",
   },
   indie_developer: {
     label: "Indie Dev",
     icon: Code,
-    color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+    color: "bg-primary/20 text-primary border-primary/30",
   },
   viewer: {
     label: "Viewer",

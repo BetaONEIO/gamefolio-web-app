@@ -344,10 +344,10 @@ const Sidebar = () => {
                             className={cn(
                               "w-3 h-3 rounded-full",
                               game.id % 5 === 0 ? "bg-red-500" :
-                              game.id % 5 === 1 ? "bg-blue-500" :
+                              game.id % 5 === 1 ? "bg-sky-500" :
                               game.id % 5 === 2 ? "bg-primary" :
                               game.id % 5 === 3 ? "bg-yellow-500" :
-                              "bg-purple-500"
+                              "bg-orange-500"
                             )}
                           ></span>
                         </div>
@@ -358,10 +358,10 @@ const Sidebar = () => {
                           className={cn(
                             "w-3 h-3 rounded-full",
                             game.id % 5 === 0 ? "bg-red-500" :
-                            game.id % 5 === 1 ? "bg-blue-500" :
+                            game.id % 5 === 1 ? "bg-sky-500" :
                             game.id % 5 === 2 ? "bg-primary" :
                             game.id % 5 === 3 ? "bg-yellow-500" :
-                            "bg-purple-500"
+                            "bg-orange-500"
                           )}
                         ></span>
                       </div>
@@ -462,10 +462,10 @@ const Sidebar = () => {
                         className={cn(
                           "w-6 h-6 rounded-full",
                           game.id % 5 === 0 ? "bg-red-500" :
-                          game.id % 5 === 1 ? "bg-blue-500" :
+                          game.id % 5 === 1 ? "bg-sky-500" :
                           game.id % 5 === 2 ? "bg-primary" :
                           game.id % 5 === 3 ? "bg-yellow-500" :
-                          "bg-purple-500"
+                          "bg-orange-500"
                         )}
                       ></span>
                     </div>

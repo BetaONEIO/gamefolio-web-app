@@ -55,7 +55,7 @@ export function VerificationBadgeDetailDialog({
   };
 
   const rarityColor = badge.rarity?.toLowerCase() === 'legendary' ? '#f0b100'
-    : badge.rarity?.toLowerCase() === 'epic' ? '#a855f7'
+    : badge.rarity?.toLowerCase() === 'epic' ? '#F97316'
     : badge.rarity?.toLowerCase() === 'rare' ? '#2b7fff'
     : '#00c950';
 

@@ -299,7 +299,7 @@ export default function InvitePage() {
             You're not the problem. Discovery is. Gamefolio is being built to help smaller streamers and gamers get seen.
           </p>
           <div className="flex items-center gap-3 text-gray-400 text-sm flex-wrap justify-center">
-            <span className="flex items-center gap-1.5"><SiTwitch className="h-4 w-4 text-purple-400" /> Twitch</span>
+            <span className="flex items-center gap-1.5"><SiTwitch className="h-4 w-4 text-[#9146FF]" /> Twitch</span>
             <span className="text-gray-600">+</span>
             <span className="flex items-center gap-1.5"><SiKick className="h-4 w-4 text-primary" /> Kick</span>
             <span className="text-gray-600">→ your Gamefolio profile</span>

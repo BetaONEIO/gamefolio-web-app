@@ -170,7 +170,7 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
     bg: "bg-gradient-to-b from-[#f6cfff] via-[#cefafe] to-[#fff085]",
     glow: "shadow-[0_0_25px_rgba(236,72,153,0.4)]",
     dotColor: "bg-primary shadow-[0_0_8px_#A2F000]",
-    textStyle: "bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent font-black",
+    textStyle: "bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] bg-clip-text text-transparent font-black",
     nameColor: "text-slate-800",
   },
   epic: {
@@ -197,7 +197,7 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
 };
 
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
-  streamer: { label: "Streamer", icon: Video, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
+  streamer: { label: "Streamer", icon: Video, color: "bg-primary/20 text-primary border-primary/30" },
   gamer: { label: "Gamer", icon: Gamepad2, color: "bg-primary/20 text-primary border-primary/30" },
   professional_gamer: { label: "Professional Gamer", icon: Trophy, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
   content_creator: { label: "Content Creator", icon: Upload, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
@@ -1766,11 +1766,11 @@ const ProfilePage = () => {
         if (profile.birthday !== todayMMDD) return null;
         return (
           <div className="relative overflow-hidden rounded-xl mx-1 md:mx-0 mb-3" style={{
-            background: 'linear-gradient(135deg, #7c3aed 0%, #ec4899 50%, #f59e0b 100%)',
+            background: 'linear-gradient(135deg, #B7FF1A 0%, #A2F000 50%, #EAB308 100%)',
             padding: '1px',
           }}>
             <div className="relative rounded-xl px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-center gap-3 text-center" style={{
-              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(236, 72, 153, 0.15) 50%, rgba(245, 158, 11, 0.15) 100%)',
+              background: 'linear-gradient(135deg, rgba(183, 255, 26, 0.10) 0%, rgba(162, 240, 0, 0.10) 50%, rgba(234, 179, 8, 0.10) 100%)',
               backdropFilter: 'blur(10px)',
             }}>
               <span className="text-2xl sm:text-3xl animate-bounce" style={{ animationDuration: '2s' }}>🎂</span>
@@ -3621,8 +3621,8 @@ const ProfilePage = () => {
                 style={{ background: headerBg }}
                 onClick={!isLive ? () => setStreamExpanded(prev => !prev) : undefined}
               >
-                <div className={`w-2 h-2 rounded-full ${isLive ? 'animate-pulse' : 'opacity-40'} ${isKick ? 'bg-primary' : 'bg-purple-500'}`} />
-                <span className={`text-xs font-semibold ${isKick ? 'text-primary' : 'text-purple-400'}`}>
+                <div className={`w-2 h-2 rounded-full ${isLive ? 'animate-pulse' : 'opacity-40'} ${isKick ? 'bg-primary' : 'bg-primary'}`} />
+                <span className={`text-xs font-semibold ${isKick ? 'text-primary' : 'text-primary'}`}>
                   {isKick ? 'Kick' : 'Twitch'}
                 </span>
                 <span className="text-xs text-muted-foreground">— {activeChannel}</span>
@@ -4136,7 +4136,7 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(15 clip limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white font-semibold px-8"
+                  className="bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] text-[#071013] font-semibold px-8"
                 >
                   Go PRO
                 </Button>
@@ -4286,7 +4286,7 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(15 reel limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white font-semibold px-8"
+                  className="bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] text-[#071013] font-semibold px-8"
                 >
                   Go PRO
                 </Button>
@@ -4444,7 +4444,7 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(10 screenshot limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white font-semibold px-8"
+                  className="bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] text-[#071013] font-semibold px-8"
                 >
                   Go PRO
                 </Button>

@@ -63,7 +63,7 @@ export function BorderCheckoutDialog({
   };
 
   const rarityColor = border.rarity?.toLowerCase() === 'legendary' ? '#f0b100'
-    : border.rarity?.toLowerCase() === 'epic' ? '#a855f7'
+    : border.rarity?.toLowerCase() === 'epic' ? '#F97316'
     : border.rarity?.toLowerCase() === 'rare' ? '#B7FF1A'
     : '#94a3b8';
   return (

@@ -33,7 +33,7 @@ export function SuccessDashNameTag({
   };
 
   const rarityColor = rarity?.toLowerCase() === 'legendary' ? '#f0b100'
-    : rarity?.toLowerCase() === 'epic' ? '#a855f7'
+    : rarity?.toLowerCase() === 'epic' ? '#F97316'
     : rarity?.toLowerCase() === 'rare' ? '#2b7fff'
     : '#94a3b8';
 

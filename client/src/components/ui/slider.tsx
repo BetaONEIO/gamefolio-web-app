@@ -119,23 +119,23 @@ const DualRangeSlider: React.FC<DualRangeSliderProps> = ({
           style={{
             left: `${startPercent}%`,
             width: `${endPercent - startPercent}%`,
-            background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
+            background: 'linear-gradient(90deg, #B7FF1A, #A2F000)',
           }}
         />
       </div>
 
       <div
         className={cn(
-          "absolute w-5 h-5 rounded-full border-[3px] border-indigo-500 bg-white -translate-x-1/2 transition-transform",
-          activeThumb === 'start' ? 'scale-125 shadow-[0_0_10px_rgba(99,102,241,0.8)]' : 'shadow-[0_0_6px_rgba(99,102,241,0.6)] hover:scale-110'
+          "absolute w-5 h-5 rounded-full border-[3px] border-[#B7FF1A] bg-white -translate-x-1/2 transition-transform",
+          activeThumb === 'start' ? 'scale-125 shadow-[0_0_10px_rgba(183,255,26,0.8)]' : 'shadow-[0_0_6px_rgba(183,255,26,0.6)] hover:scale-110'
         )}
         style={{ left: `${startPercent}%` }}
       />
 
       <div
         className={cn(
-          "absolute w-5 h-5 rounded-full border-[3px] border-violet-500 bg-white -translate-x-1/2 transition-transform",
-          activeThumb === 'end' ? 'scale-125 shadow-[0_0_10px_rgba(139,92,246,0.8)]' : 'shadow-[0_0_6px_rgba(139,92,246,0.6)] hover:scale-110'
+          "absolute w-5 h-5 rounded-full border-[3px] border-[#B7FF1A] bg-white -translate-x-1/2 transition-transform",
+          activeThumb === 'end' ? 'scale-125 shadow-[0_0_10px_rgba(183,255,26,0.8)]' : 'shadow-[0_0_6px_rgba(183,255,26,0.6)] hover:scale-110'
         )}
         style={{ left: `${endPercent}%` }}
       />

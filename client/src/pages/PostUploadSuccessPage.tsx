@@ -436,9 +436,9 @@ const PostUploadSuccessPage = () => {
                   <Button
                     variant="outline"
                     onClick={() => handleSocialShare('discord', uploadedContent.socialMediaLinks!.discord)}
-                    className="flex items-center justify-center gap-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+                    className="flex items-center justify-center gap-2 hover:bg-primary/10"
                   >
-                    <MessageCircle className="h-4 w-4 text-indigo-500" />
+                    <MessageCircle className="h-4 w-4 text-[#5865F2]" />
                     Discord
                   </Button>
                 </div>

@@ -1,0 +1,129 @@
+Perform a full UI colour audit and refactor across the entire Gamefolio app.
+
+Goal:
+Ensure ALL UI elements use the new neon green + dark navy theme.
+Remove any old colours (especially purple, light green, default Tailwind colours, or mismatched accents).
+
+New design system:
+
+Primary (neon green):
+#B7FF1A
+
+Primary hover:
+#A2F000
+
+Primary dark:
+#6FA800
+
+Background:
+#03080A
+
+Secondary background:
+#071013
+
+Surface/card:
+#0B1218
+
+Elevated surface:
+#101923
+
+Border:
+#1B2A33
+
+Text primary:
+#F5F7F2
+
+Text secondary:
+#B8C0AE
+
+Text muted:
+#7E887A
+
+Button text on green:
+#071013
+
+Tasks:
+
+1. Scan entire codebase:
+- CSS / SCSS files
+- Tailwind classes
+- Inline styles
+- React/Vue components
+- Theme/config files
+
+2. Identify and replace ALL incorrect colours:
+- Purple (bg-purple, text-purple, violet, indigo)
+- Old greens (Tailwind green, emerald, lime)
+- Light green / pastel green
+- Blue accents used for buttons
+- Any non-theme accent colours
+
+Examples to replace:
+- bg-purple-*
+- text-purple-*
+- bg-indigo-*
+- bg-green-*
+- bg-emerald-*
+- bg-lime-*
+- text-green-*
+- border-green-*
+- ring-green-*
+- gradients using old colours
+
+3. Replace with new system:
+
+Use CSS variables wherever possible:
+- var(--primary)
+- var(--primary-hover)
+- var(--primary-dark)
+- var(--background)
+- var(--surface)
+- var(--text-primary)
+
+If Tailwind is used:
+- Update tailwind.config.js to define:
+  primary: #B7FF1A
+  primaryHover: #A2F000
+  primaryDark: #6FA800
+
+Then replace classes accordingly.
+
+4. Standardise components:
+
+Buttons:
+- Primary buttons MUST use neon green
+- Remove all purple/blue buttons
+- Add subtle glow on hover
+
+Links:
+- Use neon green or text-primary
+- No purple/blue links
+
+Badges:
+- Use green or muted tones only
+
+Borders:
+- Use #1B2A33 or muted variants
+
+Focus states:
+- Use neon green glow or outline
+
+Gradients:
+- Replace any purple/blue gradients with:
+  neon green + dark background blends
+
+5. Fix inconsistencies:
+- Ensure same button styles across pages
+- Ensure same hover states everywhere
+- Ensure consistent text colours
+- Ensure no leftover default Tailwind colours
+
+6. Final check:
+- No purple anywhere
+- No default Tailwind green/blue
+- Only neon green used as accent
+- App feels consistent, premium, dark, gaming-focused
+
+Important:
+Do NOT change layout or functionality.
+Only fix colour inconsistencies and enforce the new design system across the entire app.

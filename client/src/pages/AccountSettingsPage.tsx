@@ -866,7 +866,7 @@ const AccountSettingsPage: React.FC = () => {
                                     <p className="text-sm font-medium mt-3">{selectedTag.name}</p>
                                     <span className={`text-xs capitalize font-medium mt-1 ${
                                       selectedTag.rarity === 'legendary' ? 'text-yellow-400' :
-                                      selectedTag.rarity === 'epic' ? 'text-purple-400' :
+                                      selectedTag.rarity === 'epic' ? 'text-orange-400' :
                                       selectedTag.rarity === 'rare' ? 'text-blue-400' : 'text-gray-400'
                                     }`}>
                                       {selectedTag.rarity}
@@ -996,7 +996,7 @@ const AccountSettingsPage: React.FC = () => {
                                     {!selectedBadge.isDefault && (
                                       <span className={`text-xs capitalize font-medium mt-1 ${
                                         selectedBadge.rarity === 'legendary' ? 'text-yellow-400' :
-                                        selectedBadge.rarity === 'epic' ? 'text-purple-400' :
+                                        selectedBadge.rarity === 'epic' ? 'text-orange-400' :
                                         selectedBadge.rarity === 'rare' ? 'text-blue-400' : 'text-gray-400'
                                       }`}>
                                         {selectedBadge.rarity}

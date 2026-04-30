@@ -418,7 +418,7 @@ function StoreManagement() {
   const rarityColors: Record<string, string> = {
     common: "bg-gray-600",
     rare: "bg-blue-600",
-    epic: "bg-purple-600",
+    epic: "bg-orange-500",
     legendary: "bg-amber-600",
   };
 
@@ -579,7 +579,7 @@ function StoreManagement() {
                             {typeLabels[item.type] || item.type}
                           </Badge>
                           {item.type === 'profile_border' && item.shape && (
-                            <Badge variant="outline" className={`text-[10px] w-fit ${item.shape === 'square' ? 'text-purple-400 border-purple-400/50' : 'text-blue-400 border-blue-400/50'}`}>
+                            <Badge variant="outline" className={`text-[10px] w-fit ${item.shape === 'square' ? 'text-primary border-primary/50' : 'text-blue-400 border-blue-400/50'}`}>
                               {item.shape === 'square' ? 'NFT/Square' : 'Circle'}
                             </Badge>
                           )}
@@ -624,7 +624,7 @@ function StoreManagement() {
                       </td>
                       <td className="p-2">
                         {item.availableInLootbox ? (
-                          <Gift className="h-4 w-4 text-purple-500" />
+                          <Gift className="h-4 w-4 text-primary" />
                         ) : (
                           <XCircle className="h-4 w-4 text-red-500" />
                         )}
@@ -951,7 +951,7 @@ function LootboxManagement() {
     switch (rarity) {
       case 'common': return 'bg-gray-500';
       case 'rare': return 'bg-blue-500';
-      case 'epic': return 'bg-purple-500';
+      case 'epic': return 'bg-orange-500';
       case 'legendary': return 'bg-amber-500';
       default: return 'bg-gray-500';
     }
@@ -2631,7 +2631,7 @@ const AdminPage = () => {
   const getBadgeColor = (badgeType: string) => {
     switch (badgeType) {
       case 'newcomer': return "bg-primary";
-      case 'founder': return "bg-purple-500";
+      case 'founder": return "bg-amber-500";
       case 'admin': return "bg-blue-500";
       default: return "bg-gray-500";
     }
@@ -3891,7 +3891,7 @@ const AdminPage = () => {
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium">Founder Badges</CardTitle>
-                      <Crown className="h-4 w-4 text-purple-500" />
+                      <Crown className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
@@ -3983,7 +3983,7 @@ const AdminPage = () => {
               </div>
 
               {/* Regenerate Reel Thumbnails */}
-              <div className="border rounded-lg p-4 bg-purple-50 dark:bg-purple-950">
+              <div className="border rounded-lg p-4 bg-primary/5 dark:bg-primary/10">
                 <div className="flex items-start gap-4">
                   <div className="flex-1">
                     <h4 className="font-semibold mb-1">Regenerate Reel Thumbnails</h4>
@@ -4343,7 +4343,7 @@ const AdminPage = () => {
             const colorMap: Record<string, string> = {
               blue: "text-blue-500 border-blue-200 dark:border-blue-800",
               green: "text-primary border-primary dark:border-primary",
-              purple: "text-purple-500 border-purple-200 dark:border-purple-800",
+              purple: "text-primary border-primary/30 dark:border-primary/40",
               orange: "text-orange-500 border-orange-200 dark:border-orange-800",
             };
             return (
@@ -4447,7 +4447,7 @@ const AdminPage = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <Eye className="h-4 w-4 text-purple-500" />
+                      <Eye className="h-4 w-4 text-primary" />
                       Per-Clip View Milestones
                     </CardTitle>
                     <CardDescription>
@@ -4468,7 +4468,7 @@ const AdminPage = () => {
                       ].map(m => (
                         <div key={m.views} className="p-3 border rounded-lg text-center">
                           <p className="text-xs text-muted-foreground">{m.views} views</p>
-                          <p className="text-sm font-bold text-purple-500 mt-1">{m.xp}</p>
+                          <p className="text-sm font-bold text-primary mt-1">{m.xp}</p>
                         </div>
                       ))}
                     </div>
@@ -4750,7 +4750,7 @@ const AdminPage = () => {
                                     entry.action === 'like' ? 'bg-red-100 text-red-700' :
                                     entry.action === 'comment' ? 'bg-primary text-primary' :
                                     entry.action === 'fire' ? 'bg-orange-100 text-orange-700' :
-                                    entry.action === 'view' ? 'bg-purple-100 text-purple-700' :
+                                    entry.action === 'view' ? 'bg-primary/10 text-primary' :
                                     'bg-gray-100 text-gray-700'
                                   }`}>
                                     {entry.action}
@@ -4899,7 +4899,7 @@ const AdminPage = () => {
                                   slide.visibility === 'logged_in' ? 'border-blue-500 text-blue-600' :
                                   slide.visibility === 'logged_out' ? 'border-orange-500 text-orange-600' :
                                   slide.visibility === 'new_users' ? 'border-cyan-500 text-cyan-600' :
-                                  slide.visibility === 'pro_only' ? 'border-purple-500 text-purple-600' :
+                                  slide.visibility === 'pro_only' ? 'border-primary text-primary' :
                                   slide.visibility === 'has_lootbox' ? 'border-yellow-500 text-yellow-600' : ''
                                 }`}>
                                   {slide.visibility === 'everyone' ? 'Everyone' :
@@ -5494,7 +5494,7 @@ const AdminPage = () => {
                           </SelectItem>
                           <SelectItem value="epic">
                             <span className="flex items-center gap-2">
-                              <span className="w-3 h-3 rounded-full bg-purple-500"></span>
+                              <span className="w-3 h-3 rounded-full bg-orange-500"></span>
                               Epic (12%)
                             </span>
                           </SelectItem>
@@ -5592,7 +5592,7 @@ const AdminPage = () => {
                         <SelectContent>
                           <SelectItem value="pro_user">
                             <span className="flex items-center gap-2">
-                              <Crown className="h-4 w-4 text-purple-500" /> Pro User Exclusive
+                              <Crown className="h-4 w-4 text-primary" /> Pro User Exclusive
                             </span>
                           </SelectItem>
                           <SelectItem value="lootbox">
@@ -5764,7 +5764,7 @@ const AdminPage = () => {
                               <Badge 
                                 className={
                                   reward.rarity === 'legendary' ? 'bg-yellow-500 text-black' :
-                                  reward.rarity === 'epic' ? 'bg-purple-500' :
+                                  reward.rarity === 'epic' ? 'bg-orange-500' :
                                   reward.rarity === 'rare' ? 'bg-blue-500' :
                                   'bg-gray-400'
                                 }
@@ -5886,7 +5886,7 @@ const AdminPage = () => {
                     <div>
                       <p><strong>Rarity:</strong> <Badge className={
                         selectedReward.rarity === 'legendary' ? 'bg-yellow-500 text-black' :
-                        selectedReward.rarity === 'epic' ? 'bg-purple-500' :
+                        selectedReward.rarity === 'epic' ? 'bg-orange-500' :
                         selectedReward.rarity === 'rare' ? 'bg-blue-500' :
                         'bg-gray-400'
                       }>{selectedReward.rarity ? selectedReward.rarity.charAt(0).toUpperCase() + selectedReward.rarity.slice(1) : 'Common'}</Badge></p>
@@ -5999,7 +5999,7 @@ const AdminPage = () => {
                         </SelectItem>
                         <SelectItem value="epic">
                           <span className="flex items-center gap-2">
-                            <span className="w-3 h-3 rounded-full bg-purple-500"></span>
+                            <span className="w-3 h-3 rounded-full bg-orange-500"></span>
                             Epic (12%)
                           </span>
                         </SelectItem>
@@ -6350,7 +6350,7 @@ const AdminPage = () => {
                                   </span>
                                 )}
                                 {assignment.proOnly && (
-                                  <span className="inline-flex items-center gap-1 text-xs bg-purple-500/20 text-purple-500 px-2 py-0.5 rounded-full">
+                                  <span className="inline-flex items-center gap-1 text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
                                     <Crown className="h-3 w-3" /> Pro
                                   </span>
                                 )}
@@ -6358,7 +6358,7 @@ const AdminPage = () => {
                               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                 <span className={`w-2 h-2 rounded-full ${
                                   assignment.rarity === 'legendary' ? 'bg-yellow-500' :
-                                  assignment.rarity === 'epic' ? 'bg-purple-500' :
+                                  assignment.rarity === 'epic' ? 'bg-orange-500' :
                                   assignment.rarity === 'rare' ? 'bg-blue-500' : 'bg-gray-400'
                                 }`}></span>
                                 {assignment.rarity} · {assignment.type.replace('_', ' ')} · {assignment.name}
@@ -6459,7 +6459,7 @@ const AdminPage = () => {
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Crown className="h-4 w-4 text-purple-500" />
+                          <Crown className="h-4 w-4 text-primary" />
                           <span className="text-sm">Pro Users Only</span>
                         </div>
                         <Switch checked={assetsProOnly} onCheckedChange={setAssetsProOnly} />
@@ -6503,7 +6503,7 @@ const AdminPage = () => {
                           <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-blue-500"></span> Rare</span>
                         </SelectItem>
                         <SelectItem value="epic">
-                          <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-purple-500"></span> Epic</span>
+                          <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-orange-500"></span> Epic</span>
                         </SelectItem>
                         <SelectItem value="legendary">
                           <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-yellow-500"></span> Legendary</span>

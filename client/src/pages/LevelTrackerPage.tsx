@@ -147,7 +147,7 @@ const sourceLabels: Record<string, string> = {
 
 const sourceColors: Record<string, string> = {
   view: "text-[#B7FF1A]",
-  lootbox: "text-purple-400",
+  lootbox: "text-primary",
   like_received: "text-pink-400",
   fire_received: "text-orange-400",
   upload: "text-[#B7FF1A]",
@@ -155,7 +155,7 @@ const sourceColors: Record<string, string> = {
   welcome_bonus: "text-amber-400",
   comment_received: "text-sky-400",
   share_received: "text-teal-400",
-  follow_received: "text-violet-400",
+  follow_received: "text-primary",
   comment: "text-sky-400",
   like: "text-pink-400",
   share_given: "text-teal-400",
@@ -166,12 +166,12 @@ const sourceColors: Record<string, string> = {
   weekly_uploads_10: "text-amber-400",
   first_100_views: "text-cyan-400",
   first_1000_views: "text-cyan-400",
-  lootbox_bonus: "text-purple-400",
+  lootbox_bonus: "text-primary",
   consecutive_upload_bonus: "text-primary",
   weekend_upload_bonus: "text-rose-400",
   streak_milestone: "text-orange-400",
-  referral: "text-violet-400",
-  referral_bonus: "text-violet-300",
+  referral: "text-primary",
+  referral_bonus: "text-primary",
   other: "text-gray-400",
 };
 
@@ -466,7 +466,7 @@ export default function LevelTrackerPage() {
                     <p className="text-sm font-medium text-foreground">Featured Clip of the Day</p>
                     <p className="text-xs text-muted-foreground">Selected by our team — check your notifications</p>
                   </div>
-                  <span className="text-sm font-bold text-purple-400">+500 XP</span>
+                  <span className="text-sm font-bold text-primary">+500 XP</span>
                 </div>
                 <div className={`flex items-center gap-3 px-3 py-3 rounded-xl border transition-colors ${lootboxStatus?.canOpen === false ? "bg-[#B7FF1A]/8 border-[#B7FF1A]/20 opacity-70" : "bg-muted/40 border-border/50"}`}>
                   <div className="shrink-0">
@@ -484,7 +484,7 @@ export default function LevelTrackerPage() {
                       {lootboxStatus?.canOpen === false ? "Already opened today" : "Open your daily lootbox"}
                     </p>
                   </div>
-                  <span className={`text-sm font-bold shrink-0 ${lootboxStatus?.canOpen === false ? "text-muted-foreground" : "text-purple-400"}`}>+100 XP</span>
+                  <span className={`text-sm font-bold shrink-0 ${lootboxStatus?.canOpen === false ? "text-muted-foreground" : "text-primary"}`}>+100 XP</span>
                 </div>
                 {(() => {
                   const consecutiveDone = !!(xpHistory && xpHistory.some((h) => h.source === "consecutive_upload_bonus" && isToday(new Date(h.createdAt))));
@@ -592,10 +592,10 @@ export default function LevelTrackerPage() {
         {/* MILESTONES — Creator + Performance */}
         <TabsContent value="milestones" className="space-y-4">
           {/* Creator Milestones */}
-          <Card className="border-purple-500/20">
+          <Card className="border-primary/20">
             <CardContent className="pt-5 pb-5">
               <div className="flex items-center gap-2 mb-4">
-                <Trophy className="w-5 h-5 text-purple-400" />
+                <Trophy className="w-5 h-5 text-primary" />
                 <h2 className="font-bold text-base">Creator Milestones</h2>
               </div>
 
@@ -711,7 +711,7 @@ export default function LevelTrackerPage() {
               { icon: Share2, color: "#2dd4bf", xp: "+40 XP", label: "Share Received", sub: "When others share your clip" },
               { icon: UserPlus, color: "#a78bfa", xp: "+50 XP", label: "Follow Received", sub: "Gain a new follower" },
               { icon: LogIn, color: "#eab308", xp: "+25 XP", label: "Daily Login", sub: "Log in every day for streaks" },
-              { icon: Gift, color: "#a855f7", xp: "+100 XP", label: "Daily Lootbox", sub: "Open your daily lootbox" },
+              { icon: Gift, color: "#B7FF1A", xp: "+100 XP", label: "Daily Lootbox", sub: "Open your daily lootbox" },
               { icon: Star, color: "#f59e0b", xp: "+50 XP", label: "Streak Milestones", sub: "Hit login streak milestones" },
               { icon: Share2, color: "#B7FF1A", xp: "+20 XP", label: "Share Given", sub: "Share someone's clip" },
             ].map((item) => (

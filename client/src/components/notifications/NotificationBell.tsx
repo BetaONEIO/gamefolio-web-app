@@ -196,7 +196,7 @@ export function NotificationBell() {
       case 'follow_request':
         return <UserPlus className="h-4 w-4 text-orange-500" />;
       case 'upload':
-        return <Upload className="h-4 w-4 text-purple-500" />;
+        return <Upload className="h-4 w-4 text-primary" />;
       case 'message':
         return <MessageCircle className="h-4 w-4 text-primary" />;
       default:

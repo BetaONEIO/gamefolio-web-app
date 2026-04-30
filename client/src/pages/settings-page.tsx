@@ -3100,7 +3100,7 @@ export default function SettingsPage() {
                                       <p className="text-sm font-medium mt-3">{selectedTag.name}</p>
                                       <span className={`text-xs capitalize font-medium mt-1 ${
                                         selectedTag.rarity === 'legendary' ? 'text-yellow-400' :
-                                        selectedTag.rarity === 'epic' ? 'text-purple-400' :
+                                        selectedTag.rarity === 'epic' ? 'text-orange-400' :
                                         selectedTag.rarity === 'rare' ? 'text-blue-400' : 'text-gray-400'
                                       }`}>
                                         {selectedTag.rarity}
@@ -3218,7 +3218,7 @@ export default function SettingsPage() {
                                       {!selectedBadge.isDefault && (
                                         <span className={`text-xs capitalize font-medium mt-1 ${
                                           selectedBadge.rarity === 'legendary' ? 'text-yellow-400' :
-                                          selectedBadge.rarity === 'epic' ? 'text-purple-400' :
+                                          selectedBadge.rarity === 'epic' ? 'text-orange-400' :
                                           selectedBadge.rarity === 'rare' ? 'text-blue-400' : 'text-gray-400'
                                         }`}>
                                           {selectedBadge.rarity}
@@ -3970,7 +3970,7 @@ export default function SettingsPage() {
             <Card className="mt-4">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center flex-shrink-0">
+                  <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
                     {(user as any)?.streamPlatform === "kick"
                       ? <SiKick className="w-5 h-5 text-[#53FC18]" />
                       : <SiTwitch className="w-5 h-5 text-[#9146FF]" />}
@@ -4211,7 +4211,7 @@ export default function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Video className="h-5 w-5 text-purple-400" />
+                  <Video className="h-5 w-5 text-primary" />
                   Streamer Settings
                 </CardTitle>
                 <CardDescription>
@@ -4221,9 +4221,9 @@ export default function SettingsPage() {
 
               <CardContent className="space-y-6">
                 {/* Enable Streaming toggle */}
-                <div className="flex items-center justify-between rounded-lg border border-purple-500/30 bg-purple-500/5 p-4">
+                <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 p-4">
                   <div>
-                    <p className="text-sm font-semibold text-purple-300">Enable Streaming</p>
+                    <p className="text-sm font-semibold text-primary">Enable Streaming</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       Adds the Streamer badge to your profile and displays your stream embed.
                     </p>
@@ -4248,7 +4248,7 @@ export default function SettingsPage() {
                         !isStreamingEnabled
                           ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
                           : streamPlatform === 'twitch'
-                          ? 'border-purple-500 bg-purple-500/20 text-purple-300'
+                          ? 'border-primary bg-primary/20 text-primary'
                           : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
                       }`}
                     >
@@ -4279,15 +4279,15 @@ export default function SettingsPage() {
 
                   {/* Twitch OAuth connect option */}
                   {streamPlatform === 'twitch' && isStreamingEnabled && oauthConfig?.twitch && (
-                    <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.twitchVerified ? 'border-purple-500/30 bg-purple-500/5' : 'border-slate-700 bg-slate-800/30'}`}>
+                    <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.twitchVerified ? "border-primary/30 bg-primary/5' : 'border-slate-700 bg-slate-800/30'}`}>
                       {(user as any)?.twitchVerified ? (
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded bg-purple-500/20 flex items-center justify-center">
-                              <Check className="w-3.5 h-3.5 text-purple-400" />
+                            <div className="w-6 h-6 rounded bg-primary/20 flex items-center justify-center">
+                              <Check className="w-3.5 h-3.5 text-primary" />
                             </div>
                             <div>
-                              <p className="text-xs font-medium text-purple-300">Twitch OAuth Verified</p>
+                              <p className="text-xs font-medium text-primary">Twitch OAuth Verified</p>
                               <p className="text-[11px] text-slate-400">@{(user as any)?.streamChannelName}</p>
                             </div>
                           </div>
@@ -4680,7 +4680,7 @@ export default function SettingsPage() {
                         common: "bg-slate-400/50 shadow-[0_0_8px_#1e293b]",
                       };
                       const rarityText: Record<string, string> = {
-                        legendary: "bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent font-black",
+                        legendary: "bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] bg-clip-text text-transparent font-black",
                         epic: "text-slate-400 font-normal",
                         rare: "text-slate-400 font-normal",
                         common: "text-slate-400 font-normal",

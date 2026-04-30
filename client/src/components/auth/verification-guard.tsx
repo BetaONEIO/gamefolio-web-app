@@ -123,7 +123,7 @@ function EmailVerificationRequired({ user }: { user: any }) {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
-        <Mail className="w-12 h-12 text-blue-500 mx-auto mb-4" />
+        <Mail className="w-12 h-12 text-primary mx-auto mb-4" />
         <CardTitle>Redirecting to Verification</CardTitle>
         <CardDescription>
           Taking you to the verification page...
@@ -144,15 +144,15 @@ function OnboardingRequired({ user }: { user: any }) {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
-        <User className="w-12 h-12 text-purple-500 mx-auto mb-4" />
+        <User className="w-12 h-12 text-primary mx-auto mb-4" />
         <CardTitle>Complete Your Profile</CardTitle>
         <CardDescription>
           Please complete your profile setup to access this feature
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
-          <p className="text-sm text-purple-300">
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+          <p className="text-sm text-primary">
             Complete your onboarding to start uploading clips and interacting with the community
           </p>
         </div>

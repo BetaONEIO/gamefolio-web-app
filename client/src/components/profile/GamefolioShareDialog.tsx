@@ -16,11 +16,11 @@ import { Badge } from '@/components/ui/badge';
 import { useSignedUrl } from '@/hooks/use-signed-url';
 
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
-  streamer: { label: "Streamer", icon: Video, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
+  streamer: { label: "Streamer", icon: Video, color: "bg-primary/20 text-primary border-primary/30" },
   gamer: { label: "Gamer", icon: Gamepad2, color: "bg-primary/20 text-primary border-primary/30" },
   professional_gamer: { label: "Professional Gamer", icon: Trophy, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
   content_creator: { label: "Content Creator", icon: Upload, color: "bg-[#B7FF1A]/20 text-[#B7FF1A] border-[#B7FF1A]/30" },
-  indie_developer: { label: "Indie Developer", icon: Code, color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
+  indie_developer: { label: "Indie Developer", icon: Code, color: "bg-primary/20 text-primary border-primary/30" },
   viewer: { label: "Viewer", icon: Eye, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
   filthy_casual: { label: "Filthy Casual", icon: Coffee, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
   doom_scroller: { label: "Doom Scroller", icon: Scroll, color: "bg-red-500/20 text-red-400 border-red-500/30" },
@@ -385,7 +385,7 @@ export function GamefolioShareDialog({
                   </div>
                   <button
                     onClick={handleCopyLink}
-                    className="flex items-center gap-1.5 sm:gap-2 bg-[#a855f7] hover:bg-[#9333ea] text-white rounded-2xl px-3 sm:px-4 py-3 transition-colors shrink-0"
+                    className="flex items-center gap-1.5 sm:gap-2 bg-[#B7FF1A] hover:bg-[#A2F000] text-[#071013] rounded-2xl px-3 sm:px-4 py-3 transition-colors shrink-0"
                   >
                     <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span className="text-sm sm:text-base whitespace-nowrap">{copied ? 'Copied!' : 'Copy Link'}</span>

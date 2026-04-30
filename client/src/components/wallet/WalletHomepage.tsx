@@ -207,14 +207,14 @@ export default function WalletHomepage({
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                             />
                           ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                            <div className="w-full h-full bg-gradient-to-br from-[#B7FF1A] to-[#6FA800] flex items-center justify-center">
                               <span className="text-white text-sm font-bold">{ownedNFTs[0].name}</span>
                             </div>
                           )}
                           {ownedNFTs[0].rarity && (
                             <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase"
                               style={{
-                                background: ownedNFTs[0].rarity === 'Legendary' ? '#a855f7' : 
+                                background: ownedNFTs[0].rarity === 'Legendary' ? '#EAB308' : 
                                            ownedNFTs[0].rarity === 'Epic' ? '#ec4899' : 
                                            ownedNFTs[0].rarity === 'Rare' ? '#3b82f6' : '#B7FF1A',
                                 color: '#fff'
@@ -235,7 +235,7 @@ export default function WalletHomepage({
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                             />
                           ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                            <div className="w-full h-full bg-gradient-to-br from-[#B7FF1A] to-[#6FA800] flex items-center justify-center">
                               <span className="text-white text-sm font-bold">{ownedNFTs[0].name}</span>
                             </div>
                           )}

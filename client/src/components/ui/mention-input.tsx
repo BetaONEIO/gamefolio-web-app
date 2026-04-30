@@ -321,7 +321,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
                           {game.imageUrl ? (
                             <SignedImage src={game.imageUrl} alt={game.name} className="w-6 h-6 rounded object-cover" />
                           ) : (
-                            <div className="w-6 h-6 rounded bg-purple-500/20 text-purple-400 flex items-center justify-center">
+                            <div className="w-6 h-6 rounded bg-primary/20 text-primary flex items-center justify-center">
                               <Gamepad2 className="w-3.5 h-3.5" />
                             </div>
                           )}
@@ -377,10 +377,10 @@ function renderStyledText(text: string): React.ReactNode[] {
         </span>
       );
     } else if (match[3]) {
-      // /[Game] - purple, show only the game name
+      // /[Game] - primary, show only the game name
       const gameName = match[3].slice(2, -1); // Remove /[ and ]
       parts.push(
-        <span key={key++} className="text-purple-400 font-medium">
+        <span key={key++} className="text-primary font-medium">
           {gameName}
         </span>
       );
@@ -736,7 +736,7 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
                           {game.imageUrl ? (
                             <SignedImage src={game.imageUrl} alt={game.name} className="w-6 h-6 rounded object-cover" />
                           ) : (
-                            <div className="w-6 h-6 rounded bg-purple-500/20 text-purple-400 flex items-center justify-center">
+                            <div className="w-6 h-6 rounded bg-primary/20 text-primary flex items-center justify-center">
                               <Gamepad2 className="w-3.5 h-3.5" />
                             </div>
                           )}

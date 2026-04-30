@@ -31,14 +31,14 @@ interface WelcomePackDialogProps {
 const rarityColors: Record<string, { bg: string; border: string; text: string; glow: string }> = {
   common: { bg: "bg-gray-500/20", border: "border-gray-400", text: "text-gray-300", glow: "shadow-gray-500/50" },
   rare: { bg: "bg-blue-500/20", border: "border-blue-400", text: "text-blue-300", glow: "shadow-blue-500/50" },
-  epic: { bg: "bg-purple-500/20", border: "border-purple-400", text: "text-purple-300", glow: "shadow-purple-500/50" },
+  epic: { bg: "bg-orange-500/20", border: "border-orange-400", text: "text-orange-300", glow: "shadow-orange-500/50" },
   legendary: { bg: "bg-amber-500/20", border: "border-amber-400", text: "text-amber-300", glow: "shadow-amber-500/50" },
 };
 
 const rewardTypeLabels: Record<string, { label: string; color: string }> = {
   nft_voucher: { label: "NFT Lootbox Voucher", color: "text-amber-400" },
-  store_item: { label: "Store Item", color: "text-blue-400" },
-  animated_border: { label: "Animated Border", color: "text-purple-400" },
+  store_item: { label: "Store Item", color: "text-primary" },
+  animated_border: { label: "Animated Border", color: "text-primary" },
 };
 
 export function WelcomePackDialog({ open, onOpenChange, onClaimComplete }: WelcomePackDialogProps) {
@@ -190,21 +190,21 @@ export function WelcomePackDialog({ open, onOpenChange, onClaimComplete }: Welco
                       <p className="text-xs text-gray-500">Redeem for exclusive NFTs</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                    <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                      <Package className="w-5 h-5 text-blue-400" />
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                    <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                      <Package className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-blue-400">Random Store Item</p>
+                      <p className="text-sm font-medium text-primary">Random Store Item</p>
                       <p className="text-xs text-gray-500">A surprise from the store</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                    <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                      <Crown className="w-5 h-5 text-purple-400" />
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                    <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                      <Crown className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-purple-400">Animated Profile Border</p>
+                      <p className="text-sm font-medium text-primary">Animated Profile Border</p>
                       <p className="text-xs text-gray-500">Make your avatar stand out</p>
                     </div>
                   </div>
@@ -309,11 +309,11 @@ export function WelcomePackDialog({ open, onOpenChange, onClaimComplete }: Welco
                         <Gift className="w-12 h-12 text-white" />
                       </div>
                     ) : currentReward.type === "store_item" ? (
-                      <div className="w-28 h-28 rounded-lg bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center shadow-lg">
+                      <div className="w-28 h-28 rounded-lg bg-gradient-to-br from-[#B7FF1A] to-[#A2F000] flex items-center justify-center shadow-lg">
                         <Package className="w-12 h-12 text-white" />
                       </div>
                     ) : (
-                      <div className="w-28 h-28 rounded-lg bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center shadow-lg">
+                      <div className="w-28 h-28 rounded-lg bg-gradient-to-br from-[#B7FF1A] to-[#A2F000] flex items-center justify-center shadow-lg">
                         <Crown className="w-12 h-12 text-white" />
                       </div>
                     )}
@@ -411,14 +411,14 @@ export function WelcomePackDialog({ open, onOpenChange, onClaimComplete }: Welco
                       <div className={cn(
                         "w-10 h-10 rounded-lg flex items-center justify-center",
                         reward.type === "nft_voucher" ? "bg-amber-500/20" :
-                        reward.type === "store_item" ? "bg-blue-500/20" : "bg-purple-500/20"
+                        reward.type === "store_item" ? "bg-primary/20" : "bg-primary/20"
                       )}>
                         {reward.type === "nft_voucher" ? (
                           <Gift className="w-5 h-5 text-amber-400" />
                         ) : reward.type === "store_item" ? (
-                          <Package className="w-5 h-5 text-blue-400" />
+                          <Package className="w-5 h-5 text-primary" />
                         ) : (
-                          <Crown className="w-5 h-5 text-purple-400" />
+                          <Crown className="w-5 h-5 text-primary" />
                         )}
                       </div>
                       <div className="flex-1">

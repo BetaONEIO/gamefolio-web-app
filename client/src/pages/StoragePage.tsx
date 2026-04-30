@@ -14,7 +14,7 @@ export default function StoragePage() {
 
   // Mock data for categories
   const categories = [
-    { id: 1, name: "Art", image: "https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=400&h=400&fit=crop", color: "from-purple-500 to-pink-500" },
+    { id: 1, name: "Art", image: "https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=400&h=400&fit=crop", color: "from-[#B7FF1A] to-[#A2F000]" },
     { id: 2, name: "Collectible", image: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400&h=400&fit=crop", color: "from-gray-500 to-gray-700" },
     { id: 3, name: "Music", image: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400&h=400&fit=crop", color: "from-orange-500 to-red-500" },
   ];

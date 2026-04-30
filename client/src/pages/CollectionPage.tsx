@@ -100,7 +100,7 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
     bg: "bg-gradient-to-b from-[#f6cfff] via-[#cefafe] to-[#fff085]",
     glow: "shadow-[0_0_25px_rgba(236,72,153,0.4)]",
     dotColor: "bg-primary shadow-[0_0_8px_#A2F000]",
-    textStyle: "bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent font-black",
+    textStyle: "bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] bg-clip-text text-transparent font-black",
     nameColor: "text-slate-800",
   },
   epic: {

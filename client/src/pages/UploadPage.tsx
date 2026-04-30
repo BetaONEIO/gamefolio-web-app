@@ -927,9 +927,9 @@ const UploadPage = () => {
       )}
 
       {uploadLimits?.isPro && (
-        <Alert className="mb-4 border-purple-500/50 bg-purple-500/10">
-          <Check className="h-4 w-4 text-purple-500" />
-          <AlertTitle className="text-purple-500">Pro Member</AlertTitle>
+        <Alert className="mb-4 border-primary/50 bg-primary/10">
+          <Check className="h-4 w-4 text-primary" />
+          <AlertTitle className="text-primary">Pro Member</AlertTitle>
           <AlertDescription>
             Clips up to {uploadLimits.maxClipSizeMB}MB / {Math.round(uploadLimits.maxClipDurationSeconds / 60)} min,
             Reels up to {uploadLimits.maxReelSizeMB}MB / {uploadLimits.maxReelDurationSeconds}s,

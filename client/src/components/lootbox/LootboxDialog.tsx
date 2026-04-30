@@ -33,7 +33,7 @@ interface LootboxDialogProps {
 const rarityColors: Record<string, { bg: string; border: string; text: string; glow: string }> = {
   common: { bg: "bg-gray-500/20", border: "border-gray-400", text: "text-gray-300", glow: "shadow-gray-500/50" },
   rare: { bg: "bg-blue-500/20", border: "border-blue-400", text: "text-blue-300", glow: "shadow-blue-500/50" },
-  epic: { bg: "bg-purple-500/20", border: "border-purple-400", text: "text-purple-300", glow: "shadow-purple-500/50" },
+  epic: { bg: "bg-orange-500/20", border: "border-orange-400", text: "text-orange-300", glow: "shadow-orange-500/50" },
   legendary: { bg: "bg-amber-500/20", border: "border-amber-400", text: "text-amber-300", glow: "shadow-amber-500/50" },
 };
 
@@ -178,7 +178,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
 
                 {statusLoading ? (
                   <div className="flex items-center gap-2 text-gray-400 py-4">
-                    <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                     Loading...
                   </div>
                 ) : status?.canOpen ? (
@@ -196,7 +196,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                     <Button
                       onClick={handleOpen}
                       disabled={openMutation.isPending}
-                      className="w-full py-6 text-lg font-bold bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 rounded-xl shadow-lg shadow-purple-500/30"
+                      className="w-full py-6 text-lg font-bold bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] rounded-xl shadow-lg shadow-[#B7FF1A]/30 text-[#071013]"
                       data-testid="button-open-lootbox"
                     >
                       Claim Lootbox
@@ -211,7 +211,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                       <Timer className="w-5 h-5" />
                       <span>Next lootbox in:</span>
                     </div>
-                    <p className="text-3xl font-bold text-purple-400">
+                    <p className="text-3xl font-bold text-primary">
                       {status?.nextOpenAt ? formatTimeRemaining(status.nextOpenAt) : "Loading..."}
                     </p>
                   </div>
@@ -386,7 +386,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                   )}
                   <Button 
                     onClick={handleClose} 
-                    className="w-full py-6 text-lg font-bold bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 rounded-xl"
+                    className="w-full py-6 text-lg font-bold bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] rounded-xl text-[#071013]"
                     data-testid="button-close-lootbox"
                   >
                     Continue
@@ -428,7 +428,7 @@ export function LootboxTrigger({ onClick }: { onClick: () => void }) {
       <Gift className="w-5 h-5" />
       {status?.canOpen && (
         <motion.span
-          className="absolute -top-1 -right-1 w-3 h-3 bg-purple-500 rounded-full"
+          className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full"
           animate={{ scale: [1, 1.2, 1] }}
           transition={{ duration: 1, repeat: Infinity }}
         />

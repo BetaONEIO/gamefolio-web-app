@@ -55,7 +55,7 @@ const SOCIAL_PLATFORMS = [
   { name: "X", icon: SiX, key: "twitter", color: "text-white" },
   { name: "Facebook", icon: Facebook, key: "facebook", color: "text-blue-600" },
   { name: "Reddit", icon: FaReddit, key: "reddit", color: "text-orange-500" },
-  { name: "Discord", icon: FaDiscord, key: "discord", color: "text-indigo-500" },
+  { name: "Discord", icon: FaDiscord, key: "discord", color: "text-[#5865F2]" },
 ];
 
 // Component to handle clip thumbnail display with signed URLs
