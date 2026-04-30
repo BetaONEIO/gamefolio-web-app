@@ -185,7 +185,7 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
               <Link 
                 href={`/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-gray-600 text-white px-2 py-1 text-xs font-bold rounded-md hover:bg-gray-500 transition-colors"
+                className="bg-[#B7FF1A] text-[#071013] px-2 py-1 text-xs font-bold rounded-md hover:bg-[#A2F000] transition-colors"
               >
                 {clip.game.name}
               </Link>
