@@ -100,8 +100,8 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
 
   return (
     <div
-      className="border-b"
-      style={{ background: '#03080A', borderColor: '#1B2A33' }}
+      className="overflow-hidden mx-2 rounded-xl"
+      style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
     >
       {/* ── Video ── */}
       <VideoPlayer
@@ -294,12 +294,28 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void }>
         </button>
       </div>
 
-      {/* Scrollable feed */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Snap-scrolling feed — one clip per scroll */}
+      <div
+        className="flex-1 overflow-y-auto"
+        style={{
+          scrollSnapType: 'y mandatory',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
         {clips.map((clip) => (
-          <ClipFeedCard key={clip.id} clip={clip} clips={clips} />
+          <div
+            key={clip.id}
+            className="flex flex-col justify-center"
+            style={{
+              scrollSnapAlign: 'start',
+              scrollSnapStop: 'always',
+              minHeight: '100%',
+              padding: '8px 0',
+            }}
+          >
+            <ClipFeedCard clip={clip} clips={clips} />
+          </div>
         ))}
-        <div className="h-6" />
       </div>
     </div>
   );
