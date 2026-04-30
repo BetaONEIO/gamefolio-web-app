@@ -130,7 +130,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   const canCollapse = caption.length > 120;
 
   return (
-    <div ref={cardRef} className="w-full" style={{ background: '#03080A' }}>
+    <div ref={cardRef} className="w-full flex flex-col flex-1 min-h-0" style={{ background: '#03080A' }}>
 
       {/* ── Video (full-width, sits at the top, auto-plays when in view) ── */}
       <VideoPlayer
@@ -143,6 +143,9 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
         externalPaused={!isInView}
         className="w-full"
       />
+
+      {/* Spacer pushes the meta block (header + caption + social) toward the footer */}
+      <div className="flex-1" />
 
       {/* ── Header (creator info) — restored BELOW the video ── */}
       <div className="px-4 pt-3 pb-2">
@@ -349,13 +352,16 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void }>
           onClick={onBack}
           className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
           style={{ color: '#F5F7F2' }}
+          aria-label="Back"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <span className="font-bold text-[16px]" style={{ color: '#F5F7F2', fontFamily: 'Space Grotesk, sans-serif' }}>
-          Clips
-        </span>
-        <button className="w-9 h-9 flex items-center justify-center rounded-full" style={{ color: '#F5F7F2' }}>
+        <span className="sr-only">Clips</span>
+        <button
+          className="w-9 h-9 flex items-center justify-center rounded-full"
+          style={{ color: '#F5F7F2' }}
+          aria-label="More"
+        >
           <MoreHorizontal className="h-5 w-5" />
         </button>
       </div>
@@ -371,7 +377,7 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void }>
         {clips.map((clip) => (
           <div
             key={clip.id}
-            className="flex flex-col justify-center"
+            className="flex flex-col"
             style={{
               scrollSnapAlign: 'start',
               scrollSnapStop: 'always',
