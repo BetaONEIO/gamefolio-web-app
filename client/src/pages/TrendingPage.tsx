@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useLikeScreenshot } from '@/hooks/use-clips';
 import { useToast } from '@/hooks/use-toast';
 import { ClipWithUser } from '@shared/schema';
-import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Share2, Heart, Play, MessageCircle, AlertTriangle, Film, Video, Camera, ChevronDown, Check, Search } from 'lucide-react';
+import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Share2, Heart, Play, MessageCircle, AlertTriangle, Film, Video, Camera, ChevronDown, Check, Search, ArrowLeft, MoreHorizontal, Bookmark, BarChart2, BadgeCheck, Repeat2 } from 'lucide-react';
 import { formatDuration } from '@/lib/constants';
 import { formatDistance } from 'date-fns';
 import { useClipDialog } from '@/hooks/use-clip-dialog';
@@ -64,16 +64,17 @@ interface ScreenshotWithUser {
   };
 }
 
-// Individual clip card — X/Twitter style with inline VideoPlayer
-const MobileClipItem: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[] }> = ({ clip, clips }) => {
+// ── Shared clip feed card — X/Twitter post style ──────────────────────────
+const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesktop?: boolean }> = ({ clip, clips, isDesktop }) => {
   const { openClipDialog } = useClipDialog();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [showFullDesc, setShowFullDesc] = useState(false);
   const [localFollowing, setLocalFollowing] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
 
-  const formatNum = (n: number) => {
+  const fmt = (n: number) => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
     if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
     return n.toString();
@@ -82,7 +83,9 @@ const MobileClipItem: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[] }> = 
   const likes    = (clip as any)._count?.likes    || 0;
   const fires    = (clip as any)._count?.fires    || (clip as any)._count?.reactions || 0;
   const comments = (clip as any)._count?.comments || 0;
+  const views    = clip.views || 0;
   const isSelf   = user && user.id === clip.user.id;
+  const isPro    = (clip.user as any).isPro;
 
   const followMutation = useMutation({
     mutationFn: () => apiRequest('POST', `/api/users/${clip.user.username}/follow`),
@@ -92,16 +95,15 @@ const MobileClipItem: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[] }> = 
     },
   });
 
-  const handleFollow = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!user) { toast({ description: 'Sign in to follow creators' }); return; }
-    if (isSelf || localFollowing) return;
-    followMutation.mutate();
-  };
+  const caption = [clip.title, clip.description].filter(Boolean).join(' — ');
+  const captionTrimmed = caption.length > 120 && !showFullDesc;
 
   return (
-    <div className="border-b" style={{ background: '#000', borderColor: 'rgba(255,255,255,0.08)' }}>
-      {/* Inline VideoPlayer — click to play/pause, shows controls, 16:9 */}
+    <div
+      className="border-b"
+      style={{ background: '#03080A', borderColor: '#1B2A33' }}
+    >
+      {/* ── Video ── */}
       <VideoPlayer
         videoUrl={clip.videoUrl || ''}
         thumbnailUrl={clip.thumbnailUrl || undefined}
@@ -111,94 +113,151 @@ const MobileClipItem: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[] }> = 
         className="w-full"
       />
 
-      {/* Info panel below the video */}
-      <div className="px-4 pt-3 pb-4">
+      {/* ── Post body ── */}
+      <div className="px-4 pt-3 pb-1" style={{ background: '#0B1218' }}>
+
         {/* Creator row */}
-        <div className="flex items-center gap-3 mb-2">
-          <Link href={`/profile/${clip.user.username}`} className="flex items-center gap-2 flex-1 min-w-0 no-underline">
-            <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid rgba(183,255,26,0.45)' }}>
+        <div className="flex items-start gap-3 mb-2.5">
+          <Link href={`/profile/${clip.user.username}`} className="flex-shrink-0">
+            <div
+              className="w-10 h-10 rounded-full overflow-hidden"
+              style={{ border: '2px solid rgba(183,255,26,0.4)' }}
+            >
               <img
                 src={clip.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
                 alt={clip.user.displayName || clip.user.username}
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="min-w-0">
-              <span className="text-white font-bold text-[14px] block truncate">
-                {clip.user.displayName || clip.user.username}
-              </span>
-              <span className="text-white/50 text-[12px]">@{clip.user.username}</span>
-            </div>
           </Link>
-          {!isSelf && !localFollowing && (
-            <button
-              onClick={handleFollow}
-              disabled={followMutation.isPending}
-              className="flex-shrink-0 text-xs font-bold px-3 py-1 rounded-full"
-              style={{ background: '#B7FF1A', color: '#071013' }}
-            >
-              {followMutation.isPending ? '…' : 'Follow'}
-            </button>
-          )}
-        </div>
 
-        {/* Title */}
-        <p className="text-white text-[15px] leading-snug mb-1">{clip.title}</p>
-
-        {/* Description */}
-        {clip.description && (
-          <div className="mb-2">
-            <p className={`text-white/55 text-[13px] leading-snug ${showFullDesc ? '' : 'line-clamp-2'}`}>
-              {clip.description}
-            </p>
-            {clip.description.length > 80 && (
-              <button
-                onClick={() => setShowFullDesc(v => !v)}
-                className="text-[#B7FF1A] text-[12px] font-semibold"
-              >
-                {showFullDesc ? 'less' : '... more'}
-              </button>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Link href={`/profile/${clip.user.username}`} className="no-underline">
+                <span className="font-bold text-[15px] leading-tight" style={{ color: '#F5F7F2' }}>
+                  {clip.user.displayName || clip.user.username}
+                </span>
+              </Link>
+              {isPro && (
+                <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#B7FF1A' }} />
+              )}
+              <span className="text-[13px]" style={{ color: '#7E887A' }}>
+                @{clip.user.username}
+              </span>
+            </div>
+            {clip.game?.name && (
+              <div className="flex items-center gap-1 mt-0.5">
+                <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
+                <span className="text-[12px] font-medium" style={{ color: '#B7FF1A' }}>{clip.game.name}</span>
+              </div>
             )}
           </div>
-        )}
 
-        {/* Game tag */}
-        {clip.game?.name && (
-          <div className="flex items-center gap-1.5 mb-3">
-            <Gamepad2 className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-            <span className="text-[13px] font-semibold" style={{ color: '#B7FF1A' }}>{clip.game.name}</span>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {!isSelf && !localFollowing && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!user) { toast({ description: 'Sign in to follow creators' }); return; }
+                  followMutation.mutate();
+                }}
+                disabled={followMutation.isPending}
+                className="text-xs font-bold px-3 py-1 rounded-full"
+                style={{ background: '#B7FF1A', color: '#071013' }}
+              >
+                {followMutation.isPending ? '…' : 'Follow'}
+              </button>
+            )}
+            <button className="p-1" style={{ color: '#7E887A' }}>
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
           </div>
-        )}
+        </div>
+
+        {/* Caption */}
+        <div className="mb-3">
+          <p
+            className="text-[14px] leading-relaxed"
+            style={{ color: '#B8C0AE' }}
+          >
+            {captionTrimmed ? caption.slice(0, 120) : caption}
+            {captionTrimmed && (
+              <button
+                onClick={() => setShowFullDesc(true)}
+                className="font-semibold ml-0.5"
+                style={{ color: '#B7FF1A' }}
+              >
+                … more
+              </button>
+            )}
+          </p>
+        </div>
 
         {/* Engagement row */}
-        <div className="flex items-center gap-5 pt-1">
-          <LikeButton
-            contentId={clip.id}
-            contentType="clip"
-            contentOwnerId={clip.user.id}
-            initialLiked={(clip as any).isLiked ?? false}
-            initialCount={likes}
-            size="sm"
-            variant="horizontal"
-          />
-          <FireButton
-            contentId={clip.id}
-            contentType="clip"
-            contentOwnerId={clip.user.id}
-            initialFired={(clip as any).isFired ?? false}
-            initialCount={fires}
-            size="sm"
-            variant="horizontal"
-          />
+        <div
+          className="flex items-center py-2.5"
+          style={{ borderTop: '1px solid #1B2A33' }}
+        >
+          {/* Comments */}
           <button
             onClick={() => openClipDialog(clip.id, clips)}
-            className="flex items-center gap-1.5 text-white/55 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 flex-1 justify-center transition-colors"
+            style={{ color: '#7E887A' }}
           >
-            <MessageCircle className="h-5 w-5" />
-            <span className="text-sm">{formatNum(comments)}</span>
+            <MessageCircle className="h-[18px] w-[18px]" />
+            <span className="text-[13px]">{fmt(comments)}</span>
           </button>
-          <button className="flex items-center gap-1.5 text-white/55 hover:text-white transition-colors ml-auto">
-            <Share2 className="h-5 w-5" />
+
+          {/* Fire / reaction */}
+          <div className="flex-1 flex justify-center">
+            <FireButton
+              contentId={clip.id}
+              contentType="clip"
+              contentOwnerId={clip.user.id}
+              initialFired={(clip as any).isFired ?? false}
+              initialCount={fires}
+              size="sm"
+              variant="horizontal"
+            />
+          </div>
+
+          {/* Likes */}
+          <div className="flex-1 flex justify-center">
+            <LikeButton
+              contentId={clip.id}
+              contentType="clip"
+              contentOwnerId={clip.user.id}
+              initialLiked={(clip as any).isLiked ?? false}
+              initialCount={likes}
+              size="sm"
+              variant="horizontal"
+            />
+          </div>
+
+          {/* Views */}
+          <button
+            className="flex items-center gap-1.5 flex-1 justify-center"
+            style={{ color: '#7E887A' }}
+          >
+            <BarChart2 className="h-[18px] w-[18px]" />
+            <span className="text-[13px]">{fmt(views)}</span>
+          </button>
+
+          {/* Bookmark */}
+          <button
+            onClick={() => setBookmarked(v => !v)}
+            className="flex items-center justify-center flex-1 transition-colors"
+            style={{ color: bookmarked ? '#B7FF1A' : '#7E887A' }}
+          >
+            <Bookmark className={`h-[18px] w-[18px] ${bookmarked ? 'fill-current' : ''}`} />
+          </button>
+
+          {/* Share */}
+          <button
+            className="flex items-center justify-center flex-1 transition-colors"
+            style={{ color: '#7E887A' }}
+          >
+            <Share2 className="h-[18px] w-[18px]" />
           </button>
         </div>
       </div>
@@ -206,14 +265,45 @@ const MobileClipItem: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[] }> = 
   );
 };
 
-// Scrollable clips feed — wraps MobileClipItem cards
-const MobileClipsViewer: React.FC<{ clips: ClipWithUser[] }> = ({ clips }) => (
-  <div className="pb-24" style={{ background: '#000' }}>
-    {clips.map((clip) => (
-      <MobileClipItem key={clip.id} clip={clip} clips={clips} />
-    ))}
-  </div>
-);
+// ── Mobile: full-screen clips viewer with top bar ─────────────────────────
+const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void }> = ({ clips, onBack }) => {
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: '#03080A' }}>
+      {/* Top bar */}
+      <div
+        className="flex-shrink-0 flex items-center justify-between px-4 py-3"
+        style={{ background: '#03080A', borderBottom: '1px solid #1B2A33' }}
+      >
+        <button
+          onClick={onBack}
+          className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
+          style={{ color: '#F5F7F2' }}
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <span className="font-bold text-[16px]" style={{ color: '#F5F7F2', fontFamily: 'Space Grotesk, sans-serif' }}>
+          Clips
+        </span>
+        <button className="w-9 h-9 flex items-center justify-center rounded-full" style={{ color: '#F5F7F2' }}>
+          <MoreHorizontal className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Scrollable feed */}
+      <div className="flex-1 overflow-y-auto">
+        {clips.map((clip) => (
+          <ClipFeedCard key={clip.id} clip={clip} clips={clips} />
+        ))}
+        <div className="h-6" />
+      </div>
+    </div>
+  );
+};
 
 // Reel card component - TikTok/YouTube Shorts style
 const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({ reel, reelsList }) => {
@@ -559,6 +649,28 @@ const TrendingPage: React.FC = () => {
                      isLoadingScreenshots;
 
     if (isLoading) {
+      if (activeTab === 'clips') {
+        return (
+          <div className="max-w-[640px] mx-auto rounded-xl overflow-hidden" style={{ border: '1px solid #1B2A33' }}>
+            {Array(3).fill(0).map((_, i) => (
+              <div key={i} className="border-b" style={{ borderColor: '#1B2A33', background: '#03080A' }}>
+                <Skeleton className="w-full aspect-video rounded-none" style={{ background: '#0B1218' }} />
+                <div className="px-4 pt-3 pb-4 space-y-3" style={{ background: '#0B1218' }}>
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" style={{ background: '#1B2A33' }} />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-3.5 w-32" style={{ background: '#1B2A33' }} />
+                      <Skeleton className="h-3 w-24" style={{ background: '#1B2A33' }} />
+                    </div>
+                  </div>
+                  <Skeleton className="h-4 w-full" style={{ background: '#1B2A33' }} />
+                  <Skeleton className="h-3 w-3/4" style={{ background: '#1B2A33' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      }
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {Array(8).fill(0).map((_, i) => (
@@ -731,25 +843,28 @@ const TrendingPage: React.FC = () => {
       );
     }
 
-    // For clips
+    // For clips — narrow centered X/Twitter-style feed
     if (!trendingClips?.length) {
       return (
-        <div className="text-center py-12">
-          <TrendingUp className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-xl font-semibold mb-2">No trending clips</h3>
-          <p className="text-muted-foreground">Check back later for trending content!</p>
+        <div className="text-center py-16 max-w-lg mx-auto">
+          <TrendingUp className="h-14 w-14 mx-auto mb-4" style={{ color: '#B7FF1A' }} />
+          <p className="text-lg font-semibold mb-1" style={{ color: '#F5F7F2' }}>No trending clips</p>
+          <p style={{ color: '#7E887A' }}>Check back later for trending content!</p>
         </div>
       );
     }
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div
+        className="max-w-[640px] mx-auto rounded-xl overflow-hidden"
+        style={{ border: '1px solid #1B2A33' }}
+      >
         {trendingClips.map((clip) => (
-          <VideoClipGridItem
+          <ClipFeedCard
             key={clip.id}
             clip={clip}
-            userId={user?.id}
-            clipsList={trendingClips}
+            clips={trendingClips}
+            isDesktop
           />
         ))}
       </div>
@@ -820,7 +935,7 @@ const TrendingPage: React.FC = () => {
                 <p className="text-white/50 text-sm text-center">Check back later!</p>
               </div>
             ) : (
-              <MobileClipsViewer clips={trendingClips} />
+              <MobileClipsViewer clips={trendingClips} onBack={() => setActiveTab('reels')} />
             )}
           </div>
         )}

@@ -1,0 +1,102 @@
+Update the Clips viewing page to work like X/Twitter video posts.
+
+Goal:
+Show one horizontal 16:9 clip at a time, with the clip and post details underneath, similar to watching videos on X.
+
+Important:
+This is NOT reels.
+Do not make videos vertical 9:16.
+Clips must stay horizontal 16:9.
+
+Layout:
+
+1. Full dark page
+- Background should be black / #03080A
+- One clip shown at a time
+- Mobile-first design
+- Desktop should centre the content in a narrow feed column
+
+2. Top bar
+- Back arrow on the left
+- Three-dot menu on the right
+- Keep it minimal and white
+
+3. Video area
+- Show a 16:9 video player
+- The video should sit around the upper/middle area of the screen
+- Use full available width
+- Preserve aspect ratio
+- Do not crop into portrait
+- Add standard controls:
+  - Play/pause
+  - Progress bar
+  - Current time / duration
+  - Volume
+  - Fullscreen
+
+4. Post/creator section under video
+Show:
+- Avatar
+- Display name
+- Username
+- Verification badge if user has one
+- Optional badge/icon if available
+- Three-dot menu on the right
+
+Example:
+Avatar
+WiiMee ✅
+@WiiMee
+
+5. Caption section
+Under the creator row:
+- Clip caption/title
+- Description text
+- If long, truncate and show “more”
+
+Example:
+The seed phrase was already in the box.
+
+Had so much fun scratching it off!... more
+
+6. Engagement row
+Under caption, show:
+- Comment icon + count
+- Repost/share icon + count
+- Like icon + count
+- View count
+- Bookmark icon
+- Share icon
+
+Example:
+💬 68   🔁 115   ♥ 668   📊 78K   🔖   Share
+
+Use clean line icons.
+Likes can use neon green or pink depending on existing app style, but default Gamefolio accent should be neon green.
+
+7. Scrolling behaviour
+- Feed should show one clip/post at a time
+- User can scroll down to the next clip
+- Each clip should feel like its own full-screen viewing moment
+- Keep the next clip below, not a grid
+- No masonry layout
+- No multi-column layout on mobile
+
+8. Theme
+Use Gamefolio theme:
+- Background: #03080A
+- Surface: #0B1218
+- Border: #1B2A33
+- Neon green: #B7FF1A
+- Text primary: #F5F7F2
+- Text secondary: #B8C0AE
+- Text muted: #7E887A
+- Font: Space Grotesk
+
+9. Keep functionality
+- Do not break existing upload, like, comment, share, bookmark, or user profile links
+- Reuse existing data and components where possible
+- Only update layout and styling for the clip viewing experience
+
+Overall:
+Make the clips viewer feel like X/Twitter video watching, one 16:9 clip at a time, with creator details, caption, and engagement underneath.
