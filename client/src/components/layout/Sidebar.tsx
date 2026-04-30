@@ -257,8 +257,8 @@ const Sidebar = () => {
                 className={cn(
                   "flex items-center p-3 rounded-lg transition-all cursor-pointer",
                   location === item.href
-                    ? "text-white bg-primary"
-                    : "text-muted-foreground hover:bg-primary hover:text-white"
+                    ? "text-[#071013] bg-primary"
+                    : "text-muted-foreground hover:bg-primary hover:text-[#071013]"
                 )}
               >
                 <item.icon className="w-6 h-6" />
