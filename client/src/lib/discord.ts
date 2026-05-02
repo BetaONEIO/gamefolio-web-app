@@ -1,9 +1,17 @@
 /**
  * Discord OAuth configuration and authentication functions
- * Similar to Firebase setup but for Discord OAuth 2.0
+ * Web flow: redirect to Discord, callback at /auth/discord/callback (handled
+ *           by client/src/components/auth/DiscordCallback.tsx)
+ * Native flow (Capacitor): backend /api/auth/mobile/discord/init returns an
+ *           authUrl, we open it in @capacitor/browser, the backend's mobile
+ *           callback redirects to com.gamefolio.app://auth/callback?code=...
+ *           which is captured by native-auth-bridge and exchanged for JWT
+ *           tokens via /api/auth/mobile/exchange.
  */
 
-import { openExternal } from './platform';
+import { Browser } from '@capacitor/browser';
+import { isNative, openExternal, API_BASE } from './platform';
+import { CAPACITOR_APP_SCHEME, awaitMobileAuthCallback } from './native-auth-bridge';
 
 interface DiscordUser {
   id: string;
@@ -20,15 +28,18 @@ interface DiscordOAuthConfig {
   scope: string;
 }
 
-// Discord OAuth configuration
+// Discord OAuth configuration (web flow)
 const discordConfig: DiscordOAuthConfig = {
   clientId: import.meta.env.VITE_DISCORD_CLIENT_ID || '',
-  redirectUri: `${window.location.origin}/auth/discord/callback`,
+  redirectUri: typeof window !== 'undefined'
+    ? `${window.location.origin}/auth/discord/callback`
+    : '',
   scope: 'identify email'
 };
 
-// Validate Discord configuration
-const isDiscordConfigValid = !!discordConfig.clientId;
+// Discord client id is only required for the web popup flow; the native
+// flow runs through the backend so it can work even without it.
+const isDiscordConfigValid = isNative ? true : !!discordConfig.clientId;
 
 if (!isDiscordConfigValid) {
   console.warn('Discord configuration is incomplete. Discord authentication will not work.');
@@ -61,19 +72,47 @@ function clearOAuthState(): void {
 }
 
 /**
- * Initiate Discord OAuth flow
- * Opens Discord authorization URL in current window
+ * Result returned by signInWithDiscord on native platforms — a one-time auth
+ * code that should be exchanged with /api/auth/mobile/exchange.
  */
-export const signInWithDiscord = async (): Promise<void> => {
+export type DiscordNativeResult = { kind: 'native'; code: string };
+
+/**
+ * Initiate Discord OAuth flow.
+ *  - Web: redirects to Discord; resolves to undefined.
+ *  - Native: opens Discord in @capacitor/browser, waits for the deep-link
+ *            callback, and resolves to a one-time auth code.
+ */
+export const signInWithDiscord = async (): Promise<DiscordNativeResult | void> => {
+  if (isNative) {
+    // Use the backend mobile init endpoint so the redirect URI matches the
+    // server's callback (deep-link back into the app).
+    const initRes = await fetch(
+      `${API_BASE}/api/auth/mobile/discord/init?scheme=${encodeURIComponent(CAPACITOR_APP_SCHEME)}`,
+      { method: 'GET' }
+    );
+    if (!initRes.ok) {
+      throw new Error('Failed to start Discord sign-in');
+    }
+    const { authUrl } = (await initRes.json()) as { authUrl: string };
+    if (!authUrl) throw new Error('Discord auth URL missing');
+
+    // Kick off the deep-link wait BEFORE opening the browser so we don't miss
+    // a fast redirect.
+    const codePromise = awaitMobileAuthCallback();
+    await Browser.open({ url: authUrl, presentationStyle: 'popover' });
+    const code = await codePromise;
+    return { kind: 'native', code };
+  }
+
   if (!isDiscordConfigValid) {
     throw new Error('Discord OAuth not properly configured');
   }
 
-  // Generate and store state for security
+  // Web fallback: full-page redirect to Discord with state.
   const state = generateOAuthState();
   storeOAuthState(state);
 
-  // Build Discord OAuth URL
   const authUrl = new URL('https://discord.com/oauth2/authorize');
   authUrl.searchParams.set('client_id', discordConfig.clientId);
   authUrl.searchParams.set('redirect_uri', discordConfig.redirectUri);
@@ -82,13 +121,12 @@ export const signInWithDiscord = async (): Promise<void> => {
   authUrl.searchParams.set('state', state);
   authUrl.searchParams.set('prompt', 'consent');
 
-  // Redirect to Discord OAuth (in-app browser on native, same-window on web)
   await openExternal(authUrl.toString());
 };
 
 /**
- * Handle Discord OAuth callback
- * This processes the authorization code returned from Discord
+ * Handle Discord OAuth callback (web only).
+ * This processes the authorization code returned from Discord.
  */
 export const handleDiscordCallback = async (code: string, state: string): Promise<DiscordUser> => {
   if (!isDiscordConfigValid) {
@@ -105,7 +143,6 @@ export const handleDiscordCallback = async (code: string, state: string): Promis
   clearOAuthState();
 
   try {
-    // Exchange authorization code for access token via our backend
     const response = await fetch('/api/auth/discord/token', {
       method: 'POST',
       headers: {
@@ -131,14 +168,14 @@ export const handleDiscordCallback = async (code: string, state: string): Promis
 };
 
 /**
- * Check if current URL is a Discord OAuth callback
+ * Check if current URL is a Discord OAuth callback (web)
  */
 export const isDiscordCallback = (): boolean => {
-  return window.location.pathname === '/auth/discord/callback';
+  return typeof window !== 'undefined' && window.location.pathname === '/auth/discord/callback';
 };
 
 /**
- * Extract OAuth parameters from current URL
+ * Extract OAuth parameters from current URL (web)
  */
 export const getDiscordCallbackParams = (): { code: string | null; state: string | null; error: string | null } => {
   const urlParams = new URLSearchParams(window.location.search);

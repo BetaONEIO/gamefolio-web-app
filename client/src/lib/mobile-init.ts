@@ -2,9 +2,13 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
 import { isNative, isIOS, isAndroid } from './platform';
+import { initNativeAuthBridge } from './native-auth-bridge';
 
 export async function initMobileShell(): Promise<void> {
   if (!isNative) return;
+
+  // Register deep-link listener for OAuth callbacks (Discord/Xbox/etc.)
+  initNativeAuthBridge();
 
   try {
     await StatusBar.setStyle({ style: Style.Dark });

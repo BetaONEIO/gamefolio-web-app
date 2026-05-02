@@ -1,4 +1,6 @@
-import { openExternal } from './platform';
+import { Browser } from '@capacitor/browser';
+import { isNative, openExternal, API_BASE } from './platform';
+import { CAPACITOR_APP_SCHEME, awaitMobileAuthCallback } from './native-auth-bridge';
 
 interface XboxUser {
   xuid: string;
@@ -16,7 +18,9 @@ const xboxConfig: XboxOAuthConfig = {
   scope: 'XboxLive.signin XboxLive.offline_access'
 };
 
-export const isXboxConfigValid = !!xboxConfig.clientId;
+// On native we drive the OAuth flow via the backend's /auth/mobile/xbox/init
+// endpoint, so we don't strictly need the web client id locally.
+export const isXboxConfigValid = isNative ? true : !!xboxConfig.clientId;
 
 if (!isXboxConfigValid) {
   console.warn('Xbox configuration is incomplete. Xbox authentication will not work.');
@@ -42,10 +46,6 @@ function clearOAuthState(): void {
   localStorage.removeItem('xbox_oauth_state');
 }
 
-function navigateToXboxAuth(url: string): void {
-  void openExternal(url);
-}
-
 function buildXboxAuthUrl(state: string): string {
   const authUrl = new URL('https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize');
   authUrl.searchParams.set('client_id', xboxConfig.clientId);
@@ -56,7 +56,32 @@ function buildXboxAuthUrl(state: string): string {
   return authUrl.toString();
 }
 
-export const signInWithXbox = (): void => {
+export type XboxNativeResult = { kind: 'native'; code: string };
+
+/**
+ * Initiate Xbox sign-in.
+ *  - Web: redirects to Microsoft consumers OAuth page; resolves undefined.
+ *  - Native: backend /api/auth/mobile/xbox/init returns the authUrl; opens it
+ *            in the in-app browser and waits for the deep-link callback.
+ */
+export const signInWithXbox = async (): Promise<XboxNativeResult | void> => {
+  if (isNative) {
+    const initRes = await fetch(
+      `${API_BASE}/api/auth/mobile/xbox/init?scheme=${encodeURIComponent(CAPACITOR_APP_SCHEME)}`,
+      { method: 'GET' }
+    );
+    if (!initRes.ok) {
+      throw new Error('Failed to start Xbox sign-in');
+    }
+    const { authUrl } = (await initRes.json()) as { authUrl: string };
+    if (!authUrl) throw new Error('Xbox auth URL missing');
+
+    const codePromise = awaitMobileAuthCallback();
+    await Browser.open({ url: authUrl, presentationStyle: 'popover' });
+    const code = await codePromise;
+    return { kind: 'native', code };
+  }
+
   if (!isXboxConfigValid) {
     throw new Error('Xbox OAuth not properly configured');
   }
@@ -64,11 +89,18 @@ export const signInWithXbox = (): void => {
   const state = generateOAuthState();
   storeOAuthState(state);
   localStorage.removeItem('xbox_oauth_mode');
-
-  navigateToXboxAuth(buildXboxAuthUrl(state));
+  await openExternal(buildXboxAuthUrl(state));
 };
 
-export const connectXboxAccount = (): void => {
+export const connectXboxAccount = async (): Promise<XboxNativeResult | void> => {
+  if (isNative) {
+    // Connect mode flows through the same mobile init/exchange pair, but we
+    // still flag connect mode in localStorage so the auth-modal/settings UI
+    // knows what to do once the deep-link returns.
+    localStorage.setItem('xbox_oauth_mode', 'connect');
+    return signInWithXbox();
+  }
+
   if (!isXboxConfigValid) {
     throw new Error('Xbox OAuth not properly configured');
   }
@@ -76,8 +108,7 @@ export const connectXboxAccount = (): void => {
   const state = generateOAuthState();
   storeOAuthState(state);
   localStorage.setItem('xbox_oauth_mode', 'connect');
-
-  navigateToXboxAuth(buildXboxAuthUrl(state));
+  await openExternal(buildXboxAuthUrl(state));
 };
 
 export const handleXboxCallback = async (code: string, state: string): Promise<XboxUser> => {

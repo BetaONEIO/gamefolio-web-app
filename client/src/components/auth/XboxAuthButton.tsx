@@ -1,8 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { FaXbox } from "react-icons/fa";
 import { signInWithXbox, isXboxConfigValid } from "@/lib/xbox";
+import { exchangeMobileAuthCode } from "@/lib/mobile-auth";
+import { isNative } from "@/lib/platform";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 
 interface XboxAuthButtonProps {
   disabled?: boolean;
@@ -11,6 +15,8 @@ interface XboxAuthButtonProps {
 export function XboxAuthButton({ disabled = false }: XboxAuthButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const handleXboxSignIn = async () => {
     try {
@@ -22,32 +28,67 @@ export function XboxAuthButton({ disabled = false }: XboxAuthButtonProps) {
 
       toast({
         title: "Connecting to Xbox",
-        description: "Redirecting to secure Microsoft authentication...",
-        variant: "default"
+        description: isNative
+          ? "Opening Xbox / Microsoft authentication..."
+          : "Redirecting to secure Microsoft authentication...",
+        variant: "default",
       });
 
-      await signInWithXbox();
+      const result = await signInWithXbox();
+
+      if (result && result.kind === 'native') {
+        const { user } = await exchangeMobileAuthCode(result.code);
+        queryClient.setQueryData(["/api/user"], user);
+
+        if (user?.needsOnboarding) {
+          toast({
+            title: user?.isNewUser ? "Welcome to Gamefolio!" : "Complete your profile",
+            description: user?.isNewUser
+              ? "Let's set up your gaming profile."
+              : "Finish setting up your gaming profile to continue.",
+            variant: "gamefolioSuccess",
+          });
+          setLocation("/onboarding");
+        } else {
+          toast({
+            title: "Welcome back!",
+            description: `You're signed in as ${user?.xboxUsername || user?.displayName || 'gamer'}.`,
+            variant: "gamefolioSuccess",
+          });
+          setLocation("/");
+        }
+        setIsLoading(false);
+        return;
+      }
+      // Web: redirect already happened; the XboxCallback page finishes login.
     } catch (error: any) {
       console.error('Xbox sign-in error:', error);
       setIsLoading(false);
 
-      if (error.message.includes('not properly configured')) {
+      const message = error?.message ?? 'Xbox sign-in failed';
+      if (message.includes('not properly configured')) {
         toast({
           title: "Configuration Error",
           description: "Xbox sign-in is not set up yet. Please use another login method.",
-          variant: "destructive"
+          variant: "destructive",
         });
-      } else if (error.message.includes('network') || error.message.includes('fetch')) {
+      } else if (message.includes('cancelled') || message.includes('Cancelled')) {
+        toast({
+          title: "Sign-in cancelled",
+          description: "Xbox sign-in was cancelled. Please try again.",
+          variant: "destructive",
+        });
+      } else if (message.includes('network') || message.includes('fetch') || message.includes('timed out')) {
         toast({
           title: "Network Error",
           description: "Please check your internet connection and try again.",
-          variant: "destructive"
+          variant: "destructive",
         });
       } else {
         toast({
           title: "Authentication Error",
-          description: error.message || "There was an error signing in with Xbox. Please try again.",
-          variant: "destructive"
+          description: message || "There was an error signing in with Xbox. Please try again.",
+          variant: "destructive",
         });
       }
     }

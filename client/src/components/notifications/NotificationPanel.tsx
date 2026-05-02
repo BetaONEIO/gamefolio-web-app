@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
+import { API_BASE, isNative } from "@/lib/platform";
 
 interface NotificationData {
   id: number;
@@ -77,8 +78,29 @@ export function NotificationPanel({
   React.useEffect(() => {
     if (!isOpen || !user?.id) return;
 
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsHost = window.location.host;
+    // On Capacitor native builds, window.location.host is "localhost" (the
+    // WebView's origin) — connect to the real API host instead. Never fall
+    // back to window.location on native; that would silently reproduce the
+    // localhost bug.
+    const NATIVE_FALLBACK_HOST = 'app.gamefolio.com';
+    let wsProtocol: string;
+    let wsHost: string;
+    if (isNative) {
+      let apiUrl: URL | null = null;
+      if (API_BASE) {
+        try { apiUrl = new URL(API_BASE); } catch { apiUrl = null; }
+      }
+      if (apiUrl) {
+        wsProtocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsHost = apiUrl.host;
+      } else {
+        wsProtocol = 'wss:';
+        wsHost = NATIVE_FALLBACK_HOST;
+      }
+    } else {
+      wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      wsHost = window.location.host;
+    }
     const wsUrl = `${wsProtocol}//${wsHost}/api/ws/notifications?userId=${user.id}`;
 
     console.log('🔗 Connecting to WebSocket notifications:', wsUrl);

@@ -11,8 +11,26 @@ const scryptAsync = promisify(scrypt);
 const router = Router();
 
 // In-memory store for OAuth state tokens and auth codes (expires after 10 minutes)
-const oauthStateStore = new Map<string, { createdAt: number; platform: string }>();
+const oauthStateStore = new Map<string, { createdAt: number; platform: string; scheme?: string }>();
 const mobileAuthCodes = new Map<string, { createdAt: number; tokens: { accessToken: string; refreshToken: string }; userId: number; needsOnboarding: boolean; isNewUser: boolean }>();
+
+// Allow-list of native app URL schemes that may receive the OAuth deep-link
+// callback. Capacitor app uses `com.gamefolio.app://`; the legacy Rork bundle
+// used `rork-app://`. New schemes must be added here explicitly.
+const ALLOWED_MOBILE_SCHEMES = new Set<string>(['com.gamefolio.app', 'rork-app']);
+const DEFAULT_MOBILE_SCHEME = 'rork-app';
+
+function resolveMobileScheme(req: Request): string {
+  const raw = String(req.query.scheme || '').trim().toLowerCase().replace(/:$|:\/\/$/, '');
+  if (raw && ALLOWED_MOBILE_SCHEMES.has(raw)) {
+    return raw;
+  }
+  return DEFAULT_MOBILE_SCHEME;
+}
+
+function schemePrefix(scheme: string): string {
+  return `${scheme}://`;
+}
 
 // Cleanup expired entries every 5 minutes
 setInterval(() => {
@@ -455,8 +473,10 @@ router.get('/health', (req, res) => {
   });
 });
 
-// Mobile app deep link scheme
-const RORK_APP_SCHEME = 'rork-app://';
+// Mobile app deep link scheme — kept for backward compatibility with code that
+// hasn't been migrated yet, but new code paths should resolve the scheme per
+// request via resolveMobileScheme(req).
+const RORK_APP_SCHEME = schemePrefix(DEFAULT_MOBILE_SCHEME);
 
 /**
  * Mobile Google OAuth endpoint
@@ -564,16 +584,18 @@ router.post('/auth/mobile/google', async (req: Request, res: Response) => {
 router.get('/auth/mobile/discord/init', (req: Request, res: Response) => {
   const baseUrl = process.env.SITE_URL || `https://${process.env.REPLIT_DEV_DOMAIN}`;
   const redirectUri = `${baseUrl}/api/auth/mobile/discord/callback`;
-  
+
   const discordClientId = process.env.DISCORD_CLIENT_ID;
-  
+
   if (!discordClientId) {
     return res.status(500).json({ message: 'Discord client ID not configured' });
   }
-  
+
+  const scheme = resolveMobileScheme(req);
+
   // Generate state token for CSRF protection
   const state = generateSecureCode();
-  oauthStateStore.set(state, { createdAt: Date.now(), platform: 'discord' });
+  oauthStateStore.set(state, { createdAt: Date.now(), platform: 'discord', scheme });
   
   const discordAuthUrl = `https://discord.com/api/oauth2/authorize?` +
     `client_id=${discordClientId}&` +
@@ -595,28 +617,36 @@ router.get('/auth/mobile/discord/init', (req: Request, res: Response) => {
  * Mobile app exchanges this code for tokens via /auth/mobile/exchange endpoint
  */
 router.get('/auth/mobile/discord/callback', async (req: Request, res: Response) => {
+  // Resolve scheme from the stored state (set during init); default kept for
+  // safety so we never crash if the state lookup fails.
+  let appScheme = RORK_APP_SCHEME;
   try {
     const { code, error: oauthError, state } = req.query;
-    
+
+    if (state && oauthStateStore.has(String(state))) {
+      const sd = oauthStateStore.get(String(state));
+      if (sd?.scheme) appScheme = schemePrefix(sd.scheme);
+    }
+
     if (oauthError) {
-      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent(String(oauthError))}`);
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent(String(oauthError))}`);
     }
 
     if (!code) {
-      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('No authorization code received')}`);
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('No authorization code received')}`);
     }
 
     // Validate state parameter for CSRF protection
     if (!state || !oauthStateStore.has(String(state))) {
       console.error('Invalid or missing OAuth state parameter');
-      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Invalid authentication state')}`);
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Invalid authentication state')}`);
     }
-    
+
     const stateData = oauthStateStore.get(String(state));
     oauthStateStore.delete(String(state)); // One-time use
-    
+
     if (stateData?.platform !== 'discord') {
-      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Invalid authentication state')}`);
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Invalid authentication state')}`);
     }
 
     const baseUrl = process.env.SITE_URL || `https://${process.env.REPLIT_DEV_DOMAIN}`;
@@ -640,7 +670,7 @@ router.get('/auth/mobile/discord/callback', async (req: Request, res: Response) 
 
     if (!tokenResponse.ok) {
       console.error('Discord token exchange failed:', await tokenResponse.text());
-      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Failed to exchange authorization code')}`);
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Failed to exchange authorization code')}`);
     }
 
     const tokenData = await tokenResponse.json();
@@ -653,14 +683,14 @@ router.get('/auth/mobile/discord/callback', async (req: Request, res: Response) 
     });
 
     if (!userResponse.ok) {
-      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Failed to fetch Discord user info')}`);
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Failed to fetch Discord user info')}`);
     }
 
     const discordUser = await userResponse.json();
     const { id, username, discriminator, email, avatar } = discordUser;
 
     if (!id || !email) {
-      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Discord account missing email')}`);
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Discord account missing email')}`);
     }
 
     // Check if user already exists by email
@@ -727,11 +757,11 @@ router.get('/auth/mobile/discord/callback', async (req: Request, res: Response) 
     });
 
     // Redirect to mobile app with one-time auth code (not the actual tokens)
-    return res.redirect(`${RORK_APP_SCHEME}auth/callback?code=${authCode}`);
+    return res.redirect(`${appScheme}auth/callback?code=${authCode}`);
 
   } catch (error) {
     console.error('Mobile Discord callback error:', error);
-    return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Discord authentication failed')}`);
+    return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Discord authentication failed')}`);
   }
 });
 
@@ -852,8 +882,10 @@ router.get('/auth/mobile/xbox/init', (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Xbox (Microsoft) client ID not configured' });
   }
 
+  const scheme = resolveMobileScheme(req);
+
   const state = generateSecureCode();
-  oauthStateStore.set(state, { createdAt: Date.now(), platform: 'xbox' });
+  oauthStateStore.set(state, { createdAt: Date.now(), platform: 'xbox', scheme });
 
   const authUrl = `https://login.live.com/oauth20_authorize.srf?` +
     `client_id=${microsoftClientId}&` +
@@ -872,32 +904,38 @@ router.get('/auth/mobile/xbox/init', (req: Request, res: Response) => {
  * GET /api/auth/mobile/xbox/callback
  */
 router.get('/auth/mobile/xbox/callback', async (req: Request, res: Response) => {
+  let appScheme = RORK_APP_SCHEME;
   try {
     const { code, error: oauthError, state } = req.query;
 
+    if (state && oauthStateStore.has(String(state))) {
+      const sd = oauthStateStore.get(String(state));
+      if (sd?.scheme) appScheme = schemePrefix(sd.scheme);
+    }
+
     if (oauthError) {
-      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent(String(oauthError))}`);
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent(String(oauthError))}`);
     }
 
     if (!code) {
-      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('No authorization code received')}`);
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('No authorization code received')}`);
     }
 
     if (!state || !oauthStateStore.has(String(state))) {
       console.error('Invalid or missing Xbox OAuth state parameter');
-      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Invalid authentication state')}`);
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Invalid authentication state')}`);
     }
 
     const stateData = oauthStateStore.get(String(state));
     oauthStateStore.delete(String(state));
 
     if (stateData?.platform !== 'xbox') {
-      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Invalid authentication state')}`);
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Invalid authentication state')}`);
     }
 
     const xblApiKey = process.env.XBL_API_KEY;
     if (!xblApiKey) {
-      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Xbox authentication not configured on server')}`);
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Xbox authentication not configured on server')}`);
     }
 
     const baseUrl = process.env.SITE_URL || `https://${process.env.REPLIT_DEV_DOMAIN}`;
@@ -917,7 +955,7 @@ router.get('/auth/mobile/xbox/callback', async (req: Request, res: Response) => 
     if (!xblResponse.ok) {
       const errorText = await xblResponse.text().catch(() => 'Unknown error');
       console.error('xbl.io mobile token exchange error:', xblResponse.status, errorText);
-      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Failed to exchange authorization code with Xbox Live')}`);
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Failed to exchange authorization code with Xbox Live')}`);
     }
 
     const xblData = await xblResponse.json();
@@ -928,7 +966,7 @@ router.get('/auth/mobile/xbox/callback', async (req: Request, res: Response) => 
 
     if (!xuid || !gamertag) {
       console.error('xbl.io mobile response missing required fields:', JSON.stringify(xblData));
-      return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Could not retrieve Xbox profile information')}`);
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Could not retrieve Xbox profile information')}`);
     }
 
     // Find or create user
@@ -982,11 +1020,11 @@ router.get('/auth/mobile/xbox/callback', async (req: Request, res: Response) => 
       isNewUser
     });
 
-    return res.redirect(`${RORK_APP_SCHEME}auth/callback?code=${authCode}`);
+    return res.redirect(`${appScheme}auth/callback?code=${authCode}`);
 
   } catch (error) {
     console.error('Mobile Xbox callback error:', error);
-    return res.redirect(`${RORK_APP_SCHEME}auth/error?message=${encodeURIComponent('Xbox authentication failed')}`);
+    return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Xbox authentication failed')}`);
   }
 });
 
