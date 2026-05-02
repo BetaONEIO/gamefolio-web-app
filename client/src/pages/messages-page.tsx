@@ -56,7 +56,7 @@ export default function MessagesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [newConversationUsername, setNewConversationUsername] = useState("");
@@ -290,7 +290,7 @@ export default function MessagesPage() {
               You have disabled messaging for your account. To use messaging, please enable it in your settings.
             </p>
             <Button 
-              onClick={() => window.location.href = "/account/settings"}
+              onClick={() => setLocation("/account/settings")}
               className="bg-green text-black hover:bg-green/90"
             >
               Go to Settings

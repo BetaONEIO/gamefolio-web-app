@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { openExternal, nativeShare, isNative } from "@/lib/platform";
 import {
   Share2,
   Copy,
@@ -182,10 +183,21 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
     }
   };
 
-  const handleSocialShare = (platform: string, url: string) => {
+  const handleSocialShare = async (platform: string, url: string) => {
     if (!url) return;
-
-    window.open(url, '_blank', 'noopener,noreferrer');
+    if (isNative && shareData?.clipUrl) {
+      const handled = await nativeShare({
+        title: shareData.title || `Gamefolio ${label}`,
+        text: shareData.description || undefined,
+        url: shareData.clipUrl,
+        dialogTitle: `Share to ${platform}`,
+      });
+      if (handled) {
+        trackShare();
+        return;
+      }
+    }
+    void openExternal(url);
     trackShare();
     toast({
       title: `Sharing on ${platform}`,

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { getQueryFn } from "@/lib/queryClient";
+import { openExternal } from "@/lib/platform";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -282,7 +283,7 @@ export default function CollectionPage() {
         onClose={() => setSelectedNft(null)}
         onViewExplorer={() => {
           if (selectedNft.txHash) {
-            window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${selectedNft.txHash}`, '_blank');
+            void openExternal(`${SKALE_EXPLORER_BASE_URL}/tx/${selectedNft.txHash}`);
           }
         }}
         initialSold={selectedNft.sold || false}

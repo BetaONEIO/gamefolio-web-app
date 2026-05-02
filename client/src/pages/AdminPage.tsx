@@ -3,7 +3,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { AlertSettings } from "@/components/admin/AlertSettings";
 import { useAuth } from "@/hooks/use-auth";
-import { Redirect } from "wouter";
+import { Redirect, useLocation } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
 import { UserWithBadges, BannerSettings, Badge as BadgeType, assetTypes, AssetType, Game } from "@shared/schema";
 import { Switch } from "@/components/ui/switch";
@@ -1819,6 +1819,7 @@ const AdminAlertsSection = () => {
 
 const AdminPage = () => {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [userSearch, setUserSearch] = useState("");
@@ -2891,7 +2892,7 @@ const AdminPage = () => {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Admin Panel</h1>
         <div>
-          <Button variant="outline" onClick={() => window.location.href = "/"}>
+          <Button variant="outline" onClick={() => setLocation("/")}>
             Return to App
           </Button>
         </div>
@@ -3126,7 +3127,7 @@ const AdminPage = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => window.location.href = `/clips/${clip.id}`}
+                          onClick={() => setLocation(`/clips/${clip.id}`)}
                         >
                           View
                         </Button>
@@ -3234,7 +3235,7 @@ const AdminPage = () => {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => window.location.href = `/profile/${user.username}`}
+                                onClick={() => setLocation(`/profile/${user.username}`)}
                                 title="View Profile"
                               >
                                 <User className="h-4 w-4" />
@@ -3389,7 +3390,7 @@ const AdminPage = () => {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => window.location.href = `/clips/${clip.id}`}
+                                onClick={() => setLocation(`/clips/${clip.id}`)}
                                 title="View Clip"
                               >
                                 <Video className="h-4 w-4" />

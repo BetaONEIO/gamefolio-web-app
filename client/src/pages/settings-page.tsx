@@ -17,7 +17,7 @@ import { HexColorPicker } from "react-colorful";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
-import { openExternal } from "@/lib/platform";
+import { openExternal, isNative, API_BASE } from "@/lib/platform";
 import { BannerUploadPreview } from "@/components/BannerUploadPreview";
 import { BackgroundUploadPreview } from "@/components/BackgroundUploadPreview";
 import { BannerPositionPreview } from "@/components/BannerPositionPreview";
@@ -4100,7 +4100,11 @@ export default function SettingsPage() {
                           </div>
                           <Button
                             size="sm"
-                            onClick={() => { window.location.href = "/api/auth/twitch/connect"; }}
+                            onClick={() => {
+                              const url = "/api/auth/twitch/connect";
+                              if (isNative) void openExternal(`${API_BASE}${url}`);
+                              else window.location.href = url;
+                            }}
                             className="gap-1.5 bg-[#9146FF] hover:bg-[#7d3ce8] text-white border-0"
                           >
                             <SiTwitch className="w-4 h-4" />
@@ -4164,7 +4168,11 @@ export default function SettingsPage() {
                           </div>
                           <Button
                             size="sm"
-                            onClick={() => { window.location.href = "/api/auth/kick/connect"; }}
+                            onClick={() => {
+                              const url = "/api/auth/kick/connect";
+                              if (isNative) void openExternal(`${API_BASE}${url}`);
+                              else window.location.href = url;
+                            }}
                             className="gap-1.5 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-[#53FC18] border border-[#53FC18]/30"
                           >
                             <SiKick className="w-4 h-4" />
@@ -4337,7 +4345,12 @@ export default function SettingsPage() {
                             size="sm"
                             disabled={connectingTwitch}
                             className="bg-[#9146FF] hover:bg-[#7d3de8] text-white font-semibold border-0 h-8 px-3 text-xs"
-                            onClick={() => { setConnectingTwitch(true); window.location.href = '/api/auth/twitch-stream/connect'; }}
+                            onClick={() => {
+                              setConnectingTwitch(true);
+                              const url = '/api/auth/twitch-stream/connect';
+                              if (isNative) void openExternal(`${API_BASE}${url}`);
+                              else window.location.href = url;
+                            }}
                           >
                             {connectingTwitch ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
                             Connect with Twitch
@@ -4391,7 +4404,12 @@ export default function SettingsPage() {
                             size="sm"
                             disabled={connectingKick}
                             className="bg-[#53fc18] hover:bg-[#45d414] text-black font-semibold border-0 h-8 px-3 text-xs"
-                            onClick={() => { setConnectingKick(true); window.location.href = '/api/auth/kick/connect'; }}
+                            onClick={() => {
+                              setConnectingKick(true);
+                              const url = '/api/auth/kick/connect';
+                              if (isNative) void openExternal(`${API_BASE}${url}`);
+                              else window.location.href = url;
+                            }}
                           >
                             {connectingKick ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
                             Connect with Kick
@@ -4445,7 +4463,12 @@ export default function SettingsPage() {
                             size="sm"
                             disabled={connectingRumble}
                             className="bg-[#85C742] hover:bg-[#72aa38] text-black font-semibold border-0 h-8 px-3 text-xs"
-                            onClick={() => { setConnectingRumble(true); window.location.href = '/api/auth/rumble/connect'; }}
+                            onClick={() => {
+                              setConnectingRumble(true);
+                              const url = '/api/auth/rumble/connect';
+                              if (isNative) void openExternal(`${API_BASE}${url}`);
+                              else window.location.href = url;
+                            }}
                           >
                             {connectingRumble ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
                             Connect with Rumble

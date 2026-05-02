@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, AlertCircle, Mail, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { isNative, openExternal, API_BASE } from "@/lib/platform";
 
 export default function VerifyEmailPage() {
   const [, setLocation] = useLocation();
@@ -55,8 +56,14 @@ export default function VerifyEmailPage() {
       
       // Add a timeout to prevent infinite hanging
       setTimeout(() => {
-        // Redirect to the server GET endpoint which will handle verification and redirect back
-        window.location.href = `/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+        // Redirect to the server GET endpoint which will handle verification and redirect back.
+        // On native, open through the in-app browser so the deep-link callback can return.
+        const url = `/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+        if (isNative) {
+          void openExternal(`${API_BASE}${url}`);
+        } else {
+          window.location.href = url;
+        }
       }, 500);
       
       // Set a fallback timeout in case redirect fails

@@ -12,6 +12,7 @@ import { Share2, Copy, X, RefreshCw, AlertCircle } from 'lucide-react';
 import { FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
 import { useToast } from '@/hooks/use-toast';
+import { openExternal, nativeShare, isNative } from '@/lib/platform';
 
 interface ShareData {
   screenshotUrl: string;
@@ -127,10 +128,21 @@ export function ScreenshotShareDialog({
     }
   };
 
-  const handleSocialShare = (platform: string, url: string) => {
+  const handleSocialShare = async (platform: string, url: string) => {
     if (!url) return;
-    
-    window.open(url, '_blank', 'noopener,noreferrer');
+    if (isNative && shareData?.screenshotUrl) {
+      const handled = await nativeShare({
+        title: shareData.title || 'Gamefolio screenshot',
+        text: shareData.description || undefined,
+        url: shareData.screenshotUrl,
+        dialogTitle: `Share to ${platform}`,
+      });
+      if (handled) {
+        trackShare();
+        return;
+      }
+    }
+    void openExternal(url);
     trackShare();
     toast({
       title: `Sharing on ${platform}`,

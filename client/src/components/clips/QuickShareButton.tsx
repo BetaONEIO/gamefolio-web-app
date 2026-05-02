@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Share2 } from "lucide-react";
+import { openExternal, nativeShare, isNative } from "@/lib/platform";
 import { 
   FaFacebookF, 
   FaReddit, 
@@ -88,8 +89,21 @@ const QuickShareButton: React.FC<QuickShareButtonProps> = ({
     }
     
     if (platform.url) {
-      window.open(platform.url, '_blank', 'noopener,noreferrer,width=600,height=500');
-      setShowPopover(false);
+      void (async () => {
+        if (isNative) {
+          const handled = await nativeShare({
+            title: 'Shared from Gamefolio',
+            url: shareUrl,
+            dialogTitle: `Share to ${platform.name}`,
+          });
+          if (handled) {
+            setShowPopover(false);
+            return;
+          }
+        }
+        await openExternal(platform.url!);
+        setShowPopover(false);
+      })();
     }
   };
   

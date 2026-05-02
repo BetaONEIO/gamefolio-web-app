@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+import { openExternal, nativeShare, isNative } from "@/lib/platform";
 import { 
   CheckCircle, 
   Upload, 
@@ -181,7 +182,7 @@ const PostUploadSuccessPage = () => {
     document.body.removeChild(link);
   };
 
-  const handleSocialShare = (platform: string, url: string) => {
+  const handleSocialShare = async (platform: string, url: string) => {
     if (platform === 'discord') {
       // For Discord, copy the link to clipboard
       navigator.clipboard.writeText(uploadedContent?.shareUrl || '');
@@ -189,9 +190,18 @@ const PostUploadSuccessPage = () => {
         title: "Link copied for Discord!",
         description: "Paste this link in your Discord channel.",
       });
-    } else {
-      window.open(url, '_blank', 'width=600,height=400');
+      return;
     }
+    // On native, prefer the OS share sheet so the user can pick the right app.
+    if (isNative) {
+      const handled = await nativeShare({
+        title: uploadedContent?.title || 'Shared from Gamefolio',
+        url: uploadedContent?.shareUrl || url,
+        dialogTitle: `Share to ${platform}`,
+      });
+      if (handled) return;
+    }
+    void openExternal(url);
   };
 
   const handleUploadMore = () => {
@@ -450,7 +460,7 @@ const PostUploadSuccessPage = () => {
               variant="outline"
               onClick={() => {
                 const emailUrl = `mailto:?subject=${encodeURIComponent(`Check out this ${contentTypeDisplay.toLowerCase()}!`)}&body=${encodeURIComponent(`I wanted to share this ${contentTypeDisplay.toLowerCase()} with you: ${uploadedContent.shareUrl}`)}`;
-                window.location.href = emailUrl;
+                void openExternal(emailUrl);
               }}
               className="w-full flex items-center justify-center gap-2"
             >

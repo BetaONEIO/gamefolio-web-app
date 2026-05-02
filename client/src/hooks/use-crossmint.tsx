@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useAuth } from './use-auth';
 import { useToast } from './use-toast';
+import { openExternal } from '@/lib/platform';
 
 interface CrossmintWallet {
   address: string;
@@ -114,9 +115,9 @@ export function CrossmintProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Open Crossmint console in new window
+    // Open Crossmint console in the system browser (Capacitor Browser on native).
     const dashboardUrl = getCrossmintDashboardUrl();
-    window.open(dashboardUrl, '_blank', 'noopener,noreferrer');
+    void openExternal(dashboardUrl);
 
     toast({
       title: "Opening Crossmint",

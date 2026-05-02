@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
-import { API_BASE, isNative } from "@/lib/platform";
+import { API_BASE, isNative, openExternal } from "@/lib/platform";
+import { useLocation } from "wouter";
 
 interface NotificationData {
   id: number;
@@ -57,6 +58,7 @@ export function NotificationPanel({
   onNotificationClick,
   className 
 }: NotificationPanelProps) {
+  const [, setLocation] = useLocation();
   const [notifications, setNotifications] = React.useState<NotificationData[]>([]);
   // Bumped whenever the native shell broadcasts an `app-resumed` event so the
   // WebSocket effect re-runs and a socket dropped during backgrounding is
@@ -197,10 +199,16 @@ export function NotificationPanel({
   const handleNotificationClick = (notification: NotificationData) => {
     // Mark as read logic could go here
     onNotificationClick?.(notification);
-    
-    // Navigate to the notification's action URL
+
+    // Navigate to the notification's action URL. Internal app routes use wouter
+    // so we stay inside the WebView; absolute http(s) links are opened via the
+    // in-app browser on native (Capacitor Browser) or a new tab on web.
     if (notification.actionUrl) {
-      window.location.href = notification.actionUrl;
+      if (/^https?:\/\//i.test(notification.actionUrl)) {
+        void openExternal(notification.actionUrl);
+      } else {
+        setLocation(notification.actionUrl);
+      }
     }
   };
 

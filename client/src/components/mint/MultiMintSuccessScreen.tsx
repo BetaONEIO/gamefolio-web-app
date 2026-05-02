@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Copy, Check, Share2 } from "lucide-react";
 import { useState, useRef, useCallback } from "react";
 import MintedNftDetailScreen from "./MintedNftDetailScreen";
+import { openExternal, nativeShare } from "@/lib/platform";
 
 interface NftAttribute {
   trait_type: string;
@@ -155,7 +156,7 @@ export default function MultiMintSuccessScreen({
         txHash={txHash}
         walletAddress={walletAddress}
         onClose={() => setSelectedNft(null)}
-        onViewExplorer={() => window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`, "_blank")}
+        onViewExplorer={() => void openExternal(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`)}
         initialSold={soldNftIds.has(selectedNft.id)}
         onSold={() => handleNftSold(selectedNft.id)}
       />
@@ -175,9 +176,15 @@ export default function MultiMintSuccessScreen({
           <span className="text-lg font-bold text-[#f8fafc] leading-7">Success!</span>
           <button
             onClick={() => {
-              if (navigator.share) {
-                navigator.share({ title: `Minted ${quantity} NFTs`, url: `https://explorer.nebula-testnet.skalelabs.com/tx/${txHash}` });
-              }
+              const shareUrl = `${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`;
+              void nativeShare({
+                title: `Minted ${quantity} NFTs`,
+                text: `Just minted ${quantity} Gamefolio Genesis NFTs!`,
+                url: shareUrl,
+                dialogTitle: 'Share your mint',
+              }).then((handled) => {
+                if (!handled) void openExternal(shareUrl);
+              });
             }}
             className="w-10 h-10 rounded-full bg-[#1e293b80] flex items-center justify-center hover:bg-[#1e293b] transition-colors"
           >

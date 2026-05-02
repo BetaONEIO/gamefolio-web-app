@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { openExternal, nativeShare, isNative } from "@/lib/platform";
 import { Copy, Download, Facebook, MessageCircle, Mail, Share2 } from "lucide-react";
 import { FaXTwitter } from "react-icons/fa6";
 
@@ -68,7 +69,7 @@ export function ShareDialog({
     document.body.removeChild(link);
   };
 
-  const handleSocialShare = (platform: string, url: string) => {
+  const handleSocialShare = async (platform: string, url: string) => {
     if (platform === 'discord') {
       // For Discord, copy the link to clipboard
       navigator.clipboard.writeText(shareUrl);
@@ -76,9 +77,17 @@ export function ShareDialog({
         title: "Link copied for Discord!",
         description: "Paste this link in your Discord channel.",
       });
-    } else {
-      window.open(url, '_blank', 'width=600,height=400');
+      return;
     }
+    if (isNative) {
+      const handled = await nativeShare({
+        title: 'Shared from Gamefolio',
+        url: shareUrl,
+        dialogTitle: `Share to ${platform}`,
+      });
+      if (handled) return;
+    }
+    void openExternal(url);
   };
 
   return (

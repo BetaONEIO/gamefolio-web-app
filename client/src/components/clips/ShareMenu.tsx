@@ -10,6 +10,7 @@ import { Share2, Copy, Facebook, Linkedin, Mail } from "lucide-react";
 import { FaReddit, FaWhatsapp, FaTelegram } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 import { useToast } from "@/hooks/use-toast";
+import { openExternal, nativeShare, isNative } from "@/lib/platform";
 
 interface ShareMenuProps {
   clipId: number;
@@ -91,9 +92,16 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
     });
   };
   
-  // Handle share click to open in new window
-  const handleShareClick = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer,width=600,height=500');
+  // Handle share click — native share sheet on mobile, external browser on web.
+  const handleShareClick = async (url: string) => {
+    if (isNative) {
+      const handled = await nativeShare({
+        title: 'Shared from Gamefolio',
+        url: shareUrl,
+      });
+      if (handled) return;
+    }
+    void openExternal(url);
   };
   
   return (

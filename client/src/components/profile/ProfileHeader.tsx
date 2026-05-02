@@ -18,7 +18,7 @@ import {
   Scroll,
   Settings,
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -126,6 +126,7 @@ const ProfileHeader = ({
   isFollowLoading = false,
 }: ProfileHeaderProps) => {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const { isOpen, actionType, openDialog, closeDialog } = useJoinDialog();
   const [nftPopup, setNftPopup] = useState<{
     userId: number;
@@ -175,7 +176,7 @@ const ProfileHeader = ({
     }
 
     console.log("🎯 MESSAGE BUTTON CLICKED - Setting target user:", profile.username);
-    window.location.href = `/messages?user=${profile.username}`;
+    setLocation(`/messages?user=${profile.username}`);
   };
 
   const [shareDialogOpen, setShareDialogOpen] = useState(false);

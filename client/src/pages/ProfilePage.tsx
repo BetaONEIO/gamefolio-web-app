@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
+import { openExternal } from "@/lib/platform";
 import { Game, User, UserWithStats, ClipWithUser, Screenshot } from "@shared/schema";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1697,7 +1698,7 @@ const ProfilePage = () => {
           onViewExplorer={() => {
             if (selectedProfileNft.txHash) {
               const SKALE_EXPLORER_BASE_URL = SKALE_NEBULA_TESTNET.blockExplorers.default.url;
-              window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${selectedProfileNft.txHash}`, '_blank');
+              void openExternal(`${SKALE_EXPLORER_BASE_URL}/tx/${selectedProfileNft.txHash}`);
             }
           }}
           initialSold={selectedProfileNft.sold || false}

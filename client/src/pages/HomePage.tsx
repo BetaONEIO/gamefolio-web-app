@@ -788,7 +788,7 @@ const HomePage = () => {
                   key={`screenshot-${screenshot.id}`} 
                   className="relative overflow-hidden rounded-xl cursor-pointer group shadow-lg transition-all duration-500 border aspect-video"
                   style={{ borderColor: 'rgba(255,255,255,0.05)' }}
-                  onClick={() => window.open(`/view/screenshot/${screenshot.id}`, '_blank')}
+                  onClick={() => setLocation(`/view/screenshot/${screenshot.id}`)}
                 >
                   <img 
                     src={screenshot.thumbnailUrl || undefined} 
@@ -822,7 +822,7 @@ const HomePage = () => {
                 <Image className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No screenshots yet</h3>
                 <p className="text-muted-foreground mb-4">Capture and share your best gaming moments!</p>
-                <Button onClick={() => window.location.href = '/upload'}>
+                <Button onClick={() => setLocation('/upload')}>
                   <Plus className="h-4 w-4 mr-2" />
                   Upload Screenshot
                 </Button>

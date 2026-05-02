@@ -14,6 +14,7 @@ import { CustomAvatar } from '@/components/ui/custom-avatar';
 import { VerificationBadge } from '@/components/ui/verification-badge';
 import { Badge } from '@/components/ui/badge';
 import { useSignedUrl } from '@/hooks/use-signed-url';
+import { openExternal, nativeShare, isNative } from '@/lib/platform';
 
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
   streamer: { label: "Streamer", icon: Video, color: "bg-primary/20 text-primary border-primary/30" },
@@ -167,8 +168,15 @@ export function GamefolioShareDialog({
     }
   };
 
-  const handleSocialShare = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer,width=600,height=500');
+  const handleSocialShare = async (url: string) => {
+    if (isNative && shareData?.profileUrl) {
+      const handled = await nativeShare({
+        title: 'My Gamefolio',
+        url: shareData.profileUrl,
+      });
+      if (handled) return;
+    }
+    void openExternal(url);
   };
 
   const socialPlatforms = [

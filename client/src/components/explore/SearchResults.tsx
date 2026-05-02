@@ -176,10 +176,7 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
               </ul>
             </div>
             <Button 
-              onClick={() => {
-                // Force a fresh page load to the explore page
-                window.location.href = "/explore";
-              }}
+              onClick={() => setLocation("/explore")}
               className="w-full sm:w-auto"
               data-testid="button-browse-explore"
             >

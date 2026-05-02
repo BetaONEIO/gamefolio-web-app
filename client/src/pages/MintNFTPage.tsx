@@ -12,6 +12,7 @@ import { useMintNFT } from "@/hooks/use-mint-nft";
 import { formatUnits } from "viem";
 import { useWallet } from "@/hooks/use-wallet";
 import { SKALE_EXPLORER_BASE_URL } from "../../../config/web3";
+import { openExternal } from "@/lib/platform";
 
 const MINT_VIDEO_URL = "https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/sign/gamefolio-assets/NFT%20mint.mp4?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hMzEyZGM4MC1lOGJlLTRjMDAtODFhNy1kOTI5MTgyYTJlYWEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJnYW1lZm9saW8tYXNzZXRzL05GVCBtaW50Lm1wNCIsImlhdCI6MTc3MDEzNzMzOSwiZXhwIjoyMDg1NDk3MzM5fQ.rdKpWSU4H8CdDO-mfEAbTc96_zdl35E6Y7Md38HS-uY";
 
@@ -381,7 +382,7 @@ export default function MintNFTPage() {
           txHash={txHash}
           walletAddress={crossmintAddress || wagmiWallet || undefined}
           onViewCollection={() => navigate("/collection")}
-          onViewExplorer={() => window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`, "_blank")}
+          onViewExplorer={() => void openExternal(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`)}
           onBack={() => navigate("/store")}
           onMintMore={() => {
             setMintState("idle");
@@ -405,7 +406,7 @@ export default function MintNFTPage() {
           txHash={txHash}
           walletAddress={crossmintAddress || wagmiWallet || undefined}
           onClose={() => setShowSingleNftDetail(false)}
-          onViewExplorer={() => window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`, "_blank")}
+          onViewExplorer={() => void openExternal(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`)}
           initialSold={singleNftSold}
           onSold={() => setSingleNftSold(true)}
         />
@@ -573,7 +574,7 @@ export default function MintNFTPage() {
                   Add to Collection
                 </Button>
                 <Button
-                  onClick={() => window.open(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`, "_blank")}
+                  onClick={() => void openExternal(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`)}
                   className="w-full md:flex-1 h-14 rounded-2xl bg-[#1e293b] hover:bg-[#334155] border border-[#1e293b]/50 text-[#f8fafc] text-base font-bold flex items-center justify-center gap-2"
                 >
                   <ExternalLink className="h-5 w-5" />

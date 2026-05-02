@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
+import { Share } from '@capacitor/share';
 
 export const isNative = Capacitor.isNativePlatform();
 export const platform = Capacitor.getPlatform();
@@ -44,5 +45,60 @@ export async function openExternal(url: string): Promise<void> {
     await Browser.open({ url, presentationStyle: 'popover' });
     return;
   }
-  window.location.href = url;
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+export interface NativeShareOptions {
+  title?: string;
+  text?: string;
+  url?: string;
+  dialogTitle?: string;
+}
+
+/**
+ * Share content using the platform's native share sheet when available
+ * (Capacitor on iOS/Android, Web Share API in mobile browsers). Falls back
+ * to opening a target URL in a new window/external browser so existing
+ * "share to Twitter/Facebook" buttons keep working on desktop web.
+ *
+ * Returns `true` when the native sheet handled the share, `false` when the
+ * caller should run its own fallback (e.g. open a social-share popup).
+ */
+export async function nativeShare(opts: NativeShareOptions): Promise<boolean> {
+  const payload = {
+    title: opts.title,
+    text: opts.text,
+    url: opts.url,
+    dialogTitle: opts.dialogTitle ?? opts.title,
+  };
+
+  if (isNative) {
+    try {
+      await Share.share(payload);
+      return true;
+    } catch (err) {
+      const name = (err as { message?: string })?.message ?? '';
+      // User cancelled — treat as handled so we don't fall back to a popup.
+      if (/cancel/i.test(name)) return true;
+      console.warn('Native share failed, falling back:', err);
+      return false;
+    }
+  }
+
+  if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+    try {
+      await navigator.share({
+        title: payload.title,
+        text: payload.text,
+        url: payload.url,
+      });
+      return true;
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return true;
+      // Browser refused (e.g. no user gesture) — caller can fall back.
+      return false;
+    }
+  }
+
+  return false;
 }

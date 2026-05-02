@@ -20,6 +20,7 @@ import { Camera } from "lucide-react";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
 import { ProUpgradeDialog } from "@/components/ProUpgradeDialog";
 import { LazySection } from "@/components/ui/lazy-section";
+import { openExternal } from "@/lib/platform";
 
 interface TrendingContentCarouselProps {
   clips: ClipWithUser[] | undefined;
@@ -324,7 +325,7 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
                         } else if (slide.buttonLink === '/pro') {
                           window.dispatchEvent(new CustomEvent('open-pro-upgrade'));
                         } else if (slide.buttonLink?.startsWith('http')) {
-                          window.open(slide.buttonLink, '_blank');
+                          void openExternal(slide.buttonLink);
                         } else {
                           setLocation(slide.buttonLink || '/');
                         }
@@ -392,7 +393,7 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
                             className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
                             onClick={() => {
                               if (heroText.buttonUrl?.startsWith('http')) {
-                                window.open(heroText.buttonUrl, '_blank');
+                                void openExternal(heroText.buttonUrl);
                               } else {
                                 setLocation(heroText.buttonUrl || '/');
                               }
