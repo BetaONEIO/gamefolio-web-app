@@ -70,15 +70,9 @@ export function ShareDialog({
   };
 
   const handleSocialShare = async (platform: string, url: string) => {
-    if (platform === 'discord') {
-      // For Discord, copy the link to clipboard
-      navigator.clipboard.writeText(shareUrl);
-      toast({
-        title: "Link copied for Discord!",
-        description: "Paste this link in your Discord channel.",
-      });
-      return;
-    }
+    // On native, every social tile (including Discord) should open the OS
+    // share sheet first so the user can pick Discord directly instead of
+    // being silently downgraded to a copy-link.
     if (isNative) {
       const handled = await nativeShare({
         title: 'Shared from Gamefolio',
@@ -87,6 +81,18 @@ export function ShareDialog({
       });
       if (handled) return;
     }
+
+    // On web, Discord doesn't expose a share-intent URL — preserve the
+    // legacy desktop behavior of copying the link to the clipboard.
+    if (platform === 'discord') {
+      navigator.clipboard.writeText(shareUrl);
+      toast({
+        title: "Link copied for Discord!",
+        description: "Paste this link in your Discord channel.",
+      });
+      return;
+    }
+
     void openShareWindow(url);
   };
 
