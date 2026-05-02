@@ -1,4 +1,4 @@
-import { createPublicKey } from 'node:crypto';
+import { createPublicKey, type JsonWebKey as NodeJsonWebKey } from 'node:crypto';
 import jwt, { type JwtPayload, type VerifyOptions } from 'jsonwebtoken';
 
 const APPLE_JWKS_URL = 'https://appleid.apple.com/auth/keys';
@@ -32,7 +32,16 @@ async function fetchAppleKeys(forceRefresh = false): Promise<AppleJwk[]> {
 
 function jwkToPem(jwk: AppleJwk): string {
   // node's createPublicKey accepts a JWK directly when format is 'jwk'.
-  const key = createPublicKey({ key: jwk as any, format: 'jwk' });
+  // We narrow AppleJwk -> node's JsonWebKey shape (same RSA fields) instead
+  // of using `any` so a future change to AppleJwk can't silently drift.
+  const nodeJwk: NodeJsonWebKey = {
+    kty: jwk.kty,
+    n: jwk.n,
+    e: jwk.e,
+    alg: jwk.alg,
+    use: jwk.use,
+  };
+  const key = createPublicKey({ key: nodeJwk, format: 'jwk' });
   return key.export({ type: 'spki', format: 'pem' }) as string;
 }
 

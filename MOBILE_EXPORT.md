@@ -39,6 +39,7 @@ All auth routes are prefixed with `/api`:
 | POST | `/api/auth/token/login` | Login with username/password, returns `accessToken` + `refreshToken` + `user` |
 | POST | `/api/auth/token/refresh` | Refresh tokens using `{ refreshToken }` body |
 | POST | `/api/auth/mobile/google` | Google Sign-In — send `{ email, displayName, photoURL, uid }` from Firebase, returns tokens |
+| POST | `/api/auth/mobile/apple` | **iOS only** — Sign in with Apple. Send `{ identityToken, givenName?, familyName? }` from `@capacitor-community/apple-sign-in`. Backend verifies the JWT against Apple's JWKS (RS256, iss, aud=bundle id) and returns the same shape as `/mobile/google`. Required by App Store guideline 4.8 whenever any other third-party sign-in is offered. |
 | GET | `/api/auth/mobile/discord/init` | Get Discord OAuth URL for in-app browser |
 | POST | `/api/auth/mobile/exchange` | Exchange one-time auth code for tokens after Discord OAuth |
 | POST | `/api/auth/register` | Register new user |
@@ -282,9 +283,9 @@ type UserWithStats = User & {
 5. **Profile** — Current user profile with clips/screenshots grid, stats (XP/level/streak/followers)
 
 ### Stack Screens
-- `/(auth)/login` — Username/password form, Google Sign-In button, Discord button, link to register
+- `/(auth)/login` — Username/password form, Sign in with Apple button (iOS only), Google Sign-In button, Discord button, link to register
 - `/(auth)/register` — Registration form
-- `/(auth)/onboarding` — User type selection + age range (shown after first Google/Discord login)
+- `/(auth)/onboarding` — User type selection + age range (shown after first Apple/Google/Discord login)
 - `/profile/[username]` — Other user profiles with follow/message actions
 - `/clip/[id]` — Full-screen video player, likes, comments, share
 - `/screenshot/[id]` — Full-screen image, likes, comments
@@ -344,6 +345,32 @@ socket.on('connect_error', (err) => { /* handle auth failure */ });
 EXPO_PUBLIC_API_URL=https://YOUR-BACKEND-URL.replit.app
 ```
 
+### Sign in with Apple — App Store reviewer note
+
+Apple's App Store Review Guideline **4.8** requires Sign in with Apple
+whenever the app offers any other third-party sign-in option. Gamefolio
+satisfies this on iOS:
+
+- Native plugin: `@capacitor-community/apple-sign-in` v6 (Capacitor 6).
+- iOS entitlement: `com.apple.developer.applesignin = Default` (see
+  `ios/App/App/App.entitlements`, wired into both Debug and Release configs).
+- The "Continue with Apple" button is rendered above all other social
+  providers on the login screen, on iOS only.
+- Backend endpoint `POST /api/auth/mobile/apple` verifies the identity token
+  against Apple's JWKS. Algorithm is hard-pinned to RS256, the JWK must be
+  an RSA signing key, `iss` must be `https://appleid.apple.com`, and `aud`
+  must equal the iOS bundle id (`APPLE_BUNDLE_ID` env, defaults to
+  `com.gamefolio.app`).
+- Users keyed by Apple `sub`; "Hide my email" relay addresses are stored
+  as-is and respected on every sign-in.
+
+Pre-submission checklist (one-time, on a Mac):
+1. Run `npx cap sync ios`, then open `ios/App/App.xcworkspace` in Xcode.
+2. In the Apple Developer portal, enable the "Sign In with Apple" capability
+   on the App ID and refresh provisioning profiles.
+3. Confirm "Sign In with Apple" appears under the App target's
+   "Signing & Capabilities" tab.
+
 ---
 
 ## Design System
@@ -360,7 +387,7 @@ EXPO_PUBLIC_API_URL=https://YOUR-BACKEND-URL.replit.app
 
 ## Key Features Priority Order
 
-1. Auth (login, register, Google Sign-In)
+1. Auth (login, register, Sign in with Apple on iOS, Google Sign-In)
 2. Home feed (clips + screenshots)
 3. Video playback (clip detail screen)
 4. User profiles

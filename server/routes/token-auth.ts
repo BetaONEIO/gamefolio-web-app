@@ -623,6 +623,14 @@ router.post('/auth/mobile/google', async (req: Request, res: Response) => {
  */
 router.post('/auth/mobile/apple', async (req: Request, res: Response) => {
   try {
+    // Note: the client may also forward `authorizationCode`, `user`, and
+    // `email`. We deliberately ignore them for sign-in:
+    //   - `authorizationCode` is reserved for future server-to-server token
+    //     exchange / revocation against Apple's /auth/token endpoint and
+    //     isn't needed to authenticate a single login.
+    //   - `email` from the body is not trusted (only the verified token's
+    //     email claim is — see linking logic below).
+    //   - `user` (Apple `sub`) is duplicated by the verified token's `sub`.
     const { identityToken, givenName, familyName } = req.body as {
       identityToken?: string;
       givenName?: string | null;
