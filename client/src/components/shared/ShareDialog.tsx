@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { openExternal, nativeShare, isNative } from "@/lib/platform";
+import { openExternal, openShareWindow, nativeShare, isNative } from "@/lib/platform";
 import { Copy, Download, Facebook, MessageCircle, Mail, Share2 } from "lucide-react";
 import { FaXTwitter } from "react-icons/fa6";
 
@@ -87,7 +87,7 @@ export function ShareDialog({
       });
       if (handled) return;
     }
-    void openExternal(url);
+    void openShareWindow(url);
   };
 
   return (

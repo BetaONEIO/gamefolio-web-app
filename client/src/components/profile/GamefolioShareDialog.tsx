@@ -14,7 +14,7 @@ import { CustomAvatar } from '@/components/ui/custom-avatar';
 import { VerificationBadge } from '@/components/ui/verification-badge';
 import { Badge } from '@/components/ui/badge';
 import { useSignedUrl } from '@/hooks/use-signed-url';
-import { openExternal, nativeShare, isNative } from '@/lib/platform';
+import { openExternal, openShareWindow, nativeShare, isNative } from '@/lib/platform';
 
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
   streamer: { label: "Streamer", icon: Video, color: "bg-primary/20 text-primary border-primary/30" },
@@ -176,7 +176,7 @@ export function GamefolioShareDialog({
       });
       if (handled) return;
     }
-    void openExternal(url);
+    void openShareWindow(url);
   };
 
   const socialPlatforms = [

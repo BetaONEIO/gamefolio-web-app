@@ -57,7 +57,9 @@ export default function VerifyEmailPage() {
       // Add a timeout to prevent infinite hanging
       setTimeout(() => {
         // Redirect to the server GET endpoint which will handle verification and redirect back.
-        // On native, open through the in-app browser so the deep-link callback can return.
+        // On native, open through the in-app Capacitor Browser so the SPA shell stays mounted
+        // and the user can dismiss back to the app once the server-side flow finishes. The
+        // deep-link callback that flips the verified state in-app is tracked under task #85.
         const url = `/api/auth/verify-email?token=${encodeURIComponent(token)}`;
         if (isNative) {
           void openExternal(`${API_BASE}${url}`);

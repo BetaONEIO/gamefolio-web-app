@@ -93,6 +93,44 @@ export function onExternalBrowserClosed(handler: () => void): () => void {
   return () => cleanup();
 }
 
+/**
+ * Open a social-share intent URL (Twitter/Facebook/Reddit/etc) in the
+ * platform-appropriate way. Preserves the legacy desktop-web UX of a
+ * centered, popup-sized window so the share screen looks like a dialog,
+ * not a full new tab. On native, defers to the in-app Capacitor Browser.
+ */
+export async function openShareWindow(
+  url: string,
+  opts: { width?: number; height?: number; name?: string } = {},
+): Promise<void> {
+  if (isNative) {
+    await openExternal(url);
+    return;
+  }
+  const width = opts.width ?? 600;
+  const height = opts.height ?? 500;
+  const name = opts.name ?? 'share';
+  let features = 'noopener,noreferrer';
+  try {
+    const dualLeft =
+      window.screenLeft ?? (window.screen as unknown as { left?: number }).left ?? 0;
+    const dualTop =
+      window.screenTop ?? (window.screen as unknown as { top?: number }).top ?? 0;
+    const winW = window.innerWidth || document.documentElement.clientWidth || width;
+    const winH = window.innerHeight || document.documentElement.clientHeight || height;
+    const left = dualLeft + Math.max(0, (winW - width) / 2);
+    const top = dualTop + Math.max(0, (winH - height) / 2);
+    features = `noopener,noreferrer,width=${width},height=${height},left=${Math.round(left)},top=${Math.round(top)}`;
+  } catch {
+    features = `noopener,noreferrer,width=${width},height=${height}`;
+  }
+  const popup = window.open(url, name, features);
+  // Some browsers ignore size hints and return null when blocking the
+  // popup — fall back to a regular new tab so the user still gets the
+  // intent URL.
+  if (!popup) window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 export interface NativeShareOptions {
   title?: string;
   text?: string;

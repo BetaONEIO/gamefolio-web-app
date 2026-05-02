@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Share2 } from "lucide-react";
-import { openExternal, nativeShare, isNative } from "@/lib/platform";
+import { openExternal, openShareWindow, nativeShare, isNative } from "@/lib/platform";
 import { 
   FaFacebookF, 
   FaReddit, 
@@ -101,7 +101,7 @@ const QuickShareButton: React.FC<QuickShareButtonProps> = ({
             return;
           }
         }
-        await openExternal(platform.url!);
+        await openShareWindow(platform.url!);
         setShowPopover(false);
       })();
     }

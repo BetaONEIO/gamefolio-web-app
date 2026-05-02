@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { openExternal, nativeShare, isNative } from "@/lib/platform";
+import { openExternal, openShareWindow, nativeShare, isNative } from "@/lib/platform";
 import {
   Share2,
   Copy,
@@ -197,7 +197,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
         return;
       }
     }
-    void openExternal(url);
+    void openShareWindow(url);
     trackShare();
     toast({
       title: `Sharing on ${platform}`,
