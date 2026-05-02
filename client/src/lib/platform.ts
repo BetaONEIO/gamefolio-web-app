@@ -84,13 +84,26 @@ export async function openExternal(url: string): Promise<void> {
  */
 export function onExternalBrowserClosed(handler: () => void): () => void {
   if (!isNative) return () => {};
-  let cleanup = () => {};
-  void Browser.addListener('browserFinished', handler).then((sub) => {
-    cleanup = () => {
-      void sub.remove();
-    };
+  // The Capacitor listener registration is async, so the unsubscribe
+  // function may be called before the listener has actually attached.
+  // Track the cancelled state and remove the subscription as soon as it
+  // resolves to avoid a race where a stale listener fires after unmount.
+  let cancelled = false;
+  let sub: { remove: () => Promise<void> } | null = null;
+  void Browser.addListener('browserFinished', handler).then((s) => {
+    sub = s;
+    if (cancelled) {
+      void s.remove();
+      sub = null;
+    }
   });
-  return () => cleanup();
+  return () => {
+    cancelled = true;
+    if (sub) {
+      void sub.remove();
+      sub = null;
+    }
+  };
 }
 
 /**

@@ -12,7 +12,7 @@ import { Share2, Copy, X, RefreshCw, AlertCircle } from 'lucide-react';
 import { FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
 import { useToast } from '@/hooks/use-toast';
-import { openExternal, openShareWindow, nativeShare, isNative } from '@/lib/platform';
+import { openShareWindow, nativeShare, isNative } from '@/lib/platform';
 
 interface ShareData {
   screenshotUrl: string;

@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { openExternal, openShareWindow, nativeShare, isNative } from "@/lib/platform";
+import { openShareWindow, nativeShare, isNative } from "@/lib/platform";
 import {
   Share2,
   Copy,

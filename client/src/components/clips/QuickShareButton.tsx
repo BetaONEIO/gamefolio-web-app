@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Share2 } from "lucide-react";
-import { openExternal, openShareWindow, nativeShare, isNative } from "@/lib/platform";
+import { openShareWindow, nativeShare, isNative } from "@/lib/platform";
 import { 
   FaFacebookF, 
   FaReddit, 

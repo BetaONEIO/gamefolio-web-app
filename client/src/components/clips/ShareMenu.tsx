@@ -10,7 +10,7 @@ import { Share2, Copy, Facebook, Linkedin, Mail } from "lucide-react";
 import { FaReddit, FaWhatsapp, FaTelegram } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 import { useToast } from "@/hooks/use-toast";
-import { openExternal, openShareWindow, nativeShare, isNative } from "@/lib/platform";
+import { openShareWindow, nativeShare, isNative } from "@/lib/platform";
 
 interface ShareMenuProps {
   clipId: number;
