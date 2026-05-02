@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { Redirect } from 'wouter';
+import { Redirect, useLocation } from 'wouter';
 import { Loader2, Trash2, AlertTriangle, Shield, Palette, Type, Sparkles, Check, X, Save, Smile, User, KeyRound, Gift, Copy, ExternalLink, Users, Star } from 'lucide-react';
 import { validatePassword, isPasswordValid } from '@/lib/password-validation';
 import { PasswordRequirementsDisplay } from '@/components/ui/password-requirements';
@@ -349,6 +349,7 @@ const AccountSettingsPage: React.FC = () => {
   })();
 
   const { user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const updateProfile = useUpdateProfile();
   const [changePasswordStatus, setChangePasswordStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -618,9 +619,10 @@ const AccountSettingsPage: React.FC = () => {
           duration: 3000,
         });
         
-        // Redirect to home after a short delay
+        // Redirect to home after a short delay using wouter so the WebView
+        // doesn't reload the entire app bundle on native.
         setTimeout(() => {
-          window.location.href = '/';
+          setLocation('/');
         }, 2000);
       }
     } catch (error: any) {
