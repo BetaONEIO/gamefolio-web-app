@@ -13,6 +13,7 @@ import {
 } from "@stripe/react-stripe-js";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { isNative } from "@/lib/platform";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 import ProOnboardingScreen from "@/components/pro/ProOnboardingScreen";
 
@@ -317,6 +318,27 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
 
   const handleJoinPro = async () => {
     if (!selectedPackage || purchasing) return;
+
+    // On native (iOS/Android) Apple/Google require all digital subscription
+    // purchases to flow through the platform's IAP. RevenueCat handles that;
+    // we never present Stripe on a native build.
+    if (isNative) {
+      setCheckoutError(null);
+      setPurchasing(true);
+      setPurchaseInProgress(true);
+      try {
+        const success = await purchasePackage(selectedPackage);
+        if (success) {
+          setStep("success");
+        }
+      } catch (err: any) {
+        setCheckoutError(err?.message || "Purchase failed");
+      } finally {
+        setPurchasing(false);
+      }
+      return;
+    }
+
     setCheckoutLoading(true);
     setCheckoutError(null);
     setCheckoutClientSecret(null);

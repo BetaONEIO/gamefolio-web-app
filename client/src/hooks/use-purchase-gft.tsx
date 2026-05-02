@@ -2,7 +2,13 @@ import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from './use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { openExternal } from '@/lib/platform';
+import { openExternal, isNative } from '@/lib/platform';
+
+// On native, the GBP-priced GFT checkout is unavailable: Apple/Google
+// require all in-app purchases of digital tokens to flow through their IAP
+// systems. We surface a "Buy on the web" deep-link instead so the user can
+// complete the purchase in a browser session managed via Capacitor Browser.
+const NATIVE_WEB_BUY_URL = 'https://app.gamefolio.com/wallet';
 
 interface CreateCheckoutResponse {
   orderId: string;
@@ -53,13 +59,22 @@ export function usePurchaseGFT() {
   }, []);
 
   const createOrder = useCallback(async (gbpAmount: number): Promise<CreateCheckoutResponse | null> => {
+    if (isNative) {
+      toast({
+        title: 'Buy GFT on the web',
+        description:
+          'Token purchases are managed on the Gamefolio website. Opening it now…',
+      });
+      void openExternal(NATIVE_WEB_BUY_URL);
+      return null;
+    }
     try {
       const result = await createOrderMutation.mutateAsync({ gbpAmount });
       return result;
     } catch {
       return null;
     }
-  }, [createOrderMutation]);
+  }, [createOrderMutation, toast]);
 
   const refreshBalances = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['/api/token/balance'] });

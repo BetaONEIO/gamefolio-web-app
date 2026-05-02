@@ -5,7 +5,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { isNative, openExternal } from "@/lib/platform";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
+
+const NATIVE_WEB_BUY_URL = "https://app.gamefolio.com/wallet";
 
 interface BuyGFTokenDialogProps {
   open: boolean;
@@ -164,11 +167,47 @@ export default function BuyGFTokenDialog({ open, onOpenChange }: BuyGFTokenDialo
           <div className="flex items-center gap-3">
             <img src={gfTokenLogo} alt="GF Token" className="w-10 h-10" />
             <DialogTitle className="text-2xl">
-              {checkoutStep === "select" ? "Buy GF Tokens" : "Complete Payment"}
+              {isNative
+                ? "Buy GF Tokens"
+                : checkoutStep === "select"
+                  ? "Buy GF Tokens"
+                  : "Complete Payment"}
             </DialogTitle>
           </div>
         </DialogHeader>
 
+        {isNative ? (
+          <div className="space-y-6 py-4" data-testid="native-buy-gft-cta">
+            <div className="bg-muted/50 rounded-xl p-6 space-y-3 text-center">
+              <ExternalLink className="w-10 h-10 mx-auto text-primary" />
+              <h3 className="font-semibold text-lg">Buy GFT on the web</h3>
+              <p className="text-sm text-muted-foreground">
+                Token purchases are managed on the Gamefolio website. Tap below
+                to continue in your browser.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  void openExternal(NATIVE_WEB_BUY_URL);
+                  onOpenChange(false);
+                }}
+                data-testid="button-native-buy-gft-web"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Open Gamefolio.com
+              </Button>
+            </div>
+          </div>
+        ) : (
         <div className="space-y-6 py-4">
           {checkoutStep === "select" ? (
             <>
@@ -401,6 +440,7 @@ export default function BuyGFTokenDialog({ open, onOpenChange }: BuyGFTokenDialo
             </>
           )}
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );

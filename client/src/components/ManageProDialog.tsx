@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { openExternal } from "@/lib/platform";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, Lock, AlertTriangle, Calendar, Tag, Wallet, CheckCircle2, X } from "lucide-react";
 
@@ -108,7 +109,12 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
         resetCancelState();
       } else if (data.useManagementUrl) {
         const managementUrl = customerInfo?.managementURL;
-        if (managementUrl) window.open(managementUrl, '_blank');
+        if (managementUrl) {
+          // openExternal routes through Capacitor Browser on native, which is
+          // required so iOS/Android open the App Store / Play subscription
+          // management UI rather than a blocked window.open in the WebView.
+          await openExternal(managementUrl);
+        }
         toast({
           title: "Manage subscription",
           description: "Please cancel your subscription through the billing portal.",

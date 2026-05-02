@@ -17,6 +17,7 @@ import { HexColorPicker } from "react-colorful";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
+import { openExternal } from "@/lib/platform";
 import { BannerUploadPreview } from "@/components/BannerUploadPreview";
 import { BackgroundUploadPreview } from "@/components/BackgroundUploadPreview";
 import { BannerPositionPreview } from "@/components/BannerPositionPreview";
@@ -703,7 +704,7 @@ export default function SettingsPage() {
         });
         setShowCancelConfirm(false);
       } else if (data.useManagementUrl && customerInfo?.managementURL) {
-        window.open(customerInfo.managementURL, '_blank');
+        await openExternal(customerInfo.managementURL);
         toast({
           title: "Manage subscription",
           description: "Please cancel your subscription through the billing portal.",

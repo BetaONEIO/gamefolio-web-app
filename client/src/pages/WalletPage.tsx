@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useWallet } from "@/hooks/use-wallet";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { isNative, openExternal } from "@/lib/platform";
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useStaking } from "@/hooks/use-staking";
@@ -32,6 +34,7 @@ import { useAuthModal } from "@/hooks/use-auth-modal";
 export default function WalletPage() {
   const { user } = useAuth();
   const { openModal } = useAuthModal();
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { walletAddress: connectedWalletAddress, isReady, isConnecting, connect } = useWallet();
   const [showBuyDialog, setShowBuyDialog] = useState(false);
@@ -59,6 +62,22 @@ export default function WalletPage() {
   })();
   const { stakedAmount, earnedRewards, estimatedApy, stake, unstake, claimRewards, isStaking, isClaiming, stakeHistory } = useStaking();
   const { createOrder, isCreatingOrder, checkOrderStatus, refreshBalances } = usePurchaseGFT();
+
+  const NATIVE_WEB_BUY_URL = "https://app.gamefolio.com/wallet";
+  const handleBuyClick = () => {
+    if (isNative) {
+      // Apple/Google forbid third-party payment flows for digital goods, so
+      // redirect the user to the web wallet via Capacitor Browser instead of
+      // mounting the Stripe-powered card entry screen.
+      toast({
+        title: "Buy GFT on the web",
+        description: "Token purchases are managed on the Gamefolio website. Opening it now…",
+      });
+      void openExternal(NATIVE_WEB_BUY_URL);
+      return;
+    }
+    setShowBuyScreen(true);
+  };
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   const recoveryAttemptedRef = useRef(false);
@@ -318,7 +337,7 @@ export default function WalletPage() {
         stakedAmount={stakedAmount}
         nftsOwned={ownedNFTs.length}
         ownedNFTs={ownedNFTs}
-        onBuyClick={() => setShowBuyScreen(true)}
+        onBuyClick={handleBuyClick}
         onActivityClick={() => setShowActivityHistory(true)}
         onStakeClick={() => setShowStakingHub(true)}
         onNFTsClick={() => setLocation('/collection')}
