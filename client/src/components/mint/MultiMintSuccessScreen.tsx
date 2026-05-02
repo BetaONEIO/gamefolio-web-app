@@ -1,7 +1,7 @@
 import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Copy, Check, Share2 } from "lucide-react";
 import { useState, useRef, useCallback } from "react";
 import MintedNftDetailScreen from "./MintedNftDetailScreen";
-import { openExternal, nativeShare } from "@/lib/platform";
+import { openExternal, nativeShare, isNative } from "@/lib/platform";
 
 interface NftAttribute {
   trait_type: string;
@@ -177,14 +177,18 @@ export default function MultiMintSuccessScreen({
           <button
             onClick={() => {
               const shareUrl = `${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`;
-              void nativeShare({
-                title: `Minted ${quantity} NFTs`,
-                text: `Just minted ${quantity} Gamefolio Genesis NFTs!`,
-                url: shareUrl,
-                dialogTitle: 'Share your mint',
-              }).then((handled) => {
-                if (!handled) void openExternal(shareUrl);
-              });
+              void (async () => {
+                if (isNative) {
+                  const handled = await nativeShare({
+                    title: `Minted ${quantity} NFTs`,
+                    text: `Just minted ${quantity} Gamefolio Genesis NFTs!`,
+                    url: shareUrl,
+                    dialogTitle: 'Share your mint',
+                  });
+                  if (handled) return;
+                }
+                await openExternal(shareUrl);
+              })();
             }}
             className="w-10 h-10 rounded-full bg-[#1e293b80] flex items-center justify-center hover:bg-[#1e293b] transition-colors"
           >
