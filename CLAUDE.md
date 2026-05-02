@@ -53,13 +53,45 @@ the iOS Distribution cert + provisioning profile for `com.gamefolio.app`.
 
 ### "Put a new build in for production"
 
-When the user asks for a production build, run **both** pipelines:
-1. Bump Android `versionCode` (commit it).
-2. Run the Android AAB build above.
-3. Run `./scripts/ios-testflight.sh` (confirm first — visible-to-others action).
+Triggered by phrasings like *"do a build for production for android & ios"*,
+*"push a new version to production"*, *"ship a release"*. Run **both** pipelines:
 
-The Android AAB lands locally for the user to upload to Play Console; the iOS
-build goes straight to App Store Connect / TestFlight.
+0. **Pre-flight:** `git status`. If hand-edited tracked files are dirty (typically
+   under `client/` or root configs), `git stash push -u -m "pre-prod-build"` so
+   only committed code ships. Auto-generated cap-sync files
+   (`android/app/capacitor.build.gradle`, `ios/App/Podfile.lock`, etc.) don't
+   need stashing — the build regenerates them. Pop the stash after both builds.
+1. Bump Android `versionCode` in `android/app/build.gradle` (must be greater
+   than the last Play Console upload — check the most recent
+   `Bump Android versionCode` commit). Commit it.
+2. `bun run mobile:build:android`
+3. `cd android && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew bundleRelease`
+4. `./scripts/ios-testflight.sh` (confirm first — visible-to-others action).
+
+AAB lands at `android/app/build/outputs/bundle/release/app-release.aab` (inside
+the repo, gitignored — leave it there; user grabs it from Finder for Play
+Console upload). iOS goes straight to App Store Connect / TestFlight.
+
+#### Known gotchas
+
+- **`bun run mobile:build:android` fails with `[vite]: Rollup failed to resolve
+  import "@capacitor/share"`** (or any other `@capacitor/*` package): node_modules
+  has drifted from `package.json`. Run `bun install`, then retry. This recurs
+  often enough that it's worth checking proactively.
+- **`./gradlew bundleRelease` fails with `Unable to locate a Java Runtime`**:
+  no system JDK on PATH. Android Studio bundles a JBR — always invoke gradle
+  with `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`
+  (already baked into step 3 above).
+- **`./scripts/ios-testflight.sh` fails with `ASC_API_KEY_PATH` missing**:
+  `.env.ios.local` doesn't exist or `.p8` was deleted. To regenerate the key:
+  https://appstoreconnect.apple.com/access/integrations/api → Team Keys →
+  Generate API Key (App Manager role) → download once → drop in `~/keys/` →
+  set `ASC_API_KEY_PATH` to the absolute path. The `ASC_API_KEY_ID` in the env
+  file must match the new key's 10-char ID (visible in the filename).
+- **Pipe-to-tail hides exit codes**: `./gradlew … | tail -40` always returns 0
+  because tail succeeds. When backgrounding gradle/xcodebuild, don't trust the
+  exit-code-0 notification alone — read the tail of the output file and grep
+  for `BUILD SUCCESSFUL` / `UPLOAD SUCCEEDED` / `** ARCHIVE SUCCEEDED **`.
 
 ## Stack quick-ref
 
