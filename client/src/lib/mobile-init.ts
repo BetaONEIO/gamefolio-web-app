@@ -47,8 +47,14 @@ export async function initMobileShell(): Promise<void> {
     });
     await CapacitorApp.addListener('resume', () => {
       // Belt-and-braces: some Android OEMs deliver `resume` without a prior
-      // `appStateChange(false)`. Force a refetch in that case.
-      refetchAfterResume();
+      // `appStateChange(false)`. Honour the same 30 s threshold so a quick
+      // app-switcher peek doesn't trigger a refetch storm.
+      if (
+        lastBackgroundedAt !== null &&
+        Date.now() - lastBackgroundedAt >= RESUME_REFETCH_THRESHOLD_MS
+      ) {
+        refetchAfterResume();
+      }
       lastBackgroundedAt = null;
     });
   } catch (err) {
