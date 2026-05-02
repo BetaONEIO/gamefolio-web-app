@@ -17,7 +17,7 @@ import { HexColorPicker } from "react-colorful";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
-import { openExternal, isNative, API_BASE } from "@/lib/platform";
+import { openExternal, isNative, API_BASE, onExternalBrowserClosed } from "@/lib/platform";
 import { BannerUploadPreview } from "@/components/BannerUploadPreview";
 import { BackgroundUploadPreview } from "@/components/BackgroundUploadPreview";
 import { BannerPositionPreview } from "@/components/BannerPositionPreview";
@@ -444,6 +444,17 @@ export default function SettingsPage() {
   const [disconnectingTwitch, setDisconnectingTwitch] = useState(false);
   const [connectingRumble, setConnectingRumble] = useState(false);
   const [disconnectingRumble, setDisconnectingRumble] = useState(false);
+
+  // When the in-app browser closes (user dismissed without finishing OAuth),
+  // clear the per-platform "Connecting…" spinners so the buttons aren't stuck
+  // disabled until next mount. No-op on web.
+  useEffect(() => {
+    return onExternalBrowserClosed(() => {
+      setConnectingTwitch(false);
+      setConnectingKick(false);
+      setConnectingRumble(false);
+    });
+  }, []);
   const [syncingAchievements, setSyncingAchievements] = useState(false);
   const [togglingAchievements, setTogglingAchievements] = useState(false);
   const [showXboxDisconnectDialog, setShowXboxDisconnectDialog] = useState(false);

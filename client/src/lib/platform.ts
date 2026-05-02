@@ -40,12 +40,57 @@ export function installNativeFetchPatch(): void {
   fetchPatched = true;
 }
 
+/**
+ * Open `url` outside of the SPA without hijacking the WebView.
+ *
+ * - On native (iOS/Android), http(s) URLs open in the in-app Capacitor
+ *   Browser so the user can dismiss back to the app. Non-http schemes
+ *   (mailto:, tel:, sms:, etc.) are handed to `window.location.href` so
+ *   the OS can route them to the right app — Capacitor Browser only
+ *   handles web URLs.
+ * - On web, http(s) URLs open in a new tab. Non-http schemes use
+ *   `window.location.href` because most browsers block `window.open` for
+ *   `mailto:`/`tel:` links.
+ *
+ * Returns a promise that resolves once the browser was launched (native)
+ * or the new tab/scheme was triggered (web).
+ */
 export async function openExternal(url: string): Promise<void> {
+  const isHttp = /^https?:\/\//i.test(url);
+
   if (isNative) {
-    await Browser.open({ url, presentationStyle: 'popover' });
+    if (isHttp) {
+      await Browser.open({ url, presentationStyle: 'popover' });
+      return;
+    }
+    // mailto:, tel:, sms:, custom schemes — let the OS handle the intent.
+    window.location.href = url;
     return;
   }
-  window.open(url, '_blank', 'noopener,noreferrer');
+
+  if (isHttp) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  window.location.href = url;
+}
+
+/**
+ * Subscribe to the in-app Capacitor Browser's "finished" (dismissed) event.
+ * Useful for resetting transient UI state (e.g. an OAuth "Connecting…"
+ * spinner) when the user closes the browser without completing the flow.
+ *
+ * On web this is a no-op and returns a noop unsubscribe.
+ */
+export function onExternalBrowserClosed(handler: () => void): () => void {
+  if (!isNative) return () => {};
+  let cleanup = () => {};
+  void Browser.addListener('browserFinished', handler).then((sub) => {
+    cleanup = () => {
+      void sub.remove();
+    };
+  });
+  return () => cleanup();
 }
 
 export interface NativeShareOptions {
