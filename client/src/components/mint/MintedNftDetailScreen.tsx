@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+import { nativeShare, openExternal } from "@/lib/platform";
 
 interface NftAttribute {
   trait_type: string;
@@ -194,12 +195,22 @@ export default function MintedNftDetailScreen({
             </div>
             <button
               onClick={() => {
-                if (navigator.share) {
-                  const shareUrl = txHash
-                    ? `${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`
-                    : window.location.href;
-                  navigator.share({ title: displayName, url: shareUrl });
-                }
+                const shareUrl = txHash
+                  ? `${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`
+                  : window.location.href;
+                void (async () => {
+                  // nativeShare uses Capacitor Share on native and the
+                  // Web Share API on web (when available); falls back to
+                  // opening the explorer URL externally so desktop
+                  // browsers without Web Share still get a useful action.
+                  const handled = await nativeShare({
+                    title: displayName,
+                    url: shareUrl,
+                    dialogTitle: 'Share this NFT',
+                  });
+                  if (handled) return;
+                  await openExternal(shareUrl);
+                })();
               }}
               className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#1e293b] transition-colors"
             >
