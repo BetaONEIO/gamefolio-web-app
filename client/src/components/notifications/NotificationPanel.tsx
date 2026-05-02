@@ -58,6 +58,10 @@ export function NotificationPanel({
   className 
 }: NotificationPanelProps) {
   const [notifications, setNotifications] = React.useState<NotificationData[]>([]);
+  // Bumped whenever the native shell broadcasts an `app-resumed` event so the
+  // WebSocket effect re-runs and a socket dropped during backgrounding is
+  // re-opened. Also re-fetches notifications regardless of staleTime.
+  const [resumeCounter, setResumeCounter] = React.useState(0);
   const { user } = useAuth();
 
   // Fetch notifications
@@ -73,6 +77,18 @@ export function NotificationPanel({
       setNotifications(fetchedNotifications);
     }
   }, [fetchedNotifications]);
+
+  // Listen for native-shell resume events and force a socket + data refresh.
+  React.useEffect(() => {
+    const handleResume = () => {
+      setResumeCounter((n) => n + 1);
+      if (isOpen) {
+        void refetch();
+      }
+    };
+    window.addEventListener('app-resumed', handleResume);
+    return () => window.removeEventListener('app-resumed', handleResume);
+  }, [isOpen, refetch]);
 
   // WebSocket for real-time notifications
   React.useEffect(() => {
@@ -139,7 +155,9 @@ export function NotificationPanel({
         ws.close();
       }
     };
-  }, [isOpen, user?.id, refetch]);
+    // resumeCounter is intentionally a dep so the effect tears down the old
+    // socket and reconnects when the native shell signals an app resume.
+  }, [isOpen, user?.id, refetch, resumeCounter]);
 
   // Get notification icon based on type
   const getNotificationIcon = (type: string) => {

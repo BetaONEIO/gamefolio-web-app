@@ -20,6 +20,15 @@ function refetchAfterResume(): void {
   void queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
   void queryClient.invalidateQueries({ queryKey: ['/api/token/balance'] });
   void queryClient.invalidateQueries({ queryKey: ['/api/subscription/status'] });
+  // Long-lived sockets (notifications) can be silently dropped while the
+  // WebView is backgrounded and never receive a `close` event. Broadcast a
+  // resume signal so socket-owning components (e.g. NotificationPanel) can
+  // tear down and re-open their WebSocket.
+  try {
+    window.dispatchEvent(new CustomEvent('app-resumed'));
+  } catch {
+    /* SSR / older webview — safe to ignore */
+  }
 }
 
 export async function initMobileShell(): Promise<void> {
