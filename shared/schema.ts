@@ -87,7 +87,7 @@ export const users = pgTable("users", {
   showLiveOverlay: boolean("show_live_overlay").default(false), // Show LIVE badge on avatar
   ageRange: text("age_range"), // Age range: 13-17, 18-24, 25-34, 35-44, 45-54, 55+
   // Authentication provider fields
-  authProvider: text("auth_provider").default("local"), // "local", "google", "discord", "steam"
+  authProvider: text("auth_provider").default("local"), // "local", "google", "discord", "steam", "apple"
   externalId: text("external_id"), // Provider-specific user ID
   // User status and role
   role: text("role").default("user").notNull(), // "user", "admin", "moderator"

@@ -5,6 +5,7 @@ import { hybridAuth } from '../middleware/hybrid-auth';
 import { storage } from '../storage';
 import { StreakService } from '../streak-service';
 import { getDemoUser } from '../demo-user';
+import { verifyAppleIdentityToken } from '../services/apple-auth';
 import { scrypt, timingSafeEqual, randomBytes } from 'crypto';
 import { promisify } from 'util';
 
@@ -124,6 +125,12 @@ router.post('/auth/token/login', async (req: Request, res: Response) => {
     if (user.authProvider === 'discord') {
       return res.status(401).json({ 
         message: "This account is associated with Discord - please login using the 'Continue with Discord' button" 
+      });
+    }
+
+    if (user.authProvider === 'apple') {
+      return res.status(401).json({
+        message: "This account is associated with Apple - please login using the 'Continue with Apple' button"
       });
     }
 
@@ -585,6 +592,172 @@ router.post('/auth/mobile/google', async (req: Request, res: Response) => {
     return res.status(500).json({ 
       success: false,
       message: 'Google authentication failed'
+    });
+  }
+});
+
+/**
+ * Mobile Apple Sign In endpoint (iOS only)
+ *
+ * The native iOS client calls @capacitor-community/apple-sign-in, which opens
+ * the system Sign in with Apple sheet and returns an identity token (JWT) and
+ * — only on the FIRST authorization for this app — the user's email and full
+ * name. The client POSTs everything here.
+ *
+ * We:
+ *   - Verify the identity token's RS256 signature against Apple's JWKS, and
+ *     enforce iss = https://appleid.apple.com and aud = our iOS bundle id.
+ *   - Look up the user by Apple `sub` (authProvider='apple', externalId=sub)
+ *     — this is the stable Apple user identifier that survives email relay.
+ *   - If not found, fall back to lookup by **token-verified** email (only when
+ *     `email_verified` is true) and only link to an existing account that
+ *     hasn't already been claimed by a different external provider. We do NOT
+ *     trust the email value forwarded in the request body for linking — that
+ *     would allow Apple `sub` rebinding via a forged body.
+ *   - If still not found, create a new user. Apple's "Hide my email" relay
+ *     address is treated like any verified email and stored as-is. The given
+ *     /family name from the body is only used to seed the new account's
+ *     display name (it cannot affect identity).
+ *   - Return a JWT pair so the native app can authenticate subsequent
+ *     requests, mirroring the /auth/mobile/google response shape.
+ */
+router.post('/auth/mobile/apple', async (req: Request, res: Response) => {
+  try {
+    const { identityToken, givenName, familyName } = req.body as {
+      identityToken?: string;
+      givenName?: string | null;
+      familyName?: string | null;
+    };
+
+    if (!identityToken || typeof identityToken !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing Apple identity token',
+      });
+    }
+
+    let claims;
+    try {
+      claims = await verifyAppleIdentityToken(identityToken);
+    } catch (err) {
+      console.error('Apple identity token verification failed:', err);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid Apple identity token',
+      });
+    }
+
+    const sub = claims.sub;
+    // ONLY use the email asserted by Apple's signed token. The body's `email`
+    // field is intentionally ignored to avoid letting a malicious client bind
+    // their Apple sub to another user's account.
+    const tokenEmail =
+      typeof claims.email === 'string' && claims.email.length > 0
+        ? claims.email.toLowerCase()
+        : null;
+    // Apple sends `email_verified` as either a boolean or the string "true".
+    const tokenEmailVerified =
+      claims.email_verified === true || claims.email_verified === 'true';
+
+    // 1. Try to find an existing Apple-linked user by stable sub.
+    let user: any = null;
+    if (typeof storage.getUserByExternalId === 'function') {
+      user = await storage.getUserByExternalId(sub, 'apple');
+    }
+
+    let isNewUser = false;
+
+    // 2. Fall back to email match — only when the email is verified by Apple
+    //    AND the existing account is local (no other external provider). This
+    //    prevents an Apple identity from silently overwriting a Google /
+    //    Discord / Steam linkage on the same email.
+    if (!user && tokenEmail && tokenEmailVerified && typeof storage.getUserByEmail === 'function') {
+      const byEmail = await storage.getUserByEmail(tokenEmail);
+      if (byEmail) {
+        const existingProvider = byEmail.authProvider || 'local';
+        if (existingProvider === 'local') {
+          user = (await storage.updateUser(byEmail.id, {
+            authProvider: 'apple',
+            externalId: sub,
+            emailVerified: true,
+          })) || byEmail;
+        } else {
+          // Email belongs to an account already linked to a different
+          // external provider — refuse to overwrite. The user should sign in
+          // through that provider instead.
+          return res.status(409).json({
+            success: false,
+            message: `An account with this email is already linked to ${existingProvider}. Please sign in with ${existingProvider} instead.`,
+          });
+        }
+      }
+    }
+
+    // 3. Create a new user if neither lookup matched.
+    if (!user) {
+      isNewUser = true;
+      const timestamp = Date.now().toString().slice(-6);
+      const tempUsername = `temp_${sub.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8)}_${timestamp}`.toLowerCase();
+
+      const displayName =
+        [givenName, familyName].filter(Boolean).join(' ').trim() ||
+        (tokenEmail ? tokenEmail.split('@')[0] : `apple_user_${timestamp}`);
+
+      user = await storage.createUser({
+        username: tempUsername,
+        email: tokenEmail || null,
+        displayName,
+        password: '',
+        avatarUrl: '/attached_assets/gamefolio social logo 3d circle web.png',
+        bannerUrl: '/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg',
+        emailVerified: true,
+        authProvider: 'apple',
+        externalId: sub,
+        userType: null,
+        ageRange: null,
+      });
+    }
+
+    const needsOnboarding = !user.userType || user.username.startsWith('temp_');
+
+    // Update login time + streak (best-effort; failures are non-fatal).
+    let streakInfo;
+    try {
+      await storage.updateUserLoginTime(user.id, 0);
+      streakInfo = await StreakService.updateLoginStreak(user.id);
+    } catch (error) {
+      console.error('Error updating user login time or streak:', error);
+    }
+
+    const tokens = JWTService.generateTokenPair(user);
+    const { password: _pw, ...userWithoutPassword } = user;
+
+    return res.status(200).json({
+      success: true,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: {
+        ...userWithoutPassword,
+        needsOnboarding,
+        isNewAppleUser: isNewUser,
+        ...(streakInfo && {
+          streakInfo: {
+            currentStreak: streakInfo.currentStreak,
+            bonusAwarded: streakInfo.bonusAwarded,
+            dailyXP: streakInfo.dailyXP,
+            longestStreak: user.longestStreak || 0,
+            nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
+            message: streakInfo.message,
+            isNewMilestone: streakInfo.isNewMilestone,
+          },
+        }),
+      },
+    });
+  } catch (error) {
+    console.error('Mobile Apple auth error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Apple authentication failed',
     });
   }
 });

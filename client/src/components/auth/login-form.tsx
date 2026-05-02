@@ -7,6 +7,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { GoogleAuthButton } from "./GoogleAuthButton";
 import { DiscordAuthButton } from "./DiscordAuthButton";
 import { XboxAuthButton } from "./XboxAuthButton";
+import { AppleAuthButton } from "./AppleAuthButton";
+import { isAppleSignInAvailable } from "@/lib/mobile-auth";
 import { FieldError } from "@/components/ui/field-error";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -144,6 +146,7 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
       </div>
 
       <div className="space-y-3">
+        {isAppleSignInAvailable() && <AppleAuthButton disabled={isLoading} />}
         <GoogleAuthButton disabled={isLoading} />
         <DiscordAuthButton disabled={isLoading} />
         <XboxAuthButton disabled={isLoading} />

@@ -5,10 +5,16 @@
  * pair in @capacitor/preferences so subsequent API calls authenticate.
  */
 
+import { Capacitor } from '@capacitor/core';
+import { SignInWithApple, type SignInWithAppleResponse } from '@capacitor-community/apple-sign-in';
 import { setTokens } from './auth-token';
-import { API_BASE, isNative } from './platform';
+import { API_BASE, isIOS, isNative } from './platform';
 import { signInWithGoogleNative } from './firebase';
 import { apiRequest } from './queryClient';
+
+const APPLE_SERVICE_ID = (import.meta.env.VITE_APPLE_SERVICE_ID as string | undefined) ?? 'com.gamefolio.app';
+const APPLE_REDIRECT_URI =
+  (import.meta.env.VITE_APPLE_REDIRECT_URI as string | undefined) ?? 'https://app.gamefolio.com/api/auth/apple/callback';
 
 type MobileAuthResponse = {
   success?: boolean;
@@ -50,6 +56,51 @@ export async function nativeSignInWithGoogle(): Promise<{ user: any }> {
   });
   if (!data.accessToken || !data.refreshToken) {
     throw new Error(data.message || 'Mobile Google sign-in did not return tokens');
+  }
+  await setTokens(data.accessToken, data.refreshToken);
+  return { user: data.user };
+}
+
+/**
+ * Native Apple sign-in (iOS only). Opens the system Sign in with Apple sheet
+ * via the @capacitor-community/apple-sign-in plugin, then exchanges the
+ * resulting identity token for JWT tokens at /api/auth/mobile/apple.
+ *
+ * Apple only returns the user's email and full name on the FIRST authorization
+ * for a given app — we forward those values to the backend so the new account
+ * can be seeded with a display name. On subsequent sign-ins we still get the
+ * stable `user` (Apple `sub`) inside the identity token.
+ */
+export function isAppleSignInAvailable(): boolean {
+  return isIOS && Capacitor.isPluginAvailable('SignInWithApple');
+}
+
+export async function nativeSignInWithApple(): Promise<{ user: any }> {
+  if (!isAppleSignInAvailable()) {
+    throw new Error('Sign in with Apple is only available on iOS');
+  }
+
+  const result: SignInWithAppleResponse = await SignInWithApple.authorize({
+    clientId: APPLE_SERVICE_ID,
+    redirectURI: APPLE_REDIRECT_URI,
+    scopes: 'email name',
+  });
+
+  const r = result.response;
+  if (!r?.identityToken) {
+    throw new Error('Apple sign-in did not return an identity token');
+  }
+
+  const data = await postJson('/api/auth/mobile/apple', {
+    identityToken: r.identityToken,
+    authorizationCode: r.authorizationCode,
+    user: r.user,
+    email: r.email,
+    givenName: r.givenName,
+    familyName: r.familyName,
+  });
+  if (!data.accessToken || !data.refreshToken) {
+    throw new Error(data.message || 'Mobile Apple sign-in did not return tokens');
   }
   await setTokens(data.accessToken, data.refreshToken);
   return { user: data.user };
