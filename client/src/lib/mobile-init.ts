@@ -1,14 +1,59 @@
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
+import { App as CapacitorApp } from '@capacitor/app';
 import { isNative, isIOS, isAndroid } from './platform';
 import { initNativeAuthBridge } from './native-auth-bridge';
+import { queryClient } from './queryClient';
+
+// Tracks the last time the app went to background. Used to gate the
+// "we were away long enough that data is probably stale" refetch on resume
+// so we don't refetch on every quick app switch.
+let lastBackgroundedAt: number | null = null;
+const RESUME_REFETCH_THRESHOLD_MS = 30_000;
+
+function refetchAfterResume(): void {
+  // Invalidate the most user-visible queries. Other queries refetch on demand
+  // when their owning components mount, so a broad invalidation here would
+  // create unnecessary network traffic on every foreground.
+  void queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+  void queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+  void queryClient.invalidateQueries({ queryKey: ['/api/token/balance'] });
+  void queryClient.invalidateQueries({ queryKey: ['/api/subscription/status'] });
+}
 
 export async function initMobileShell(): Promise<void> {
   if (!isNative) return;
 
   // Register deep-link listener for OAuth callbacks (Discord/Xbox/etc.)
   initNativeAuthBridge();
+
+  // App lifecycle: invalidate user-facing queries when returning from
+  // background so notifications / Pro status / GFT balance recover even if
+  // the WebView (and any open WebSockets) was paused for a few minutes.
+  try {
+    await CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) {
+        const wasBackgrounded =
+          lastBackgroundedAt !== null &&
+          Date.now() - lastBackgroundedAt >= RESUME_REFETCH_THRESHOLD_MS;
+        if (wasBackgrounded) {
+          refetchAfterResume();
+        }
+        lastBackgroundedAt = null;
+      } else {
+        lastBackgroundedAt = Date.now();
+      }
+    });
+    await CapacitorApp.addListener('resume', () => {
+      // Belt-and-braces: some Android OEMs deliver `resume` without a prior
+      // `appStateChange(false)`. Force a refetch in that case.
+      refetchAfterResume();
+      lastBackgroundedAt = null;
+    });
+  } catch (err) {
+    console.warn('App lifecycle listeners failed:', err);
+  }
 
   try {
     await StatusBar.setStyle({ style: Style.Dark });

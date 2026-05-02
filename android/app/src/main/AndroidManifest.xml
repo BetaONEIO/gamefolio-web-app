@@ -44,6 +44,17 @@
     </application>
 
     <!-- Permissions -->
-
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Android 13+ scoped media permissions for picking videos and screenshots -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
+    <!-- Legacy storage permissions for Android 12 and below -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <!-- Keep CPU awake during long uploads (TUS resumable video uploads) -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
 </manifest>

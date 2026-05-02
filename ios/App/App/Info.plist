@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>Gamefolio</string>
+	<string>Gamefolio</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -42,6 +42,14 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Gamefolio needs access to your photo library so you can upload gameplay clips and screenshots to your portfolio.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Gamefolio needs permission to save clips and screenshots to your photo library when you download or share them.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Gamefolio needs camera access so you can take a profile picture or capture a quick screenshot for your portfolio.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Gamefolio needs microphone access so audio is included when you record gameplay clips inside the app.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
