@@ -54,7 +54,7 @@ export default function VerifyEmailPage() {
     if (token) {
       console.log('🔗 Direct token link detected, redirecting to server verification');
       
-      // Add a timeout to prevent infinite hanging
+      // Add a small delay so the user sees the loading state before we redirect.
       setTimeout(() => {
         // Redirect to the server GET endpoint which will handle verification and redirect back.
         // On native, open through the in-app Capacitor Browser so the SPA shell stays mounted
@@ -63,18 +63,31 @@ export default function VerifyEmailPage() {
         const url = `/api/auth/verify-email?token=${encodeURIComponent(token)}`;
         if (isNative) {
           void openExternal(`${API_BASE}${url}`);
+          // On native we never leave the SPA — show an explicit "finish in
+          // the in-app browser, then return" state instead of the legacy
+          // 10s "verification failed" fallback (which would fire here even
+          // on success, since the WebView keeps running).
+          setVerificationStatus('loading');
+          setMessage(
+            'Finish verifying your email in the browser window that just opened, then return to the app.',
+          );
         } else {
           window.location.href = url;
         }
       }, 500);
-      
-      // Set a fallback timeout in case redirect fails
-      setTimeout(() => {
-        console.warn('Redirect may have failed, trying alternate approach');
-        setVerificationStatus('error');
-        setMessage('Verification is taking longer than expected. Please try refreshing the page or contact support.');
-      }, 10000); // 10 seconds fallback
-      
+
+      // Web-only fallback: if the same-origin redirect didn't take effect
+      // within 10s, surface an error. Skipped on native because the SPA
+      // is intentionally still mounted while the in-app browser does the
+      // round-trip.
+      if (!isNative) {
+        setTimeout(() => {
+          console.warn('Redirect may have failed, trying alternate approach');
+          setVerificationStatus('error');
+          setMessage('Verification is taking longer than expected. Please try refreshing the page or contact support.');
+        }, 10000);
+      }
+
       return;
     }
 
