@@ -3636,7 +3636,22 @@ export default function SettingsPage() {
                                       }
                                       setConnectingXbox(true);
                                       try {
-                                        await connectXboxAccount();
+                                        const result = await connectXboxAccount();
+                                        // On web, connectXboxAccount triggers a full-page redirect
+                                        // and never returns. On native, it resolves to a one-time
+                                        // connect code that we exchange for an account link.
+                                        if (result && result.kind === 'native-connect') {
+                                          const { nativeXboxConnect } = await import('@/lib/mobile-auth');
+                                          const { xboxUsername } = await nativeXboxConnect(result.code);
+                                          await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+                                          toast({
+                                            title: 'Xbox connected!',
+                                            description: `Your Xbox account (${xboxUsername}) has been linked to your profile.`,
+                                            variant: 'gamefolioSuccess',
+                                          });
+                                          setShowAddPlatform(false);
+                                          setConnectingXbox(false);
+                                        }
                                       } catch (err: any) {
                                         setConnectingXbox(false);
                                         toast({ title: "Error", description: err.message || "Failed to start Xbox connection.", variant: "destructive" });

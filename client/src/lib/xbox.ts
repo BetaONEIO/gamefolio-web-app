@@ -56,7 +56,25 @@ function buildXboxAuthUrl(state: string): string {
   return authUrl.toString();
 }
 
-export type XboxNativeResult = { kind: 'native'; code: string };
+export type XboxNativeLoginResult = { kind: 'native'; code: string };
+export type XboxNativeConnectResult = { kind: 'native-connect'; code: string };
+export type XboxNativeResult = XboxNativeLoginResult | XboxNativeConnectResult;
+
+async function startXboxNativeFlow(mode: 'login' | 'connect'): Promise<string> {
+  const initRes = await fetch(
+    `${API_BASE}/api/auth/mobile/xbox/init?scheme=${encodeURIComponent(CAPACITOR_APP_SCHEME)}&mode=${mode}`,
+    { method: 'GET' }
+  );
+  if (!initRes.ok) {
+    throw new Error('Failed to start Xbox sign-in');
+  }
+  const { authUrl } = (await initRes.json()) as { authUrl: string };
+  if (!authUrl) throw new Error('Xbox auth URL missing');
+
+  const codePromise = awaitMobileAuthCallback();
+  await Browser.open({ url: authUrl, presentationStyle: 'popover' });
+  return codePromise;
+}
 
 /**
  * Initiate Xbox sign-in.
@@ -64,21 +82,9 @@ export type XboxNativeResult = { kind: 'native'; code: string };
  *  - Native: backend /api/auth/mobile/xbox/init returns the authUrl; opens it
  *            in the in-app browser and waits for the deep-link callback.
  */
-export const signInWithXbox = async (): Promise<XboxNativeResult | void> => {
+export const signInWithXbox = async (): Promise<XboxNativeLoginResult | void> => {
   if (isNative) {
-    const initRes = await fetch(
-      `${API_BASE}/api/auth/mobile/xbox/init?scheme=${encodeURIComponent(CAPACITOR_APP_SCHEME)}`,
-      { method: 'GET' }
-    );
-    if (!initRes.ok) {
-      throw new Error('Failed to start Xbox sign-in');
-    }
-    const { authUrl } = (await initRes.json()) as { authUrl: string };
-    if (!authUrl) throw new Error('Xbox auth URL missing');
-
-    const codePromise = awaitMobileAuthCallback();
-    await Browser.open({ url: authUrl, presentationStyle: 'popover' });
-    const code = await codePromise;
+    const code = await startXboxNativeFlow('login');
     return { kind: 'native', code };
   }
 
@@ -92,13 +98,13 @@ export const signInWithXbox = async (): Promise<XboxNativeResult | void> => {
   await openExternal(buildXboxAuthUrl(state));
 };
 
-export const connectXboxAccount = async (): Promise<XboxNativeResult | void> => {
+export const connectXboxAccount = async (): Promise<XboxNativeConnectResult | void> => {
   if (isNative) {
-    // Connect mode flows through the same mobile init/exchange pair, but we
-    // still flag connect mode in localStorage so the auth-modal/settings UI
-    // knows what to do once the deep-link returns.
-    localStorage.setItem('xbox_oauth_mode', 'connect');
-    return signInWithXbox();
+    // Connect mode: backend skips user-create and stores the raw Xbox profile
+    // under a one-time code that the authenticated client redeems via
+    // /api/auth/mobile/xbox/connect to link the xuid to the current user.
+    const code = await startXboxNativeFlow('connect');
+    return { kind: 'native-connect', code };
   }
 
   if (!isXboxConfigValid) {

@@ -8,6 +8,7 @@
 import { setTokens } from './auth-token';
 import { API_BASE, isNative } from './platform';
 import { signInWithGoogleNative } from './firebase';
+import { apiRequest } from './queryClient';
 
 type MobileAuthResponse = {
   success?: boolean;
@@ -68,4 +69,21 @@ export async function exchangeMobileAuthCode(code: string): Promise<{ user: any 
   }
   await setTokens(data.accessToken, data.refreshToken);
   return { user: data.user };
+}
+
+/**
+ * Link a Xbox profile (captured via the connect-mode deep-link) to the
+ * currently-authenticated user. Uses apiRequest so the request automatically
+ * carries the Bearer token from auth-token storage.
+ */
+export async function nativeXboxConnect(code: string): Promise<{ xboxUsername: string; user: any }> {
+  if (!isNative) {
+    throw new Error('nativeXboxConnect is only valid on native platforms');
+  }
+  const res = await apiRequest('POST', '/api/auth/mobile/xbox/connect', { code });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data?.success) {
+    throw new Error(data?.message || 'Failed to link Xbox account');
+  }
+  return { xboxUsername: data.xboxUsername, user: data.user };
 }

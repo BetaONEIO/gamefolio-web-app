@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import passport from 'passport';
 import { JWTService } from '../services/jwt-service';
+import { hybridAuth } from '../middleware/hybrid-auth';
 import { storage } from '../storage';
 import { StreakService } from '../streak-service';
 import { getDemoUser } from '../demo-user';
@@ -11,8 +12,12 @@ const scryptAsync = promisify(scrypt);
 const router = Router();
 
 // In-memory store for OAuth state tokens and auth codes (expires after 10 minutes)
-const oauthStateStore = new Map<string, { createdAt: number; platform: string; scheme?: string }>();
+const oauthStateStore = new Map<string, { createdAt: number; platform: string; scheme?: string; mode?: 'login' | 'connect' }>();
 const mobileAuthCodes = new Map<string, { createdAt: number; tokens: { accessToken: string; refreshToken: string }; userId: number; needsOnboarding: boolean; isNewUser: boolean }>();
+// Connect-mode codes: hold the raw OAuth profile so an authenticated client
+// can later link it to the current user via /api/auth/mobile/xbox/connect.
+type XboxProfile = { xuid: string; gamertag: string; gamerpic?: string };
+const mobileXboxConnectCodes = new Map<string, { createdAt: number; profile: XboxProfile }>();
 
 // Allow-list of native app URL schemes that may receive the OAuth deep-link
 // callback. Capacitor app uses `com.gamefolio.app://`; the legacy Rork bundle
@@ -32,9 +37,17 @@ function schemePrefix(scheme: string): string {
   return `${scheme}://`;
 }
 
+function resolveOAuthMode(req: Request): 'login' | 'connect' {
+  const raw = String(req.query.mode || '').trim().toLowerCase();
+  return raw === 'connect' ? 'connect' : 'login';
+}
+
 // Cleanup expired entries every 5 minutes
 setInterval(() => {
   const now = Date.now();
+  for (const [code, entry] of mobileXboxConnectCodes.entries()) {
+    if (now - entry.createdAt > 10 * 60 * 1000) mobileXboxConnectCodes.delete(code);
+  }
   const tenMinutes = 10 * 60 * 1000;
   
   for (const [key, value] of oauthStateStore.entries()) {
@@ -883,9 +896,10 @@ router.get('/auth/mobile/xbox/init', (req: Request, res: Response) => {
   }
 
   const scheme = resolveMobileScheme(req);
+  const mode = resolveOAuthMode(req);
 
   const state = generateSecureCode();
-  oauthStateStore.set(state, { createdAt: Date.now(), platform: 'xbox', scheme });
+  oauthStateStore.set(state, { createdAt: Date.now(), platform: 'xbox', scheme, mode });
 
   const authUrl = `https://login.live.com/oauth20_authorize.srf?` +
     `client_id=${microsoftClientId}&` +
@@ -967,6 +981,18 @@ router.get('/auth/mobile/xbox/callback', async (req: Request, res: Response) => 
     if (!xuid || !gamertag) {
       console.error('xbl.io mobile response missing required fields:', JSON.stringify(xblData));
       return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Could not retrieve Xbox profile information')}`);
+    }
+
+    // CONNECT MODE: don't create/log-in any user. Just stash the Xbox profile
+    // under a one-time code that the already-authenticated client redeems via
+    // /api/auth/mobile/xbox/connect to link this xuid to the current account.
+    if (stateData?.mode === 'connect') {
+      const connectCode = generateSecureCode();
+      mobileXboxConnectCodes.set(connectCode, {
+        createdAt: Date.now(),
+        profile: { xuid: String(xuid), gamertag: String(gamertag), gamerpic: gamerpic ? String(gamerpic) : undefined },
+      });
+      return res.redirect(`${appScheme}auth/callback?code=${connectCode}&mode=connect`);
     }
 
     // Find or create user
@@ -1094,6 +1120,64 @@ router.post('/auth/mobile/exchange', async (req: Request, res: Response) => {
       success: false,
       message: 'Failed to exchange auth code'
     });
+  }
+});
+
+/**
+ * Mobile Xbox CONNECT exchange.
+ * The native client calls this after receiving a one-time code from the
+ * `mode=connect` deep-link. It is authenticated (JWT bearer or session) and
+ * links the previously-captured Xbox profile to the current user, mirroring
+ * the web `/api/xbox/connect` endpoint.
+ */
+router.post('/auth/mobile/xbox/connect', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const { code } = req.body || {};
+    if (!code || typeof code !== 'string') {
+      return res.status(400).json({ success: false, message: 'Missing connect code' });
+    }
+
+    const entry = mobileXboxConnectCodes.get(code);
+    if (!entry) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired connect code' });
+    }
+    mobileXboxConnectCodes.delete(code); // one-time use
+
+    const userId = (req.user as any)?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+
+    const { xuid, gamertag, gamerpic } = entry.profile;
+
+    // Reject if this Xbox account is already linked to a different user.
+    const existingUser = await storage.getUserByExternalId?.(xuid, 'xbox');
+    if (existingUser && existingUser.id !== userId) {
+      return res.status(409).json({
+        success: false,
+        message: 'This Xbox account is already connected to another Gamefolio profile',
+      });
+    }
+
+    const updated = await storage.updateUser(userId, {
+      xboxUsername: gamertag,
+      xboxXuid: xuid,
+      ...(gamerpic && !existingUser ? { avatarUrl: gamerpic } : {}),
+    });
+
+    if (!updated) {
+      return res.status(500).json({ success: false, message: 'Failed to link Xbox account' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      xboxUsername: gamertag,
+      xboxXuid: xuid,
+      user: updated,
+    });
+  } catch (error) {
+    console.error('Mobile Xbox connect error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to link Xbox account' });
   }
 });
 
