@@ -1280,11 +1280,11 @@ const TrendingPage: React.FC = () => {
                 )}
 
                 <div className="grid grid-cols-3 gap-2">
-                  {/* "All Games" card — always first, 4:3 */}
+                  {/* "All Games" card — always first, 3:4 portrait to match game box art */}
                   <button
                     className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center transition-all"
                     style={{
-                      aspectRatio: '4/3',
+                      aspectRatio: '3/4',
                       background: '#1A2736',
                       border: !selectedGameId ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                     }}
@@ -1319,14 +1319,14 @@ const TrendingPage: React.FC = () => {
                       const isSelected = selectedGameId === game.id;
                       const isInCurrentTab = activeTabGameIds.has(game.id);
                       const imgSrc = game.imageUrl
-                        ? game.imageUrl.replace('{width}', '192').replace('{height}', '144')
+                        ? game.imageUrl.replace('{width}', '144').replace('{height}', '192')
                         : null;
                       return (
                         <button
                           key={game.id}
                           className="relative rounded-xl overflow-hidden flex flex-col justify-end transition-all"
                           style={{
-                            aspectRatio: '4/3',
+                            aspectRatio: '3/4',
                             background: '#1A2736',
                             border: isSelected ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                             opacity: isInCurrentTab ? 1 : 0.4,
