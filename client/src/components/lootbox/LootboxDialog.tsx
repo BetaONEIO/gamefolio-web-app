@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gift, Sparkles, Timer, Star, Crown, Gem, Package, Zap, Coins, X, TrendingUp, Lock } from "lucide-react";
+import { Gift, Sparkles, Timer, Star, Crown, Gem, Package, Zap, Coins, X, TrendingUp, Lock, Volume2, VolumeX } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { AssetReward } from "@shared/schema";
 import { useLevelTracker } from "@/hooks/use-level-tracker";
 import { useAuth } from "@/hooks/use-auth";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
+import { playLootboxOpenSound, useLootboxMute } from "@/lib/lootbox-sound";
 
 interface LootboxStatus {
   canOpen: boolean;
@@ -54,6 +55,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
   const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
   const { showLevelTracker } = useLevelTracker();
   const { user } = useAuth();
+  const [isMuted, toggleMuted] = useLootboxMute();
 
   const { data: status, isLoading: statusLoading } = useQuery<LootboxStatus>({
     queryKey: ["/api/lootbox/status"],
@@ -97,6 +99,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
       setPreviousXP(user.totalXP);
     }
     setPhase("opening");
+    playLootboxOpenSound();
     openMutation.mutate();
   };
 
@@ -151,6 +154,19 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
         <DialogPrimitive.Content
           className="lootbox-dialog-content fixed left-[50%] top-[50%] z-50 w-full max-w-xl md:max-w-3xl lg:max-w-4xl translate-x-[-50%] translate-y-[-50%] p-0 overflow-hidden border-none shadow-none duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg"
         >
+          <button
+            type="button"
+            onClick={toggleMuted}
+            className="absolute right-14 top-4 z-50 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            aria-label={isMuted ? "Unmute lootbox sound" : "Mute lootbox sound"}
+            data-testid="button-lootbox-mute-toggle"
+          >
+            {isMuted ? (
+              <VolumeX className="h-5 w-5 text-white" />
+            ) : (
+              <Volume2 className="h-5 w-5 text-white" />
+            )}
+          </button>
           <DialogPrimitive.Close className="absolute right-4 top-4 z-50 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
             <X className="h-5 w-5 text-white" />
             <span className="sr-only">Close</span>

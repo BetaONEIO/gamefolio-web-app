@@ -35,6 +35,7 @@ import Header from "./components/layout/Header";
 import Sidebar from "./components/layout/Sidebar";
 import MobileNav from "./components/layout/MobileNav";
 import MobileMenu from "./components/layout/MobileMenu";
+import { PullToRefresh } from "./components/layout/PullToRefresh";
 import { ActivityScrollBanner } from "./components/layout/ActivityScrollBanner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, X } from "lucide-react";
@@ -152,6 +153,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [location] = useLocation();
   const { isOpen, closeModal, defaultTab } = useAuthModal();
+  const mainScrollRef = React.useRef<HTMLElement>(null);
   
   // Version checking for cache busting
   useVersionCheck();
@@ -286,10 +288,18 @@ function MainLayout({ children }: { children: React.ReactNode }) {
       <div className="flex flex-1 min-h-0 relative z-10">
         {!isMobile && <Sidebar />}
 
-        <main className={`flex-1 overflow-y-auto overflow-x-hidden w-full ${!isMobile ? 'ml-64' : ''}`}>
-          <div className="px-0 py-0">
-            {children}
-          </div>
+        <main
+          ref={mainScrollRef}
+          className={`flex-1 overflow-y-auto overflow-x-hidden w-full ${!isMobile ? 'ml-64' : ''}`}
+        >
+          <PullToRefresh
+            containerRef={mainScrollRef}
+            onRefresh={() => queryClient.invalidateQueries()}
+          >
+            <div className="px-0 py-0">
+              {children}
+            </div>
+          </PullToRefresh>
         </main>
       </div>
 
