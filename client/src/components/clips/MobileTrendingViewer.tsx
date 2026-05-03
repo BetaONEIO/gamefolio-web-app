@@ -140,20 +140,19 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
     );
   }
 
-  // Touch handling for mobile
-  const [touchStartY, setTouchStartY] = useState(0);
-  const [touchStartTime, setTouchStartTime] = useState(0);
+  // Touch handling for mobile — use refs so values are always current
+  // without triggering re-renders mid-swipe that would re-attach listeners
+  const touchStartYRef = useRef(0);
+  const touchStartTimeRef = useRef(0);
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
-    setTouchStartY(e.touches[0].clientY);
-    setTouchStartTime(Date.now());
+    touchStartYRef.current = e.touches[0].clientY;
+    touchStartTimeRef.current = Date.now();
   }, []);
 
   const handleTouchEnd = useCallback((e: TouchEvent) => {
-    const touchEndY = e.changedTouches[0].clientY;
-    const touchEndTime = Date.now();
-    const deltaY = touchStartY - touchEndY;
-    const deltaTime = touchEndTime - touchStartTime;
+    const deltaY = touchStartYRef.current - e.changedTouches[0].clientY;
+    const deltaTime = Date.now() - touchStartTimeRef.current;
     
     // Trigger swipe on a clear vertical gesture — relaxed thresholds so
     // slower swipes on screenshots/reels still navigate.
@@ -166,7 +165,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         setCurrentIndex(prev => prev - 1);
       }
     }
-  }, [currentIndex, content.length, touchStartY, touchStartTime]);
+  }, [currentIndex, content.length]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     switch (e.key) {
