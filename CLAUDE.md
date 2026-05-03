@@ -61,17 +61,27 @@ Triggered by phrasings like *"do a build for production for android & ios"*,
    only committed code ships. Auto-generated cap-sync files
    (`android/app/capacitor.build.gradle`, `ios/App/Podfile.lock`, etc.) don't
    need stashing — the build regenerates them. Pop the stash after both builds.
-1. Bump Android `versionCode` in `android/app/build.gradle` (must be greater
-   than the last Play Console upload — check the most recent
-   `Bump Android versionCode` commit). Commit it.
+1. Bump **both** `versionCode` (must be greater than the last Play Console
+   upload — check the most recent `Bump Android version*` commit) and
+   `versionName` (semver patch bump for hotfixes, minor bump for new
+   features) in `android/app/build.gradle`. Commit them in one commit.
 2. `bun run mobile:build:android`
-3. `cd android && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew bundleRelease && cd .. && cp android/app/build/outputs/bundle/release/app-release.aab app-release.aab`
-4. `./scripts/ios-testflight.sh` (confirm first — visible-to-others action).
+3. `cd android && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew bundleRelease && cd ..`
+4. Copy the AAB to the repo root with a versioned filename so QA can tell
+   builds apart, removing any previous `app-release-*.aab` first:
+   `rm -f app-release-*.aab && cp android/app/build/outputs/bundle/release/app-release.aab app-release-<versionName>-<versionCode>.aab`
+   (e.g. `app-release-1.0.1-10.aab`). Use `setopt nonomatch` or wrap the
+   `rm` in `2>/dev/null || true` if running under zsh and no previous
+   versioned file exists — the bare glob throws "no matches found".
+5. `./scripts/ios-testflight.sh` (confirm first — visible-to-others action).
 
-AAB lands at `app-release.aab` in the repo root (copied from gradle's deep
-output path — `*.aab` is gitignored at the root so the copy isn't committed).
-The user grabs it from Finder for Play Console upload. iOS goes straight to
-App Store Connect / TestFlight.
+The versioned AAB lands in the repo root (`*.aab` is gitignored, so the
+copy isn't committed). User grabs it from Finder for Play Console upload
+or sideload to QA. iOS goes straight to App Store Connect / TestFlight;
+its `CFBundleVersion` is auto-stamped by the script with a UTC timestamp,
+but `CFBundleShortVersionString` (in `ios/App/App/Info.plist`) is the
+marketing version and should be kept in sync with Android `versionName`
+when you bump it.
 
 #### Known gotchas
 
