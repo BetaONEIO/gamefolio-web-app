@@ -65,12 +65,13 @@ Triggered by phrasings like *"do a build for production for android & ios"*,
    than the last Play Console upload — check the most recent
    `Bump Android versionCode` commit). Commit it.
 2. `bun run mobile:build:android`
-3. `cd android && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew bundleRelease`
+3. `cd android && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew bundleRelease && cd .. && cp android/app/build/outputs/bundle/release/app-release.aab app-release.aab`
 4. `./scripts/ios-testflight.sh` (confirm first — visible-to-others action).
 
-AAB lands at `android/app/build/outputs/bundle/release/app-release.aab` (inside
-the repo, gitignored — leave it there; user grabs it from Finder for Play
-Console upload). iOS goes straight to App Store Connect / TestFlight.
+AAB lands at `app-release.aab` in the repo root (copied from gradle's deep
+output path — `*.aab` is gitignored at the root so the copy isn't committed).
+The user grabs it from Finder for Play Console upload. iOS goes straight to
+App Store Connect / TestFlight.
 
 #### Known gotchas
 
