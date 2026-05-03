@@ -459,7 +459,8 @@ video:focus {
   filter: contrast(150%);
 }
 
-/* Custom Scrollbar Styling for Gamefolio Theme */
+/* Custom Scrollbar Styling for Gamefolio Theme — desktop only */
+@media (pointer: fine) {
 ::-webkit-scrollbar {
   width: 12px;
   height: 12px;
@@ -485,26 +486,41 @@ video:focus {
 ::-webkit-scrollbar-corner {
   background: hsl(var(--background));
 }
+} /* end @media (pointer: fine) */
 
-/* Firefox scrollbar styling */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: hsl(var(--primary)) hsl(var(--background));
+/* Firefox scrollbar styling — desktop only */
+@media (pointer: fine) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary)) hsl(var(--background));
+  }
 }
 
-/* Dark mode specific scrollbar adjustments */
-.dark ::-webkit-scrollbar-track {
-  background: hsl(220 16% 12%);
+/* Mobile: hide scrollbars entirely */
+@media (pointer: coarse) {
+  * {
+    scrollbar-width: none;
+  }
+  *::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  border-color: hsl(220 16% 12%);
-  box-shadow: inset 0 0 0 1px hsl(var(--primary) / 0.2);
-}
-
-.dark ::-webkit-scrollbar-corner {
-  background: hsl(220 16% 12%);
-}
+/* Dark mode specific scrollbar adjustments — desktop only */
+@media (pointer: fine) {
+  .dark ::-webkit-scrollbar-track {
+    background: hsl(220 16% 12%);
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    border-color: hsl(220 16% 12%);
+    box-shadow: inset 0 0 0 1px hsl(var(--primary) / 0.2);
+  }
+  .dark ::-webkit-scrollbar-corner {
+    background: hsl(220 16% 12%);
+  }
+} /* end dark-mode scrollbar */
 
 .filter-saturate {
   filter: saturate(200%);

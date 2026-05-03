@@ -835,16 +835,27 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   </button>
                 </div>
               ) : (
-                // Clips: fixed container with video contained inside
-                <VideoPlayer 
-                  videoUrl={clip.videoUrl} 
-                  thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined} 
-                  autoPlay={true}
-                  className="w-full h-full max-w-full max-h-full"
-                  objectFit="contain"
-                  clipId={clip.id}
-                  disableAspectRatio={true}
-                />
+                // Clips: fixed container with video contained inside + mobile fullscreen button
+                <div className="relative w-full h-full max-w-full max-h-full">
+                  <VideoPlayer 
+                    videoUrl={clip.videoUrl} 
+                    thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined} 
+                    autoPlay={true}
+                    className="w-full h-full max-w-full max-h-full"
+                    objectFit="contain"
+                    clipId={clip.id}
+                    disableAspectRatio={true}
+                  />
+                  {isMobile && (
+                    <button
+                      onClick={() => setIsFullscreen(true)}
+                      className="absolute top-3 right-3 z-50 p-2 rounded-full bg-black/60 hover:bg-black/80 transition-colors"
+                      title="View fullscreen"
+                    >
+                      <Maximize2 className="h-5 w-5 text-white" />
+                    </button>
+                  )}
+                </div>
               )
               ) : (
                 // Age-restricted content placeholder
@@ -1145,7 +1156,22 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
       
       {/* Fullscreen video overlay */}
       {clip && isFullscreen && (
-        <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center">
+        <div
+          className="fixed z-[100] bg-black flex items-center justify-center"
+          style={isMobile ? {
+            // Rotate the overlay to landscape on portrait mobile screens
+            // so the video fills the full screen in landscape orientation
+            top: 0,
+            left: 0,
+            width: '100vh',
+            height: '100vw',
+            transform: 'rotate(90deg) translateX(0) translateY(-100%)',
+            transformOrigin: 'top left',
+          } : {
+            inset: 0,
+          }}
+        >
+          {/* Exit buttons — positioned relative to the rotated overlay */}
           <button
             onClick={() => setIsFullscreen(false)}
             className="absolute top-4 right-4 z-[110] p-3 rounded-full bg-black/60 hover:bg-black/80 transition-colors"
@@ -1160,24 +1186,25 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           >
             <Minimize2 className="h-6 w-6 text-white" />
           </button>
-          <div className="h-full max-h-full w-full flex items-center justify-center">
-            <div className="h-full aspect-[9/16] max-w-full">
-              <VideoPlayer 
-                videoUrl={clip.videoUrl} 
-                thumbnailUrl={clip.thumbnailUrl || undefined} 
-                autoPlay={true}
-                className="w-full h-full"
-                objectFit="contain"
-                clipId={clip.id}
-                disableAspectRatio={true}
-              />
-            </div>
+
+          {/* Video fills the rotated container */}
+          <div className="w-full h-full flex items-center justify-center">
+            <VideoPlayer 
+              videoUrl={clip.videoUrl} 
+              thumbnailUrl={clip.thumbnailUrl || undefined} 
+              autoPlay={true}
+              className="w-full h-full"
+              objectFit="contain"
+              clipId={clip.id}
+              disableAspectRatio={true}
+            />
           </div>
-          {/* Fullscreen overlay info */}
-          <div className="absolute bottom-8 left-8 right-8 z-[110] text-white">
-            <h2 className="text-xl font-semibold mb-2">{clip.title}</h2>
+
+          {/* Info bar at the bottom of the rotated overlay */}
+          <div className="absolute bottom-6 left-16 right-16 z-[110] text-white">
+            <h2 className="text-lg font-semibold mb-1">{clip.title}</h2>
             {clip.game && (
-              <span className="bg-primary text-[#071013] px-3 py-1.5 rounded text-sm font-bold">
+              <span className="bg-primary text-[#071013] px-3 py-1 rounded text-sm font-bold">
                 {clip.game.name}
               </span>
             )}
