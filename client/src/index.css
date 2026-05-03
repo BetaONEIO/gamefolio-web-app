@@ -459,68 +459,26 @@ video:focus {
   filter: contrast(150%);
 }
 
-/* Custom Scrollbar Styling for Gamefolio Theme — desktop only */
-@media (pointer: fine) {
-::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+/* Hide scrollbars globally — all browsers, all devices */
+/* Scrolling still works; only the visual scrollbar UI is removed */
+* {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE / Edge legacy */
 }
-
-::-webkit-scrollbar-track {
-  background: hsl(var(--background));
-  border-radius: 6px;
+*::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+  background: transparent;      /* Chrome, Safari, Edge */
 }
-
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%);
-  border-radius: 6px;
-  border: 2px solid hsl(var(--background));
-  transition: all 0.2s ease;
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
-
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, hsl(var(--primary) / 0.9) 0%, hsl(var(--primary) / 0.7) 100%);
-  transform: scale(1.05);
+*::-webkit-scrollbar-thumb {
+  background: transparent;
 }
-
-::-webkit-scrollbar-corner {
-  background: hsl(var(--background));
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
-} /* end @media (pointer: fine) */
-
-/* Firefox scrollbar styling — desktop only */
-@media (pointer: fine) {
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--primary)) hsl(var(--background));
-  }
-}
-
-/* Mobile: hide scrollbars entirely */
-@media (pointer: coarse) {
-  * {
-    scrollbar-width: none;
-  }
-  *::-webkit-scrollbar {
-    display: none;
-    width: 0;
-    height: 0;
-  }
-}
-
-/* Dark mode specific scrollbar adjustments — desktop only */
-@media (pointer: fine) {
-  .dark ::-webkit-scrollbar-track {
-    background: hsl(220 16% 12%);
-  }
-  .dark ::-webkit-scrollbar-thumb {
-    border-color: hsl(220 16% 12%);
-    box-shadow: inset 0 0 0 1px hsl(var(--primary) / 0.2);
-  }
-  .dark ::-webkit-scrollbar-corner {
-    background: hsl(220 16% 12%);
-  }
-} /* end dark-mode scrollbar */
 
 .filter-saturate {
   filter: saturate(200%);
