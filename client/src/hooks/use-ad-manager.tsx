@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
+import { isAdInventoryConfigured } from "@/components/ads/VideoAdPlayer";
 
 interface AdManagerState {
   shouldShowAd: boolean;
@@ -26,12 +27,12 @@ export function useAdManager(options: UseAdManagerOptions = {}) {
   });
 
   const shouldShowAdForClip = useCallback((): boolean => {
-    if (isPro || isProLoading) return false;
+    if (isPro || isProLoading || !isAdInventoryConfigured()) return false;
     return Math.random() < clipChance;
   }, [isPro, isProLoading, clipChance]);
 
   const shouldShowAdForReel = useCallback((): boolean => {
-    if (isPro || isProLoading) return false;
+    if (isPro || isProLoading || !isAdInventoryConfigured()) return false;
     const nextCount = state.reelsWatched + 1;
     return nextCount % reelsInterval === 0;
   }, [isPro, isProLoading, state.reelsWatched, reelsInterval]);
@@ -44,8 +45,8 @@ export function useAdManager(options: UseAdManagerOptions = {}) {
   }, []);
 
   const checkAndShowAdForClip = useCallback((): boolean => {
-    if (isPro || isProLoading) return false;
-    
+    if (isPro || isProLoading || !isAdInventoryConfigured()) return false;
+
     const showAd = shouldShowAdForClip();
     if (showAd) {
       setState(prev => ({
@@ -58,8 +59,8 @@ export function useAdManager(options: UseAdManagerOptions = {}) {
   }, [isPro, isProLoading, shouldShowAdForClip]);
 
   const checkAndShowAdForReel = useCallback((): boolean => {
-    if (isPro || isProLoading) return false;
-    
+    if (isPro || isProLoading || !isAdInventoryConfigured()) return false;
+
     const showAd = shouldShowAdForReel();
     recordReelWatched();
     
@@ -112,13 +113,13 @@ export function useClipAdDecision() {
 
   const decideAd = useCallback(() => {
     setAdCompleted(false);
-    
-    if (isPro || isLoading) {
+
+    if (isPro || isLoading || !isAdInventoryConfigured()) {
       setShowAd(false);
       setAdCompleted(true);
       return false;
     }
-    
+
     const shouldShow = Math.random() < CLIP_AD_CHANCE;
     setShowAd(shouldShow);
     if (!shouldShow) {
@@ -153,7 +154,7 @@ export function useReelAdTracker() {
   const [showAd, setShowAd] = useState(false);
 
   const onReelChange = useCallback((newIndex: number) => {
-    if (isPro || isLoading) {
+    if (isPro || isLoading || !isAdInventoryConfigured()) {
       setShowAd(false);
       return false;
     }
@@ -165,7 +166,7 @@ export function useReelAdTracker() {
       setShowAd(true);
       return true;
     }
-    
+
     return false;
   }, [isPro, isLoading]);
 

@@ -85,11 +85,13 @@ interface VideoAdPlayerProps {
   className?: string;
 }
 
-const DEFAULT_TEST_AD_TAG = "https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/single_preroll_skippable&sz=640x480&ciu_szs=300x250%2C728x90&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&impl=s&correlator=";
-
-const getAdTagUrl = () => {
+export const getAdTagUrl = (): string | undefined => {
   const customTag = import.meta.env.VITE_AD_TAG_URL;
-  return customTag || DEFAULT_TEST_AD_TAG;
+  return customTag && customTag.trim().length > 0 ? customTag : undefined;
+};
+
+export const isAdInventoryConfigured = (): boolean => {
+  return getAdTagUrl() !== undefined;
 };
 
 export function VideoAdPlayer({ 
@@ -133,6 +135,12 @@ export function VideoAdPlayer({
 
   const initializeAds = useCallback(async () => {
     try {
+      const adTagUrl = getAdTagUrl();
+      if (!adTagUrl) {
+        onAdComplete();
+        return;
+      }
+
       await loadImaSDK();
       setSdkLoaded(true);
 
@@ -202,7 +210,7 @@ export function VideoAdPlayer({
       );
 
       const adsRequest = new window.google.ima.AdsRequest();
-      adsRequest.adTagUrl = getAdTagUrl();
+      adsRequest.adTagUrl = adTagUrl;
       adsRequest.linearAdSlotWidth = adContainerRef.current.clientWidth || 640;
       adsRequest.linearAdSlotHeight = adContainerRef.current.clientHeight || 360;
       adsRequest.nonLinearAdSlotWidth = adContainerRef.current.clientWidth || 640;
