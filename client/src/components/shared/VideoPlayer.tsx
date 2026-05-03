@@ -170,20 +170,58 @@ const VideoPlayer = ({
     }
   };
 
-  const toggleFullscreen = () => {
-    if (!videoRef.current) return;
+  const toggleFullscreen = async () => {
+    const video = videoRef.current;
+    if (!video) return;
 
     if (!isFullscreen) {
-      if (videoRef.current.requestFullscreen) {
-        videoRef.current.requestFullscreen().catch(err => {
+      // iOS WKWebView (Capacitor) does not implement HTMLElement.requestFullscreen.
+      // Use the WebKit-only video method, which hands off to the native iOS
+      // player — that player auto-rotates to landscape and handles further
+      // rotation correctly without us needing a screen-orientation plugin.
+      const iosVideo = video as HTMLVideoElement & {
+        webkitEnterFullscreen?: () => void;
+      };
+      if (typeof iosVideo.webkitEnterFullscreen === "function") {
+        try {
+          iosVideo.webkitEnterFullscreen();
+          return;
+        } catch (err) {
+          console.warn("webkitEnterFullscreen failed, falling back:", err);
+        }
+      }
+
+      // Standard path (Android WebView, desktop browsers).
+      if (video.requestFullscreen) {
+        try {
+          await video.requestFullscreen();
+          // Lock to landscape only for landscape-aspect videos so vertical
+          // reels don't get rotated. The Screen Orientation API is unavailable
+          // on iOS Safari/WKWebView and may reject in some other browsers —
+          // either is fine, fall through silently.
+          const isLandscapeVideo =
+            video.videoWidth > 0 && video.videoWidth > video.videoHeight;
+          const orientation = screen.orientation as
+            | (ScreenOrientation & { lock?: (o: string) => Promise<void> })
+            | undefined;
+          if (isLandscapeVideo && orientation?.lock) {
+            try {
+              await orientation.lock("landscape");
+            } catch (err) {
+              console.warn("Orientation lock failed:", err);
+            }
+          }
+        } catch (err) {
           console.error("Error attempting to enable fullscreen:", err);
-        });
+        }
       }
     } else {
       if (document.exitFullscreen) {
-        document.exitFullscreen().catch(err => {
+        try {
+          await document.exitFullscreen();
+        } catch (err) {
           console.error("Error attempting to exit fullscreen:", err);
-        });
+        }
       }
     }
   };
@@ -289,13 +327,33 @@ const VideoPlayer = ({
     };
 
     const onFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const isFs = !!document.fullscreenElement;
+      setIsFullscreen(isFs);
+      // Release any landscape lock when leaving fullscreen so the rest of
+      // the app respects the device orientation again.
+      if (!isFs) {
+        const orientation = screen.orientation as
+          | (ScreenOrientation & { unlock?: () => void })
+          | undefined;
+        try {
+          orientation?.unlock?.();
+        } catch {
+          /* not supported / not locked — ignore */
+        }
+      }
     };
+
+    // iOS-only: the native video player fires webkit events instead of the
+    // standard fullscreenchange event.
+    const onWebkitBeginFullscreen = () => setIsFullscreen(true);
+    const onWebkitEndFullscreen = () => setIsFullscreen(false);
 
     video.addEventListener("timeupdate", onTimeUpdate);
     video.addEventListener("loadedmetadata", onLoadedMetadata);
     video.addEventListener("ended", onVideoEnded);
     document.addEventListener("fullscreenchange", onFullscreenChange);
+    video.addEventListener("webkitbeginfullscreen", onWebkitBeginFullscreen);
+    video.addEventListener("webkitendfullscreen", onWebkitEndFullscreen);
 
     if (!autoHideControls) {
       hideControlsTimer();
@@ -306,7 +364,9 @@ const VideoPlayer = ({
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
       video.removeEventListener("ended", onVideoEnded);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
-      
+      video.removeEventListener("webkitbeginfullscreen", onWebkitBeginFullscreen);
+      video.removeEventListener("webkitendfullscreen", onWebkitEndFullscreen);
+
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
