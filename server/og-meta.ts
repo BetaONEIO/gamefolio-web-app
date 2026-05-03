@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { refreshSupabaseSignedUrl } from './og-thumbnail';
 
 interface OGMetaTags {
   title: string;
@@ -44,8 +45,8 @@ export function createOGMetaMiddleware(storage: IStorage) {
     // Regular users should get the normal Vite-served app
     if (process.env.NODE_ENV === 'development') {
       const userAgent = req.headers['user-agent'] || '';
-      const isSocialBot = /facebookexternalhit|twitterbot|LinkedInBot|WhatsApp|TelegramBot|discordbot|Slackbot|redditbot|SkypeUriPreview/i.test(userAgent);
-      
+      const isSocialBot = /facebookexternalhit|facebookcatalog|twitterbot|linkedinbot|whatsapp|telegrambot|discordbot|slackbot|slack-imgproxy|redditbot|skypeuripreview|pinterest|pinterestbot|mastodon|bluesky|bsky|threads|applebot|snapchat|tiktokbot|bytespider|googlebot|bingbot|yandex|embedly|iframely|opengraph|metainspector|vkshare|qwantify|line|kakaotalk/i.test(userAgent);
+
       if (!isSocialBot) {
         // Not a bot in dev mode, let Vite handle it
         return next();
@@ -83,20 +84,25 @@ export function createOGMetaMiddleware(storage: IStorage) {
           // Use OG thumbnail endpoint with play button overlay for clips/reels
           // Fallback to original thumbnail, then game image or user avatar
           const baseHost = `https://${req.get('host')}`;
-          let imageUrl = clip.thumbnailUrl || clip.gameImageUrl || clip.user.avatarUrl || '';
-          
-          // If clip has a share code, use the OG thumbnail endpoint for play button overlay
+          let imageUrl: string;
+
           if (clip.shareCode && clip.thumbnailUrl) {
+            // Use the OG thumbnail endpoint (it re-signs internally) — no need to pre-sign here
             imageUrl = `${baseHost}/api/og-thumbnail/${clip.shareCode}`;
+          } else {
+            // Fall back to the raw thumbnail/game/avatar URL, re-signed
+            const raw = clip.thumbnailUrl || clip.gameImageUrl || clip.user.avatarUrl || '';
+            imageUrl = await refreshSupabaseSignedUrl(raw);
           }
-          
+          const freshVideoUrl = clip.videoUrl ? await refreshSupabaseSignedUrl(clip.videoUrl) : undefined;
+
           ogTags = {
             title: `${clip.title} - ${clip.user.displayName || clip.user.username} | Gamefolio`,
             description: clip.description || `Watch this amazing ${contentType.toLowerCase()} by ${clip.user.displayName || clip.user.username} on Gamefolio`,
             image: imageUrl,
             url: `https://${req.get('host')}${url}`,
             type: 'video.other',
-            videoUrl: clip.videoUrl
+            videoUrl: freshVideoUrl,
           };
         }
       }
@@ -124,12 +130,14 @@ export function createOGMetaMiddleware(storage: IStorage) {
           const user = await storage.getUser(screenshot.userId);
           
           if (user) {
+            const rawImage = screenshot.thumbnailUrl || screenshot.imageUrl || '';
+            const freshImage = await refreshSupabaseSignedUrl(rawImage);
             ogTags = {
               title: `${screenshot.title} - ${user.displayName || user.username} | Gamefolio`,
               description: screenshot.description || `Check out this screenshot by ${user.displayName || user.username} on Gamefolio`,
-              image: screenshot.thumbnailUrl || screenshot.imageUrl || '',
+              image: freshImage,
               url: `https://${req.get('host')}${url}`,
-              type: 'website'
+              type: 'website',
             };
           }
         }
