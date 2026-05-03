@@ -145,7 +145,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
       />
 
       {/* ── Header (creator info) — sits directly BELOW the video ── */}
-      <div className="px-4 pt-14 pb-2">
+      <div className="px-4 pt-3 pb-2">
         <div className="flex items-start gap-3">
           <Link href={`/profile/${clip.user.username}`} className="flex-shrink-0">
             <div
@@ -1064,7 +1064,7 @@ const TrendingPage: React.FC = () => {
               : 'flex-col items-end'
           }`}
           style={{
-            top: 16,
+            top: 'calc(env(safe-area-inset-top, 0px) + 12px)',
             right: 12,
             opacity: (activeTab !== 'clips' && commentsOpen) ? 0 : 1,
             pointerEvents: (activeTab !== 'clips' && commentsOpen) ? 'none' : 'auto',
