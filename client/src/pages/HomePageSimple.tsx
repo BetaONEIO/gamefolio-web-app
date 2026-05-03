@@ -601,7 +601,7 @@ const HomePage = () => {
 
 
   return (
-    <div className="pb-16 md:pb-8">
+    <div className="pb-16 md:pb-8 hide-scrollbar">
       {/* Email Verification Banner - Only for authenticated users */}
       {user && (
         <div className="mx-2 sm:mx-4 md:mx-6 mb-0">
