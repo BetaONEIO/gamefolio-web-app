@@ -509,6 +509,8 @@ const TrendingPage: React.FC = () => {
   const [screenshotsDragging, setScreenshotsDragging] = useState(false);
   const [screenshotsDragStart, setScreenshotsDragStart] = useState(0);
   const [screenshotsScrollStart, setScreenshotsScrollStart] = useState(0);
+  const [screenshotsTouchStart, setScreenshotsTouchStart] = useState(0);
+  const [screenshotsTouchScrollStart, setScreenshotsTouchScrollStart] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -776,7 +778,7 @@ const TrendingPage: React.FC = () => {
           <div
             ref={screenshotsScrollRef}
             className={`flex gap-5 overflow-x-auto scrollbar-hide pb-4 select-none ${screenshotsDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-            style={{ scrollBehavior: screenshotsDragging ? 'auto' : 'smooth' }}
+            style={{ scrollBehavior: screenshotsDragging ? 'auto' : 'smooth', touchAction: 'pan-x' }}
             onMouseDown={(e) => {
               if (!screenshotsScrollRef.current) return;
               setScreenshotsDragging(true);
@@ -791,6 +793,16 @@ const TrendingPage: React.FC = () => {
             }}
             onMouseUp={() => setScreenshotsDragging(false)}
             onMouseLeave={() => setScreenshotsDragging(false)}
+            onTouchStart={(e) => {
+              if (!screenshotsScrollRef.current) return;
+              setScreenshotsTouchStart(e.touches[0].clientX);
+              setScreenshotsTouchScrollStart(screenshotsScrollRef.current.scrollLeft);
+            }}
+            onTouchMove={(e) => {
+              if (!screenshotsScrollRef.current) return;
+              const delta = screenshotsTouchStart - e.touches[0].clientX;
+              screenshotsScrollRef.current.scrollLeft = screenshotsTouchScrollStart + delta;
+            }}
           >
             {trendingScreenshots.map((screenshot) => (
               <div key={screenshot.id} className="flex-shrink-0 w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px]">
