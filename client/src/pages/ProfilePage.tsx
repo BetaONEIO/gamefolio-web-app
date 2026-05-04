@@ -1324,9 +1324,9 @@ const ProfilePage = () => {
   const isCyberpunkTheme = !isLightBackground && accentColor?.toLowerCase() === '#00d3f2';
   const isNeoTheme = !isLightBackground && accentColor?.toLowerCase() === '#00ff41';
   const isGothicTheme = !isLightBackground && accentColor?.toLowerCase() === '#c27aff' && backgroundColor?.toLowerCase() === '#1e053a';
-  const isBlocksTheme = !isLightBackground && accentColor?.toLowerCase() === '#B7FF1A' && backgroundColor?.toLowerCase() === '#1a1a1a';
-  const isForestTheme = !isLightBackground && accentColor?.toLowerCase() === '#B7FF1A' && backgroundColor?.toLowerCase() === '#0a2f1f';
-  const isWatermelonTheme = accentColor?.toLowerCase() === '#B7FF1A' && backgroundColor?.toLowerCase() === '#ff4d6d';
+  const isBlocksTheme = !isLightBackground && accentColor?.toLowerCase() === '#b7ff1a' && backgroundColor?.toLowerCase() === '#1a1a1a';
+  const isForestTheme = !isLightBackground && accentColor?.toLowerCase() === '#b7ff1a' && backgroundColor?.toLowerCase() === '#0a2f1f';
+  const isWatermelonTheme = accentColor?.toLowerCase() === '#b7ff1a' && backgroundColor?.toLowerCase() === '#ff4d6d';
   const isElectricTheme = !isLightBackground && accentColor?.toLowerCase() === '#ffe033' && backgroundColor?.toLowerCase() === '#1a1200';
 
   const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isLightBackground;
