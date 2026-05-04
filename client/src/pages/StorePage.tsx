@@ -435,7 +435,7 @@ export default function StorePage() {
     }
 
     if (chainId !== SKALE_CHAIN_ID) {
-      toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+      toast({ title: "Wrong network", description: "Please switch to SKALE on Base", variant: "destructive" });
       return;
     }
 
@@ -531,7 +531,7 @@ export default function StorePage() {
       if (!requireExternalWallet("Buying name tags")) return;
     }
     if (chainId !== SKALE_CHAIN_ID) {
-      toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+      toast({ title: "Wrong network", description: "Please switch to SKALE on Base", variant: "destructive" });
       return;
     }
     setPurchasingNameTagId(nameTagId);
@@ -608,7 +608,7 @@ export default function StorePage() {
       if (!requireExternalWallet("Buying borders")) return;
     }
     if (chainId !== SKALE_CHAIN_ID) {
-      toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+      toast({ title: "Wrong network", description: "Please switch to SKALE on Base", variant: "destructive" });
       return;
     }
     setPurchasingBorderId(borderId);

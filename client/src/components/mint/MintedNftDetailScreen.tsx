@@ -548,7 +548,7 @@ export default function MintedNftDetailScreen({
                   <span className="text-sm font-normal text-[#94a3b8] leading-5">Network</span>
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-[#B7FF1A]" />
-                    <span className="text-sm font-normal text-[#f8fafc] leading-5">SKALE Nebula</span>
+                    <span className="text-sm font-normal text-[#f8fafc] leading-5">SKALE on Base</span>
                   </div>
                 </div>
 

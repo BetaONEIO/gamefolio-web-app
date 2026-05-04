@@ -144,7 +144,7 @@ export function NFTPurchaseDialog({
           return;
         }
         if (chainId !== SKALE_CHAIN_ID) {
-          toast({ title: "Wrong Network", description: "Please switch to SKALE Nebula network.", variant: "destructive" });
+          toast({ title: "Wrong Network", description: "Please switch to SKALE on Base network.", variant: "destructive" });
           return;
         }
         const intentRes = await fetch("/api/nft/purchase-intent", {
@@ -553,7 +553,7 @@ export function NFTPurchaseDialog({
                     {[
                       { label: "Contract Address", value: contractAddress, mono: true, link: true },
                       { label: "Token ID", value: tokenId, mono: true },
-                      { label: "Blockchain", value: "SKALE Nebula" },
+                      { label: "Blockchain", value: "SKALE on Base" },
                       { label: "Token Standard", value: "ERC-721" },
                     ].map((detail, idx) => (
                       <div

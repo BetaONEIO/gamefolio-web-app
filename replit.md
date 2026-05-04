@@ -156,7 +156,7 @@ For native release builds the following must exist in RevenueCat (and in App Sto
 ## External Dependencies
 - **Supabase**: PostgreSQL database, authentication, and storage services.
 - **Twitch API**: Game data retrieval.
-- **Sequence WaaS**: Email-based blockchain wallet authentication on SKALE Nebula Testnet (chainId 37084624). Uses `@0xsequence/waas` SDK with OTP verification flow.
+- **Sequence WaaS**: Email-based blockchain wallet authentication on SKALE on Base (chainId 37084624). Uses `@0xsequence/waas` SDK with OTP verification flow.
 - **bad-words (NPM package)**: Content filtering and profanity detection.
 - **TUS (protocol)**: Robust video upload and processing.
 - **connect-pg-simple**: PostgreSQL-backed session management.

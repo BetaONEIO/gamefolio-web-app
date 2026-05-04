@@ -11,7 +11,7 @@ interface WalletSettingsScreenProps {
 export default function WalletSettingsScreen({
   onBack,
   walletAddress = "0x12a8...3b89e4f2",
-  network = "SKALE Nebula",
+  network = "SKALE on Base",
   isConnected = true,
 }: WalletSettingsScreenProps) {
   const [copied, setCopied] = useState(false);

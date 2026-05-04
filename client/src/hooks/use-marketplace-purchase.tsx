@@ -124,7 +124,7 @@ export function useMarketplacePurchase(options: UseMarketplacePurchaseOptions = 
       return;
     }
     if (chainId !== SKALE_CHAIN_ID) {
-      toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+      toast({ title: "Wrong network", description: "Please switch to SKALE on Base", variant: "destructive" });
       setPendingNftPurchase(null);
       return;
     }

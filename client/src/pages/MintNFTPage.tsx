@@ -522,7 +522,7 @@ export default function MintNFTPage() {
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#B7FF1A]" />
                   <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-[2px]">
-                    Network: SKALE Nebula
+                    Network: SKALE on Base
                   </span>
                 </div>
               </div>
