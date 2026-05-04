@@ -10,6 +10,15 @@ installNativeFetchPatch();
 void initMobileShell();
 void ensureAuthTokensHydrated();
 
+const adsenseClientId = import.meta.env.VITE_ADSENSE_CLIENT_ID?.trim();
+if (adsenseClientId) {
+  const adsenseScript = document.createElement("script");
+  adsenseScript.async = true;
+  adsenseScript.crossOrigin = "anonymous";
+  adsenseScript.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(adsenseClientId)}`;
+  document.head.appendChild(adsenseScript);
+}
+
 // Set page title
 document.title = "Gamefolio - Share Your Gaming Moments";
 
