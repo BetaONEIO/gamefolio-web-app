@@ -290,7 +290,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
         <main
           ref={mainScrollRef}
-          className={`flex-1 overflow-y-auto overflow-x-hidden w-full ${!isMobile ? 'ml-64' : ''}`}
+          className={`flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide ${!isMobile ? 'ml-64' : ''}`}
         >
           <PullToRefresh
             containerRef={mainScrollRef}

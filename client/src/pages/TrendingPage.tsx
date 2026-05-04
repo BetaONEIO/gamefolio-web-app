@@ -145,7 +145,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
       />
 
       {/* ── Header (creator info) — sits directly BELOW the video ── */}
-      <div className="px-4 pt-14 pb-2">
+      <div className="px-4 pt-3 pb-2">
         <div className="flex items-start gap-3">
           <Link href={`/profile/${clip.user.username}`} className="flex-shrink-0">
             <div
@@ -509,6 +509,8 @@ const TrendingPage: React.FC = () => {
   const [screenshotsDragging, setScreenshotsDragging] = useState(false);
   const [screenshotsDragStart, setScreenshotsDragStart] = useState(0);
   const [screenshotsScrollStart, setScreenshotsScrollStart] = useState(0);
+  const [screenshotsTouchStart, setScreenshotsTouchStart] = useState(0);
+  const [screenshotsTouchScrollStart, setScreenshotsTouchScrollStart] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -776,7 +778,7 @@ const TrendingPage: React.FC = () => {
           <div
             ref={screenshotsScrollRef}
             className={`flex gap-5 overflow-x-auto scrollbar-hide pb-4 select-none ${screenshotsDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-            style={{ scrollBehavior: screenshotsDragging ? 'auto' : 'smooth' }}
+            style={{ scrollBehavior: screenshotsDragging ? 'auto' : 'smooth', touchAction: 'pan-x' }}
             onMouseDown={(e) => {
               if (!screenshotsScrollRef.current) return;
               setScreenshotsDragging(true);
@@ -791,6 +793,16 @@ const TrendingPage: React.FC = () => {
             }}
             onMouseUp={() => setScreenshotsDragging(false)}
             onMouseLeave={() => setScreenshotsDragging(false)}
+            onTouchStart={(e) => {
+              if (!screenshotsScrollRef.current) return;
+              setScreenshotsTouchStart(e.touches[0].clientX);
+              setScreenshotsTouchScrollStart(screenshotsScrollRef.current.scrollLeft);
+            }}
+            onTouchMove={(e) => {
+              if (!screenshotsScrollRef.current) return;
+              const delta = screenshotsTouchStart - e.touches[0].clientX;
+              screenshotsScrollRef.current.scrollLeft = screenshotsTouchScrollStart + delta;
+            }}
           >
             {trendingScreenshots.map((screenshot) => (
               <div key={screenshot.id} className="flex-shrink-0 w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px]">
@@ -1064,7 +1076,7 @@ const TrendingPage: React.FC = () => {
               : 'flex-col items-end'
           }`}
           style={{
-            top: 16,
+            top: 'calc(env(safe-area-inset-top, 0px) + 12px)',
             right: 12,
             opacity: (activeTab !== 'clips' && commentsOpen) ? 0 : 1,
             pointerEvents: (activeTab !== 'clips' && commentsOpen) ? 'none' : 'auto',
@@ -1268,11 +1280,11 @@ const TrendingPage: React.FC = () => {
                 )}
 
                 <div className="grid grid-cols-3 gap-2">
-                  {/* "All Games" card — always first, 4:3 */}
+                  {/* "All Games" card — always first, 3:4 portrait to match game box art */}
                   <button
                     className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center transition-all"
                     style={{
-                      aspectRatio: '4/3',
+                      aspectRatio: '3/4',
                       background: '#1A2736',
                       border: !selectedGameId ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                     }}
@@ -1307,14 +1319,14 @@ const TrendingPage: React.FC = () => {
                       const isSelected = selectedGameId === game.id;
                       const isInCurrentTab = activeTabGameIds.has(game.id);
                       const imgSrc = game.imageUrl
-                        ? game.imageUrl.replace('{width}', '192').replace('{height}', '144')
+                        ? game.imageUrl.replace('{width}', '144').replace('{height}', '192')
                         : null;
                       return (
                         <button
                           key={game.id}
                           className="relative rounded-xl overflow-hidden flex flex-col justify-end transition-all"
                           style={{
-                            aspectRatio: '4/3',
+                            aspectRatio: '3/4',
                             background: '#1A2736',
                             border: isSelected ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                             opacity: isInCurrentTab ? 1 : 0.4,

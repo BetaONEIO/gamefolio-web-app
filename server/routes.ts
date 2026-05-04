@@ -77,7 +77,7 @@ import { hybridAuth, hybridEmailVerification } from "./middleware/hybrid-auth";
 import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
 import { contentFilterService } from "./services/content-filter";
-import { addPlayButtonOverlay } from "./og-thumbnail";
+import { addPlayButtonOverlay, refreshSupabaseSignedUrl } from "./og-thumbnail";
 import { getTokenBalance, getTokenInfo } from "./blockchain";
 import { transferGfTokens } from "./gf-token-service";
 import { writeContractWithPoW } from "./skale-pow";
@@ -4265,15 +4265,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Clip thumbnail not found' });
       }
 
-      // Generate thumbnail with play button overlay
-      const thumbnailWithPlayButton = await addPlayButtonOverlay(fullClip.thumbnailUrl);
-
-      // Set appropriate headers for image response with long cache
-      res.setHeader('Content-Type', 'image/jpeg');
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); // Cache for 1 year
-      console.log(`✅ OG thumbnail with play button generated for ${shareCode}`);
-      res.send(thumbnailWithPlayButton);
-      
+      // Generate thumbnail with play button overlay (re-signs Supabase URL internally)
+      try {
+        const thumbnailWithPlayButton = await addPlayButtonOverlay(fullClip.thumbnailUrl);
+        res.setHeader('Content-Type', 'image/jpeg');
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day (signed URLs)
+        console.log(`✅ OG thumbnail with play button generated for ${shareCode}`);
+        return res.send(thumbnailWithPlayButton);
+      } catch (overlayErr) {
+        // Sharp/fetch failed — gracefully redirect to a freshly-signed thumbnail
+        // so social crawlers still get a valid image instead of a 500.
+        // Only redirect if target is on the trusted Supabase storage host to
+        // prevent this endpoint from becoming an open-redirect sink.
+        console.warn(`⚠️ Play button overlay failed for ${shareCode}, falling back to raw thumbnail`);
+        const fresh = await refreshSupabaseSignedUrl(fullClip.thumbnailUrl);
+        const supabaseHost = (() => {
+          try { return new URL(process.env.SUPABASE_URL || '').host; } catch { return ''; }
+        })();
+        let freshHost = '';
+        try { freshHost = new URL(fresh).host; } catch { /* invalid url */ }
+        if (supabaseHost && freshHost === supabaseHost) {
+          res.setHeader('Cache-Control', 'public, max-age=300'); // short cache on fallback
+          return res.redirect(302, fresh);
+        }
+        // Untrusted/invalid target — serve a transparent placeholder (200) instead
+        // of redirecting, so og:image is still a valid response.
+        return res.status(200)
+          .setHeader('Content-Type', 'image/svg+xml')
+          .setHeader('Cache-Control', 'public, max-age=60')
+          .send('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><rect width="1200" height="630" fill="#0a0a0a"/></svg>');
+      }
     } catch (error) {
       console.error('Error generating OG thumbnail with play button:', error);
       res.status(500).json({ error: 'Failed to generate thumbnail' });
