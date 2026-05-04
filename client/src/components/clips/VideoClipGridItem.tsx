@@ -48,7 +48,7 @@ const VideoClipGridItem = ({ clip, userId, compact = false, customCardColor, cus
 
   // Determine aspect ratio based on video type
   const isReel = clip.videoType === 'reel';
-  const aspectRatioClass = 'aspect-video';
+  const aspectRatioClass = isReel ? 'aspect-[9/16]' : 'aspect-video';
 
   // Use the actual thumbnail URL from the clip data (user-selected or auto-generated)
   // For videos without thumbnails, use the video itself with poster frame
