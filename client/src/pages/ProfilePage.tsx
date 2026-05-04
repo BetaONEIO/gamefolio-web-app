@@ -1501,17 +1501,26 @@ const ProfilePage = () => {
     screenshots: '#27ae60',
     favorites: '#f39c12',
   };
-  const getTabStyle = (tabName: string) => ({
-    backgroundColor: isCartoonTheme ? 'transparent' : activeTab === tabName ? (isBlocksTheme ? (blocksTabColors[tabName] || accentColor) : isForestTheme ? '#e8d5b7' : isMacTheme ? accentColor : `${accentColor}30`) : 'transparent',
-    color: isCartoonTheme ? (activeTab === tabName ? (cartoonTabColors[tabName] || '#1d1d1f') : 'rgba(0,0,0,0.25)') : activeTab === tabName ? (isBlocksTheme ? '#1a1a1a' : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#5C3317' : accentColor) : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#c4a882' : isLightBackground ? accentColor : undefined,
-    ...(isCartoonTheme ? { fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: '800', letterSpacing: '-0.5px', fontSize: '1.1rem', borderBottom: activeTab === tabName ? `4px solid ${cartoonTabColors[tabName] || 'gold'}` : '4px solid transparent', borderRadius: '0', paddingBottom: '6px' } : {}),
-    ...(isZombieTheme ? { fontFamily: "'Creepster', cursive", letterSpacing: '2px', fontSize: '0.8rem' } : {}),
-    ...(isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2.5px', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase' as const } : {}),
-    ...(isNeoTheme ? { fontFamily: "'JetBrains Mono', monospace", letterSpacing: '1.5px', fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase' as const } : {}),
-    ...(isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.55rem', letterSpacing: '0.5px', textTransform: 'uppercase' as const, borderRadius: '2px' } : {}),
-    ...(isGothicTheme ? { fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '1.5px', fontSize: '0.78rem' } : {}),
-    ...(isElectricTheme ? { fontFamily: "'Bangers', 'Impact', cursive", letterSpacing: '2px', fontSize: '0.85rem', textTransform: 'uppercase' as const } : {}),
-  });
+  const getTabStyle = (tabName: string) => {
+    const isActive = activeTab === tabName;
+    const frostedGlass = isActive ? {
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+      border: isMacTheme ? '1px solid rgba(255,255,255,0.25)' : `1px solid ${accentColor}25`,
+    } : {};
+    return {
+      backgroundColor: isCartoonTheme ? 'transparent' : isActive ? (isBlocksTheme ? (blocksTabColors[tabName] || accentColor) : isForestTheme ? '#e8d5b7' : isMacTheme ? 'rgba(255,255,255,0.18)' : `${accentColor}22`) : 'transparent',
+      color: isCartoonTheme ? (isActive ? (cartoonTabColors[tabName] || '#1d1d1f') : 'rgba(0,0,0,0.25)') : isActive ? (isBlocksTheme ? '#1a1a1a' : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#5C3317' : accentColor) : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#c4a882' : isLightBackground ? accentColor : undefined,
+      ...(!isCartoonTheme && !isBlocksTheme && !isForestTheme ? frostedGlass : {}),
+      ...(isCartoonTheme ? { fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: '800', letterSpacing: '-0.5px', fontSize: '1.1rem', borderBottom: isActive ? `4px solid ${cartoonTabColors[tabName] || 'gold'}` : '4px solid transparent', borderRadius: '0', paddingBottom: '6px' } : {}),
+      ...(isZombieTheme ? { fontFamily: "'Creepster', cursive", letterSpacing: '2px', fontSize: '0.8rem' } : {}),
+      ...(isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2.5px', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase' as const } : {}),
+      ...(isNeoTheme ? { fontFamily: "'JetBrains Mono', monospace", letterSpacing: '1.5px', fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase' as const } : {}),
+      ...(isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.55rem', letterSpacing: '0.5px', textTransform: 'uppercase' as const, borderRadius: '2px' } : {}),
+      ...(isGothicTheme ? { fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '1.5px', fontSize: '0.78rem' } : {}),
+      ...(isElectricTheme ? { fontFamily: "'Bangers', 'Impact', cursive", letterSpacing: '2px', fontSize: '0.85rem', textTransform: 'uppercase' as const } : {}),
+    };
+  };
 
   const nameTagBgStyle = isWatermelonTheme ? {
     background: '#ffb3c1',
@@ -3865,12 +3874,12 @@ const ProfilePage = () => {
             className={`w-full max-w-lg lg:max-w-full mx-auto justify-start md:justify-center p-1 relative flex flex-nowrap gap-0.5 overflow-x-auto scrollbar-hide ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : isGothicTheme ? 'rounded-2xl' : isCartoonTheme ? '' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : isForestTheme ? '' : isZombieTheme ? '' : isMacTheme ? '' : isGothicTheme ? '' : isCartoonTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
             style={tabListStyle}
           >
-            {/* Mac Theme – traffic light dots on the left of the tab bar */}
+            {/* Mac Theme – traffic light dots in top-left corner of the tab bar */}
             {isMacTheme && (
-              <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6, alignItems: 'center', zIndex: 2 }}>
-                <div style={{ width: 13, height: 13, borderRadius: '50%', background: '#ff5f57', border: '0.5px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
-                <div style={{ width: 13, height: 13, borderRadius: '50%', background: '#febc2e', border: '0.5px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
-                <div style={{ width: 13, height: 13, borderRadius: '50%', background: '#28c840', border: '0.5px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
+              <div style={{ position: 'absolute', left: 8, top: 6, display: 'flex', gap: 4, alignItems: 'center', zIndex: 2 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff5f57', border: '0.5px solid rgba(0,0,0,0.15)', flexShrink: 0 }} />
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#febc2e', border: '0.5px solid rgba(0,0,0,0.15)', flexShrink: 0 }} />
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#28c840', border: '0.5px solid rgba(0,0,0,0.15)', flexShrink: 0 }} />
               </div>
             )}
             <TabsTrigger 
