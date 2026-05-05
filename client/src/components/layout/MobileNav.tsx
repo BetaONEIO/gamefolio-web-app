@@ -73,7 +73,7 @@ const MobileNav = () => {
                 className={cn(
                   "absolute pointer-events-auto flex flex-col items-center justify-center",
                   "w-[76px] h-[88px] rounded-2xl",
-                  "bg-zinc-900 border-2 border-primary",
+                  "bg-zinc-800 border-2 border-primary",
                   "shadow-lg shadow-black/40",
                   "hover:bg-primary active:bg-primary",
                   "group",
