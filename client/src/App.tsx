@@ -452,7 +452,6 @@ function App() {
                                   <Router />
                                 </ErrorBoundary>
                               </MainLayout>
-                              <WelcomePackComponents />
                               <DailyXpBonus />
                               <DailyStreakOverlay />
                             </ClipDialogProvider>
@@ -472,7 +471,6 @@ function App() {
                                     <Router />
                                   </ErrorBoundary>
                                 </MainLayout>
-                                <WelcomePackComponents />
                                 <DailyXpBonus />
                                 <DailyStreakOverlay />
                               </ClipDialogProvider>

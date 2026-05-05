@@ -48,12 +48,12 @@ export function WelcomePackProvider({ children }: { children: ReactNode }) {
 
   const canClaimWelcomePack = status?.canClaim ?? false;
 
-  // Auto-open the welcome pack dialog when the server says it can be claimed
-  useEffect(() => {
-    if (status?.canClaim && !status?.claimed) {
-      setShowWelcomePack(true);
-    }
-  }, [status?.canClaim, status?.claimed]);
+  // Welcome pack auto-open disabled — feature temporarily hidden
+  // useEffect(() => {
+  //   if (status?.canClaim && !status?.claimed) {
+  //     setShowWelcomePack(true);
+  //   }
+  // }, [status?.canClaim, status?.claimed]);
 
   return (
     <WelcomePackContext.Provider
