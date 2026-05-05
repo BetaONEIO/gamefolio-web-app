@@ -144,16 +144,38 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   // without triggering re-renders mid-swipe that would re-attach listeners
   const touchStartYRef = useRef(0);
   const touchStartTimeRef = useRef(0);
+  // Rubberband offset for visual feedback when swiping past start/end of feed
+  const [dragOffset, setDragOffset] = useState(0);
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
     touchStartYRef.current = e.touches[0].clientY;
     touchStartTimeRef.current = Date.now();
   }, []);
 
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    const deltaY = touchStartYRef.current - e.touches[0].clientY;
+    const atStart = currentIndex <= 0;
+    const atEnd = currentIndex >= content.length - 1;
+
+    // Only show rubberband when at a boundary AND swiping further past it.
+    // Outside those branches setDragOffset(0) is a no-op when offset is already 0
+    // (React bails out on identical values), so this is cheap to call every move.
+    if (deltaY > 0 && atEnd) {
+      setDragOffset(-deltaY * 0.3);
+    } else if (deltaY < 0 && atStart) {
+      setDragOffset(-deltaY * 0.3);
+    } else {
+      setDragOffset(0);
+    }
+  }, [currentIndex, content.length]);
+
   const handleTouchEnd = useCallback((e: TouchEvent) => {
     const deltaY = touchStartYRef.current - e.changedTouches[0].clientY;
     const deltaTime = Date.now() - touchStartTimeRef.current;
-    
+
+    // Snap rubberband offset back to 0 with CSS transition
+    setDragOffset(0);
+
     // Trigger swipe on a clear vertical gesture — relaxed thresholds so
     // slower swipes on screenshots/reels still navigate.
     if (deltaTime < 1500 && Math.abs(deltaY) > 30) {
@@ -194,15 +216,17 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
     if (!container) return;
 
     container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: true });
     container.addEventListener('touchend', handleTouchEnd, { passive: true });
     document.addEventListener('keydown', handleKeyDown);
 
     return () => {
       container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleTouchStart, handleTouchEnd, handleKeyDown]);
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd, handleKeyDown]);
 
   // Type guard to check if content is video (clip/reel) or screenshot
   const isVideoContent = (item: ContentItem): item is ClipWithUser => {
@@ -256,10 +280,14 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   const stats = getContentStats();
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className={embedded ? "relative w-full h-full flex flex-col" : "fixed inset-0 z-[60] flex flex-col"}
-      style={{ background: '#131F2A' }}
+      style={{
+        background: '#131F2A',
+        transform: dragOffset !== 0 ? `translateY(${dragOffset}px)` : undefined,
+        transition: dragOffset !== 0 ? 'none' : 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+      }}
       data-testid="mobile-trending-viewer"
     >
       {/* Content - shrinks when comments panel is open */}
@@ -271,7 +299,10 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
 
         {/* Top overlay with close button — hidden when comments open */}
         {!hideCloseButton && !showComments && (
-          <div className="absolute top-0 left-0 right-0 flex justify-between items-center p-4 bg-gradient-to-b from-black/60 to-transparent z-10">
+          <div
+            className="absolute top-0 left-0 right-0 flex justify-between items-center px-4 pb-4 bg-gradient-to-b from-black/60 to-transparent z-10"
+            style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)' }}
+          >
             <Button
               variant="ghost"
               size="sm"

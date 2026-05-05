@@ -25,7 +25,7 @@ import { MobileTrendingViewer } from '@/components/clips/MobileTrendingViewer';
 import { Dialog, DialogContent, DialogClose, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import CommentSection from '@/components/clips/CommentSection';
 import { UserIcon, X, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { AgeRestrictionDialog } from '@/components/content/AgeRestrictionDialog';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
@@ -489,6 +489,7 @@ const TrendingPage: React.FC = () => {
   const { user } = useAuth();
   const isMobile = useMobile();
   const { openClipDialog } = useClipDialog();
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<ContentType>('clips');
   const [filter, setFilter] = useState<FilterType>('likes');
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('recent');
@@ -1022,8 +1023,14 @@ const TrendingPage: React.FC = () => {
           <MobileTrendingViewer
             key={activeTab}
             content={activeContent}
-            onClose={() => {}}
-            hideCloseButton={true}
+            onClose={() => {
+              if (window.history.length > 1) {
+                window.history.back();
+              } else {
+                setLocation('/');
+              }
+            }}
+            hideCloseButton={false}
             onCommentsVisibilityChange={setCommentsOpen}
           />
         )}
