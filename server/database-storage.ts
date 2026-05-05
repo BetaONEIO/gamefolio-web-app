@@ -210,9 +210,9 @@ export class DatabaseStorage implements IStorage {
     return user || null;
   }
 
-  async getReferralStats(userId: number): Promise<{ referralCount: number; totalXpEarned: number; referralCode: string | null }> {
+  async getReferralStats(userId: number): Promise<{ referralCount: number; totalXpEarned: number; referralCode: string | null; referralCodeCustomized: boolean }> {
     const user = await this.getUser(userId);
-    if (!user) return { referralCount: 0, totalXpEarned: 0, referralCode: null };
+    if (!user) return { referralCount: 0, totalXpEarned: 0, referralCode: null, referralCodeCustomized: false };
 
     let referralCode = user.referralCode || null;
 
@@ -243,7 +243,28 @@ export class DatabaseStorage implements IStorage {
 
     const totalXpEarned = Number(xpResult[0]?.total ?? 0);
 
-    return { referralCount, totalXpEarned, referralCode };
+    return { referralCount, totalXpEarned, referralCode, referralCodeCustomized: user.referralCodeCustomized ?? false };
+  }
+
+  async customizeReferralCode(userId: number, newCode: string): Promise<{ success: boolean; message: string }> {
+    const user = await this.getUser(userId);
+    if (!user) return { success: false, message: 'User not found' };
+
+    if (user.referralCodeCustomized) {
+      return { success: false, message: 'You have already customised your referral code. This can only be done once.' };
+    }
+
+    // Check uniqueness (case-insensitive)
+    const existing = await db.select({ id: users.id }).from(users).where(eq(users.referralCode, newCode.toUpperCase())).limit(1);
+    if (existing.length > 0 && existing[0].id !== userId) {
+      return { success: false, message: 'That referral code is already taken. Please choose another.' };
+    }
+
+    await db.update(users)
+      .set({ referralCode: newCode.toUpperCase(), referralCodeCustomized: true })
+      .where(eq(users.id, userId));
+
+    return { success: true, message: 'Referral code updated successfully.' };
   }
 
   async createUser(userData: InsertUser): Promise<User> {

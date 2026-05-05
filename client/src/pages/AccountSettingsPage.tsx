@@ -168,12 +168,15 @@ const ReferralSection: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [applyCode, setApplyCode] = useState('');
+  const [customCode, setCustomCode] = useState('');
+  const [showCustomize, setShowCustomize] = useState(false);
 
   const { data: referralStats, isLoading } = useQuery<{
     referralCode: string | null;
     referralCount: number;
     totalXpEarned: number;
     referralLink: string | null;
+    referralCodeCustomized: boolean;
   }>({
     queryKey: ['/api/user/referral-stats'],
     queryFn: getQueryFn({ on401: 'throw' }),
@@ -194,12 +197,32 @@ const ReferralSection: React.FC = () => {
     },
   });
 
+  const customizeMutation = useMutation({
+    mutationFn: (code: string) =>
+      apiRequest('POST', '/api/user/referral-code/customize', { code }),
+    onSuccess: () => {
+      toast({ title: 'Referral code updated!', description: 'Your custom referral code is now active.', duration: 3000 });
+      setCustomCode('');
+      setShowCustomize(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/user/referral-stats'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Could not update code', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text).then(() => {
       toast({ title: `${label} copied!`, description: 'Ready to share.', duration: 2000 });
     }).catch(() => {
       toast({ title: 'Copy failed', description: 'Please copy manually.', variant: 'destructive' });
     });
+  };
+
+  const handleCustomCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Only allow alphanumeric characters, max 16 chars
+    const value = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 16);
+    setCustomCode(value);
   };
 
   if (isLoading) {
@@ -211,6 +234,8 @@ const ReferralSection: React.FC = () => {
       </Card>
     );
   }
+
+  const alreadyCustomized = referralStats?.referralCodeCustomized ?? false;
 
   return (
     <div className="space-y-4">
@@ -227,7 +252,22 @@ const ReferralSection: React.FC = () => {
         <CardContent className="space-y-6">
           {/* Your referral code */}
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Your Referral Code</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Your Referral Code</h3>
+              {!alreadyCustomized && !showCustomize && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-primary h-auto py-1"
+                  onClick={() => setShowCustomize(true)}
+                >
+                  Customise
+                </Button>
+              )}
+              {alreadyCustomized && (
+                <span className="text-xs text-muted-foreground italic">Custom code set (one-time only)</span>
+              )}
+            </div>
             <div className="flex items-center gap-3">
               <div className="flex-1 bg-muted rounded-lg px-4 py-3 font-mono text-xl font-bold tracking-widest text-center border border-border">
                 {referralStats?.referralCode ?? '—'}
@@ -242,6 +282,48 @@ const ReferralSection: React.FC = () => {
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
+
+            {/* Customise form */}
+            {showCustomize && !alreadyCustomized && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Choose your custom code</p>
+                  <p className="text-xs text-muted-foreground">
+                    Letters and numbers only, 3–16 characters. <strong>You can only do this once.</strong>
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customCode}
+                    onChange={handleCustomCodeChange}
+                    placeholder="MYGAMERTAG"
+                    maxLength={16}
+                    disabled={customizeMutation.isPending}
+                    className="flex-1 bg-background border border-border rounded-md px-3 py-2 text-sm font-mono uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                  />
+                  <Button
+                    onClick={() => customizeMutation.mutate(customCode)}
+                    disabled={customCode.trim().length < 3 || customizeMutation.isPending}
+                  >
+                    {customizeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => { setShowCustomize(false); setCustomCode(''); }}
+                    disabled={customizeMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+                {customCode.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Preview: <span className="font-mono font-bold text-foreground">{customCode}</span>
+                    {' '}({customCode.length}/16)
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Shareable link */}
@@ -319,14 +401,14 @@ const ReferralSection: React.FC = () => {
                 type="text"
                 value={applyCode}
                 onChange={(e) => setApplyCode(e.target.value.toUpperCase())}
-                placeholder="g4m3f0li0"
-                maxLength={8}
+                placeholder="FRIENDSCODE"
+                maxLength={16}
                 disabled={applyMutation.isPending}
                 className="flex-1 bg-muted border border-border rounded-md px-3 py-2 text-sm font-mono uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
               <Button
                 onClick={() => applyMutation.mutate(applyCode)}
-                disabled={applyCode.trim().length < 4 || applyMutation.isPending}
+                disabled={applyCode.trim().length < 3 || applyMutation.isPending}
               >
                 {applyMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
               </Button>
