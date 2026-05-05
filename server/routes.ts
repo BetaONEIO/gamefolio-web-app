@@ -2780,6 +2780,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
   // Referral Stats Endpoint
   // ==========================================
+
+  // Run migration to ensure the referral_code_customized column exists
+  (async () => {
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code_customized BOOLEAN NOT NULL DEFAULT false`);
+    } catch (err) {
+      // Column already exists or other harmless error
+    }
+  })();
+
   app.get("/api/user/referral-stats", authMiddleware, async (req, res) => {
     try {
       const userId = (req.user as any).id;
@@ -2789,11 +2799,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         referralCode: stats.referralCode,
         referralCount: stats.referralCount,
         totalXpEarned: stats.totalXpEarned,
+        referralCodeCustomized: stats.referralCodeCustomized,
         referralLink: stats.referralCode ? `${appUrl}/auth?ref=${stats.referralCode}` : null,
       });
     } catch (error) {
       console.error('Error fetching referral stats:', error);
       return res.status(500).json({ message: 'Failed to fetch referral stats' });
+    }
+  });
+
+  app.post("/api/user/referral-code/customize", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const { code } = req.body;
+
+      if (!code || typeof code !== 'string') {
+        return res.status(400).json({ message: 'Referral code is required' });
+      }
+
+      const trimmed = code.trim().toUpperCase();
+
+      // Validate length (max 16 chars, min 3)
+      if (trimmed.length < 3 || trimmed.length > 16) {
+        return res.status(400).json({ message: 'Referral code must be between 3 and 16 characters' });
+      }
+
+      // Validate characters — alphanumeric only
+      if (!/^[A-Z0-9]+$/.test(trimmed)) {
+        return res.status(400).json({ message: 'Referral code can only contain letters and numbers' });
+      }
+
+      // Profanity check using the content filter service
+      const { contentFilterService } = await import('./services/content-filter');
+      const isProfane = await contentFilterService.isProfane(trimmed);
+      if (isProfane) {
+        return res.status(400).json({ message: 'Referral code contains inappropriate language. Please choose another.' });
+      }
+
+      const result = await storage.customizeReferralCode(userId, trimmed);
+      if (!result.success) {
+        return res.status(400).json({ message: result.message });
+      }
+
+      return res.json({ message: result.message });
+    } catch (error) {
+      console.error('Error customizing referral code:', error);
+      return res.status(500).json({ message: 'Failed to customize referral code' });
     }
   });
 

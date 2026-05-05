@@ -69,7 +69,8 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | null>;
   getUserByExternalId?(externalId: string, authProvider: string): Promise<User | null>;
   getUserByReferralCode(referralCode: string): Promise<User | null>;
-  getReferralStats(userId: number): Promise<{ referralCount: number; totalXpEarned: number; referralCode: string | null }>;
+  getReferralStats(userId: number): Promise<{ referralCount: number; totalXpEarned: number; referralCode: string | null; referralCodeCustomized: boolean }>;
+  customizeReferralCode(userId: number, newCode: string): Promise<{ success: boolean; message: string }>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<User>): Promise<User | null>;
   updateUserType(id: number, userType: string): Promise<User | null>;
