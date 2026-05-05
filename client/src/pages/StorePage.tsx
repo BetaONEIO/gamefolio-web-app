@@ -1626,7 +1626,6 @@ export default function StorePage() {
               </div>
               )}
               </>
-              )}
 
               <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 mt-8 flex items-center gap-2">
@@ -1779,9 +1778,8 @@ export default function StorePage() {
               </div>
               )}
               </>
-              )}
 
-                <div className="mt-8">
+              <div className="mt-8">
                   <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-blue-400" />
                     Verification Badges
