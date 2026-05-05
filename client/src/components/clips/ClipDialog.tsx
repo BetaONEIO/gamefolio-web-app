@@ -53,7 +53,6 @@ import ShareMenu from "@/components/clips/ShareMenu";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { FullscreenReelsViewer } from "./FullscreenReelsViewer";
-import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { ReportDialog } from "@/components/content/ReportDialog";
 import { AgeRestrictionDialog } from "@/components/content/AgeRestrictionDialog";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
@@ -101,9 +100,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   const reelVideoRef = useRef<HTMLVideoElement | null>(null);
   
   const { showAd, adCompleted, isPro, decideAd, onAdFinished, reset: resetAd } = useClipAdDecision();
-
-  // Access closeClipDialog from useClipDialog
-  const { closeClipDialog } = useClipDialog();
 
   // Only fetch if dialog is open and we have a clipId (MUST be before useEffects that use clip)
   const { data: clip, isLoading } = useQuery<ClipWithUser>({

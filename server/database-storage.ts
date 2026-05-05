@@ -746,14 +746,15 @@ export class DatabaseStorage implements IStorage {
 
   async deleteClip(id: number): Promise<boolean> {
     try {
-      // First delete associated XP history records
+      // Delete associated XP history records
       await db.delete(userXPHistory).where(eq(userXPHistory.clipId, id));
       
-      // Then delete associated likes and comments
+      // Delete associated likes, comments, and notifications
       await db.delete(likes).where(eq(likes.clipId, id));
       await db.delete(comments).where(eq(comments.clipId, id));
+      await db.delete(notifications).where(eq(notifications.clipId, id));
 
-      // Then delete the clip
+      // Delete the clip
       const result = await db.delete(clips).where(eq(clips.id, id)).returning();
       return result.length > 0;
     } catch (error) {
