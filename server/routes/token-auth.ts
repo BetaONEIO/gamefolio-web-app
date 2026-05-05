@@ -176,7 +176,7 @@ router.post('/auth/token/login', async (req: Request, res: Response) => {
           bonusAwarded: streakInfo.bonusAwarded,
           dailyXP: streakInfo.dailyXP,
           longestStreak: userToReturn.longestStreak || 0,
-          nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
+          nextMilestone: streakInfo.currentStreak % 5 === 0 ? streakInfo.currentStreak + 5 : streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
           message: streakInfo.message,
           isNewMilestone: streakInfo.isNewMilestone,
         },
