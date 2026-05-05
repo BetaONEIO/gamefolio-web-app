@@ -1216,7 +1216,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent className="z-[200]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this clip?</AlertDialogTitle>
+            <AlertDialogTitle>Delete this {clip?.videoType === 'reel' ? 'reel' : 'clip'}?</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete "{clip?.title}"? This action cannot be undone.
             </AlertDialogDescription>
@@ -1227,13 +1227,14 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               className="bg-red-600 hover:bg-red-700 text-white"
               onClick={async () => {
                 if (!clip) return;
+                const contentLabel = clip.videoType === 'reel' ? 'reel' : 'clip';
                 try {
                   const response = await fetch(`/api/clips/${clip.id}`, { 
                     method: 'DELETE',
                     credentials: 'include'
                   });
                   if (response.ok) {
-                    toast({ title: "Clip deleted successfully" });
+                    toast({ title: `${contentLabel.charAt(0).toUpperCase() + contentLabel.slice(1)} deleted successfully` });
                     queryClient.invalidateQueries({ queryKey: ['/api/clips'] });
                     if (clip.user?.username) {
                       queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/clips`] });
@@ -1247,14 +1248,14 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     setShowDeleteConfirm(false);
                     onClose();
                   } else {
-                    toast({ title: "Failed to delete clip", variant: "destructive" });
+                    toast({ title: `Failed to delete ${contentLabel}`, variant: "destructive" });
                   }
                 } catch (error) {
-                  toast({ title: "Failed to delete clip", variant: "destructive" });
+                  toast({ title: `Failed to delete ${contentLabel}`, variant: "destructive" });
                 }
               }}
             >
-              Delete
+              Delete this {clip?.videoType === 'reel' ? 'reel' : 'clip'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
