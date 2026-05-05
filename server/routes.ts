@@ -8553,7 +8553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const discountedCost = isPro ? Math.floor(baseCost * 0.8) : baseCost;
           return {
             ...tag,
-            owned: unlockedIds.has(tag.id) || isPro,
+            owned: unlockedIds.has(tag.id),
             originalPrice: baseCost,
             gfCost: discountedCost,
             proDiscount: isPro,
