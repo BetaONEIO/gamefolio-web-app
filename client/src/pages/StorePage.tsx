@@ -1086,27 +1086,6 @@ export default function StorePage() {
               >
                 NFTs
               </Button>
-              <Button 
-                variant={storeTab === "nametags" ? "default" : "ghost"}
-                onClick={() => setStoreTab("nametags")}
-                className={`rounded-xl px-6 py-2 h-auto whitespace-nowrap transition-all ${storeTab === "nametags" ? "bg-primary hover:bg-primary text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
-              >
-                Name Tags
-              </Button>
-              <Button 
-                variant={storeTab === "borders" ? "default" : "ghost"}
-                onClick={() => setStoreTab("borders")}
-                className={`rounded-xl px-6 py-2 h-auto whitespace-nowrap transition-all ${storeTab === "borders" ? "bg-primary hover:bg-primary text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
-              >
-                Profile Borders
-              </Button>
-              <Button 
-                variant={storeTab === "badges" ? "default" : "ghost"}
-                onClick={() => setStoreTab("badges")}
-                className={`rounded-xl px-6 py-2 h-auto whitespace-nowrap transition-all ${storeTab === "badges" ? "bg-primary hover:bg-primary text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
-              >
-                Verification Badges
-              </Button>
             </div>
           </div>
 
@@ -1513,8 +1492,6 @@ export default function StorePage() {
               </>
               )}
 
-              {/* Name Tags Section */}
-              {storeTab === "nametags" && accessFilter !== "pro" && (
               <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 mt-8 flex items-center gap-2">
                 <Tag className="h-4 w-4 text-primary" />
@@ -1651,8 +1628,6 @@ export default function StorePage() {
               </>
               )}
 
-              {/* Profile Borders Section - Pro Only */}
-              {storeTab === "borders" && accessFilter !== "free" && (
               <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 mt-8 flex items-center gap-2">
                 <Circle className="h-4 w-4 text-amber-400" />
@@ -1806,8 +1781,6 @@ export default function StorePage() {
               </>
               )}
 
-              {/* Verification Badges Section */}
-              {storeTab === "badges" && (
                 <div className="mt-8">
                   <h3 className="text-base font-semibold text-gray-300 mb-3 flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-blue-400" />
