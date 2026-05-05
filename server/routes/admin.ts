@@ -341,6 +341,54 @@ adminRouter.post("/users/:id/unban", async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/admin/users/:id/suspend - Suspend user
+adminRouter.post("/users/:id/suspend", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const user = await storage.getUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.role === "admin") {
+      return res.status(403).json({ message: "Cannot suspend an admin user" });
+    }
+
+    const updatedUser = await storage.updateUser(userId, {
+      status: "suspended",
+      bannedReason: req.body.reason || "Account temporarily suspended"
+    });
+
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("Error suspending user:", err);
+    res.status(500).json({ message: "Error suspending user" });
+  }
+});
+
+// POST /api/admin/users/:id/unsuspend - Unsuspend user
+adminRouter.post("/users/:id/unsuspend", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const user = await storage.getUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const updatedUser = await storage.updateUser(userId, {
+      status: "active",
+      bannedReason: null
+    });
+
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("Error unsuspending user:", err);
+    res.status(500).json({ message: "Error unsuspending user" });
+  }
+});
+
 // POST /api/admin/users/:id/make-admin - Make user an admin
 adminRouter.post("/users/:id/make-admin", async (req: Request, res: Response) => {
   try {

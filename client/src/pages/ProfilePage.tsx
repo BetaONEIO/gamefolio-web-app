@@ -1176,7 +1176,75 @@ const ProfilePage = () => {
     const errorMessage = (profileError as Error)?.message || '';
     const is404Error = errorMessage.includes('404:') || errorMessage.includes('User not found');
     const is403Error = errorMessage.includes('403:') || errorMessage.includes('private');
-    
+
+    // Parse suspension/ban info from 403 response body
+    let suspendedReason: string | null = null;
+    let bannedReason: string | null = null;
+    if (is403Error) {
+      try {
+        const jsonStart = errorMessage.indexOf('{');
+        if (jsonStart !== -1) {
+          const parsed = JSON.parse(errorMessage.slice(jsonStart));
+          if (parsed.message === 'ACCOUNT_SUSPENDED') suspendedReason = parsed.reason || 'Account temporarily suspended';
+          if (parsed.message === 'ACCOUNT_BANNED') bannedReason = parsed.reason || 'Violation of community guidelines';
+        }
+      } catch {}
+    }
+
+    if (suspendedReason !== null) {
+      return (
+        <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-secondary/20">
+          <div className="max-w-lg w-full text-center space-y-6">
+            <div className="flex justify-center mb-4">
+              <img src="/attached_assets/Gamefolio logo copy.png" alt="Gamefolio" className="h-16 w-auto drop-shadow-lg" />
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-center">
+                <div className="h-20 w-20 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-yellow-600 dark:text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" /></svg>
+                </div>
+              </div>
+              <h1 className="text-3xl font-bold text-foreground">Account Suspended</h1>
+              <p className="text-muted-foreground leading-relaxed">Your account has been temporarily suspended. You cannot access your profile until the suspension is lifted.</p>
+              <div className="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4 text-left">
+                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Reason</p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">{suspendedReason}</p>
+              </div>
+              <p className="text-sm text-muted-foreground">If you believe this is an error, please contact support.</p>
+            </div>
+            <Button onClick={() => setLocation("/")} variant="outline" className="mt-4">Go Home</Button>
+          </div>
+        </div>
+      );
+    }
+
+    if (bannedReason !== null) {
+      return (
+        <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-secondary/20">
+          <div className="max-w-lg w-full text-center space-y-6">
+            <div className="flex justify-center mb-4">
+              <img src="/attached_assets/Gamefolio logo copy.png" alt="Gamefolio" className="h-16 w-auto drop-shadow-lg" />
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-center">
+                <div className="h-20 w-20 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636a9 9 0 010 12.728M5.636 5.636a9 9 0 000 12.728M9 10h.01M15 10h.01M10 14s1 2 4 0" /></svg>
+                </div>
+              </div>
+              <h1 className="text-3xl font-bold text-foreground">Account Banned</h1>
+              <p className="text-muted-foreground leading-relaxed">Your account has been permanently banned from Gamefolio.</p>
+              <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-left">
+                <p className="text-sm font-medium text-red-800 dark:text-red-200">Reason</p>
+                <p className="text-sm text-red-700 dark:text-red-300 mt-1">{bannedReason}</p>
+              </div>
+              <p className="text-sm text-muted-foreground">If you believe this is an error, please contact support.</p>
+            </div>
+            <Button onClick={() => setLocation("/")} variant="outline" className="mt-4">Go Home</Button>
+          </div>
+        </div>
+      );
+    }
+
     if (is404Error) {
       // User not found
       return (

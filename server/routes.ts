@@ -599,6 +599,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return done(null, false, { message: "Incorrect password" });
         }
 
+        // Check if user account is banned or suspended
+        if (user.status === 'banned') {
+          const reason = user.bannedReason || 'Violation of community guidelines';
+          console.log(`🚫 Banned user attempted login: ${user.username}`);
+          return done(null, false, { 
+            message: `Your account has been permanently banned. Reason: ${reason}` 
+          });
+        }
+
+        if (user.status === 'suspended') {
+          const reason = user.bannedReason || 'Account temporarily suspended';
+          console.log(`⏸️ Suspended user attempted login: ${user.username}`);
+          return done(null, false, { 
+            message: `Your account has been suspended. Reason: ${reason}` 
+          });
+        }
+
         console.log(`✅ Authentication successful for user ${user.username}`);
         return done(null, user);
       } catch (error) {
@@ -3908,6 +3925,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Hide suspended/banned accounts from non-admins
       if ((user.status === 'suspended' || user.status === 'banned') && !isAdmin) {
+        // Account owner should see a clear suspension/ban message, not a 404
+        if (isOwnProfile) {
+          const reason = user.bannedReason || (user.status === 'banned' ? 'Violation of community guidelines' : 'Account temporarily suspended');
+          if (user.status === 'banned') {
+            return res.status(403).json({ 
+              message: "ACCOUNT_BANNED", 
+              reason,
+              status: 'banned'
+            });
+          } else {
+            return res.status(403).json({ 
+              message: "ACCOUNT_SUSPENDED", 
+              reason,
+              status: 'suspended'
+            });
+          }
+        }
         return res.status(404).json({ message: "User not found" });
       }
 
