@@ -3,26 +3,28 @@ import { ClipWithUser } from "@shared/schema";
 import { formatDuration } from "@/lib/constants";
 import { Eye, Play, Heart, Flame, MessageSquare } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useState } from "react";
 import { LazyImage, LazyAvatar } from "@/components/ui/lazy-image";
+import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 
 interface TrendingVideoCardProps {
   clip: ClipWithUser;
-  customAccentColor?: string; // Custom accent color from user profile
+  customAccentColor?: string;
 }
 
 const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) => {
   const { openClipDialog } = useClipDialog();
   const [imageError, setImageError] = useState(false);
+  const [hidden, setHidden] = useState(false);
+
+  if (hidden) return null;
 
   const handleCardClick = (e: React.MouseEvent) => {
     e.preventDefault();
     openClipDialog(clip.id);
   };
 
-  // Format numbers for display
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
@@ -31,17 +33,16 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
 
   return (
     <div onClick={handleCardClick} className="cursor-pointer">
-      <Card 
+      <Card
         className="overflow-hidden group transition-all duration-300 hover:-translate-y-1"
         style={{
-          boxShadow: customAccentColor 
-            ? `0 10px 25px -5px ${customAccentColor}40, 0 4px 6px -2px ${customAccentColor}20` 
-            : '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+          boxShadow: customAccentColor
+            ? `0 10px 25px -5px ${customAccentColor}40, 0 4px 6px -2px ${customAccentColor}20`
+            : "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
         }}
       >
         {/* Thumbnail with lazy loading */}
         <div className="relative overflow-hidden aspect-video bg-gray-800">
-          {/* Default fallback - always visible as background */}
           <div className="absolute inset-0 flex items-center justify-center bg-gray-800 z-0">
             <Play className="h-12 w-12 text-gray-500" />
           </div>
@@ -49,7 +50,7 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
             <LazyImage
               src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
               alt={clip.title}
-              className={`relative z-10 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${clip.ageRestricted ? 'blur-2xl' : ''}`}
+              className={`relative z-10 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${clip.ageRestricted ? "blur-2xl" : ""}`}
               placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
               showLoadingSpinner={false}
               rootMargin="50px"
@@ -70,7 +71,7 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
               <div className="text-white/70 text-xs">18+ Content</div>
             </div>
           )}
-          
+
           {/* Play overlay */}
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
             <div className="bg-primary/90 rounded-full p-3 transform scale-90 group-hover:scale-100 transition-transform duration-300">
@@ -88,9 +89,10 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
           {/* Duration badge */}
           <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
             {(() => {
-              const actualDuration = clip.trimEnd && clip.trimEnd > 0 
-                ? clip.trimEnd - (clip.trimStart || 0)
-                : clip.duration || 0;
+              const actualDuration =
+                clip.trimEnd && clip.trimEnd > 0
+                  ? clip.trimEnd - (clip.trimStart || 0)
+                  : clip.duration || 0;
               return formatDuration(actualDuration);
             })()}
           </div>
@@ -104,11 +106,10 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
 
         {/* Content */}
         <CardContent className="p-3">
-          <h3 className="font-semibold text-sm line-clamp-2 mb-2 leading-tight">
-            {clip.title}
-          </h3>
-          
+          <h3 className="font-semibold text-sm line-clamp-2 mb-2 leading-tight">{clip.title}</h3>
+
           <div className="flex items-center justify-between">
+            {/* User info */}
             <Link href={`/profile/${clip.user.username}`} onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                 <LazyAvatar
@@ -124,14 +125,31 @@ const TrendingVideoCard = ({ clip, customAccentColor }: TrendingVideoCardProps) 
                 </span>
               </div>
             </Link>
-            
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1"><Heart className="h-3 w-3" /> {formatNumber(parseInt(clip._count?.likes?.toString() || '0'))}</span>
-              <span className="flex items-center gap-1"><Flame className="h-3 w-3" /> {formatNumber(parseInt(clip._count?.reactions?.toString() || '0'))}</span>
-              <span className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {formatNumber(parseInt(clip._count?.comments?.toString() || '0'))}</span>
+
+            {/* Stats + three-dot menu */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Heart className="h-3 w-3" />
+                  {formatNumber(parseInt(clip._count?.likes?.toString() || "0"))}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Flame className="h-3 w-3" />
+                  {formatNumber(parseInt(clip._count?.reactions?.toString() || "0"))}
+                </span>
+                <span className="flex items-center gap-1">
+                  <MessageSquare className="h-3 w-3" />
+                  {formatNumber(parseInt(clip._count?.comments?.toString() || "0"))}
+                </span>
+              </div>
+
+              {/* Three-dot menu — stop propagation so card click doesn't fire */}
+              <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                <TrendingClipMenu clip={clip} onHide={() => setHidden(true)} />
+              </div>
             </div>
           </div>
-          
+
           {/* Game info */}
           {clip.game && (
             <div className="mt-2">
