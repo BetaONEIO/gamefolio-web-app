@@ -89,8 +89,8 @@ const MobileNav = () => {
                   transitionDelay: uploadMenuOpen ? `${index * 60}ms` : `${(total - 1 - index) * 30}ms`,
                 }}
               >
-                <option.icon className="w-6 h-6 mb-1.5 text-primary group-hover:text-black group-active:text-black transition-colors" />
-                <span className="text-[10px] font-semibold leading-tight text-center px-1 text-primary group-hover:text-black group-active:text-black transition-colors">
+                <option.icon className="w-6 h-6 mb-1.5 text-muted-foreground group-hover:text-primary group-active:text-primary transition-colors" />
+                <span className="text-[10px] font-semibold leading-tight text-center px-1 text-muted-foreground group-hover:text-primary group-active:text-primary transition-colors">
                   {option.label}
                 </span>
               </button>
