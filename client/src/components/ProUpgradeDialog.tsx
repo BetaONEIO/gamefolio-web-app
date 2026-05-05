@@ -494,9 +494,11 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
           className="w-full h-full object-cover"
           style={{ objectPosition: "center 70%" }}
         />
+        {/* Top vignette for depth */}
+        <div className="absolute inset-x-0 top-0 h-1/4" style={{ background: 'linear-gradient(to bottom, rgba(3,8,10,0.5) 0%, transparent 100%)' }} />
+        {/* Bottom fade into page background */}
+        <div className="absolute inset-x-0 bottom-0 h-[75%]" style={{ background: 'linear-gradient(to top, #03080A 0%, #03080A 8%, rgba(3,8,10,0.85) 35%, rgba(3,8,10,0.4) 65%, transparent 100%)' }} />
       </div>
-
-      <div className="absolute inset-x-0 bottom-0 h-[60%]" style={{ background: 'linear-gradient(to top, rgba(2,6,23,1) 0%, rgba(2,6,23,1) 10%, rgba(2,6,23,0.7) 50%, transparent 100%)' }} />
 
       <button
         onClick={() => onOpenChange(false)}
@@ -692,7 +694,10 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                     className="w-full h-full object-cover"
                     style={{ objectPosition: "center 70%" }}
                   />
-                  <div className="absolute inset-x-0 bottom-0 h-2/3" style={{ background: "linear-gradient(to top, #101D27 0%, #101D27 15%, rgba(16,29,39,0.85) 45%, transparent 100%)" }} />
+                  {/* Top vignette for depth */}
+                  <div className="absolute inset-x-0 top-0 h-1/4" style={{ background: "linear-gradient(to bottom, rgba(3,8,10,0.5) 0%, transparent 100%)" }} />
+                  {/* Bottom fade into page background */}
+                  <div className="absolute inset-x-0 bottom-0 h-[80%]" style={{ background: "linear-gradient(to top, #03080A 0%, #03080A 8%, rgba(3,8,10,0.85) 35%, rgba(3,8,10,0.4) 65%, transparent 100%)" }} />
                   <button
                     onClick={() => onOpenChange(false)}
                     className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center transition-colors hover:bg-black/60 z-10"
