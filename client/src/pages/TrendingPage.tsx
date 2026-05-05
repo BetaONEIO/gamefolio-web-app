@@ -344,8 +344,8 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void }>
     <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: '#03080A' }}>
       {/* Top bar */}
       <div
-        className="flex-shrink-0 flex items-center justify-between px-4 py-3"
-        style={{ background: '#03080A', borderBottom: '1px solid #1B2A33' }}
+        className="flex-shrink-0 flex items-center justify-between px-4 pb-3"
+        style={{ background: '#03080A', borderBottom: '1px solid #1B2A33', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
       >
         <button
           onClick={onBack}
@@ -1076,7 +1076,7 @@ const TrendingPage: React.FC = () => {
               : 'flex-col items-end'
           }`}
           style={{
-            top: 'calc(env(safe-area-inset-top, 0px) + 56px)',
+            top: 'calc(env(safe-area-inset-top, 0px) + 12px)',
             right: 12,
             opacity: (activeTab !== 'clips' && commentsOpen) ? 0 : 1,
             pointerEvents: (activeTab !== 'clips' && commentsOpen) ? 'none' : 'auto',
