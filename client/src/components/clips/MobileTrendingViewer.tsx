@@ -313,13 +313,6 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               <ChevronLeft className="h-5 w-5" />
             </Button>
             
-            {/* Content type indicator */}
-            <div className="bg-black/40 text-white text-xs px-2 py-1 rounded-full">
-              {isVideoContent(currentItem) 
-                ? 'Video'
-                : 'Screenshot'
-              }
-            </div>
           </div>
         )}
 
