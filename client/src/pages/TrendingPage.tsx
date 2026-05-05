@@ -31,6 +31,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { ScreenshotCard } from '@/components/screenshots/ScreenshotCard';
 import { ScreenshotLightbox } from '@/components/screenshots/ScreenshotLightbox';
+import ClipShareDialog from '@/components/clip/ClipShareDialog';
 
 type ContentType = 'clips' | 'reels' | 'screenshots';
 type FilterType = 'likes' | 'comments';
@@ -75,6 +76,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   const [localFollowing, setLocalFollowing] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [isInView, setIsInView] = useState(true);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -298,6 +300,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
 
           {/* Share */}
           <button
+            onClick={(e) => { e.stopPropagation(); setShareOpen(true); }}
             className="flex items-center justify-center flex-1 transition-colors"
             style={{ color: '#7E887A' }}
           >
@@ -329,6 +332,14 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Share dialog */}
+      <ClipShareDialog
+        clipId={clip.id}
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        contentType={(clip as any).type === 'reel' ? 'reel' : 'clip'}
+      />
     </div>
   );
 };
@@ -356,13 +367,6 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void }>
           <ArrowLeft className="h-5 w-5" />
         </button>
         <span className="sr-only">Clips</span>
-        <button
-          className="w-9 h-9 flex items-center justify-center rounded-full"
-          style={{ color: '#F5F7F2' }}
-          aria-label="More"
-        >
-          <MoreHorizontal className="h-5 w-5" />
-        </button>
       </div>
 
       {/* Snap-scrolling feed — one clip per scroll */}
