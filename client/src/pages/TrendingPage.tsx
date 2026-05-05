@@ -31,7 +31,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { ScreenshotCard } from '@/components/screenshots/ScreenshotCard';
 import { ScreenshotLightbox } from '@/components/screenshots/ScreenshotLightbox';
-import ClipShareDialog from '@/components/clip/ClipShareDialog';
+import { ClipShareDialog } from '@/components/clip/ClipShareDialog';
 
 type ContentType = 'clips' | 'reels' | 'screenshots';
 type FilterType = 'likes' | 'comments';
