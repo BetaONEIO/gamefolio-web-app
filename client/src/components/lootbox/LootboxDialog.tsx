@@ -287,9 +287,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                     transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
                     className={cn(
                       "relative p-1 rounded-2xl",
-                      rarityStyle.bg,
-                      "shadow-lg",
-                      rarityStyle.glow
+                      rarityStyle.bg
                     )}
                   >
                   <div className="w-40 h-40 rounded-xl overflow-hidden flex items-center justify-center bg-[#1a1a2e]">
