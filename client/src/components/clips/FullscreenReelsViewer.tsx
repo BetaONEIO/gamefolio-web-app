@@ -21,6 +21,16 @@ import { useToast } from "@/hooks/use-toast";
 import { VideoAdPlayer } from "@/components/ads/VideoAdPlayer";
 import { useReelAdTracker } from "@/hooks/use-ad-manager";
 import { useSignedUrl } from "@/hooks/use-signed-url";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface FullscreenReelsViewerProps {
   reels: ClipWithUser[];
@@ -36,6 +46,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const [showAgeRestrictionDialog, setShowAgeRestrictionDialog] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isAcceptingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -95,6 +106,35 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
     }
     followMutation.mutate();
   };
+
+  // Delete reel mutation
+  const deleteReelMutation = useMutation({
+    mutationFn: async (reelId: number) => {
+      await apiRequest("DELETE", `/api/clips/${reelId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/reels/latest'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reels/trending'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reels'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clips/reels/trending'] });
+      if (currentReel?.user?.username) {
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${currentReel.user.username}/clips`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${currentReel.user.username}`] });
+      }
+      toast({
+        description: "Reel deleted successfully.",
+        variant: "gamefolioSuccess" as any,
+      });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete failed",
+        description: error.message || "Failed to delete reel. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Scroll to initial reel on mount
   useEffect(() => {
@@ -229,13 +269,9 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             <Button
               variant="ghost"
               size="sm"
-              className="text-white bg-black/40 hover:bg-black/60 w-10 h-10 p-0 rounded-lg"
-              onClick={() => {
-                toast({
-                  description: "Delete functionality available in clip settings",
-                  variant: "default",
-                });
-              }}
+              className="text-white bg-black/40 hover:bg-red-600/80 w-10 h-10 p-0 rounded-lg"
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={deleteReelMutation.isPending}
             >
               <Trash2 className="h-5 w-5" />
             </Button>
@@ -526,6 +562,32 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         onOpenChange={(open) => !open && closeDialog()}
         actionType={actionType}
       />
+
+      {/* Delete reel confirmation dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete reel?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{currentReel?.title}". This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteReelMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={deleteReelMutation.isPending}
+              onClick={() => {
+                if (currentReel) {
+                  deleteReelMutation.mutate(currentReel.id);
+                }
+              }}
+            >
+              {deleteReelMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
