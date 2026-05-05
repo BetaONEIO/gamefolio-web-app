@@ -907,7 +907,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ...userToReturn,
             needsOnboarding: true,
             isNewGoogleUser: true,
-            ...(streakInfo && {
+            ...(streakInfo && !streakInfo.isFirstLogin && {
               streakInfo: {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
@@ -962,7 +962,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.status(200).json({
             ...userToReturn,
             needsOnboarding,
-            ...(streakInfo && {
+            ...(streakInfo && !streakInfo.isFirstLogin && {
               streakInfo: {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
@@ -1140,7 +1140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ...userToReturn,
             needsOnboarding: true,
             isNewDiscordUser: true,
-            ...(streakInfo && {
+            ...(streakInfo && !streakInfo.isFirstLogin && {
               streakInfo: {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
@@ -1193,7 +1193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.status(200).json({
             ...userToReturn,
             needsOnboarding,
-            ...(streakInfo && {
+            ...(streakInfo && !streakInfo.isFirstLogin && {
               streakInfo: {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
@@ -1387,7 +1387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ...userToReturn,
             needsOnboarding: true,
             isNewXboxUser: true,
-            ...(streakInfo && {
+            ...(streakInfo && !streakInfo.isFirstLogin && {
               streakInfo: {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
@@ -1429,7 +1429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.status(200).json({
             ...userToReturn,
             needsOnboarding,
-            ...(streakInfo && {
+            ...(streakInfo && !streakInfo.isFirstLogin && {
               streakInfo: {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
@@ -2236,7 +2236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Login successful for user:", userToReturn.username);
         
         // Include streak info in response if available
-        const response = streakInfo ? {
+        const response = (streakInfo && !streakInfo.isFirstLogin) ? {
           ...userWithoutSensitive,
           streakInfo: {
             currentStreak: streakInfo.currentStreak,
@@ -2463,7 +2463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const { password: _, twoFactorSecret: __, ...userWithoutSensitive } = user;
         
-        const response = streakInfo ? {
+        const response = (streakInfo && !streakInfo.isFirstLogin) ? {
           ...userWithoutSensitive,
           streakInfo: {
             currentStreak: streakInfo.currentStreak,
@@ -2628,7 +2628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           liveEnabled: userWithoutPassword.liveEnabled || false,
           referralCode: userWithoutPassword.referralCode || null,
           referredBy: userWithoutPassword.referredBy || null,
-          ...(streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0 ? { streakInfo } : {}),
+          ...(!streakInfo.isFirstLogin && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0) ? { streakInfo } : {}),
         });
       }
     } catch (error) {

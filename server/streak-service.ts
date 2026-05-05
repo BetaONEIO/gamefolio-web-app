@@ -71,6 +71,7 @@ export class StreakService {
     dailyXP: number;
     isNewMilestone: boolean;
     message: string;
+    isFirstLogin: boolean;
   }> {
     try {
       const user = await storage.getUserById(userId);
@@ -88,7 +89,9 @@ export class StreakService {
       let isNewMilestone = false;
       let message = "";
 
-      if (!lastStreakUpdate) {
+      const isFirstLogin = !lastStreakUpdate;
+
+      if (isFirstLogin) {
         currentStreak = 1;
         dailyXP = DAILY_LOGIN_XP;
         message = `Welcome! Your login streak has started! +${DAILY_LOGIN_XP} XP`;
@@ -98,7 +101,8 @@ export class StreakService {
           bonusAwarded: 0,
           dailyXP: 0,
           isNewMilestone: false,
-          message: "Already logged in today"
+          message: "Already logged in today",
+          isFirstLogin: false,
         };
       } else if (this.areConsecutiveDays(lastStreakUpdate, now)) {
         currentStreak++;
@@ -169,7 +173,8 @@ export class StreakService {
         bonusAwarded,
         dailyXP,
         isNewMilestone,
-        message
+        message,
+        isFirstLogin,
       };
     } catch (error) {
       console.error("Error updating login streak:", error);
@@ -178,7 +183,8 @@ export class StreakService {
         bonusAwarded: 0,
         dailyXP: 0,
         isNewMilestone: false,
-        message: "Error updating streak"
+        message: "Error updating streak",
+        isFirstLogin: false,
       };
     }
   }

@@ -169,7 +169,7 @@ router.post('/auth/token/login', async (req: Request, res: Response) => {
     // Return tokens and user data
     const response = {
       ...tokens,
-      user: streakInfo ? {
+      user: (streakInfo && !streakInfo.isFirstLogin) ? {
         ...userWithoutPassword,
         streakInfo: {
           currentStreak: streakInfo.currentStreak,
@@ -298,7 +298,7 @@ router.post('/auth/token/google', async (req: Request, res: Response) => {
             ...userWithoutPassword,
             needsOnboarding: true,
             isNewGoogleUser: true,
-            streakInfo: streakInfo ? {
+            streakInfo: (streakInfo && !streakInfo.isFirstLogin) ? {
               currentStreak: streakInfo.currentStreak,
               bonusAwarded: streakInfo.bonusAwarded,
               dailyXP: streakInfo.dailyXP,
@@ -339,7 +339,7 @@ router.post('/auth/token/google', async (req: Request, res: Response) => {
         user: {
           ...userWithoutPassword,
           needsOnboarding,
-          streakInfo: streakInfo ? {
+          streakInfo: (streakInfo && !streakInfo.isFirstLogin) ? {
             currentStreak: streakInfo.currentStreak,
             bonusAwarded: streakInfo.bonusAwarded,
             dailyXP: streakInfo.dailyXP,
@@ -418,7 +418,7 @@ router.post('/auth/token/discord', async (req: Request, res: Response) => {
             ...userWithoutPassword,
             needsOnboarding: true,
             isNewDiscordUser: true,
-            streakInfo: streakInfo ? {
+            streakInfo: (streakInfo && !streakInfo.isFirstLogin) ? {
               currentStreak: streakInfo.currentStreak,
               bonusAwarded: streakInfo.bonusAwarded,
               dailyXP: streakInfo.dailyXP,
@@ -450,7 +450,7 @@ router.post('/auth/token/discord', async (req: Request, res: Response) => {
         user: {
           ...userWithoutPassword,
           needsOnboarding,
-          streakInfo: streakInfo ? {
+          streakInfo: (streakInfo && !streakInfo.isFirstLogin) ? {
             currentStreak: streakInfo.currentStreak,
             bonusAwarded: streakInfo.bonusAwarded,
             dailyXP: streakInfo.dailyXP,
@@ -573,7 +573,7 @@ router.post('/auth/mobile/google', async (req: Request, res: Response) => {
         ...userWithoutPassword,
         needsOnboarding,
         isNewGoogleUser: isNewUser,
-        ...(streakInfo && {
+        ...(streakInfo && !streakInfo.isFirstLogin && {
           streakInfo: {
             currentStreak: streakInfo.currentStreak,
             bonusAwarded: streakInfo.bonusAwarded,
@@ -748,7 +748,7 @@ router.post('/auth/mobile/apple', async (req: Request, res: Response) => {
         ...userWithoutPassword,
         needsOnboarding,
         isNewAppleUser: isNewUser,
-        ...(streakInfo && {
+        ...(streakInfo && !streakInfo.isFirstLogin && {
           streakInfo: {
             currentStreak: streakInfo.currentStreak,
             bonusAwarded: streakInfo.bonusAwarded,
@@ -1038,7 +1038,7 @@ router.post('/auth/mobile/discord', async (req: Request, res: Response) => {
         ...userWithoutPassword,
         needsOnboarding,
         isNewDiscordUser: isNewUser,
-        ...(streakInfo && {
+        ...(streakInfo && !streakInfo.isFirstLogin && {
           streakInfo: {
             currentStreak: streakInfo.currentStreak,
             bonusAwarded: streakInfo.bonusAwarded,
