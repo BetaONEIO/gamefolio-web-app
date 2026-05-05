@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { API_BASE, isNative, openExternal } from "@/lib/platform";
 import { useLocation } from "wouter";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface NotificationData {
   id: number;
@@ -215,11 +216,9 @@ export function NotificationPanel({
   // Handle mark all as read
   const handleMarkAllRead = async () => {
     try {
-      await fetch('/api/notifications/mark-all-read', {
-        method: 'POST',
-        credentials: 'include',
-      });
-      refetch();
+      await apiRequest("POST", '/api/notifications/mark-all-read');
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
     } catch (error) {
       console.error('Failed to mark notifications as read:', error);
     }

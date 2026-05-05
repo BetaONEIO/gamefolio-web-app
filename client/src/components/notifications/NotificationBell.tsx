@@ -81,24 +81,17 @@ export function NotificationBell() {
     },
   });
 
-  // Fetch notifications (with fallback for demo)
+  // Fetch notifications
   const { data: notifications = [] } = useQuery<NotificationWithUser[]>({
     queryKey: ['/api/notifications'],
-    queryFn: async () => {
-      const response = await fetch('/api/notifications', { credentials: 'include' });
-      if (!response.ok) throw new Error("Failed to fetch notifications");
-      return await response.json();
-    },
+    staleTime: 0,
   });
 
-  // Fetch unread count (with fallback for demo)
+  // Fetch unread count
   const { data: unreadCount = 0 } = useQuery<number>({
     queryKey: ['/api/notifications/unread-count'],
-    queryFn: async () => {
-      const response = await fetch('/api/notifications/unread-count', { credentials: 'include' });
-      if (!response.ok) throw new Error("Failed to fetch unread count");
-      return await response.json();
-    },
+    staleTime: 0,
+    refetchInterval: 30000,
   });
 
   // Trigger green popup animation when new notifications arrive

@@ -2525,7 +2525,7 @@ export class DatabaseStorage implements IStorage {
         eq(notifications.userId, userId),
         eq(notifications.isRead, false)
       ));
-    return result.count;
+    return parseInt(String(result.count), 10) || 0;
   }
 
   async markNotificationAsRead(id: number): Promise<boolean> {
