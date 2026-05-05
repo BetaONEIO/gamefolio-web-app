@@ -57,15 +57,17 @@ export function GamePickerSheet({
   });
 
   const { data: trendingGames, isLoading: isTrendingLoading } = useQuery<Game[]>({
-    queryKey: ["/api/twitch/games/top"],
+    // Use a unique cache key so we don't read raw Twitch objects cached by Sidebar/HomeSection
+    queryKey: ["/api/twitch/games/top", "game-picker"],
     queryFn: async () => {
       const res = await fetch("/api/twitch/games/top?limit=30");
       if (!res.ok) return [];
       const data = await res.json();
-      return data.map((g: TwitchGame) => ({
+      return data.map((g: any) => ({
         id: parseInt(g.id),
         name: g.name,
-        imageUrl: g.box_art_url?.replace("{width}", "144").replace("{height}", "192") || null,
+        // box_art_url is already resolved (600x800) by the server — use directly
+        imageUrl: g.box_art_url || g.imageUrl || null,
         isUserAdded: false,
         createdAt: new Date(),
       }));
@@ -242,9 +244,7 @@ export function GamePickerSheet({
               {/* Game cards */}
               {displayGames.map((game) => {
                 const isSelected = selectedGame?.id === game.id;
-                const imgSrc = game.imageUrl
-                  ? game.imageUrl.replace("{width}", "144").replace("{height}", "192")
-                  : null;
+                const imgSrc = game.imageUrl || null;
 
                 return (
                   <button
