@@ -494,10 +494,11 @@ export class DatabaseStorage implements IStorage {
 
   async getFeaturedUsers(limit: number = 6): Promise<User[]> {
     try {
-      // Get the first few users to showcase the feature
+      // Get the first few users to showcase the feature, excluding suspended/banned
       const featuredUsers = await db
         .select()
         .from(users)
+        .where(eq(users.status, 'active'))
         .orderBy(desc(users.createdAt), desc(users.id))
         .limit(limit);
 
@@ -989,7 +990,9 @@ export class DatabaseStorage implements IStorage {
           or(
             sql`${clips.gameId} IS NULL`,
             sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
-          )
+          ),
+          // Exclude content from suspended/banned users
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )
       )
       .groupBy(clips.id)
@@ -1088,7 +1091,9 @@ export class DatabaseStorage implements IStorage {
             ) : sql`false` // If no current user, don't show any private content
           ),
           // Only show content for approved games (or no game)
-          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
+          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`,
+          // Exclude content from suspended/banned users
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )
       )
       .groupBy(clips.id, users.id, games.id)
@@ -1159,7 +1164,9 @@ export class DatabaseStorage implements IStorage {
             ) : sql`false` // If no current user, don't show any private content
           ),
           // Only show content for approved games (or no game)
-          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
+          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`,
+          // Exclude content from suspended/banned users
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )
       )
       .groupBy(clips.id, users.id, games.id)
@@ -1492,9 +1499,12 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(users)
       .where(
-        or(
-          ilike(users.username, `%${query}%`),
-          ilike(users.displayName, `%${query}%`)
+        and(
+          eq(users.status, 'active'),
+          or(
+            ilike(users.username, `%${query}%`),
+            ilike(users.displayName, `%${query}%`)
+          )
         )
       )
       .orderBy(desc(users.createdAt), desc(users.id))
@@ -1955,7 +1965,8 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(games, eq(clips.gameId, games.id))
       .where(and(
         eq(clips.videoType, 'clip'),
-        sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
+        sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`,
+        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
       ))
       .orderBy(desc(clips.createdAt), desc(clips.id))
       .limit(limit)
@@ -2865,7 +2876,8 @@ export class DatabaseStorage implements IStorage {
         and(
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'clip'),
-          gameId ? eq(clips.gameId, gameId) : undefined
+          gameId ? eq(clips.gameId, gameId) : undefined,
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )
       )
       .groupBy(clips.id)
@@ -2924,7 +2936,8 @@ export class DatabaseStorage implements IStorage {
         and(
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'clip'),
-          gameId ? eq(clips.gameId, gameId) : undefined
+          gameId ? eq(clips.gameId, gameId) : undefined,
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )
       )
       .groupBy(clips.id)
@@ -2983,7 +2996,8 @@ export class DatabaseStorage implements IStorage {
         and(
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'reel'),
-          gameId ? eq(clips.gameId, gameId) : undefined
+          gameId ? eq(clips.gameId, gameId) : undefined,
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )
       )
       .groupBy(clips.id)
@@ -3042,7 +3056,8 @@ export class DatabaseStorage implements IStorage {
         and(
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'reel'),
-          gameId ? eq(clips.gameId, gameId) : undefined
+          gameId ? eq(clips.gameId, gameId) : undefined,
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )
       )
       .groupBy(clips.id)
@@ -3125,7 +3140,8 @@ export class DatabaseStorage implements IStorage {
         and(
           dateFilter ? gt(screenshots.createdAt, dateFilter) : undefined,
           gameId ? eq(screenshots.gameId, gameId) : undefined,
-          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${screenshots.gameId} AND g.is_approved = false)`
+          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${screenshots.gameId} AND g.is_approved = false)`,
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${screenshots.userId} AND u.status IN ('suspended', 'banned'))`
         )
       )
       .orderBy(desc(screenshots.views), desc(screenshots.createdAt), desc(screenshots.id))
@@ -4251,9 +4267,12 @@ export class DatabaseStorage implements IStorage {
         .leftJoin(users, eq(screenshots.userId, users.id))
         .leftJoin(games, eq(screenshots.gameId, games.id))
         .where(
-          or(
-            sql`${screenshots.gameId} IS NULL`,
-            sql`${games.is_approved} IS NULL OR ${games.is_approved} = true`
+          and(
+            or(
+              sql`${screenshots.gameId} IS NULL`,
+              sql`${games.is_approved} IS NULL OR ${games.is_approved} = true`
+            ),
+            sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${screenshots.userId} AND u.status IN ('suspended', 'banned'))`
           )
         )
         .orderBy(desc(screenshots.createdAt), desc(screenshots.id)) // Stable pagination with tie-breaker

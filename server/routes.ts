@@ -3904,6 +3904,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check privacy controls for private profiles
       const requesterId = req.user?.id;
       const isOwnProfile = requesterId === user.id;
+      const isAdmin = (req.user as any)?.role === 'admin' || (req.user as any)?.role === 'moderator';
+
+      // Hide suspended/banned accounts from non-admins
+      if ((user.status === 'suspended' || user.status === 'banned') && !isAdmin) {
+        return res.status(404).json({ message: "User not found" });
+      }
 
       if (user.isPrivate && !isOwnProfile && requesterId) {
         const isFollowing = await storage.isFollowing(requesterId, user.id);
