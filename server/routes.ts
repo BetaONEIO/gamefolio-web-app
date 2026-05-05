@@ -2514,9 +2514,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Update streak when user accesses the app (daily check-in)
     try {
-      const streakInfo = await StreakService.updateLoginStreak((req.user as any).id);
+      let streakInfo = await StreakService.updateLoginStreak((req.user as any).id);
       if (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0) {
         console.log(`🎉 Daily check-in for ${(req.user as any).username}: ${streakInfo.message}`);
+      }
+
+      // Testing override: mod_tom always sees the streak screen on startup
+      if ((req.user as any).username === "mod_tom") {
+        streakInfo = {
+          ...streakInfo,
+          dailyXP: streakInfo.dailyXP > 0 ? streakInfo.dailyXP : 50,
+          message: streakInfo.message || "Daily login bonus!",
+        };
       }
       
       // Fetch fresh user data after streak update
