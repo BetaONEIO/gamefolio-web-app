@@ -73,9 +73,8 @@ const MobileNav = () => {
                 className={cn(
                   "absolute pointer-events-auto flex flex-col items-center justify-center",
                   "w-[76px] h-[88px] rounded-2xl",
-                  "bg-card border border-border",
-                  "shadow-lg shadow-black/20",
-                  "text-foreground",
+                  "bg-zinc-900 border-2 border-primary",
+                  "shadow-lg shadow-black/40",
                   "hover:bg-primary active:bg-primary",
                   "group",
                   "transition-all duration-300 ease-out",
@@ -90,8 +89,8 @@ const MobileNav = () => {
                   transitionDelay: uploadMenuOpen ? `${index * 60}ms` : `${(total - 1 - index) * 30}ms`,
                 }}
               >
-                <option.icon className="w-6 h-6 mb-1.5 text-primary group-hover:text-white group-active:text-white transition-colors" />
-                <span className="text-[10px] font-semibold leading-tight text-center px-1 text-foreground group-hover:text-white group-active:text-white transition-colors">
+                <option.icon className="w-6 h-6 mb-1.5 text-primary group-hover:text-black group-active:text-black transition-colors" />
+                <span className="text-[10px] font-semibold leading-tight text-center px-1 text-primary group-hover:text-black group-active:text-black transition-colors">
                   {option.label}
                 </span>
               </button>
