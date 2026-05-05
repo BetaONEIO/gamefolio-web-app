@@ -27,7 +27,6 @@ export function ScreenshotCard({
   onSelect,
   showUserInfo = false
 }: ScreenshotCardProps) {
-  const { signedUrl: screenshotSignedUrl } = useSignedUrl(screenshot.imageUrl);
   const screenshotUser = (screenshot as any).user;
   const { signedUrl: signedAvatarUrl } = useSignedUrl(showUserInfo ? screenshotUser?.avatarUrl : null);
 
@@ -43,7 +42,7 @@ export function ScreenshotCard({
         onClick={() => onSelect?.(screenshot)}
       >
         <LazyImage 
-          src={screenshotSignedUrl || screenshot.imageUrl || ''} 
+          src={screenshot.imageUrl || ''} 
           alt={screenshot.title}
           className={`w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105 ${screenshot.ageRestricted ? 'blur-2xl' : ''}`}
           placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
