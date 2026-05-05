@@ -384,9 +384,9 @@ export class LeaderboardService {
       }
 
       if (topContributor) {
-        // Skip if a winner has already been recorded for this period
-        const existing = await storage.getTopContributorsByPeriod(periodType, period, year);
-        if (existing.length > 0) {
+        // Skip if a winner has already been recorded for this period (unfiltered — checks all statuses)
+        const existing = await storage.getTopContributorByPeriod(periodType, period, year);
+        if (existing) {
           console.log(`Top contributor for ${periodType} ${period} already recorded, skipping`);
           return;
         }

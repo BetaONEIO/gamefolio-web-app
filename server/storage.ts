@@ -261,6 +261,7 @@ export interface IStorage {
   // Top contributors operations
   createTopContributor(contributor: InsertTopContributor): Promise<TopContributor>;
   getTopContributors(periodType: string, limit?: number): Promise<(TopContributor & { user: User })[]>;
+  getTopContributorByPeriod(periodType: string, period: string, year: number): Promise<TopContributor | null>;
   getTopContributorsByPeriod(periodType: string, period: string, year: number): Promise<(TopContributor & { user: User })[]>;
 
   // XP operations (legacy - kept for backward compatibility, totalXP now stores points)

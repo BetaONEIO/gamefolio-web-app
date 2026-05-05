@@ -110,7 +110,7 @@ import {
   XpSetting, InsertXpSetting
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, isNotNull, getTableColumns } from "drizzle-orm";
+import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, notInArray, isNotNull, getTableColumns } from "drizzle-orm";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { IStorage } from "./storage";
@@ -3512,7 +3512,8 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(monthlyLeaderboard.month, month),
         eq(monthlyLeaderboard.year, year),
-        gt(monthlyLeaderboard.totalPoints, 0)
+        gt(monthlyLeaderboard.totalPoints, 0),
+        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND u.status IN ('suspended', 'banned'))`
       ))
       .orderBy(desc(monthlyLeaderboard.totalPoints));
 
@@ -3558,7 +3559,7 @@ export class DatabaseStorage implements IStorage {
     rank: number;
     user: User;
   }>> {
-    // Aggregate all monthly leaderboard data by user
+    // Aggregate all monthly leaderboard data by user, excluding suspended/banned
     const aggregated = await db
       .select({
         userId: monthlyLeaderboard.userId,
@@ -3570,6 +3571,7 @@ export class DatabaseStorage implements IStorage {
         totalPoints: sql<number>`CAST(SUM(${monthlyLeaderboard.totalPoints}) AS INTEGER)`,
       })
       .from(monthlyLeaderboard)
+      .where(sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND u.status IN ('suspended', 'banned'))`)
       .groupBy(monthlyLeaderboard.userId)
       .having(sql`SUM(${monthlyLeaderboard.totalPoints}) > 0`)
       .orderBy(desc(sql`SUM(${monthlyLeaderboard.totalPoints})`))
@@ -3625,7 +3627,8 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(weeklyLeaderboard.week, week),
         eq(weeklyLeaderboard.year, year),
-        gt(weeklyLeaderboard.totalPoints, 0)
+        gt(weeklyLeaderboard.totalPoints, 0),
+        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${weeklyLeaderboard.userId} AND u.status IN ('suspended', 'banned'))`
       ))
       .orderBy(desc(weeklyLeaderboard.totalPoints));
 
@@ -3672,7 +3675,10 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(topContributors)
       .leftJoin(users, eq(topContributors.userId, users.id))
-      .where(eq(topContributors.periodType, periodType))
+      .where(and(
+        eq(topContributors.periodType, periodType),
+        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${topContributors.userId} AND u.status IN ('suspended', 'banned'))`
+      ))
       .orderBy(desc(topContributors.achievedAt), desc(topContributors.totalPoints));
 
     const mapped = results.map(row => ({
@@ -3714,7 +3720,8 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(topContributors.periodType, periodType),
         eq(topContributors.period, period),
-        eq(topContributors.year, year)
+        eq(topContributors.year, year),
+        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${topContributors.userId} AND u.status IN ('suspended', 'banned'))`
       ))
       .orderBy(desc(topContributors.totalPoints));
 
@@ -3800,6 +3807,7 @@ export class DatabaseStorage implements IStorage {
         totalXP: users.totalXP
       })
       .from(users)
+      .where(notInArray(users.status, ['suspended', 'banned']))
       .orderBy(desc(users.totalXP))
       .limit(limit);
 
