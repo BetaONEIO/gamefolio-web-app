@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 export default function DailyStreak() {
   const { overlayStep, streakData, dismiss } = useDailyStreak();
 
-  if (overlayStep !== "streak" || !streakData) return null;
+  if (overlayStep !== "streak" || !streakData || streakData.currentStreak <= 1) return null;
 
   const streak = streakData.currentStreak;
   const longestStreak = streakData.longestStreak;

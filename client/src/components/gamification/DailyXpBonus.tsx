@@ -2,9 +2,12 @@ import { useDailyStreak } from "@/hooks/use-daily-streak";
 import { ChevronRight } from "lucide-react";
 
 export default function DailyXpBonus() {
-  const { overlayStep, streakData, advanceToStreak } = useDailyStreak();
+  const { overlayStep, streakData, advanceToStreak, dismiss } = useDailyStreak();
 
   if (overlayStep !== "xp" || !streakData) return null;
+
+  // Skip the streak screen entirely on day 1 — nothing meaningful to show yet
+  const handleClaim = streakData.currentStreak <= 1 ? dismiss : advanceToStreak;
 
   const totalXP = streakData.dailyXP + streakData.bonusAwarded;
   const streak = streakData.currentStreak;
@@ -159,7 +162,7 @@ export default function DailyXpBonus() {
       {/* Bottom button */}
       <div className="shrink-0 backdrop-blur-xl bg-[#020617]/80 border-t border-slate-700/10 p-5 md:p-6 flex justify-center">
         <button
-          onClick={advanceToStreak}
+          onClick={handleClaim}
           className="w-full max-w-[400px] h-16 bg-[#B7FF1A] hover:bg-[#A2F000] active:scale-[0.98] transition-all rounded-full flex items-center justify-center gap-3 cursor-pointer"
           style={{ boxShadow: "0 15px 30px rgba(183, 255, 26, 0.2)" }}
         >
