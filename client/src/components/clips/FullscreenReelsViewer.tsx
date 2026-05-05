@@ -583,7 +583,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                 }
               }}
             >
-              {deleteReelMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteReelMutation.isPending ? "Deleting..." : "Delete this reel"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
