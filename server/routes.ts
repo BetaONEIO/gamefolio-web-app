@@ -2532,6 +2532,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const freshUser = await storage.getUserById((req.user as any).id);
       if (freshUser) {
         const { password, ...userWithoutPassword } = freshUser as any;
+        // Testing override: busyguy always sees onboarding on startup
+        if (userWithoutPassword.username === 'busyguy') {
+          userWithoutPassword.userType = null;
+          userWithoutPassword.ageRange = null;
+        }
         return res.json({
           id: userWithoutPassword.id,
           username: userWithoutPassword.username,
@@ -2635,6 +2640,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fallbackUser = await storage.getUserById((req.user as any).id);
       if (fallbackUser) {
         const { password: pw, ...fallbackWithoutPassword } = fallbackUser as any;
+        // Testing override: busyguy always sees onboarding on startup
+        if (fallbackWithoutPassword.username === 'busyguy') {
+          fallbackWithoutPassword.userType = null;
+          fallbackWithoutPassword.ageRange = null;
+        }
         return res.json({
           id: fallbackWithoutPassword.id,
           username: fallbackWithoutPassword.username,
@@ -4547,6 +4557,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Prevent the onboarding test account from ever completing onboarding
       if (req.user?.email === 'onboarding@gamefolio.com') {
         delete safeBody.userType;
+      }
+
+      // Testing override: busyguy always sees onboarding on startup
+      if ((req.user as any)?.username === 'busyguy') {
+        delete safeBody.userType;
+        delete safeBody.ageRange;
       }
 
       // Handle demo user separately
