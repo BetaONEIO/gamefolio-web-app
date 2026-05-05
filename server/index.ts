@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
 import { eq } from 'drizzle-orm';
 import { db } from './db';
 import { users } from '../shared/schema';
@@ -63,6 +64,13 @@ const app = express();
 if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
+
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: false,
+}));
 
 // CORS configuration for production and mobile apps
 function isOriginAllowed(origin: string, allowedOrigins: string[]): boolean {
