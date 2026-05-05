@@ -4594,7 +4594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload avatar
-  app.post("/api/upload/avatar", authMiddleware, upload.single("avatar"), async (req, res) => {
+  app.post("/api/upload/avatar", emailVerificationMiddleware, upload.single("avatar"), async (req, res) => {
     try {
       console.log('Avatar upload request received');
       console.log('User authenticated:', req.isAuthenticated());
@@ -4764,7 +4764,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload profile image
-  app.post("/api/users/:id/profile-image", authMiddleware, upload.single("profileImage"), async (req, res) => {
+  app.post("/api/users/:id/profile-image", emailVerificationMiddleware, upload.single("profileImage"), async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
 
@@ -6232,7 +6232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update clip
-  app.patch("/api/clips/:id", authMiddleware, async (req, res) => {
+  app.patch("/api/clips/:id", emailVerificationMiddleware, async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
       const clip = await storage.getClip(clipId);
@@ -6314,7 +6314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Pin/unpin clip
-  app.patch("/api/clips/:id/pin", authMiddleware, async (req, res) => {
+  app.patch("/api/clips/:id/pin", emailVerificationMiddleware, async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
       const clip = await storage.getClip(clipId);
@@ -6368,7 +6368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update clip thumbnail
-  app.put("/api/clips/:id/thumbnail", authMiddleware, async (req, res) => {
+  app.put("/api/clips/:id/thumbnail", emailVerificationMiddleware, async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
       const { thumbnailUrl } = req.body;
@@ -6399,7 +6399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload custom thumbnail for clip
-  app.post("/api/clips/:id/thumbnail", authMiddleware, upload.single("thumbnail"), async (req, res) => {
+  app.post("/api/clips/:id/thumbnail", emailVerificationMiddleware, upload.single("thumbnail"), async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
 
@@ -6566,7 +6566,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Like a clip comment
-  app.post("/api/comments/:id/like", authMiddleware, async (req, res) => {
+  app.post("/api/comments/:id/like", emailVerificationMiddleware, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -6588,7 +6588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unlike a clip comment
-  app.delete("/api/comments/:id/like", authMiddleware, async (req, res) => {
+  app.delete("/api/comments/:id/like", emailVerificationMiddleware, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -6620,7 +6620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Like a screenshot comment
-  app.post("/api/screenshot-comments/:id/like", authMiddleware, async (req, res) => {
+  app.post("/api/screenshot-comments/:id/like", emailVerificationMiddleware, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -6642,7 +6642,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unlike a screenshot comment
-  app.delete("/api/screenshot-comments/:id/like", authMiddleware, async (req, res) => {
+  app.delete("/api/screenshot-comments/:id/like", emailVerificationMiddleware, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -7132,7 +7132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a reaction (supports both session and JWT token auth for mobile apps)
-  app.delete("/api/reactions/:id", hybridAuth, async (req, res) => {
+  app.delete("/api/reactions/:id", hybridEmailVerification, async (req, res) => {
     try {
       const reactionId = parseInt(req.params.id);
 
@@ -7327,7 +7327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add game to favorites
-  app.post("/api/users/:id/favorites", authMiddleware, async (req, res) => {
+  app.post("/api/users/:id/favorites", emailVerificationMiddleware, async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
 
@@ -7375,7 +7375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Remove game from favorites
-  app.delete("/api/users/:userId/favorites/:gameId", authMiddleware, async (req, res) => {
+  app.delete("/api/users/:userId/favorites/:gameId", emailVerificationMiddleware, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const gameId = parseInt(req.params.gameId);
@@ -7498,7 +7498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Follow a user by username
-  app.post("/api/users/:username/follow", authMiddleware, async (req, res) => {
+  app.post("/api/users/:username/follow", emailVerificationMiddleware, async (req, res) => {
     try {
       const followerId = req.user?.id ?? 0;
       const { username } = req.params;
@@ -7558,7 +7558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unfollow a user by username
-  app.delete("/api/users/:username/follow", authMiddleware, async (req, res) => {
+  app.delete("/api/users/:username/follow", emailVerificationMiddleware, async (req, res) => {
     try {
       const followerId = req.user?.id ?? 0;
       const { username } = req.params;
@@ -7598,7 +7598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Follow a user
-  app.post("/api/users/:id/follow", authMiddleware, async (req, res) => {
+  app.post("/api/users/:id/follow", emailVerificationMiddleware, async (req, res) => {
     try {
       const followerId = req.user?.id ?? 0;
       const followingId = parseInt(req.params.id);
@@ -7658,7 +7658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unfollow a user
-  app.delete("/api/users/:id/follow", authMiddleware, async (req, res) => {
+  app.delete("/api/users/:id/follow", emailVerificationMiddleware, async (req, res) => {
     try {
       const followerId = req.user?.id ?? 0;
       const followingId = parseInt(req.params.id);
@@ -7708,7 +7708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Approve a follow request
-  app.post("/api/follow-requests/:requestId/approve", authMiddleware, async (req, res) => {
+  app.post("/api/follow-requests/:requestId/approve", emailVerificationMiddleware, async (req, res) => {
     try {
       const userId = req.user?.id ?? 0;
       const requestId = parseInt(req.params.requestId);
@@ -7743,7 +7743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reject a follow request
-  app.post("/api/follow-requests/:requestId/reject", authMiddleware, async (req, res) => {
+  app.post("/api/follow-requests/:requestId/reject", emailVerificationMiddleware, async (req, res) => {
     try {
       const userId = req.user?.id ?? 0;
       const requestId = parseInt(req.params.requestId);
@@ -7775,7 +7775,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Approve follow request via notification ID (for notification buttons)
-  app.post("/api/notifications/:notificationId/approve-follow", authMiddleware, async (req, res) => {
+  app.post("/api/notifications/:notificationId/approve-follow", emailVerificationMiddleware, async (req, res) => {
     try {
       const userId = req.user?.id ?? 0;
       const notificationId = parseInt(req.params.notificationId);
@@ -7819,7 +7819,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reject follow request via notification ID (for notification buttons)
-  app.post("/api/notifications/:notificationId/reject-follow", authMiddleware, async (req, res) => {
+  app.post("/api/notifications/:notificationId/reject-follow", emailVerificationMiddleware, async (req, res) => {
     try {
       const userId = req.user?.id ?? 0;
       const notificationId = parseInt(req.params.notificationId);
@@ -7985,11 +7985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unlock a banner for the current user (admin or lootbox system use)
-  app.post("/api/user/unlock-banner/:bannerId", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    
+  app.post("/api/user/unlock-banner/:bannerId", emailVerificationMiddleware, async (req, res) => {
     try {
       const userId = (req.user as User).id;
       const bannerId = parseInt(req.params.bannerId);
@@ -8030,11 +8026,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload custom banner with aspect ratio processing and positioning
-  app.post("/api/upload/banner", upload.single('banner'), async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.sendStatus(401);
-    }
-
+  app.post("/api/upload/banner", emailVerificationMiddleware, upload.single('banner'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -9781,7 +9773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Pin/unpin screenshot
-  app.patch("/api/screenshots/:id/pin", authMiddleware, async (req, res) => {
+  app.patch("/api/screenshots/:id/pin", emailVerificationMiddleware, async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
       const screenshot = await storage.getScreenshot(screenshotId);
@@ -10012,7 +10004,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Send a message
-  app.post("/api/messages", hybridAuth, async (req, res) => {
+  app.post("/api/messages", hybridEmailVerification, async (req, res) => {
     try {
       // Validate content for profanity and inappropriate language
       const contentValidation = await contentFilterService.validateContent(req.body.content, 'message');
@@ -10127,7 +10119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Start a new conversation with username lookup
-  app.post("/api/messages/start", hybridAuth, async (req, res) => {
+  app.post("/api/messages/start", hybridEmailVerification, async (req, res) => {
     try {
       const { username } = req.body;
       let { content } = req.body;
@@ -10384,7 +10376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     });
   };
-  app.post('/api/videos/upload', hybridAuth, desktopVideoUpload, async (req: Request, res: Response) => {
+  app.post('/api/videos/upload', hybridEmailVerification, desktopVideoUpload, async (req: Request, res: Response) => {
     try {
       console.log('📹 Desktop video upload request received:', {
         fileProvided: !!req.file,

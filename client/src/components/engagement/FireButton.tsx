@@ -7,6 +7,7 @@ import { Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
+import { requireEmailVerified, isEmailVerificationError } from "@/lib/email-verification";
 
 interface FireButtonProps {
   contentId: number;
@@ -118,11 +119,19 @@ export function FireButton({
         setFired(context.previousFired);
         setCount(context.previousCount);
       }
-      toast({
-        title: "Cannot fire",
-        description: error.message,
-        variant: "gamefolioError",
-      });
+      if (isEmailVerificationError(error)) {
+        toast({
+          title: "Email verification required",
+          description: "Please verify your email address to react to content.",
+          variant: "gamefolioError",
+        });
+      } else {
+        toast({
+          title: "Cannot fire",
+          description: error.message,
+          variant: "gamefolioError",
+        });
+      }
     },
   });
 
@@ -131,10 +140,12 @@ export function FireButton({
       if (onUnauthenticatedAction) {
         onUnauthenticatedAction();
       } else {
-        openDialog('like'); // Using 'like' as it's similar to fire reaction
+        openDialog('like');
       }
       return;
     }
+
+    if (!requireEmailVerified(user, toast)) return;
 
     // Prevent users from firing their own content
     if (contentOwnerId && user.id === contentOwnerId) {

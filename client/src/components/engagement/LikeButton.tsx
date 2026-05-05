@@ -7,6 +7,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
+import { requireEmailVerified, isEmailVerificationError } from "@/lib/email-verification";
 
 interface LikeButtonProps {
   contentId: number;
@@ -100,11 +101,19 @@ export function LikeButton({
         setLiked(context.previousLiked);
         setCount(context.previousCount);
       }
-      toast({
-        title: "Error",
-        description: error.message || "Failed to toggle like",
-        variant: "gamefolioError",
-      });
+      if (isEmailVerificationError(error)) {
+        toast({
+          title: "Email verification required",
+          description: "Please verify your email address to like content.",
+          variant: "gamefolioError",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to toggle like",
+          variant: "gamefolioError",
+        });
+      }
     },
   });
 
@@ -117,6 +126,8 @@ export function LikeButton({
       }
       return;
     }
+
+    if (!requireEmailVerified(user, toast)) return;
 
     // Prevent users from liking their own content
     if (contentOwnerId && user.id === contentOwnerId) {

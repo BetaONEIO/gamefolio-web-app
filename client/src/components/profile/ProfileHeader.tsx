@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { UserWithStats } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
+import { requireEmailVerified } from "@/lib/email-verification";
 import {
   UserPlus,
   UserCheck,
@@ -126,6 +128,7 @@ const ProfileHeader = ({
   isFollowLoading = false,
 }: ProfileHeaderProps) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { isOpen, actionType, openDialog, closeDialog } = useJoinDialog();
   const [nftPopup, setNftPopup] = useState<{
@@ -161,6 +164,8 @@ const ProfileHeader = ({
       openDialog("general");
       return;
     }
+
+    if (!requireEmailVerified(user, toast)) return;
 
     if (onFollowClick) {
       onFollowClick();
