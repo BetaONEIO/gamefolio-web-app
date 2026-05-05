@@ -129,7 +129,8 @@ export function createOGMetaMiddleware(storage: IStorage) {
           // Get user data
           const user = await storage.getUser(screenshot.userId);
           
-          if (user) {
+          // Skip OG preview for suspended/banned accounts
+          if (user && user.status !== 'suspended' && user.status !== 'banned') {
             const rawImage = screenshot.thumbnailUrl || screenshot.imageUrl || '';
             const freshImage = await refreshSupabaseSignedUrl(rawImage);
             ogTags = {
@@ -150,7 +151,7 @@ export function createOGMetaMiddleware(storage: IStorage) {
         
         const user = await storage.getUserByUsername(username);
         
-        if (user) {
+        if (user && user.status !== 'suspended' && user.status !== 'banned') {
           const baseHost = `https://${req.get('host')}`;
           const previewImageUrl = `${baseHost}/api/social-preview/${username}`;
           

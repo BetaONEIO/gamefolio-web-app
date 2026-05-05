@@ -4896,6 +4896,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get user data for the screenshot
       const user = await storage.getUser(screenshot.userId);
+
+      // Hide content from suspended/banned accounts for non-admins
+      const isAdmin = (req.user as any)?.role === 'admin' || (req.user as any)?.role === 'moderator';
+      if (user && (user.status === 'suspended' || user.status === 'banned') && !isAdmin) {
+        return res.status(404).json({ message: "Screenshot not found" });
+      }
+
       if (user) {
         const { password, ...userWithoutPassword } = user;
         screenshot.user = userWithoutPassword;
