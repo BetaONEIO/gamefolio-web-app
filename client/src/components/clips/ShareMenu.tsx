@@ -55,6 +55,8 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
             whatsapp: `https://wa.me/?text=${encodeURIComponent(fallbackUrl)}`,
             telegram: `https://t.me/share/url?url=${encodeURIComponent(fallbackUrl)}`,
             discord: fallbackUrl,
+            instagram: fallbackUrl,
+            tiktok: fallbackUrl,
             email: `mailto:?body=${encodeURIComponent(fallbackUrl)}`
           }
         });
@@ -91,7 +93,7 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
     });
   };
 
-  // Handle copy-only platforms (Instagram, TikTok, Discord) — no web share intent
+  // Handle copy-only platforms (Instagram, TikTok) — no web share intent URL available
   const handleCopyOnlyShare = (platformName: string) => {
     if (isNative) {
       nativeShare({ title: 'Shared from Gamefolio', url: shareUrl }).then((handled) => {
