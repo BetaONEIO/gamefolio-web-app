@@ -45,6 +45,7 @@ import { useWallet } from "@/hooks/use-wallet";
 import { useTokenBalance } from "@/hooks/use-token";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { useMarketplacePurchase, MarketplacePurchaseDialog } from "@/hooks/use-marketplace-purchase";
+import { useNftMetadata } from "@/hooks/use-nft-metadata";
 
 const rarityGradients: Record<string, string> = {
   legendary: "from-amber-500 via-yellow-400 to-amber-600",
@@ -113,15 +114,9 @@ function resolveStoreImage(imagePath: string | null): string {
 }
 
 function MarketplaceNftImage({ tokenId }: { tokenId: number }) {
-  const { data } = useQuery({
-    queryKey: ['/api/nft/metadata', tokenId],
-    queryFn: async () => {
-      const res = await fetch(`/api/nft/metadata/${tokenId}`);
-      if (!res.ok) return null;
-      return res.json();
-    },
-    staleTime: 300_000,
-  });
+  // Coalesces parallel fetches across all listing tiles into one
+  // POST /api/nft/metadata/batch instead of N separate GET requests.
+  const { data } = useNftMetadata(tokenId);
 
   if (!data?.image) {
     return (

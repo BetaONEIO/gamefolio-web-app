@@ -8525,19 +8525,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get name tags available for purchase in the store
   app.get("/api/store/name-tags", async (req, res) => {
     try {
-      const allTags = await storage.getAllNameTags();
-      const storeTags = allTags.filter(t => t.availableInStore && t.isActive && !t.isDefault);
-      
-      const tagsWithSignedUrls = await Promise.all(
-        storeTags.map(async (tag) => {
-          let imageUrl = tag.imageUrl;
-          if (imageUrl && imageUrl.includes('supabase.co/storage')) {
-            const signed = await supabaseStorage.convertToSignedUrl(imageUrl, 3600);
-            if (signed) imageUrl = signed;
-          }
-          return { ...tag, imageUrl };
-        })
-      );
+      // Cache the public name-tag list + signed images (slow Supabase signing).
+      // Per-user "owned"/Pro status is merged fresh below.
+      const tagsWithSignedUrls = await getCachedTrending('store-name-tags', async () => {
+        const allTags = await storage.getAllNameTags();
+        const storeTags = allTags.filter(t => t.availableInStore && t.isActive && !t.isDefault);
+        return await Promise.all(
+          storeTags.map(async (tag) => {
+            let imageUrl = tag.imageUrl;
+            if (imageUrl && imageUrl.includes('supabase.co/storage')) {
+              const signed = await supabaseStorage.convertToSignedUrl(imageUrl, 3600);
+              if (signed) imageUrl = signed;
+            }
+            return { ...tag, imageUrl };
+          })
+        );
+      });
 
       if (req.isAuthenticated()) {
         const unlockedTags = await storage.getUserUnlockedNameTags(req.user.id);
@@ -8772,22 +8775,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/store/borders", async (req, res) => {
     try {
       const shapeFilter = req.query.shape as string | undefined;
-      const allBorders = await storage.getAllProfileBordersFromTable();
-      const storeBorders = allBorders.filter(b => {
-        if (!b.availableInStore || !b.isActive || b.isDefault) return false;
-        if (shapeFilter && b.shape !== shapeFilter) return false;
-        return true;
-      });
-
-      const bordersWithSignedUrls = await Promise.all(
-        storeBorders.map(async (border) => {
-          let imageUrl = border.imageUrl;
-          if (imageUrl && imageUrl.includes('supabase.co/storage')) {
-            const signed = await supabaseStorage.convertToSignedUrl(imageUrl, 3600);
-            if (signed) imageUrl = signed;
-          }
-          return { ...border, imageUrl };
-        })
+      // Cache the full border list with signed image URLs (per shape filter).
+      // Per-user "owned"/Pro flags merged fresh below.
+      const bordersWithSignedUrls = await getCachedTrending(
+        `store-borders:${shapeFilter || 'all'}`,
+        async () => {
+          const allBorders = await storage.getAllProfileBordersFromTable();
+          const storeBorders = allBorders.filter(b => {
+            if (!b.availableInStore || !b.isActive || b.isDefault) return false;
+            if (shapeFilter && b.shape !== shapeFilter) return false;
+            return true;
+          });
+          return await Promise.all(
+            storeBorders.map(async (border) => {
+              let imageUrl = border.imageUrl;
+              if (imageUrl && imageUrl.includes('supabase.co/storage')) {
+                const signed = await supabaseStorage.convertToSignedUrl(imageUrl, 3600);
+                if (signed) imageUrl = signed;
+              }
+              return { ...border, imageUrl };
+            })
+          );
+        },
       );
 
       if (req.isAuthenticated()) {
