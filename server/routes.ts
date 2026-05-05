@@ -3254,6 +3254,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper to sign all Supabase URLs in clip objects (thumbnails, videos, avatars)
+  // Short-lived in-memory cache for trending feeds (DB query + signed URLs).
+  // Keyed by route+normalized-params+user. Bounded LRU so user-controlled
+  // query params can't blow up memory.
+  const TRENDING_CACHE_TTL_MS = 30_000;
+  const TRENDING_CACHE_MAX_ENTRIES = 500;
+  // Map preserves insertion order — re-inserting on hit gives us LRU semantics.
+  const trendingCache = new Map<string, { expires: number; data: any }>();
+  const trendingInflight = new Map<string, Promise<any>>();
+
+  async function getCachedTrending<T>(key: string, loader: () => Promise<T>): Promise<T> {
+    const now = Date.now();
+    const hit = trendingCache.get(key);
+    if (hit && hit.expires > now) {
+      // LRU bump
+      trendingCache.delete(key);
+      trendingCache.set(key, hit);
+      return hit.data as T;
+    }
+    if (hit) trendingCache.delete(key);
+
+    const existing = trendingInflight.get(key);
+    if (existing) return existing as Promise<T>;
+
+    const promise = (async () => {
+      try {
+        const data = await loader();
+        trendingCache.set(key, { expires: Date.now() + TRENDING_CACHE_TTL_MS, data });
+        // Evict oldest entries when over capacity (insertion-order iteration).
+        while (trendingCache.size > TRENDING_CACHE_MAX_ENTRIES) {
+          const oldest = trendingCache.keys().next().value;
+          if (oldest === undefined) break;
+          trendingCache.delete(oldest);
+        }
+        return data;
+      } finally {
+        trendingInflight.delete(key);
+      }
+    })();
+    trendingInflight.set(key, promise);
+    return promise;
+  }
+
+  // Normalize trending query params so semantically-equivalent queries
+  // ("10" vs "010" vs missing gameId) collapse to one cache key.
+  function trendingCacheKey(
+    route: string,
+    period: unknown,
+    limit: unknown,
+    gameId: unknown,
+    currentUserId: number | undefined,
+  ): string {
+    const allowedPeriods = new Set(['all', 'recent', 'day', 'week', 'month', 'year']);
+    const periodStr = typeof period === 'string' && allowedPeriods.has(period) ? period : 'all';
+    const parsedLimit = Math.max(1, Math.min(50, parseInt(String(limit ?? '10'), 10) || 10));
+    const parsedGameId = gameId !== undefined && gameId !== '' && !Number.isNaN(parseInt(String(gameId), 10))
+      ? parseInt(String(gameId), 10)
+      : '';
+    return `${route}:${periodStr}:${parsedLimit}:${parsedGameId}:${currentUserId ?? 'guest'}`;
+  }
+
+  // Periodic eviction so the cache doesn't grow without bound
+  setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of trendingCache) {
+      if (v.expires <= now) trendingCache.delete(k);
+    }
+  }, 60_000).unref?.();
+
   async function signClipUrls<T extends { thumbnailUrl?: string | null; videoUrl?: string | null; user?: { avatarUrl?: string | null } | null }>(clips: T[]): Promise<T[]> {
     return Promise.all(
       clips.map(async (clip) => {
@@ -5194,20 +5262,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { period = 'all', limit = 10, gameId } = req.query;
       const currentUserId = (req.user as any)?.id;
-      console.log('🔍 Trending clips API: currentUserId =', currentUserId, 'period =', period, 'session user:', req.user);
-      
+
       // Force no caching for privacy-sensitive content
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
-      
-      const clips = await storage.getTrendingClips(
-        period as string,
-        parseInt(limit as string) || 10,
-        gameId ? parseInt(gameId as string) : undefined,
-        currentUserId
-      );
-      res.json(await signClipUrls(clips));
+
+      const cacheKey = trendingCacheKey('clips', period, limit, gameId, currentUserId);
+      const signed = await getCachedTrending(cacheKey, async () => {
+        const clips = await storage.getTrendingClips(
+          period as string,
+          parseInt(limit as string) || 10,
+          gameId ? parseInt(gameId as string) : undefined,
+          currentUserId
+        );
+        return await signClipUrls(clips);
+      });
+      res.json(signed);
     } catch (err) {
       console.error("Error fetching trending clips:", err);
       res.status(500).json({ message: "Internal server error" });
@@ -5219,12 +5290,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
       const currentUserId = (req.user as any)?.id;
-      const reels = await storage.getTrendingReels(
+      const cacheKey = trendingCacheKey('reels-home', period, limit, gameId, currentUserId);
+      const reels = await getCachedTrending(cacheKey, () => storage.getTrendingReels(
         period as string,
         parseInt(limit as string) || 10,
         gameId ? parseInt(gameId as string) : undefined,
         currentUserId
-      );
+      ));
       res.json(reels);
     } catch (err) {
       console.error("Error fetching trending reels:", err);
@@ -5250,22 +5322,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
       const currentUserId = (req.user as any)?.id;
-      const reels = await storage.getTrendingReels(
-        period as string,
-        parseInt(limit as string) || 10,
-        gameId ? parseInt(gameId as string) : undefined,
-        currentUserId
-      );
-      const reelsWithSignedThumbnails = await Promise.all(
-        reels.map(async (reel) => {
-          if (reel.thumbnailUrl) {
-            const signedUrl = await supabaseStorage.convertToSignedUrl(reel.thumbnailUrl, 3600);
-            return { ...reel, thumbnailUrl: signedUrl || reel.thumbnailUrl };
-          }
-          return reel;
-        })
-      );
-      res.json(reelsWithSignedThumbnails);
+      const cacheKey = trendingCacheKey('reels', period, limit, gameId, currentUserId);
+      const result = await getCachedTrending(cacheKey, async () => {
+        const reels = await storage.getTrendingReels(
+          period as string,
+          parseInt(limit as string) || 10,
+          gameId ? parseInt(gameId as string) : undefined,
+          currentUserId
+        );
+        return await Promise.all(
+          reels.map(async (reel) => {
+            if (reel.thumbnailUrl) {
+              const signedUrl = await supabaseStorage.convertToSignedUrl(reel.thumbnailUrl, 3600);
+              return { ...reel, thumbnailUrl: signedUrl || reel.thumbnailUrl };
+            }
+            return reel;
+          })
+        );
+      });
+      res.json(result);
     } catch (err) {
       console.error("Error fetching trending reels:", err);
       res.status(500).json({ message: "Internal server error" });
@@ -12797,14 +12872,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         results[url] = url; // Return original URL for non-Supabase URLs
       }
 
-      // Generate signed URLs for Supabase bucket content
-      for (const url of supabaseUrls) {
-        const signedUrl = await supabaseStorage.convertToSignedUrl(url, 3600);
-        if (signedUrl) {
-          results[url] = signedUrl;
-        } else {
-          results[url] = url; // Fallback to original if signing fails
-        }
+      // Generate signed URLs for Supabase bucket content in parallel
+      const signedResults = await Promise.all(
+        supabaseUrls.map(async (url) => {
+          const signedUrl = await supabaseStorage.convertToSignedUrl(url, 3600);
+          return [url, signedUrl || url] as const;
+        })
+      );
+      for (const [url, signed] of signedResults) {
+        results[url] = signed;
       }
 
       res.json({ signedUrls: results });
