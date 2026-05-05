@@ -724,11 +724,11 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                     <span className="text-[#B7FF1A]">Gamefolio Pro</span>
                   </h2>
 
-                  <p className="text-[#94a3b8] text-xs text-center leading-relaxed mb-8 max-w-[260px] mx-auto">
+                  <p className="text-[#94a3b8] text-xs text-center leading-relaxed mb-3 max-w-[260px] mx-auto">
                     Elevate your gaming identity with premium features
                   </p>
 
-                  <div className="flex flex-col gap-3 mb-4 pt-4">
+                  <div className="flex flex-col gap-3 mb-4 pt-1">
                     {premiumBenefits.map((benefit, index) => (
                       <motion.div
                         key={benefit.title}
