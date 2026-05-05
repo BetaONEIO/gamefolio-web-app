@@ -2836,6 +2836,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Referral code can only contain letters and numbers' });
       }
 
+      // Block reserved brand names
+      const RESERVED_CODES = ['GAMEFOLIO', 'ADMIN', 'SUPPORT', 'STAFF', 'MODERATOR', 'MOD', 'OFFICIAL'];
+      if (RESERVED_CODES.includes(trimmed)) {
+        return res.status(400).json({ message: 'That referral code is reserved and cannot be used. Please choose another.' });
+      }
+
       // Profanity check using the content filter service
       const { contentFilterService } = await import('./services/content-filter');
       const isProfane = await contentFilterService.isProfane(trimmed);
