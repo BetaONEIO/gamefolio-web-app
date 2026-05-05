@@ -584,10 +584,13 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             />
           </div>
         ) : (
-          <div className={cn(
-            "flex flex-col lg:flex-row h-full max-h-full transition-opacity duration-300",
-            isTransitioning ? "opacity-60" : "opacity-100"
-          )}>
+          <div
+            className={cn(
+              "flex flex-col lg:flex-row h-full max-h-full transition-opacity duration-300",
+              isTransitioning ? "opacity-60" : "opacity-100"
+            )}
+            style={isMobile && clip.videoType !== 'reel' ? { paddingTop: 'max(env(safe-area-inset-top, 0px), 44px)' } : undefined}
+          >
             {/* Video player area - fixed size container, video fits inside */}
             <div className={cn(
               "bg-black flex items-center justify-center transition-transform duration-200 relative",
