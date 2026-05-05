@@ -1532,6 +1532,8 @@ export class DatabaseStorage implements IStorage {
       sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
     );
 
+    const activeUsersFilter = sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`;
+
     let matchingClips;
 
     if (isHashtag) {
@@ -1543,7 +1545,8 @@ export class DatabaseStorage implements IStorage {
           and(
             eq(clips.videoType, 'clip'),
             sql`EXISTS (SELECT 1 FROM unnest(${clips.tags}) AS tag WHERE LOWER(tag) = ${searchTerm})`,
-            approvedFilter
+            approvedFilter,
+            activeUsersFilter
           )
         );
     } else {
@@ -1558,7 +1561,8 @@ export class DatabaseStorage implements IStorage {
               ilike(clips.title, `%${query}%`),
               ilike(clips.description, `%${query}%`)
             ),
-            approvedFilter
+            approvedFilter,
+            activeUsersFilter
           )
         );
     }
@@ -1584,6 +1588,8 @@ export class DatabaseStorage implements IStorage {
       sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
     );
 
+    const activeUsersFilter = sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`;
+
     let matchingReels;
 
     if (isHashtag) {
@@ -1595,7 +1601,8 @@ export class DatabaseStorage implements IStorage {
           and(
             eq(clips.videoType, 'reel'),
             sql`EXISTS (SELECT 1 FROM unnest(${clips.tags}) AS tag WHERE LOWER(tag) = ${searchTerm})`,
-            approvedFilter
+            approvedFilter,
+            activeUsersFilter
           )
         );
     } else {
@@ -1610,7 +1617,8 @@ export class DatabaseStorage implements IStorage {
               ilike(clips.title, `%${query}%`),
               ilike(clips.description, `%${query}%`)
             ),
-            approvedFilter
+            approvedFilter,
+            activeUsersFilter
           )
         );
     }
@@ -1660,7 +1668,13 @@ export class DatabaseStorage implements IStorage {
       .from(screenshots)
       .leftJoin(users, eq(screenshots.userId, users.id))
       .leftJoin(games, eq(screenshots.gameId, games.id))
-      .where(and(whereClause, approvedFilter))
+      .where(
+        and(
+          whereClause,
+          approvedFilter,
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${screenshots.userId} AND u.status IN ('suspended', 'banned'))`
+        )
+      )
       .orderBy(desc(screenshots.createdAt), desc(screenshots.id))
       .limit(20);
 
@@ -4224,7 +4238,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Screenshot admin operations
-  async getAllScreenshots(limit: number = 10, offset: number = 0): Promise<Array<{
+  async getAllScreenshots(limit: number = 10, offset: number = 0, includeAllUsers: boolean = false): Promise<Array<{
     id: number;
     title: string;
     description?: string | null;
@@ -4272,7 +4286,9 @@ export class DatabaseStorage implements IStorage {
               sql`${screenshots.gameId} IS NULL`,
               sql`${games.is_approved} IS NULL OR ${games.is_approved} = true`
             ),
-            sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${screenshots.userId} AND u.status IN ('suspended', 'banned'))`
+            includeAllUsers
+              ? undefined
+              : sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${screenshots.userId} AND u.status IN ('suspended', 'banned'))`
           )
         )
         .orderBy(desc(screenshots.createdAt), desc(screenshots.id)) // Stable pagination with tie-breaker

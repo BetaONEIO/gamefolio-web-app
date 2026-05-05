@@ -3753,7 +3753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get all clips and screenshots
       const allClips = await storage.getAllClips();
-      const allScreenshots = await storage.getAllScreenshots();
+      const allScreenshots = await storage.getAllScreenshots(undefined, undefined, true);
       
       let clipPointsAwarded = 0;
       let screenshotPointsAwarded = 0;

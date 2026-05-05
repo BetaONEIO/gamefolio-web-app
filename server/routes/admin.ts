@@ -605,7 +605,7 @@ adminRouter.get("/screenshots", async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
 
-    const screenshots = await storage.getAllScreenshots(limit, offset);
+    const screenshots = await storage.getAllScreenshots(limit, offset, true);
     const total = await storage.getScreenshotCount();
 
     res.json({
