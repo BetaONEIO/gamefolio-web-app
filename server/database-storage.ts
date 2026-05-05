@@ -986,8 +986,6 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Get clips based on engagement (likes + comments) with privacy filtering
-    console.log('getTrendingClips: currentUserId =', currentUserId);
-    
     const clipEngagementQuery = db
       .select({
         clipId: clips.id,
@@ -1027,13 +1025,12 @@ export class DatabaseStorage implements IStorage {
 
     const engagementResults = await clipEngagementQuery;
 
-    const clipsWithDetails: ClipWithUser[] = [];
-    for (const result of engagementResults) {
-      const clipWithUser = await this.getClipWithUser(result.clipId);
-      if (clipWithUser) {
-        clipsWithDetails.push(clipWithUser);
-      }
-    }
+    // Run getClipWithUser in parallel — was a serial N+1 that made this
+    // endpoint take 3s+ for 20 clips. Promise.all preserves order.
+    const fetched = await Promise.all(
+      engagementResults.map(r => this.getClipWithUser(r.clipId))
+    );
+    const clipsWithDetails: ClipWithUser[] = fetched.filter((c): c is ClipWithUser => !!c);
 
     return clipsWithDetails;
   }
@@ -1975,7 +1972,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllClips(limit: number = 10, offset: number = 0, currentUserId?: number): Promise<ClipWithUser[]> {
-    console.log('getAllClips: currentUserId =', currentUserId);
     
     // Show clips excluding those linked to unapproved custom games (public feed safety)
     const allClipsData = await db
@@ -2922,13 +2918,10 @@ export class DatabaseStorage implements IStorage {
 
     const likesResults = await clipLikesQuery;
 
-    const clipsWithDetails: ClipWithUser[] = [];
-    for (const result of likesResults) {
-      const clipWithUser = await this.getClipWithUser(result.clipId);
-      if (clipWithUser) {
-        clipsWithDetails.push(clipWithUser);
-      }
-    }
+    const fetched = await Promise.all(
+      likesResults.map(r => this.getClipWithUser(r.clipId))
+    );
+    const clipsWithDetails: ClipWithUser[] = fetched.filter((c): c is ClipWithUser => !!c);
 
     return clipsWithDetails;
   }
@@ -2982,13 +2975,10 @@ export class DatabaseStorage implements IStorage {
 
     const commentsResults = await clipCommentsQuery;
 
-    const clipsWithDetails: ClipWithUser[] = [];
-    for (const result of commentsResults) {
-      const clipWithUser = await this.getClipWithUser(result.clipId);
-      if (clipWithUser) {
-        clipsWithDetails.push(clipWithUser);
-      }
-    }
+    const fetched = await Promise.all(
+      commentsResults.map(r => this.getClipWithUser(r.clipId))
+    );
+    const clipsWithDetails: ClipWithUser[] = fetched.filter((c): c is ClipWithUser => !!c);
 
     return clipsWithDetails;
   }
@@ -3042,13 +3032,10 @@ export class DatabaseStorage implements IStorage {
 
     const likesResults = await reelLikesQuery;
 
-    const clipsWithDetails: ClipWithUser[] = [];
-    for (const result of likesResults) {
-      const clipWithUser = await this.getClipWithUser(result.clipId);
-      if (clipWithUser) {
-        clipsWithDetails.push(clipWithUser);
-      }
-    }
+    const fetched = await Promise.all(
+      likesResults.map(r => this.getClipWithUser(r.clipId))
+    );
+    const clipsWithDetails: ClipWithUser[] = fetched.filter((c): c is ClipWithUser => !!c);
 
     return clipsWithDetails;
   }
@@ -3102,13 +3089,10 @@ export class DatabaseStorage implements IStorage {
 
     const commentsResults = await reelCommentsQuery;
 
-    const clipsWithDetails: ClipWithUser[] = [];
-    for (const result of commentsResults) {
-      const clipWithUser = await this.getClipWithUser(result.clipId);
-      if (clipWithUser) {
-        clipsWithDetails.push(clipWithUser);
-      }
-    }
+    const fetched = await Promise.all(
+      commentsResults.map(r => this.getClipWithUser(r.clipId))
+    );
+    const clipsWithDetails: ClipWithUser[] = fetched.filter((c): c is ClipWithUser => !!c);
 
     return clipsWithDetails;
   }
