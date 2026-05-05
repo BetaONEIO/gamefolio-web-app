@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Share2, X, Copy, Video, Gamepad2, Trophy, Upload, Code, Eye, Coffee, Scroll } from 'lucide-react';
 import { FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope } from 'react-icons/fa';
-import { FaXTwitter } from 'react-icons/fa6';
+import { FaXTwitter, FaInstagram, FaTiktok } from 'react-icons/fa6';
 import { toast } from '@/hooks/use-toast';
 import { CustomAvatar } from '@/components/ui/custom-avatar';
 import { VerificationBadge } from '@/components/ui/verification-badge';
@@ -40,6 +40,8 @@ interface GamefolioShareData {
     whatsapp: string;
     telegram: string;
     discord: string;
+    instagram: string;
+    tiktok: string;
     email: string;
   };
 }
@@ -151,6 +153,8 @@ export function GamefolioShareDialog({
         whatsapp: `https://wa.me/?text=Check%20out%20my%20gaming%20portfolio!%20${encodeURIComponent(profileUrl)}`,
         telegram: `https://t.me/share/url?url=${encodeURIComponent(profileUrl)}&text=Check%20out%20my%20gaming%20portfolio!`,
         discord: `https://discord.com/channels/@me`,
+        instagram: profileUrl,
+        tiktok: profileUrl,
         email: `mailto:?subject=Check%20out%20my%20gaming%20portfolio!&body=Hey!%20Check%20out%20my%20gaming%20portfolio:%20${encodeURIComponent(profileUrl)}`
       }
     });
@@ -168,13 +172,19 @@ export function GamefolioShareDialog({
     }
   };
 
-  const handleSocialShare = async (url: string) => {
+  const handleSocialShare = async (url: string, platformKey: string, platformName: string) => {
     if (isNative && shareData?.profileUrl) {
       const handled = await nativeShare({
         title: 'My Gamefolio',
         url: shareData.profileUrl,
       });
       if (handled) return;
+    }
+    const COPY_ONLY = ["discord", "instagram", "tiktok"];
+    if (COPY_ONLY.includes(platformKey)) {
+      navigator.clipboard.writeText(shareData?.profileUrl || url);
+      toast({ title: `Link copied for ${platformName}!`, description: `Paste this link in ${platformName} to share your Gamefolio.`, duration: 3000 });
+      return;
     }
     void openShareWindow(url);
   };
@@ -187,6 +197,8 @@ export function GamefolioShareDialog({
     { name: 'Telegram', icon: FaTelegram, key: 'telegram' },
     { name: 'Reddit', icon: FaReddit, key: 'reddit' },
     { name: 'Discord', icon: FaDiscord, key: 'discord' },
+    { name: 'Instagram', icon: FaInstagram, key: 'instagram' },
+    { name: 'TikTok', icon: FaTiktok, key: 'tiktok' },
     { name: 'Email', icon: FaEnvelope, key: 'email' },
   ];
 
@@ -411,7 +423,7 @@ export function GamefolioShareDialog({
                     return (
                       <button
                         key={platform.name}
-                        onClick={() => shareUrl && handleSocialShare(shareUrl)}
+                        onClick={() => shareUrl && handleSocialShare(shareUrl, platform.key, platform.name)}
                         disabled={!shareUrl}
                         className="w-14 h-14 rounded-full border-2 border-[#B7FF1A] bg-transparent hover:bg-[#B7FF1A]/10 text-[#f8fafc] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                         title={platform.name}

@@ -14,7 +14,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope } from "react-icons/fa";
-import { FaXTwitter } from "react-icons/fa6";
+import { FaXTwitter, FaInstagram, FaTiktok } from "react-icons/fa6";
 
 interface ClipShareDialogProps {
   clipId: number;
@@ -36,6 +36,8 @@ interface ShareData {
     whatsapp: string;
     telegram: string;
     discord: string;
+    instagram: string;
+    tiktok: string;
     email: string;
   };
   clipUrl: string;
@@ -46,6 +48,8 @@ interface ShareData {
   videoType?: string;
 }
 
+const COPY_ONLY_PLATFORMS = ["discord", "instagram", "tiktok"];
+
 const SOCIAL_PLATFORMS = [
   { name: "X", icon: FaXTwitter, key: "twitter" },
   { name: "Facebook", icon: FaFacebook, key: "facebook" },
@@ -54,6 +58,8 @@ const SOCIAL_PLATFORMS = [
   { name: "Telegram", icon: FaTelegram, key: "telegram" },
   { name: "Reddit", icon: FaReddit, key: "reddit" },
   { name: "Discord", icon: FaDiscord, key: "discord" },
+  { name: "Instagram", icon: FaInstagram, key: "instagram" },
+  { name: "TikTok", icon: FaTiktok, key: "tiktok" },
   { name: "Email", icon: FaEnvelope, key: "email" },
 ];
 
@@ -183,7 +189,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
     }
   };
 
-  const handleSocialShare = async (platform: string, url: string) => {
+  const handleSocialShare = async (platform: string, url: string, platformKey: string) => {
     if (!url) return;
     if (isNative && shareData?.clipUrl) {
       const handled = await nativeShare({
@@ -196,6 +202,16 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
         trackShare();
         return;
       }
+    }
+    if (COPY_ONLY_PLATFORMS.includes(platformKey)) {
+      navigator.clipboard.writeText(shareData?.clipUrl || url);
+      trackShare();
+      toast({
+        title: `Link copied for ${platform}!`,
+        description: `Paste this link in ${platform} to share your ${label}.`,
+        duration: 3000,
+      });
+      return;
     }
     void openShareWindow(url);
     trackShare();
@@ -332,7 +348,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                   return (
                     <button
                       key={platform.key}
-                      onClick={() => shareUrl && handleSocialShare(platform.name, shareUrl)}
+                      onClick={() => shareUrl && handleSocialShare(platform.name, shareUrl, platform.key)}
                       disabled={!shareUrl}
                       className="w-10 h-10 rounded-full border border-[#B7FF1A]/40 bg-transparent hover:bg-[#B7FF1A]/10 text-[#f8fafc] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
                       title={platform.name}

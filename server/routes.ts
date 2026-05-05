@@ -170,7 +170,9 @@ function generateSocialMediaLinks(contentUrl: string, title: string) {
     twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`,
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
     reddit: `https://reddit.com/submit?url=${encodedUrl}&title=${encodedTitle}`,
-    discord: contentUrl // Discord doesn't have a direct share URL, just copy the link
+    discord: contentUrl, // Discord doesn't have a direct share URL, just copy the link
+    instagram: contentUrl, // Instagram doesn't have a web share URL, copy the link
+    tiktok: contentUrl // TikTok doesn't have a web share URL, copy the link
   };
 }
 
@@ -5592,6 +5594,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `🎮 Epic gaming clip from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
         )}`,
         discord: clipUrl,
+        instagram: clipUrl,
+        tiktok: clipUrl,
         email: `mailto:?subject=${encodeURIComponent(
           `🎮 Amazing gaming clip from ${displayName}'s Gamefolio!`
         )}&body=${encodeURIComponent(
@@ -6605,6 +6609,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `📸 Epic gaming screenshot from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
         )}`,
         discord: screenshotUrl,
+        instagram: screenshotUrl,
+        tiktok: screenshotUrl,
         email: `mailto:?subject=${encodeURIComponent(
           `📸 Amazing gaming screenshot from ${displayName}'s Gamefolio!`
         )}&body=${encodeURIComponent(
@@ -9482,6 +9488,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         whatsapp: `https://wa.me/?text=${encodeURIComponent(`Check out this gaming screenshot: ${screenshotUrl}`)}`,
         telegram: `https://t.me/share/url?url=${encodeURIComponent(screenshotUrl)}&text=${encodeURIComponent('Check out this gaming screenshot!')}`,
         discord: screenshotUrl,
+        instagram: screenshotUrl,
+        tiktok: screenshotUrl,
         email: `mailto:?subject=${encodeURIComponent(`Gaming Screenshot: ${screenshot.title}`)}&body=${encodeURIComponent(`I wanted to share this awesome gaming screenshot with you: ${screenshotUrl}`)}`
       };
 
@@ -11298,7 +11306,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
         twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${title}`,
         reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${title}`,
-        discord: shareUrl // For Discord, we just copy the link
+        discord: shareUrl, // For Discord, we just copy the link
+        instagram: shareUrl,
+        tiktok: shareUrl
       };
 
       const uploadedContent = {

@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Share2, Copy, Facebook, Linkedin, Mail } from "lucide-react";
 import { FaReddit, FaWhatsapp, FaTelegram } from "react-icons/fa";
-import { FaXTwitter } from "react-icons/fa6";
+import { FaXTwitter, FaInstagram, FaTiktok } from "react-icons/fa6";
 import { useToast } from "@/hooks/use-toast";
 import { openShareWindow, nativeShare, isNative } from "@/lib/platform";
 
@@ -81,13 +81,28 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
   const whatsappUrl = socialMediaLinks.whatsapp;
   const telegramUrl = socialMediaLinks.telegram;
   const mailUrl = socialMediaLinks.email;
-  
   // Handle copy link to clipboard
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareUrl);
     toast({
       title: "Link copied!",
       description: "The link has been copied to your clipboard.",
+      duration: 3000,
+    });
+  };
+
+  // Handle copy-only platforms (Instagram, TikTok, Discord) — no web share intent
+  const handleCopyOnlyShare = (platformName: string) => {
+    if (isNative) {
+      nativeShare({ title: 'Shared from Gamefolio', url: shareUrl }).then((handled) => {
+        if (handled) return;
+      });
+      return;
+    }
+    navigator.clipboard.writeText(shareUrl);
+    toast({
+      title: `Link copied for ${platformName}!`,
+      description: `Paste this link in ${platformName} to share the clip.`,
       duration: 3000,
     });
   };
@@ -176,6 +191,22 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
           <span>Telegram</span>
         </DropdownMenuItem>
         
+        <DropdownMenuItem
+          onClick={() => handleCopyOnlyShare('Instagram')}
+          className="cursor-pointer"
+        >
+          <FaInstagram className="mr-2 h-4 w-4 text-[#E1306C]" />
+          <span>Instagram</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => handleCopyOnlyShare('TikTok')}
+          className="cursor-pointer"
+        >
+          <FaTiktok className="mr-2 h-4 w-4" />
+          <span>TikTok</span>
+        </DropdownMenuItem>
+
         <DropdownMenuItem 
           onClick={() => handleShareClick(mailUrl)} 
           className="cursor-pointer"
