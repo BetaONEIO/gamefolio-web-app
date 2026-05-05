@@ -1076,7 +1076,7 @@ const TrendingPage: React.FC = () => {
               : 'flex-col items-end'
           }`}
           style={{
-            top: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+            top: 'calc(env(safe-area-inset-top, 0px) + 56px)',
             right: 12,
             opacity: (activeTab !== 'clips' && commentsOpen) ? 0 : 1,
             pointerEvents: (activeTab !== 'clips' && commentsOpen) ? 'none' : 'auto',
