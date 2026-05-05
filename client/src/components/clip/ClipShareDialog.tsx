@@ -14,7 +14,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope } from "react-icons/fa";
-import { FaXTwitter, FaInstagram, FaTiktok } from "react-icons/fa6";
+import { FaXTwitter, FaInstagram, FaTiktok, FaSnapchat, FaBluesky, FaThreads } from "react-icons/fa6";
 
 interface ClipShareDialogProps {
   clipId: number;
@@ -38,6 +38,9 @@ interface ShareData {
     discord: string;
     instagram: string;
     tiktok: string;
+    bluesky: string;
+    snapchat: string;
+    threads: string;
     email: string;
   };
   clipUrl: string;
@@ -48,7 +51,7 @@ interface ShareData {
   videoType?: string;
 }
 
-const COPY_ONLY_PLATFORMS = ["discord", "instagram", "tiktok"];
+const COPY_ONLY_PLATFORMS = ["discord", "instagram", "tiktok", "snapchat", "threads"];
 
 const SOCIAL_PLATFORMS = [
   { name: "X", icon: FaXTwitter, key: "twitter" },
@@ -60,6 +63,9 @@ const SOCIAL_PLATFORMS = [
   { name: "Discord", icon: FaDiscord, key: "discord" },
   { name: "Instagram", icon: FaInstagram, key: "instagram" },
   { name: "TikTok", icon: FaTiktok, key: "tiktok" },
+  { name: "Bluesky", icon: FaBluesky, key: "bluesky" },
+  { name: "Snapchat", icon: FaSnapchat, key: "snapchat" },
+  { name: "Threads", icon: FaThreads, key: "threads" },
   { name: "Email", icon: FaEnvelope, key: "email" },
 ];
 

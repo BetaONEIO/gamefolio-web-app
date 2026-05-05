@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Share2, X, Copy, Video, Gamepad2, Trophy, Upload, Code, Eye, Coffee, Scroll } from 'lucide-react';
 import { FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope } from 'react-icons/fa';
-import { FaXTwitter, FaInstagram, FaTiktok } from 'react-icons/fa6';
+import { FaXTwitter, FaInstagram, FaTiktok, FaSnapchat, FaBluesky, FaThreads } from 'react-icons/fa6';
 import { toast } from '@/hooks/use-toast';
 import { CustomAvatar } from '@/components/ui/custom-avatar';
 import { VerificationBadge } from '@/components/ui/verification-badge';
@@ -42,6 +42,9 @@ interface GamefolioShareData {
     discord: string;
     instagram: string;
     tiktok: string;
+    bluesky: string;
+    snapchat: string;
+    threads: string;
     email: string;
   };
 }
@@ -155,6 +158,9 @@ export function GamefolioShareDialog({
         discord: `https://discord.com/channels/@me`,
         instagram: profileUrl,
         tiktok: profileUrl,
+        bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`Check out my gaming portfolio! ${profileUrl}`)}`,
+        snapchat: profileUrl,
+        threads: profileUrl,
         email: `mailto:?subject=Check%20out%20my%20gaming%20portfolio!&body=Hey!%20Check%20out%20my%20gaming%20portfolio:%20${encodeURIComponent(profileUrl)}`
       }
     });
@@ -180,7 +186,7 @@ export function GamefolioShareDialog({
       });
       if (handled) return;
     }
-    const COPY_ONLY = ["discord", "instagram", "tiktok"];
+    const COPY_ONLY = ["discord", "instagram", "tiktok", "snapchat", "threads"];
     if (COPY_ONLY.includes(platformKey)) {
       navigator.clipboard.writeText(shareData?.profileUrl || url);
       toast({ title: `Link copied for ${platformName}!`, description: `Paste this link in ${platformName} to share your Gamefolio.`, duration: 3000 });
@@ -199,6 +205,9 @@ export function GamefolioShareDialog({
     { name: 'Discord', icon: FaDiscord, key: 'discord' },
     { name: 'Instagram', icon: FaInstagram, key: 'instagram' },
     { name: 'TikTok', icon: FaTiktok, key: 'tiktok' },
+    { name: 'Bluesky', icon: FaBluesky, key: 'bluesky' },
+    { name: 'Snapchat', icon: FaSnapchat, key: 'snapchat' },
+    { name: 'Threads', icon: FaThreads, key: 'threads' },
     { name: 'Email', icon: FaEnvelope, key: 'email' },
   ];
 

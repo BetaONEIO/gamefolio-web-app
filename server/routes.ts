@@ -170,9 +170,12 @@ function generateSocialMediaLinks(contentUrl: string, title: string) {
     twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`,
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
     reddit: `https://reddit.com/submit?url=${encodedUrl}&title=${encodedTitle}`,
-    discord: contentUrl, // Discord doesn't have a direct share URL, just copy the link
-    instagram: contentUrl, // Instagram doesn't have a web share URL, copy the link
-    tiktok: contentUrl // TikTok doesn't have a web share URL, copy the link
+    discord: contentUrl,
+    instagram: contentUrl,
+    tiktok: contentUrl,
+    bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`${decodeURIComponent(encodedTitle)} ${contentUrl}`)}`,
+    snapchat: contentUrl,
+    threads: contentUrl,
   };
 }
 
@@ -5596,6 +5599,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         discord: clipUrl,
         instagram: clipUrl,
         tiktok: clipUrl,
+        bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(
+          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! ${clipUrl}`
+        )}`,
+        snapchat: clipUrl,
+        threads: clipUrl,
         email: `mailto:?subject=${encodeURIComponent(
           `🎮 Amazing gaming clip from ${displayName}'s Gamefolio!`
         )}&body=${encodeURIComponent(
@@ -6611,6 +6619,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         discord: screenshotUrl,
         instagram: screenshotUrl,
         tiktok: screenshotUrl,
+        bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(
+          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! ${screenshotUrl}`
+        )}`,
+        snapchat: screenshotUrl,
+        threads: screenshotUrl,
         email: `mailto:?subject=${encodeURIComponent(
           `📸 Amazing gaming screenshot from ${displayName}'s Gamefolio!`
         )}&body=${encodeURIComponent(
@@ -9490,6 +9503,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         discord: screenshotUrl,
         instagram: screenshotUrl,
         tiktok: screenshotUrl,
+        bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`Check out this amazing gaming screenshot! 📸 ${screenshotUrl}`)}`,
+        snapchat: screenshotUrl,
+        threads: screenshotUrl,
         email: `mailto:?subject=${encodeURIComponent(`Gaming Screenshot: ${screenshot.title}`)}&body=${encodeURIComponent(`I wanted to share this awesome gaming screenshot with you: ${screenshotUrl}`)}`
       };
 
@@ -11306,9 +11322,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
         twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${title}`,
         reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${title}`,
-        discord: shareUrl, // For Discord, we just copy the link
+        discord: shareUrl,
         instagram: shareUrl,
-        tiktok: shareUrl
+        tiktok: shareUrl,
+        bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`${decodeURIComponent(title)} ${shareUrl}`)}`,
+        snapchat: shareUrl,
+        threads: shareUrl,
       };
 
       const uploadedContent = {

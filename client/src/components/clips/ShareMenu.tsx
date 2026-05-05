@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Share2, Copy, Facebook, Linkedin, Mail } from "lucide-react";
 import { FaReddit, FaWhatsapp, FaTelegram } from "react-icons/fa";
-import { FaXTwitter, FaInstagram, FaTiktok } from "react-icons/fa6";
+import { FaXTwitter, FaInstagram, FaTiktok, FaSnapchat, FaBluesky, FaThreads } from "react-icons/fa6";
 import { useToast } from "@/hooks/use-toast";
 import { openShareWindow, nativeShare, isNative } from "@/lib/platform";
 
@@ -57,6 +57,9 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
             discord: fallbackUrl,
             instagram: fallbackUrl,
             tiktok: fallbackUrl,
+            bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(fallbackUrl)}`,
+            snapchat: fallbackUrl,
+            threads: fallbackUrl,
             email: `mailto:?body=${encodeURIComponent(fallbackUrl)}`
           }
         });
@@ -82,6 +85,7 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
   const linkedinUrl = socialMediaLinks.linkedin;
   const whatsappUrl = socialMediaLinks.whatsapp;
   const telegramUrl = socialMediaLinks.telegram;
+  const blueskyUrl = socialMediaLinks.bluesky;
   const mailUrl = socialMediaLinks.email;
   // Handle copy link to clipboard
   const handleCopyLink = () => {
@@ -207,6 +211,30 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
         >
           <FaTiktok className="mr-2 h-4 w-4" />
           <span>TikTok</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => handleShareClick(blueskyUrl)}
+          className="cursor-pointer"
+        >
+          <FaBluesky className="mr-2 h-4 w-4 text-[#0085ff]" />
+          <span>Bluesky</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => handleCopyOnlyShare('Snapchat')}
+          className="cursor-pointer"
+        >
+          <FaSnapchat className="mr-2 h-4 w-4 text-[#FFFC00]" />
+          <span>Snapchat</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => handleCopyOnlyShare('Threads')}
+          className="cursor-pointer"
+        >
+          <FaThreads className="mr-2 h-4 w-4" />
+          <span>Threads</span>
         </DropdownMenuItem>
 
         <DropdownMenuItem 
