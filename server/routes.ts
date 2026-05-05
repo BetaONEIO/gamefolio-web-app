@@ -12337,6 +12337,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
+
+      // Testing override: busyguy always sees the welcome pack on startup
+      if (user.username === "busyguy") {
+        return res.json({ claimed: false, canClaim: true });
+      }
       
       res.json({
         claimed: user.welcomePackClaimed || false,
@@ -12461,11 +12466,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Mark welcome pack as claimed
-      await db.update(users).set({ 
-        welcomePackClaimed: true,
-        updatedAt: new Date()
-      }).where(eq(users.id, userId));
+      // Mark welcome pack as claimed (skip for busyguy so they always see it on startup)
+      if (user.username !== "busyguy") {
+        await db.update(users).set({ 
+          welcomePackClaimed: true,
+          updatedAt: new Date()
+        }).where(eq(users.id, userId));
+      }
       
       res.json({
         rewards,
