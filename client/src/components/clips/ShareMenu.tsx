@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Share2, Copy, Facebook, Linkedin, Mail } from "lucide-react";
-import { FaReddit, FaWhatsapp, FaTelegram } from "react-icons/fa";
+import { FaReddit, FaWhatsapp, FaTelegram, FaPinterest, FaYoutube } from "react-icons/fa";
 import { FaXTwitter, FaInstagram, FaTiktok, FaSnapchat, FaBluesky, FaThreads } from "react-icons/fa6";
 import { useToast } from "@/hooks/use-toast";
 import { openShareWindow, nativeShare, isNative } from "@/lib/platform";
@@ -60,6 +60,8 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
             bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(fallbackUrl)}`,
             snapchat: fallbackUrl,
             threads: fallbackUrl,
+            pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(fallbackUrl)}`,
+            youtube: fallbackUrl,
             email: `mailto:?body=${encodeURIComponent(fallbackUrl)}`
           }
         });
@@ -235,6 +237,22 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
         >
           <FaThreads className="mr-2 h-4 w-4" />
           <span>Threads</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => handleShareClick(socialMediaLinks.pinterest)}
+          className="cursor-pointer"
+        >
+          <FaPinterest className="mr-2 h-4 w-4 text-[#E60023]" />
+          <span>Pinterest</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => handleCopyOnlyShare('YouTube')}
+          className="cursor-pointer"
+        >
+          <FaYoutube className="mr-2 h-4 w-4 text-[#FF0000]" />
+          <span>YouTube</span>
         </DropdownMenuItem>
 
         <DropdownMenuItem 

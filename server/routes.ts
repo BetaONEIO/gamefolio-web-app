@@ -176,6 +176,8 @@ function generateSocialMediaLinks(contentUrl: string, title: string) {
     bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`${decodeURIComponent(encodedTitle)} ${contentUrl}`)}`,
     snapchat: contentUrl,
     threads: contentUrl,
+    pinterest: `https://pinterest.com/pin/create/button/?url=${encodedUrl}&description=${encodedTitle}`,
+    youtube: contentUrl,
   };
 }
 
@@ -5604,6 +5606,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )}`,
         snapchat: clipUrl,
         threads: clipUrl,
+        pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(clipUrl)}&description=${encodeURIComponent(
+          `🎮 Epic gaming clip from ${displayName}'s Gamefolio!`
+        )}`,
+        youtube: clipUrl,
         email: `mailto:?subject=${encodeURIComponent(
           `🎮 Amazing gaming clip from ${displayName}'s Gamefolio!`
         )}&body=${encodeURIComponent(
@@ -6624,6 +6630,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )}`,
         snapchat: screenshotUrl,
         threads: screenshotUrl,
+        pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(screenshotUrl)}&description=${encodeURIComponent(
+          `📸 Epic gaming screenshot from ${displayName}'s Gamefolio!`
+        )}`,
+        youtube: screenshotUrl,
         email: `mailto:?subject=${encodeURIComponent(
           `📸 Amazing gaming screenshot from ${displayName}'s Gamefolio!`
         )}&body=${encodeURIComponent(
@@ -9506,6 +9516,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`Check out this amazing gaming screenshot! 📸 ${screenshotUrl}`)}`,
         snapchat: screenshotUrl,
         threads: screenshotUrl,
+        pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(screenshotUrl)}&description=${encodeURIComponent(`Check out this amazing gaming screenshot! 📸`)}`,
+        youtube: screenshotUrl,
         email: `mailto:?subject=${encodeURIComponent(`Gaming Screenshot: ${screenshot.title}`)}&body=${encodeURIComponent(`I wanted to share this awesome gaming screenshot with you: ${screenshotUrl}`)}`
       };
 
@@ -11328,6 +11340,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`${decodeURIComponent(title)} ${shareUrl}`)}`,
         snapchat: shareUrl,
         threads: shareUrl,
+        pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(shareUrl)}&description=${title}`,
+        youtube: shareUrl,
       };
 
       const uploadedContent = {
