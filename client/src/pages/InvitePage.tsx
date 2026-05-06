@@ -40,7 +40,7 @@ function smoothScroll(id: string) {
 function GlowDot({ top, left, size = 300, opacity = 0.08 }: { top: string; left: string; size?: number; opacity?: number }) {
   return (
     <div
-      className="absolute rounded-full pointer-events-none"
+      className="absolute rounded-full pointer-events-none z-[2]"
       style={{
         top,
         left,
