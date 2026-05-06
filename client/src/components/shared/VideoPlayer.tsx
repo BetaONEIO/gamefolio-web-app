@@ -444,11 +444,11 @@ const VideoPlayer = ({
         </div>
         
         <div className="flex items-center justify-between px-2 py-1 rounded bg-black/60" style={{ color: 'white' }}>
-          <div className="flex items-center">
+          <div className="flex items-center gap-1">
             <Button 
               variant="ghost" 
               size="sm" 
-              className="text-white p-1 md:p-2 h-6 md:h-8 w-6 md:w-8"
+              className="p-0 h-7 w-7 md:h-8 md:w-8 rounded-full flex items-center justify-center bg-[#B7FF1A] hover:bg-[#c8ff4d] text-[#071013]"
               onClick={togglePlay}
               aria-label={isPlaying ? "Pause video" : "Play video"}
             >
@@ -459,7 +459,7 @@ const VideoPlayer = ({
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="text-white p-1 md:p-2 h-6 md:h-8 w-6 md:w-8"
+                className="text-[#B7FF1A] p-1 md:p-2 h-6 md:h-8 w-6 md:w-8 hover:bg-white/10"
                 onClick={toggleMute}
                 aria-label={isMuted ? "Unmute video" : "Mute video"}
               >
@@ -479,7 +479,7 @@ const VideoPlayer = ({
           <Button 
             variant="ghost" 
             size="sm" 
-            className="text-white p-1 md:p-2 h-6 md:h-8 w-6 md:w-8"
+            className="text-[#B7FF1A] p-1 md:p-2 h-6 md:h-8 w-6 md:w-8 hover:bg-white/10"
             onClick={toggleFullscreen}
             aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
           >
