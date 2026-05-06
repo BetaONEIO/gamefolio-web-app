@@ -7,7 +7,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Share2, X, Copy, Video, Gamepad2, Trophy, Upload, Code, Eye, Coffee, Scroll } from 'lucide-react';
-import { FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope } from 'react-icons/fa';
+import { FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope, FaPinterest, FaYoutube } from 'react-icons/fa';
 import { FaXTwitter, FaInstagram, FaTiktok, FaSnapchat, FaBluesky, FaThreads } from 'react-icons/fa6';
 import { toast } from '@/hooks/use-toast';
 import { CustomAvatar } from '@/components/ui/custom-avatar';
@@ -45,6 +45,8 @@ interface GamefolioShareData {
     bluesky: string;
     snapchat: string;
     threads: string;
+    pinterest: string;
+    youtube: string;
     email: string;
   };
 }
@@ -161,6 +163,8 @@ export function GamefolioShareDialog({
         bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`Check out my gaming portfolio! ${profileUrl}`)}`,
         snapchat: profileUrl,
         threads: profileUrl,
+        pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(profileUrl)}&description=${encodeURIComponent('Check out my gaming portfolio!')}`,
+        youtube: profileUrl,
         email: `mailto:?subject=Check%20out%20my%20gaming%20portfolio!&body=Hey!%20Check%20out%20my%20gaming%20portfolio:%20${encodeURIComponent(profileUrl)}`
       }
     });
@@ -186,7 +190,7 @@ export function GamefolioShareDialog({
       });
       if (handled) return;
     }
-    const COPY_ONLY = ["discord", "instagram", "tiktok", "snapchat", "threads"];
+    const COPY_ONLY = ["discord", "instagram", "tiktok", "snapchat", "threads", "youtube"];
     if (COPY_ONLY.includes(platformKey)) {
       navigator.clipboard.writeText(shareData?.profileUrl || url);
       toast({ title: `Link copied for ${platformName}!`, description: `Paste this link in ${platformName} to share your Gamefolio.`, duration: 3000 });
@@ -208,6 +212,8 @@ export function GamefolioShareDialog({
     { name: 'Bluesky', icon: FaBluesky, key: 'bluesky' },
     { name: 'Snapchat', icon: FaSnapchat, key: 'snapchat' },
     { name: 'Threads', icon: FaThreads, key: 'threads' },
+    { name: 'Pinterest', icon: FaPinterest, key: 'pinterest' },
+    { name: 'YouTube', icon: FaYoutube, key: 'youtube' },
     { name: 'Email', icon: FaEnvelope, key: 'email' },
   ];
 

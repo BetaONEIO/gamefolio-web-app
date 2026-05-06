@@ -86,11 +86,6 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
           instance.getOfferings(),
         ]);
 
-        console.log("RevenueCat initialized successfully");
-        console.log("Offerings:", offers);
-        console.log("Current offering:", offers?.current);
-        console.log("Available packages:", offers?.current?.availablePackages);
-
         setCustomerInfo(info);
         setOfferings(offers);
         setIsInitialized(true);

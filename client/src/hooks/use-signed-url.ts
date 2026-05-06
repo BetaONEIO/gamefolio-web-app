@@ -6,9 +6,6 @@ const CACHE_BUFFER = 5 * 60 * 1000; // Refresh 5 minutes before expiry
 const URL_EXPIRY = 60 * 60 * 1000; // 1 hour
 
 function isSupabaseStorageUrl(url: string): boolean {
-  // Check if it's a Supabase storage URL that needs signing
-  // All Supabase storage buckets are private and need signed URLs
-  // Note: Old URLs may still have /object/public/ path but bucket is now private
   if (!url) return false;
   return url.includes('gamefolio-media') || url.includes('gamefolio-assets') || url.includes('gamefolio-name-tags');
 }
@@ -37,6 +34,96 @@ export function clearSignedUrlCache(originalUrl?: string): void {
   }
 }
 
+// ---- Request coalescing ----
+// Multiple components requesting different URLs around the same time get
+// merged into a single batch POST to /api/media/signed-urls. This dramatically
+// cuts request count when a feed mounts many video/avatar components at once.
+
+const BATCH_WINDOW_MS = 15;
+const MAX_BATCH_SIZE = 50;
+
+const inflight = new Map<string, Promise<string>>();
+let pendingResolvers = new Map<string, (url: string) => void>();
+let pendingQueue: string[] = [];
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+function flushBatch() {
+  flushTimer = null;
+  if (pendingQueue.length === 0) return;
+
+  const urls = pendingQueue;
+  const resolvers = pendingResolvers;
+  pendingQueue = [];
+  pendingResolvers = new Map();
+
+  // Server caps batch at 50; chunk if necessary.
+  const chunks: string[][] = [];
+  for (let i = 0; i < urls.length; i += MAX_BATCH_SIZE) {
+    chunks.push(urls.slice(i, i + MAX_BATCH_SIZE));
+  }
+
+  // Resolve a caller without poisoning the cache. The original URL is returned
+  // so the UI still has *something*, but we DO NOT cache it — otherwise a
+  // transient backend blip would lock private media to a broken URL for an
+  // hour and prevent retry.
+  const resolveOnly = (url: string, value: string) => {
+    resolvers.get(url)?.(value);
+    inflight.delete(url);
+  };
+
+  // Resolve and cache (only used when the server returned a real signed URL).
+  const resolveAndCache = (url: string, signed: string) => {
+    setCachedSignedUrl(url, signed);
+    resolvers.get(url)?.(signed);
+    inflight.delete(url);
+  };
+
+  for (const chunk of chunks) {
+    fetch('/api/media/signed-urls', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ urls: chunk }),
+      credentials: 'include',
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Failed to get signed URLs');
+        const data = await res.json();
+        const map: Record<string, string> = data.signedUrls || {};
+        for (const url of chunk) {
+          const signed = map[url];
+          if (signed && signed !== url) {
+            resolveAndCache(url, signed);
+          } else {
+            // Server didn't return a signed URL — let consumers render the
+            // original but allow a fresh fetch attempt next time.
+            resolveOnly(url, url);
+          }
+        }
+      })
+      .catch(() => {
+        // Network/server failure — fall back without caching, so the next
+        // mount can retry instead of being stuck for an hour.
+        for (const url of chunk) resolveOnly(url, url);
+      });
+  }
+}
+
+function batchedFetchSignedUrl(url: string): Promise<string> {
+  const existing = inflight.get(url);
+  if (existing) return existing;
+
+  const promise = new Promise<string>((resolve) => {
+    pendingResolvers.set(url, resolve);
+  });
+  inflight.set(url, promise);
+  pendingQueue.push(url);
+
+  if (!flushTimer) {
+    flushTimer = setTimeout(flushBatch, BATCH_WINDOW_MS);
+  }
+  return promise;
+}
+
 export function useSignedUrl(publicUrl: string | undefined | null) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,13 +135,11 @@ export function useSignedUrl(publicUrl: string | undefined | null) {
       return;
     }
 
-    // For public Supabase URLs or non-Supabase URLs, use directly without signing
     if (!isSupabaseStorageUrl(publicUrl)) {
       setSignedUrl(publicUrl);
       return;
     }
 
-    // Check cache first for private URLs
     const cached = getCachedSignedUrl(publicUrl);
     if (cached) {
       setSignedUrl(cached);
@@ -62,43 +147,32 @@ export function useSignedUrl(publicUrl: string | undefined | null) {
     }
 
     setSignedUrl(null);
-    const abortController = new AbortController();
     setIsLoading(true);
     setError(null);
 
-    fetch('/api/media/signed-url', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: publicUrl }),
-      credentials: 'include',
-      signal: abortController.signal,
-    })
-      .then(async (res) => {
-        if (!res.ok) throw new Error('Failed to get signed URL');
-        const data = await res.json();
-        if (data.signedUrl) {
-          setCachedSignedUrl(publicUrl, data.signedUrl);
-          setSignedUrl(data.signedUrl);
-        }
+    let cancelled = false;
+    batchedFetchSignedUrl(publicUrl)
+      .then((url) => {
+        if (cancelled) return;
+        setSignedUrl(url);
       })
       .catch((err) => {
-        if (err?.name === 'AbortError') return;
+        if (cancelled) return;
         setError(err);
         setSignedUrl(publicUrl);
       })
       .finally(() => {
-        if (!abortController.signal.aborted) setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       });
 
-    return () => { abortController.abort(); };
+    return () => {
+      cancelled = true;
+    };
   }, [publicUrl]);
 
-  // For non-Supabase URLs, return directly; for Supabase URLs, use signed URL from state
   const finalUrl = useMemo(() => {
     if (!publicUrl) return null;
-    // Non-Supabase URLs don't need signing
     if (!isSupabaseStorageUrl(publicUrl)) return publicUrl;
-    // Supabase URLs need signed URLs - return from state (will be null until signed)
     return signedUrl;
   }, [publicUrl, signedUrl]);
 
@@ -111,7 +185,7 @@ export function useSignedUrls(publicUrls: (string | undefined | null)[]) {
   const pendingRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    const validUrls = publicUrls.filter((url): url is string => 
+    const validUrls = publicUrls.filter((url): url is string =>
       !!url && isSupabaseStorageUrl(url)
     );
 
@@ -132,19 +206,13 @@ export function useSignedUrls(publicUrls: (string | undefined | null)[]) {
 
     if (urlsToFetch.length > 0) {
       setIsLoading(true);
-      
-      apiRequest('POST', '/api/media/signed-urls', { urls: urlsToFetch })
-        .then(async (res) => {
-          if (!res.ok) throw new Error('Failed to get signed URLs');
-          const data = await res.json();
-          
-          if (data.signedUrls) {
-            for (const [originalUrl, signedUrl] of Object.entries(data.signedUrls)) {
-              setCachedSignedUrl(originalUrl, signedUrl as string);
-              newSignedUrls.set(originalUrl, signedUrl as string);
-            }
-            setSignedUrls(new Map(newSignedUrls));
-          }
+
+      Promise.all(urlsToFetch.map(batchedFetchSignedUrl))
+        .then((signed) => {
+          urlsToFetch.forEach((url, i) => {
+            newSignedUrls.set(url, signed[i]);
+          });
+          setSignedUrls(new Map(newSignedUrls));
         })
         .catch(console.error)
         .finally(() => {
@@ -176,19 +244,11 @@ export async function fetchSignedUrl(publicUrl: string): Promise<string> {
   if (cached) return cached;
 
   try {
-    const res = await apiRequest('POST', '/api/media/signed-url', { url: publicUrl });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.signedUrl) {
-        setCachedSignedUrl(publicUrl, data.signedUrl);
-        return data.signedUrl;
-      }
-    }
+    return await batchedFetchSignedUrl(publicUrl);
   } catch (error) {
     console.error('Error fetching signed URL:', error);
+    return publicUrl;
   }
-
-  return publicUrl;
 }
 
 export async function fetchSignedUrls(publicUrls: string[]): Promise<Map<string, string>> {
@@ -211,16 +271,8 @@ export async function fetchSignedUrls(publicUrls: string[]): Promise<Map<string,
 
   if (urlsToFetch.length > 0) {
     try {
-      const res = await apiRequest('POST', '/api/media/signed-urls', { urls: urlsToFetch });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.signedUrls) {
-          for (const [originalUrl, signedUrl] of Object.entries(data.signedUrls)) {
-            setCachedSignedUrl(originalUrl, signedUrl as string);
-            results.set(originalUrl, signedUrl as string);
-          }
-        }
-      }
+      const signed = await Promise.all(urlsToFetch.map(batchedFetchSignedUrl));
+      urlsToFetch.forEach((url, i) => results.set(url, signed[i]));
     } catch (error) {
       console.error('Error fetching signed URLs:', error);
     }

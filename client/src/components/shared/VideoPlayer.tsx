@@ -440,36 +440,8 @@ const VideoPlayer = ({
         muted={isMuted}
         playsInline
         preload="metadata"
-        onError={(e) => {
-          console.error("Video playback error:", e);
-          console.error("Failed video URL:", effectiveVideoUrl);
-          console.error("Video element src:", videoRef.current?.src);
-          console.error("Video readyState:", videoRef.current?.readyState);
-          console.error("Video networkState:", videoRef.current?.networkState);
-        }}
-        onLoadStart={() => {
-          console.log("Video loading started for:", effectiveVideoUrl);
-        }}
-        onCanPlay={() => {
-          console.log("Video can play:", videoUrl);
-        }}
-        onLoadedData={() => {
-          console.log("Video data loaded successfully");
-        }}
-        onCanPlayThrough={() => {
-          console.log("Video can play through without buffering");
-        }}
-        onLoadedMetadata={() => {
-          console.log("Video metadata loaded - duration:", videoRef.current?.duration);
-          console.log("Video ready to play:", videoUrl);
-          console.log("ShowControls state:", showControls);
-        }}
         onPlay={() => {
-          console.log("Video started playing:", videoUrl);
           trackView();
-        }}
-        onPause={() => {
-          console.log("Video paused:", videoUrl);
         }}
       />
       

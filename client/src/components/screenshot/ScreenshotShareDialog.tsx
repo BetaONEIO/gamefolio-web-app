@@ -9,7 +9,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Share2, Copy, X, RefreshCw, AlertCircle } from 'lucide-react';
-import { FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope } from 'react-icons/fa';
+import { FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope, FaPinterest, FaYoutube } from 'react-icons/fa';
 import { FaXTwitter, FaInstagram, FaTiktok, FaSnapchat, FaBluesky, FaThreads } from 'react-icons/fa6';
 import { useToast } from '@/hooks/use-toast';
 import { openShareWindow, nativeShare, isNative } from '@/lib/platform';
@@ -34,6 +34,8 @@ interface ShareData {
     bluesky: string;
     snapchat: string;
     threads: string;
+    pinterest: string;
+    youtube: string;
     email: string;
   };
 }
@@ -46,7 +48,7 @@ interface ScreenshotShareDialogProps {
   isOwnContent?: boolean;
 }
 
-const COPY_ONLY_PLATFORMS = ["discord", "instagram", "tiktok", "snapchat", "threads"];
+const COPY_ONLY_PLATFORMS = ["discord", "instagram", "tiktok", "snapchat", "threads", "youtube"];
 
 const SOCIAL_PLATFORMS = [
   { name: "X", icon: FaXTwitter, key: "twitter" },
@@ -61,6 +63,8 @@ const SOCIAL_PLATFORMS = [
   { name: "Bluesky", icon: FaBluesky, key: "bluesky" },
   { name: "Snapchat", icon: FaSnapchat, key: "snapchat" },
   { name: "Threads", icon: FaThreads, key: "threads" },
+  { name: "Pinterest", icon: FaPinterest, key: "pinterest" },
+  { name: "YouTube", icon: FaYoutube, key: "youtube" },
   { name: "Email", icon: FaEnvelope, key: "email" },
 ];
 

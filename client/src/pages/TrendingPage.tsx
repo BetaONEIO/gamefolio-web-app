@@ -77,19 +77,34 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   const [bookmarked, setBookmarked] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [isInView, setIsInView] = useState(true);
+  const [isInView, setIsInView] = useState(false);
+  // isNear: card is within ~1 screen of viewport — mount the VideoPlayer
+  const [isNear, setIsNear] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Pause video when this card scrolls out of view, so only the visible clip plays
   useEffect(() => {
     const el = cardRef.current;
     if (!el) return;
-    const observer = new IntersectionObserver(
+
+    // Fine-grained observer: is the card actually visible (>= 50%)?
+    const viewObserver = new IntersectionObserver(
       ([entry]) => setIsInView(entry.intersectionRatio >= 0.5),
       { threshold: [0, 0.5, 1] }
     );
-    observer.observe(el);
-    return () => observer.disconnect();
+    // Coarse observer: is the card within ~1 screen height of the viewport?
+    // rootMargin "100%" expands the intersection rect by one full viewport height
+    // in every direction, so cards just outside the screen are still "near".
+    const nearObserver = new IntersectionObserver(
+      ([entry]) => setIsNear(entry.isIntersecting),
+      { rootMargin: '100% 0px' }
+    );
+
+    viewObserver.observe(el);
+    nearObserver.observe(el);
+    return () => {
+      viewObserver.disconnect();
+      nearObserver.disconnect();
+    };
   }, []);
 
   const fmt = (n: number) => {
@@ -134,17 +149,33 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   return (
     <div ref={cardRef} className="w-full" style={{ background: '#03080A' }}>
 
-      {/* ── Video (full-width, auto-plays when in view) ── */}
-      <VideoPlayer
-        videoUrl={clip.videoUrl || ''}
-        thumbnailUrl={clip.thumbnailUrl || undefined}
-        autoPlay={isInView}
-        clipId={clip.id}
-        objectFit="contain"
-        autoHideControls
-        externalPaused={!isInView}
-        className="w-full"
-      />
+      {/* ── Video (lazy-mounted: only creates the video element when within ~1
+           screen of the viewport; shows a static thumbnail until then) ── */}
+      {isNear ? (
+        <VideoPlayer
+          videoUrl={clip.videoUrl || ''}
+          thumbnailUrl={clip.thumbnailUrl || undefined}
+          autoPlay={isInView}
+          clipId={clip.id}
+          objectFit="contain"
+          autoHideControls
+          externalPaused={!isInView}
+          className="w-full"
+        />
+      ) : (
+        <div className="w-full aspect-video bg-black flex items-center justify-center relative overflow-hidden">
+          {clip.thumbnailUrl ? (
+            <img
+              src={clip.thumbnailUrl}
+              alt={clip.title}
+              className="w-full h-full object-contain"
+              loading="lazy"
+            />
+          ) : (
+            <Play className="h-10 w-10 text-white/30" />
+          )}
+        </div>
+      )}
 
       {/* ── Header (creator info) — sits directly BELOW the video ── */}
       <div className="px-4 pt-3 pb-2">

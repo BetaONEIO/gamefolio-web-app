@@ -176,6 +176,8 @@ function generateSocialMediaLinks(contentUrl: string, title: string) {
     bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`${decodeURIComponent(encodedTitle)} ${contentUrl}`)}`,
     snapchat: contentUrl,
     threads: contentUrl,
+    pinterest: `https://pinterest.com/pin/create/button/?url=${encodedUrl}&description=${encodedTitle}`,
+    youtube: contentUrl,
   };
 }
 
@@ -2834,6 +2836,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Referral code can only contain letters and numbers' });
       }
 
+      // Block reserved brand names
+      const RESERVED_CODES = ['GAMEFOLIO', 'ADMIN', 'SUPPORT', 'STAFF', 'MODERATOR', 'MOD', 'OFFICIAL'];
+      if (RESERVED_CODES.includes(trimmed)) {
+        return res.status(400).json({ message: 'That referral code is reserved and cannot be used. Please choose another.' });
+      }
+
       // Profanity check using the content filter service
       const { contentFilterService } = await import('./services/content-filter');
       const isProfane = await contentFilterService.isProfane(trimmed);
@@ -3246,6 +3254,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper to sign all Supabase URLs in clip objects (thumbnails, videos, avatars)
+  // Short-lived in-memory cache for trending feeds (DB query + signed URLs).
+  // Keyed by route+normalized-params+user. Bounded LRU so user-controlled
+  // query params can't blow up memory.
+  const TRENDING_CACHE_TTL_MS = 30_000;
+  const TRENDING_CACHE_MAX_ENTRIES = 500;
+  // Map preserves insertion order — re-inserting on hit gives us LRU semantics.
+  const trendingCache = new Map<string, { expires: number; data: any }>();
+  const trendingInflight = new Map<string, Promise<any>>();
+
+  async function getCachedTrending<T>(key: string, loader: () => Promise<T>): Promise<T> {
+    const now = Date.now();
+    const hit = trendingCache.get(key);
+    if (hit && hit.expires > now) {
+      // LRU bump
+      trendingCache.delete(key);
+      trendingCache.set(key, hit);
+      return hit.data as T;
+    }
+    if (hit) trendingCache.delete(key);
+
+    const existing = trendingInflight.get(key);
+    if (existing) return existing as Promise<T>;
+
+    const promise = (async () => {
+      try {
+        const data = await loader();
+        trendingCache.set(key, { expires: Date.now() + TRENDING_CACHE_TTL_MS, data });
+        // Evict oldest entries when over capacity (insertion-order iteration).
+        while (trendingCache.size > TRENDING_CACHE_MAX_ENTRIES) {
+          const oldest = trendingCache.keys().next().value;
+          if (oldest === undefined) break;
+          trendingCache.delete(oldest);
+        }
+        return data;
+      } finally {
+        trendingInflight.delete(key);
+      }
+    })();
+    trendingInflight.set(key, promise);
+    return promise;
+  }
+
+  // Normalize trending query params so semantically-equivalent queries
+  // ("10" vs "010" vs missing gameId) collapse to one cache key.
+  function trendingCacheKey(
+    route: string,
+    period: unknown,
+    limit: unknown,
+    gameId: unknown,
+    currentUserId: number | undefined,
+  ): string {
+    const allowedPeriods = new Set(['all', 'recent', 'day', 'week', 'month', 'year']);
+    const periodStr = typeof period === 'string' && allowedPeriods.has(period) ? period : 'all';
+    const parsedLimit = Math.max(1, Math.min(50, parseInt(String(limit ?? '10'), 10) || 10));
+    const parsedGameId = gameId !== undefined && gameId !== '' && !Number.isNaN(parseInt(String(gameId), 10))
+      ? parseInt(String(gameId), 10)
+      : '';
+    return `${route}:${periodStr}:${parsedLimit}:${parsedGameId}:${currentUserId ?? 'guest'}`;
+  }
+
+  // Periodic eviction so the cache doesn't grow without bound
+  setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of trendingCache) {
+      if (v.expires <= now) trendingCache.delete(k);
+    }
+  }, 60_000).unref?.();
+
   async function signClipUrls<T extends { thumbnailUrl?: string | null; videoUrl?: string | null; user?: { avatarUrl?: string | null } | null }>(clips: T[]): Promise<T[]> {
     return Promise.all(
       clips.map(async (clip) => {
@@ -5186,20 +5262,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { period = 'all', limit = 10, gameId } = req.query;
       const currentUserId = (req.user as any)?.id;
-      console.log('🔍 Trending clips API: currentUserId =', currentUserId, 'period =', period, 'session user:', req.user);
-      
+
       // Force no caching for privacy-sensitive content
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
-      
-      const clips = await storage.getTrendingClips(
-        period as string,
-        parseInt(limit as string) || 10,
-        gameId ? parseInt(gameId as string) : undefined,
-        currentUserId
-      );
-      res.json(await signClipUrls(clips));
+
+      const cacheKey = trendingCacheKey('clips', period, limit, gameId, currentUserId);
+      const signed = await getCachedTrending(cacheKey, async () => {
+        const clips = await storage.getTrendingClips(
+          period as string,
+          parseInt(limit as string) || 10,
+          gameId ? parseInt(gameId as string) : undefined,
+          currentUserId
+        );
+        return await signClipUrls(clips);
+      });
+      res.json(signed);
     } catch (err) {
       console.error("Error fetching trending clips:", err);
       res.status(500).json({ message: "Internal server error" });
@@ -5211,12 +5290,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
       const currentUserId = (req.user as any)?.id;
-      const reels = await storage.getTrendingReels(
+      const cacheKey = trendingCacheKey('reels-home', period, limit, gameId, currentUserId);
+      const reels = await getCachedTrending(cacheKey, () => storage.getTrendingReels(
         period as string,
         parseInt(limit as string) || 10,
         gameId ? parseInt(gameId as string) : undefined,
         currentUserId
-      );
+      ));
       res.json(reels);
     } catch (err) {
       console.error("Error fetching trending reels:", err);
@@ -5242,22 +5322,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
       const currentUserId = (req.user as any)?.id;
-      const reels = await storage.getTrendingReels(
-        period as string,
-        parseInt(limit as string) || 10,
-        gameId ? parseInt(gameId as string) : undefined,
-        currentUserId
-      );
-      const reelsWithSignedThumbnails = await Promise.all(
-        reels.map(async (reel) => {
-          if (reel.thumbnailUrl) {
-            const signedUrl = await supabaseStorage.convertToSignedUrl(reel.thumbnailUrl, 3600);
-            return { ...reel, thumbnailUrl: signedUrl || reel.thumbnailUrl };
-          }
-          return reel;
-        })
-      );
-      res.json(reelsWithSignedThumbnails);
+      const cacheKey = trendingCacheKey('reels', period, limit, gameId, currentUserId);
+      const result = await getCachedTrending(cacheKey, async () => {
+        const reels = await storage.getTrendingReels(
+          period as string,
+          parseInt(limit as string) || 10,
+          gameId ? parseInt(gameId as string) : undefined,
+          currentUserId
+        );
+        return await Promise.all(
+          reels.map(async (reel) => {
+            if (reel.thumbnailUrl) {
+              const signedUrl = await supabaseStorage.convertToSignedUrl(reel.thumbnailUrl, 3600);
+              return { ...reel, thumbnailUrl: signedUrl || reel.thumbnailUrl };
+            }
+            return reel;
+          })
+        );
+      });
+      res.json(result);
     } catch (err) {
       console.error("Error fetching trending reels:", err);
       res.status(500).json({ message: "Internal server error" });
@@ -5604,6 +5687,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )}`,
         snapchat: clipUrl,
         threads: clipUrl,
+        pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(clipUrl)}&description=${encodeURIComponent(
+          `🎮 Epic gaming clip from ${displayName}'s Gamefolio!`
+        )}`,
+        youtube: clipUrl,
         email: `mailto:?subject=${encodeURIComponent(
           `🎮 Amazing gaming clip from ${displayName}'s Gamefolio!`
         )}&body=${encodeURIComponent(
@@ -6624,6 +6711,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )}`,
         snapchat: screenshotUrl,
         threads: screenshotUrl,
+        pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(screenshotUrl)}&description=${encodeURIComponent(
+          `📸 Epic gaming screenshot from ${displayName}'s Gamefolio!`
+        )}`,
+        youtube: screenshotUrl,
         email: `mailto:?subject=${encodeURIComponent(
           `📸 Amazing gaming screenshot from ${displayName}'s Gamefolio!`
         )}&body=${encodeURIComponent(
@@ -8434,19 +8525,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get name tags available for purchase in the store
   app.get("/api/store/name-tags", async (req, res) => {
     try {
-      const allTags = await storage.getAllNameTags();
-      const storeTags = allTags.filter(t => t.availableInStore && t.isActive && !t.isDefault);
-      
-      const tagsWithSignedUrls = await Promise.all(
-        storeTags.map(async (tag) => {
-          let imageUrl = tag.imageUrl;
-          if (imageUrl && imageUrl.includes('supabase.co/storage')) {
-            const signed = await supabaseStorage.convertToSignedUrl(imageUrl, 3600);
-            if (signed) imageUrl = signed;
-          }
-          return { ...tag, imageUrl };
-        })
-      );
+      // Cache the public name-tag list + signed images (slow Supabase signing).
+      // Per-user "owned"/Pro status is merged fresh below.
+      const tagsWithSignedUrls = await getCachedTrending('store-name-tags', async () => {
+        const allTags = await storage.getAllNameTags();
+        const storeTags = allTags.filter(t => t.availableInStore && t.isActive && !t.isDefault);
+        return await Promise.all(
+          storeTags.map(async (tag) => {
+            let imageUrl = tag.imageUrl;
+            if (imageUrl && imageUrl.includes('supabase.co/storage')) {
+              const signed = await supabaseStorage.convertToSignedUrl(imageUrl, 3600);
+              if (signed) imageUrl = signed;
+            }
+            return { ...tag, imageUrl };
+          })
+        );
+      });
 
       if (req.isAuthenticated()) {
         const unlockedTags = await storage.getUserUnlockedNameTags(req.user.id);
@@ -8459,7 +8553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const discountedCost = isPro ? Math.floor(baseCost * 0.8) : baseCost;
           return {
             ...tag,
-            owned: unlockedIds.has(tag.id) || isPro,
+            owned: unlockedIds.has(tag.id),
             originalPrice: baseCost,
             gfCost: discountedCost,
             proDiscount: isPro,
@@ -8681,22 +8775,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/store/borders", async (req, res) => {
     try {
       const shapeFilter = req.query.shape as string | undefined;
-      const allBorders = await storage.getAllProfileBordersFromTable();
-      const storeBorders = allBorders.filter(b => {
-        if (!b.availableInStore || !b.isActive || b.isDefault) return false;
-        if (shapeFilter && b.shape !== shapeFilter) return false;
-        return true;
-      });
-
-      const bordersWithSignedUrls = await Promise.all(
-        storeBorders.map(async (border) => {
-          let imageUrl = border.imageUrl;
-          if (imageUrl && imageUrl.includes('supabase.co/storage')) {
-            const signed = await supabaseStorage.convertToSignedUrl(imageUrl, 3600);
-            if (signed) imageUrl = signed;
-          }
-          return { ...border, imageUrl };
-        })
+      // Cache the full border list with signed image URLs (per shape filter).
+      // Per-user "owned"/Pro flags merged fresh below.
+      const bordersWithSignedUrls = await getCachedTrending(
+        `store-borders:${shapeFilter || 'all'}`,
+        async () => {
+          const allBorders = await storage.getAllProfileBordersFromTable();
+          const storeBorders = allBorders.filter(b => {
+            if (!b.availableInStore || !b.isActive || b.isDefault) return false;
+            if (shapeFilter && b.shape !== shapeFilter) return false;
+            return true;
+          });
+          return await Promise.all(
+            storeBorders.map(async (border) => {
+              let imageUrl = border.imageUrl;
+              if (imageUrl && imageUrl.includes('supabase.co/storage')) {
+                const signed = await supabaseStorage.convertToSignedUrl(imageUrl, 3600);
+                if (signed) imageUrl = signed;
+              }
+              return { ...border, imageUrl };
+            })
+          );
+        },
       );
 
       if (req.isAuthenticated()) {
@@ -9506,6 +9606,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`Check out this amazing gaming screenshot! 📸 ${screenshotUrl}`)}`,
         snapchat: screenshotUrl,
         threads: screenshotUrl,
+        pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(screenshotUrl)}&description=${encodeURIComponent(`Check out this amazing gaming screenshot! 📸`)}`,
+        youtube: screenshotUrl,
         email: `mailto:?subject=${encodeURIComponent(`Gaming Screenshot: ${screenshot.title}`)}&body=${encodeURIComponent(`I wanted to share this awesome gaming screenshot with you: ${screenshotUrl}`)}`
       };
 
@@ -11328,6 +11430,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`${decodeURIComponent(title)} ${shareUrl}`)}`,
         snapchat: shareUrl,
         threads: shareUrl,
+        pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(shareUrl)}&description=${title}`,
+        youtube: shareUrl,
       };
 
       const uploadedContent = {
@@ -12777,14 +12881,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         results[url] = url; // Return original URL for non-Supabase URLs
       }
 
-      // Generate signed URLs for Supabase bucket content
-      for (const url of supabaseUrls) {
-        const signedUrl = await supabaseStorage.convertToSignedUrl(url, 3600);
-        if (signedUrl) {
-          results[url] = signedUrl;
-        } else {
-          results[url] = url; // Fallback to original if signing fails
-        }
+      // Generate signed URLs for Supabase bucket content in parallel
+      const signedResults = await Promise.all(
+        supabaseUrls.map(async (url) => {
+          const signedUrl = await supabaseStorage.convertToSignedUrl(url, 3600);
+          return [url, signedUrl || url] as const;
+        })
+      );
+      for (const [url, signed] of signedResults) {
+        results[url] = signed;
       }
 
       res.json({ signedUrls: results });
