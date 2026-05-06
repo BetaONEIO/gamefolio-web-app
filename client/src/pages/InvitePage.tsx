@@ -322,16 +322,16 @@ export default function InvitePage() {
         >
           <div className="flex flex-col gap-4 flex-1">
             <p className="text-xs font-bold tracking-widest uppercase" style={{ color: PRIMARY }}>Early Access</p>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-white leading-tight">We've just launched</h2>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-white leading-tight">Join Gamefolio Early Access</h2>
             <p className="text-gray-400 text-base leading-relaxed">
-              Secure your username, start building your profile, upload your clips, and be part of Gamefolio from the beginning.
+              Secure your username, upload your clips, and grow with Gamefolio from the beginning.
             </p>
           </div>
           <div className="flex flex-col gap-4 flex-1">
             {[
-              "First pick of usernames",
-              "More visibility while the platform grows",
-              "Help shape what we build next",
+              "Priority username access",
+              "Increased visibility as Gamefolio grows",
+              "Direct influence on future features",
             ].map(point => (
               <div key={point} className="flex items-start gap-3">
                 <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: PRIMARY_DIM }}>
