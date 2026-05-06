@@ -16,6 +16,9 @@ import {
 } from "lucide-react";
 import { SiTwitch, SiKick } from "react-icons/si";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
+import heroVid1 from "@assets/gamer.mp4";
+import heroVid2 from "@assets/Forzadrift_1756741835180.mp4";
+import heroVid3 from "@assets/NFT_mint_1770134654009.mp4";
 
 const PRIMARY = "#b5f23d";
 const PRIMARY_DIM = "rgba(181,242,61,0.12)";
@@ -187,6 +190,17 @@ export default function InvitePage() {
 
       {/* Hero */}
       <section className="relative px-6 pt-40 pb-28 overflow-hidden">
+        {/* Video collage background */}
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <div className="w-full h-full grid" style={{ gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr" }}>
+            <video src={heroVid1} autoPlay loop muted playsInline className="w-full h-full object-cover row-span-2" />
+            <video src={heroVid2} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+            <video src={heroVid3} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+          </div>
+        </div>
+        {/* Dark overlay */}
+        <div className="absolute inset-0 z-[1]" style={{ background: "rgba(8,14,23,0.82)" }} />
+
         <GlowDot top="30%" left="50%" size={600} opacity={0.07} />
         <GlowDot top="10%" left="20%" size={300} opacity={0.05} />
         <GlowDot top="60%" left="80%" size={250} opacity={0.05} />
