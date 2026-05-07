@@ -428,7 +428,7 @@ function sanitizePlatformInput(key: PlatformKey, raw: string): string {
     twitterUsername: /^(?:https?:\/\/)?(?:www\.)?(?:twitter\.com|x\.com)\/@?/i,
     youtubeUsername: /^(?:https?:\/\/)?(?:www\.)?youtube\.com\/@?/i,
     steamUsername: /^(?:https?:\/\/)?(?:www\.)?steamcommunity\.com\/id\//i,
-    rumbleUsername: /^(?:https?:\/\/)?(?:www\.)?rumble\.com\/c\//i,
+    rumbleUsername: /^(?:https?:\/\/)?(?:www\.)?rumble\.com\/(?:user\/|c\/)/i,
     playstationUsername: /^(?:https?:\/\/)?(?:www\.)?psnprofiles\.com\//i,
   };
   const pattern = urlPatterns[key];
@@ -445,7 +445,7 @@ function getPlatformUrl(key: PlatformKey, username: string): string | null {
     case 'playstationUsername': return `psnprofiles.com/${u}`;
     case 'twitterUsername': return `x.com/${u}`;
     case 'youtubeUsername': return `youtube.com/@${u}`;
-    case 'rumbleUsername': return `rumble.com/c/${u}`;
+    case 'rumbleUsername': return `rumble.com/user/${u}`;
     default: return null;
   }
 }

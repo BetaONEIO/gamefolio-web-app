@@ -3109,7 +3109,7 @@ const ProfilePage = () => {
             )}
             {profile.rumbleUsername && (
               <a 
-                href={`https://rumble.com/c/${profile.rumbleUsername}`}
+                href={`https://rumble.com/user/${profile.rumbleUsername}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
@@ -3434,7 +3434,7 @@ const ProfilePage = () => {
                 )}
                 {profile.rumbleUsername && (
                   <a 
-                    href={`https://rumble.com/c/${profile.rumbleUsername}`}
+                    href={`https://rumble.com/user/${profile.rumbleUsername}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
@@ -4997,7 +4997,7 @@ const ProfilePage = () => {
 
                     {profile.rumbleUsername && (
                       <a 
-                        href={`https://rumble.com/c/${profile.rumbleUsername}`}
+                        href={`https://rumble.com/user/${profile.rumbleUsername}`}
                         target="_blank"
                         rel="noreferrer"
                         className="hover:opacity-80 flex items-center gap-2"
