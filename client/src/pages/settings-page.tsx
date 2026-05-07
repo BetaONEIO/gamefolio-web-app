@@ -409,18 +409,92 @@ const darkenColor = (hex: string, percent: number) => {
 };
 
 const PLATFORM_DEFINITIONS = [
-  { key: "steamUsername" as const, label: "Steam", placeholder: "Enter your Steam username", icon: "steam", category: "gaming" },
+  { key: "steamUsername" as const, label: "Steam", placeholder: "Your Steam username (e.g. CoolGamer99)", icon: "steam", category: "gaming" },
   { key: "xboxUsername" as const, label: "Xbox", placeholder: "Enter your Xbox gamertag", icon: "xbox", category: "gaming" },
-  { key: "playstationUsername" as const, label: "PlayStation", placeholder: "Enter your PlayStation ID", icon: "playstation", category: "gaming" },
-  { key: "discordUsername" as const, label: "Discord", placeholder: "Enter your Discord username", icon: "discord", category: "gaming" },
-  { key: "epicUsername" as const, label: "Epic Games", placeholder: "Enter your Epic Games username", icon: "epic", category: "gaming" },
-  { key: "nintendoUsername" as const, label: "Nintendo", placeholder: "Enter your Nintendo username", icon: "nintendo", category: "gaming" },
-  { key: "twitterUsername" as const, label: "X (Twitter)", placeholder: "Enter your X username", icon: "twitter", category: "social" },
-  { key: "youtubeUsername" as const, label: "YouTube", placeholder: "Enter your YouTube username", icon: "youtube", category: "social" },
-  { key: "rumbleUsername" as const, label: "Rumble", placeholder: "Enter your Rumble username", icon: "rumble", category: "social" },
+  { key: "playstationUsername" as const, label: "PlayStation", placeholder: "Your PSN ID (e.g. CoolGamer99)", icon: "playstation", category: "gaming" },
+  { key: "discordUsername" as const, label: "Discord", placeholder: "Your Discord username (e.g. coolgamer)", icon: "discord", category: "gaming" },
+  { key: "epicUsername" as const, label: "Epic Games", placeholder: "Your Epic Games display name", icon: "epic", category: "gaming" },
+  { key: "nintendoUsername" as const, label: "Nintendo", placeholder: "Your Nintendo username", icon: "nintendo", category: "gaming" },
+  { key: "twitterUsername" as const, label: "X (Twitter)", placeholder: "Your X handle without @ (e.g. coolgamer)", icon: "twitter", category: "social" },
+  { key: "youtubeUsername" as const, label: "YouTube", placeholder: "Your YouTube handle without @ (e.g. coolgamer)", icon: "youtube", category: "social" },
+  { key: "rumbleUsername" as const, label: "Rumble", placeholder: "Your Rumble username (e.g. coolgamer)", icon: "rumble", category: "social" },
 ] as const;
 
 type PlatformKey = typeof PLATFORM_DEFINITIONS[number]["key"];
+
+function sanitizePlatformInput(key: PlatformKey, raw: string): string {
+  let v = raw;
+  const urlPatterns: Partial<Record<PlatformKey, RegExp>> = {
+    twitterUsername: /^(?:https?:\/\/)?(?:www\.)?(?:twitter\.com|x\.com)\/@?/i,
+    youtubeUsername: /^(?:https?:\/\/)?(?:www\.)?youtube\.com\/@?/i,
+    steamUsername: /^(?:https?:\/\/)?(?:www\.)?steamcommunity\.com\/id\//i,
+    rumbleUsername: /^(?:https?:\/\/)?(?:www\.)?rumble\.com\/c\//i,
+    playstationUsername: /^(?:https?:\/\/)?(?:www\.)?psnprofiles\.com\//i,
+  };
+  const pattern = urlPatterns[key];
+  if (pattern) v = v.replace(pattern, '');
+  if (key === 'twitterUsername' || key === 'youtubeUsername') v = v.replace(/^@+/, '');
+  return v.trim();
+}
+
+function getPlatformUrl(key: PlatformKey, username: string): string | null {
+  const u = username.trim();
+  if (!u) return null;
+  switch (key) {
+    case 'steamUsername': return `steamcommunity.com/id/${u}`;
+    case 'playstationUsername': return `psnprofiles.com/${u}`;
+    case 'twitterUsername': return `x.com/${u}`;
+    case 'youtubeUsername': return `youtube.com/@${u}`;
+    case 'rumbleUsername': return `rumble.com/c/${u}`;
+    default: return null;
+  }
+}
+
+function validatePlatformInput(key: PlatformKey, username: string): string | null {
+  const u = username.trim();
+  if (!u) return null;
+  switch (key) {
+    case 'steamUsername':
+      if (u.length < 2) return 'Must be at least 2 characters';
+      if (u.length > 32) return 'Must be 32 characters or fewer';
+      if (!/^[a-zA-Z0-9_-]+$/.test(u)) return 'Only letters, numbers, _ and - allowed';
+      return null;
+    case 'playstationUsername':
+      if (u.length < 3) return 'Must be at least 3 characters';
+      if (u.length > 16) return 'Must be 16 characters or fewer';
+      if (!/^[a-zA-Z0-9_-]+$/.test(u)) return 'Only letters, numbers, _ and - allowed';
+      return null;
+    case 'discordUsername':
+      if (u.length < 2) return 'Must be at least 2 characters';
+      if (u.length > 32) return 'Must be 32 characters or fewer';
+      if (!/^[a-zA-Z0-9_.]+$/.test(u)) return 'Only letters, numbers, _ and . allowed';
+      return null;
+    case 'epicUsername':
+      if (u.length < 3) return 'Must be at least 3 characters';
+      if (u.length > 16) return 'Must be 16 characters or fewer';
+      return null;
+    case 'nintendoUsername':
+      if (u.length < 2) return 'Must be at least 2 characters';
+      if (u.length > 10) return 'Must be 10 characters or fewer';
+      return null;
+    case 'twitterUsername':
+      if (u.length > 15) return 'Must be 15 characters or fewer';
+      if (!/^[a-zA-Z0-9_]+$/.test(u)) return 'Only letters, numbers and _ allowed';
+      return null;
+    case 'youtubeUsername':
+      if (u.length < 3) return 'Must be at least 3 characters';
+      if (u.length > 30) return 'Must be 30 characters or fewer';
+      if (!/^[a-zA-Z0-9_.]+$/.test(u)) return 'Only letters, numbers, _ and . allowed';
+      return null;
+    case 'rumbleUsername':
+      if (u.length < 2) return 'Must be at least 2 characters';
+      if (u.length > 50) return 'Must be 50 characters or fewer';
+      if (!/^[a-zA-Z0-9_-]+$/.test(u)) return 'Only letters, numbers, _ and - allowed';
+      return null;
+    default:
+      return null;
+  }
+}
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
@@ -487,9 +561,15 @@ export default function SettingsPage() {
 
   const handleAddPlatform = async () => {
     if (!user || !selectedPlatform || !platformHandle.trim()) return;
+    const sanitized = sanitizePlatformInput(selectedPlatform, platformHandle);
+    const validationError = validatePlatformInput(selectedPlatform, sanitized);
+    if (validationError) {
+      toast({ title: "Invalid username", description: validationError, variant: "destructive" });
+      return;
+    }
     setSavingPlatform(true);
     try {
-      await apiRequest("PATCH", `/api/users/${user.id}`, { [selectedPlatform]: platformHandle.trim() });
+      await apiRequest("PATCH", `/api/users/${user.id}`, { [selectedPlatform]: sanitized });
       await refreshUser();
       toast({ title: "Platform added", description: "Your platform connection has been saved.", duration: 3000 });
       setShowAddPlatform(false);
@@ -3682,18 +3762,46 @@ export default function SettingsPage() {
                                 <Input
                                   placeholder={platform.placeholder}
                                   value={platformHandle}
-                                  onChange={(e) => setPlatformHandle(e.target.value)}
+                                  onChange={(e) => setPlatformHandle(sanitizePlatformInput(platform.key, e.target.value))}
                                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPlatform(); } }}
                                   autoFocus
+                                  className={platformHandle.trim() && validatePlatformInput(platform.key, platformHandle) ? 'border-red-500 focus-visible:ring-red-500' : ''}
                                 />
+                                {/* Live URL preview */}
+                                {platformHandle.trim() && getPlatformUrl(platform.key, platformHandle) && !validatePlatformInput(platform.key, platformHandle) && (
+                                  <a
+                                    href={`https://${getPlatformUrl(platform.key, platformHandle)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2 transition-colors group"
+                                  >
+                                    <ExternalLink className="w-3 h-3 flex-shrink-0 text-primary group-hover:text-slate-200" />
+                                    <span className="font-mono truncate">{getPlatformUrl(platform.key, platformHandle)}</span>
+                                    <span className="ml-auto text-[10px] text-slate-500 group-hover:text-slate-400 flex-shrink-0">click to verify</span>
+                                  </a>
+                                )}
+                                {/* For platforms without a URL, show a simple username preview */}
+                                {platformHandle.trim() && !getPlatformUrl(platform.key, platformHandle) && !validatePlatformInput(platform.key, platformHandle) && (
+                                  <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
+                                    <Check className="w-3 h-3 flex-shrink-0 text-green-400" />
+                                    <span>Will show as <span className="text-white font-medium">{platformHandle}</span> on your profile</span>
+                                  </div>
+                                )}
+                                {/* Validation error */}
+                                {platformHandle.trim() && validatePlatformInput(platform.key, platformHandle) && (
+                                  <p className="flex items-center gap-1.5 text-xs text-red-400">
+                                    <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                                    {validatePlatformInput(platform.key, platformHandle)}
+                                  </p>
+                                )}
                                 <div className="flex gap-2 justify-end">
-                                  <Button variant="outline" size="sm" onClick={() => setShowAddPlatform(false)}>
+                                  <Button variant="outline" size="sm" onClick={() => { setShowAddPlatform(false); setPlatformHandle(''); }}>
                                     Cancel
                                   </Button>
                                   <Button
                                     size="sm"
                                     onClick={handleAddPlatform}
-                                    disabled={!platformHandle.trim() || savingPlatform}
+                                    disabled={!platformHandle.trim() || savingPlatform || !!validatePlatformInput(platform.key, platformHandle)}
                                   >
                                     {savingPlatform ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />}
                                     Save
