@@ -3645,7 +3645,24 @@ export default function SettingsPage() {
                               )}
                             </div>
                             {isConnected ? (
-                              <div className="text-xs text-slate-400 truncate">{user?.[platform.key]}</div>
+                              (() => {
+                                const username = user?.[platform.key] as string;
+                                const url = username ? getPlatformUrl(platform.key, username) : null;
+                                return url ? (
+                                  <a
+                                    href={`https://${url}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="flex items-center gap-1 text-xs text-slate-400 hover:text-primary transition-colors group truncate"
+                                  >
+                                    <span className="truncate">{url}</span>
+                                    <ExternalLink className="w-3 h-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </a>
+                                ) : (
+                                  <div className="text-xs text-slate-400 truncate">{username}</div>
+                                );
+                              })()
                             ) : (
                               <div className="text-xs text-slate-500">Not connected</div>
                             )}
