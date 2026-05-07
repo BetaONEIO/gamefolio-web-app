@@ -3107,6 +3107,18 @@ const ProfilePage = () => {
                 <span>{profile.youtubeUsername}</span>
               </a>
             )}
+            {profile.rumbleUsername && (
+              <a 
+                href={`https://rumble.com/c/${profile.rumbleUsername}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
+                style={{ background: 'rgba(133,199,66,0.15)', color: '#85C742', border: '1px solid rgba(133,199,66,0.3)' }}
+              >
+                <FaYoutube className="w-2.5 h-2.5" style={{ color: '#85C742' }} />
+                <span>{profile.rumbleUsername}</span>
+              </a>
+            )}
             {profile.instagramUsername && (
               <a 
                 href={`https://instagram.com/${profile.instagramUsername}`}
@@ -3358,7 +3370,7 @@ const ProfilePage = () => {
             </div>
 
             {/* Platform Connections — below the stats card */}
-            {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
+            {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.rumbleUsername || profile.instagramUsername || profile.facebookUsername) && (
               <div className={`flex flex-wrap gap-2 mt-4 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''}`}>
                 {profile.steamUsername && (
                   <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('steam')}>
@@ -3418,6 +3430,18 @@ const ProfilePage = () => {
                   >
                     <FaYoutube className="w-3 h-3" />
                     <span>{profile.youtubeUsername}</span>
+                  </a>
+                )}
+                {profile.rumbleUsername && (
+                  <a 
+                    href={`https://rumble.com/c/${profile.rumbleUsername}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
+                    style={{ background: 'rgba(133,199,66,0.15)', color: '#85C742', border: '1px solid rgba(133,199,66,0.3)' }}
+                  >
+                    <FaYoutube className="w-3 h-3" style={{ color: '#85C742' }} />
+                    <span>{profile.rumbleUsername}</span>
                   </a>
                 )}
                 {profile.instagramUsername && (
@@ -4971,6 +4995,19 @@ const ProfilePage = () => {
                       </a>
                     )}
 
+                    {profile.rumbleUsername && (
+                      <a 
+                        href={`https://rumble.com/c/${profile.rumbleUsername}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:opacity-80 flex items-center gap-2"
+                        style={{ color: '#85C742' }}
+                      >
+                        <FaYoutube className="h-5 w-5" style={{ color: '#85C742' }} />
+                        <span>Rumble: {profile.rumbleUsername}</span>
+                      </a>
+                    )}
+
                     {profile.steamUsername && (
                       <a 
                         href={`https://steamcommunity.com/id/${profile.steamUsername}`}
@@ -4999,6 +5036,7 @@ const ProfilePage = () => {
 
                     {!profile.youtubeUsername && 
                      !profile.twitterUsername && 
+                     !profile.rumbleUsername &&
                      !profile.steamUsername && 
                      !profile.xboxUsername && 
                      !profile.playstationUsername && (

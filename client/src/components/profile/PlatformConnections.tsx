@@ -80,6 +80,13 @@ const PlatformConnections: React.FC<PlatformConnectionsProps> = ({
       color: 'text-[#FF0000] hover:opacity-80'
     },
     {
+      name: 'Rumble',
+      username: profile.rumbleUsername,
+      icon: <FaYoutube className="w-5 h-5" style={{ color: '#85C742' }} />,
+      url: (username: string) => `https://rumble.com/c/${username}`,
+      color: 'text-[#85C742] hover:opacity-80'
+    },
+    {
       name: 'Instagram',
       username: profile.instagramUsername,
       icon: <FaInstagram className="w-5 h-5" />,

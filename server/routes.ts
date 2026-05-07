@@ -2583,6 +2583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           nintendoUsername: userWithoutPassword.nintendoUsername || null,
           twitterUsername: userWithoutPassword.twitterUsername || null,
           youtubeUsername: userWithoutPassword.youtubeUsername || null,
+          rumbleUsername: userWithoutPassword.rumbleUsername || null,
           nftProfileTokenId: userWithoutPassword.nftProfileTokenId || null,
           nftProfileImageUrl: userWithoutPassword.nftProfileImageUrl || null,
           activeProfilePicType: userWithoutPassword.activeProfilePicType || 'upload',
@@ -2689,6 +2690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           nintendoUsername: fallbackWithoutPassword.nintendoUsername || null,
           twitterUsername: fallbackWithoutPassword.twitterUsername || null,
           youtubeUsername: fallbackWithoutPassword.youtubeUsername || null,
+          rumbleUsername: fallbackWithoutPassword.rumbleUsername || null,
           nftProfileTokenId: fallbackWithoutPassword.nftProfileTokenId || null,
           nftProfileImageUrl: fallbackWithoutPassword.nftProfileImageUrl || null,
           activeProfilePicType: fallbackWithoutPassword.activeProfilePicType || 'upload',
@@ -2783,6 +2785,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       nintendoUsername: userWithoutPassword.nintendoUsername || null,
       twitterUsername: userWithoutPassword.twitterUsername || null,
       youtubeUsername: userWithoutPassword.youtubeUsername || null,
+      rumbleUsername: userWithoutPassword.rumbleUsername || null,
       nftProfileTokenId: userWithoutPassword.nftProfileTokenId || null,
       nftProfileImageUrl: userWithoutPassword.nftProfileImageUrl || null,
       activeProfilePicType: userWithoutPassword.activeProfilePicType || 'upload',
@@ -4547,7 +4550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "hideBanner", "statsGlassEffect", "profileBackgroundGradient",
         "steamUsername", "xboxUsername", "playstationUsername",
         "discordUsername", "epicUsername", "twitchUsername", "youtubeUsername",
-        "twitterUsername", "instagramUsername", "facebookUsername", "nintendoUsername",
+        "twitterUsername", "instagramUsername", "facebookUsername", "nintendoUsername", "rumbleUsername",
         "streamPlatform", "streamChannelName", "showLiveOverlay",
       ]);
       const safeBody = Object.fromEntries(
