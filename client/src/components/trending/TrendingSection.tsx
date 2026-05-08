@@ -16,7 +16,7 @@ interface TrendingSectionProps {
   className?: string;
 }
 
-// Reel card component - TikTok/YouTube Shorts style
+// Reel card component - clean 9:16 thumbnail with meta below
 const ReelCard: React.FC<{ reel: any; reelsList?: any[] }> = ({ reel, reelsList }) => {
   const { openClipDialog } = useClipDialog();
 
@@ -32,76 +32,63 @@ const ReelCard: React.FC<{ reel: any; reelsList?: any[] }> = ({ reel, reelsList 
   };
 
   return (
-    <div 
+    <div
       onClick={handleReelClick}
-      className="group relative overflow-hidden rounded-xl cursor-pointer aspect-[9/16] border border-border/50 hover:border-primary/50 transition-all duration-300"
+      className="group cursor-pointer"
     >
-      {/* Thumbnail */}
-      <div className="absolute inset-0 bg-gray-800" />
-      <LazyImage
-        src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
-        alt={reel.title}
-        className="w-full h-full object-cover"
-        placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
-        showLoadingSpinner={true}
-        rootMargin="50px"
-        containerClassName="absolute inset-0"
-        fallback={
-          <div className="w-full h-full flex items-center justify-center bg-gray-800">
-            <Play className="h-12 w-12 text-gray-500" />
+      {/* 9:16 Thumbnail */}
+      <div className="relative aspect-[9/16] overflow-hidden rounded-xl bg-[#0B1218] border border-[#1B2A33]">
+        <LazyImage
+          src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
+          alt={reel.title}
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%230B1218'/%3e%3c/svg%3e"
+          showLoadingSpinner={true}
+          rootMargin="50px"
+          containerClassName="absolute inset-0"
+          fallback={
+            <div className="w-full h-full flex items-center justify-center bg-[#0B1218]">
+              <Play className="h-12 w-12 text-gray-600" />
+            </div>
+          }
+        />
+
+        {/* Hover play overlay */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/50 pointer-events-none">
+          <div className="bg-primary/90 rounded-full p-3 backdrop-blur-sm transform scale-90 group-hover:scale-100 transition-transform duration-500">
+            <Play size={28} className="text-white fill-white" />
           </div>
-        }
-      />
+        </div>
 
-      {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+        {/* Top-left: duration */}
+        {reel.duration && reel.duration > 0 && (
+          <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-white px-1.5 py-0.5 text-[11px] rounded-md font-semibold">
+            {`${Math.floor(reel.duration / 60)}:${(reel.duration % 60).toString().padStart(2, '0')}`}
+          </div>
+        )}
 
-      {/* Play button overlay */}
-      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/60">
-        <div className="bg-primary/90 rounded-full p-3 md:p-4 backdrop-blur-sm transform scale-90 group-hover:scale-100 transition-transform duration-500">
-          <Play size={32} className="text-white fill-white" />
+        {/* Top-right: view count */}
+        <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm text-white px-1.5 py-0.5 text-[11px] rounded-md font-semibold flex items-center gap-1">
+          <Eye className="h-3 w-3" />
+          {formatNumber(reel.views || 0)}
         </div>
       </div>
 
-      {/* Duration badge */}
-      {reel.duration && reel.duration > 0 && (
-        <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm text-white px-1.5 py-0.5 text-xs rounded font-medium">
-          {`${Math.floor(reel.duration / 60)}:${(reel.duration % 60).toString().padStart(2, '0')}`}
-        </div>
-      )}
-
-      {/* View count badge */}
-      <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-white px-1.5 py-0.5 text-xs rounded font-medium flex items-center gap-1">
-        <Eye className="h-3 w-3" />
-        {formatNumber(reel.views || 0)}
-      </div>
-
-      {/* Bottom content overlay */}
-      <div className="absolute bottom-0 left-0 right-0 p-3">
-        {/* Title */}
-        <h3 className="text-white font-semibold text-sm mb-2 line-clamp-2 leading-tight">
+      {/* Meta below thumbnail */}
+      <div className="pt-2 px-0.5">
+        <h3 className="text-[#F5F7F2] font-bold text-sm line-clamp-1 leading-tight">
           {reel.title}
         </h3>
-
-        {/* User info */}
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-6 h-6 rounded-full overflow-hidden border border-white/50">
-            <img
-              src={reel.user?.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-              alt={reel.user?.displayName || 'User'}
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <span className="text-white/90 text-xs font-medium">
-            @{reel.user?.username || 'unknown'}
-          </span>
-        </div>
-
-        {/* Game badge */}
-        {reel.game && (
-          <div className="inline-block bg-primary text-[#071013] text-xs px-2 py-0.5 rounded font-bold">
+        <p className="text-[#B8C0AE] text-xs mt-0.5">
+          @{reel.user?.username || 'unknown'}
+        </p>
+        {reel.game?.name && (
+          <span
+            className="inline-block mt-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded"
+            style={{ background: '#B7FF1A', color: '#03080A' }}
+          >
             {reel.game.name}
-          </div>
+          </span>
         )}
       </div>
     </div>
