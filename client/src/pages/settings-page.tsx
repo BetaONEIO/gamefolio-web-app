@@ -3800,7 +3800,7 @@ export default function SettingsPage() {
                                 {/* For platforms without a URL, show a simple username preview */}
                                 {platformHandle.trim() && !getPlatformUrl(platform.key, platformHandle) && !validatePlatformInput(platform.key, platformHandle) && (
                                   <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
-                                    <Check className="w-3 h-3 flex-shrink-0 text-green-400" />
+                                    <Check className="w-3 h-3 flex-shrink-0 text-[#B7FF1A]" />
                                     <span>Will show as <span className="text-white font-medium">{platformHandle}</span> on your profile</span>
                                   </div>
                                 )}

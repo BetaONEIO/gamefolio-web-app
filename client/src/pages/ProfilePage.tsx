@@ -2936,6 +2936,7 @@ const ProfilePage = () => {
                 boxShadow: '0 0 16px #00ff4122, 0 0 40px #00ff4111',
               } : isBlocksTheme ? {
                 background: '#2a2a2a',
+                border: '1px solid rgba(183, 255, 26, 0.2)',
               } : isForestTheme ? {
                 background: '#e8d5b7',
                 border: '1px solid #c4a88266',
@@ -2945,8 +2946,8 @@ const ProfilePage = () => {
                 boxShadow: '0 0 20px #c27aff22, 0 0 40px #c27aff11',
               } : {
                 background: `${accentColor}14`,
-                border: `1px solid ${accentColor}55`,
-                boxShadow: `0 0 20px ${accentColor}12`,
+                border: `1px solid rgba(183, 255, 26, 0.25)`,
+                boxShadow: `0 0 18px rgba(183, 255, 26, 0.08)`,
               }}
             >
               <div className="p-4">
@@ -3325,13 +3326,14 @@ const ProfilePage = () => {
                   boxShadow: '0 0 16px #00ff4122, 0 0 40px #00ff4111',
                 } : isBlocksTheme ? {
                   background: '#2a2a2a',
+                  border: '1px solid rgba(183, 255, 26, 0.2)',
                 } : isForestTheme ? {
                   background: '#e8d5b7',
                   border: '1px solid #c4a88266',
                 } : {
                   background: `${accentColor}14`,
-                  border: `1px solid ${accentColor}55`,
-                  boxShadow: `0 0 20px ${accentColor}12`,
+                  border: `1px solid rgba(183, 255, 26, 0.25)`,
+                  boxShadow: `0 0 18px rgba(183, 255, 26, 0.08)`,
                 }}
               >
                 <div className="p-5">

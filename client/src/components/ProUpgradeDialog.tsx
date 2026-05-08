@@ -217,7 +217,7 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentInt
             <button
               onClick={handlePay}
               disabled={processing || !stripe || !isReady}
-              className="w-full bg-[#B7FF1A] hover:bg-[#3bce71] rounded-2xl h-[60px] flex items-center justify-center transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-[#B7FF1A] hover:bg-[#A2F000] rounded-2xl h-[60px] flex items-center justify-center transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ boxShadow: "0 12px 40px -10px #B7FF1A80" }}
             >
               {processing ? (
@@ -376,7 +376,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
             </p>
             <button
               onClick={() => onOpenChange(false)}
-              className="w-full py-4 bg-[#B7FF1A] hover:bg-[#3bce71] text-[#071013] font-bold text-lg rounded-2xl transition-colors"
+              className="w-full py-4 bg-[#B7FF1A] hover:bg-[#A2F000] text-[#071013] font-bold text-lg rounded-2xl transition-colors"
             >
               Close
             </button>
@@ -572,7 +572,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
         <button
           onClick={handleJoinPro}
           disabled={buttonDisabled}
-          className="w-full py-3 bg-[#B7FF1A] hover:bg-[#3bce71] rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed mt-1"
+          className="w-full py-3 bg-[#B7FF1A] hover:bg-[#A2F000] rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed mt-1"
           style={{ boxShadow: "0 0 30px -5px #B7FF1A" }}
           data-testid="button-upgrade-pro"
         >
@@ -763,7 +763,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                   <button
                     onClick={handleJoinPro}
                     disabled={buttonDisabled}
-                    className="w-full py-3 bg-[#B7FF1A] hover:bg-[#3bce71] rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed mt-3"
+                    className="w-full py-3 bg-[#B7FF1A] hover:bg-[#A2F000] rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed mt-3"
                     style={{ boxShadow: "0 0 30px -5px #B7FF1A" }}
                     data-testid="button-upgrade-pro-mobile"
                   >

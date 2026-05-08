@@ -235,7 +235,7 @@ export function NotificationBell() {
             <Bell className="h-4 w-4" />
             <span className="text-sm font-medium">New notification!</span>
           </div>
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-green-500"></div>
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#B7FF1A]"></div>
         </div>
       )}
       

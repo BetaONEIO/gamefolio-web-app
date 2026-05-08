@@ -171,7 +171,7 @@ export default function ProOnboardingScreen({ onComplete, lootboxReward }: ProOn
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
             onClick={onComplete}
-            className="w-full max-w-[367px] mx-auto block h-[60px] bg-[#B7FF1A] hover:bg-[#3bce71] text-black text-lg font-normal rounded-[28px] transition-colors"
+            className="w-full max-w-[367px] mx-auto block h-[60px] bg-[#B7FF1A] hover:bg-[#A2F000] text-black text-lg font-normal rounded-[28px] transition-colors"
             style={{ boxShadow: "0 10px 20px -5px #B7FF1A4d" }}
           >
             Continue
@@ -245,7 +245,7 @@ export default function ProOnboardingScreen({ onComplete, lootboxReward }: ProOn
 
         <button
           onClick={handleNext}
-          className="w-full max-w-[366px] mx-auto flex items-center justify-center gap-2 h-[60px] bg-[#B7FF1A] hover:bg-[#3bce71] text-[#071013] text-lg font-bold rounded-2xl transition-colors"
+          className="w-full max-w-[366px] mx-auto flex items-center justify-center gap-2 h-[60px] bg-[#B7FF1A] hover:bg-[#A2F000] text-[#071013] text-lg font-bold rounded-2xl transition-colors"
           style={{ boxShadow: "0 0 25px -5px #B7FF1A66" }}
         >
           <span>Next</span>

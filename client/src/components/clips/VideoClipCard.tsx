@@ -246,8 +246,8 @@ const VideoClipCard = ({ clip, userId, clipsList, customAccentColor }: VideoClip
               <Heart 
                 className={`h-2.5 w-2.5 transition-all duration-300 ${
                   hasUserLiked 
-                    ? `fill-green-500 stroke-green-500 text-primary ${isAnimating ? 'animate-bounce scale-125' : 'scale-110'}` 
-                    : 'stroke-muted-foreground hover:stroke-green-500 fill-transparent hover:scale-105'
+                    ? `fill-primary stroke-primary text-primary ${isAnimating ? 'animate-bounce scale-125' : 'scale-110'}` 
+                    : 'stroke-muted-foreground hover:stroke-primary fill-transparent hover:scale-105'
                 }`} 
                 style={{
                   animation: isAnimating ? 'heartGrow 2s ease-out' : undefined
