@@ -115,6 +115,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { IStorage } from "./storage";
 import { calculateLevel } from "./level-system";
+import { notifyNewSignup } from "./telegram-notify";
 import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 
@@ -295,6 +296,7 @@ export class DatabaseStorage implements IStorage {
         referralCode: await generateReferralCode(),
       };
       const [user] = await db.insert(users).values(userWithDefaults).returning();
+      notifyNewSignup(user);
       return user;
     } catch (error) {
       console.error("Error creating user:", error);
