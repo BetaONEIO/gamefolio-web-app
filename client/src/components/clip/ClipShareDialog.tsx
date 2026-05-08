@@ -243,7 +243,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
           {trigger}
         </DialogTrigger>
       )}
-      {!trigger && !open && (
+      {!trigger && open === undefined && (
         <DialogTrigger asChild>
           <Button variant="outline" size="sm" className="gap-2">
             <Share2 className="w-4 h-4" />
