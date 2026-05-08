@@ -319,11 +319,23 @@ const HomePage = () => {
     };
   }, []);
 
-  // Query all clips (used for screenshots and popular clips sections)
+  // Query all clips (used for popular clips section)
   const { data: userClips, isLoading: isLoadingUserClips } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/clips`, Date.now()], // Force new query every time
     staleTime: 0,
     gcTime: 0, // Don't cache at all
+  });
+
+  // Latest screenshots — sorted newest first
+  const { data: latestScreenshots, isLoading: isLoadingLatestScreenshots } = useQuery<any[]>({
+    queryKey: ['/api/screenshots/latest'],
+    queryFn: async () => {
+      const response = await fetch('/api/screenshots/latest?limit=20', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch latest screenshots');
+      return response.json();
+    },
+    staleTime: 0,
+    gcTime: 0,
   });
 
   // Latest clips — dedicated endpoint sorted purely by upload date, newest first
@@ -338,11 +350,11 @@ const HomePage = () => {
     gcTime: 0,
   });
 
-  // Latest reels — same endpoint as dedicated Latest Reels page, sorted newest first
+  // Latest reels — sorted newest first
   const { data: latestReelsRaw, isLoading: isLoadingLatestReels } = useQuery<ClipWithUser[]>({
-    queryKey: ['/api/reels/trending', 'recent'],
+    queryKey: ['/api/reels/latest'],
     queryFn: async () => {
-      const response = await fetch('/api/reels/trending?period=recent&limit=20', { credentials: 'include' });
+      const response = await fetch('/api/reels/latest?limit=20', { credentials: 'include' });
       if (!response.ok) throw new Error('Failed to fetch latest reels');
       return response.json();
     },
@@ -783,7 +795,7 @@ const HomePage = () => {
           {/* Screenshots Tab Content */}
           <TabsContent value="screenshots" className="space-y-6" data-content-tab="screenshots">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
-              {userClips?.filter(clip => clip.thumbnailUrl && !clip.videoUrl)?.slice(0, 12).map((screenshot, i) => (
+              {latestScreenshots?.slice(0, 12).map((screenshot) => (
                 <div 
                   key={`screenshot-${screenshot.id}`} 
                   className="relative overflow-hidden rounded-xl cursor-pointer group shadow-lg transition-all duration-500 border aspect-video"
@@ -791,7 +803,7 @@ const HomePage = () => {
                   onClick={() => setLocation(`/view/screenshot/${screenshot.id}`)}
                 >
                   <img 
-                    src={screenshot.thumbnailUrl || undefined} 
+                    src={screenshot.imageUrl || screenshot.thumbnailUrl || undefined} 
                     alt={screenshot.title}
                     className="w-full h-full object-cover"
                   />
@@ -807,17 +819,19 @@ const HomePage = () => {
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-3">
                     <div className="space-y-1">
                       <h4 className="text-white text-sm font-medium line-clamp-2 leading-tight">{screenshot.title}</h4>
-                      <Link href={`/profile/${screenshot.user.username}`} onClick={(e) => e.stopPropagation()}>
-                        <p className="text-white/80 hover:text-white text-xs cursor-pointer transition-colors">
-                          {screenshot.user.displayName || screenshot.user.username}
-                        </p>
-                      </Link>
+                      {screenshot.user && (
+                        <Link href={`/profile/${screenshot.user.username}`} onClick={(e) => e.stopPropagation()}>
+                          <p className="text-white/80 hover:text-white text-xs cursor-pointer transition-colors">
+                            {screenshot.user.displayName || screenshot.user.username}
+                          </p>
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-            {(!userClips || userClips.filter(clip => clip.thumbnailUrl && !clip.videoUrl).length === 0) && (
+            {(!latestScreenshots || latestScreenshots.length === 0) && !isLoadingLatestScreenshots && (
               <div className="text-center py-12">
                 <Image className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No screenshots yet</h3>

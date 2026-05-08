@@ -136,6 +136,7 @@ export interface IStorage {
   getTrendingClips(period: string, limit: number, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]>;
   getTrendingReels(period: string, limit: number, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]>;
   getLatestReels(limit: number, currentUserId?: number): Promise<ClipWithUser[]>;
+  getLatestScreenshots(limit: number, gameId?: number): Promise<any[]>;
   getClipById(id: number): Promise<ClipWithUser | null>;
 
   // Like operations

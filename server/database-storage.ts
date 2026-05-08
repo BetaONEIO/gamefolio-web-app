@@ -3208,6 +3208,43 @@ export class DatabaseStorage implements IStorage {
     })) as any;
   }
 
+  async getLatestScreenshots(limit: number = 20, gameId?: number): Promise<(Screenshot & { user: User; game?: Game })[]> {
+    const screenshotsQuery = db
+      .select({
+        screenshot: screenshots,
+        user: users,
+        game: games,
+        likesCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotLikes} WHERE ${screenshotLikes.screenshotId} = ${screenshots.id}), 0)`,
+        reactionsCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotReactions} WHERE ${screenshotReactions.screenshotId} = ${screenshots.id}), 0)`,
+        commentsCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotComments} WHERE ${screenshotComments.screenshotId} = ${screenshots.id}), 0)`
+      })
+      .from(screenshots)
+      .leftJoin(users, eq(screenshots.userId, users.id))
+      .leftJoin(games, eq(screenshots.gameId, games.id))
+      .where(
+        and(
+          gameId ? eq(screenshots.gameId, gameId) : undefined,
+          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${screenshots.gameId} AND g.is_approved = false)`,
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${screenshots.userId} AND u.status IN ('suspended', 'banned'))`
+        )
+      )
+      .orderBy(desc(screenshots.createdAt), desc(screenshots.id))
+      .limit(limit);
+
+    const results = await screenshotsQuery;
+
+    return results.map(row => ({
+      ...row.screenshot,
+      user: row.user?.id ? { ...row.user } : null,
+      game: row.game?.id ? { ...row.game } : null,
+      _count: {
+        likes: Number(row.likesCount) || 0,
+        reactions: Number(row.reactionsCount) || 0,
+        comments: Number(row.commentsCount) || 0
+      }
+    })) as any;
+  }
+
   // Badge definition operations
   async createBadge(badgeData: InsertBadge): Promise<Badge> {
     const [badge] = await db.insert(badges).values(badgeData).returning();

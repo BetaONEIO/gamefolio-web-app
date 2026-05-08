@@ -496,10 +496,10 @@ const HomePage = () => {
     }
   });
 
-  const { data: latestScreenshots, isLoading: isLoadingScreenshots } = useQuery<ClipWithUser[]>({
-    queryKey: ['/api/screenshots', 'recent'],
+  const { data: latestScreenshots, isLoading: isLoadingScreenshots } = useQuery<any[]>({
+    queryKey: ['/api/screenshots/latest'],
     queryFn: async () => {
-      const response = await fetch('/api/screenshots?period=recent&limit=12');
+      const response = await fetch('/api/screenshots/latest?limit=12', { credentials: 'include' });
       if (!response.ok) {
         throw new Error('Failed to fetch latest screenshots');
       }

@@ -5487,6 +5487,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Latest screenshots endpoint (newest first, pure createdAt DESC)
+  app.get("/api/screenshots/latest", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const gameId = req.query.gameId ? parseInt(req.query.gameId as string) : undefined;
+      const screenshots = await storage.getLatestScreenshots(limit, gameId);
+      res.json(screenshots);
+    } catch (err) {
+      console.error("Error fetching latest screenshots:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // General screenshots endpoint (supports filtering by game and time period)
   app.get("/api/screenshots", async (req, res) => {
     try {
