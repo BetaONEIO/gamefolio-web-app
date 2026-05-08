@@ -489,9 +489,9 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
         </div>
 
         {/* Content overlay - left aligned bottom */}
-        <div className="absolute bottom-0 left-0 right-0 p-3">
+        <div className="absolute bottom-0 left-0 right-0 p-3" onClick={(e) => e.stopPropagation()}>
           {/* Title */}
-          <h3 className="text-white font-bold text-sm mb-0.5 drop-shadow-lg line-clamp-2">
+          <h3 className="text-white font-bold text-sm mb-0.5 drop-shadow-lg line-clamp-2" onClick={handleReelClick}>
             {reel.title}
           </h3>
 
@@ -502,9 +502,13 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
 
           {/* Game badge underneath username */}
           {reel.game && (
-            <div className="inline-block bg-primary text-[#071013] text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
+            <Link
+              href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-block bg-primary text-[#071013] text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
+            >
               {reel.game.name}
-            </div>
+            </Link>
           )}
         </div>
       </div>
@@ -923,9 +927,13 @@ const TrendingPage: React.FC = () => {
                           @{reel.user.username}
                         </p>
                         {reel.game && (
-                          <div className="inline-block bg-primary text-[#071013] text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
+                          <Link
+                            href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-block bg-primary text-[#071013] text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
+                          >
                             {reel.game.name}
-                          </div>
+                          </Link>
                         )}
                       </div>
                     </div>

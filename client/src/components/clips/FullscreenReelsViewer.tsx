@@ -451,7 +451,13 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             {/* Game badge */}
             {currentReel.game && (
               <div className="mb-1.5">
-                <span className="text-[#B7FF1A] text-sm font-medium drop-shadow-lg">{currentReel.game.name}</span>
+                <Link
+                  href={`/games/${currentReel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                  onClick={onClose}
+                  className="text-[#B7FF1A] text-sm font-medium drop-shadow-lg hover:underline"
+                >
+                  {currentReel.game.name}
+                </Link>
               </div>
             )}
 
