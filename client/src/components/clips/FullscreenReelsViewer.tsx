@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { ChevronLeft, Heart, MessageCircle, Share2, MoreVertical, User, Play, Pause, Flag, Check, Volume2, VolumeX, Trash2, X } from "lucide-react";
+import { MessageCircle, Share2, MoreVertical, Play, Pause, Volume2, VolumeX, Trash2, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { Link } from "wouter";
@@ -52,8 +52,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const { user } = useAuth();
   const { toast } = useToast();
   const { isOpen: isJoinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
-  
-  const { showAd, isPro, onReelChange, onAdFinished, reset: resetAdTracker } = useReelAdTracker();
+
+  const { showAd, isPro, onReelChange, onAdFinished } = useReelAdTracker();
 
   const currentReel = reels[currentIndex];
 
@@ -65,7 +65,6 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
 
   const isFollowing = followStatus?.following || followStatus?.requested || false;
 
-  // Follow/unfollow mutation
   const followMutation = useMutation({
     mutationFn: async () => {
       if (isFollowing) {
@@ -82,30 +81,19 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       });
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update follow status",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to update follow status", variant: "destructive" });
     },
   });
 
   const handleFollow = () => {
     if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to follow users",
-        variant: "destructive",
-      });
+      toast({ title: "Authentication Required", description: "Please log in to follow users", variant: "destructive" });
       return;
     }
-    if (user.id === currentReel.user.id) {
-      return; // Don't allow following yourself
-    }
+    if (user.id === currentReel.user.id) return;
     followMutation.mutate();
   };
 
-  // Delete reel mutation
   const deleteReelMutation = useMutation({
     mutationFn: async (reelId: number) => {
       await apiRequest("DELETE", `/api/clips/${reelId}`);
@@ -119,48 +107,33 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         queryClient.invalidateQueries({ queryKey: [`/api/users/${currentReel.user.username}/clips`] });
         queryClient.invalidateQueries({ queryKey: [`/api/users/${currentReel.user.username}`] });
       }
-      toast({
-        description: "Reel deleted successfully.",
-        variant: "gamefolioSuccess" as any,
-      });
+      toast({ description: "Reel deleted successfully.", variant: "gamefolioSuccess" as any });
       onClose();
     },
     onError: (error: any) => {
-      toast({
-        title: "Delete failed",
-        description: error.message || "Failed to delete reel. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Delete failed", description: error.message || "Failed to delete reel.", variant: "destructive" });
     },
   });
 
   // Scroll to initial reel on mount
   useEffect(() => {
     if (containerRef.current) {
-      const itemHeight = containerRef.current.clientHeight;
-      const scrollPosition = initialIndex * itemHeight;
-      containerRef.current.scrollTop = scrollPosition;
+      containerRef.current.scrollTop = initialIndex * containerRef.current.clientHeight;
     }
   }, []);
 
-  // Track current reel based on scroll position and trigger ads every 5 reels
+  // Track current reel based on scroll
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
     const handleScroll = () => {
-      const itemHeight = container.clientHeight;
-      const scrollTop = container.scrollTop;
-      const newIndex = Math.round(scrollTop / itemHeight);
+      const newIndex = Math.round(container.scrollTop / container.clientHeight);
       if (newIndex !== currentIndex && newIndex >= 0 && newIndex < reels.length) {
         setCurrentIndex(newIndex);
-        if (!isPro) {
-          onReelChange(newIndex);
-        }
+        if (!isPro) onReelChange(newIndex);
       }
     };
-
-    container.addEventListener('scroll', handleScroll);
+    container.addEventListener('scroll', handleScroll, { passive: true });
     return () => container.removeEventListener('scroll', handleScroll);
   }, [currentIndex, reels.length, isPro, onReelChange]);
 
@@ -168,54 +141,42 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     const container = containerRef.current;
     if (!container) return;
-
-    const itemHeight = container.clientHeight;
-
-    switch (e.key) {
-      case 'ArrowUp':
-        e.preventDefault();
-        if (currentIndex > 0) {
-          container.scrollTo({ top: (currentIndex - 1) * itemHeight, behavior: 'smooth' });
-        }
-        break;
-      case 'ArrowDown':
-        e.preventDefault();
-        if (currentIndex < reels.length - 1) {
-          container.scrollTo({ top: (currentIndex + 1) * itemHeight, behavior: 'smooth' });
-        }
-        break;
-      case 'Escape':
-        onClose();
-        break;
+    const h = container.clientHeight;
+    if (e.key === 'ArrowUp' && currentIndex > 0) {
+      e.preventDefault();
+      container.scrollTo({ top: (currentIndex - 1) * h, behavior: 'smooth' });
+    } else if (e.key === 'ArrowDown' && currentIndex < reels.length - 1) {
+      e.preventDefault();
+      container.scrollTo({ top: (currentIndex + 1) * h, behavior: 'smooth' });
+    } else if (e.key === 'Escape') {
+      if (showComments) setShowComments(false);
+      else onClose();
     }
-  }, [currentIndex, reels.length, onClose]);
+  }, [currentIndex, reels.length, onClose, showComments]);
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Check for age restriction when reel changes
+  // Age restriction check
   useEffect(() => {
     if (currentReel && currentReel.ageRestricted && !ageRestrictionAccepted[currentReel.id]) {
       setShowAgeRestrictionDialog(true);
     }
   }, [currentReel, ageRestrictionAccepted]);
 
-  // Auto-close age restriction dialog after acceptance
   useEffect(() => {
     if (currentReel && ageRestrictionAccepted[currentReel.id] && showAgeRestrictionDialog) {
-      const timer = setTimeout(() => {
+      const t = setTimeout(() => {
         setShowAgeRestrictionDialog(false);
-        setTimeout(() => {
-          isAcceptingRef.current = false;
-        }, 100);
+        setTimeout(() => { isAcceptingRef.current = false; }, 100);
       }, 100);
-      return () => clearTimeout(timer);
+      return () => clearTimeout(t);
     }
   }, [ageRestrictionAccepted, showAgeRestrictionDialog, currentReel]);
 
-  // Reset state when switching reels
+  // Reset on reel change
   useEffect(() => {
     setShowComments(false);
     setShowShare(false);
@@ -224,12 +185,16 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
 
   if (!currentReel) return null;
 
+  // COMMENTS_HEIGHT: how much of the screen the comment sheet occupies
+  const COMMENTS_HEIGHT = '62%';
+
   return (
     <div className="fixed inset-0 bg-black z-[60]">
-      {/* Ad overlay - shows every 5 reels for non-Pro users */}
+
+      {/* ── Ad overlay ── */}
       {showAd && (
         <div className="fixed inset-0 bg-black z-[70] flex items-center justify-center">
-          <VideoAdPlayer 
+          <VideoAdPlayer
             onAdComplete={onAdFinished}
             onAdError={onAdFinished}
             onAdSkipped={onAdFinished}
@@ -238,35 +203,83 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           />
         </div>
       )}
-      
-      {/* Top header bar - TikTok style */}
-      <div className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between p-3 md:p-4">
-        {/* Left controls - Pause/Play and Volume */}
+
+      {/* ── Layer 1: Scrollable video stack (pointer-events-none so buttons above work) ── */}
+      <div
+        ref={containerRef}
+        className="absolute inset-0 z-[1] overflow-y-scroll overflow-x-hidden snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain', pointerEvents: showComments ? 'none' : 'auto' }}
+      >
+        {reels.map((reel, index) => (
+          <div
+            key={reel.id}
+            className="snap-start snap-always h-[100dvh] w-full relative"
+            style={{ scrollSnapStop: 'always' }}
+          >
+            {/* Video — pointer-events-none so tap overlay controls it */}
+            <div className="absolute inset-0 pointer-events-none">
+              {(!reel.ageRestricted || ageRestrictionAccepted[reel.id]) ? (
+                <VideoPlayer
+                  videoUrl={reel.videoUrl}
+                  thumbnailUrl={reel.thumbnailUrl || undefined}
+                  autoPlay={index === currentIndex}
+                  className="w-full h-full"
+                  objectFit="cover"
+                  clipId={reel.id}
+                  disableAspectRatio={true}
+                  hideControls={true}
+                  externalPaused={index === currentIndex ? isPaused : true}
+                  externalMuted={index === currentIndex ? isMuted : undefined}
+                  onPlayingChange={index === currentIndex ? (playing) => setIsPaused(!playing) : undefined}
+                  onMutedChange={index === currentIndex ? (muted) => setIsMuted(muted) : undefined}
+                  onEnded={() => {
+                    if (index < reels.length - 1 && containerRef.current) {
+                      const h = containerRef.current.clientHeight;
+                      containerRef.current.scrollTo({ top: (index + 1) * h, behavior: 'smooth' });
+                    }
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-black/80">
+                  <p className="text-white text-lg font-semibold">Age-Restricted Content</p>
+                </div>
+              )}
+            </div>
+
+            {/* Transparent tap zone for play/pause — only for current reel */}
+            {index === currentIndex && (
+              <div
+                className="absolute inset-0 z-[2]"
+                style={{ pointerEvents: 'auto' }}
+                onClick={() => setIsPaused(p => !p)}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* ── Layer 3: Top header (pause / volume / delete / close) ── */}
+      <div className="fixed top-0 left-0 right-0 z-[3] flex items-center justify-between p-3 md:p-4" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}>
         <div className="flex items-center gap-2">
           <Button
-            variant="ghost"
-            size="sm"
+            variant="ghost" size="sm"
             className="text-white bg-black/60 backdrop-blur-sm hover:bg-black/80 w-10 h-10 p-0 rounded-full"
-            onClick={() => setIsPaused(!isPaused)}
+            onClick={() => setIsPaused(p => !p)}
           >
             {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
           </Button>
           <Button
-            variant="ghost"
-            size="sm"
+            variant="ghost" size="sm"
             className="text-white bg-black/60 backdrop-blur-sm hover:bg-black/80 w-10 h-10 p-0 rounded-full"
-            onClick={() => setIsMuted(!isMuted)}
+            onClick={() => setIsMuted(m => !m)}
           >
             {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
           </Button>
         </div>
-
-        {/* Right controls - Delete (for owner) and Close */}
         <div className="flex items-center gap-2">
           {user && currentReel && user.id === currentReel.userId && (
             <Button
-              variant="ghost"
-              size="sm"
+              variant="ghost" size="sm"
               className="text-white bg-black/60 backdrop-blur-sm hover:bg-red-600/80 w-10 h-10 p-0 rounded-full"
               onClick={() => setShowDeleteConfirm(true)}
               disabled={deleteReelMutation.isPending}
@@ -275,8 +288,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             </Button>
           )}
           <Button
-            variant="ghost"
-            size="sm"
+            variant="ghost" size="sm"
             className="text-white bg-black/60 backdrop-blur-sm hover:bg-black/80 w-10 h-10 p-0 rounded-full"
             onClick={onClose}
           >
@@ -285,104 +297,50 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         </div>
       </div>
 
-      {/* Scrollable reels container */}
-      <div 
-        ref={containerRef}
-        className="h-[100dvh] w-full overflow-y-scroll overflow-x-hidden snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
-        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
-      >
-        {reels.map((reel, index) => (
-          <div 
-            key={reel.id}
-            className="snap-start snap-always h-[100dvh] w-full flex items-center justify-center relative"
-            style={{ scrollSnapStop: 'always' }}
+      {/* ── Layer 3: Engagement + user info overlay (above tap zone) ── */}
+      {currentReel && !showComments && (
+        <div className="fixed inset-0 z-[3] pointer-events-none">
+
+          {/* Right side engagement buttons */}
+          <div
+            className="absolute right-3 md:right-4 flex flex-col items-center gap-5 pointer-events-auto"
+            style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
           >
-            {/* Video player - full screen on mobile */}
-            <div className="relative w-full h-full md:max-w-lg lg:max-w-xl mx-auto pointer-events-none">
-              <div className="w-full h-full pointer-events-auto flex items-center justify-center">
-                {(!reel.ageRestricted || ageRestrictionAccepted[reel.id]) ? (
-                  <VideoPlayer
-                    videoUrl={reel.videoUrl}
-                    thumbnailUrl={reel.thumbnailUrl || undefined}
-                    autoPlay={index === currentIndex}
-                    className="w-full h-full"
-                    objectFit="cover"
-                    clipId={reel.id}
-                    disableAspectRatio={true}
-                    hideControls={true}
-                    externalPaused={index === currentIndex ? isPaused : undefined}
-                    externalMuted={index === currentIndex ? isMuted : undefined}
-                    onPlayingChange={index === currentIndex ? (playing) => setIsPaused(!playing) : undefined}
-                    onMutedChange={index === currentIndex ? (muted) => setIsMuted(muted) : undefined}
-                    onEnded={() => {
-                      if (index < reels.length - 1 && containerRef.current) {
-                        const itemHeight = containerRef.current.clientHeight;
-                        containerRef.current.scrollTo({ top: (index + 1) * itemHeight, behavior: 'smooth' });
-                      }
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-black/80">
-                    <div className="text-center text-white p-6">
-                      <p className="text-lg font-semibold mb-2">Age-Restricted Content</p>
-                      <p className="text-sm text-white/70">This reel has been marked as age-restricted</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+            {/* Fire */}
+            <FireButton
+              contentId={currentReel.id}
+              contentType="clip"
+              contentOwnerId={currentReel.userId}
+              initialCount={parseInt(currentReel._count?.reactions?.toString() || '0')}
+              size="lg"
+              showCount={true}
+              variant="vertical"
+            />
 
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Fixed overlay content - positioned outside scroll container to prevent overlap during transitions */}
-      {currentReel && (
-        <div className="fixed inset-0 pointer-events-none z-30">
-          {/* Right side - Engagement buttons (TikTok-style) */}
-          <div className="absolute right-3 md:right-4 flex flex-col items-center gap-5 pointer-events-auto" style={{ bottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}>
-            {/* Fire/Reactions */}
-            <div className="flex flex-col items-center">
-              <FireButton
-                contentId={currentReel.id}
-                contentType="clip"
-                contentOwnerId={currentReel.userId}
-                initialCount={parseInt(currentReel._count?.reactions?.toString() || '0')}
-                size="lg"
-                showCount={false}
-                variant="vertical"
-              />
-            </div>
-
-            {/* Like/Heart */}
-            <div className="flex flex-col items-center">
-              <LikeButton
-                contentId={currentReel.id}
-                contentType="clip"
-                contentOwnerId={currentReel.userId}
-                initialLiked={false}
-                initialCount={parseInt(currentReel._count?.likes?.toString() || '0')}
-                size="lg"
-                showCount={true}
-                variant="vertical"
-              />
-            </div>
+            {/* Like */}
+            <LikeButton
+              contentId={currentReel.id}
+              contentType="clip"
+              contentOwnerId={currentReel.userId}
+              initialLiked={false}
+              initialCount={parseInt(currentReel._count?.likes?.toString() || '0')}
+              size="lg"
+              showCount={true}
+              variant="vertical"
+            />
 
             {/* Comments */}
             <div className="flex flex-col items-center">
               <button
-                className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/50 transition-colors"
+                className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white active:bg-black/70 transition-colors"
                 onClick={() => {
-                  if (!user) {
-                    openDialog('comment');
-                  } else {
-                    setShowComments(true);
-                  }
+                  if (!user) { openDialog('comment'); }
+                  else { setShowComments(true); setIsPaused(true); }
                 }}
               >
                 <MessageCircle className="h-7 w-7" />
               </button>
-              <span className="text-white text-xs mt-1 font-medium">
+              <span className="text-white text-xs mt-1 font-medium drop-shadow-lg">
                 {currentReel._count?.comments || 0}
               </span>
             </div>
@@ -390,65 +348,50 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             {/* Share */}
             <div className="flex flex-col items-center">
               <button
-                className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/50 transition-colors"
+                className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white active:bg-black/70 transition-colors"
                 onClick={() => setShowShare(true)}
               >
                 <Share2 className="h-6 w-6" />
               </button>
-              <span className="text-white text-xs mt-1 font-medium">Share</span>
+              <span className="text-white text-xs mt-1 font-medium drop-shadow-lg">Share</span>
             </div>
           </div>
 
-          {/* Bottom left - User info and title */}
-          <div className="absolute left-3 md:left-4 right-20 md:right-24 pointer-events-auto" style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
-            {/* User row with avatar and username */}
+          {/* Bottom left - user info */}
+          <div
+            className="absolute left-3 md:left-4 right-20 md:right-24 pointer-events-auto"
+            style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
+          >
             <div className="flex items-center gap-2 mb-2">
-              <Link href={`/profile/${currentReel.user.username}`} onClick={onClose}>
-                <div className="hover:opacity-80 transition-opacity flex-shrink-0">
-                  <CustomAvatar
-                    user={currentReel.user as any}
-                    size="sm"
-                    showBorder={true}
-                  />
-                </div>
+              <Link href={`/profile/${currentReel.user.username}`} onClick={onClose} className="flex-shrink-0 hover:opacity-80 transition-opacity">
+                <CustomAvatar user={currentReel.user as any} size="sm" showBorder={true} />
               </Link>
               <Link href={`/profile/${currentReel.user.username}`} onClick={onClose}>
-                <span className="text-white font-semibold text-sm cursor-pointer hover:opacity-80">
-                  @{currentReel.user.username}
-                </span>
+                <span className="text-white font-semibold text-sm drop-shadow-lg">@{currentReel.user.username}</span>
               </Link>
-              {/* Inline Follow button */}
               {user && user.id !== currentReel.user.id && (
                 <Button
                   onClick={handleFollow}
                   disabled={followMutation.isPending}
                   size="sm"
                   className={cn(
-                    "h-7 px-3 text-xs font-semibold rounded-md transition-colors ml-1",
-                    isFollowing 
-                      ? "bg-transparent border border-white/50 text-white hover:bg-white/10" 
+                    "h-7 px-3 text-xs font-semibold rounded-md ml-1",
+                    isFollowing
+                      ? "bg-transparent border border-white/50 text-white hover:bg-white/10"
                       : "bg-[#B7FF1A] text-black hover:bg-[#A2F000]"
                   )}
-                  data-testid="button-follow"
                 >
                   {isFollowing ? "Following" : "Follow"}
                 </Button>
               )}
             </div>
 
-            {/* Title */}
             <h3 className="text-white font-semibold text-base mb-1 leading-tight line-clamp-1 drop-shadow-lg">
               {currentReel.title}
             </h3>
-
-            {/* Description if available */}
             {currentReel.description && (
-              <p className="text-white/90 text-sm mb-1.5 line-clamp-1 drop-shadow-md">
-                {currentReel.description}
-              </p>
+              <p className="text-white/90 text-sm mb-1.5 line-clamp-1 drop-shadow-md">{currentReel.description}</p>
             )}
-
-            {/* Game badge */}
             {currentReel.game && (
               <div className="mb-1.5">
                 <Link
@@ -460,8 +403,6 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                 </Link>
               </div>
             )}
-
-            {/* Audio/Original info */}
             <div className="flex items-center gap-1.5 text-white/80 text-xs drop-shadow-md">
               <span>Original audio</span>
               <span>•</span>
@@ -469,15 +410,18 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             </div>
           </div>
 
-          {/* Report button - subtle, bottom right corner */}
-          <div className="absolute right-3 md:right-4 pointer-events-auto" style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
+          {/* Report button */}
+          <div
+            className="absolute right-3 md:right-4 pointer-events-auto"
+            style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
+          >
             <ReportDialog
               contentType="clip"
               contentId={currentReel.id}
               contentTitle={currentReel.title}
               contentAuthor={currentReel.user.username}
               trigger={
-                <button className="w-8 h-8 rounded-full bg-transparent flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors">
+                <button className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors">
                   <MoreVertical className="h-4 w-4" />
                 </button>
               }
@@ -486,27 +430,38 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         </div>
       )}
 
-      {/* Navigation hints - desktop only */}
-      <div className="fixed bottom-2 md:bottom-4 left-1/2 transform -translate-x-1/2 text-white/30 text-xs text-center px-4 z-20 hidden md:block">
-        <p>Scroll or use arrow keys to navigate • ESC to close</p>
-      </div>
+      {/* ── Layer 4: Comments — Instagram-style bottom sheet, shrinks the reel view ── */}
+      {showComments && currentReel && (
+        <div className="fixed inset-0 z-[4]">
+          {/* Backdrop — tap to close */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => { setShowComments(false); setIsPaused(false); }}
+          />
 
-      {/* Comments overlay */}
-      {showComments && (
-        <div className="absolute inset-0 bg-black/80 z-10">
-          <div className="absolute bottom-0 left-0 right-0 bg-background rounded-t-2xl max-h-[80vh] md:max-h-[70vh] overflow-hidden">
-            <div className="p-3 md:p-4 border-b flex justify-between items-center">
-              <h3 className="font-semibold text-sm md:text-base">Comments</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowComments(false)}
-                className="h-8 w-8 p-0"
-              >
-                ✕
-              </Button>
+          {/* Bottom sheet */}
+          <div
+            className="absolute bottom-0 left-0 right-0 bg-background rounded-t-2xl flex flex-col overflow-hidden"
+            style={{ height: COMMENTS_HEIGHT, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          >
+            {/* Handle + header */}
+            <div className="flex-shrink-0 flex flex-col items-center pt-2 pb-0 border-b border-border">
+              <div className="w-10 h-1 rounded-full bg-muted-foreground/40 mb-3" />
+              <div className="w-full flex items-center justify-between px-4 pb-3">
+                <span className="font-semibold text-base">
+                  Comments · {currentReel._count?.comments || 0}
+                </span>
+                <button
+                  onClick={() => { setShowComments(false); setIsPaused(false); }}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+                >
+                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                </button>
+              </div>
             </div>
-            <div className="overflow-y-auto max-h-[calc(80vh-60px)] md:max-h-[calc(70vh-80px)]">
+
+            {/* Scrollable comments */}
+            <div className="flex-1 overflow-y-auto">
               <CommentSection
                 clipId={currentReel.id}
                 currentUserId={user?.id}
@@ -516,28 +471,29 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         </div>
       )}
 
-      {/* Share overlay */}
+      {/* ── Share overlay ── */}
       {showShare && (
-        <div className="absolute inset-0 bg-black/80 z-10 flex items-center justify-center p-4">
-          <div className="bg-background rounded-2xl p-4 md:p-6 max-w-sm w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-semibold text-sm md:text-base">Share Reel</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowShare(false)}
-                className="h-8 w-8 p-0"
-              >
-                ✕
-              </Button>
+        <div className="fixed inset-0 z-[4] bg-black/70 flex items-end justify-center p-0" onClick={() => setShowShare(false)}>
+          <div
+            className="bg-background rounded-t-2xl p-5 w-full max-w-lg"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.25rem)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <span className="font-semibold text-base">Share Reel</span>
+              <button onClick={() => setShowShare(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted">
+                <X className="h-4 w-4" />
+              </button>
             </div>
-            <ShareMenu
-              clipId={currentReel.id}
-              clipTitle={currentReel.title}
-            />
+            <ShareMenu clipId={currentReel.id} clipTitle={currentReel.title} />
           </div>
         </div>
       )}
+
+      {/* Desktop hint */}
+      <p className="fixed bottom-3 left-1/2 -translate-x-1/2 text-white/30 text-xs z-[3] hidden md:block">
+        Scroll or arrow keys to navigate · ESC to close
+      </p>
 
       {/* Age Restriction Dialog */}
       {currentReel && (
@@ -545,29 +501,21 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           isOpen={showAgeRestrictionDialog}
           onAccept={() => {
             isAcceptingRef.current = true;
-            setAgeRestrictionAccepted(prev => ({
-              ...prev,
-              [currentReel.id]: true
-            }));
+            setAgeRestrictionAccepted(prev => ({ ...prev, [currentReel.id]: true }));
           }}
           onDecline={() => {
-            if (!isAcceptingRef.current) {
-              setShowAgeRestrictionDialog(false);
-              onClose();
-            }
+            if (!isAcceptingRef.current) { setShowAgeRestrictionDialog(false); onClose(); }
           }}
           contentType="reel"
         />
       )}
 
-      {/* Join Dialog for unauthenticated users */}
       <JoinGamefolioDialog
         open={isJoinDialogOpen}
         onOpenChange={(open) => !open && closeDialog()}
         actionType={actionType}
       />
 
-      {/* Delete reel confirmation dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -580,14 +528,10 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             <AlertDialogCancel disabled={deleteReelMutation.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => deleteReelMutation.mutate(currentReel.id)}
               disabled={deleteReelMutation.isPending}
-              onClick={() => {
-                if (currentReel) {
-                  deleteReelMutation.mutate(currentReel.id);
-                }
-              }}
             >
-              {deleteReelMutation.isPending ? "Deleting..." : "Delete this reel"}
+              {deleteReelMutation.isPending ? "Deleting…" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
