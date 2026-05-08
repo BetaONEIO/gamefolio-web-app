@@ -1321,6 +1321,7 @@ const UploadPage = () => {
                     checked={ageRestricted}
                     onCheckedChange={(checked) => setAgeRestricted(checked as boolean)}
                     data-testid="checkbox-age-restricted"
+                    className="h-5 w-5 rounded-full border-gray-500 bg-transparent data-[state=checked]:bg-transparent data-[state=checked]:border-gray-500 [&_svg]:text-[#B7FF1A] [&_svg]:h-3.5 [&_svg]:w-3.5"
                   />
                   <div className="flex-1">
                     <Label
@@ -1850,6 +1851,7 @@ const UploadPage = () => {
                     checked={ageRestricted}
                     onCheckedChange={(checked) => setAgeRestricted(checked as boolean)}
                     data-testid="checkbox-reel-age-restricted"
+                    className="h-5 w-5 rounded-full border-gray-500 bg-transparent data-[state=checked]:bg-transparent data-[state=checked]:border-gray-500 [&_svg]:text-[#B7FF1A] [&_svg]:h-3.5 [&_svg]:w-3.5"
                   />
                   <div className="flex-1">
                     <Label
@@ -2135,6 +2137,7 @@ const UploadPage = () => {
                     checked={screenshotAgeRestricted}
                     onCheckedChange={(checked) => setScreenshotAgeRestricted(checked as boolean)}
                     data-testid="checkbox-screenshot-age-restricted"
+                    className="h-5 w-5 rounded-full border-gray-500 bg-transparent data-[state=checked]:bg-transparent data-[state=checked]:border-gray-500 [&_svg]:text-[#B7FF1A] [&_svg]:h-3.5 [&_svg]:w-3.5"
                   />
                   <div className="flex-1">
                     <Label
@@ -2187,9 +2190,9 @@ const UploadPage = () => {
       
       {/* Upload Progress Modal */}
       {isUploading && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-0">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative w-full sm:max-w-2xl bg-[#101D27] sm:rounded-2xl overflow-hidden shadow-2xl border border-[#1e3a4a]/50">
+          <div className="relative w-full sm:max-w-2xl bg-[#101D27] rounded-2xl overflow-hidden shadow-2xl border border-[#1e3a4a]/50">
             <div className="flex flex-col items-center justify-center px-6 py-10 sm:px-10 sm:py-14 gap-6">
               <div className="flex items-center gap-1">
                 <span className="text-6xl sm:text-8xl font-black text-white tracking-tighter leading-none" style={{ letterSpacing: '-4px' }}>

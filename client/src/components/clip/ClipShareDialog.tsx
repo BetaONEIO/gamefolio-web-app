@@ -277,7 +277,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
         </div>
 
         {/* Content */}
-        <div className="p-4 sm:p-5 flex flex-col gap-5 overflow-y-auto">
+        <div className="p-4 sm:p-5 flex flex-col gap-5 overflow-y-auto flex-1 min-h-0 pb-24 sm:pb-5">
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
               <div className="animate-spin w-8 h-8 border-4 border-[#B7FF1A] border-t-transparent rounded-full" />
