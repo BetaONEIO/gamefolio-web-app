@@ -22,6 +22,7 @@ import { LikeButton } from '@/components/engagement/LikeButton';
 import { FireButton } from '@/components/engagement/FireButton';
 import { ReportButton } from '@/components/reporting/ReportButton';
 import { MobileTrendingViewer } from '@/components/clips/MobileTrendingViewer';
+import { CustomAvatar } from '@/components/ui/custom-avatar';
 import { Dialog, DialogContent, DialogClose, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import CommentSection from '@/components/clips/CommentSection';
 import { UserIcon, X, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -181,16 +182,11 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
       <div className="px-4 pt-3 pb-2">
         <div className="flex items-start gap-3">
           <Link href={`/profile/${clip.user.username}`} className="flex-shrink-0">
-            <div
-              className="w-10 h-10 rounded-full overflow-hidden"
-              style={{ border: '2px solid rgba(183,255,26,0.4)' }}
-            >
-              <img
-                src={clip.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                alt={clip.user.displayName || clip.user.username}
-                className="w-full h-full object-cover"
-              />
-            </div>
+            <CustomAvatar
+              user={clip.user as any}
+              size="sm"
+              showBorder={true}
+            />
           </Link>
 
           <div className="flex-1 min-w-0">

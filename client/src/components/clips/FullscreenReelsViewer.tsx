@@ -4,6 +4,7 @@ import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
 import { ChevronLeft, Heart, MessageCircle, Share2, MoreVertical, User, Play, Pause, Flag, Check, Volume2, VolumeX, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { Link } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
@@ -20,7 +21,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { VideoAdPlayer } from "@/components/ads/VideoAdPlayer";
 import { useReelAdTracker } from "@/hooks/use-ad-manager";
-import { useSignedUrl } from "@/hooks/use-signed-url";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,8 +56,6 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const { showAd, isPro, onReelChange, onAdFinished, reset: resetAdTracker } = useReelAdTracker();
 
   const currentReel = reels[currentIndex];
-
-  const { signedUrl: avatarSignedUrl } = useSignedUrl(currentReel?.user?.avatarUrl);
 
   // Follow status for current user
   const { data: followStatus } = useQuery<{ following: boolean; requested: boolean }>({
@@ -248,7 +246,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           <Button
             variant="ghost"
             size="sm"
-            className="text-white bg-black/40 hover:bg-black/60 w-10 h-10 p-0 rounded-lg"
+            className="text-white bg-black/60 backdrop-blur-sm hover:bg-black/80 w-10 h-10 p-0 rounded-full"
             onClick={() => setIsPaused(!isPaused)}
           >
             {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
@@ -256,7 +254,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           <Button
             variant="ghost"
             size="sm"
-            className="text-white bg-black/40 hover:bg-black/60 w-10 h-10 p-0 rounded-lg"
+            className="text-white bg-black/60 backdrop-blur-sm hover:bg-black/80 w-10 h-10 p-0 rounded-full"
             onClick={() => setIsMuted(!isMuted)}
           >
             {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
@@ -269,7 +267,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             <Button
               variant="ghost"
               size="sm"
-              className="text-white bg-black/40 hover:bg-red-600/80 w-10 h-10 p-0 rounded-lg"
+              className="text-white bg-black/60 backdrop-blur-sm hover:bg-red-600/80 w-10 h-10 p-0 rounded-full"
               onClick={() => setShowDeleteConfirm(true)}
               disabled={deleteReelMutation.isPending}
             >
@@ -279,7 +277,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           <Button
             variant="ghost"
             size="sm"
-            className="text-white bg-black/40 hover:bg-black/60 w-10 h-10 p-0 rounded-lg"
+            className="text-white bg-black/60 backdrop-blur-sm hover:bg-black/80 w-10 h-10 p-0 rounded-full"
             onClick={onClose}
           >
             <X className="h-5 w-5" />
@@ -406,11 +404,11 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             {/* User row with avatar and username */}
             <div className="flex items-center gap-2 mb-2">
               <Link href={`/profile/${currentReel.user.username}`} onClick={onClose}>
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white/40 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0">
-                  <img
-                    src={avatarSignedUrl || currentReel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                    alt={currentReel.user.displayName}
-                    className="w-full h-full object-cover"
+                <div className="hover:opacity-80 transition-opacity flex-shrink-0">
+                  <CustomAvatar
+                    user={currentReel.user as any}
+                    size="sm"
+                    showBorder={true}
                   />
                 </div>
               </Link>
@@ -429,7 +427,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     "h-7 px-3 text-xs font-semibold rounded-md transition-colors ml-1",
                     isFollowing 
                       ? "bg-transparent border border-white/50 text-white hover:bg-white/10" 
-                      : "bg-[#00E676] text-black hover:bg-[#00C853]"
+                      : "bg-[#B7FF1A] text-black hover:bg-[#A2F000]"
                   )}
                   data-testid="button-follow"
                 >
@@ -453,7 +451,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             {/* Game badge */}
             {currentReel.game && (
               <div className="mb-1.5">
-                <span className="text-[#00E676] text-sm font-medium drop-shadow-lg">{currentReel.game.name}</span>
+                <span className="text-[#B7FF1A] text-sm font-medium drop-shadow-lg">{currentReel.game.name}</span>
               </div>
             )}
 
