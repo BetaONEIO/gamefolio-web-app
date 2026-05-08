@@ -747,7 +747,7 @@ const HomePage = () => {
               </div>
             </div>
           ) : (
-            <div className="text-center py-8 sm:py-12 bg-card/50 rounded-xl border border-border/50 mx-2">
+            <div className="text-center py-8 sm:py-12 pb-16 sm:pb-20 bg-card/50 rounded-xl border border-border/50 mx-2">
               <Camera className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">No Screenshots Yet</h3>
               <p className="text-muted-foreground text-sm px-4">
