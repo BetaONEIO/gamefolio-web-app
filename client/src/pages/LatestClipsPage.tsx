@@ -22,9 +22,11 @@ const LatestClipsPage = () => {
   }, []);
 
   const { data: clipsData, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
-    queryKey: ['/api/clips/trending', timePeriod],
+    queryKey: ['/api/clips/latest', timePeriod],
     queryFn: async () => {
-      const response = await fetch(`/api/clips/trending?period=${timePeriod}&limit=100`);
+      const params = new URLSearchParams({ limit: '100' });
+      if (timePeriod !== 'recent') params.set('period', timePeriod);
+      const response = await fetch(`/api/clips/latest?${params}`, { credentials: 'include' });
       if (!response.ok) throw new Error('Failed to fetch clips');
       return response.json();
     },

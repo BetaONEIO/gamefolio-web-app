@@ -326,11 +326,11 @@ const HomePage = () => {
     gcTime: 0, // Don't cache at all
   });
 
-  // Latest clips — same endpoint as dedicated Latest Clips page, sorted newest first
+  // Latest clips — dedicated endpoint sorted purely by upload date, newest first
   const { data: latestClipsRaw, isLoading: isLoadingLatestClips } = useQuery<ClipWithUser[]>({
-    queryKey: ['/api/clips/trending', 'recent'],
+    queryKey: ['/api/clips/latest'],
     queryFn: async () => {
-      const response = await fetch('/api/clips/trending?period=recent&limit=20', { credentials: 'include' });
+      const response = await fetch('/api/clips/latest?limit=20', { credentials: 'include' });
       if (!response.ok) throw new Error('Failed to fetch latest clips');
       return response.json();
     },

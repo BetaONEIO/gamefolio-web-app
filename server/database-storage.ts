@@ -1971,6 +1971,33 @@ export class DatabaseStorage implements IStorage {
     return Number(result.count);
   }
 
+  async getLatestClips(limit: number = 20, since?: Date, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]> {
+    const result = await db
+      .select({ clipId: clips.id })
+      .from(clips)
+      .leftJoin(users, eq(clips.userId, users.id))
+      .where(and(
+        eq(clips.videoType, 'clip'),
+        since ? gt(clips.createdAt, since) : undefined,
+        gameId ? eq(clips.gameId, gameId) : undefined,
+        or(
+          eq(users.isPrivate, false),
+          currentUserId ? eq(users.id, currentUserId) : sql`false`,
+          currentUserId ? sql`exists (select 1 from follows f where f.following_id = ${users.id} and f.follower_id = ${currentUserId})` : sql`false`
+        ),
+        or(
+          sql`${clips.gameId} IS NULL`,
+          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
+        ),
+        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
+      ))
+      .orderBy(desc(clips.createdAt), desc(clips.id))
+      .limit(limit);
+
+    const fetched = await Promise.all(result.map(r => this.getClipWithUser(r.clipId)));
+    return fetched.filter((c): c is ClipWithUser => !!c);
+  }
+
   async getAllClips(limit: number = 10, offset: number = 0, currentUserId?: number): Promise<ClipWithUser[]> {
     
     // Show clips excluding those linked to unapproved custom games (public feed safety)

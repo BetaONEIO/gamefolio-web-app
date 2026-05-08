@@ -467,11 +467,11 @@ const HomePage = () => {
   const { user } = useAuth();
   const userId = user?.id;
 
-  // Query latest clips for the homepage section — newest uploaded first, same as dedicated page
+  // Query latest clips for the homepage section — newest uploaded first
   const { data: trendingClipsData, isLoading: isLoadingTrendingClips } = useQuery<ClipWithUser[]>({
-    queryKey: ['/api/clips/trending', 'recent'],
+    queryKey: ['/api/clips/latest'],
     queryFn: async () => {
-      const response = await fetch('/api/clips/trending?period=recent&limit=20');
+      const response = await fetch('/api/clips/latest?limit=20', { credentials: 'include' });
       if (!response.ok) {
         throw new Error('Failed to fetch latest clips');
       }

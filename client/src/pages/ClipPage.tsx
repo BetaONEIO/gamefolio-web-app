@@ -192,9 +192,9 @@ const ClipPage = () => {
   });
 
   const { data: latestClips } = useQuery<ClipWithUser[]>({
-    queryKey: ['/api/clips'],
+    queryKey: ['/api/clips/latest'],
     queryFn: async () => {
-      const res = await fetch('/api/clips', { credentials: "include" });
+      const res = await fetch('/api/clips/latest?limit=50', { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch clips");
       return res.json();
     },

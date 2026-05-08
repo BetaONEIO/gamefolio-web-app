@@ -5216,6 +5216,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Clip Routes
   // ==========================================
 
+  // Get latest clips sorted purely by upload date (newest first)
+  app.get("/api/clips/latest", async (req, res) => {
+    try {
+      const { limit = '50', period, gameId } = req.query;
+      const currentUserId = (req.user as any)?.id;
+
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+
+      let since: Date | undefined;
+      const now = new Date();
+      if (period === '1d') since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      else if (period === '1w') since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      else if (period === 'ever') since = undefined;
+
+      const latestClips = await storage.getLatestClips(
+        parseInt(limit as string) || 50,
+        since,
+        gameId ? parseInt(gameId as string) : undefined,
+        currentUserId
+      );
+      const signed = await signClipUrls(latestClips);
+      res.json(signed);
+    } catch (err) {
+      console.error('Error fetching latest clips:', err);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
   // Get recent clip uploads for activity banner
   app.get("/api/recent-uploads", async (req, res) => {
     try {
