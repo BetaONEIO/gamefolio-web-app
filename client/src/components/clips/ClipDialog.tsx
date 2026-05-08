@@ -98,6 +98,8 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   const [reelIsPlaying, setReelIsPlaying] = useState(true);
   const [reelIsMuted, setReelIsMuted] = useState(true);
   const reelVideoRef = useRef<HTMLVideoElement | null>(null);
+  const [clipIsPlaying, setClipIsPlaying] = useState(true);
+  const [clipIsMuted, setClipIsMuted] = useState(true);
   
   const { showAd, adCompleted, isPro, decideAd, onAdFinished, reset: resetAd } = useClipAdDecision();
 
@@ -160,6 +162,8 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
       setAgeRestrictionAccepted(false);
       setShowAgeRestrictionDialog(false);
       isAcceptingRef.current = false;
+      setClipIsPlaying(true);
+      setClipIsMuted(true);
       resetAd();
     }
   }, [isOpen, resetAd]);
@@ -500,17 +504,18 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
       <DialogPortal>
         {/* Custom overlay that leaves footer visible on mobile reels */}
         <DialogOverlay className={cn(
+          "z-[100]",
           isMobile && clip?.videoType === 'reel' && "h-[calc(100dvh-64px)] bottom-auto"
         )} />
         <DialogPrimitive.Content
           ref={dialogRef}
           className={cn(
-            "fixed left-[50%] top-[50%] z-50 grid w-full translate-x-[-50%] translate-y-[-50%] border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+            "fixed left-[50%] top-[50%] z-[100] grid w-full translate-x-[-50%] translate-y-[-50%] border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
             "p-0 bg-background text-foreground clip-dialog-content",
             isMobile && clip?.videoType === 'reel' 
               ? "w-screen h-[calc(100dvh-64px)] max-w-none max-h-none overflow-hidden top-0 translate-y-0" // Leave space for footer on mobile reels, use dvh for dynamic viewport
               : isMobile 
-                ? "w-screen h-screen max-w-none max-h-none overflow-y-auto sm:max-w-[80%] sm:w-[80%] sm:max-h-[76vh] sm:h-[76vh] sm:overflow-hidden" // Allow scrolling on mobile, fixed on larger screens - 15% smaller
+                ? "w-screen h-[100dvh] max-w-none max-h-none overflow-hidden top-0 translate-y-0 border-0 rounded-none" // Full screen, no border/radius on mobile clips
                 : "max-w-[80%] w-[80%] max-h-[76vh] h-[76vh] overflow-hidden" // Desktop size - 15% smaller
           )}
           onTouchStart={handleTouchStart}
@@ -525,11 +530,11 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         </DialogDescription>
         {/* Top right action buttons */}
         <div
-          className={cn("absolute z-[60] flex items-center gap-2", !isMobile && "right-4 top-4")}
-          style={isMobile ? { top: 'max(8px, env(safe-area-inset-top, 8px))', right: '8px' } : undefined}
+          className={cn("absolute z-[110] flex items-center gap-2", !isMobile && "right-4 top-4")}
+          style={isMobile ? { top: 'max(12px, env(safe-area-inset-top, 12px))', right: '12px' } : undefined}
         >
-          {/* Delete button - only show for clip owner */}
-          {isOwnClip && clip && (
+          {/* Delete button - only show for clip owner, not on mobile (shown in overlay for clips) */}
+          {isOwnClip && clip && (!isMobile || clip.videoType === 'reel') && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -547,9 +552,26 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               <span className="sr-only">Delete</span>
             </button>
           )}
+          {/* Volume toggle - only for mobile clips (not reels, reels have their own) */}
+          {isMobile && clip && clip.videoType !== 'reel' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setClipIsMuted(!clipIsMuted);
+              }}
+              className="p-3 bg-black/60 backdrop-blur-sm hover:bg-black/80 rounded-full transition-colors"
+              title={clipIsMuted ? "Unmute" : "Mute"}
+            >
+              {clipIsMuted ? (
+                <VolumeX className="h-6 w-6 text-white" />
+              ) : (
+                <Volume2 className="h-6 w-6 text-white" />
+              )}
+            </button>
+          )}
           {/* Close button */}
           <DialogClose className={cn(
-            "rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
+            "rounded-full ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
             isMobile 
               ? "p-3 bg-black/60 backdrop-blur-sm hover:bg-black/80 opacity-100"
               : "p-2 opacity-70 hover:opacity-100"
@@ -589,7 +611,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               "flex flex-col lg:flex-row h-full max-h-full transition-opacity duration-300",
               isTransitioning ? "opacity-60" : "opacity-100"
             )}
-            style={isMobile && clip.videoType !== 'reel' ? { paddingTop: 'max(env(safe-area-inset-top, 0px), 44px)' } : undefined}
           >
             {/* Video player area - fixed size container, video fits inside */}
             <div className={cn(
@@ -597,8 +618,8 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               clip.videoType === 'reel' ? "" : "overflow-hidden",
               clip.videoType === 'reel' && isMobile
                 ? "w-full h-full"
-                : isMobile
-                  ? "w-full flex-[0_0_clamp(280px,50vh,60vh)]"
+                : isMobile && clip.videoType !== 'reel'
+                  ? "w-full h-full" // Full height on mobile for clip fullscreen layout
                   : clip.videoType === 'reel'
                     ? "w-full lg:w-[450px] h-full flex-shrink-0 mx-auto"
                     : "w-full lg:w-[65%] h-full flex-shrink-0",
@@ -833,27 +854,161 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     <Maximize2 className="h-5 w-5 text-white" />
                   </button>
                 </div>
+              ) : isMobile ? (
+                // Mobile clips: fullscreen TikTok-style with blurred background
+                <div className="w-full h-full flex items-center justify-center bg-black relative overflow-hidden">
+                  {/* Blurred full-screen background using clip thumbnail */}
+                  {(signedThumbnailUrl || clip.thumbnailUrl) && (
+                    <div className="absolute inset-0 z-0">
+                      <img
+                        src={signedThumbnailUrl || clip.thumbnailUrl || ''}
+                        alt=""
+                        aria-hidden="true"
+                        className="w-full h-full object-cover blur-2xl scale-110 opacity-70"
+                      />
+                    </div>
+                  )}
+                  {/* Subtle dark scrim over blur */}
+                  <div className="absolute inset-0 bg-black/30 z-[1]" />
+
+                  {/* Centered video */}
+                  <div className="relative z-10 w-full h-full flex items-center justify-center">
+                    <VideoPlayer
+                      videoUrl={clip.videoUrl}
+                      thumbnailUrl={clip.thumbnailUrl || (clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined)}
+                      autoPlay={true}
+                      className="w-full h-full"
+                      objectFit="contain"
+                      clipId={clip.id}
+                      disableAspectRatio={true}
+                      externalMuted={clipIsMuted}
+                      externalPaused={!clipIsPlaying}
+                      onMutedChange={setClipIsMuted}
+                      onPlayingChange={setClipIsPlaying}
+                    />
+                  </div>
+
+                  {/* Bottom left: user info + title + game */}
+                  <div className="absolute bottom-4 left-4 right-24 z-40 pointer-events-auto">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Link href={`/profile/${clip.user?.username}`} onClick={(e: React.MouseEvent) => { e.stopPropagation(); onClose(); }}>
+                        {clip?.user && <CustomAvatar user={clip.user} size="sm" showBorder={true} />}
+                      </Link>
+                      <Link href={`/profile/${clip.user?.username}`} onClick={(e: React.MouseEvent) => { e.stopPropagation(); onClose(); }}>
+                        <span className="text-white font-semibold text-sm drop-shadow-lg">@{clip.user?.username || 'unknown'}</span>
+                      </Link>
+                      {!isOwnClip && clip.user?.username && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={handleFollowClick}
+                          disabled={followMutation.isPending}
+                          className={cn(
+                            "h-7 px-3 text-xs font-semibold rounded-md",
+                            followRequestStatus === 'following'
+                              ? "bg-gray-600 hover:bg-gray-700 text-white"
+                              : followRequestStatus === 'requested'
+                                ? "bg-orange-500 hover:bg-orange-600 text-white"
+                                : "bg-primary hover:bg-primary/90 text-[#071013]"
+                          )}
+                        >
+                          {followRequestStatus === 'following' ? 'Following' : followRequestStatus === 'requested' ? 'Requested' : 'Follow'}
+                        </Button>
+                      )}
+                    </div>
+                    <h2 className="text-white font-semibold text-base mb-1 leading-tight drop-shadow-lg line-clamp-2">{clip.title}</h2>
+                    {clip.description && (
+                      <p className="text-white/80 text-sm leading-relaxed line-clamp-2 drop-shadow-lg">{clip.description}</p>
+                    )}
+                    {clip.game && (
+                      <div className="mt-1 flex items-center gap-1.5">
+                        {signedGameIconUrl && <img src={signedGameIconUrl} alt="" loading="lazy" className="w-4 h-4 rounded" />}
+                        <span className="text-[#B7FF1A] text-sm font-medium drop-shadow-lg">{clip.game.name}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right side action buttons */}
+                  <div className="absolute right-3 bottom-8 flex flex-col items-center space-y-5 z-50 pointer-events-auto">
+                    {isOwnClip && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
+                        className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 flex items-center justify-center"
+                      >
+                        <Trash2 className="h-5 w-5 text-white hover:text-red-500 transition-colors" />
+                      </button>
+                    )}
+                    <FireButton
+                      contentId={clip.id}
+                      contentType="clip"
+                      contentOwnerId={clip.userId}
+                      initialFired={false}
+                      initialCount={clip._count?.reactions || 0}
+                      size="lg"
+                      variant="vertical"
+                      onUnauthenticatedAction={() => openDialog('general')}
+                    />
+                    <LikeButton
+                      contentId={clip.id}
+                      contentType="clip"
+                      contentOwnerId={clip.userId}
+                      initialLiked={false}
+                      initialCount={clip._count?.likes || 0}
+                      size="lg"
+                      variant="vertical"
+                      onUnauthenticatedAction={() => openDialog('like')}
+                    />
+                    <div className="flex flex-col items-center">
+                      <button
+                        onClick={() => { if (!user) { openDialog('comment'); } else { setShowComments(true); } }}
+                        className="w-11 h-11 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors flex items-center justify-center"
+                      >
+                        <MessageSquare className="h-6 w-6 text-white" />
+                      </button>
+                      <span className="text-white text-xs font-medium mt-1">{comments?.length || 0}</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <ClipShareDialog
+                        clipId={clip.id}
+                        isOwnContent={user?.id === clip.userId}
+                        contentType="clip"
+                        trigger={
+                          <button className="w-11 h-11 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors flex items-center justify-center">
+                            <Share2 className="h-6 w-6 text-white" />
+                          </button>
+                        }
+                      />
+                      <span className="text-white text-xs font-medium mt-1">Share</span>
+                    </div>
+                  </div>
+
+                  {/* Mobile comments slide-up overlay */}
+                  {showComments && (
+                    <>
+                      <div className="fixed inset-0 bg-black/20 z-40" onClick={() => setShowComments(false)} />
+                      <div className="absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg overflow-hidden flex flex-col">
+                        <button onClick={() => setShowComments(false)} className="w-full flex justify-center py-2 flex-shrink-0 bg-background">
+                          <ChevronDown className="h-6 w-6 text-muted-foreground" />
+                        </button>
+                        <div className="flex-1 overflow-y-auto px-4 pb-4">
+                          <CommentSection clipId={clip.id} />
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
               ) : (
-                // Clips: fixed container with video contained inside + mobile fullscreen button
+                // Desktop clips: fixed container with video contained inside
                 <div className="relative w-full h-full max-w-full max-h-full">
-                  <VideoPlayer 
-                    videoUrl={clip.videoUrl} 
-                    thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined} 
+                  <VideoPlayer
+                    videoUrl={clip.videoUrl}
+                    thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined}
                     autoPlay={true}
                     className="w-full h-full max-w-full max-h-full"
                     objectFit="contain"
                     clipId={clip.id}
                     disableAspectRatio={true}
                   />
-                  {isMobile && (
-                    <button
-                      onClick={() => setIsFullscreen(true)}
-                      className="absolute top-3 right-3 z-50 p-2 rounded-full bg-black/60 hover:bg-black/80 transition-colors"
-                      title="View fullscreen"
-                    >
-                      <Maximize2 className="h-5 w-5 text-white" />
-                    </button>
-                  )}
                 </div>
               )
               ) : (
@@ -877,18 +1032,18 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               />
             )}
 
-            {/* Right side - Info and comments */}
+            {/* Right side - Info and comments (hidden on mobile clips — info lives in the overlay) */}
             <div className={cn(
               "flex flex-col",
-              clip.videoType === 'reel' && isMobile && !showComments
-                ? "hidden" // Hide sidebar on mobile for reels when comments not shown
-                : clip.videoType === 'reel' && isMobile && showComments
-                  ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out overflow-hidden" // Show comments as slide-up overlay on mobile for reels
-                  : isMobile && clip.videoType !== 'reel'
-                    ? "w-full flex-1 min-h-0 overflow-hidden" // Take remaining space on mobile for clips
-                  : clip.videoType === 'reel'
-                    ? "w-full lg:w-[35%] h-full overflow-hidden" // Reels: fixed 35% width for comments
-                    : "w-full lg:flex-1 lg:min-w-0 overflow-hidden" // Clips: take remaining space, allow internal scroll
+              isMobile && clip.videoType !== 'reel'
+                ? "hidden" // Mobile clips: info/comments shown in the fullscreen overlay above
+                : clip.videoType === 'reel' && isMobile && !showComments
+                  ? "hidden" // Hide sidebar on mobile for reels when comments not shown
+                  : clip.videoType === 'reel' && isMobile && showComments
+                    ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out overflow-hidden" // Show comments as slide-up overlay on mobile for reels
+                    : clip.videoType === 'reel'
+                      ? "w-full lg:w-[35%] h-full overflow-hidden" // Reels: fixed 35% width for comments
+                      : "w-full lg:flex-1 lg:min-w-0 overflow-hidden" // Clips: take remaining space, allow internal scroll
             )}
             style={{ maxHeight: '100%' }}>
               {/* Arrow down to close mobile comments */}
