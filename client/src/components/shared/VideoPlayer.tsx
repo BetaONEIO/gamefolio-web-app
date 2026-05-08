@@ -170,59 +170,70 @@ const VideoPlayer = ({
     }
   };
 
-  const toggleFullscreen = async () => {
+  const enterFullscreen = async () => {
     const video = videoRef.current;
     if (!video) return;
 
-    if (!isFullscreen) {
-      // iOS WKWebView (Capacitor) does not implement HTMLElement.requestFullscreen.
-      // Use the WebKit-only video method, which hands off to the native iOS
-      // player — that player auto-rotates to landscape and handles further
-      // rotation correctly without us needing a screen-orientation plugin.
-      const iosVideo = video as HTMLVideoElement & {
-        webkitEnterFullscreen?: () => void;
-      };
-      if (typeof iosVideo.webkitEnterFullscreen === "function") {
-        try {
-          iosVideo.webkitEnterFullscreen();
-          return;
-        } catch (err) {
-          console.warn("webkitEnterFullscreen failed, falling back:", err);
-        }
+    // iOS WKWebView (Capacitor) does not implement HTMLElement.requestFullscreen.
+    // Use the WebKit-only video method, which hands off to the native iOS
+    // player — that player auto-rotates to landscape and handles further
+    // rotation correctly without us needing a screen-orientation plugin.
+    const iosVideo = video as HTMLVideoElement & {
+      webkitEnterFullscreen?: () => void;
+      webkitDisplayingFullscreen?: boolean;
+    };
+    if (iosVideo.webkitDisplayingFullscreen) return; // already presenting
+    if (typeof iosVideo.webkitEnterFullscreen === "function") {
+      try {
+        iosVideo.webkitEnterFullscreen();
+        return;
+      } catch (err) {
+        console.warn("webkitEnterFullscreen failed, falling back:", err);
       }
+    }
 
-      // Standard path (Android WebView, desktop browsers).
-      if (video.requestFullscreen) {
-        try {
-          await video.requestFullscreen();
-          // Lock to landscape only for landscape-aspect videos so vertical
-          // reels don't get rotated. The Screen Orientation API is unavailable
-          // on iOS Safari/WKWebView and may reject in some other browsers —
-          // either is fine, fall through silently.
-          const isLandscapeVideo =
-            video.videoWidth > 0 && video.videoWidth > video.videoHeight;
-          const orientation = screen.orientation as
-            | (ScreenOrientation & { lock?: (o: string) => Promise<void> })
-            | undefined;
-          if (isLandscapeVideo && orientation?.lock) {
-            try {
-              await orientation.lock("landscape");
-            } catch (err) {
-              console.warn("Orientation lock failed:", err);
-            }
+    // Standard path (Android WebView, desktop browsers).
+    if (document.fullscreenElement) return; // already presenting
+    if (video.requestFullscreen) {
+      try {
+        await video.requestFullscreen();
+        // Lock to landscape only for landscape-aspect videos so vertical
+        // reels don't get rotated. The Screen Orientation API is unavailable
+        // on iOS Safari/WKWebView and may reject in some other browsers —
+        // either is fine, fall through silently.
+        const isLandscapeVideo =
+          video.videoWidth > 0 && video.videoWidth > video.videoHeight;
+        const orientation = screen.orientation as
+          | (ScreenOrientation & { lock?: (o: string) => Promise<void> })
+          | undefined;
+        if (isLandscapeVideo && orientation?.lock) {
+          try {
+            await orientation.lock("landscape");
+          } catch (err) {
+            console.warn("Orientation lock failed:", err);
           }
-        } catch (err) {
-          console.error("Error attempting to enable fullscreen:", err);
         }
+      } catch (err) {
+        console.error("Error attempting to enable fullscreen:", err);
       }
+    }
+  };
+
+  const exitFullscreen = async () => {
+    if (document.exitFullscreen && document.fullscreenElement) {
+      try {
+        await document.exitFullscreen();
+      } catch (err) {
+        console.error("Error attempting to exit fullscreen:", err);
+      }
+    }
+  };
+
+  const toggleFullscreen = async () => {
+    if (!isFullscreen) {
+      await enterFullscreen();
     } else {
-      if (document.exitFullscreen) {
-        try {
-          await document.exitFullscreen();
-        } catch (err) {
-          console.error("Error attempting to exit fullscreen:", err);
-        }
-      }
+      await exitFullscreen();
     }
   };
 
@@ -372,6 +383,37 @@ const VideoPlayer = ({
       }
     };
   }, [isPlaying, onEnded, initialTime]);
+
+  // Auto-enter fullscreen when the device rotates to landscape while a video
+  // is actively playing. enterFullscreen reads videoRef.current and DOM state
+  // only (no React state closures), so attaching the listener once on mount
+  // is sufficient.
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(orientation: landscape)");
+
+    const onOrientationChange = () => {
+      if (!mq.matches) return; // ignore portrait transitions
+      const video = videoRef.current;
+      if (!video || video.paused) return; // only when actively watching
+      void enterFullscreen();
+    };
+
+    // Modern API; fall back to addListener for older Safari/iOS.
+    if (typeof mq.addEventListener === "function") {
+      mq.addEventListener("change", onOrientationChange);
+    } else if (typeof (mq as unknown as { addListener?: (cb: () => void) => void }).addListener === "function") {
+      (mq as unknown as { addListener: (cb: () => void) => void }).addListener(onOrientationChange);
+    }
+
+    return () => {
+      if (typeof mq.removeEventListener === "function") {
+        mq.removeEventListener("change", onOrientationChange);
+      } else if (typeof (mq as unknown as { removeListener?: (cb: () => void) => void }).removeListener === "function") {
+        (mq as unknown as { removeListener: (cb: () => void) => void }).removeListener(onOrientationChange);
+      }
+    };
+  }, []);
 
   return (
     <div 
