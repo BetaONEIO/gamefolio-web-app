@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { Link } from "wouter";
 import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { ClipWithUser } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -164,12 +165,17 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
                   @{reel.user.username}
                 </p>
                 {reel.game?.name && (
-                  <span
-                    className="inline-block mt-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded"
-                    style={{ background: '#B7FF1A', color: '#071013' }}
+                  <Link
+                    href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    {reel.game.name}
-                  </span>
+                    <span
+                      className="inline-block mt-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded hover:opacity-90 transition-opacity"
+                      style={{ background: '#B7FF1A', color: '#071013' }}
+                    >
+                      {reel.game.name}
+                    </span>
+                  </Link>
                 )}
               </div>
             </div>
