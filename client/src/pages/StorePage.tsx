@@ -26,7 +26,16 @@ import { VerificationBadgeDetailDialog } from "@/components/store/VerificationBa
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import { useAccount, useWalletClient, usePublicClient, useChainId } from "wagmi";
 import { useOpenConnectModal } from "@0xsequence/connect";
+import { sequenceConfig } from "@/lib/sequence-config";
 import { useLocation } from "wouter";
+
+// Sequence's useOpenConnectModal throws when its provider isn't mounted, which
+// happens when the Sequence env vars are missing and App.tsx falls back to a
+// plain WagmiProvider. Mirror the guard from use-wallet.tsx so the Store page
+// doesn't crash in that build.
+const useConnectModalSafe: () => { setOpenConnectModal: (open: boolean) => void } = sequenceConfig
+  ? useOpenConnectModal
+  : () => ({ setOpenConnectModal: () => {} });
 import {
   Dialog as WalletDialog,
   DialogContent as WalletDialogContent,
@@ -247,7 +256,7 @@ export default function StorePage() {
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const chainId = useChainId();
-  const { setOpenConnectModal } = useOpenConnectModal();
+  const { setOpenConnectModal } = useConnectModalSafe();
   const { data: tokenBalance } = useTokenBalance();
   const { walletMode, setWalletMode } = useWallet();
 
