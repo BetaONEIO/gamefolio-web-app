@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   Upload,
@@ -33,6 +33,41 @@ const NAV_LINKS = [
 
 function smoothScroll(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+}
+
+function useLazyVideo() {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const startPlayback = () => {
+      setVisible(true);
+      el.play().catch(() => {});
+    };
+
+    if (!("IntersectionObserver" in window)) {
+      startPlayback();
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          startPlayback();
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return { ref, visible };
 }
 
 function GlowDot({ top, left, size = 300, opacity = 0.08 }: { top: string; left: string; size?: number; opacity?: number }) {
@@ -165,6 +200,8 @@ function UsernameChecker() {
 
 export default function InvitePage() {
   const [, setLocation] = useLocation();
+  const heroVideo = useLazyVideo();
+  const promoVideo = useLazyVideo();
 
   return (
     <div className="min-h-screen" style={{ background: BG, color: "white", fontFamily: "inherit" }}>
@@ -190,7 +227,16 @@ export default function InvitePage() {
       <section className="relative px-6 pt-40 pb-28 overflow-hidden">
         {/* Video background */}
         <div className="absolute inset-0 z-0 overflow-hidden">
-          <video src={heroVid1} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+          <video
+            ref={heroVideo.ref}
+            src={heroVid1}
+            preload="none"
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover transition-opacity duration-700"
+            style={{ opacity: heroVideo.visible ? 1 : 0 }}
+          />
         </div>
         {/* Dark overlay */}
         <div className="absolute inset-0 z-[1]" style={{ background: "rgba(8,14,23,0.82)" }} />
@@ -269,12 +315,14 @@ export default function InvitePage() {
             </div>
             <div className="relative rounded-3xl overflow-hidden border shadow-2xl" style={{ borderColor: "rgba(183,255,26,0.25)", background: CARD_BG, zIndex: 1 }}>
               <video
+                ref={promoVideo.ref}
                 src="/promo-hero.mp4"
-                autoPlay
+                preload="none"
                 loop
                 muted
                 playsInline
-                className="w-full h-[380px] md:h-[500px] object-cover"
+                className="w-full h-[380px] md:h-[500px] object-cover transition-opacity duration-700"
+                style={{ opacity: promoVideo.visible ? 1 : 0 }}
               />
             </div>
           </div>
