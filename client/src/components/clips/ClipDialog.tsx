@@ -885,23 +885,22 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   {/* Dark overlay so foreground video remains clear */}
                   <div className="absolute inset-0 bg-black/50 z-[1]" />
 
-                  {/* Portrait: narrow 9:16 column centred.
-                      Landscape: fill width — VideoPlayer's aspect-video wrapper handles the
-                      correct 16:9 height; outer flex centres it; no letterbox bars. */}
+                  {/* Portrait: narrow 9:16 column centred. Landscape: fill screen with
+                      contain so the blurred bg shows in the bars (better on portrait phone). */}
                   <div
                     className="relative z-10 flex-shrink-0"
                     style={isPortraitClip
                       ? { height: '100%', aspectRatio: '9/16', overflow: 'hidden' }
-                      : { width: '100%' }}
+                      : { width: '100%', height: '100%' }}
                   >
                     <VideoPlayer
                       videoUrl={clip.videoUrl}
                       thumbnailUrl={signedThumbnailUrl || clip.thumbnailUrl || undefined}
                       autoPlay={true}
-                      className={isPortraitClip ? "w-full h-full" : "w-full"}
+                      className="w-full h-full"
                       objectFit="contain"
                       clipId={clip.id}
-                      disableAspectRatio={isPortraitClip}
+                      disableAspectRatio={true}
                       externalMuted={clipIsMuted}
                       externalPaused={!clipIsPlaying}
                       onMutedChange={setClipIsMuted}
@@ -1023,8 +1022,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               ) : (
                 // Desktop clips — absolute inset-0 guarantees container matches panel dimensions exactly
                 <div className="absolute inset-0 flex items-center justify-center bg-black overflow-hidden">
-                  {/* Blurred background — spec: blur(24px) opacity 0.35 scale(1.08) */}
-                  {isPortraitClip && (signedThumbnailUrl || clip.thumbnailUrl) && (
+                  {/* Blurred background — always shown. For landscape clips it sits behind
+                      the full-panel video (mostly hidden). For portrait it fills the side bars. */}
+                  {(signedThumbnailUrl || clip.thumbnailUrl) && (
                     <div className="absolute inset-0 z-0">
                       <img
                         src={signedThumbnailUrl || clip.thumbnailUrl || ''}
@@ -1035,24 +1035,22 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       />
                     </div>
                   )}
-                  {/* Dark overlay so foreground video remains clear */}
-                  {isPortraitClip && <div className="absolute inset-0 bg-black/40 z-[1]" />}
+                  {/* Dark overlay */}
+                  <div className="absolute inset-0 bg-black/40 z-[1]" />
                   {/* Portrait: narrow 9:16 column centred.
-                      Landscape: fill width only — VideoPlayer uses aspect-video (16:9) and
-                      the outer flex centres it vertically; no black bars from object-contain
-                      in an oversized container. */}
+                      Landscape: fill panel with cover (no bars, minor edge crop). */}
                   <div
-                    className={cn("relative z-10 flex-shrink-0", !isPortraitClip && "w-full")}
+                    className={cn("relative z-10 flex-shrink-0", !isPortraitClip && "w-full h-full")}
                     style={isPortraitClip ? { height: '100%', aspectRatio: '9/16', maxWidth: '480px', overflow: 'hidden' } : undefined}
                   >
                     <VideoPlayer
                       videoUrl={clip.videoUrl}
                       thumbnailUrl={signedThumbnailUrl || clip.thumbnailUrl || undefined}
                       autoPlay={true}
-                      className={isPortraitClip ? "w-full h-full" : "w-full"}
-                      objectFit="contain"
+                      className="w-full h-full"
+                      objectFit={isPortraitClip ? "contain" : "cover"}
                       clipId={clip.id}
-                      disableAspectRatio={isPortraitClip}
+                      disableAspectRatio={true}
                       onAspectRatioDetected={setIsPortraitClip}
                       videoStyle={isPortraitClip ? { objectFit: 'contain', width: '100%', height: '100%', maxHeight: '100%' } : undefined}
                     />
