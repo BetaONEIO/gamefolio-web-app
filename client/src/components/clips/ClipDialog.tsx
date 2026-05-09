@@ -1051,6 +1051,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       objectFit={isPortraitClip ? "contain" : "cover"}
                       clipId={clip.id}
                       disableAspectRatio={true}
+                      persistControls={true}
                       onAspectRatioDetected={setIsPortraitClip}
                       videoStyle={isPortraitClip ? { objectFit: 'contain', width: '100%', height: '100%', maxHeight: '100%' } : undefined}
                     />

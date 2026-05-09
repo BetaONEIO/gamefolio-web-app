@@ -21,6 +21,7 @@ interface VideoPlayerProps {
   disableAspectRatio?: boolean;
   hideControls?: boolean;
   autoHideControls?: boolean;
+  persistControls?: boolean;
   onPlayingChange?: (isPlaying: boolean) => void;
   onMutedChange?: (isMuted: boolean) => void;
   onAspectRatioDetected?: (isPortrait: boolean) => void;
@@ -42,6 +43,7 @@ const VideoPlayer = ({
   disableAspectRatio = false,
   hideControls = false,
   autoHideControls = false,
+  persistControls = false,
   onPlayingChange,
   onMutedChange,
   onAspectRatioDetected,
@@ -375,7 +377,7 @@ const VideoPlayer = ({
     video.addEventListener("webkitbeginfullscreen", onWebkitBeginFullscreen);
     video.addEventListener("webkitendfullscreen", onWebkitEndFullscreen);
 
-    if (!autoHideControls) {
+    if (!persistControls && !autoHideControls) {
       hideControlsTimer();
     }
 
@@ -431,8 +433,8 @@ const VideoPlayer = ({
         disableAspectRatio ? "w-full h-full" : "w-full aspect-video",
         className
       )}
-      onMouseMove={hideControlsTimer}
-      onMouseLeave={() => isPlaying && setShowControls(false)}
+      onMouseMove={persistControls ? undefined : hideControlsTimer}
+      onMouseLeave={persistControls ? undefined : () => isPlaying && setShowControls(false)}
     >
       <video
         ref={videoRef}
