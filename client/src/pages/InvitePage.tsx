@@ -204,8 +204,12 @@ export default function InvitePage() {
             loop
             muted
             playsInline
-            className="w-full h-full object-cover transition-opacity duration-700"
-            style={{ opacity: heroVideo.visible ? 1 : 0 }}
+            className="w-full h-full object-cover"
+            style={{
+              opacity: heroVideo.visible ? 1 : 0,
+              filter: heroVideo.isPlaying ? "blur(0px) brightness(1)" : "blur(6px) brightness(0.65)",
+              transition: "opacity 700ms, filter 700ms",
+            }}
           />
         </div>
         {/* Dark overlay */}
@@ -292,8 +296,12 @@ export default function InvitePage() {
                 loop
                 muted
                 playsInline
-                className="w-full h-[380px] md:h-[500px] object-cover transition-opacity duration-700"
-                style={{ opacity: promoVideo.visible ? 1 : 0 }}
+                className="w-full h-[380px] md:h-[500px] object-cover"
+                style={{
+                  opacity: promoVideo.visible ? 1 : 0,
+                  filter: promoVideo.isPlaying ? "blur(0px) brightness(1)" : "blur(6px) brightness(0.65)",
+                  transition: "opacity 700ms, filter 700ms",
+                }}
               />
             </div>
           </div>

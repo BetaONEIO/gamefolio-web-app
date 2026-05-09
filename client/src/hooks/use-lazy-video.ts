@@ -9,10 +9,14 @@ export function useLazyVideo(options: UseLazyVideoOptions = {}) {
   const { autoPlay = true, threshold = 0.1 } = options;
   const ref = useRef<HTMLVideoElement>(null);
   const [visible, setVisible] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+
+    const onPlaying = () => setIsPlaying(true);
+    el.addEventListener("playing", onPlaying);
 
     const onEnter = () => {
       setVisible(true);
@@ -23,7 +27,7 @@ export function useLazyVideo(options: UseLazyVideoOptions = {}) {
 
     if (!("IntersectionObserver" in window)) {
       onEnter();
-      return;
+      return () => el.removeEventListener("playing", onPlaying);
     }
 
     const observer = new IntersectionObserver(
@@ -37,8 +41,11 @@ export function useLazyVideo(options: UseLazyVideoOptions = {}) {
     );
 
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      el.removeEventListener("playing", onPlaying);
+    };
   }, [autoPlay, threshold]);
 
-  return { ref, visible };
+  return { ref, visible, isPlaying };
 }
