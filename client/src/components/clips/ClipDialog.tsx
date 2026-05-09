@@ -1169,17 +1169,12 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 </div>
               </div>
 
-              {/* Comments and content section - scrollable area */}
+              {/* Comments and content section — info is fixed, comments scroll independently */}
               <div 
-                className={cn(
-                  "flex-1 min-h-0 overflow-y-auto space-y-3 scrollbar-hide",
-                  isMobile ? "px-3 py-2" : "px-4 py-3"
-                )}
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                data-scroll-container
+                className="flex-1 min-h-0 flex flex-col overflow-hidden"
               >
-                {/* Title and description */}
-                <div className="flex-shrink-0">
+                {/* Title and description — fixed, does not scroll */}
+                <div className={cn("flex-shrink-0", isMobile ? "px-3 py-2" : "px-4 py-3")}>
                   <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>{clip.title}</h1>
                   {clip.description && (
                     <p className={cn("text-foreground mt-1 leading-relaxed break-words max-h-24 overflow-y-auto", isMobile ? "text-sm" : "text-base")}>{clip.description}</p>
@@ -1273,8 +1268,8 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   </div>
                 </div>
 
-                {/* Comments section */}
-                <div className="pt-2">
+                {/* Comments section — flex-1 so it fills remaining height; CommentSection handles its own scroll */}
+                <div className={cn("flex-1 min-h-0 overflow-hidden", isMobile ? "px-3" : "px-4")}>
                   <CommentSection 
                     clipId={clip.id}
                     currentUserId={user?.id || null} 
