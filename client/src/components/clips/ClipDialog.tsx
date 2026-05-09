@@ -868,27 +868,36 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   </button>
                 </div>
               ) : isMobile ? (
-                // Mobile clips: fullscreen TikTok-style with blurred background
-                <div className="w-full h-full flex items-center justify-center bg-black relative overflow-hidden">
-                  {/* Blurred full-screen background using clip thumbnail */}
+                // Mobile clips: fullscreen with blurred background and contained video
+                <div className="absolute inset-0 flex items-center justify-center bg-black overflow-hidden">
+                  {/* Blurred background — spec: blur(24px) opacity 0.35 scale(1.08) */}
                   {(signedThumbnailUrl || clip.thumbnailUrl) && (
                     <div className="absolute inset-0 z-0">
                       <img
                         src={signedThumbnailUrl || clip.thumbnailUrl || ''}
                         alt=""
                         aria-hidden="true"
-                        className="w-full h-full object-cover blur-2xl scale-110 opacity-70"
+                        className="w-full h-full object-cover"
+                        style={{ filter: 'blur(24px)', opacity: 0.35, transform: 'scale(1.08)' }}
                       />
                     </div>
                   )}
-                  {/* Subtle dark scrim over blur */}
-                  <div className="absolute inset-0 bg-black/30 z-[1]" />
+                  {/* Dark overlay so foreground video remains clear */}
+                  <div className="absolute inset-0 bg-black/50 z-[1]" />
 
-                  {/* Centered video */}
-                  <div className="relative z-10 w-full h-full flex items-center justify-center">
+                  {/* Portrait clips: narrow 9:16 column centred. Landscape: fill width. */}
+                  <div
+                    className="relative z-10 flex-shrink-0"
+                    style={{
+                      height: '100%',
+                      width: isPortraitClip ? undefined : '100%',
+                      aspectRatio: isPortraitClip ? '9/16' : undefined,
+                      overflow: 'hidden',
+                    }}
+                  >
                     <VideoPlayer
                       videoUrl={clip.videoUrl}
-                      thumbnailUrl={clip.thumbnailUrl || (clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined)}
+                      thumbnailUrl={signedThumbnailUrl || clip.thumbnailUrl || undefined}
                       autoPlay={true}
                       className="w-full h-full"
                       objectFit="contain"
@@ -898,6 +907,8 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       externalPaused={!clipIsPlaying}
                       onMutedChange={setClipIsMuted}
                       onPlayingChange={setClipIsPlaying}
+                      onAspectRatioDetected={setIsPortraitClip}
+                      videoStyle={{ objectFit: 'contain', width: '100%', height: '100%', maxHeight: '100%' }}
                     />
                   </div>
 
@@ -1011,24 +1022,27 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   )}
                 </div>
               ) : (
-                // Desktop clips — fill the video panel, object-contain keeps all content visible
-                <div className="relative flex items-center justify-center w-full h-full bg-black overflow-hidden">
-                  {/* Blurred background fill for portrait clips (covers pillarbox bars) */}
+                // Desktop clips — absolute inset-0 guarantees container matches panel dimensions exactly
+                <div className="absolute inset-0 flex items-center justify-center bg-black overflow-hidden">
+                  {/* Blurred background — spec: blur(24px) opacity 0.35 scale(1.08) */}
                   {isPortraitClip && (signedThumbnailUrl || clip.thumbnailUrl) && (
                     <div className="absolute inset-0 z-0">
                       <img
                         src={signedThumbnailUrl || clip.thumbnailUrl || ''}
                         alt=""
                         aria-hidden="true"
-                        className="w-full h-full object-cover blur-2xl scale-110 opacity-50"
+                        className="w-full h-full object-cover"
+                        style={{ filter: 'blur(24px)', opacity: 0.35, transform: 'scale(1.08)' }}
                       />
                     </div>
                   )}
-                  {/* Portrait: narrow column sized by aspect ratio so no bars visible.
-                      Landscape: fill the panel. object-contain keeps all content in frame. */}
+                  {/* Dark overlay so foreground video remains clear */}
+                  {isPortraitClip && <div className="absolute inset-0 bg-black/40 z-[1]" />}
+                  {/* Portrait: narrow 9:16 column centred. Landscape: fill the panel.
+                      inline height: 100% avoids flex percentage-height resolution quirks. */}
                   <div
-                    className={cn("relative z-10", isPortraitClip ? "h-full flex-shrink-0" : "w-full h-full")}
-                    style={isPortraitClip ? { aspectRatio: '9/16', maxWidth: '480px' } : undefined}
+                    className={cn("relative z-10 flex-shrink-0", !isPortraitClip && "w-full h-full")}
+                    style={isPortraitClip ? { height: '100%', aspectRatio: '9/16', maxWidth: '480px', overflow: 'hidden' } : undefined}
                   >
                     <VideoPlayer
                       videoUrl={clip.videoUrl}
@@ -1039,6 +1053,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       clipId={clip.id}
                       disableAspectRatio={true}
                       onAspectRatioDetected={setIsPortraitClip}
+                      videoStyle={{ objectFit: 'contain', width: '100%', height: '100%', maxHeight: '100%' }}
                     />
                   </div>
                 </div>

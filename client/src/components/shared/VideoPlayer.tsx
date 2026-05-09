@@ -26,6 +26,7 @@ interface VideoPlayerProps {
   onAspectRatioDetected?: (isPortrait: boolean) => void;
   externalPaused?: boolean;
   externalMuted?: boolean;
+  videoStyle?: React.CSSProperties;
 }
 
 const VideoPlayer = ({ 
@@ -45,7 +46,8 @@ const VideoPlayer = ({
   onMutedChange,
   onAspectRatioDetected,
   externalPaused,
-  externalMuted
+  externalMuted,
+  videoStyle,
 }: VideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
@@ -442,6 +444,7 @@ const VideoPlayer = ({
           filter !== 'none' && `filter-${filter}`,
           'focus:outline-none focus:ring-0 outline-none border-none'
         )}
+        style={videoStyle}
         onClick={togglePlay}
         autoPlay={autoPlay}
         muted={isMuted}
