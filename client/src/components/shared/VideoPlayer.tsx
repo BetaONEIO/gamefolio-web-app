@@ -22,6 +22,7 @@ interface VideoPlayerProps {
   hideControls?: boolean;
   autoHideControls?: boolean;
   persistControls?: boolean;
+  transparentBg?: boolean;
   onPlayingChange?: (isPlaying: boolean) => void;
   onMutedChange?: (isMuted: boolean) => void;
   onAspectRatioDetected?: (isPortrait: boolean) => void;
@@ -44,6 +45,7 @@ const VideoPlayer = ({
   hideControls = false,
   autoHideControls = false,
   persistControls = false,
+  transparentBg = false,
   onPlayingChange,
   onMutedChange,
   onAspectRatioDetected,
@@ -429,7 +431,8 @@ const VideoPlayer = ({
   return (
     <div 
       className={cn(
-        "relative overflow-hidden bg-black flex items-center justify-center video-container",
+        "relative overflow-hidden flex items-center justify-center video-container",
+        !transparentBg && "bg-black",
         disableAspectRatio ? "w-full h-full" : "w-full aspect-video",
         className
       )}

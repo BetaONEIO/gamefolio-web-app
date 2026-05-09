@@ -1048,10 +1048,11 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       thumbnailUrl={signedThumbnailUrl || clip.thumbnailUrl || undefined}
                       autoPlay={true}
                       className="w-full h-full"
-                      objectFit={isPortraitClip ? "contain" : "cover"}
+                      objectFit="contain"
                       clipId={clip.id}
                       disableAspectRatio={true}
                       persistControls={true}
+                      transparentBg={true}
                       onAspectRatioDetected={setIsPortraitClip}
                       videoStyle={isPortraitClip ? { objectFit: 'contain', width: '100%', height: '100%', maxHeight: '100%' } : undefined}
                     />
