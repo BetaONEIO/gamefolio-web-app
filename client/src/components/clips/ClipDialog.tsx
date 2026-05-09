@@ -1000,12 +1000,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   )}
                 </div>
               ) : (
-                // Desktop clips: portrait clips get a centred narrow column, landscape fill the panel
-                <div className={cn(
-                  "relative flex items-center justify-center w-full h-full bg-black",
-                  isPortraitClip && "overflow-hidden"
-                )}>
-                  {/* Blurred background for portrait clips */}
+                // Desktop clips — fill the video panel, object-contain keeps all content visible
+                <div className="relative flex items-center justify-center w-full h-full bg-black overflow-hidden">
+                  {/* Blurred background fill for portrait clips (covers pillarbox bars) */}
                   {isPortraitClip && (signedThumbnailUrl || clip.thumbnailUrl) && (
                     <div className="absolute inset-0 z-0">
                       <img
@@ -1016,17 +1013,13 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       />
                     </div>
                   )}
-                  <div className={cn(
-                    "relative z-10",
-                    isPortraitClip
-                      ? "h-full max-w-[420px] w-full flex-shrink-0"
-                      : "w-full h-full max-w-full max-h-full"
-                  )}>
+                  {/* Video fills the panel; object-contain ensures nothing is clipped */}
+                  <div className="relative z-10 w-full h-full">
                     <VideoPlayer
                       videoUrl={clip.videoUrl}
                       thumbnailUrl={signedThumbnailUrl || clip.thumbnailUrl || undefined}
                       autoPlay={true}
-                      className="w-full h-full max-w-full max-h-full"
+                      className="w-full h-full"
                       objectFit="contain"
                       clipId={clip.id}
                       disableAspectRatio={true}
@@ -1067,9 +1060,8 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out overflow-hidden" // Show comments as slide-up overlay on mobile for reels
                     : clip.videoType === 'reel'
                       ? "w-full lg:w-[35%] h-full overflow-hidden" // Reels: fixed 35% width for comments
-                      : "w-full lg:flex-1 lg:min-w-0 overflow-hidden" // Clips: take remaining space, allow internal scroll
-            )}
-            style={{ maxHeight: '100%' }}>
+                      : "w-full lg:flex-1 lg:min-w-0 h-full overflow-hidden" // Clips: take remaining space, allow internal scroll
+            )}>
               {/* Arrow down to close mobile comments */}
               {clip.videoType === 'reel' && isMobile && showComments && (
                 <button 
@@ -1150,16 +1142,10 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               {/* Comments and content section - scrollable area */}
               <div 
                 className={cn(
-                  "overflow-y-auto space-y-3 scrollbar-hide",
-                  isMobile ? "px-3 py-2" : "px-4 py-3" // Better mobile padding
+                  "flex-1 min-h-0 overflow-y-auto space-y-3 scrollbar-hide",
+                  isMobile ? "px-3 py-2" : "px-4 py-3"
                 )}
-                style={{ 
-                  scrollbarWidth: 'none', 
-                  msOverflowStyle: 'none',
-                  flex: '1 1 0',
-                  minHeight: 0,
-                  maxHeight: 'calc(100% - 80px)' // Account for header height
-                }}
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 data-scroll-container
               >
                 {/* Title and description */}
