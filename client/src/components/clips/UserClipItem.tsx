@@ -60,14 +60,16 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
       onClick={handleClipClick}
     >
       <div className="relative overflow-hidden w-full h-full">
-        {/* Blurred background fill for portrait clips */}
-        {isPortrait && clip.thumbnailUrl && (
-          <div className="absolute inset-0 z-0">
+        {/* Blurred background — always shown; invisible for landscape (fills square);
+            visible as bars for portrait clips. */}
+        {clip.thumbnailUrl && (
+          <div className="absolute inset-0 z-0 overflow-hidden">
             <img
               src={clip.thumbnailUrl}
               alt=""
               aria-hidden="true"
-              className="w-full h-full object-cover blur-xl scale-110 opacity-60"
+              className="w-full h-full object-cover"
+              style={{ filter: 'blur(24px)', opacity: 0.35, transform: 'scale(1.08)' }}
             />
           </div>
         )}

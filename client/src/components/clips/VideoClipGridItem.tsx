@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useLazyVideo } from "@/hooks/use-lazy-video";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { ClipWithUser } from "@shared/schema";
@@ -28,7 +27,6 @@ const VideoClipGridItem = ({
   clipsList,
 }: VideoClipGridItemProps) => {
   const { openClipDialog } = useClipDialog();
-  const [isPortrait, setIsPortrait] = useState(false);
   const lazyVideo = useLazyVideo({ autoPlay: false });
 
   const handleOpenClip = () => {
@@ -66,29 +64,27 @@ const VideoClipGridItem = ({
           />
         ) : (
           <>
-            {/* Blurred background fill for portrait thumbnails */}
-            {isPortrait && !isReel && (
+            {/* Blurred background — always shown for non-reel clips so portrait
+                thumbnails get filled bars; invisible for landscape (image fills container). */}
+            {!isReel && thumbnailUrl && (
               <div className="absolute inset-0 z-[1] overflow-hidden">
                 <img
                   src={thumbnailUrl}
                   alt=""
                   aria-hidden="true"
-                  className="w-full h-full object-cover blur-xl scale-110 opacity-60"
+                  className="w-full h-full object-cover"
+                  style={{ filter: 'blur(24px)', opacity: 0.35, transform: 'scale(1.08)' }}
                 />
               </div>
             )}
             <LazyImage
               src={thumbnailUrl}
               alt={clip.title || "Video clip thumbnail"}
-              className={`w-full h-full transition-transform duration-300 group-hover:scale-105 ${isPortrait && !isReel ? "object-contain" : "object-cover"} ${clip.ageRestricted ? "blur-2xl" : ""}`}
+              className={`w-full h-full transition-transform duration-300 group-hover:scale-105 ${isReel ? "object-cover" : "object-contain"} ${clip.ageRestricted ? "blur-2xl" : ""}`}
               placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%230B1218'/%3e%3c/svg%3e"
               showLoadingSpinner={true}
               rootMargin="100px"
               threshold={0.1}
-              onLoad={(e) => {
-                const img = e.currentTarget as HTMLImageElement;
-                if (!isReel) setIsPortrait(img.naturalHeight > img.naturalWidth);
-              }}
             />
           </>
         )}

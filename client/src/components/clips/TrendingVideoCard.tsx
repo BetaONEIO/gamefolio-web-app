@@ -15,7 +15,6 @@ interface TrendingVideoCardProps {
 const TrendingVideoCard = ({ clip }: TrendingVideoCardProps) => {
   const { openClipDialog } = useClipDialog();
   const [hidden, setHidden] = useState(false);
-  const [isPortrait, setIsPortrait] = useState(false);
 
   if (hidden) return null;
 
@@ -47,14 +46,16 @@ const TrendingVideoCard = ({ clip }: TrendingVideoCardProps) => {
           <Play className="h-10 w-10 text-gray-600" />
         </div>
 
-        {/* Blurred background fill for portrait thumbnails */}
-        {isPortrait && (
+        {/* Blurred background — always shown so portrait thumbnails get filled bars;
+            invisible for landscape clips (image fills the 16:9 container exactly). */}
+        {(clip.thumbnailUrl) && (
           <div className="absolute inset-0 z-[1] overflow-hidden">
             <img
               src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
               alt=""
               aria-hidden="true"
-              className="w-full h-full object-cover blur-xl scale-110 opacity-60"
+              className="w-full h-full object-cover"
+              style={{ filter: 'blur(24px)', opacity: 0.35, transform: 'scale(1.08)' }}
             />
           </div>
         )}
@@ -62,17 +63,13 @@ const TrendingVideoCard = ({ clip }: TrendingVideoCardProps) => {
         <LazyImage
           src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
           alt={clip.title}
-          className={`w-full h-full group-hover:scale-105 transition-transform duration-300 ${isPortrait ? "object-contain" : "object-cover"} ${
+          className={`w-full h-full group-hover:scale-105 transition-transform duration-300 object-contain ${
             clip.ageRestricted ? "blur-2xl" : ""
           }`}
           placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%230B1218'/%3e%3c/svg%3e"
           showLoadingSpinner={false}
           rootMargin="50px"
           containerClassName="absolute inset-0 z-10"
-          onLoad={(e) => {
-            const img = e.currentTarget as HTMLImageElement;
-            setIsPortrait(img.naturalHeight > img.naturalWidth);
-          }}
           fallback={
             <div className="w-full h-full flex items-center justify-center bg-[#0B1218]">
               <Play className="h-10 w-10 text-gray-600" />

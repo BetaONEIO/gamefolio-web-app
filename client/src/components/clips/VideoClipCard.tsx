@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { formatDuration } from "@/lib/constants";
@@ -15,7 +14,6 @@ interface VideoClipCardProps {
 
 const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
   const { openClipDialog } = useClipDialog();
-  const [isPortrait, setIsPortrait] = useState(false);
 
   const handleCardClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -55,14 +53,16 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
           <Play className="h-10 w-10 text-gray-600" />
         </div>
 
-        {/* Blurred background fill for portrait thumbnails */}
-        {isPortrait && (
+        {/* Blurred background — always shown; invisible for landscape (fills 16:9 container
+            exactly with object-contain); visible as bars for portrait clips. */}
+        {clip.thumbnailUrl && (
           <div className="absolute inset-0 z-[1] overflow-hidden">
             <img
               src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
               alt=""
               aria-hidden="true"
-              className="w-full h-full object-cover blur-xl scale-110 opacity-60"
+              className="w-full h-full object-cover"
+              style={{ filter: 'blur(24px)', opacity: 0.35, transform: 'scale(1.08)' }}
             />
           </div>
         )}
@@ -70,14 +70,10 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
         <LazyImage
           src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
           alt={clip.title}
-          className={`w-full h-full transition-transform duration-300 group-hover:scale-105 ${isPortrait ? "object-contain" : "object-cover"} ${clip.ageRestricted ? "blur-2xl" : ""}`}
+          className={`w-full h-full transition-transform duration-300 group-hover:scale-105 object-contain ${clip.ageRestricted ? "blur-2xl" : ""}`}
           placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%230B1218'/%3e%3c/svg%3e"
           showLoadingSpinner={false}
           containerClassName="absolute inset-0 z-10"
-          onLoad={(e) => {
-            const img = e.currentTarget as HTMLImageElement;
-            setIsPortrait(img.naturalHeight > img.naturalWidth);
-          }}
           fallback={
             <div className="w-full h-full flex items-center justify-center bg-[#0B1218]">
               <Play className="h-10 w-10 text-gray-600" />
