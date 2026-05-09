@@ -197,11 +197,12 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     }
   }, [ageRestrictionAccepted, showAgeRestrictionDialog]);
 
-  // Reset age restriction state when clip changes
+  // Reset age restriction state and portrait detection when clip changes
   useEffect(() => {
     if (clipId !== previousClipId) {
       setAgeRestrictionAccepted(false);
       setShowAgeRestrictionDialog(false);
+      setIsPortraitClip(false);
     }
   }, [clipId, previousClipId]);
 
@@ -823,7 +824,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   {!isFullscreen && (
                     <VideoPlayer 
                       videoUrl={clip.videoUrl} 
-                      thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined} 
+                      thumbnailUrl={signedThumbnailUrl || clip.thumbnailUrl || undefined} 
                       autoPlay={true}
                       className="h-full max-h-full"
                       objectFit="contain"
