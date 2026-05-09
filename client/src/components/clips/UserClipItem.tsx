@@ -15,6 +15,7 @@ interface UserClipItemProps {
 
 const UserClipItem = ({ clip }: UserClipItemProps) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [isPortrait, setIsPortrait] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const { openClipDialog } = useClipDialog();
   const [, setLocation] = useLocation();
@@ -58,7 +59,19 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleClipClick}
     >
-      <div className="relative overflow-hidden w-full h-full"> 
+      <div className="relative overflow-hidden w-full h-full">
+        {/* Blurred background fill for portrait clips */}
+        {isPortrait && clip.thumbnailUrl && (
+          <div className="absolute inset-0 z-0">
+            <img
+              src={clip.thumbnailUrl}
+              alt=""
+              aria-hidden="true"
+              className="w-full h-full object-cover blur-xl scale-110 opacity-60"
+            />
+          </div>
+        )}
+
         {/* Video element for hover playback */}
         <video 
           ref={videoRef}
@@ -68,7 +81,8 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
           muted
           loop
           className={cn(
-            "w-full h-full object-cover object-center transition-opacity duration-200",
+            "w-full h-full transition-opacity duration-200 relative z-10",
+            isPortrait ? "object-contain" : "object-cover object-center",
             isHovered ? "opacity-100" : "opacity-0"
           )}
         />
@@ -79,9 +93,14 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
           alt={clip.title} 
           loading="lazy"
           className={cn(
-            "w-full h-full object-cover object-center absolute inset-0 transition-opacity duration-200",
+            "w-full h-full absolute inset-0 transition-opacity duration-200 z-10",
+            isPortrait ? "object-contain" : "object-cover object-center",
             isHovered ? "opacity-0" : "opacity-100"
           )}
+          onLoad={(e) => {
+            const img = e.currentTarget as HTMLImageElement;
+            setIsPortrait(img.naturalHeight > img.naturalWidth);
+          }}
         />
         
         {/* Username removed from thumbnail as requested */}

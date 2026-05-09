@@ -23,6 +23,7 @@ interface VideoPlayerProps {
   autoHideControls?: boolean;
   onPlayingChange?: (isPlaying: boolean) => void;
   onMutedChange?: (isMuted: boolean) => void;
+  onAspectRatioDetected?: (isPortrait: boolean) => void;
   externalPaused?: boolean;
   externalMuted?: boolean;
 }
@@ -42,6 +43,7 @@ const VideoPlayer = ({
   autoHideControls = false,
   onPlayingChange,
   onMutedChange,
+  onAspectRatioDetected,
   externalPaused,
   externalMuted
 }: VideoPlayerProps) => {
@@ -324,6 +326,11 @@ const VideoPlayer = ({
         video.currentTime = initialTime;
         setCurrentTime(initialTime);
         hasSetInitialTime.current = true;
+      }
+
+      // Fire aspect ratio callback so parent can adapt layout
+      if (onAspectRatioDetected && video.videoWidth > 0 && video.videoHeight > 0) {
+        onAspectRatioDetected(video.videoHeight > video.videoWidth);
       }
     };
 

@@ -86,6 +86,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   const [showComments, setShowComments] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isPortraitClip, setIsPortraitClip] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
@@ -998,17 +999,39 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   )}
                 </div>
               ) : (
-                // Desktop clips: fixed container with video contained inside
-                <div className="relative w-full h-full max-w-full max-h-full">
-                  <VideoPlayer
-                    videoUrl={clip.videoUrl}
-                    thumbnailUrl={clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined}
-                    autoPlay={true}
-                    className="w-full h-full max-w-full max-h-full"
-                    objectFit="contain"
-                    clipId={clip.id}
-                    disableAspectRatio={true}
-                  />
+                // Desktop clips: portrait clips get a centred narrow column, landscape fill the panel
+                <div className={cn(
+                  "relative flex items-center justify-center w-full h-full bg-black",
+                  isPortraitClip && "overflow-hidden"
+                )}>
+                  {/* Blurred background for portrait clips */}
+                  {isPortraitClip && (signedThumbnailUrl || clip.thumbnailUrl) && (
+                    <div className="absolute inset-0 z-0">
+                      <img
+                        src={signedThumbnailUrl || clip.thumbnailUrl || ''}
+                        alt=""
+                        aria-hidden="true"
+                        className="w-full h-full object-cover blur-2xl scale-110 opacity-50"
+                      />
+                    </div>
+                  )}
+                  <div className={cn(
+                    "relative z-10",
+                    isPortraitClip
+                      ? "h-full max-w-[420px] w-full flex-shrink-0"
+                      : "w-full h-full max-w-full max-h-full"
+                  )}>
+                    <VideoPlayer
+                      videoUrl={clip.videoUrl}
+                      thumbnailUrl={signedThumbnailUrl || clip.thumbnailUrl || undefined}
+                      autoPlay={true}
+                      className="w-full h-full max-w-full max-h-full"
+                      objectFit="contain"
+                      clipId={clip.id}
+                      disableAspectRatio={true}
+                      onAspectRatioDetected={setIsPortraitClip}
+                    />
+                  </div>
                 </div>
               )
               ) : (
