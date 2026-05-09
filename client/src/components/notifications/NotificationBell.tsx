@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Notification } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, getQueryFn, queryClient } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -84,12 +84,14 @@ export function NotificationBell() {
   // Fetch notifications
   const { data: notifications = [] } = useQuery<NotificationWithUser[]>({
     queryKey: ['/api/notifications'],
+    queryFn: getQueryFn({ on401: "returnNull" }),
     staleTime: 0,
   });
 
   // Fetch unread count
   const { data: unreadCount = 0 } = useQuery<number>({
     queryKey: ['/api/notifications/unread-count'],
+    queryFn: getQueryFn({ on401: "returnNull" }),
     staleTime: 0,
     refetchInterval: 30000,
   });
