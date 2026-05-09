@@ -206,6 +206,17 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     }
   }, [clipId, previousClipId]);
 
+  // Detect portrait from thumbnail early (before video loadedmetadata fires)
+  useEffect(() => {
+    const url = signedThumbnailUrl || clip?.thumbnailUrl;
+    if (!url || clip?.videoType === 'reel') return;
+    const img = new Image();
+    img.onload = () => {
+      if (img.naturalHeight > img.naturalWidth) setIsPortraitClip(true);
+    };
+    img.src = url;
+  }, [signedThumbnailUrl, clip?.thumbnailUrl, clip?.videoType]);
+
   // Handle clip transitions with fade effect
   useEffect(() => {
     if (clipId !== previousClipId && previousClipId !== null) {
@@ -1013,8 +1024,12 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       />
                     </div>
                   )}
-                  {/* Video fills the panel; object-contain ensures nothing is clipped */}
-                  <div className="relative z-10 w-full h-full">
+                  {/* Portrait: narrow column sized by aspect ratio so no bars visible.
+                      Landscape: fill the panel. object-contain keeps all content in frame. */}
+                  <div
+                    className={cn("relative z-10", isPortraitClip ? "h-full flex-shrink-0" : "w-full h-full")}
+                    style={isPortraitClip ? { aspectRatio: '9/16', maxWidth: '480px' } : undefined}
+                  >
                     <VideoPlayer
                       videoUrl={clip.videoUrl}
                       thumbnailUrl={signedThumbnailUrl || clip.thumbnailUrl || undefined}
