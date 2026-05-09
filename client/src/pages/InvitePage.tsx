@@ -18,6 +18,8 @@ import {
 import { SiTwitch, SiKick } from "react-icons/si";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 import heroVid1 from "@assets/gamer.mp4";
+import gamerPoster from "@assets/gamer-poster.jpg";
+import promoHeroPoster from "@assets/promo-hero-poster.jpg";
 
 const PRIMARY = "#b5f23d";
 const PRIMARY_DIM = "rgba(181,242,61,0.12)";
@@ -197,6 +199,7 @@ export default function InvitePage() {
           <video
             ref={heroVideo.ref}
             src={heroVid1}
+            poster={gamerPoster}
             preload="none"
             loop
             muted
@@ -284,6 +287,7 @@ export default function InvitePage() {
               <video
                 ref={promoVideo.ref}
                 src="/promo-hero.mp4"
+                poster={promoHeroPoster}
                 preload="none"
                 loop
                 muted
