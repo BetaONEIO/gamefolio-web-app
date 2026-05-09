@@ -151,15 +151,30 @@ function AuthRedirect() {
 function MainLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useMobile();
   const { user } = useAuth();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { isOpen, closeModal, defaultTab } = useAuthModal();
   const mainScrollRef = React.useRef<HTMLElement>(null);
-  
+
   // Version checking for cache busting
   useVersionCheck();
 
   // Android hardware back button → go back in history, or exit at root
   useAndroidBackButton();
+
+  // Tapping a system push surfaces the actionUrl through this custom event.
+  // Route into the SPA when the user opens a push that targets a specific
+  // page (clip, profile, follow request, etc.).
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ actionUrl?: string }>).detail;
+      const target = detail?.actionUrl;
+      if (target && typeof target === 'string' && target.startsWith('/')) {
+        setLocation(target);
+      }
+    };
+    window.addEventListener('gf-push-deeplink', handler as EventListener);
+    return () => window.removeEventListener('gf-push-deeplink', handler as EventListener);
+  }, [setLocation]);
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);

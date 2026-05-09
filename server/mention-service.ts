@@ -1,5 +1,6 @@
 import { type IStorage } from './storage';
 import { getRealtimeNotificationService } from './realtime-notification-service';
+import { sendPushToUser } from './push-service';
 
 export interface MentionMatch {
   username: string;
@@ -91,7 +92,7 @@ export class MentionService {
       });
 
       // Create notification for the mentioned user
-      await this.storage.createNotification({
+      const notif = await this.storage.createNotification({
         userId: userId,
         type: 'clip_mention',
         title: `@${mentionCreator.username} mentioned you in a clip`,
@@ -109,6 +110,12 @@ export class MentionService {
           }
         }
       });
+      void sendPushToUser(userId, {
+        title: notif.title,
+        body: notif.message,
+        actionUrl: notif.actionUrl,
+        data: { notificationId: String(notif.id), type: notif.type },
+      }).catch(err => console.warn('[mention-service] push fan-out failed:', err));
 
       // Send real-time notification via WebSocket
       const realtimeService = getRealtimeNotificationService();
@@ -155,7 +162,7 @@ export class MentionService {
       });
 
       // Create notification for the mentioned user
-      await this.storage.createNotification({
+      const notif = await this.storage.createNotification({
         userId: userId,
         type: 'comment_mention',
         title: `@${mentionCreator.username} mentioned you in a comment`,
@@ -173,6 +180,12 @@ export class MentionService {
           }
         }
       });
+      void sendPushToUser(userId, {
+        title: notif.title,
+        body: notif.message,
+        actionUrl: notif.actionUrl,
+        data: { notificationId: String(notif.id), type: notif.type },
+      }).catch(err => console.warn('[mention-service] push fan-out failed:', err));
 
       // Send real-time notification via WebSocket
       const realtimeService = getRealtimeNotificationService();
@@ -219,7 +232,7 @@ export class MentionService {
       });
 
       // Create notification for the mentioned user
-      await this.storage.createNotification({
+      const notif = await this.storage.createNotification({
         userId: userId,
         type: 'comment_mention',
         title: `@${mentionCreator.username} mentioned you in a comment`,
@@ -236,6 +249,12 @@ export class MentionService {
           }
         }
       });
+      void sendPushToUser(userId, {
+        title: notif.title,
+        body: notif.message,
+        actionUrl: notif.actionUrl,
+        data: { notificationId: String(notif.id), type: notif.type },
+      }).catch(err => console.warn('[mention-service] push fan-out failed:', err));
     }
   }
 

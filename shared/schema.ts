@@ -452,6 +452,36 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// FCM device tokens for push notifications (per-device, per-user)
+export const pushTokens = pgTable("push_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  platform: text("platform").notNull(), // "ios" | "android" | "web"
+  deviceModel: text("device_model"),
+  appVersion: text("app_version"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index("push_tokens_user_idx").on(table.userId),
+}));
+
+// Admin-sent push broadcast history
+export const pushBroadcasts = pgTable("push_broadcasts", {
+  id: serial("id").primaryKey(),
+  sentByUserId: integer("sent_by_user_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  actionUrl: text("action_url"),
+  // Audience descriptor — JSON for flexibility:
+  //   { kind: "all" } | { kind: "role", role: "admin" } | { kind: "pro" } | { kind: "users", userIds: number[] }
+  audience: json("audience").notNull(),
+  recipientCount: integer("recipient_count").default(0).notNull(),
+  successCount: integer("success_count").default(0).notNull(),
+  failureCount: integer("failure_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Clip mentions table - for tracking user mentions in clip uploads
 export const clipMentions = pgTable("clip_mentions", {
   id: serial("id").primaryKey(),
@@ -1320,6 +1350,33 @@ export type InsertHeroTextSettings = z.infer<typeof insertHeroTextSettingsSchema
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+
+// Push tokens
+export const insertPushTokenSchema = createInsertSchema(pushTokens).omit({
+  id: true,
+  createdAt: true,
+  lastSeenAt: true,
+});
+export type PushToken = typeof pushTokens.$inferSelect;
+export type InsertPushToken = z.infer<typeof insertPushTokenSchema>;
+
+// Push broadcasts
+export const pushAudienceSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("all") }),
+  z.object({ kind: z.literal("role"), role: z.enum(["user", "admin", "moderator"]) }),
+  z.object({ kind: z.literal("pro") }),
+  z.object({ kind: z.literal("users"), userIds: z.array(z.number().int().positive()).min(1).max(5000) }),
+]);
+export type PushAudience = z.infer<typeof pushAudienceSchema>;
+
+export const insertPushBroadcastSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+  body: z.string().trim().min(1).max(500),
+  actionUrl: z.string().trim().max(500).optional(),
+  audience: pushAudienceSchema,
+});
+export type InsertPushBroadcast = z.infer<typeof insertPushBroadcastSchema>;
+export type PushBroadcast = typeof pushBroadcasts.$inferSelect;
 
 // Schema for inserting clip mentions
 export const insertClipMentionSchema = createInsertSchema(clipMentions).omit({

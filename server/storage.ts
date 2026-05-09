@@ -54,7 +54,9 @@ import {
   type ScreenshotCommentWithUser,
   type XpSetting, type InsertXpSetting,
   adminAlertSettings,
-  type AdminAlertSettings, type InsertAdminAlertSettings
+  type AdminAlertSettings, type InsertAdminAlertSettings,
+  type PushToken, type InsertPushToken,
+  type PushBroadcast, type PushAudience
 } from "@shared/schema";
 
 export interface IStorage {
@@ -288,6 +290,27 @@ export interface IStorage {
   markAllNotificationsAsRead(userId: number): Promise<boolean>;
   deleteNotification(id: number): Promise<boolean>;
   deleteAllNotifications(userId: number): Promise<boolean>;
+
+  // Push notifications
+  upsertPushToken(input: InsertPushToken): Promise<PushToken>;
+  deletePushToken(token: string): Promise<boolean>;
+  deletePushTokensByUser(userId: number): Promise<number>;
+  getPushTokensByUserIds(userIds: number[]): Promise<PushToken[]>;
+  getAllPushTokens(): Promise<PushToken[]>;
+  getPushTokensByRole(role: string): Promise<PushToken[]>;
+  getPushTokensForProUsers(): Promise<PushToken[]>;
+  removeStalePushTokens(tokens: string[]): Promise<number>;
+  createPushBroadcast(input: {
+    sentByUserId: number;
+    title: string;
+    body: string;
+    actionUrl?: string | null;
+    audience: PushAudience;
+    recipientCount: number;
+    successCount: number;
+    failureCount: number;
+  }): Promise<PushBroadcast>;
+  getRecentPushBroadcasts(limit?: number): Promise<PushBroadcast[]>;
 
   // Badge definition operations
   createBadge(badge: InsertBadge): Promise<Badge>;

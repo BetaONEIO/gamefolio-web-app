@@ -1,5 +1,23 @@
 import { storage } from "./storage";
 import { InsertNotification } from "@shared/schema";
+import { sendPushToUser } from "./push-service";
+
+// Create the in-app notification row, then fire a push to the recipient.
+// Push failure is logged but does not block in-app delivery.
+// Exported so callers outside this file (mentions, streaks, birthday, etc.) get
+// the same fan-out behaviour without duplicating the dispatch logic.
+export async function createAndPush(notification: InsertNotification): Promise<void> {
+  const row = await storage.createNotification(notification);
+  void sendPushToUser(notification.userId, {
+    title: notification.title,
+    body: notification.message,
+    actionUrl: notification.actionUrl ?? null,
+    data: {
+      notificationId: String(row.id),
+      type: notification.type,
+    },
+  }).catch(err => console.warn("[notification-service] push fan-out failed:", err));
+}
 
 export class NotificationService {
   // Create notification for when someone likes a clip
@@ -26,7 +44,7 @@ export class NotificationService {
         actionUrl: `/clips/${clipId}`
       };
 
-      await storage.createNotification(notification);
+      await createAndPush(notification);
     } catch (error) {
       console.error("Error creating like notification:", error);
     }
@@ -60,7 +78,7 @@ export class NotificationService {
         actionUrl: `/clips/${clipId}?openComments=true${commentId ? `&highlightComment=${commentId}` : ''}`
       };
 
-      await storage.createNotification(notification);
+      await createAndPush(notification);
     } catch (error) {
       console.error("Error creating comment notification:", error);
     }
@@ -85,7 +103,7 @@ export class NotificationService {
         actionUrl: `/profile/${followerUser.username}`
       };
 
-      await storage.createNotification(notification);
+      await createAndPush(notification);
     } catch (error) {
       console.error("Error creating follow notification:", error);
     }
@@ -110,7 +128,7 @@ export class NotificationService {
         actionUrl: `/settings/follow-requests`
       };
 
-      await storage.createNotification(notification);
+      await createAndPush(notification);
     } catch (error) {
       console.error("Error creating follow request notification:", error);
     }
@@ -135,7 +153,7 @@ export class NotificationService {
         actionUrl: `/profile/${acceptedByUser.username}`
       };
 
-      await storage.createNotification(notification);
+      await createAndPush(notification);
     } catch (error) {
       console.error("Error creating follow request accepted notification:", error);
     }
@@ -168,7 +186,7 @@ export class NotificationService {
 
       // Create all notifications
       for (const notification of notifications) {
-        await storage.createNotification(notification);
+        await createAndPush(notification);
       }
     } catch (error) {
       console.error("Error creating upload notifications:", error);
@@ -199,7 +217,7 @@ export class NotificationService {
         actionUrl: `/clips/${clipId}`
       };
 
-      await storage.createNotification(notification);
+      await createAndPush(notification);
     } catch (error) {
       console.error("Error creating reaction notification:", error);
     }
@@ -229,7 +247,7 @@ export class NotificationService {
         actionUrl: `/messages?user=${senderUser.username}`
       };
 
-      await storage.createNotification(notification);
+      await createAndPush(notification);
     } catch (error) {
       console.error("Error creating message notification:", error);
     }
@@ -259,7 +277,7 @@ export class NotificationService {
         actionUrl: `/@${screenshot.user.username}/screenshots/${screenshotId}`
       };
 
-      await storage.createNotification(notification);
+      await createAndPush(notification);
     } catch (error) {
       console.error("Error creating screenshot like notification:", error);
     }
@@ -293,7 +311,7 @@ export class NotificationService {
         actionUrl: `/@${screenshot.user.username}/screenshots/${screenshotId}?openComments=true${commentId ? `&highlightComment=${commentId}` : ''}`
       };
 
-      await storage.createNotification(notification);
+      await createAndPush(notification);
     } catch (error) {
       console.error("Error creating screenshot comment notification:", error);
     }

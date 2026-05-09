@@ -14,6 +14,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { useDailyStreak } from "@/hooks/use-daily-streak";
 import { isNative } from "@/lib/platform";
 import { clearTokens, setTokens } from "@/lib/auth-token";
+import { initPushNotifications, unregisterCurrentPushToken } from "@/lib/push-notifications";
 
 type AuthContextType = {
   user: User | null;
@@ -184,6 +185,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     retryDelay: 500,
   });
 
+  // Once the user is authenticated, fire off the push-notification handshake
+  // (request OS permission, fetch FCM token, POST to /api/push/register). Safe
+  // to run multiple times — initPushNotifications is idempotent.
+  const pushBoundForUserId = useRef<number | null>(null);
+  useEffect(() => {
+    if (!isNative || !user) return;
+    if (pushBoundForUserId.current === user.id) return;
+    pushBoundForUserId.current = user.id;
+    void initPushNotifications();
+  }, [user]);
+
   useEffect(() => {
     if (!user || dailyRewardShownRef.current) return;
     const userData = user as any;
@@ -309,9 +321,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
+      // Best-effort: revoke the FCM token before tearing down the session so
+      // the next user on this device gets a fresh registration.
+      if (isNative) {
+        await unregisterCurrentPushToken();
+      }
       await apiRequest("POST", "/api/logout");
     },
     onSuccess: async () => {
+      pushBoundForUserId.current = null;
       await clearTokens();
       queryClient.setQueryData(["/api/user"], null);
 

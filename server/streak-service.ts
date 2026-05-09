@@ -1,5 +1,6 @@
 import { storage } from "./storage";
 import { LeaderboardService, POINT_VALUES } from "./leaderboard-service";
+import { sendPushToUser } from "./push-service";
 
 const DAILY_LOGIN_XP = POINT_VALUES.daily_login;
 
@@ -138,7 +139,7 @@ export class StreakService {
       }
 
       try {
-        await storage.createNotification({
+        const notif = await storage.createNotification({
           userId,
           type: 'streak',
           title: isNewMilestone ? `🔥 ${currentStreak}-Day Streak Milestone!` : `🔥 Day ${currentStreak} Streak!`,
@@ -153,6 +154,12 @@ export class StreakService {
           metadata: { streakDay: currentStreak, dailyXP, milestoneBonus: bonusAwarded },
           actionUrl: '/level-tracker',
         });
+        void sendPushToUser(userId, {
+          title: notif.title,
+          body: notif.message,
+          actionUrl: notif.actionUrl,
+          data: { notificationId: String(notif.id), type: notif.type },
+        }).catch(err => console.warn('[streak-service] push fan-out failed:', err));
       } catch (notifError) {
         console.error("Error creating streak notification:", notifError);
       }

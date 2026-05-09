@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { AlertSettings } from "@/components/admin/AlertSettings";
+import { PushBroadcastPanel } from "@/components/admin/PushBroadcastPanel";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect, useLocation } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
@@ -2966,11 +2967,16 @@ const AdminPage = () => {
           <TabsTrigger value="settings" className="text-xs px-3 py-1.5">Settings</TabsTrigger>
           <TabsTrigger value="games" className="text-xs px-3 py-1.5">Games</TabsTrigger>
           <TabsTrigger value="alerts" className="text-xs px-3 py-1.5">Alerts</TabsTrigger>
+          <TabsTrigger value="push" className="text-xs px-3 py-1.5">Push</TabsTrigger>
         </TabsList>
 
         <TabsContent value="alerts" className="space-y-4">
           <AlertSettings />
           <AdminAlertsSection />
+        </TabsContent>
+
+        <TabsContent value="push" className="space-y-4">
+          <PushBroadcastPanel />
         </TabsContent>
 
         {/* Dashboard Tab */}

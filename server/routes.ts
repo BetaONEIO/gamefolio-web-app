@@ -63,6 +63,7 @@ import linkedWalletsRouter from "./routes/linked-wallets";
 import quickSellRouter from "./routes/quick-sell";
 import adminNftSeedRouter from "./routes/admin-nft-seed";
 import adminWalletAuditRouter from "./routes/admin-wallet-audit";
+import { pushRouter, adminPushRouter } from "./routes/push";
 import { twitchApi } from "./services/twitch-api";
 import { VideoProcessor } from "./video-processor";
 import sharp from "sharp";
@@ -70,6 +71,7 @@ import { EmailService } from "./email-service";
 import { createVerificationCode, verifyEmailCode, createPasswordResetCode, verifyPasswordResetCode, deletePasswordResetTokensByUser } from "./services/token-service";
 import { NotificationService } from "./notification-service";
 import { MentionService } from "./mention-service";
+import { sendPushToUser } from "./push-service";
 import { initializeRealtimeNotificationService } from './realtime-notification-service';
 import { adminMiddleware } from "./middleware/admin";
 import { optionalHybridAuth } from "./middleware/optional-hybrid-auth";
@@ -2208,7 +2210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const currentYear = now.getFullYear();
           
           if (user.birthday && user.birthday === todayMMDD && user.lastBirthdayNotificationYear !== currentYear) {
-            await storage.createNotification({
+            const notif = await storage.createNotification({
               userId: user.id,
               type: "birthday",
               title: "🎂 Happy Birthday!",
@@ -2220,6 +2222,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               metadata: null,
               actionUrl: `/profile/${user.username}`,
             });
+            void sendPushToUser(user.id, {
+              title: notif.title,
+              body: notif.message,
+              actionUrl: notif.actionUrl,
+              data: { notificationId: String(notif.id), type: notif.type },
+            }).catch(err => console.warn('[routes] birthday push fan-out failed:', err));
             await db.update(users).set({ lastBirthdayNotificationYear: currentYear }).where(eq(users.id, user.id));
             console.log(`🎂 Birthday notification sent for ${user.username}`);
           }
@@ -10365,6 +10373,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount admin routes
   app.use('/api/admin', adminRouter);
   app.use('/api/admin/content-filter', adminContentFilterRouter);
+  app.use('/api/admin/push', adminPushRouter);
+
+  // Push notifications (token register/unregister, self-test)
+  app.use('/api/push', pushRouter);
 
   // Mount support routes
   app.use('/api/support', supportRouter);

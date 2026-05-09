@@ -107,7 +107,11 @@ import {
   UserDailyFires, InsertUserDailyFires,
   FireLimits,
   xpSettings,
-  XpSetting, InsertXpSetting
+  XpSetting, InsertXpSetting,
+  PushToken, InsertPushToken,
+  PushBroadcast, PushAudience,
+  pushTokens,
+  pushBroadcasts
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, notInArray, isNotNull, getTableColumns } from "drizzle-orm";
@@ -5958,5 +5962,134 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return result;
+  }
+
+  // ----- Push notifications -----
+
+  async upsertPushToken(input: InsertPushToken): Promise<PushToken> {
+    const now = new Date();
+    const [row] = await db
+      .insert(pushTokens)
+      .values({
+        userId: input.userId,
+        token: input.token,
+        platform: input.platform,
+        deviceModel: input.deviceModel ?? null,
+        appVersion: input.appVersion ?? null,
+      })
+      .onConflictDoUpdate({
+        target: pushTokens.token,
+        set: {
+          userId: input.userId,
+          platform: input.platform,
+          deviceModel: input.deviceModel ?? null,
+          appVersion: input.appVersion ?? null,
+          lastSeenAt: now,
+        },
+      })
+      .returning();
+    return row;
+  }
+
+  async deletePushToken(token: string): Promise<boolean> {
+    const rows = await db
+      .delete(pushTokens)
+      .where(eq(pushTokens.token, token))
+      .returning({ id: pushTokens.id });
+    return rows.length > 0;
+  }
+
+  async deletePushTokensByUser(userId: number): Promise<number> {
+    const rows = await db
+      .delete(pushTokens)
+      .where(eq(pushTokens.userId, userId))
+      .returning({ id: pushTokens.id });
+    return rows.length;
+  }
+
+  async getPushTokensByUserIds(userIds: number[]): Promise<PushToken[]> {
+    if (userIds.length === 0) return [];
+    return db.select().from(pushTokens).where(inArray(pushTokens.userId, userIds));
+  }
+
+  async getAllPushTokens(): Promise<PushToken[]> {
+    return db.select().from(pushTokens);
+  }
+
+  async getPushTokensByRole(role: string): Promise<PushToken[]> {
+    return db
+      .select({
+        id: pushTokens.id,
+        userId: pushTokens.userId,
+        token: pushTokens.token,
+        platform: pushTokens.platform,
+        deviceModel: pushTokens.deviceModel,
+        appVersion: pushTokens.appVersion,
+        createdAt: pushTokens.createdAt,
+        lastSeenAt: pushTokens.lastSeenAt,
+      })
+      .from(pushTokens)
+      .innerJoin(users, eq(pushTokens.userId, users.id))
+      .where(eq(users.role, role));
+  }
+
+  async getPushTokensForProUsers(): Promise<PushToken[]> {
+    return db
+      .select({
+        id: pushTokens.id,
+        userId: pushTokens.userId,
+        token: pushTokens.token,
+        platform: pushTokens.platform,
+        deviceModel: pushTokens.deviceModel,
+        appVersion: pushTokens.appVersion,
+        createdAt: pushTokens.createdAt,
+        lastSeenAt: pushTokens.lastSeenAt,
+      })
+      .from(pushTokens)
+      .innerJoin(users, eq(pushTokens.userId, users.id))
+      .where(eq(users.isPro, true));
+  }
+
+  async removeStalePushTokens(tokens: string[]): Promise<number> {
+    if (tokens.length === 0) return 0;
+    const rows = await db
+      .delete(pushTokens)
+      .where(inArray(pushTokens.token, tokens))
+      .returning({ id: pushTokens.id });
+    return rows.length;
+  }
+
+  async createPushBroadcast(input: {
+    sentByUserId: number;
+    title: string;
+    body: string;
+    actionUrl?: string | null;
+    audience: PushAudience;
+    recipientCount: number;
+    successCount: number;
+    failureCount: number;
+  }): Promise<PushBroadcast> {
+    const [row] = await db
+      .insert(pushBroadcasts)
+      .values({
+        sentByUserId: input.sentByUserId,
+        title: input.title,
+        body: input.body,
+        actionUrl: input.actionUrl ?? null,
+        audience: input.audience,
+        recipientCount: input.recipientCount,
+        successCount: input.successCount,
+        failureCount: input.failureCount,
+      })
+      .returning();
+    return row;
+  }
+
+  async getRecentPushBroadcasts(limit: number = 50): Promise<PushBroadcast[]> {
+    return db
+      .select()
+      .from(pushBroadcasts)
+      .orderBy(desc(pushBroadcasts.createdAt))
+      .limit(limit);
   }
 }

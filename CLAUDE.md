@@ -104,6 +104,49 @@ when you bump it.
   exit-code-0 notification alone — read the tail of the output file and grep
   for `BUILD SUCCESSFUL` / `UPLOAD SUCCEEDED` / `** ARCHIVE SUCCEEDED **`.
 
+## Push notifications (FCM)
+
+Both platforms use **Firebase Cloud Messaging** via `@capacitor-firebase/messaging`.
+The Firebase project is `gamefolio-e8bde` (already wired via `google-services.json`
+on Android and `GoogleService-Info.plist` on iOS).
+
+### Server-side requirement
+
+Set `FIREBASE_SERVICE_ACCOUNT_JSON` in Replit Secrets (and local `.env` if
+you want to test from a dev server). It's the entire JSON of a Firebase
+service-account key — Project Settings → Service Accounts → Generate new
+private key. Without this env var, the admin "Push" tab shows a banner and
+all push sends are no-ops (in-app notifications still work fine).
+
+### iOS-specific manual step (one-time)
+
+In Firebase Console → Project Settings → Cloud Messaging → Apple app
+configuration, upload an **APNs Auth Key** (`.p8`) generated from
+https://developer.apple.com/account/resources/authkeys/list. Without that
+key Firebase has nothing to talk to APNs with, so iOS pushes will never
+deliver — Android will work fine without it. The same `.p8` already used
+elsewhere in iOS automation cannot be reused; APNs auth keys are scoped
+separately from App Store Connect API keys.
+
+The app's `aps-environment` entitlement is set to `production`, so this
+works for both TestFlight and App Store builds. Local `xcodebuild`-from-
+laptop debug builds installed via Xcode would need it set to
+`development` — only relevant if you sideload to a tethered device.
+
+### How a push gets sent
+
+1. On native sign-in, `client/src/lib/push-notifications.ts` requests
+   permission, fetches the FCM token, and POSTs it to
+   `/api/push/register` (table: `push_tokens`).
+2. Server-side, every notification created via `notification-service.ts`
+   (likes, comments, follows, mentions, streaks, etc.) fans out to
+   `sendPushToUser` in `server/push-service.ts`.
+3. Admins use AdminPage → "Push" tab to broadcast to all users / by role
+   / Pro subscribers / specific users. History stored in `push_broadcasts`.
+4. Tap routing: the push payload carries `actionUrl`. The native client
+   surfaces it via a `gf-push-deeplink` window event, which `App.tsx`
+   forwards to `wouter`'s `setLocation`.
+
 ## Stack quick-ref
 
 - Web client: Vite + React DOM + TypeScript in `client/`, output to `dist/public`.
