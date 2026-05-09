@@ -885,30 +885,29 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   {/* Dark overlay so foreground video remains clear */}
                   <div className="absolute inset-0 bg-black/50 z-[1]" />
 
-                  {/* Portrait clips: narrow 9:16 column centred. Landscape: fill width. */}
+                  {/* Portrait: narrow 9:16 column centred.
+                      Landscape: fill width — VideoPlayer's aspect-video wrapper handles the
+                      correct 16:9 height; outer flex centres it; no letterbox bars. */}
                   <div
                     className="relative z-10 flex-shrink-0"
-                    style={{
-                      height: '100%',
-                      width: isPortraitClip ? undefined : '100%',
-                      aspectRatio: isPortraitClip ? '9/16' : undefined,
-                      overflow: 'hidden',
-                    }}
+                    style={isPortraitClip
+                      ? { height: '100%', aspectRatio: '9/16', overflow: 'hidden' }
+                      : { width: '100%' }}
                   >
                     <VideoPlayer
                       videoUrl={clip.videoUrl}
                       thumbnailUrl={signedThumbnailUrl || clip.thumbnailUrl || undefined}
                       autoPlay={true}
-                      className="w-full h-full"
+                      className={isPortraitClip ? "w-full h-full" : "w-full"}
                       objectFit="contain"
                       clipId={clip.id}
-                      disableAspectRatio={true}
+                      disableAspectRatio={isPortraitClip}
                       externalMuted={clipIsMuted}
                       externalPaused={!clipIsPlaying}
                       onMutedChange={setClipIsMuted}
                       onPlayingChange={setClipIsPlaying}
                       onAspectRatioDetected={setIsPortraitClip}
-                      videoStyle={{ objectFit: 'contain', width: '100%', height: '100%', maxHeight: '100%' }}
+                      videoStyle={isPortraitClip ? { objectFit: 'contain', width: '100%', height: '100%', maxHeight: '100%' } : undefined}
                     />
                   </div>
 
@@ -1038,22 +1037,24 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   )}
                   {/* Dark overlay so foreground video remains clear */}
                   {isPortraitClip && <div className="absolute inset-0 bg-black/40 z-[1]" />}
-                  {/* Portrait: narrow 9:16 column centred. Landscape: fill the panel.
-                      inline height: 100% avoids flex percentage-height resolution quirks. */}
+                  {/* Portrait: narrow 9:16 column centred.
+                      Landscape: fill width only — VideoPlayer uses aspect-video (16:9) and
+                      the outer flex centres it vertically; no black bars from object-contain
+                      in an oversized container. */}
                   <div
-                    className={cn("relative z-10 flex-shrink-0", !isPortraitClip && "w-full h-full")}
+                    className={cn("relative z-10 flex-shrink-0", !isPortraitClip && "w-full")}
                     style={isPortraitClip ? { height: '100%', aspectRatio: '9/16', maxWidth: '480px', overflow: 'hidden' } : undefined}
                   >
                     <VideoPlayer
                       videoUrl={clip.videoUrl}
                       thumbnailUrl={signedThumbnailUrl || clip.thumbnailUrl || undefined}
                       autoPlay={true}
-                      className="w-full h-full"
+                      className={isPortraitClip ? "w-full h-full" : "w-full"}
                       objectFit="contain"
                       clipId={clip.id}
-                      disableAspectRatio={true}
+                      disableAspectRatio={isPortraitClip}
                       onAspectRatioDetected={setIsPortraitClip}
-                      videoStyle={{ objectFit: 'contain', width: '100%', height: '100%', maxHeight: '100%' }}
+                      videoStyle={isPortraitClip ? { objectFit: 'contain', width: '100%', height: '100%', maxHeight: '100%' } : undefined}
                     />
                   </div>
                 </div>
