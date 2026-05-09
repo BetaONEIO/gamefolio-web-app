@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLazyVideo } from "@/hooks/use-lazy-video";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { ClipWithUser } from "@shared/schema";
 import { Play, Eye } from "lucide-react";
@@ -28,6 +29,7 @@ const VideoClipGridItem = ({
 }: VideoClipGridItemProps) => {
   const { openClipDialog } = useClipDialog();
   const [isPortrait, setIsPortrait] = useState(false);
+  const lazyVideo = useLazyVideo({ autoPlay: false });
 
   const handleOpenClip = () => {
     const contextList = reelsList || clipsList;
@@ -55,9 +57,10 @@ const VideoClipGridItem = ({
       >
         {hasNoThumbnail ? (
           <video
-            src={clip.videoUrl ?? undefined}
+            ref={lazyVideo.ref}
+            src={lazyVideo.visible ? (clip.videoUrl ?? undefined) : undefined}
             className={`w-full h-full object-cover ${clip.ageRestricted ? "blur-2xl" : ""}`}
-            preload="metadata"
+            preload="none"
             muted
             playsInline
           />

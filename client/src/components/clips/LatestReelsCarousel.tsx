@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useLazyVideo } from "@/hooks/use-lazy-video";
 import { Link } from "wouter";
 import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { ClipWithUser } from "@shared/schema";
@@ -7,6 +8,20 @@ import { LazyImage } from "@/components/ui/lazy-image";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { formatNumber } from "@/lib/format";
 import { formatDuration } from "@/lib/constants";
+
+function LazyReelVideoThumbnail({ src, className }: { src: string | undefined; className: string }) {
+  const { ref, visible } = useLazyVideo({ autoPlay: false });
+  return (
+    <video
+      ref={ref}
+      src={visible ? src : undefined}
+      className={className}
+      preload="none"
+      muted
+      playsInline
+    />
+  );
+}
 
 interface LatestReelsCarouselProps {
   reels: ClipWithUser[] | undefined;
@@ -135,12 +150,9 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
                     threshold={0.1}
                   />
                 ) : (
-                  <video
+                  <LazyReelVideoThumbnail
                     src={reel.videoUrl ?? undefined}
                     className="w-full h-full object-cover"
-                    preload="metadata"
-                    muted
-                    playsInline
                   />
                 )}
 

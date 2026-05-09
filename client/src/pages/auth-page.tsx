@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useLazyVideo } from "@/hooks/use-lazy-video";
 import { useLocation } from "wouter";
 import LoginForm from "@/components/auth/login-form";
 import RegisterForm from "@/components/auth/register-form";
@@ -15,6 +16,7 @@ export default function AuthPage() {
   const [activeTab, setActiveTab] = useState("login");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { user, isLoading } = useAuth();
+  const bgVideo = useLazyVideo();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -83,19 +85,15 @@ export default function AuthPage() {
     <KeyboardAvoidingWrapper className="min-h-screen w-full relative overflow-x-hidden">
       {/* Video Background */}
       <video
-        className="fixed inset-0 w-full h-full object-cover z-0"
-        autoPlay
+        ref={bgVideo.ref}
+        src="/attached_assets/gamer.mp4"
+        className="fixed inset-0 w-full h-full object-cover z-0 transition-opacity duration-700"
+        style={{ opacity: bgVideo.visible ? 1 : 0 }}
         loop
         muted
         playsInline
-        onError={(e) => console.log('Video error:', e)}
-        onLoadStart={() => console.log('Video loading started')}
-        onCanPlay={() => console.log('Video can play')}
-      >
-        <source src="/attached_assets/gamer.mp4" type="video/mp4" />
-        <source src="./attached_assets/gamer.mp4" type="video/mp4" />
-        Your browser does not support the video tag.
-      </video>
+        preload="none"
+      />
 
       {/* Faded Black Overlay */}
       <div className="fixed inset-0 bg-black/60 z-10"></div>

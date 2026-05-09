@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
+import { useLazyVideo } from "@/hooks/use-lazy-video";
 import {
   Upload,
   Tv2,
@@ -35,40 +36,6 @@ function smoothScroll(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
 
-function useLazyVideo() {
-  const ref = useRef<HTMLVideoElement>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const startPlayback = () => {
-      setVisible(true);
-      el.play().catch(() => {});
-    };
-
-    if (!("IntersectionObserver" in window)) {
-      startPlayback();
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          startPlayback();
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  return { ref, visible };
-}
 
 function GlowDot({ top, left, size = 300, opacity = 0.08 }: { top: string; left: string; size?: number; opacity?: number }) {
   return (
