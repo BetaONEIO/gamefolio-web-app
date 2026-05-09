@@ -210,9 +210,9 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Comments list — scrollable */}
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1" style={{ scrollbarWidth: 'thin' }}>
+    <div className="flex flex-col">
+      {/* Comments list */}
+      <div className="space-y-3">
         {comments && comments.length > 0 ? (
           comments.map((comment) => (
             <div 
@@ -302,11 +302,12 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
         )}
       </div>
       
-      {/* Comment form — sticky at bottom, never scrolls away */}
+      {/* Comment form — sticky so it stays visible while comments scroll above it */}
       {user ? (
         <form 
           onSubmit={handleSubmitComment} 
-          className="mt-4 pb-6 space-y-3 flex-shrink-0"
+          className="mt-4 space-y-3 sticky bottom-0 pt-3 pb-6"
+          style={{ background: '#0B1218' }}
         >
           <div className="flex items-start gap-3">
             {currentUser && (
@@ -338,7 +339,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
           </div>
         </form>
       ) : (
-        <div className="mt-4 flex items-center justify-center">
+        <div className="mt-4 pb-6 sticky bottom-0 pt-3" style={{ background: '#0B1218' }}>
           <Button 
             variant="outline"
             onClick={() => openDialog('comment')}
