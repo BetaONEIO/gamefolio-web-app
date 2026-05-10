@@ -331,16 +331,27 @@ export function ZapFlyOverlay({
       return;
     }
     if (phase === 'fly') {
-      const outcome = modeRef.current ?? 'success';
-      if (outcome === 'fail') {
-        setPhase('failFall');
-        setTimeout(onDone, 500);
-      } else {
-        setPhase('successLand');
-        setShowSparks(true);
-        if (showXpPopupRef.current) setShowXp(true);
-        setTimeout(onDone, 750);
-      }
+      // Poll up to 600ms extra for the API response before deciding success/fail.
+      // This prevents defaulting to 'success' when the server is slow to reject.
+      let waited = 0;
+      const resolve = () => {
+        if (modeRef.current !== null || waited >= 600) {
+          const outcome = modeRef.current ?? 'success';
+          if (outcome === 'fail') {
+            setPhase('failFall');
+            setTimeout(onDone, 500);
+          } else {
+            setPhase('successLand');
+            setShowSparks(true);
+            if (showXpPopupRef.current) setShowXp(true);
+            setTimeout(onDone, 750);
+          }
+        } else {
+          waited += 50;
+          setTimeout(resolve, 50);
+        }
+      };
+      resolve();
     }
   };
 

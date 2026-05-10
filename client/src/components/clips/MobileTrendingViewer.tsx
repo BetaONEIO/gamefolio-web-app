@@ -322,11 +322,12 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
           <div
             className="absolute top-0 left-0 right-0 flex justify-between items-center px-4 pb-4 bg-gradient-to-b from-black/60 to-transparent z-10"
             style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)' }}
+            onClick={e => e.stopPropagation()}
           >
             <Button
               variant="ghost"
               size="sm"
-              onClick={onClose}
+              onClick={(e) => { e.stopPropagation(); onClose(); }}
               className="text-white hover:bg-white/20"
               data-testid="button-close"
             >

@@ -38,7 +38,10 @@ const MobileNav = () => {
       return;
     }
     if ('isTrending' in item && item.isTrending) {
-      triggerZapFly(trendingIconRef.current);
+      // Only play the animation when navigating TO trending, not when already there
+      if (location !== '/trending') {
+        triggerZapFly(trendingIconRef.current);
+      }
       return;
     }
     if ('requiresAuth' in item && item.requiresAuth && !user) {
@@ -175,7 +178,7 @@ const MobileNav = () => {
       </nav>
 
       {zapFlyState && (
-        <ZapFlyOverlay targetRect={zapFlyState} onDone={dismissZapFly} />
+        <ZapFlyOverlay targetRect={zapFlyState} onDone={dismissZapFly} mode={null} showXpPopup={false} />
       )}
 
       <AuthModal
