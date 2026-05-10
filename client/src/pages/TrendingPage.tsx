@@ -388,7 +388,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
               <ChevronDown className="h-5 w-5 text-white/70" />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto px-4 py-3 pb-5">
             <CommentSection
               clipId={clip.id}
               currentUserId={user?.id}
