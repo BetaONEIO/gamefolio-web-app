@@ -2,7 +2,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { MessageCircle, Share2, MoreVertical, Play, Pause, Volume2, VolumeX, Trash2, X, ChevronDown } from "lucide-react";
+import { MessageCircle, MoreVertical, Play, Pause, Volume2, VolumeX, Trash2, X, ChevronDown } from "lucide-react";
+import ShareIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { Link } from "wouter";
@@ -344,12 +345,13 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                 </span>
               </div>
               <div className="flex flex-col items-center">
-                <button
-                  className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white active:bg-black/70 transition-colors"
-                  onClick={() => setShowShare(true)}
-                >
-                  <Share2 className="h-6 w-6" />
-                </button>
+                <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white active:bg-black/70 transition-colors">
+                  <ShareIcon
+                    size={24}
+                    className="text-white"
+                    onClick={(e) => { e.stopPropagation(); setShowShare(true); }}
+                  />
+                </div>
                 <span className="text-white text-xs mt-1 font-medium drop-shadow-lg">Share</span>
               </div>
             </div>

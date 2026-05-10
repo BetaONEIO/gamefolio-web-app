@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { ChevronLeft, Heart, MessageCircle, Share2, User, Play, Pause, Flag, Eye, Gamepad2, Music, X } from "lucide-react";
+import { ChevronLeft, Heart, MessageCircle, User, Play, Pause, Flag, Eye, Gamepad2, Music, X } from "lucide-react";
+import ShareIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
@@ -378,13 +379,11 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
           </button>
 
           {/* Share */}
-          <button
+          <ShareIcon
+            size={24}
+            className="text-white drop-shadow"
             onClick={(e) => { e.stopPropagation(); setShowShare(true); }}
-            className="flex flex-col items-center gap-0.5"
-            data-testid="button-share"
-          >
-            <Share2 className="h-6 w-6 text-white drop-shadow" />
-          </button>
+          />
         </div>}
 
         {/* ── Bottom info overlay — full-width gradient, hidden when comments open ─── */}

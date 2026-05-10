@@ -16,6 +16,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { DialogOverlay, DialogPortal } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import ShareIcon from "@/components/ui/ShareIcon";
 import { 
   MessageSquare, 
   X,
@@ -23,7 +24,7 @@ import {
   User as UserIcon,
   Clock,
   Flame,
-  Share2,
+  
   ChevronLeft,
   ChevronRight,
   Heart,
@@ -846,7 +847,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           contentType={clip.videoType === 'reel' ? 'reel' : 'clip'}
                           trigger={
                             <button className="w-11 h-11 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors flex items-center justify-center">
-                              <Share2 className="h-6 w-6 text-white" />
+                              <ShareIcon size={24} className="text-white" />
                             </button>
                           } 
                         />
@@ -1036,7 +1037,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           contentType="clip"
                           trigger={
                             <button className="w-11 h-11 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors flex items-center justify-center">
-                              <Share2 className="h-6 w-6 text-white" />
+                              <ShareIcon size={24} className="text-white" />
                             </button>
                           }
                         />
@@ -1349,7 +1350,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                               contentType={clip.videoType === 'reel' ? 'reel' : 'clip'}
                               trigger={
                                 <button className="focus:outline-none">
-                                  <Share2 className="h-6 w-6" />
+                                  <ShareIcon size={24} className="text-white" />
                                 </button>
                               } 
                             />
