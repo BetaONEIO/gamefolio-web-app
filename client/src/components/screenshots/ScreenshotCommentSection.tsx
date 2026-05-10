@@ -11,7 +11,8 @@ import { useScreenshotComments, useCreateScreenshotComment, useDeleteScreenshotC
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import { Heart, Send } from "lucide-react";
+import { Send } from "lucide-react";
+import { PixelHeartReaction } from "@/components/ui/PixelHeartReaction";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
@@ -93,18 +94,19 @@ function ScreenshotCommentLikeButton({ commentId, isLoggedIn }: ScreenshotCommen
   };
 
   return (
-    <button
-      onClick={handleClick}
-      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+    <div
+      className="flex items-center gap-1 text-xs text-muted-foreground"
       data-testid={`button-like-screenshot-comment-${commentId}`}
     >
-      <Heart 
-        className={`h-3.5 w-3.5 ${likeStatus?.hasLiked ? 'fill-red-500 text-red-500' : ''}`} 
+      <PixelHeartReaction
+        active={likeStatus?.hasLiked ?? false}
+        onClick={handleClick}
+        size={14}
       />
       {(likeStatus?.likeCount ?? 0) > 0 && (
-        <span>{likeStatus?.likeCount}</span>
+        <span className={likeStatus?.hasLiked ? 'text-[#ff4d6d]' : ''}>{likeStatus?.likeCount}</span>
       )}
-    </button>
+    </div>
   );
 }
 
