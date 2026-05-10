@@ -233,9 +233,11 @@ const MobileMenu = () => {
                   <Link 
                     href={`/profile/${user.username}`}
                     onClick={close}
-                    className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                    className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline group"
                   >
-                    <GamefolioProfileIcon className="mr-3 h-5 w-5 text-primary" />
+                    <span className="mr-3 inline-flex transition-all duration-300 group-hover:[filter:drop-shadow(0_0_7px_#B7FF1A)]">
+                      <GamefolioProfileIcon className="h-5 w-5 text-primary" />
+                    </span>
                     <span className="font-medium">My Gamefolio</span>
                   </Link>
                 </li>
