@@ -562,41 +562,33 @@ const Header = () => {
               ref={mobileSearchRef}
               className="relative max-w-full"
             >
-              <form onSubmit={handleSearch} className="flex items-center gap-2">
-                <div className="flex-1 relative">
-                  <Input
-                    type="text"
-                    placeholder="Search #hashtags, users, games..."
-                    className="w-full py-3 px-4 pr-12 rounded-lg bg-secondary text-foreground text-base"
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                    onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
-                    autoFocus
-                    inputMode="search"
-                    data-testid="mobile-search-input"
-                  />
-                  <Button
-                    type="submit"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground"
-                  >
-                    <Search className="h-5 w-5" />
-                  </Button>
-                </div>
-                <Button
+              <form onSubmit={handleSearch} className="relative flex items-center">
+                <Input
+                  type="text"
+                  placeholder="Search #hashtags, users, games..."
+                  className="w-full py-3 pl-10 pr-20 rounded-full bg-secondary text-foreground text-base"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
+                  autoFocus
+                  inputMode="search"
+                  data-testid="mobile-search-input"
+                />
+                {/* Search icon — left side */}
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                {/* Cancel — right side, inside the row */}
+                <button
                   type="button"
-                  variant="ghost"
                   onClick={() => {
                     setShowMobileSearch(false);
                     setShowDropdown(false);
                     setSearchQuery("");
                   }}
-                  className="text-muted-foreground touch-manipulation min-w-[60px] px-3"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground touch-manipulation whitespace-nowrap"
                   data-testid="mobile-search-close"
                 >
                   Cancel
-                </Button>
+                </button>
               </form>
 
               {/* Mobile Search Dropdown */}
