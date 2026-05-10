@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
+import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
 import TrendingGameCard from "@/components/clips/TrendingGameCard";
 import GameClipsSection from "@/components/clips/GameClipsSection";
 import { LazyImage } from "@/components/ui/lazy-image";
@@ -47,6 +48,7 @@ const HomePage = () => {
   const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [selectedGameFilter, setSelectedGameFilter] = useState<string | null>(null);
   const [activeContentTab, setActiveContentTab] = useState<'clips' | 'reels' | 'screenshots'>('clips');
+  const [mobileViewer, setMobileViewer] = useState<{ clips: ClipWithUser[]; startId: number } | null>(null);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   
@@ -448,6 +450,7 @@ const HomePage = () => {
   const isLoadingGames = isLoadingTwitchGames;
 
   return (
+    <>
     <div className="space-y-16 max-w-none px-4 md:px-6 py-4 md:py-6">
       {/* Hero Banner Carousel - Full width with negative margin to compensate for parent padding */}
       <section className="mb-10 -mx-4 md:-mx-6 -mt-4 md:-mt-6">
@@ -597,6 +600,8 @@ const HomePage = () => {
                     clip={clip}
                     userId={userId}
                     compact={true}
+                    clipsList={latestClips ?? undefined}
+                    onCardClick={isMobile ? (clipId, clips) => setMobileViewer({ clips, startId: clipId }) : undefined}
                   />
                 ))
               )}
@@ -1008,6 +1013,15 @@ const HomePage = () => {
 
 
     </div>
+
+    {mobileViewer && (
+      <MobileClipsViewerOverlay
+        clips={mobileViewer.clips}
+        startClipId={mobileViewer.startId}
+        onBack={() => setMobileViewer(null)}
+      />
+    )}
+    </>
   );
 };
 

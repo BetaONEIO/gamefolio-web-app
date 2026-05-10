@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
+import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
 import { ArrowLeft, Video } from "lucide-react";
 import { useLocation } from "wouter";
 import { ClipWithUser } from "@shared/schema";
@@ -15,6 +16,7 @@ const LatestClipsPage = () => {
   const [, setLocation] = useLocation();
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
   const [timePeriod, setTimePeriod] = useState<string>("recent");
+  const [mobileViewer, setMobileViewer] = useState<{ clips: ClipWithUser[]; startId: number } | null>(null);
   const isMobile = useMobile();
 
   useEffect(() => {
@@ -39,6 +41,14 @@ const LatestClipsPage = () => {
     : [];
 
   return (
+    <>
+    {mobileViewer && (
+      <MobileClipsViewerOverlay
+        clips={mobileViewer.clips}
+        startClipId={mobileViewer.startId}
+        onBack={() => setMobileViewer(null)}
+      />
+    )}
     <div className={`container mx-auto px-4 py-6 space-y-6 ${isMobile ? 'pb-24' : ''}`}>
       <div className="space-y-4 mb-8">
         <div className="flex items-center gap-4">
@@ -111,6 +121,7 @@ const LatestClipsPage = () => {
               userId={user?.id}
               compact={false}
               clipsList={filteredClips}
+              onCardClick={isMobile ? (clipId, clips) => setMobileViewer({ clips, startId: clipId }) : undefined}
             />
           ))
         ) : clipsData && clipsData.length > 0 ? (
@@ -146,6 +157,7 @@ const LatestClipsPage = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 

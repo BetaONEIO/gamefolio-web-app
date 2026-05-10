@@ -16,6 +16,7 @@ interface VideoClipGridItemProps {
   onDelete?: () => void;
   reelsList?: ClipWithUser[];
   clipsList?: ClipWithUser[];
+  onCardClick?: (clipId: number, clips: ClipWithUser[]) => void;
 }
 
 const VideoClipGridItem = ({
@@ -26,6 +27,7 @@ const VideoClipGridItem = ({
   onDelete,
   reelsList,
   clipsList,
+  onCardClick,
 }: VideoClipGridItemProps) => {
   const { openClipDialog } = useClipDialog();
   const lazyVideo = useLazyVideo({ autoPlay: false });
@@ -39,8 +41,12 @@ const VideoClipGridItem = ({
   };
 
   const handleOpenClip = () => {
-    const contextList = reelsList || clipsList;
-    openClipDialog(clip.id, contextList);
+    const contextList = reelsList || clipsList || [];
+    if (onCardClick) {
+      onCardClick(clip.id, contextList);
+    } else {
+      openClipDialog(clip.id, contextList.length ? contextList : undefined);
+    }
   };
 
   const isReel = clip.videoType === "reel";

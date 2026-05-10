@@ -1,0 +1,67 @@
+import { useEffect, useRef } from "react";
+import { ClipWithUser } from "@shared/schema";
+import { ArrowLeft } from "lucide-react";
+import ClipFeedCard from "@/components/clips/ClipFeedCard";
+
+interface MobileClipsViewerOverlayProps {
+  clips: ClipWithUser[];
+  startClipId: number;
+  onBack: () => void;
+}
+
+const MobileClipsViewerOverlay = ({ clips, startClipId, onBack }: MobileClipsViewerOverlayProps) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    const idx = clips.findIndex(c => c.id === startClipId);
+    if (idx > 0) {
+      const el = scrollRef.current.children[idx] as HTMLElement | undefined;
+      el?.scrollIntoView({ behavior: 'instant' as ScrollBehavior });
+    }
+  }, [startClipId, clips]);
+
+  return (
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: '#03080A' }}>
+      {/* Top bar */}
+      <div
+        className="flex-shrink-0 flex items-center justify-between px-4 pb-3"
+        style={{ background: '#03080A', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+      >
+        <button
+          onClick={onBack}
+          className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
+          style={{ color: '#F5F7F2' }}
+          aria-label="Back"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <span className="sr-only">Clips</span>
+      </div>
+
+      {/* Snap-scrolling feed */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto"
+        style={{ scrollSnapType: 'y mandatory', WebkitOverflowScrolling: 'touch' }}
+      >
+        {clips.map((clip) => (
+          <div
+            key={clip.id}
+            className="flex flex-col justify-center"
+            style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always', minHeight: '100%' }}
+          >
+            <ClipFeedCard clip={clip} clips={clips} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default MobileClipsViewerOverlay;
