@@ -81,7 +81,7 @@ async function getTokenWithRetry(maxAttempts = 4, baseDelayMs = 2000): Promise<s
       void reportDiagnostic('getToken-error', `attempt ${attempt}: ${String(err)}`);
     }
     if (attempt < maxAttempts) {
-      // Exponential backoff: 2s, 4s, 8s
+      // Linear backoff: 2s, 4s, 6s
       await new Promise<void>((r) => setTimeout(r, baseDelayMs * attempt));
     }
   }
