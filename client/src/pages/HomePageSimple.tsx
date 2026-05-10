@@ -1,6 +1,8 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
+import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
+import { useMobile } from "@/hooks/use-mobile";
 import { TrendingSection } from "@/components/trending/TrendingSection";
 
 import { Button } from "@/components/ui/button";
@@ -33,7 +35,9 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState(0);
   const [scrollStart, setScrollStart] = useState(0);
+  const [mobileViewer, setMobileViewer] = useState<{ clips: ClipWithUser[]; startId: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isMobile = useMobile();
 
   const scroll = useCallback((direction: 'left' | 'right') => {
     if (!scrollRef.current) return;
@@ -149,10 +153,19 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
               clip={clip}
               userId={userId}
               compact={false}
+              clipsList={clips}
+              onCardClick={isMobile ? (clipId, clipsArr) => setMobileViewer({ clips: clipsArr, startId: clipId }) : undefined}
             />
           </div>
         ))}
       </div>
+      {mobileViewer && (
+        <MobileClipsViewerOverlay
+          clips={mobileViewer.clips}
+          startClipId={mobileViewer.startId}
+          onBack={() => setMobileViewer(null)}
+        />
+      )}
     </div>
   );
 };
