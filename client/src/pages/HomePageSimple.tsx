@@ -164,6 +164,7 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
           clips={mobileViewer.clips}
           startClipId={mobileViewer.startId}
           onBack={() => setMobileViewer(null)}
+          viewAllHref="/latest-clips"
         />
       )}
     </div>

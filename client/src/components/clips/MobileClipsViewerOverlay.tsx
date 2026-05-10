@@ -1,15 +1,17 @@
 import { useEffect, useRef } from "react";
 import { ClipWithUser } from "@shared/schema";
 import { ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import ClipFeedCard from "@/components/clips/ClipFeedCard";
 
 interface MobileClipsViewerOverlayProps {
   clips: ClipWithUser[];
   startClipId: number;
   onBack: () => void;
+  viewAllHref?: string;
 }
 
-const MobileClipsViewerOverlay = ({ clips, startClipId, onBack }: MobileClipsViewerOverlayProps) => {
+const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: MobileClipsViewerOverlayProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,6 +44,21 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack }: MobileClipsVie
           <ArrowLeft className="h-5 w-5" />
         </button>
         <span className="sr-only">Clips</span>
+        {viewAllHref && (
+          <Link
+            href={viewAllHref}
+            onClick={onBack}
+            className="text-sm font-semibold px-3 py-1.5 rounded-full transition-colors"
+            style={{
+              color: '#B7FF1A',
+              border: '1px solid rgba(183, 255, 26, 0.5)',
+              background: 'rgba(183, 255, 26, 0.08)',
+            }}
+            data-testid="link-view-all"
+          >
+            View all
+          </Link>
+        )}
       </div>
 
       {/* Snap-scrolling feed */}
