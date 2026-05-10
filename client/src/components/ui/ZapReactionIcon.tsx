@@ -178,10 +178,12 @@ export interface ZapIconSvgProps {
   active?: boolean;
   className?: string;
   style?: React.CSSProperties;
+  color?: string;
 }
 
-export function ZapIconSvg({ size, active = false, className = '', style }: ZapIconSvgProps) {
+export function ZapIconSvg({ size, active = false, className = '', style, color }: ZapIconSvgProps) {
   const NEON = '#B7FF1A';
+  const activeColor = color || NEON;
   const w = size ? Math.round(size * 11 / 14) : undefined;
   return (
     <svg
@@ -196,14 +198,14 @@ export function ZapIconSvg({ size, active = false, className = '', style }: ZapI
       {active && (
         <path
           d={ZAP_PATH}
-          fill={NEON}
-          style={{ filter: `drop-shadow(0 0 2px ${NEON}) drop-shadow(0 0 5px ${NEON})`, opacity: 0.5 }}
+          fill={activeColor}
+          style={{ filter: `drop-shadow(0 0 2px ${activeColor}) drop-shadow(0 0 5px ${activeColor})`, opacity: 0.5 }}
         />
       )}
       <path
         d={ZAP_PATH}
-        fill={active ? NEON : 'none'}
-        stroke={active ? NEON : 'currentColor'}
+        fill={active ? activeColor : 'none'}
+        stroke={active ? activeColor : 'currentColor'}
         strokeWidth={0.85}
         strokeLinejoin="miter"
         strokeLinecap="square"
@@ -259,10 +261,24 @@ const FLY_SPARKS = [
   { dx:  -8, dy: -22, color: '#d4ff6b', delay: 0.07 },
 ];
 
-export function ZapFlyOverlay({ targetRect, onDone }: { targetRect: DOMRect; onDone: () => void }) {
+export function ZapFlyOverlay({
+  targetRect,
+  onDone,
+  mode,
+}: {
+  targetRect: DOMRect;
+  onDone: () => void;
+  mode: 'success' | 'fail' | null;
+}) {
   const prefersReducedMotion = useReducedMotion();
-  const [phase, setPhase] = useState<'appear' | 'fly' | 'land'>('appear');
+
+  // Always track latest mode value without needing a re-render
+  const modeRef = useRef(mode);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
+
+  const [phase, setPhase] = useState<'appear' | 'fly' | 'successLand' | 'failFall'>('appear');
   const [showSparks, setShowSparks] = useState(false);
+  const [showXp, setShowXp] = useState(false);
 
   const LARGE = 76;
   const scx = window.innerWidth / 2;
@@ -273,7 +289,6 @@ export function ZapFlyOverlay({ targetRect, onDone }: { targetRect: DOMRect; onD
   const dy = tcy - scy;
   const endScale = Math.max(targetRect.height, 16) / LARGE;
 
-  // Reduced-motion: just fire onDone immediately
   useEffect(() => {
     if (prefersReducedMotion) {
       const t = setTimeout(onDone, 50);
@@ -282,6 +297,47 @@ export function ZapFlyOverlay({ targetRect, onDone }: { targetRect: DOMRect; onD
   }, [prefersReducedMotion, onDone]);
 
   if (prefersReducedMotion) return null;
+
+  // ── bolt animate targets by phase ──────────────────────────────────────────
+  const boltAnimate = (() => {
+    switch (phase) {
+      case 'appear':      return { scale: 1.3, opacity: 1, x: 0, y: 0, rotate: 0 };
+      case 'fly':         return { x: dx, y: dy, scale: endScale, opacity: 1, rotate: 0 };
+      case 'successLand': return { x: dx, y: dy, scale: endScale * 0.6, opacity: 0, rotate: 0 };
+      case 'failFall':    return { x: dx + 14, y: dy + 95, scale: endScale * 0.25, opacity: 0, rotate: 28 };
+    }
+  })();
+
+  const boltTransition = (() => {
+    switch (phase) {
+      case 'appear':      return { duration: 0.13, ease: [0.0, 0.0, 0.2, 1.0] as const };
+      case 'fly':         return { duration: 0.46, ease: [0.55, 0.0, 0.45, 1.0] as const };
+      case 'successLand': return { duration: 0.14, ease: 'easeIn' as const };
+      case 'failFall':    return { duration: 0.44, ease: [0.55, 0.0, 1.0, 1.0] as const };
+    }
+  })();
+
+  // neon green → red via hue rotation when falling off
+  const boltFilter = phase === 'failFall' ? 'hue-rotate(283deg) saturate(2.2) brightness(1.25)' : 'none';
+
+  const handleBoltComplete = () => {
+    if (phase === 'appear') {
+      setPhase('fly');
+      return;
+    }
+    if (phase === 'fly') {
+      const outcome = modeRef.current ?? 'success';
+      if (outcome === 'fail') {
+        setPhase('failFall');
+        setTimeout(onDone, 500);
+      } else {
+        setPhase('successLand');
+        setShowSparks(true);
+        setShowXp(true);
+        setTimeout(onDone, 750);
+      }
+    }
+  };
 
   const portal = (
     <div
@@ -306,47 +362,30 @@ export function ZapFlyOverlay({ targetRect, onDone }: { targetRect: DOMRect; onD
         />
       )}
 
-      {/* ── Flying zap bolt ── */}
-      {phase !== 'land' && (
-        <motion.div
-          initial={{ x: 0, y: 0, scale: 0.08, opacity: 0 }}
-          animate={
-            phase === 'appear'
-              ? { scale: 1.3, opacity: 1, x: 0, y: 0 }
-              : { x: dx, y: dy, scale: endScale, opacity: 0 }
-          }
-          onAnimationComplete={() => {
-            if (phase === 'appear') {
-              setPhase('fly');
-            } else {
-              setShowSparks(true);
-              setPhase('land');
-              setTimeout(onDone, 280);
-            }
-          }}
-          transition={
-            phase === 'appear'
-              ? { duration: 0.13, ease: [0.0, 0.0, 0.2, 1.0] }
-              : { duration: 0.46, ease: [0.55, 0.0, 0.45, 1.0] }
-          }
-          style={{
-            position: 'absolute',
-            left: scx - LARGE / 2,
-            top: scy - LARGE / 2,
-            width: LARGE, height: LARGE,
-          }}
-        >
-          <ZapIconSvg size={LARGE} active={true} />
-        </motion.div>
-      )}
+      {/* ── Flying / landing / falling zap bolt ── */}
+      <motion.div
+        initial={{ x: 0, y: 0, scale: 0.08, opacity: 0, rotate: 0 }}
+        animate={boltAnimate}
+        transition={boltTransition}
+        onAnimationComplete={handleBoltComplete}
+        style={{
+          position: 'absolute',
+          left: scx - LARGE / 2,
+          top: scy - LARGE / 2,
+          width: LARGE, height: LARGE,
+          filter: boltFilter,
+        }}
+      >
+        <ZapIconSvg size={LARGE} active={true} />
+      </motion.div>
 
-      {/* ── Landing pixel sparks ── */}
+      {/* ── Success: landing pixel sparks ── */}
       {showSparks && FLY_SPARKS.map((s, i) => (
         <motion.div
           key={i}
           initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
           animate={{ x: s.dx * 1.6, y: s.dy * 1.6, opacity: 0, scale: 0.2 }}
-          transition={{ duration: 0.26, delay: s.delay, ease: 'easeOut' }}
+          transition={{ duration: 0.28, delay: s.delay, ease: 'easeOut' }}
           style={{
             position: 'absolute',
             left: tcx - 2, top: tcy - 2,
@@ -356,6 +395,31 @@ export function ZapFlyOverlay({ targetRect, onDone }: { targetRect: DOMRect; onD
           }}
         />
       ))}
+
+      {/* ── Success: +50 XP floating popup ── */}
+      {showXp && (
+        <motion.div
+          initial={{ y: 0, opacity: 1, scale: 0.85 }}
+          animate={{ y: -56, opacity: 0, scale: 1.15 }}
+          transition={{ duration: 0.72, ease: 'easeOut' }}
+          style={{
+            position: 'absolute',
+            left: tcx,
+            top: tcy - 22,
+            transform: 'translateX(-50%)',
+            color: '#B7FF1A',
+            fontWeight: 900,
+            fontSize: 17,
+            fontFamily: 'monospace',
+            letterSpacing: '0.04em',
+            whiteSpace: 'nowrap',
+            textShadow: '0 0 8px #B7FF1A, 0 0 20px #B7FF1A',
+            userSelect: 'none',
+          }}
+        >
+          +50 XP ⚡
+        </motion.div>
+      )}
     </div>
   );
 

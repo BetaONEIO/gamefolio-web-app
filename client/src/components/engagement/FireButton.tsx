@@ -40,6 +40,7 @@ export function FireButton({
   const [count, setCount] = useState(Number(initialCount) || 0);
   const iconRef = useRef<HTMLSpanElement>(null);
   const { zapFlyState, triggerZapFly, dismissZapFly } = useZapFly();
+  const [flyMode, setFlyMode] = useState<'success' | 'fail' | null>(null);
 
   const { data: fireStatus } = useQuery({
     queryKey: [`/api/${contentType}s/${contentId}/reactions/status`],
@@ -81,6 +82,7 @@ export function FireButton({
       return response.json();
     },
     onMutate: async () => {
+      setFlyMode(null);
       // Only increment if not already fired (fire reactions are permanent)
       if (fired) {
         return { previousFired: true, previousCount: count };
@@ -92,19 +94,12 @@ export function FireButton({
       return { previousFired, previousCount };
     },
     onSuccess: (data) => {
+      setFlyMode('success');
       if (data.reacted !== undefined) {
         setFired(data.reacted);
       }
       if (data.count !== undefined) {
         setCount(data.count);
-      }
-      // Show success message with fires remaining info
-      if (data.firesRemaining !== undefined) {
-        toast({
-          title: "🔥 sent!",
-          description: `You have ${data.firesRemaining} 🔥 left today`,
-          variant: "default",
-        });
       }
       queryClient.invalidateQueries({ 
         queryKey: [`/api/${contentType}s/${contentId}/reactions`] 
@@ -117,6 +112,7 @@ export function FireButton({
       });
     },
     onError: (error: Error, _, context) => {
+      setFlyMode('fail');
       if (context) {
         setFired(context.previousFired);
         setCount(context.previousCount);
@@ -223,7 +219,7 @@ export function FireButton({
           )}
         </div>
 
-        {zapFlyState && <ZapFlyOverlay targetRect={zapFlyState} onDone={dismissZapFly} />}
+        {zapFlyState && <ZapFlyOverlay targetRect={zapFlyState} onDone={dismissZapFly} mode={flyMode} />}
         <JoinGamefolioDialog 
           open={isOpen} 
           onOpenChange={closeDialog} 
@@ -258,7 +254,7 @@ export function FireButton({
         )}
       </button>
 
-      {zapFlyState && <ZapFlyOverlay targetRect={zapFlyState} onDone={dismissZapFly} />}
+      {zapFlyState && <ZapFlyOverlay targetRect={zapFlyState} onDone={dismissZapFly} mode={flyMode} />}
       <JoinGamefolioDialog 
         open={isOpen} 
         onOpenChange={closeDialog} 
