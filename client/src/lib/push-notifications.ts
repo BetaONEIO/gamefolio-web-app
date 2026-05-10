@@ -1,6 +1,7 @@
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import { App as CapacitorApp } from '@capacitor/app';
 import { isNative, isIOS, isAndroid, resolveApiUrl } from './platform';
+import { apiRequest } from './queryClient';
 
 let initialised = false;
 let registeredToken: string | null = null;
@@ -19,20 +20,6 @@ declare global {
   }
 }
 
-async function postJson(path: string, body: unknown): Promise<Response | null> {
-  try {
-    return await fetch(resolveApiUrl(path), {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-  } catch (err) {
-    console.warn(`[push] ${path} failed`, err);
-    return null;
-  }
-}
-
 async function registerTokenWithServer(token: string): Promise<void> {
   if (registeredToken === token) return;
   let appVersion: string | undefined;
@@ -43,14 +30,31 @@ async function registerTokenWithServer(token: string): Promise<void> {
     appVersion = undefined;
   }
   const platform = isIOS ? 'ios' : isAndroid ? 'android' : 'web';
-  const res = await postJson('/api/push/register', { token, platform, appVersion });
-  if (res?.ok) {
+  // Use apiRequest so the call carries the JWT Authorization header on
+  // native (cookies don't cross the Capacitor WebView origin, so a raw
+  // fetch hits the server unauthenticated and gets a silent 401).
+  try {
+    await apiRequest('POST', '/api/push/register', { token, platform, appVersion });
     registeredToken = token;
+    console.log(`[push] token registered (${platform}, ${appVersion ?? 'unknown'})`);
+  } catch (err) {
+    console.warn('[push] /api/push/register failed', err);
   }
 }
 
 async function unregisterTokenWithServer(token: string): Promise<void> {
-  await postJson('/api/push/unregister', { token });
+  // Unregister tolerates 401 (logout may have already invalidated the
+  // session), so use raw fetch with the URL rewriter rather than apiRequest.
+  try {
+    await fetch(resolveApiUrl('/api/push/unregister'), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+  } catch (err) {
+    console.warn('[push] /api/push/unregister failed', err);
+  }
   if (registeredToken === token) registeredToken = null;
 }
 
