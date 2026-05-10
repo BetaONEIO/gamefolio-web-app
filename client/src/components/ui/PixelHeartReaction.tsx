@@ -98,9 +98,8 @@ export function PixelHeartReaction({
 
   function handleClick() {
     setPop(true);
-    const t = setTimeout(() => setPop(false), 360);
+    setTimeout(() => setPop(false), 360);
     onClick?.();
-    return () => clearTimeout(t);
   }
 
   // `size` = target HEIGHT (matches sibling icon height like Flame h-4 w-4).
