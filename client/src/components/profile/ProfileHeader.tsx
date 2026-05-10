@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { UserWithStats } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { requireEmailVerified } from "@/lib/email-verification";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import {
   UserPlus,
   UserCheck,
-  Share2,
   Trophy,
   Heart,
   Flame,
@@ -549,7 +549,7 @@ const ProfileHeader = ({
                 onOpenChange={setShareDialogOpen}
                 trigger={
                   <Button variant="outline" size="sm" className="h-8 px-4">
-                    <Share2 className="mr-1 h-4 w-4" /> Share
+                    <ShareLaunchIcon size={16} className="mr-1" /> Share
                   </Button>
                 }
               />

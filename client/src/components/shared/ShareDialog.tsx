@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { openShareWindow, nativeShare, isNative } from "@/lib/platform";
-import { Copy, Download, Facebook, MessageCircle, Mail, Share2 } from "lucide-react";
+import { Copy, Download, Facebook, MessageCircle, Mail } from "lucide-react";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { FaXTwitter } from "react-icons/fa6";
 
 interface ShareDialogProps {
@@ -103,7 +104,7 @@ export function ShareDialog({
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
-            <Share2 className="h-5 w-5 text-primary" />
+            <ShareLaunchIcon size={20} className="text-primary" />
             Share your gamefolio
           </DialogTitle>
           <DialogDescription className="text-gray-400">

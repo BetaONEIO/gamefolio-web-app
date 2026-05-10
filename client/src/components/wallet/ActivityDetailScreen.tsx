@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowLeft, Share2, Check, Copy, ExternalLink, Gift, TrendingUp, ShoppingCart, AlertTriangle, Clock } from "lucide-react";
+import { ArrowLeft, Check, Copy, ExternalLink, Gift, TrendingUp, ShoppingCart, AlertTriangle, Clock } from "lucide-react";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 
 type ActivityType = "reward" | "stake" | "purchase" | "unstake";
 type ActivityStatus = "completed" | "pending" | "processing" | "failed";
@@ -144,7 +145,7 @@ export default function ActivityDetailScreen({
           className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
           style={{ background: '#1e293b', border: '1px solid #1e293b' }}
         >
-          <Share2 className="w-5 h-5" style={{ color: '#f8fafc' }} />
+          <ShareLaunchIcon size={20} className="text-[#f8fafc]" />
         </button>
       </div>
 

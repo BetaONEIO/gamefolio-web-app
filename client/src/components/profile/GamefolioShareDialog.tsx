@@ -6,7 +6,8 @@ import {
   DialogContent,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Share2, X, Copy, Video, Gamepad2, Trophy, Upload, Code, Eye, Coffee, Scroll } from 'lucide-react';
+import { X, Copy, Video, Gamepad2, Trophy, Upload, Code, Eye, Coffee, Scroll } from 'lucide-react';
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope, FaPinterest, FaYoutube } from 'react-icons/fa';
 import { FaXTwitter, FaInstagram, FaTiktok, FaSnapchat, FaBluesky, FaThreads } from 'react-icons/fa6';
 import { toast } from '@/hooks/use-toast';
@@ -231,7 +232,7 @@ export function GamefolioShareDialog({
       {!trigger && !open && (
         <DialogTrigger asChild>
           <Button variant="outline" size="sm" className="gap-2">
-            <Share2 className="w-4 h-4" />
+            <ShareLaunchIcon size={16} />
             Share Gamefolio
           </Button>
         </DialogTrigger>
@@ -242,7 +243,7 @@ export function GamefolioShareDialog({
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-5 py-4 sm:py-5 border-b border-[#1e293b]/50">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-[#B7FF1A] shrink-0" />
+            <ShareLaunchIcon size={20} className="text-[#B7FF1A] shrink-0" />
             <span className="text-[#f8fafc] text-base sm:text-xl font-bold truncate">Share Gamefolio</span>
           </div>
           <button

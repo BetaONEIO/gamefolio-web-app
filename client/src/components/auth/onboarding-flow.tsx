@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Check, Gamepad2, Upload, Share2, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop } from "lucide-react";
+import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop } from "lucide-react";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Game } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -795,7 +796,7 @@ export default function OnboardingFlow({
 
                     <div className="flex items-start gap-4">
                       <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                        <Share2 className="h-5 w-5 text-primary" />
+                        <ShareLaunchIcon size={20} className="text-primary" />
                       </div>
                       <div>
                         <h3 className="font-bold text-white text-[15px]">Connect and share</h3>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ClipWithUser } from '@shared/schema';
-import { BadgeCheck, MoreHorizontal, Bookmark, MessageCircle, Share2, BarChart2, ChevronDown, Gamepad2, Play } from 'lucide-react';
+import { BadgeCheck, MoreHorizontal, Bookmark, MessageCircle, BarChart2, ChevronDown, Gamepad2, Play } from 'lucide-react';
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { PartnerBadge } from '@/components/ui/partner-badge';
 import { useAuth } from '@/hooks/use-auth';
 import { useMobile } from '@/hooks/use-mobile';
@@ -307,7 +308,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
               className="flex items-center justify-center flex-1 transition-colors"
               style={{ color: '#7E887A' }}
             >
-              <Share2 className="h-[18px] w-[18px]" />
+              <ShareLaunchIcon size={18} />
             </button>
           </div>
         </div>

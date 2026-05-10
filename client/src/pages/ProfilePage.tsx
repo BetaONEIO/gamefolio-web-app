@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { LevelBadgeWithProgress } from "@/components/profile/LevelBadgeWithProgress";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { 
   Heart, 
   Users, 
@@ -30,7 +31,6 @@ import {
   Eye,
   Clock,
   Flame,
-  Share2,
   User as UserIcon,
   MessageSquare,
   Flag,
@@ -2613,7 +2613,7 @@ const ProfilePage = () => {
                 className="p-2 h-10 w-10 rounded-full hover:opacity-90 backdrop-blur-sm"
                 style={shareButtonStyle}
               >
-                <Share2 className="w-5 h-5" />
+                <ShareLaunchIcon size={20} />
               </Button>
             }
           />
@@ -3627,7 +3627,7 @@ const ProfilePage = () => {
                           className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg px-4 py-3"
                           style={shareButtonStyle}
                         >
-                          <Share2 className="h-5 w-5" />
+                          <ShareLaunchIcon size={20} />
                         </Button>
                       }
                     />
@@ -3675,7 +3675,7 @@ const ProfilePage = () => {
                           className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
                           style={shareButtonStyle}
                         >
-                          <Share2 className="h-4 w-4" />
+                          <ShareLaunchIcon size={16} />
                         </Button>
                       }
                     />
@@ -5205,7 +5205,7 @@ const ProfilePage = () => {
                 favoriteGames={favoriteGames?.slice(0, 5).map(g => ({ id: g.id, name: g.name, imageUrl: g.imageUrl }))}
                 trigger={
                   <Button variant="outline" className="w-full justify-start" onClick={() => setProfileActionDialogOpen(false)}>
-                    <Share2 className="mr-2 h-4 w-4" />
+                    <ShareLaunchIcon size={16} className="mr-2" />
                     Share Profile
                   </Button>
                 }

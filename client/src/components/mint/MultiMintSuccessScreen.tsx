@@ -1,4 +1,5 @@
-import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Copy, Check, Share2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { useState, useRef, useCallback } from "react";
 import MintedNftDetailScreen from "./MintedNftDetailScreen";
 import { openExternal, nativeShare } from "@/lib/platform";
@@ -195,7 +196,7 @@ export default function MultiMintSuccessScreen({
             }}
             className="w-10 h-10 rounded-full bg-[#1e293b80] flex items-center justify-center hover:bg-[#1e293b] transition-colors"
           >
-            <Share2 className="h-5 w-5 text-[#f8fafc]" />
+            <ShareLaunchIcon size={20} className="text-[#f8fafc]" />
           </button>
         </div>
       </header>

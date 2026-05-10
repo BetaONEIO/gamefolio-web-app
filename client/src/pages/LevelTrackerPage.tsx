@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "wouter";
-import { ArrowLeft, Zap, Gift, Eye, Heart, Flame, Upload, LogIn, Star, Award, Camera, MessageCircle, Sun, CheckCircle2, Circle, Share2, UserPlus, Trophy, Target, Calendar, Clock } from "lucide-react";
+import { ArrowLeft, Zap, Gift, Eye, Heart, Flame, Upload, LogIn, Star, Award, Camera, MessageCircle, Sun, CheckCircle2, Circle, UserPlus, Trophy, Target, Calendar, Clock } from "lucide-react";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { ZapIconFire } from "@/components/ui/ZapReactionIcon";
 import { Button } from "@/components/ui/button";
 import badgeIcon from "@assets/yellow_circle_transparent_1771659993513.png";
@@ -81,11 +82,11 @@ const sourceIcons: Record<string, typeof Zap> = {
   daily_login: LogIn,
   welcome_bonus: Star,
   comment_received: MessageCircle,
-  share_received: Share2,
+  share_received: ShareLaunchIcon,
   follow_received: UserPlus,
   comment: MessageCircle,
   like: Heart,
-  share_given: Share2,
+  share_given: ShareLaunchIcon,
   watch_5_clips: Eye,
   watch_20_clips: Eye,
   first_upload_of_day: Trophy,
@@ -709,12 +710,12 @@ export default function LevelTrackerPage() {
               { icon: Heart, color: "#ff2056", xp: "+10 XP", label: "Like Received", sub: "Get likes on your content" },
               { icon: ZapIconFire, color: "#B7FF1A", xp: "+15 XP", label: "Fire Reaction", sub: "Get fire reactions on clips" },
               { icon: MessageCircle, color: "#38bdf8", xp: "+20 XP", label: "Comment Received", sub: "Get comments on your clips" },
-              { icon: Share2, color: "#2dd4bf", xp: "+40 XP", label: "Share Received", sub: "When others share your clip" },
+              { icon: ShareLaunchIcon, color: "#2dd4bf", xp: "+40 XP", label: "Share Received", sub: "When others share your clip" },
               { icon: UserPlus, color: "#a78bfa", xp: "+50 XP", label: "Follow Received", sub: "Gain a new follower" },
               { icon: LogIn, color: "#eab308", xp: "+25 XP", label: "Daily Login", sub: "Log in every day for streaks" },
               { icon: Gift, color: "#B7FF1A", xp: "+100 XP", label: "Daily Lootbox", sub: "Open your daily lootbox" },
               { icon: Star, color: "#f59e0b", xp: "+50 XP", label: "Streak Milestones", sub: "Hit login streak milestones" },
-              { icon: Share2, color: "#B7FF1A", xp: "+20 XP", label: "Share Given", sub: "Share someone's clip" },
+              { icon: ShareLaunchIcon, color: "#B7FF1A", xp: "+20 XP", label: "Share Given", sub: "Share someone's clip" },
             ].map((item) => (
               <div key={item.label} className="bg-card border border-border/50 rounded-2xl p-4 flex flex-col items-center text-center">
                 <div className="w-11 h-11 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: `${item.color}18` }}>

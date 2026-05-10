@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
 import { ChevronLeft, Heart, MessageCircle, User, Play, Pause, Flag, Eye, Gamepad2, Music, X } from "lucide-react";
-import ShareIcon from "@/components/ui/ShareIcon";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
@@ -379,7 +379,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
           </button>
 
           {/* Share */}
-          <ShareIcon
+          <ShareLaunchIcon
             size={24}
             className="text-white drop-shadow"
             onClick={(e) => { e.stopPropagation(); setShowShare(true); }}

@@ -22,12 +22,12 @@ import {
   User,
   Shield,
   CreditCard,
-  Share2,
   Bell,
   Gamepad2,
   Settings,
   HelpCircle
 } from 'lucide-react';
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 
 const supportFormSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -167,7 +167,7 @@ const categoryIcons: Record<string, React.ReactNode> = {
   'Content': <Upload className="h-5 w-5" />,
   'Profile': <Settings className="h-5 w-5" />,
   'Privacy': <Shield className="h-5 w-5" />,
-  'Social': <Share2 className="h-5 w-5" />,
+  'Social': <ShareLaunchIcon size={20} />,
   'Features': <Gamepad2 className="h-5 w-5" />,
   'Subscription': <CreditCard className="h-5 w-5" />,
   'Safety': <Shield className="h-5 w-5" />,

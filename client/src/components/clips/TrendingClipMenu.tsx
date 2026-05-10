@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import {
   MoreHorizontal,
   Flag,
@@ -13,7 +14,6 @@ import {
   VolumeX,
   Ban,
   Copy,
-  Share2,
   Pencil,
   Trash2,
   Pin,
@@ -237,7 +237,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
         onClick={handleCopyLink}
       />
       <MenuItem
-        icon={<Share2 className="h-4 w-4" />}
+        icon={<ShareLaunchIcon size={16} />}
         label="Share"
         onClick={() => {
           close();

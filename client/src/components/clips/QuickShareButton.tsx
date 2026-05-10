@@ -5,7 +5,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Share2 } from "lucide-react";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { openShareWindow, nativeShare, isNative } from "@/lib/platform";
 import { 
   FaFacebookF, 
@@ -119,7 +119,7 @@ const QuickShareButton: React.FC<QuickShareButtonProps> = ({
             setShowPopover(true);
           }}
         >
-          <Share2 className={cn("h-4 w-4", size === 'lg' && "h-5 w-5")} />
+          <ShareLaunchIcon size={size === 'lg' ? 20 : 16} />
           {size !== 'sm' && size !== 'icon' && <span>Share</span>}
         </Button>
       </PopoverTrigger>

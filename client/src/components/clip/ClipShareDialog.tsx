@@ -7,12 +7,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { openShareWindow, nativeShare, isNative } from "@/lib/platform";
 import {
-  Share2,
   Copy,
   RefreshCw,
   X,
   AlertCircle,
 } from "lucide-react";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope, FaPinterest, FaYoutube } from "react-icons/fa";
 import { FaXTwitter, FaInstagram, FaTiktok, FaSnapchat, FaBluesky, FaThreads } from "react-icons/fa6";
 
@@ -246,7 +246,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
       {!trigger && open === undefined && (
         <DialogTrigger asChild>
           <Button variant="outline" size="sm" className="gap-2">
-            <Share2 className="w-4 h-4" />
+            <ShareLaunchIcon size={16} />
             Share
           </Button>
         </DialogTrigger>
@@ -258,7 +258,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-5 py-4 sm:py-5 border-b border-[#1e293b]/50">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-[#B7FF1A] shrink-0" />
+            <ShareLaunchIcon size={20} className="text-[#B7FF1A] shrink-0" />
             <span className="text-[#f8fafc] text-base sm:text-xl font-bold truncate">
               {isOwnContent ? `Share your ${label}` : `Share ${label}`}
             </span>
@@ -344,7 +344,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                     className="sm:hidden mt-1 flex items-center justify-center gap-2 border border-[#B7FF1A]/50 hover:bg-[#B7FF1A]/10 text-[#B7FF1A] rounded-2xl py-2.5 transition-colors"
                     aria-label="Share using device's native share menu"
                   >
-                    <Share2 className="w-4 h-4" />
+                    <ShareLaunchIcon size={16} />
                     <span className="text-sm font-medium">Share via…</span>
                   </button>
                 )}

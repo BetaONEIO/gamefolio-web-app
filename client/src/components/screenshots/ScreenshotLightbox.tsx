@@ -11,7 +11,8 @@ import { FireButton } from "@/components/engagement/FireButton";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { formatDistance } from "date-fns";
 import { Link } from "wouter";
-import { Eye, Clock, MessageSquare, Share2, User as UserIcon, UserPlus, UserCheck, ChevronLeft, ChevronRight, X, Maximize2, Minimize2 } from "lucide-react";
+import { Eye, Clock, MessageSquare, User as UserIcon, UserPlus, UserCheck, ChevronLeft, ChevronRight, X, Maximize2, Minimize2 } from "lucide-react";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import type { Game, Screenshot } from "@shared/schema";
 
 const ScreenshotShareDialog = React.lazy(() => import("@/components/screenshot/ScreenshotShareDialog").then(m => ({ default: m.ScreenshotShareDialog })));
@@ -448,7 +449,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                         isOwnContent={isOwnContent}
                         trigger={
                           <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                            <Share2 className="h-4 w-4" />
+                            <ShareLaunchIcon size={16} />
                           </Button>
                         }
                       />
@@ -616,7 +617,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                           isOwnContent={isOwnContent}
                           trigger={
                             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                              <Share2 className="h-4 w-4" />
+                              <ShareLaunchIcon size={16} />
                             </Button>
                           }
                         />

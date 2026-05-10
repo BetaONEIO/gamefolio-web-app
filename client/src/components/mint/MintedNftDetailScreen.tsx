@@ -1,4 +1,5 @@
-import { ArrowLeft, ExternalLink, Share2, Image, Hexagon } from "lucide-react";
+import { ArrowLeft, ExternalLink, Image, Hexagon } from "lucide-react";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { useState } from "react";
 import QuickSellScreen from "./QuickSellScreen";
 import { useToast } from "@/hooks/use-toast";

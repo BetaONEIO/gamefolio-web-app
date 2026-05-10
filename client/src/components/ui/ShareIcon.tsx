@@ -19,13 +19,13 @@ const SPARKS = [
   { ox: -3, oy: -4, delay: 0.02 },
 ];
 
-export interface ShareIconProps {
+export interface ShareLaunchIconProps {
   size?: number;
   className?: string;
   onClick?: (e: React.MouseEvent) => void;
 }
 
-const ShareIcon = ({ size = 24, className, onClick }: ShareIconProps) => {
+const ShareLaunchIcon = ({ size = 24, className, onClick }: ShareLaunchIconProps) => {
   const busy = useRef(false);
   const arrowCtrl = useAnimation();
   const trailCtrl = useAnimation();
@@ -103,4 +103,5 @@ const ShareIcon = ({ size = 24, className, onClick }: ShareIconProps) => {
   );
 };
 
-export default ShareIcon;
+export { ShareLaunchIcon };
+export default ShareLaunchIcon;

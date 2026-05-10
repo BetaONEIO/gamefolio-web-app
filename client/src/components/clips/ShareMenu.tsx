@@ -6,7 +6,8 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Share2, Copy, Facebook, Linkedin, Mail } from "lucide-react";
+import { Copy, Facebook, Linkedin, Mail } from "lucide-react";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { FaReddit, FaWhatsapp, FaTelegram, FaPinterest, FaYoutube } from "react-icons/fa";
 import { FaXTwitter, FaInstagram, FaTiktok, FaSnapchat, FaBluesky, FaThreads } from "react-icons/fa6";
 import { useToast } from "@/hooks/use-toast";
@@ -132,7 +133,7 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
       <DropdownMenuTrigger asChild>
         {variant === 'icon-only' ? (
           <button className="focus:outline-none">
-            <Share2 className="h-6 w-6 text-muted-foreground hover:text-foreground transition-colors" />
+            <ShareLaunchIcon size={24} className="text-muted-foreground hover:text-foreground transition-colors" />
           </button>
         ) : (
           <Button 
@@ -140,7 +141,7 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
             size="sm" 
             className="text-muted-foreground flex items-center gap-1"
           >
-            <Share2 className="h-5 w-5" />
+            <ShareLaunchIcon size={20} />
             <span>Share</span>
           </Button>
         )}
