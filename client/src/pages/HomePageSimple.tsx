@@ -214,8 +214,12 @@ interface HeroBannerSlideshowProps {
 }
 
 const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSlides, slideIntervalMs }: HeroBannerSlideshowProps) => {
-  const useDbSlides = dbSlides && dbSlides.length > 0;
-  const slidesCount = useDbSlides ? dbSlides.length : HERO_SLIDES.length;
+  // Filter out Pro slides for users who are already Pro
+  const visibleDbSlides = dbSlides?.filter(slide =>
+    !(slide.buttonLink === '/pro' && (user as any)?.isPro)
+  );
+  const useDbSlides = visibleDbSlides && visibleDbSlides.length > 0;
+  const slidesCount = useDbSlides ? visibleDbSlides.length : HERO_SLIDES.length;
   const interval = slideIntervalMs || SLIDE_INTERVAL;
 
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -290,7 +294,11 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
     >
       <div className="relative h-[300px] sm:h-[350px] md:h-[500px]">
         {useDbSlides ? (
-          dbSlides.map((slide, index) => (
+          visibleDbSlides.map((slide, index) => {
+            const isLootboxSlide = slide.buttonLink === '/lootbox';
+            const isProSlide = slide.buttonLink === '/pro';
+            const effectiveAlign = isLootboxSlide ? 'center' : slide.textAlign;
+            return (
             <div
               key={slide.id}
               className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
@@ -300,9 +308,9 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
                 zIndex: currentSlide === index ? 1 : 0,
               }}
             >
-              <div className={`absolute inset-0 ${slide.textAlign === 'left' ? 'bg-gradient-to-r from-black/80 via-black/40 to-transparent' : slide.textAlign === 'right' ? 'bg-gradient-to-l from-black/80 via-black/40 to-transparent' : 'bg-gradient-to-t from-black/70 via-black/50 to-black/30'}`} />
-              <div className={`relative flex ${slide.textAlign === 'right' ? 'items-center justify-end' : slide.textAlign === 'left' ? 'items-center justify-start' : 'items-center justify-center'} h-full`}>
-                <div className={`${slide.textAlign === 'center' ? 'text-center' : slide.textAlign === 'right' ? 'text-right' : 'text-left'} text-white px-8 sm:px-14 md:px-24 ${slide.textAlign === 'center' ? 'max-w-4xl' : 'max-w-lg'}`}>
+              <div className={`absolute inset-0 ${effectiveAlign === 'left' ? 'bg-gradient-to-r from-black/80 via-black/40 to-transparent' : effectiveAlign === 'right' ? 'bg-gradient-to-l from-black/80 via-black/40 to-transparent' : 'bg-gradient-to-t from-black/70 via-black/50 to-black/30'}`} />
+              <div className={`relative flex ${effectiveAlign === 'right' ? 'items-center justify-end' : effectiveAlign === 'left' ? 'items-center justify-start' : 'items-center justify-center'} h-full`}>
+                <div className={`${effectiveAlign === 'center' ? 'text-center' : effectiveAlign === 'right' ? 'text-right' : 'text-left'} text-white px-8 sm:px-14 md:px-24 ${effectiveAlign === 'center' ? 'max-w-4xl' : 'max-w-lg'}`}>
                   <h1 className="text-2xl sm:text-3xl md:text-6xl font-bold mb-3 sm:mb-4 leading-tight">
                     {slide.title.split('\n').map((line, idx) => (
                       <span key={idx}>
@@ -312,13 +320,19 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
                     ))}
                   </h1>
                   {slide.subtitle && (
-                    <p className={`text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl ${slide.textAlign === 'center' ? 'mx-auto' : ''} leading-relaxed`}>
+                    <p className={`text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl ${effectiveAlign === 'center' ? 'mx-auto' : ''} leading-relaxed`}>
                       {slide.subtitle}
                     </p>
                   )}
                   {slide.buttonText && slide.buttonLink && (
                     <Button 
-                      className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                      className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground border-0"
+                      style={isProSlide ? {
+                        background: 'linear-gradient(90deg, #B7FF1A, #FFE500, #AAFF00, #FFE500, #B7FF1A)',
+                        backgroundSize: '300% 100%',
+                        animation: 'gradient-shift 3s ease infinite',
+                        color: '#071013',
+                      } : undefined}
                       onClick={() => {
                         if (slide.buttonLink === '/lootbox') {
                           window.dispatchEvent(new CustomEvent('open-lootbox'));
@@ -337,7 +351,8 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
                 </div>
               </div>
             </div>
-          ))
+            );
+          })
         ) : (
           HERO_SLIDES.map((slide, index) => (
             <div
