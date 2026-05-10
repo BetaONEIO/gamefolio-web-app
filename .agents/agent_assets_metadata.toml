@@ -1,0 +1,13 @@
+uploads = []
+
+[[generated]]
+id = "GWQTr2ZlVw9nmYQf0uYcB"
+uri = "file://attached_assets/angular_heart_icon.png"
+type = "image"
+title = "angular heart icon green"
+
+[[outputs]]
+id = "uRHLdEQZY0LBFpOcTQuXt"
+uri = "file://attached_assets/angular_heart_icon_nobg.png"
+type = "image"
+title = "Angular Heart Icon (transparent background)"
