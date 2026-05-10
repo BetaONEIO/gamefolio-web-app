@@ -333,10 +333,12 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             <div className="flex flex-col items-center">
               <button
                 className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white active:bg-black/70 transition-colors"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   if (!user) { openDialog('comment'); }
                   else { setShowComments(true); setIsPaused(true); }
                 }}
+                onPointerDown={(e) => e.stopPropagation()}
               >
                 <MessageCircle className="h-7 w-7" />
               </button>

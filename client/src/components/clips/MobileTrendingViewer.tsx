@@ -317,7 +317,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         )}
 
         {/* ── Right edge action column — hidden when comments open ─── */}
-        {!showComments && <div className="absolute right-3 z-10 flex flex-col items-center gap-3" style={{ bottom: 110 }}>
+        {!showComments && <div className="absolute right-3 z-20 flex flex-col items-center gap-3" style={{ bottom: 110 }}>
           {/* Views */}
           <div className="flex flex-col items-center gap-0.5">
             <Eye className="h-6 w-6 text-white drop-shadow" />
@@ -526,8 +526,8 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
 
       {/* Join Dialog for unauthenticated users */}
       <JoinGamefolioDialog
-        isOpen={isJoinDialogOpen}
-        onClose={closeDialog}
+        open={isJoinDialogOpen}
+        onOpenChange={(open) => !open && closeDialog()}
         actionType={actionType}
       />
     </div>
