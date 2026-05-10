@@ -169,7 +169,7 @@ export function LikeButton({
     return (
       <>
         <div className="flex flex-col items-center gap-1">
-          <div className="bg-black/50 rounded-full p-1 hover:bg-black/70 transition-colors">
+          <div className="flex items-center justify-center bg-black/50 rounded-full p-1 hover:bg-black/70 transition-colors">
             <PixelHeartReaction
               active={liked}
               onClick={handleLike}
