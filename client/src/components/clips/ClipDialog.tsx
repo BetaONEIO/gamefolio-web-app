@@ -84,6 +84,28 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   const { user } = useAuth();
   const { isOpen: joinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
   const [showComments, setShowComments] = useState(false);
+  const [commentSheetDragY, setCommentSheetDragY] = useState(0);
+  const commentSheetTouchStartY = useRef<number | null>(null);
+  const commentSheetTouchStartTime = useRef<number>(0);
+  const handleCommentSheetTouchStart = (e: React.TouchEvent) => {
+    commentSheetTouchStartY.current = e.touches[0].clientY;
+    commentSheetTouchStartTime.current = Date.now();
+  };
+  const handleCommentSheetTouchMove = (e: React.TouchEvent) => {
+    if (commentSheetTouchStartY.current === null) return;
+    const delta = e.touches[0].clientY - commentSheetTouchStartY.current;
+    if (delta > 0) setCommentSheetDragY(delta);
+  };
+  const handleCommentSheetTouchEnd = () => {
+    if (commentSheetTouchStartY.current === null) return;
+    const elapsed = Date.now() - commentSheetTouchStartTime.current;
+    const velocity = commentSheetDragY / Math.max(elapsed, 1);
+    if (commentSheetDragY > 80 || velocity > 0.5) {
+      setShowComments(false);
+    }
+    setCommentSheetDragY(0);
+    commentSheetTouchStartY.current = null;
+  };
   const [isMobile, setIsMobile] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPortraitClip, setIsPortraitClip] = useState(false);
@@ -1118,7 +1140,16 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             )}>
               {clip.videoType === 'reel' && isMobile && showComments ? (
                 /* ── Mobile reel comments bottom sheet ── */
-                <>
+                <div
+                  className="flex flex-col h-full overflow-hidden"
+                  style={{
+                    transform: `translateY(${commentSheetDragY}px)`,
+                    transition: commentSheetDragY > 0 ? 'none' : 'transform 0.3s ease-out',
+                  }}
+                  onTouchStart={handleCommentSheetTouchStart}
+                  onTouchMove={handleCommentSheetTouchMove}
+                  onTouchEnd={handleCommentSheetTouchEnd}
+                >
                   {/* Drag handle + header */}
                   <div
                     className="flex-shrink-0 px-4 pt-3 pb-3"
@@ -1150,7 +1181,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       onUsernameClick={() => onClose()}
                     />
                   </div>
-                </>
+                </div>
               ) : (
                 /* ── Desktop / non-reel shared panel ── */
                 <>

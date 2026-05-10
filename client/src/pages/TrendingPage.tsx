@@ -84,11 +84,33 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   const cardRef = useRef<HTMLDivElement>(null);
   const isMobile = useMobile();
   const [sheetMounted, setSheetMounted] = useState(false);
+  const [sheetDragY, setSheetDragY] = useState(0);
+  const sheetTouchStartY = useRef<number | null>(null);
+  const sheetTouchStartTime = useRef<number>(0);
   useEffect(() => {
-    if (!commentsOpen || !isMobile) { setSheetMounted(false); return; }
+    if (!commentsOpen || !isMobile) { setSheetMounted(false); setSheetDragY(0); return; }
     const id = requestAnimationFrame(() => setSheetMounted(true));
     return () => cancelAnimationFrame(id);
   }, [commentsOpen, isMobile]);
+  const handleSheetTouchStart = (e: React.TouchEvent) => {
+    sheetTouchStartY.current = e.touches[0].clientY;
+    sheetTouchStartTime.current = Date.now();
+  };
+  const handleSheetTouchMove = (e: React.TouchEvent) => {
+    if (sheetTouchStartY.current === null) return;
+    const delta = e.touches[0].clientY - sheetTouchStartY.current;
+    if (delta > 0) setSheetDragY(delta);
+  };
+  const handleSheetTouchEnd = () => {
+    if (sheetTouchStartY.current === null) return;
+    const elapsed = Date.now() - sheetTouchStartTime.current;
+    const velocity = sheetDragY / Math.max(elapsed, 1);
+    if (sheetDragY > 80 || velocity > 0.5) {
+      setCommentsOpen(false);
+    }
+    setSheetDragY(0);
+    sheetTouchStartY.current = null;
+  };
 
   useEffect(() => {
     const el = cardRef.current;
@@ -368,9 +390,12 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
             background: '#0F1923',
             borderRadius: '20px 20px 0 0',
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-            transform: sheetMounted ? 'translateY(0)' : 'translateY(100%)',
-            transition: 'transform 0.3s ease-out',
+            transform: sheetMounted ? `translateY(${sheetDragY}px)` : 'translateY(100%)',
+            transition: sheetDragY > 0 ? 'none' : 'transform 0.3s ease-out',
           }}
+          onTouchStart={handleSheetTouchStart}
+          onTouchMove={handleSheetTouchMove}
+          onTouchEnd={handleSheetTouchEnd}
         >
           <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
             <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
