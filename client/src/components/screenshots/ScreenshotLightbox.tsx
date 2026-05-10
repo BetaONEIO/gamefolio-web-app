@@ -590,7 +590,8 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                         contentOwnerId={screenshot.userId}
                         initialLiked={false}
                         initialCount={(screenshot as any)._count?.likes || 0}
-                        size="lg"
+                        size="sm"
+                        iconSize={20}
                       />
                       <FireButton
                         contentId={screenshot.id}
@@ -598,16 +599,20 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                         contentOwnerId={screenshot.userId}
                         initialFired={false}
                         initialCount={(screenshot as any)._count?.reactions || 0}
-                        size="lg"
-                      />
-                      <Button
-                        variant="ghost"
                         size="sm"
-                        className="text-muted-foreground hover:text-foreground flex items-center gap-1"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                        <span>{(screenshot as any)._count?.comments || 0}</span>
-                      </Button>
+                        iconSize={20}
+                      />
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={scrollToComments}
+                          className="p-0 h-auto transition-colors text-muted-foreground hover:text-white focus:outline-none"
+                        >
+                          <MessageSquare className="h-5 w-5" />
+                        </button>
+                        <span className="font-medium min-w-[1rem] text-center text-base text-muted-foreground">
+                          {(screenshot as any)._count?.comments || 0}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2">
