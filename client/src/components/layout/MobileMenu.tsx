@@ -3,7 +3,8 @@ import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { X, Home, Compass, Flame, User, Settings, LogOut, MessageSquare, Trophy, ShoppingBag, Wallet, Gift } from "lucide-react";
+import { X, Home, Compass, User, Settings, LogOut, MessageSquare, Trophy, ShoppingBag, Wallet, Gift } from "lucide-react";
+import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
@@ -171,7 +172,7 @@ const MobileMenu = () => {
                   onClick={close}
                   className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
                 >
-                  <Flame className="mr-3 h-5 w-5 text-primary" />
+                  <ZapIconSvg className="mr-3 h-5 w-5" active={true} />
                   <span className="font-medium">Trending</span>
                 </Link>
               </li>

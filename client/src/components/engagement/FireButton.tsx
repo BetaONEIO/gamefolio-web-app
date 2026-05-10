@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { Flame } from "lucide-react";
+import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { cn } from "@/lib/utils";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
@@ -201,19 +201,11 @@ export function FireButton({
             disabled={isLoading}
             className={cn(
               "transition-colors rounded-full p-0 bg-black/50 hover:bg-black/70",
-              fired ? "text-orange-500" : "text-white hover:text-orange-500",
               size === "sm" && "w-8 h-8",
               size === "lg" && "w-10 h-10 md:w-12 md:h-12"
             )}
           >
-            <Flame 
-              className={cn(
-                "text-orange-500 transition-all duration-200",
-                fired ? "fill-current scale-110" : "hover:scale-105",
-                size === "sm" && "h-4 w-4",
-                size === "lg" && "h-5 w-5 md:h-6 md:w-6"
-              )} 
-            />
+            <ZapIconSvg size={iconSizes[size]} active={fired} />
           </Button>
           {showCount && (
             <span className={cn(
@@ -241,24 +233,16 @@ export function FireButton({
         onClick={handleFire}
         disabled={isLoading}
         className={cn(
-          "flex items-center gap-1 bg-transparent border-0 p-0 cursor-pointer transition-colors",
-          fired 
-            ? "text-orange-500 hover:text-orange-600" 
-            : "text-muted-foreground hover:text-orange-500",
+          "flex items-center gap-1 bg-transparent border-0 p-0 cursor-pointer transition-colors text-muted-foreground",
           isLoading && "opacity-50 pointer-events-none"
         )}
       >
-        <Flame 
-          className={cn(
-            size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-7 w-7' : 'h-5 w-5',
-            "transition-all duration-200",
-            fired ? "fill-current scale-110" : "hover:scale-105"
-          )} 
-        />
+        <ZapIconSvg size={iconSizes[size]} active={fired} />
         {showCount && (
           <span className={cn(
             "font-medium min-w-[1rem] text-center transition-colors",
             size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm',
+            fired ? 'text-[#B7FF1A]' : '',
           )}>
             {count}
           </span>

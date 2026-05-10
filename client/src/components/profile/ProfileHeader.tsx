@@ -20,6 +20,7 @@ import {
   Scroll,
   Settings,
 } from "lucide-react";
+import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -344,7 +345,7 @@ const ProfileHeader = ({
                           className="font-bold block flex items-center gap-1 justify-center"
                           style={{ color: numColor }}
                         >
-                          <Flame className="w-3 h-3 text-orange-500" />
+                          <ZapIconSvg className="w-3 h-3" active={true} />
                           {profile._count?.firesReceived || 0}
                         </span>
                         <span className="text-muted-foreground" style={{ color: lblColor }}>

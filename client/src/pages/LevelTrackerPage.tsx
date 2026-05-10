@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "wouter";
 import { ArrowLeft, Zap, Gift, Eye, Heart, Flame, Upload, LogIn, Star, Award, Camera, MessageCircle, Sun, CheckCircle2, Circle, Share2, UserPlus, Trophy, Target, Calendar, Clock } from "lucide-react";
+import { ZapIconFire } from "@/components/ui/ZapReactionIcon";
 import { Button } from "@/components/ui/button";
 import badgeIcon from "@assets/yellow_circle_transparent_1771659993513.png";
 import { isToday, isYesterday, format } from "date-fns";
@@ -75,7 +76,7 @@ const sourceIcons: Record<string, typeof Zap> = {
   view: Eye,
   lootbox: Gift,
   like_received: Heart,
-  fire_received: Flame,
+  fire_received: ZapIconFire as unknown as typeof Zap,
   upload: Upload,
   daily_login: LogIn,
   welcome_bonus: Star,
@@ -706,7 +707,7 @@ export default function LevelTrackerPage() {
               { icon: Camera, color: "#06b6d4", xp: "+100 XP", label: "Screenshot Upload", sub: "Share your best moments" },
               { icon: Eye, color: "#B7FF1A", xp: "+2 XP", label: "Per View", sub: "Earn XP when others watch" },
               { icon: Heart, color: "#ff2056", xp: "+10 XP", label: "Like Received", sub: "Get likes on your content" },
-              { icon: Flame, color: "#ff6900", xp: "+15 XP", label: "Fire Reaction", sub: "Get fire reactions on clips" },
+              { icon: ZapIconFire, color: "#B7FF1A", xp: "+15 XP", label: "Fire Reaction", sub: "Get fire reactions on clips" },
               { icon: MessageCircle, color: "#38bdf8", xp: "+20 XP", label: "Comment Received", sub: "Get comments on your clips" },
               { icon: Share2, color: "#2dd4bf", xp: "+40 XP", label: "Share Received", sub: "When others share your clip" },
               { icon: UserPlus, color: "#a78bfa", xp: "+50 XP", label: "Follow Received", sub: "Gain a new follower" },

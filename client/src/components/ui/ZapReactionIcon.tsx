@@ -163,3 +163,57 @@ export function ZapReactionIcon({
 }
 
 export default ZapReactionIcon;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ZapIconSvg — pure visual SVG (no button wrapper).
+// Use this inside other buttons/elements as a drop-in replacement for <Flame>.
+// Accepts size (px height) OR className for Tailwind sizing (e.g. "h-4 w-4").
+// active=false → outline/stroke (matches lucide icon inactive look)
+// active=true  → neon green fill + glow
+// ─────────────────────────────────────────────────────────────────────────────
+export interface ZapIconSvgProps {
+  size?: number;
+  active?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+export function ZapIconSvg({ size, active = false, className = '', style }: ZapIconSvgProps) {
+  const NEON = '#B7FF1A';
+  const w = size ? Math.round(size * 11 / 14) : undefined;
+  return (
+    <svg
+      viewBox="-1 -1 13 16"
+      width={w}
+      height={size}
+      className={className}
+      style={style}
+      shapeRendering="crispEdges"
+      aria-hidden="true"
+    >
+      {active && (
+        <path
+          d={ZAP_PATH}
+          fill={NEON}
+          style={{ filter: `drop-shadow(0 0 2px ${NEON}) drop-shadow(0 0 5px ${NEON})`, opacity: 0.5 }}
+        />
+      )}
+      <path
+        d={ZAP_PATH}
+        fill={active ? NEON : 'none'}
+        stroke={active ? NEON : 'currentColor'}
+        strokeWidth={0.85}
+        strokeLinejoin="miter"
+        strokeLinecap="square"
+      />
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ZapIconFire — always-active ZapIconSvg. Accepts className/style so it can be
+// used as a drop-in component reference in icon arrays (like lucide icons).
+// ─────────────────────────────────────────────────────────────────────────────
+export function ZapIconFire({ className = '', style }: { className?: string; style?: React.CSSProperties }) {
+  return <ZapIconSvg active={true} className={className} style={style} />;
+}

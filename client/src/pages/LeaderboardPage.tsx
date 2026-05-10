@@ -1,4 +1,5 @@
-import { Trophy, Upload, Heart, MessageCircle, Flame, Calendar, Clock } from "lucide-react";
+import { Trophy, Upload, Heart, MessageCircle, Calendar, Clock } from "lucide-react";
+import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -252,7 +253,7 @@ const LeaderboardPage = () => {
                 <span className="text-[10px] font-bold text-[#00d492]">{entry.commentsCount}</span>
               </div>
               <div className="flex items-center gap-1">
-                <Flame className="w-3 h-3 text-[#ff6900] fill-[#ff6900]" />
+                <ZapIconSvg className="w-3 h-3" active={true} />
                 <span className="text-[10px] font-bold text-[#ff6900]">{entry.firesGivenCount}</span>
               </div>
             </div>
@@ -409,7 +410,7 @@ const LeaderboardPage = () => {
         {/* Section Header */}
         <div className="mb-4">
           <div className="flex items-center gap-2 mb-2">
-            <Flame className="w-5 h-5 text-[#B7FF1A]" />
+            <ZapIconSvg className="w-5 h-5" active={true} />
             <h2 className="text-xl font-bold text-slate-50">{getSectionTitle()}</h2>
           </div>
           <p className="text-slate-400 text-xs leading-4">
@@ -528,7 +529,7 @@ const LeaderboardPage = () => {
             {/* Fire Reactions */}
             <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
               <div className="w-12 h-12 rounded-full bg-[#ff6900]/10 flex items-center justify-center mb-3">
-                <Flame className="w-6 h-6 text-[#ff6900]" />
+                <ZapIconSvg className="w-6 h-6" active={true} />
               </div>
               <span className="text-2xl font-bold text-[#ff6900] mb-1">+3 Points</span>
               <span className="text-slate-400 text-xs mb-1">Fire Reactions</span>
@@ -542,7 +543,7 @@ const LeaderboardPage = () => {
           <div className="flex flex-col items-center text-center">
             {/* Icon */}
             <div className="w-16 h-16 rounded-full bg-[#B7FF1A]/20 flex items-center justify-center mb-4">
-              <Flame className="w-8 h-8 text-[#B7FF1A]" />
+              <ZapIconSvg className="w-8 h-8" active={true} />
             </div>
             
             <h3 className="text-xl font-bold text-slate-50 mb-2">
