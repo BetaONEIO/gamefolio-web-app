@@ -615,7 +615,7 @@ const TrendingPage: React.FC = () => {
   const isMobile = useMobile();
   const { openClipDialog } = useClipDialog();
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<ContentType>('clips');
+  const [activeTab, setActiveTab] = useState<ContentType>('reels');
   const [filter, setFilter] = useState<FilterType>('likes');
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('recent');
   const [showMobileViewer, setShowMobileViewer] = useState(false);
@@ -1142,7 +1142,7 @@ const TrendingPage: React.FC = () => {
                 <p className="text-white/50 text-sm text-center">Check back later!</p>
               </div>
             ) : (
-              <MobileClipsViewer clips={trendingClips} onBack={() => setActiveTab('reels')} />
+              <MobileClipsViewer clips={trendingClips} onBack={() => { if (window.history.length > 1) { window.history.back(); } else { setLocation('/'); } }} />
             )}
           </div>
         )}

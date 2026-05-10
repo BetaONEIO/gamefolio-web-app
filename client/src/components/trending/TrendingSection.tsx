@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Calendar, CalendarDays, TrendingUp, Eye, Heart, MessageCircle, Play } from 'lucide-react';
+import { Clock, Calendar, CalendarDays, TrendingUp, BarChart2, Heart, MessageCircle, Play } from 'lucide-react';
 import VideoClipCard from "@/components/clips/VideoClipCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -69,7 +69,7 @@ const ReelCard: React.FC<{ reel: any; reelsList?: any[] }> = ({ reel, reelsList 
 
         {/* Top-right: view count */}
         <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm text-white px-1.5 py-0.5 text-[11px] rounded-md font-semibold flex items-center gap-1">
-          <Eye className="h-3 w-3" />
+          <BarChart2 className="h-3 w-3" />
           {formatNumber(reel.views || 0)}
         </div>
       </div>
