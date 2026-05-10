@@ -73,7 +73,6 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
         {clips.map((clip) => (
           <div
             key={clip.id}
-            className="flex flex-col justify-center"
             style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always', minHeight: '100%' }}
           >
             <ClipFeedCard clip={clip} clips={clips} />

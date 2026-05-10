@@ -168,7 +168,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
       {/* Header, caption, social — hidden when mobile comments overlay is open */}
       {!commentsOverlay && (<>
         {/* Header */}
-        <div className="px-4 pt-3 pb-2">
+        <div className="px-4 pt-6 pb-2">
           <div className="flex items-start gap-3">
             <Link href={`/profile/${clip.user.username}`} className="flex-shrink-0">
               <CustomAvatar user={clip.user as any} size="sm" showBorder={true} />
