@@ -229,18 +229,20 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                 animation: highlightCommentId === comment.id ? 'pulse 1s ease-in-out infinite' : 'none'
               }}
             >
-              {comment.user.nftProfileTokenId && comment.user.nftProfileImageUrl && (comment.user as any).activeProfilePicType === 'nft' ? (
-                <img
-                  src={comment.user.nftProfileImageUrl}
-                  alt={comment.user.username || "User"}
-                  className="h-8 w-8 rounded-lg border border-[#B7FF1A]/40 object-cover flex-shrink-0"
-                />
-              ) : (
-                <CommentAvatar 
-                  avatarUrl={comment.user.avatarUrl} 
-                  username={comment.user.username || "U"} 
-                />
-              )}
+              <Link href={`/profile/${comment.user.username}`} onClick={onUsernameClick}>
+                {comment.user.nftProfileTokenId && comment.user.nftProfileImageUrl && (comment.user as any).activeProfilePicType === 'nft' ? (
+                  <img
+                    src={comment.user.nftProfileImageUrl}
+                    alt={comment.user.username || "User"}
+                    className="h-8 w-8 rounded-lg border border-[#B7FF1A]/40 object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <CommentAvatar 
+                    avatarUrl={comment.user.avatarUrl} 
+                    username={comment.user.username || "U"} 
+                  />
+                )}
+              </Link>
               <div className="flex-1">
                 <div className="flex flex-wrap items-baseline">
                   <Link href={`/profile/${comment.user.username}`}>
