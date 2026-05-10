@@ -225,7 +225,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
       {/* ── Header, caption, social — hidden when mobile comments overlay is open ── */}
       {!commentsOverlay && (<>
       {/* ── Header (creator info) — sits directly BELOW the video ── */}
-      <div className="px-4 pt-3 pb-2">
+      <div className="px-4 pt-6 pb-2">
         <div className="flex items-start gap-3">
           <Link href={`/profile/${clip.user.username}`} className="flex-shrink-0">
             <CustomAvatar
@@ -1221,7 +1221,7 @@ const TrendingPage: React.FC = () => {
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* 1. Eye circle — fixed position, identical across modes */}
+          {/* 1. Eye circle — hidden from default UI; filter functionality preserved */}
           <button
             onClick={() => {
               setControlsVisible((v) => !v);
@@ -1234,6 +1234,7 @@ const TrendingPage: React.FC = () => {
               border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(183, 255, 26,0.35)'}`,
               background: 'rgba(30,41,59,0.7)',
               order: orderEye,
+              display: 'none',
             }}
           >
             <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(183, 255, 26,0.5)' }} />
