@@ -627,21 +627,25 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           >
             {/* Video player area - fixed size container, video fits inside */}
             <div className={cn(
-              "bg-black flex items-center justify-center transition-transform duration-200 relative",
+              "bg-black flex items-center justify-center transition-all duration-300 relative",
               clip.videoType === 'reel' ? "" : "overflow-hidden",
               clip.videoType === 'reel' && isMobile
-                ? "w-full h-full"
+                ? showComments ? "w-full flex-shrink-0" : "w-full h-full"
                 : isMobile && clip.videoType !== 'reel'
                   ? "w-full h-full" // Full height on mobile for clip fullscreen layout
                   : clip.videoType === 'reel'
                     ? "w-full lg:w-[450px] h-full flex-shrink-0 mx-auto"
                     : "w-full lg:w-[65%] h-full flex-shrink-0",
               isTransitioning ? "scale-95" : "scale-100"
-            )}>
+            )}
+            style={clip.videoType === 'reel' && isMobile && showComments ? { height: '43%' } : undefined}>
               {(!clip.ageRestricted || ageRestrictionAccepted) ? (
               clip.videoType === 'reel' && isMobile ? (
                 // TikTok-style mobile fullscreen layout for reels only
-                <div className="w-full h-full flex items-center justify-center bg-black relative">
+                <div
+                  className="w-full h-full flex items-center justify-center bg-black relative transition-all duration-300 ease-out"
+                  style={showComments ? { transform: 'translateY(-8px) scale(0.97)', transformOrigin: 'center top' } : undefined}
+                >
                   <VideoPlayer 
                     videoUrl={clip.videoUrl} 
                     thumbnailUrl={clip.thumbnailUrl || (clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined)} 
@@ -1099,15 +1103,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               )}
             </div>
 
-            {/* Backdrop for mobile comments */}
-            {clip.videoType === 'reel' && isMobile && showComments && (
-              <div 
-                className="fixed inset-0 bg-black/20 z-40" 
-                onClick={() => setShowComments(false)}
-                data-testid="backdrop-comments"
-              />
-            )}
-
             {/* Right side - Info and comments (hidden on mobile clips — info lives in the overlay) */}
             <div className={cn(
               "flex flex-col",
@@ -1116,212 +1111,240 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 : clip.videoType === 'reel' && isMobile && !showComments
                   ? "hidden" // Hide sidebar on mobile for reels when comments not shown
                   : clip.videoType === 'reel' && isMobile && showComments
-                    ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out overflow-hidden" // Show comments as slide-up overlay on mobile for reels
+                    ? "flex-1 min-h-0 flex flex-col overflow-hidden" // Flex child below the video — no overlay
                     : clip.videoType === 'reel'
                       ? "w-full lg:w-[35%] h-full overflow-hidden" // Reels: fixed 35% width for comments
                       : "w-full lg:flex-1 lg:min-w-0 min-h-0 h-full overflow-hidden" // Clips: take remaining space, allow internal scroll
             )}>
-              {/* Arrow down to close mobile comments */}
-              {clip.videoType === 'reel' && isMobile && showComments && (
-                <button 
-                  onClick={() => setShowComments(false)}
-                  className="w-full flex justify-center py-2 flex-shrink-0 bg-background"
-                  data-testid="button-close-comments"
-                >
-                  <ChevronDown className="h-6 w-6 text-muted-foreground" />
-                </button>
-              )}
-              {/* Header with username (mobile comments header or regular header) - FIXED */}
-              <div className={cn(
-                "border-b border-border flex items-center justify-between flex-shrink-0",
-                isMobile ? "p-3" : "p-4"
-              )}>
-                <div className="flex items-center gap-3">
-                  <div className="flex-shrink-0">
-                    {clip?.user && (
-                      <CustomAvatar 
-                        user={clip.user} 
-                        size="md" 
-                        showBorder={true}
-                      />
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {clip.user?.username ? (
-                      <Link href={`/profile/${clip.user.username}`} onClick={(e: React.MouseEvent) => {
-                        e.stopPropagation();
-                        onClose(); // Close the dialog when navigating to profile
-                      }}>
-                        <div className="font-medium flex items-center gap-1 hover:text-primary transition-colors cursor-pointer">
-                          @{clip.user.username}
-                          <ModeratorBadge isModerator={((clip.user as any).role === "moderator" || (clip.user as any).role === "admin") && !(clip.user as any).selectedVerificationBadgeId} size="sm" />
-                          <ProBadge selectedVerificationBadgeId={(clip.user as any).selectedVerificationBadgeId} size="sm" />
-                        </div>
-                      </Link>
-                    ) : (
-                      <div className="font-medium text-muted-foreground">
-                        Unknown user
-                      </div>
-                    )}
-                    {/* Follow button - next to username */}
-                    {!isOwnClip && user && clip.user?.username && (
-                      <Button
-                        variant={followRequestStatus === 'following' ? "secondary" : "default"}
-                        size="sm"
-                        onClick={handleFollowClick}
-                        disabled={followMutation.isPending}
-                        className={cn(
-                          "transition-all duration-200 h-7 px-2 text-xs",
-                          followRequestStatus === 'following' && "bg-secondary hover:bg-secondary/80",
-                          followRequestStatus === 'requested' && "bg-orange-500 hover:bg-orange-600"
-                        )}
-                        data-testid={`button-follow-${clip.user.username}`}
-                      >
-                        {followMutation.isPending ? (
-                          <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin mr-1" />
-                        ) : followRequestStatus === 'following' ? (
-                          <UserCheck className="w-3 h-3 mr-1" />
-                        ) : followRequestStatus === 'requested' ? (
-                          <UserMinus className="w-3 h-3 mr-1" />
-                        ) : (
-                          <UserPlus className="w-3 h-3 mr-1" />
-                        )}
-                        {followRequestStatus === 'following' 
-                          ? 'Following' 
-                          : followRequestStatus === 'requested' 
-                            ? 'Requested' 
-                            : 'Follow'
-                        }
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Comments and content section - scrollable area */}
-              <div 
-                className={cn(
-                  "flex-1 min-h-0 overflow-y-auto space-y-3 scrollbar-hide",
-                  isMobile ? "px-3 py-2" : "px-4 py-3"
-                )}
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                data-scroll-container
-              >
-                {/* Title and description */}
-                <div className="flex-shrink-0">
-                  <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>{clip.title}</h1>
-                  {clip.description && (
-                    <p className={cn("text-foreground mt-1 leading-relaxed break-words max-h-24 overflow-y-auto", isMobile ? "text-sm" : "text-base")}>{clip.description}</p>
-                  )}
-
-                  {/* Game name above views/time */}
-                  {clip.game && (
-                    <div className="mt-2">
-                      <Link href={`/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`} onClick={(e) => {
-                        e.stopPropagation();
-                        onClose();
-                      }}>
-                        <span className="bg-primary text-[#071013] px-3 py-1.5 rounded text-sm font-bold hover:bg-primary cursor-pointer transition-colors">
-                          {clip.game.name}
-                        </span>
-                      </Link>
+              {clip.videoType === 'reel' && isMobile && showComments ? (
+                /* ── Mobile reel comments bottom sheet ── */
+                <>
+                  {/* Drag handle + header */}
+                  <div
+                    className="flex-shrink-0 px-4 pt-3 pb-3"
+                    style={{ background: '#0F1923', borderRadius: '20px 20px 0 0', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+                  >
+                    <div className="flex justify-center mb-3">
+                      <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
                     </div>
-                  )}
-
-                  <div className="flex items-center mt-2 text-sm text-muted-foreground">
-                    <Eye className="h-4 w-4 mr-1" />
-                    <span className="mr-3">{clip.views} views</span>
-                    <Clock className="h-4 w-4 mr-1" />
-                    <span>{clip.createdAt ? formatDistance(new Date(clip.createdAt), new Date(), { addSuffix: true }) : 'Unknown'}</span>
-                  </div>
-
-                  {/* Action bar with reaction buttons - moved above comments */}
-                  <div className="border-t border-b border-border py-3 mt-3">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <LikeButton 
-                          contentId={clip.id}
-                          contentType="clip"
-                          initialLiked={false} // This would come from server in real implementation
-                          initialCount={clip._count?.likes || 0}
-                          size="lg"
-                          onUnauthenticatedAction={() => openDialog('like')}
-                        />
-
-                        <FireButton 
-                          contentId={clip.id}
-                          contentType="clip"
-                          contentOwnerId={clip.userId}
-                          initialFired={false}
-                          initialCount={clip._count?.reactions || 0}
-                          size="lg"
-                          onUnauthenticatedAction={() => openDialog('general')}
-                        />
-
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => {
-                              if (!user) {
-                                openDialog('comment');
-                              } else {
-                                // Focus the comment input field within the scrollable container
-                                const commentInput = document.querySelector('[data-testid="input-comment"]') as HTMLTextAreaElement;
-                                const scrollContainer = document.querySelector('[data-scroll-container]');
-                                if (commentInput && scrollContainer) {
-                                  // Scroll the container to show the comment input
-                                  const containerRect = scrollContainer.getBoundingClientRect();
-                                  const inputRect = commentInput.getBoundingClientRect();
-                                  const scrollTop = scrollContainer.scrollTop + (inputRect.top - containerRect.top) - 100;
-                                  scrollContainer.scrollTo({ top: scrollTop, behavior: 'smooth' });
-                                  setTimeout(() => commentInput.focus(), 300);
-                                } else if (commentInput) {
-                                  commentInput.focus();
-                                }
-                              }
-                            }}
-                            className="p-1.5 h-auto transition-colors hover:bg-primary/10 rounded-md text-gray-500 hover:text-primary"
-                            data-testid="button-comments-action"
-                          >
-                            <MessageSquare className="h-5 w-5" />
-                          </button>
-                          <span className="font-medium min-w-[1rem] text-center text-base text-muted-foreground">
-                            {comments?.length || 0}
-                          </span>
-                        </div>
+                      <h3 className="text-white font-bold text-base">
+                        Comments{' '}
+                        <span className="text-white/45 font-normal text-sm">{comments?.length || 0}</span>
+                      </h3>
+                      <button
+                        onClick={() => setShowComments(false)}
+                        className="w-8 h-8 flex items-center justify-center rounded-full"
+                        style={{ background: 'rgba(255,255,255,0.08)' }}
+                        data-testid="button-close-comments"
+                      >
+                        <ChevronDown className="h-5 w-5 text-white/70" />
+                      </button>
+                    </div>
+                  </div>
+                  {/* Scrollable comments list */}
+                  <div className="flex-1 min-h-0 overflow-y-auto" style={{ background: '#0F1923' }}>
+                    <CommentSection
+                      clipId={clip.id}
+                      currentUserId={user?.id || null}
+                      onUsernameClick={() => onClose()}
+                    />
+                  </div>
+                </>
+              ) : (
+                /* ── Desktop / non-reel shared panel ── */
+                <>
+                  {/* Header with username - FIXED */}
+                  <div className={cn(
+                    "border-b border-border flex items-center justify-between flex-shrink-0",
+                    isMobile ? "p-3" : "p-4"
+                  )}>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-shrink-0">
+                        {clip?.user && (
+                          <CustomAvatar 
+                            user={clip.user} 
+                            size="md" 
+                            showBorder={true}
+                          />
+                        )}
                       </div>
-
-                      <div className="flex items-center gap-2">
-                        <ClipShareDialog 
-                          clipId={clip.id} 
-                          isOwnContent={user?.id === clip.userId}
-                          contentType={clip.videoType === 'reel' ? 'reel' : 'clip'}
-                          trigger={
-                            <button className="focus:outline-none">
-                              <Share2 className="h-6 w-6" />
-                            </button>
-                          } 
-                        />
-                        
-                        <ReportDialog
-                          contentType="clip"
-                          contentId={clip.id}
-                          contentTitle={clip.title}
-                          contentAuthor={clip.user.username}
-                        />
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {clip.user?.username ? (
+                          <Link href={`/profile/${clip.user.username}`} onClick={(e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            onClose();
+                          }}>
+                            <div className="font-medium flex items-center gap-1 hover:text-primary transition-colors cursor-pointer">
+                              @{clip.user.username}
+                              <ModeratorBadge isModerator={((clip.user as any).role === "moderator" || (clip.user as any).role === "admin") && !(clip.user as any).selectedVerificationBadgeId} size="sm" />
+                              <ProBadge selectedVerificationBadgeId={(clip.user as any).selectedVerificationBadgeId} size="sm" />
+                            </div>
+                          </Link>
+                        ) : (
+                          <div className="font-medium text-muted-foreground">
+                            Unknown user
+                          </div>
+                        )}
+                        {/* Follow button - next to username */}
+                        {!isOwnClip && user && clip.user?.username && (
+                          <Button
+                            variant={followRequestStatus === 'following' ? "secondary" : "default"}
+                            size="sm"
+                            onClick={handleFollowClick}
+                            disabled={followMutation.isPending}
+                            className={cn(
+                              "transition-all duration-200 h-7 px-2 text-xs",
+                              followRequestStatus === 'following' && "bg-secondary hover:bg-secondary/80",
+                              followRequestStatus === 'requested' && "bg-orange-500 hover:bg-orange-600"
+                            )}
+                            data-testid={`button-follow-${clip.user.username}`}
+                          >
+                            {followMutation.isPending ? (
+                              <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin mr-1" />
+                            ) : followRequestStatus === 'following' ? (
+                              <UserCheck className="w-3 h-3 mr-1" />
+                            ) : followRequestStatus === 'requested' ? (
+                              <UserMinus className="w-3 h-3 mr-1" />
+                            ) : (
+                              <UserPlus className="w-3 h-3 mr-1" />
+                            )}
+                            {followRequestStatus === 'following' 
+                              ? 'Following' 
+                              : followRequestStatus === 'requested' 
+                                ? 'Requested' 
+                                : 'Follow'
+                            }
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Comments section */}
-                <div className="pt-2 pb-4">
-                  <CommentSection 
-                    clipId={clip.id}
-                    currentUserId={user?.id || null} 
-                    onUsernameClick={() => onClose()}
-                  />
-                </div>
-              </div>
+                  {/* Comments and content section - scrollable area */}
+                  <div 
+                    className={cn(
+                      "flex-1 min-h-0 overflow-y-auto space-y-3 scrollbar-hide",
+                      isMobile ? "px-3 py-2" : "px-4 py-3"
+                    )}
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    data-scroll-container
+                  >
+                    {/* Title and description */}
+                    <div className="flex-shrink-0">
+                      <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>{clip.title}</h1>
+                      {clip.description && (
+                        <p className={cn("text-foreground mt-1 leading-relaxed break-words max-h-24 overflow-y-auto", isMobile ? "text-sm" : "text-base")}>{clip.description}</p>
+                      )}
+
+                      {/* Game name above views/time */}
+                      {clip.game && (
+                        <div className="mt-2">
+                          <Link href={`/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`} onClick={(e) => {
+                            e.stopPropagation();
+                            onClose();
+                          }}>
+                            <span className="bg-primary text-[#071013] px-3 py-1.5 rounded text-sm font-bold hover:bg-primary cursor-pointer transition-colors">
+                              {clip.game.name}
+                            </span>
+                          </Link>
+                        </div>
+                      )}
+
+                      <div className="flex items-center mt-2 text-sm text-muted-foreground">
+                        <Eye className="h-4 w-4 mr-1" />
+                        <span className="mr-3">{clip.views} views</span>
+                        <Clock className="h-4 w-4 mr-1" />
+                        <span>{clip.createdAt ? formatDistance(new Date(clip.createdAt), new Date(), { addSuffix: true }) : 'Unknown'}</span>
+                      </div>
+
+                      {/* Action bar with reaction buttons */}
+                      <div className="border-t border-b border-border py-3 mt-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <LikeButton 
+                              contentId={clip.id}
+                              contentType="clip"
+                              initialLiked={false}
+                              initialCount={clip._count?.likes || 0}
+                              size="lg"
+                              onUnauthenticatedAction={() => openDialog('like')}
+                            />
+
+                            <FireButton 
+                              contentId={clip.id}
+                              contentType="clip"
+                              contentOwnerId={clip.userId}
+                              initialFired={false}
+                              initialCount={clip._count?.reactions || 0}
+                              size="lg"
+                              onUnauthenticatedAction={() => openDialog('general')}
+                            />
+
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  if (!user) {
+                                    openDialog('comment');
+                                  } else {
+                                    const commentInput = document.querySelector('[data-testid="input-comment"]') as HTMLTextAreaElement;
+                                    const scrollContainer = document.querySelector('[data-scroll-container]');
+                                    if (commentInput && scrollContainer) {
+                                      const containerRect = scrollContainer.getBoundingClientRect();
+                                      const inputRect = commentInput.getBoundingClientRect();
+                                      const scrollTop = scrollContainer.scrollTop + (inputRect.top - containerRect.top) - 100;
+                                      scrollContainer.scrollTo({ top: scrollTop, behavior: 'smooth' });
+                                      setTimeout(() => commentInput.focus(), 300);
+                                    } else if (commentInput) {
+                                      commentInput.focus();
+                                    }
+                                  }
+                                }}
+                                className="p-1.5 h-auto transition-colors hover:bg-primary/10 rounded-md text-gray-500 hover:text-primary"
+                                data-testid="button-comments-action"
+                              >
+                                <MessageSquare className="h-5 w-5" />
+                              </button>
+                              <span className="font-medium min-w-[1rem] text-center text-base text-muted-foreground">
+                                {comments?.length || 0}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <ClipShareDialog 
+                              clipId={clip.id} 
+                              isOwnContent={user?.id === clip.userId}
+                              contentType={clip.videoType === 'reel' ? 'reel' : 'clip'}
+                              trigger={
+                                <button className="focus:outline-none">
+                                  <Share2 className="h-6 w-6" />
+                                </button>
+                              } 
+                            />
+                            
+                            <ReportDialog
+                              contentType="clip"
+                              contentId={clip.id}
+                              contentTitle={clip.title}
+                              contentAuthor={clip.user.username}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Comments section */}
+                    <div className="pt-2 pb-4">
+                      <CommentSection 
+                        clipId={clip.id}
+                        currentUserId={user?.id || null} 
+                        onUsernameClick={() => onClose()}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

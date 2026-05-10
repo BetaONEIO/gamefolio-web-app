@@ -1,0 +1,68 @@
+Update the Reels comments experience to behave more like the reference screenshot.
+
+Goal:
+When the comments section opens on a Reel, the Reel/video should resize and move upward so the full video remains visible above the comments panel.
+
+Important:
+Do NOT let the comments overlay cover/crop the Reel content.
+
+Desired behaviour:
+- Opening comments should animate a bottom sheet upward
+- The Reel/video should shrink slightly and reposition upward
+- Preserve the FULL 9:16 video visibility
+- Do not crop or zoom the video when comments open
+- The user should still be able to watch the Reel while reading comments
+- The comments panel should feel attached to the Reel experience
+
+Layout behaviour:
+- Reel remains visible in the upper portion of the screen
+- Comments sheet occupies the lower portion
+- Reel scales down smoothly
+- Background remains dark
+- Maintain safe spacing around the Reel
+
+Animation:
+- Smooth transition when opening/closing comments
+- Bottom sheet slides upward
+- Reel/video scales/repositions smoothly
+- Use transform + opacity for performance
+
+Suggested implementation:
+When comments open:
+- Reduce Reel/video container height slightly
+- Translate the Reel upward
+- Scale the Reel down slightly if needed
+- Open comments as a rounded top-corner bottom sheet
+
+Example:
+.reel-container.comments-open {
+  transform: translateY(-40px) scale(0.92);
+  transition: transform 0.25s ease;
+}
+
+.comments-sheet {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 55%;
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
+  background: #111;
+  overflow: hidden;
+}
+
+Comments panel:
+- Must be scrollable
+- Keep comment input fixed at bottom
+- Keep reactions/emojis accessible
+- Use smooth scrolling
+- Preserve existing functionality
+
+Important:
+- Do not crop the Reel
+- Do not let comments cover important video content
+- Keep the full video visible
+- Keep existing Reel interactions and gestures working
+- Match Gamefolio dark/neon green theme
+- Only update the comments-open layout behaviour
