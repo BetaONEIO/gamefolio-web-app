@@ -185,11 +185,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
 
   if (!currentReel) return null;
 
-  // COMMENTS_HEIGHT: how much of the screen the comment sheet occupies
-  const COMMENTS_HEIGHT = '62%';
-
   return (
-    <div className="fixed inset-0 bg-black z-[60]">
+    <div className="fixed inset-0 bg-black z-[60] flex flex-col">
 
       {/* ── Ad overlay ── */}
       {showAd && (
@@ -204,271 +201,275 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         </div>
       )}
 
-      {/* ── Layer 1: Scrollable video stack (pointer-events-none so buttons above work) ── */}
+      {/* ── Video area — shrinks to 38% when comments open ── */}
       <div
-        ref={containerRef}
-        className="absolute inset-0 z-[1] overflow-y-scroll overflow-x-hidden snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
-        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain', pointerEvents: showComments ? 'none' : 'auto' }}
+        className="relative flex-shrink-0 overflow-hidden transition-[height] duration-300 ease-in-out"
+        style={{ height: showComments ? '38%' : '100%', flex: showComments ? 'none' : '1' }}
       >
-        {reels.map((reel, index) => (
-          <div
-            key={reel.id}
-            className="snap-start snap-always h-[100dvh] w-full relative"
-            style={{ scrollSnapStop: 'always' }}
-          >
-            {/* Video — pointer-events-none so tap overlay controls it */}
-            <div className="absolute inset-0 pointer-events-none">
-              {(!reel.ageRestricted || ageRestrictionAccepted[reel.id]) ? (
-                <VideoPlayer
-                  videoUrl={reel.videoUrl}
-                  thumbnailUrl={reel.thumbnailUrl || undefined}
-                  autoPlay={index === currentIndex}
-                  className="w-full h-full"
-                  objectFit="cover"
-                  clipId={reel.id}
-                  disableAspectRatio={true}
-                  hideControls={true}
-                  externalPaused={index === currentIndex ? isPaused : true}
-                  externalMuted={index === currentIndex ? isMuted : undefined}
-                  onPlayingChange={index === currentIndex ? (playing) => setIsPaused(!playing) : undefined}
-                  onMutedChange={index === currentIndex ? (muted) => setIsMuted(muted) : undefined}
-                  onEnded={() => {
-                    if (index < reels.length - 1 && containerRef.current) {
-                      const h = containerRef.current.clientHeight;
-                      containerRef.current.scrollTo({ top: (index + 1) * h, behavior: 'smooth' });
-                    }
-                  }}
+        {/* Scrollable video stack */}
+        <div
+          ref={containerRef}
+          className="absolute inset-0 overflow-y-scroll overflow-x-hidden snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain', pointerEvents: showComments ? 'none' : 'auto' }}
+        >
+          {reels.map((reel, index) => (
+            <div
+              key={reel.id}
+              className="snap-start snap-always h-full w-full relative"
+              style={{ scrollSnapStop: 'always' }}
+            >
+              {/* Video */}
+              <div className="absolute inset-0 pointer-events-none">
+                {(!reel.ageRestricted || ageRestrictionAccepted[reel.id]) ? (
+                  <VideoPlayer
+                    videoUrl={reel.videoUrl}
+                    thumbnailUrl={reel.thumbnailUrl || undefined}
+                    autoPlay={index === currentIndex}
+                    className="w-full h-full"
+                    objectFit="cover"
+                    clipId={reel.id}
+                    disableAspectRatio={true}
+                    hideControls={true}
+                    externalPaused={index === currentIndex ? isPaused : true}
+                    externalMuted={index === currentIndex ? isMuted : undefined}
+                    onPlayingChange={index === currentIndex ? (playing) => setIsPaused(!playing) : undefined}
+                    onMutedChange={index === currentIndex ? (muted) => setIsMuted(muted) : undefined}
+                    onEnded={() => {
+                      if (index < reels.length - 1 && containerRef.current) {
+                        const h = containerRef.current.clientHeight;
+                        containerRef.current.scrollTo({ top: (index + 1) * h, behavior: 'smooth' });
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-black/80">
+                    <p className="text-white text-lg font-semibold">Age-Restricted Content</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Tap zone for play/pause — only for current reel */}
+              {index === currentIndex && (
+                <div
+                  className="absolute inset-0 z-[2]"
+                  style={{ pointerEvents: 'auto' }}
+                  onClick={() => setIsPaused(p => !p)}
                 />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-black/80">
-                  <p className="text-white text-lg font-semibold">Age-Restricted Content</p>
-                </div>
               )}
             </div>
-
-            {/* Transparent tap zone for play/pause — only for current reel */}
-            {index === currentIndex && (
-              <div
-                className="absolute inset-0 z-[2]"
-                style={{ pointerEvents: 'auto' }}
-                onClick={() => setIsPaused(p => !p)}
-              />
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* ── Layer 3: Top header (pause / volume / delete / close) ── */}
-      <div className="fixed top-0 left-0 right-0 z-[3] flex items-center justify-between p-3 md:p-4" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost" size="sm"
-            className="text-white bg-black/60 backdrop-blur-sm hover:bg-black/80 w-10 h-10 p-0 rounded-full"
-            onClick={() => setIsPaused(p => !p)}
-          >
-            {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
-          </Button>
-          <Button
-            variant="ghost" size="sm"
-            className="text-white bg-black/60 backdrop-blur-sm hover:bg-black/80 w-10 h-10 p-0 rounded-full"
-            onClick={() => setIsMuted(m => !m)}
-          >
-            {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-          </Button>
+          ))}
         </div>
-        <div className="flex items-center gap-2">
-          {user && currentReel && user.id === currentReel.userId && (
+
+        {/* Top header (absolute within video area) */}
+        <div className="absolute top-0 left-0 right-0 z-[3] flex items-center justify-between p-3 md:p-4" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}>
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost" size="sm"
-              className="text-white bg-black/60 backdrop-blur-sm hover:bg-red-600/80 w-10 h-10 p-0 rounded-full"
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={deleteReelMutation.isPending}
+              className="text-white bg-black/60 backdrop-blur-sm hover:bg-black/80 w-10 h-10 p-0 rounded-full"
+              onClick={() => setIsPaused(p => !p)}
             >
-              <Trash2 className="h-5 w-5" />
+              {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
             </Button>
-          )}
-          <Button
-            variant="ghost" size="sm"
-            className="text-white bg-black/60 backdrop-blur-sm hover:bg-black/80 w-10 h-10 p-0 rounded-full"
-            onClick={onClose}
-          >
-            <X className="h-5 w-5" />
-          </Button>
+            <Button
+              variant="ghost" size="sm"
+              className="text-white bg-black/60 backdrop-blur-sm hover:bg-black/80 w-10 h-10 p-0 rounded-full"
+              onClick={() => setIsMuted(m => !m)}
+            >
+              {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            {user && currentReel && user.id === currentReel.userId && (
+              <Button
+                variant="ghost" size="sm"
+                className="text-white bg-black/60 backdrop-blur-sm hover:bg-red-600/80 w-10 h-10 p-0 rounded-full"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={deleteReelMutation.isPending}
+              >
+                <Trash2 className="h-5 w-5" />
+              </Button>
+            )}
+            <Button
+              variant="ghost" size="sm"
+              className="text-white bg-black/60 backdrop-blur-sm hover:bg-black/80 w-10 h-10 p-0 rounded-full"
+              onClick={onClose}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
+
+        {/* Engagement + user info overlay */}
+        {currentReel && (
+          <div className="absolute inset-0 z-[3] pointer-events-none">
+
+            {/* Right side engagement buttons */}
+            <div
+              className="absolute right-3 md:right-4 flex flex-col items-center gap-5 pointer-events-auto"
+              style={{ bottom: showComments ? '0.75rem' : 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
+            >
+              <FireButton
+                contentId={currentReel.id}
+                contentType="clip"
+                contentOwnerId={currentReel.userId}
+                initialCount={parseInt(currentReel._count?.reactions?.toString() || '0')}
+                size="lg"
+                showCount={true}
+                variant="vertical"
+              />
+              <LikeButton
+                contentId={currentReel.id}
+                contentType="clip"
+                contentOwnerId={currentReel.userId}
+                initialLiked={false}
+                initialCount={parseInt(currentReel._count?.likes?.toString() || '0')}
+                size="lg"
+                showCount={true}
+                variant="vertical"
+              />
+              <div className="flex flex-col items-center">
+                <button
+                  className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white active:bg-black/70 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!user) { openDialog('comment'); }
+                    else { setShowComments(true); setIsPaused(true); }
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  <MessageCircle className="h-7 w-7" />
+                </button>
+                <span className="text-white text-xs mt-1 font-medium drop-shadow-lg">
+                  {currentReel._count?.comments || 0}
+                </span>
+              </div>
+              <div className="flex flex-col items-center">
+                <button
+                  className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white active:bg-black/70 transition-colors"
+                  onClick={() => setShowShare(true)}
+                >
+                  <Share2 className="h-6 w-6" />
+                </button>
+                <span className="text-white text-xs mt-1 font-medium drop-shadow-lg">Share</span>
+              </div>
+            </div>
+
+            {/* Bottom left - user info (hidden when comments open) */}
+            {!showComments && (
+              <div
+                className="absolute left-3 md:left-4 right-20 md:right-24 pointer-events-auto"
+                style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Link href={`/profile/${currentReel.user.username}`} onClick={onClose} className="flex-shrink-0 hover:opacity-80 transition-opacity">
+                    <CustomAvatar user={currentReel.user as any} size="sm" showBorder={true} />
+                  </Link>
+                  <Link href={`/profile/${currentReel.user.username}`} onClick={onClose}>
+                    <span className="text-white font-semibold text-sm drop-shadow-lg">@{currentReel.user.username}</span>
+                  </Link>
+                  {user && user.id !== currentReel.user.id && (
+                    <Button
+                      onClick={handleFollow}
+                      disabled={followMutation.isPending}
+                      size="sm"
+                      className={cn(
+                        "h-7 px-3 text-xs font-semibold rounded-md ml-1",
+                        isFollowing
+                          ? "bg-transparent border border-white/50 text-white hover:bg-white/10"
+                          : "bg-[#B7FF1A] text-black hover:bg-[#A2F000]"
+                      )}
+                    >
+                      {isFollowing ? "Following" : "Follow"}
+                    </Button>
+                  )}
+                </div>
+                <h3 className="text-white font-semibold text-base mb-1 leading-tight line-clamp-1 drop-shadow-lg">
+                  {currentReel.title}
+                </h3>
+                {currentReel.description && (
+                  <p className="text-white/90 text-sm mb-1.5 line-clamp-1 drop-shadow-md">{currentReel.description}</p>
+                )}
+                {currentReel.game && (
+                  <div className="mb-1.5">
+                    <Link
+                      href={`/games/${currentReel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                      onClick={onClose}
+                      className="text-[#B7FF1A] text-sm font-medium drop-shadow-lg hover:underline"
+                    >
+                      {currentReel.game.name}
+                    </Link>
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5 text-white/80 text-xs drop-shadow-md">
+                  <span>Original audio</span>
+                  <span>•</span>
+                  <span>{currentReel.user.displayName || currentReel.user.username}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Report button (hidden when comments open) */}
+            {!showComments && (
+              <div
+                className="absolute right-3 md:right-4 pointer-events-auto"
+                style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
+              >
+                <ReportDialog
+                  contentType="clip"
+                  contentId={currentReel.id}
+                  contentTitle={currentReel.title}
+                  contentAuthor={currentReel.user.username}
+                  trigger={
+                    <button className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors">
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+                  }
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Desktop hint */}
+        {!showComments && (
+          <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/30 text-xs z-[3] hidden md:block">
+            Scroll or arrow keys to navigate · ESC to close
+          </p>
+        )}
       </div>
 
-      {/* ── Layer 3: Engagement + user info overlay (above tap zone) ── */}
-      {currentReel && !showComments && (
-        <div className="fixed inset-0 z-[3] pointer-events-none">
-
-          {/* Right side engagement buttons */}
-          <div
-            className="absolute right-3 md:right-4 flex flex-col items-center gap-5 pointer-events-auto"
-            style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
-          >
-            {/* Fire */}
-            <FireButton
-              contentId={currentReel.id}
-              contentType="clip"
-              contentOwnerId={currentReel.userId}
-              initialCount={parseInt(currentReel._count?.reactions?.toString() || '0')}
-              size="lg"
-              showCount={true}
-              variant="vertical"
-            />
-
-            {/* Like */}
-            <LikeButton
-              contentId={currentReel.id}
-              contentType="clip"
-              contentOwnerId={currentReel.userId}
-              initialLiked={false}
-              initialCount={parseInt(currentReel._count?.likes?.toString() || '0')}
-              size="lg"
-              showCount={true}
-              variant="vertical"
-            />
-
-            {/* Comments */}
-            <div className="flex flex-col items-center">
-              <button
-                className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white active:bg-black/70 transition-colors"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (!user) { openDialog('comment'); }
-                  else { setShowComments(true); setIsPaused(true); }
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
-              >
-                <MessageCircle className="h-7 w-7" />
-              </button>
-              <span className="text-white text-xs mt-1 font-medium drop-shadow-lg">
-                {currentReel._count?.comments || 0}
-              </span>
-            </div>
-
-            {/* Share */}
-            <div className="flex flex-col items-center">
-              <button
-                className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white active:bg-black/70 transition-colors"
-                onClick={() => setShowShare(true)}
-              >
-                <Share2 className="h-6 w-6" />
-              </button>
-              <span className="text-white text-xs mt-1 font-medium drop-shadow-lg">Share</span>
-            </div>
-          </div>
-
-          {/* Bottom left - user info */}
-          <div
-            className="absolute left-3 md:left-4 right-20 md:right-24 pointer-events-auto"
-            style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <Link href={`/profile/${currentReel.user.username}`} onClick={onClose} className="flex-shrink-0 hover:opacity-80 transition-opacity">
-                <CustomAvatar user={currentReel.user as any} size="sm" showBorder={true} />
-              </Link>
-              <Link href={`/profile/${currentReel.user.username}`} onClick={onClose}>
-                <span className="text-white font-semibold text-sm drop-shadow-lg">@{currentReel.user.username}</span>
-              </Link>
-              {user && user.id !== currentReel.user.id && (
-                <Button
-                  onClick={handleFollow}
-                  disabled={followMutation.isPending}
-                  size="sm"
-                  className={cn(
-                    "h-7 px-3 text-xs font-semibold rounded-md ml-1",
-                    isFollowing
-                      ? "bg-transparent border border-white/50 text-white hover:bg-white/10"
-                      : "bg-[#B7FF1A] text-black hover:bg-[#A2F000]"
-                  )}
-                >
-                  {isFollowing ? "Following" : "Follow"}
-                </Button>
-              )}
-            </div>
-
-            <h3 className="text-white font-semibold text-base mb-1 leading-tight line-clamp-1 drop-shadow-lg">
-              {currentReel.title}
-            </h3>
-            {currentReel.description && (
-              <p className="text-white/90 text-sm mb-1.5 line-clamp-1 drop-shadow-md">{currentReel.description}</p>
-            )}
-            {currentReel.game && (
-              <div className="mb-1.5">
-                <Link
-                  href={`/games/${currentReel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-                  onClick={onClose}
-                  className="text-[#B7FF1A] text-sm font-medium drop-shadow-lg hover:underline"
-                >
-                  {currentReel.game.name}
-                </Link>
-              </div>
-            )}
-            <div className="flex items-center gap-1.5 text-white/80 text-xs drop-shadow-md">
-              <span>Original audio</span>
-              <span>•</span>
-              <span>{currentReel.user.displayName || currentReel.user.username}</span>
-            </div>
-          </div>
-
-          {/* Report button */}
-          <div
-            className="absolute right-3 md:right-4 pointer-events-auto"
-            style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
-          >
-            <ReportDialog
-              contentType="clip"
-              contentId={currentReel.id}
-              contentTitle={currentReel.title}
-              contentAuthor={currentReel.user.username}
-              trigger={
-                <button className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors">
-                  <MoreVertical className="h-4 w-4" />
-                </button>
-              }
-            />
-          </div>
-        </div>
-      )}
-
-      {/* ── Layer 4: Comments — Instagram-style bottom sheet, shrinks the reel view ── */}
+      {/* ── Comments panel — flex-1, pushes video up ── */}
       {showComments && currentReel && (
-        <div className="fixed inset-0 z-[4]">
-          {/* Backdrop — tap to close */}
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => { setShowComments(false); setIsPaused(false); }}
-          />
+        <div
+          className="flex-1 flex flex-col overflow-hidden"
+          style={{ background: '#0F1923', borderRadius: '20px 20px 0 0', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        >
+          {/* Drag handle */}
+          <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+            <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
+          </div>
 
-          {/* Bottom sheet */}
-          <div
-            className="absolute bottom-0 left-0 right-0 bg-background rounded-t-2xl flex flex-col overflow-hidden"
-            style={{ height: COMMENTS_HEIGHT, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-          >
-            {/* Handle + header */}
-            <div className="flex-shrink-0 flex flex-col items-center pt-2 pb-0 border-b border-border">
-              <div className="w-10 h-1 rounded-full bg-muted-foreground/40 mb-3" />
-              <div className="w-full flex items-center justify-between px-4 pb-3">
-                <span className="font-semibold text-base">
-                  Comments · {currentReel._count?.comments || 0}
-                </span>
-                <button
-                  onClick={() => { setShowComments(false); setIsPaused(false); }}
-                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
-                >
-                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                </button>
-              </div>
-            </div>
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            <h3 className="text-white font-bold text-base">
+              Comments{' '}
+              <span className="text-white/45 font-normal text-sm">{currentReel._count?.comments || 0}</span>
+            </h3>
+            <button
+              onClick={() => { setShowComments(false); setIsPaused(false); }}
+              className="w-8 h-8 flex items-center justify-center rounded-full"
+              style={{ background: 'rgba(255,255,255,0.08)' }}
+            >
+              <ChevronDown className="h-5 w-5 text-white/70" />
+            </button>
+          </div>
 
-            {/* Scrollable comments */}
-            <div className="flex-1 overflow-y-auto">
-              <CommentSection
-                clipId={currentReel.id}
-                currentUserId={user?.id}
-              />
-            </div>
+          {/* Scrollable comments */}
+          <div className="flex-1 overflow-y-auto">
+            <CommentSection
+              clipId={currentReel.id}
+              currentUserId={user?.id}
+            />
           </div>
         </div>
       )}
@@ -491,11 +492,6 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           </div>
         </div>
       )}
-
-      {/* Desktop hint */}
-      <p className="fixed bottom-3 left-1/2 -translate-x-1/2 text-white/30 text-xs z-[3] hidden md:block">
-        Scroll or arrow keys to navigate · ESC to close
-      </p>
 
       {/* Age Restriction Dialog */}
       {currentReel && (
