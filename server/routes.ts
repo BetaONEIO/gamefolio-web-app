@@ -5420,11 +5420,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         return await Promise.all(
           reels.map(async (reel) => {
-            if (reel.thumbnailUrl) {
-              const signedUrl = await supabaseStorage.convertToSignedUrl(reel.thumbnailUrl, 3600);
-              return { ...reel, thumbnailUrl: signedUrl || reel.thumbnailUrl };
-            }
-            return reel;
+            const [signedThumb, signedAvatar] = await Promise.all([
+              reel.thumbnailUrl ? supabaseStorage.convertToSignedUrl(reel.thumbnailUrl, 3600) : null,
+              reel.user?.avatarUrl ? supabaseStorage.convertToSignedUrl(reel.user.avatarUrl, 3600) : null,
+            ]);
+            return {
+              ...reel,
+              thumbnailUrl: signedThumb || reel.thumbnailUrl,
+              user: reel.user ? { ...reel.user, avatarUrl: signedAvatar || reel.user.avatarUrl } : reel.user,
+            };
           })
         );
       });

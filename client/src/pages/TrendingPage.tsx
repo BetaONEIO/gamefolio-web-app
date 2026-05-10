@@ -619,7 +619,7 @@ const TrendingPage: React.FC = () => {
   const [showContentDropdown, setShowContentDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
   const [showGameFilter, setShowGameFilter] = useState(false);
-  const [controlsVisible, setControlsVisible] = useState(true);
+  const [controlsVisible, setControlsVisible] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
   const [selectedGameName, setSelectedGameName] = useState<string | null>(null);
@@ -1234,7 +1234,6 @@ const TrendingPage: React.FC = () => {
               border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(183, 255, 26,0.35)'}`,
               background: 'rgba(30,41,59,0.7)',
               order: orderEye,
-              display: 'none',
             }}
           >
             <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(183, 255, 26,0.5)' }} />
