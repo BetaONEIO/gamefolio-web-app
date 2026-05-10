@@ -1,0 +1,93 @@
+Paste this into Replit AI:
+
+```text
+Fix the Clip detail modal layout.
+
+Problem:
+The video is sitting too far down inside the media area and does not fit the video module properly. The comments section on the right is also cut off and cannot be scrolled.
+
+Please inspect the Clip detail modal/player and look for:
+
+1. Video alignment issues
+- The video appears pushed down vertically
+- There is too much empty space above the video
+- The video is not centred inside the media panel
+- The video may be using incorrect height, padding, margin, or object positioning
+
+Fix:
+- Centre the video vertically and horizontally inside the left media panel
+- Remove excessive top padding/margin
+- Use object-fit: contain
+- Preserve the original aspect ratio
+- Do not crop, zoom, or stretch the video
+- The video should fit within the visible modal area
+
+Suggested CSS:
+.video-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  overflow: hidden;
+}
+
+.video-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.video-wrapper video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+2. Modal height issues
+- The modal may be taller than the viewport
+- Content may be overflowing below the visible area
+
+Fix:
+- Set modal max-height to 90vh or 95vh
+- Prevent the outer modal from overflowing the viewport
+- Use overflow: hidden on the modal container
+
+3. Right comments panel issue
+- Comments are cut off
+- Comments cannot scroll
+- Bottom comments disappear behind the modal edge
+
+Fix:
+- Make the right panel a flex column
+- Keep the top user/details section fixed naturally
+- Make the comments list the scrollable area
+- Keep the comment input visible at the bottom if possible
+
+Suggested CSS:
+.comments-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+.comments-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.comment-input {
+  flex-shrink: 0;
+}
+
+Important:
+- Do not affect Reels
+- Do not change upload functionality
+- Do not change the Clip data model
+- Fix only the Clip detail modal/player layout
+- Video must fit properly
+- Comments must scroll properly
+- Keep the Gamefolio dark/neon green theme
+```

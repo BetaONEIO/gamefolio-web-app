@@ -529,7 +529,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               ? "w-screen h-[calc(100dvh-64px)] max-w-none max-h-none overflow-hidden top-0 translate-y-0" // Leave space for footer on mobile reels, use dvh for dynamic viewport
               : isMobile 
                 ? "w-screen h-[100dvh] max-w-none max-h-none overflow-hidden top-0 translate-y-0 border-0 rounded-none" // Full screen, no border/radius on mobile clips
-                : "max-w-[80%] w-[80%] max-h-[76vh] h-[76vh] overflow-hidden" // Desktop size - 15% smaller
+                : "max-w-[80%] w-[80%] max-h-[90vh] h-[90vh] overflow-hidden grid-rows-[1fr]" // Desktop size
           )}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -621,7 +621,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         ) : (
           <div
             className={cn(
-              "flex flex-col lg:flex-row h-full max-h-full transition-opacity duration-300",
+              "flex flex-col lg:flex-row h-full min-h-0 max-h-full transition-opacity duration-300",
               isTransitioning ? "opacity-60" : "opacity-100"
             )}
           >
@@ -1119,7 +1119,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     ? "absolute inset-x-0 bottom-0 top-[40%] bg-background rounded-t-xl z-50 shadow-lg transform transition-all duration-300 ease-in-out overflow-hidden" // Show comments as slide-up overlay on mobile for reels
                     : clip.videoType === 'reel'
                       ? "w-full lg:w-[35%] h-full overflow-hidden" // Reels: fixed 35% width for comments
-                      : "w-full lg:flex-1 lg:min-w-0 h-full overflow-hidden" // Clips: take remaining space, allow internal scroll
+                      : "w-full lg:flex-1 lg:min-w-0 min-h-0 h-full overflow-hidden" // Clips: take remaining space, allow internal scroll
             )}>
               {/* Arrow down to close mobile comments */}
               {clip.videoType === 'reel' && isMobile && showComments && (
