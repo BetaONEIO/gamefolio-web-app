@@ -578,7 +578,7 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
 
         {/* View count - top right */}
         <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-semibold flex items-center gap-1">
-          <Eye className="h-3 w-3" />
+          <BarChart2 className="h-3 w-3" />
           {formatNumber(reel.views || 0)}
         </div>
 
@@ -1009,7 +1009,7 @@ const TrendingPage: React.FC = () => {
                       </div>
                       
                       <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
+                        <BarChart2 className="h-3 w-3" />
                         {formatNumber(reel.views || 0)}
                       </div>
                       

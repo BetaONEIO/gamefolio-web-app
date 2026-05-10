@@ -141,7 +141,7 @@ export function FireButton({
         });
       } else {
         toast({
-          title: "Cannot fire",
+          title: "Cannot zap",
           description: error.message,
           variant: "gamefolioError",
         });
@@ -164,8 +164,8 @@ export function FireButton({
     // Prevent users from firing their own content
     if (contentOwnerId && user.id === contentOwnerId) {
       toast({
-        title: "Cannot fire own content",
-        description: "You cannot fire your own content, casual!",
+        title: "Cannot zap own content",
+        description: "You cannot zap your own content, casual!",
         variant: "default"
       });
       return;
@@ -174,8 +174,8 @@ export function FireButton({
     // Fire reactions are permanent - once fired, cannot be removed
     if (fired) {
       toast({
-        title: "Already fired",
-        description: "Fire reactions are permanent and cannot be removed",
+        title: "Already zapped",
+        description: "Zaps are permanent and cannot be removed",
         variant: "default"
       });
       return;

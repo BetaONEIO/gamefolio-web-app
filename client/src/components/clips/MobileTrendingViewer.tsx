@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { ChevronLeft, Heart, MessageCircle, User, Play, Pause, Flag, Eye, Gamepad2, Music, X } from "lucide-react";
+import { ChevronLeft, Heart, MessageCircle, User, Play, Pause, Flag, BarChart2, Gamepad2, Music, X } from "lucide-react";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -342,7 +342,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         {!showComments && <div className="absolute right-3 z-20 flex flex-col items-center gap-3" style={{ bottom: 110 }} onClick={e => e.stopPropagation()}>
           {/* Views */}
           <div className="flex flex-col items-center gap-0.5">
-            <Eye className="h-6 w-6 text-white drop-shadow" />
+            <BarChart2 className="h-6 w-6 text-white drop-shadow" />
             <span className="text-white text-[10px] font-semibold drop-shadow">{formatNumber(stats.views)}</span>
           </div>
 
