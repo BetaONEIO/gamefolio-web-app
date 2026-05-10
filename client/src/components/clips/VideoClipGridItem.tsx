@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLazyVideo } from "@/hooks/use-lazy-video";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { ClipWithUser } from "@shared/schema";
@@ -28,6 +29,14 @@ const VideoClipGridItem = ({
 }: VideoClipGridItemProps) => {
   const { openClipDialog } = useClipDialog();
   const lazyVideo = useLazyVideo({ autoPlay: false });
+  const [isPortraitThumbnail, setIsPortraitThumbnail] = useState(false);
+
+  const handleThumbnailLoad = (e: { currentTarget: HTMLImageElement }) => {
+    const img = e.currentTarget;
+    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+      setIsPortraitThumbnail(img.naturalHeight > img.naturalWidth);
+    }
+  };
 
   const handleOpenClip = () => {
     const contextList = reelsList || clipsList;
@@ -41,6 +50,8 @@ const VideoClipGridItem = ({
   const isNew =
     clip.createdAt &&
     Date.now() - new Date(clip.createdAt).getTime() < 86400000 * 3;
+
+  const showBlur = isPortraitThumbnail && !isReel;
 
   return (
     <div className="cursor-pointer group" onClick={handleOpenClip}>
@@ -64,27 +75,30 @@ const VideoClipGridItem = ({
           />
         ) : (
           <>
-            {/* Blurred background — always shown for non-reel clips so portrait
-                thumbnails get filled bars; invisible for landscape (image fills container). */}
-            {!isReel && thumbnailUrl && (
+            {/* Blurred background — only shown for portrait (9:16) non-reel clips
+                to fill the letterbox bars in the 16:9 container. */}
+            {showBlur && (
               <div className="absolute inset-0 z-[1] overflow-hidden">
                 <img
                   src={thumbnailUrl}
                   alt=""
                   aria-hidden="true"
                   className="w-full h-full object-cover"
-                  style={{ filter: 'blur(24px)', opacity: 0.35, transform: 'scale(1.08)' }}
+                  style={{ filter: 'blur(20px)', opacity: 0.65, transform: 'scale(1.1)' }}
                 />
               </div>
             )}
             <LazyImage
               src={thumbnailUrl}
               alt={clip.title || "Video clip thumbnail"}
-              className={`w-full h-full transition-transform duration-300 group-hover:scale-105 ${isReel ? "object-cover" : "object-contain"} ${clip.ageRestricted ? "blur-2xl" : ""}`}
+              className={`w-full h-full transition-transform duration-300 group-hover:scale-105 relative z-[2] ${
+                showBlur ? "object-contain" : "object-cover"
+              } ${clip.ageRestricted ? "blur-2xl" : ""}`}
               placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%230B1218'/%3e%3c/svg%3e"
               showLoadingSpinner={true}
               rootMargin="100px"
               threshold={0.1}
+              onLoad={handleThumbnailLoad}
             />
           </>
         )}
