@@ -323,7 +323,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
           <button
             onClick={(e) => { e.stopPropagation(); setCommentsOpen(true); }}
             className="flex items-center gap-1.5 flex-1 justify-center transition-colors"
-            style={{ color: '#7E887A' }}
+            style={{ color: commentsOpen ? '#B7FF1A' : '#7E887A' }}
           >
             <MessageCircle className="h-[18px] w-[18px]" />
             <span className="text-[13px]">{fmt(comments)}</span>
@@ -339,6 +339,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
               initialCount={fires}
               size="sm"
               variant="horizontal"
+              iconSize={18}
             />
           </div>
 
@@ -352,6 +353,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
               initialCount={likes}
               size="sm"
               variant="horizontal"
+              iconSize={18}
             />
           </div>
 

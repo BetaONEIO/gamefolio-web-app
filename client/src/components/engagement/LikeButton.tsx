@@ -207,7 +207,7 @@ export function LikeButton({
         <PixelHeartReaction
           active={liked}
           onClick={handleLike}
-          size={iconSizes[size]}
+          size={resolvedIconSize}
           fillColour="#ff4d6d"
           className={cn(
             "text-gray-500",
