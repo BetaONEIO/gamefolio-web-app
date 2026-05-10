@@ -11,47 +11,83 @@ import { CustomAvatar } from "@/components/ui/custom-avatar";
 import gamefolioLogo from '@assets/gamefolio social logo 3d circle web.png';
 
 const LEVEL_THRESHOLDS = [
-  { level: 1, xpRequired: 0 },
-  { level: 2, xpRequired: 100 },
-  { level: 3, xpRequired: 500 },
-  { level: 4, xpRequired: 1000 },
-  { level: 5, xpRequired: 2000 },
-  { level: 6, xpRequired: 3500 },
-  { level: 7, xpRequired: 5500 },
-  { level: 8, xpRequired: 8000 },
-  { level: 9, xpRequired: 11000 },
+  { level: 1,  xpRequired: 0 },
+  { level: 2,  xpRequired: 100 },
+  { level: 3,  xpRequired: 500 },
+  { level: 4,  xpRequired: 1000 },
+  { level: 5,  xpRequired: 2000 },
+  { level: 6,  xpRequired: 3500 },
+  { level: 7,  xpRequired: 5500 },
+  { level: 8,  xpRequired: 8000 },
+  { level: 9,  xpRequired: 11000 },
   { level: 10, xpRequired: 15000 },
   { level: 11, xpRequired: 20000 },
   { level: 12, xpRequired: 26000 },
   { level: 13, xpRequired: 33000 },
   { level: 14, xpRequired: 41000 },
   { level: 15, xpRequired: 50000 },
+  { level: 16, xpRequired: 60000 },
+  { level: 17, xpRequired: 71000 },
+  { level: 18, xpRequired: 83000 },
+  { level: 19, xpRequired: 96000 },
+  { level: 20, xpRequired: 110000 },
+  { level: 21, xpRequired: 125000 },
+  { level: 22, xpRequired: 141000 },
+  { level: 23, xpRequired: 158000 },
+  { level: 24, xpRequired: 176000 },
+  { level: 25, xpRequired: 195000 },
+  { level: 26, xpRequired: 215000 },
+  { level: 27, xpRequired: 236000 },
+  { level: 28, xpRequired: 258000 },
+  { level: 29, xpRequired: 281000 },
+  { level: 30, xpRequired: 305000 },
+  { level: 31, xpRequired: 330000 },
+  { level: 32, xpRequired: 356000 },
+  { level: 33, xpRequired: 383000 },
+  { level: 34, xpRequired: 411000 },
+  { level: 35, xpRequired: 440000 },
+  { level: 36, xpRequired: 470000 },
+  { level: 37, xpRequired: 501000 },
+  { level: 38, xpRequired: 533000 },
+  { level: 39, xpRequired: 566000 },
+  { level: 40, xpRequired: 600000 },
+  { level: 41, xpRequired: 635000 },
+  { level: 42, xpRequired: 671000 },
+  { level: 43, xpRequired: 708000 },
+  { level: 44, xpRequired: 746000 },
+  { level: 45, xpRequired: 785000 },
+  { level: 46, xpRequired: 825000 },
+  { level: 47, xpRequired: 866000 },
+  { level: 48, xpRequired: 908000 },
+  { level: 49, xpRequired: 951000 },
+  { level: 50, xpRequired: 995000 },
 ];
 
 function LevelProgressBar({ level, totalXP }: { level: number; totalXP: number }) {
-  const currentThreshold = LEVEL_THRESHOLDS.find(t => t.level === level) || LEVEL_THRESHOLDS[0];
+  const currentThreshold = LEVEL_THRESHOLDS.find(t => t.level === level) || LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
   const nextThreshold = LEVEL_THRESHOLDS.find(t => t.level === level + 1);
-  
+  const isMaxLevel = !nextThreshold;
+
   const xpInCurrentLevel = totalXP - currentThreshold.xpRequired;
-  const xpNeededForNextLevel = nextThreshold 
-    ? nextThreshold.xpRequired - currentThreshold.xpRequired 
-    : 0;
-  const progress = nextThreshold 
-    ? Math.min(100, (xpInCurrentLevel / xpNeededForNextLevel) * 100) 
-    : 100;
-  
-  const nextLevelXP = nextThreshold ? nextThreshold.xpRequired : currentThreshold.xpRequired;
+  const xpNeededForNextLevel = nextThreshold
+    ? nextThreshold.xpRequired - currentThreshold.xpRequired
+    : 1;
+  const progress = isMaxLevel
+    ? 100
+    : Math.min(100, (xpInCurrentLevel / xpNeededForNextLevel) * 100);
 
   return (
     <div className="mt-3">
       <div className="flex justify-between items-center text-xs mb-1">
         <span className="text-primary font-semibold">Level {level}</span>
         <span className="text-muted-foreground">
-          {Math.floor(totalXP)} / {Math.floor(nextLevelXP)} XP
+          {isMaxLevel
+            ? `${Math.floor(totalXP).toLocaleString()} XP — MAX`
+            : `${Math.floor(totalXP).toLocaleString()} / ${nextThreshold!.xpRequired.toLocaleString()} XP`}
         </span>
       </div>
       <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
-        <div 
+        <div
           className="h-full bg-primary rounded-full transition-all duration-300"
           style={{ width: `${progress}%` }}
         />
