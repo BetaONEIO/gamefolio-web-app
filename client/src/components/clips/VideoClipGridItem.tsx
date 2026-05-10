@@ -61,7 +61,6 @@ const VideoClipGridItem = ({
 
   return (
     <div className="cursor-pointer group" onClick={handleOpenClip}>
-      {/* Thumbnail */}
       <div
         className={`relative overflow-hidden rounded-xl ${aspectRatioClass} border`}
         style={{
@@ -81,8 +80,6 @@ const VideoClipGridItem = ({
           />
         ) : (
           <>
-            {/* Blurred background — only shown for portrait (9:16) non-reel clips
-                to fill the letterbox bars in the 16:9 container. */}
             {showBlur && (
               <div className="absolute inset-0 z-[1] overflow-hidden">
                 <img
@@ -109,7 +106,6 @@ const VideoClipGridItem = ({
           </>
         )}
 
-        {/* Age restricted overlay */}
         {clip.ageRestricted && (
           <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-10 pointer-events-none">
             <div className="text-red-500 text-4xl mb-2">⚠️</div>
@@ -118,7 +114,6 @@ const VideoClipGridItem = ({
           </div>
         )}
 
-        {/* Hover play overlay */}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10 pointer-events-none">
           <div
             className={`bg-primary/90 rounded-full shadow-xl backdrop-blur-sm transform scale-90 group-hover:scale-100 transition-transform duration-500 ${
@@ -132,7 +127,6 @@ const VideoClipGridItem = ({
           </div>
         </div>
 
-        {/* Top-left: 18+ + NEW badges */}
         <div className="absolute top-1.5 left-1.5 flex items-center gap-1 z-20">
           {clip.ageRestricted && (
             <div className="bg-red-600 text-white font-bold text-[9px] px-1.5 py-0.5 rounded shadow-md">
@@ -146,7 +140,6 @@ const VideoClipGridItem = ({
           )}
         </div>
 
-        {/* Top-right: duration + views */}
         <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 z-20">
           {clip.duration && clip.duration > 0 && (
             <div className="bg-black/70 backdrop-blur-sm text-white px-1.5 py-0.5 text-[9px] rounded font-semibold">
@@ -164,8 +157,7 @@ const VideoClipGridItem = ({
         </div>
       </div>
 
-      {/* Meta below thumbnail */}
-      <div className="pt-1.5 px-0.5 pb-3">
+      <div className="pt-1.5 px-0.5 pb-10">
         <h3
           className={`text-[#F5F7F2] font-bold line-clamp-1 leading-tight ${
             compact ? "text-xs" : "text-sm"
@@ -197,6 +189,7 @@ const VideoClipGridItem = ({
                 color: "#03080A",
                 fontSize: compact ? "8px" : "10px",
                 padding: compact ? "1px 5px" : "2px 6px",
+                marginBottom: "10px",
               }}
             >
               {clip.game.name}
