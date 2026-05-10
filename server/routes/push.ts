@@ -33,10 +33,9 @@ pushRouter.post("/register", async (req: Request, res: Response) => {
   // recognises cookie/session auth, but on native the request is JWT-only
   // (the global Bearer bridge populates req.user without flipping the
   // passport session flag).
-  const authHeader = req.headers.authorization ?? "(none)";
-  const authType = authHeader.startsWith("Bearer ") ? "JWT" : req.isAuthenticated() ? "session" : "none";
+  const authType = req.headers.authorization?.startsWith("Bearer ") ? "JWT" : req.isAuthenticated() ? "session" : "none";
   if (!req.user) {
-    console.warn(`[push] /register called but not authenticated — authHeader=${authHeader.substring(0, 40)}`);
+    console.warn(`[push] /register called but not authenticated — authType=${authType}`);
     return res.status(401).json({ message: "Unauthorized" });
   }
   const parsed = registerSchema.safeParse(req.body);
