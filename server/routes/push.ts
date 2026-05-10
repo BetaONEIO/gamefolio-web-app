@@ -94,8 +94,16 @@ const adminPushRouter = Router();
 
 adminPushRouter.use(adminMiddleware);
 
-adminPushRouter.get("/status", (_req: Request, res: Response) => {
-  res.json({ enabled: isPushEnabled(), reason: pushDisabledReason() });
+adminPushRouter.get("/status", async (_req: Request, res: Response) => {
+  const enabled = isPushEnabled();
+  let registeredDeviceCount = 0;
+  try {
+    const tokens = await storage.getAllPushTokens();
+    registeredDeviceCount = tokens.length;
+  } catch {
+    // non-fatal — count stays 0
+  }
+  res.json({ enabled, reason: pushDisabledReason(), registeredDeviceCount });
 });
 
 adminPushRouter.get("/broadcasts", async (req: Request, res: Response) => {
@@ -124,6 +132,13 @@ adminPushRouter.post("/broadcast", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("[push] broadcast failed:", err);
     return res.status(500).json({ message: "Broadcast failed", error: (err as Error).message });
+  }
+
+  console.log(
+    `[push] broadcast id pending — audience=${JSON.stringify(audience)} recipients=${result.recipientCount} success=${result.successCount} failed=${result.failureCount}`
+  );
+  if (result.recipientCount === 0) {
+    console.warn("[push] broadcast sent to 0 recipients — no push tokens registered in the database");
   }
 
   const broadcast = await storage.createPushBroadcast({

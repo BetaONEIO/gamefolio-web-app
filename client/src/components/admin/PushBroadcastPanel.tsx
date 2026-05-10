@@ -9,13 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Send, X, CheckCircle2 } from "lucide-react";
+import { AlertCircle, Send, X, CheckCircle2, Smartphone } from "lucide-react";
 
 type AudienceKind = "all" | "role" | "pro" | "users";
 
 interface PushStatus {
   enabled: boolean;
   reason: string | null;
+  registeredDeviceCount: number;
 }
 
 interface BroadcastRow {
@@ -104,10 +105,18 @@ export function PushBroadcastPanel() {
       return (await res.json()) as { broadcast: BroadcastRow } & BroadcastResult;
     },
     onSuccess: (data) => {
-      toast({
-        title: "Push sent",
-        description: `Delivered ${data.successCount}/${data.recipientCount} (${data.failureCount} failed${data.removedTokens ? `, ${data.removedTokens} stale tokens removed` : ""}).`,
-      });
+      if (data.recipientCount === 0) {
+        toast({
+          title: "Nothing sent — no registered devices",
+          description: "0 devices have push tokens in the database. Users must open the native app and grant notification permission first.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Push sent",
+          description: `Delivered ${data.successCount}/${data.recipientCount}${data.failureCount ? ` · ${data.failureCount} failed` : ""}${data.removedTokens ? ` · ${data.removedTokens} stale tokens removed` : ""}.`,
+        });
+      }
       setTitle("");
       setBody("");
       setActionUrl("");
@@ -144,6 +153,30 @@ export function PushBroadcastPanel() {
                 <div className="text-muted-foreground">
                   {status.data.reason ?? "FIREBASE_SERVICE_ACCOUNT_JSON env var is missing."}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {!status.isLoading && status.data?.enabled && (
+            <div className={`flex items-center gap-3 rounded-md border p-3 text-sm ${
+              status.data.registeredDeviceCount === 0
+                ? "border-rose-500/30 bg-rose-500/10"
+                : "border-emerald-500/30 bg-emerald-500/10"
+            }`}>
+              <Smartphone className={`h-4 w-4 shrink-0 ${
+                status.data.registeredDeviceCount === 0 ? "text-rose-500" : "text-emerald-500"
+              }`} />
+              <div>
+                <span className="font-medium">
+                  {status.data.registeredDeviceCount === 0
+                    ? "No devices registered"
+                    : `${status.data.registeredDeviceCount} device${status.data.registeredDeviceCount === 1 ? "" : "s"} registered`}
+                </span>
+                {status.data.registeredDeviceCount === 0 && (
+                  <div className="text-muted-foreground text-xs mt-0.5">
+                    Users must open the native iOS/Android app and grant notification permission before any push can be delivered.
+                  </div>
+                )}
               </div>
             </div>
           )}
