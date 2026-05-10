@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
+import { ZapIconSvg, useZapFly, ZapFlyOverlay } from "@/components/ui/ZapReactionIcon";
 import { cn } from "@/lib/utils";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
@@ -38,6 +38,8 @@ export function FireButton({
   const { isOpen, actionType, openDialog, closeDialog } = useJoinDialog();
   const [fired, setFired] = useState(initialFired);
   const [count, setCount] = useState(Number(initialCount) || 0);
+  const iconRef = useRef<HTMLSpanElement>(null);
+  const { zapFlyState, triggerZapFly, dismissZapFly } = useZapFly();
 
   const { data: fireStatus } = useQuery({
     queryKey: [`/api/${contentType}s/${contentId}/reactions/status`],
@@ -167,6 +169,8 @@ export function FireButton({
       return;
     }
 
+    // Trigger fly animation before the mutation
+    triggerZapFly(iconRef.current);
     fireMutation.mutate();
   };
 
@@ -205,7 +209,9 @@ export function FireButton({
               size === "lg" && "w-10 h-10 md:w-12 md:h-12"
             )}
           >
-            <ZapIconSvg size={iconSizes[size]} active={fired} />
+            <span ref={iconRef} className="flex items-center justify-center">
+              <ZapIconSvg size={iconSizes[size]} active={fired} />
+            </span>
           </Button>
           {showCount && (
             <span className={cn(
@@ -216,7 +222,8 @@ export function FireButton({
             </span>
           )}
         </div>
-        
+
+        {zapFlyState && <ZapFlyOverlay targetRect={zapFlyState} onDone={dismissZapFly} />}
         <JoinGamefolioDialog 
           open={isOpen} 
           onOpenChange={closeDialog} 
@@ -237,7 +244,9 @@ export function FireButton({
           isLoading && "opacity-50 pointer-events-none"
         )}
       >
-        <ZapIconSvg size={iconSizes[size]} active={fired} />
+        <span ref={iconRef} className="flex items-center justify-center">
+          <ZapIconSvg size={iconSizes[size]} active={fired} />
+        </span>
         {showCount && (
           <span className={cn(
             "font-medium min-w-[1rem] text-center transition-colors",
@@ -248,7 +257,8 @@ export function FireButton({
           </span>
         )}
       </button>
-      
+
+      {zapFlyState && <ZapFlyOverlay targetRect={zapFlyState} onDone={dismissZapFly} />}
       <JoinGamefolioDialog 
         open={isOpen} 
         onOpenChange={closeDialog} 

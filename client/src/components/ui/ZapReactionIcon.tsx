@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, useReducedMotion } from 'framer-motion';
 
 /**
  * ZapReactionIcon — pixel-art lightning bolt reaction icon.
@@ -216,4 +218,146 @@ export function ZapIconSvg({ size, active = false, className = '', style }: ZapI
 // ─────────────────────────────────────────────────────────────────────────────
 export function ZapIconFire({ className = '', style }: { className?: string; style?: React.CSSProperties }) {
   return <ZapIconSvg active={true} className={className} style={style} />;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useZapFly + ZapFlyOverlay — "Zap to position" gaming animation.
+//
+// Usage:
+//   const { triggerZapFly, zapFlyState, dismissZapFly } = useZapFly();
+//   const iconRef = useRef<HTMLElement>(null);
+//
+//   // On tap:
+//   triggerZapFly(iconRef.current);
+//
+//   // In JSX:
+//   {zapFlyState && <ZapFlyOverlay targetRect={zapFlyState} onDone={dismissZapFly} />}
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function useZapFly() {
+  const [zapFlyState, setZapFlyState] = useState<DOMRect | null>(null);
+
+  const triggerZapFly = useCallback((el: Element | null) => {
+    if (!el) return;
+    setZapFlyState(el.getBoundingClientRect());
+  }, []);
+
+  const dismissZapFly = useCallback(() => setZapFlyState(null), []);
+
+  return { zapFlyState, triggerZapFly, dismissZapFly };
+}
+
+// Landing spark positions (normalised around bolt centre)
+const FLY_SPARKS = [
+  { dx: -14, dy: -18, color: '#B7FF1A', delay: 0.00 },
+  { dx:  12, dy: -20, color: '#d4ff6b', delay: 0.03 },
+  { dx:  20, dy:  -4, color: '#B7FF1A', delay: 0.06 },
+  { dx:  18, dy:  12, color: '#d4ff6b', delay: 0.01 },
+  { dx:   4, dy:  20, color: '#B7FF1A', delay: 0.05 },
+  { dx: -16, dy:  16, color: '#d4ff6b', delay: 0.08 },
+  { dx: -22, dy:   2, color: '#B7FF1A', delay: 0.02 },
+  { dx:  -8, dy: -22, color: '#d4ff6b', delay: 0.07 },
+];
+
+export function ZapFlyOverlay({ targetRect, onDone }: { targetRect: DOMRect; onDone: () => void }) {
+  const prefersReducedMotion = useReducedMotion();
+  const [phase, setPhase] = useState<'appear' | 'fly' | 'land'>('appear');
+  const [showSparks, setShowSparks] = useState(false);
+
+  const LARGE = 76;
+  const scx = window.innerWidth / 2;
+  const scy = window.innerHeight / 2;
+  const tcx = targetRect.left + targetRect.width / 2;
+  const tcy = targetRect.top + targetRect.height / 2;
+  const dx = tcx - scx;
+  const dy = tcy - scy;
+  const endScale = Math.max(targetRect.height, 16) / LARGE;
+
+  // Reduced-motion: just fire onDone immediately
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      const t = setTimeout(onDone, 50);
+      return () => clearTimeout(t);
+    }
+  }, [prefersReducedMotion, onDone]);
+
+  if (prefersReducedMotion) return null;
+
+  const portal = (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        pointerEvents: 'none', overflow: 'visible',
+      }}
+    >
+      {/* ── Flash bloom at screen centre ── */}
+      {phase === 'appear' && (
+        <motion.div
+          initial={{ scale: 0, opacity: 0.9 }}
+          animate={{ scale: 3, opacity: 0 }}
+          transition={{ duration: 0.32, ease: 'easeOut' }}
+          style={{
+            position: 'absolute',
+            left: scx - 52, top: scy - 52,
+            width: 104, height: 104,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(183,255,26,0.75) 0%, transparent 70%)',
+          }}
+        />
+      )}
+
+      {/* ── Flying zap bolt ── */}
+      {phase !== 'land' && (
+        <motion.div
+          initial={{ x: 0, y: 0, scale: 0.08, opacity: 0 }}
+          animate={
+            phase === 'appear'
+              ? { scale: 1.3, opacity: 1, x: 0, y: 0 }
+              : { x: dx, y: dy, scale: endScale, opacity: 0 }
+          }
+          onAnimationComplete={() => {
+            if (phase === 'appear') {
+              setPhase('fly');
+            } else {
+              setShowSparks(true);
+              setPhase('land');
+              setTimeout(onDone, 280);
+            }
+          }}
+          transition={
+            phase === 'appear'
+              ? { duration: 0.13, ease: [0.0, 0.0, 0.2, 1.0] }
+              : { duration: 0.46, ease: [0.55, 0.0, 0.45, 1.0] }
+          }
+          style={{
+            position: 'absolute',
+            left: scx - LARGE / 2,
+            top: scy - LARGE / 2,
+            width: LARGE, height: LARGE,
+          }}
+        >
+          <ZapIconSvg size={LARGE} active={true} />
+        </motion.div>
+      )}
+
+      {/* ── Landing pixel sparks ── */}
+      {showSparks && FLY_SPARKS.map((s, i) => (
+        <motion.div
+          key={i}
+          initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+          animate={{ x: s.dx * 1.6, y: s.dy * 1.6, opacity: 0, scale: 0.2 }}
+          transition={{ duration: 0.26, delay: s.delay, ease: 'easeOut' }}
+          style={{
+            position: 'absolute',
+            left: tcx - 2, top: tcy - 2,
+            width: 4, height: 4,
+            background: s.color,
+            borderRadius: 0,
+          }}
+        />
+      ))}
+    </div>
+  );
+
+  return createPortal(portal, document.body);
 }

@@ -4,9 +4,9 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
-import { GamefolioTrendingIcon } from "@/components/icons/GamefolioTrendingIcon";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import AuthModal from "@/components/auth/auth-modal";
+import { ZapIconSvg, useZapFly, ZapFlyOverlay } from "@/components/ui/ZapReactionIcon";
 
 const uploadOptions = [
   { icon: Video, label: "Upload Clip", type: "clips", tilt: -12 },
@@ -20,22 +20,28 @@ const MobileNav = () => {
   const username = user?.username || "user";
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
+  const trendingIconRef = useRef<HTMLSpanElement>(null);
+  const { zapFlyState, triggerZapFly, dismissZapFly } = useZapFly();
 
   const navItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: PlusCircle, label: "", href: "/upload", isUpload: true },
-    { icon: GamefolioTrendingIcon, label: "Trending", href: "/trending" },
+    { label: "Trending", href: "/trending", isTrending: true },
     { icon: User, label: "Profile", href: `/profile/${username}`, requiresAuth: true },
-  ];
+  ] as const;
 
-  const handleNavClick = (item: typeof navItems[0], e: React.MouseEvent) => {
-    if (item.isUpload) {
+  const handleNavClick = (item: typeof navItems[number], e: React.MouseEvent) => {
+    if ('isUpload' in item && item.isUpload) {
       e.preventDefault();
       setUploadMenuOpen((prev) => !prev);
       return;
     }
-    if (item.requiresAuth && !user) {
+    if ('isTrending' in item && item.isTrending) {
+      triggerZapFly(trendingIconRef.current);
+      return;
+    }
+    if ('requiresAuth' in item && item.requiresAuth && !user) {
       e.preventDefault();
       setShowAuthModal(true);
     }
@@ -102,7 +108,7 @@ const MobileNav = () => {
       <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-area-bottom">
         <div className="flex justify-around py-3">
           {navItems.map((item) => {
-            if (item.isUpload) {
+            if ('isUpload' in item && item.isUpload) {
               return (
                 <button
                   key="upload"
@@ -122,32 +128,58 @@ const MobileNav = () => {
               );
             }
 
+            if ('isTrending' in item && item.isTrending) {
+              const isActive = location === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={(e) => handleNavClick(item, e)}
+                  className="flex flex-col items-center text-xs w-full no-underline"
+                >
+                  <span ref={trendingIconRef} className="mb-1 flex items-center justify-center w-6 h-6">
+                    <ZapIconSvg
+                      size={22}
+                      active={isActive}
+                      className={isActive ? '' : 'text-muted-foreground'}
+                    />
+                  </span>
+                  <span className={cn(
+                    isActive ? 'text-[#B7FF1A]' : 'text-muted-foreground'
+                  )}>
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            }
+
+            const regularItem = item as Extract<typeof navItems[number], { icon: React.ComponentType<any> }>;
             return (
               <Link
-                key={item.href}
-                href={item.href}
+                key={regularItem.href}
+                href={regularItem.href}
                 onClick={(e) => handleNavClick(item, e)}
                 className="flex flex-col items-center text-xs w-full no-underline"
               >
-                <item.icon className={cn(
+                <regularItem.icon className={cn(
                   "mb-1 w-6 h-6",
-                  location === item.href
-                    ? item.label === "Trending" ? "text-orange-500" : "text-primary"
-                    : "text-muted-foreground"
+                  location === regularItem.href ? "text-primary" : "text-muted-foreground"
                 )} />
                 <span className={cn(
-                  location === item.href
-                    ? item.label === "Trending" ? "text-orange-500" : "text-white"
-                    : "text-muted-foreground"
-                )}>{item.label}</span>
+                  location === regularItem.href ? "text-white" : "text-muted-foreground"
+                )}>{regularItem.label}</span>
               </Link>
             );
           })}
         </div>
       </nav>
-      
-      <AuthModal 
-        isOpen={showAuthModal} 
+
+      {zapFlyState && (
+        <ZapFlyOverlay targetRect={zapFlyState} onDone={dismissZapFly} />
+      )}
+
+      <AuthModal
+        isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         defaultTab="register"
       />
