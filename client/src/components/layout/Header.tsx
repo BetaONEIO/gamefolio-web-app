@@ -545,7 +545,8 @@ const Header = () => {
       {/* Mobile Search Overlay */}
       {showMobileSearch && (
         <div
-          className="fixed inset-0 bg-black/50 z-50 md:hidden flex flex-col"
+          className="fixed inset-0 z-[60] md:hidden flex flex-col"
+          style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
           onClick={() => {
             setShowMobileSearch(false);
             setShowDropdown(false);
@@ -553,7 +554,8 @@ const Header = () => {
           }}
         >
           <div
-            className="bg-card w-full p-4 shadow-lg safe-area-top"
+            className="bg-card w-full px-4 pb-4 shadow-lg"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div
