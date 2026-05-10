@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import type React from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -19,6 +20,7 @@ interface FireButtonProps {
   onUnauthenticatedAction?: () => void;
   showCount?: boolean;
   variant?: 'horizontal' | 'vertical';
+  clipRef?: React.RefObject<Element>;
 }
 
 export function FireButton({ 
@@ -30,7 +32,8 @@ export function FireButton({
   size = 'md',
   onUnauthenticatedAction,
   showCount = true,
-  variant = 'horizontal'
+  variant = 'horizontal',
+  clipRef,
 }: FireButtonProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -41,6 +44,7 @@ export function FireButton({
   const iconRef = useRef<HTMLSpanElement>(null);
   const { zapFlyState, triggerZapFly, dismissZapFly } = useZapFly();
   const [flyMode, setFlyMode] = useState<'success' | 'fail' | null>(null);
+  const [sourceRect, setSourceRect] = useState<DOMRect | undefined>(undefined);
 
   // Track how many times this user has seen the +50 XP popup (across sessions, per device)
   // Only show for the first 3 successful zaps
@@ -175,6 +179,8 @@ export function FireButton({
       return;
     }
 
+    // Capture source position from clip element (if provided) for animation origin
+    setSourceRect(clipRef?.current?.getBoundingClientRect() ?? undefined);
     // Trigger fly animation before the mutation
     triggerZapFly(iconRef.current);
     fireMutation.mutate();
@@ -187,8 +193,8 @@ export function FireButton({
   };
 
   const iconSizes = {
-    sm: 16,
-    md: 20,
+    sm: 18,
+    md: 24,
     lg: 28
   };
 
@@ -232,6 +238,7 @@ export function FireButton({
         {zapFlyState && (
           <ZapFlyOverlay
             targetRect={zapFlyState}
+            sourceRect={sourceRect}
             onDone={() => {
               if (flyMode === 'success') markXpPopupShown();
               dismissZapFly();
@@ -277,6 +284,7 @@ export function FireButton({
       {zapFlyState && (
         <ZapFlyOverlay
           targetRect={zapFlyState}
+          sourceRect={sourceRect}
           onDone={() => {
             if (flyMode === 'success') markXpPopupShown();
             dismissZapFly();

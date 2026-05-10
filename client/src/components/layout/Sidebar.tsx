@@ -230,7 +230,7 @@ const Sidebar = () => {
   const menuItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
-    { icon: GamefolioTrendingIcon, label: "Trending", href: "/trending" },
+    { icon: GamefolioTrendingIcon, label: "Trending", href: "/trending", themed: true },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
     { icon: ShoppingBag, label: "Store", href: "/store" },
     { icon: GamefolioWalletIcon, label: "Wallet", href: "/wallet" },

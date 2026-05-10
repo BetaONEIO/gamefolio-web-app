@@ -272,6 +272,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
                 initialCount={fires}
                 size="sm"
                 variant="horizontal"
+                clipRef={cardRef}
               />
             </div>
 

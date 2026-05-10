@@ -50,6 +50,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isAcceptingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoAreaRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const { isOpen: isJoinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
@@ -204,6 +205,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
 
       {/* ── Video area — shrinks to 38% when comments open ── */}
       <div
+        ref={videoAreaRef}
         className="relative flex-shrink-0 overflow-hidden transition-[height] duration-300 ease-in-out"
         style={{ height: showComments ? '38%' : '100%', flex: showComments ? 'none' : '1' }}
       >
@@ -317,6 +319,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                 size="lg"
                 showCount={true}
                 variant="vertical"
+                clipRef={videoAreaRef}
               />
               <LikeButton
                 contentId={currentReel.id}

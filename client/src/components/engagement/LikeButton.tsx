@@ -150,8 +150,8 @@ export function LikeButton({
   };
 
   const iconSizes = {
-    sm: 16,
-    md: 20,
+    sm: 18,
+    md: 24,
     lg: 28
   };
 

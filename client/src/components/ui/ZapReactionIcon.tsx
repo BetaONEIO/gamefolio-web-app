@@ -266,11 +266,13 @@ export function ZapFlyOverlay({
   onDone,
   mode,
   showXpPopup = true,
+  sourceRect,
 }: {
   targetRect: DOMRect;
   onDone: () => void;
   mode: 'success' | 'fail' | null;
   showXpPopup?: boolean;
+  sourceRect?: DOMRect;
 }) {
   const prefersReducedMotion = useReducedMotion();
 
@@ -286,8 +288,12 @@ export function ZapFlyOverlay({
   const [showXp, setShowXp] = useState(false);
 
   const LARGE = 76;
-  const scx = window.innerWidth / 2;
-  const scy = window.innerHeight / 2;
+  const scx = sourceRect
+    ? sourceRect.left + sourceRect.width / 2
+    : window.innerWidth / 2;
+  const scy = sourceRect
+    ? sourceRect.top + sourceRect.height / 2
+    : window.innerHeight / 2;
   const tcx = targetRect.left + targetRect.width / 2;
   const tcy = targetRect.top + targetRect.height / 2;
   const dx = tcx - scx;
