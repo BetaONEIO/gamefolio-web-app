@@ -29,7 +29,11 @@ const registerSchema = z.object({
 });
 
 pushRouter.post("/register", async (req: Request, res: Response) => {
-  if (!req.isAuthenticated() || !req.user) {
+  // Use req.user rather than req.isAuthenticated() — the latter only
+  // recognises cookie/session auth, but on native the request is JWT-only
+  // (the global Bearer bridge populates req.user without flipping the
+  // passport session flag).
+  if (!req.user) {
     return res.status(401).json({ message: "Unauthorized" });
   }
   const parsed = registerSchema.safeParse(req.body);
@@ -74,7 +78,7 @@ pushRouter.post("/unregister", async (req: Request, res: Response) => {
 // Lets the client send a self-test push to confirm the round-trip works
 // without bothering an admin. Only fires to the caller's own tokens.
 pushRouter.post("/test", async (req: Request, res: Response) => {
-  if (!req.isAuthenticated() || !req.user) {
+  if (!req.user) {
     return res.status(401).json({ message: "Unauthorized" });
   }
   if (!isPushEnabled()) {
