@@ -171,7 +171,7 @@ export function LikeButton({
               active={liked}
               onClick={handleLike}
               size={iconSizes[size]}
-              fillColour="#ff4d6d"
+              fillColour="#B7FF1A"
               className={cn(
                 "text-white",
                 likeMutation.isPending && "opacity-50 pointer-events-none"
@@ -205,7 +205,7 @@ export function LikeButton({
           active={liked}
           onClick={handleLike}
           size={iconSizes[size]}
-          fillColour="#ff4d6d"
+          fillColour="#B7FF1A"
           className={cn(
             "text-gray-500",
             likeMutation.isPending && "opacity-50 pointer-events-none"
@@ -215,7 +215,7 @@ export function LikeButton({
           <span className={cn(
             "font-medium min-w-[1rem] text-center transition-colors",
             countTextSizes[size],
-            liked ? 'text-[#ff4d6d]' : 'text-muted-foreground'
+            liked ? 'text-[#B7FF1A]' : 'text-muted-foreground'
           )}>
             {count}
           </span>

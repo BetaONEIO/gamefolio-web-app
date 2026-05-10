@@ -103,9 +103,10 @@ export function PixelHeartReaction({
     return () => clearTimeout(t);
   }
 
-  // Aspect-correct height: viewBox is 12 wide × 9 tall
-  const w = size;
-  const h = Math.round(size * 9 / 12);
+  // `size` = target HEIGHT (matches sibling icon height like Flame h-4 w-4).
+  // Width is proportionally wider: 12/9 ratio.
+  const h = size;
+  const w = Math.round(size * 12 / 9);
 
   return (
     <button
