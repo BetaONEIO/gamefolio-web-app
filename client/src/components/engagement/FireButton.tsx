@@ -21,6 +21,7 @@ interface FireButtonProps {
   showCount?: boolean;
   variant?: 'horizontal' | 'vertical';
   clipRef?: React.RefObject<Element>;
+  iconSize?: number;
 }
 
 export function FireButton({ 
@@ -34,6 +35,7 @@ export function FireButton({
   showCount = true,
   variant = 'horizontal',
   clipRef,
+  iconSize: iconSizeProp,
 }: FireButtonProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -193,10 +195,11 @@ export function FireButton({
   };
 
   const iconSizes = {
-    sm: 18,
-    md: 24,
+    sm: 16,
+    md: 20,
     lg: 28
   };
+  const resolvedIconSize = iconSizeProp ?? iconSizes[size];
 
   const countTextSizes = {
     sm: "text-xs",
@@ -222,7 +225,7 @@ export function FireButton({
             )}
           >
             <span ref={iconRef} className="flex items-center justify-center">
-              <ZapIconSvg size={iconSizes[size]} active={fired} />
+              <ZapIconSvg size={resolvedIconSize} active={fired} />
             </span>
           </Button>
           {showCount && (
@@ -268,7 +271,7 @@ export function FireButton({
         )}
       >
         <span ref={iconRef} className="flex items-center justify-center">
-          <ZapIconSvg size={iconSizes[size]} active={fired} />
+          <ZapIconSvg size={resolvedIconSize} active={fired} />
         </span>
         {showCount && (
           <span className={cn(

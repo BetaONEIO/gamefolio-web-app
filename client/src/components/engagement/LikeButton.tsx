@@ -19,6 +19,7 @@ interface LikeButtonProps {
   showCount?: boolean;
   variant?: 'horizontal' | 'vertical';
   onUnauthenticatedAction?: () => void;
+  iconSize?: number;
 }
 
 export function LikeButton({ 
@@ -30,7 +31,8 @@ export function LikeButton({
   size = 'md',
   showCount = true,
   variant = 'horizontal',
-  onUnauthenticatedAction
+  onUnauthenticatedAction,
+  iconSize: iconSizeProp,
 }: LikeButtonProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -150,10 +152,11 @@ export function LikeButton({
   };
 
   const iconSizes = {
-    sm: 18,
-    md: 24,
+    sm: 16,
+    md: 20,
     lg: 28
   };
+  const resolvedIconSize = iconSizeProp ?? iconSizes[size];
 
   // Define text sizes for the count
   const countTextSizes = {
@@ -170,7 +173,7 @@ export function LikeButton({
             <PixelHeartReaction
               active={liked}
               onClick={handleLike}
-              size={iconSizes[size]}
+              size={resolvedIconSize}
               fillColour="#ff4d6d"
               className={cn(
                 "text-white",
