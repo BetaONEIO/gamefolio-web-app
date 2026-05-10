@@ -11,7 +11,20 @@ interface ClipDialogContextType {
   closeClipDialog: () => void;
 }
 
-const ClipDialogContext = createContext<ClipDialogContextType | undefined>(undefined);
+// Preserve context across Vite HMR re-evaluations. When Vite re-evaluates
+// this module, createContext() would produce a NEW object — but the
+// ClipDialogProvider already mounted in the tree holds the OLD one, causing
+// useContext to return undefined and crash. import.meta.hot.data persists
+// across invalidations so we can reuse the same context instance.
+const ClipDialogContext: React.Context<ClipDialogContextType | undefined> =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (import.meta.hot?.data as any)?.clipDialogCtx ??
+  createContext<ClipDialogContextType | undefined>(undefined);
+
+if (import.meta.hot) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (import.meta.hot.data as any).clipDialogCtx = ClipDialogContext;
+}
 
 export function ClipDialogProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);

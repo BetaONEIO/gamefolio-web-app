@@ -236,37 +236,34 @@ export function FireButton({
 
   return (
     <>
-      <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleFire}
-          disabled={isLoading}
+      <button
+        type="button"
+        onClick={handleFire}
+        disabled={isLoading}
+        className={cn(
+          "flex items-center gap-1 bg-transparent border-0 p-0 cursor-pointer transition-colors",
+          fired 
+            ? "text-orange-500 hover:text-orange-600" 
+            : "text-muted-foreground hover:text-orange-500",
+          isLoading && "opacity-50 pointer-events-none"
+        )}
+      >
+        <Flame 
           className={cn(
-            "p-1.5 h-auto transition-colors hover:bg-orange-50 dark:hover:bg-orange-900/20",
-            fired 
-              ? "text-orange-500 hover:text-orange-600" 
-              : "text-muted-foreground hover:text-orange-500"
-          )}
-        >
-          <Flame 
-            className={cn(
-              size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-7 w-7' : 'h-5 w-5',
-              "transition-all duration-200",
-              fired ? "fill-current scale-110" : "hover:scale-105"
-            )} 
-          />
-        </Button>
+            size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-7 w-7' : 'h-5 w-5',
+            "transition-all duration-200",
+            fired ? "fill-current scale-110" : "hover:scale-105"
+          )} 
+        />
         {showCount && (
           <span className={cn(
             "font-medium min-w-[1rem] text-center transition-colors",
             size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm',
-            fired ? 'text-orange-500' : 'text-muted-foreground'
           )}>
             {count}
           </span>
         )}
-      </div>
+      </button>
       
       <JoinGamefolioDialog 
         open={isOpen} 
