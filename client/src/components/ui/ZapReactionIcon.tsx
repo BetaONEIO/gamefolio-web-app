@@ -265,16 +265,21 @@ export function ZapFlyOverlay({
   targetRect,
   onDone,
   mode,
+  showXpPopup = true,
 }: {
   targetRect: DOMRect;
   onDone: () => void;
   mode: 'success' | 'fail' | null;
+  showXpPopup?: boolean;
 }) {
   const prefersReducedMotion = useReducedMotion();
 
-  // Always track latest mode value without needing a re-render
+  // Always track latest mode/showXpPopup values without needing a re-render
   const modeRef = useRef(mode);
   useEffect(() => { modeRef.current = mode; }, [mode]);
+
+  const showXpPopupRef = useRef(showXpPopup);
+  useEffect(() => { showXpPopupRef.current = showXpPopup; }, [showXpPopup]);
 
   const [phase, setPhase] = useState<'appear' | 'fly' | 'successLand' | 'failFall'>('appear');
   const [showSparks, setShowSparks] = useState(false);
@@ -333,7 +338,7 @@ export function ZapFlyOverlay({
       } else {
         setPhase('successLand');
         setShowSparks(true);
-        setShowXp(true);
+        if (showXpPopupRef.current) setShowXp(true);
         setTimeout(onDone, 750);
       }
     }

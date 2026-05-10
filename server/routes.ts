@@ -7124,6 +7124,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             `Fire reaction given to clip #${clipId}`
           );
         }
+
+        // Award 50 XP to the reactor for giving a fire reaction
+        await XPService.awardXP(
+          userId,
+          50,
+          'other',
+          `Earned 50 XP for giving a fire reaction on clip #${clipId}`,
+          clipId
+        );
         
         // Get updated fire limits to return
         const fireLimits = await storage.getFireLimits(userId);
@@ -7135,6 +7144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...reaction, 
           reacted: true, 
           count,
+          xpAwarded: 50,
           firesRemaining: fireLimits.maxFiresPerDay - fireLimits.firesUsedToday,
           maxFires: fireLimits.maxFiresPerDay
         });
@@ -11301,6 +11311,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               `Fire reaction given to screenshot #${screenshotId}`
             );
           }
+
+          // Award 50 XP to the reactor for giving a fire reaction
+          await XPService.awardXP(
+            userId,
+            50,
+            'other',
+            `Earned 50 XP for giving a fire reaction on screenshot #${screenshotId}`
+          );
           
           // Get updated fire limits to return
           const fireLimits = await storage.getFireLimits(userId);
@@ -11309,6 +11327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             message: "Reaction added", 
             reacted: true, 
             reaction,
+            xpAwarded: 50,
             firesRemaining: fireLimits.maxFiresPerDay - fireLimits.firesUsedToday,
             maxFires: fireLimits.maxFiresPerDay
           });

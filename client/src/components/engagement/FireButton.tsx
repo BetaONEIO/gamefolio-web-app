@@ -42,6 +42,16 @@ export function FireButton({
   const { zapFlyState, triggerZapFly, dismissZapFly } = useZapFly();
   const [flyMode, setFlyMode] = useState<'success' | 'fail' | null>(null);
 
+  // Track how many times this user has seen the +50 XP popup (across sessions, per device)
+  // Only show for the first 3 successful zaps
+  const XP_POPUP_KEY = 'gf_zap_xp_shown';
+  const getXpShownCount = () => parseInt(localStorage.getItem(XP_POPUP_KEY) || '0', 10);
+  const shouldShowXpPopup = () => getXpShownCount() < 3;
+  const markXpPopupShown = () => {
+    const next = Math.min(getXpShownCount() + 1, 3);
+    localStorage.setItem(XP_POPUP_KEY, String(next));
+  };
+
   const { data: fireStatus } = useQuery({
     queryKey: [`/api/${contentType}s/${contentId}/reactions/status`],
     queryFn: async () => {
@@ -219,7 +229,17 @@ export function FireButton({
           )}
         </div>
 
-        {zapFlyState && <ZapFlyOverlay targetRect={zapFlyState} onDone={dismissZapFly} mode={flyMode} />}
+        {zapFlyState && (
+          <ZapFlyOverlay
+            targetRect={zapFlyState}
+            onDone={() => {
+              if (flyMode === 'success') markXpPopupShown();
+              dismissZapFly();
+            }}
+            mode={flyMode}
+            showXpPopup={shouldShowXpPopup()}
+          />
+        )}
         <JoinGamefolioDialog 
           open={isOpen} 
           onOpenChange={closeDialog} 
@@ -254,7 +274,17 @@ export function FireButton({
         )}
       </button>
 
-      {zapFlyState && <ZapFlyOverlay targetRect={zapFlyState} onDone={dismissZapFly} mode={flyMode} />}
+      {zapFlyState && (
+        <ZapFlyOverlay
+          targetRect={zapFlyState}
+          onDone={() => {
+            if (flyMode === 'success') markXpPopupShown();
+            dismissZapFly();
+          }}
+          mode={flyMode}
+          showXpPopup={shouldShowXpPopup()}
+        />
+      )}
       <JoinGamefolioDialog 
         open={isOpen} 
         onOpenChange={closeDialog} 

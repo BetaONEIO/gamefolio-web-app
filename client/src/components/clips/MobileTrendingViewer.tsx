@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
 import { ChevronLeft, Heart, MessageCircle, Share2, User, Play, Pause, Flag, Eye, Gamepad2, Music, X } from "lucide-react";
@@ -61,6 +62,9 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   const [showShare, setShowShare] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  // Brief play/pause icon flash on tap (TikTok-style)
+  const [playFlash, setPlayFlash] = useState<'play' | 'pause' | null>(null);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reset overlay states when switching between content items
   useEffect(() => {
@@ -68,6 +72,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
     setShowShare(false);
     setIsPlaying(true);
     setShowFullDescription(false);
+    setPlayFlash(null);
   }, [currentIndex]);
 
   // Prevent body scroll when mobile viewer is open
@@ -228,6 +233,18 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
     };
   }, [handleTouchStart, handleTouchMove, handleTouchEnd, handleKeyDown]);
 
+  // Tap the video area to toggle play/pause with a brief icon flash
+  const handleVideoTap = useCallback(() => {
+    if (!isVideoContent(currentItem)) return;
+    setIsPlaying(prev => {
+      const next = !prev;
+      setPlayFlash(next ? 'play' : 'pause');
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+      flashTimerRef.current = setTimeout(() => setPlayFlash(null), 650);
+      return next;
+    });
+  }, [currentItem]);
+
   // Type guard to check if content is video (clip/reel) or screenshot
   const isVideoContent = (item: ContentItem): item is ClipWithUser => {
     return 'videoUrl' in item;
@@ -249,6 +266,8 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             videoUrl={currentItem.videoUrl || ''}
             thumbnailUrl={currentItem.thumbnailUrl || undefined}
             autoPlay={isPlaying}
+            externalPaused={!isPlaying}
+            hideControls={true}
             className="w-full h-full"
             clipId={currentItem.id}
             objectFit="cover"
@@ -294,6 +313,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
       <div
         className="relative w-full flex-shrink-0 overflow-hidden"
         style={{ height: (showComments && !embedded) ? '38%' : '100%', flex: (showComments && !embedded) ? 'none' : '1' }}
+        onClick={handleVideoTap}
       >
         {renderContent()}
 
@@ -317,7 +337,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         )}
 
         {/* ── Right edge action column — hidden when comments open ─── */}
-        {!showComments && <div className="absolute right-3 z-20 flex flex-col items-center gap-3" style={{ bottom: 110 }}>
+        {!showComments && <div className="absolute right-3 z-20 flex flex-col items-center gap-3" style={{ bottom: 110 }} onClick={e => e.stopPropagation()}>
           {/* Views */}
           <div className="flex flex-col items-center gap-0.5">
             <Eye className="h-6 w-6 text-white drop-shadow" />
@@ -348,7 +368,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
 
           {/* Comments */}
           <button
-            onClick={() => { if (!user) { openDialog('comment'); } else { setShowComments(true); } }}
+            onClick={(e) => { e.stopPropagation(); if (!user) { openDialog('comment'); } else { setShowComments(true); } }}
             className="flex flex-col items-center gap-0.5"
             data-testid="button-comments"
           >
@@ -358,7 +378,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
 
           {/* Share */}
           <button
-            onClick={() => setShowShare(true)}
+            onClick={(e) => { e.stopPropagation(); setShowShare(true); }}
             className="flex flex-col items-center gap-0.5"
             data-testid="button-share"
           >
@@ -457,19 +477,31 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
           </div>
         )}
 
-        {/* Video play/pause overlay — hidden when comments open */}
+        {/* Tap-to-play flash indicator — shown briefly on each tap */}
         {!showComments && isVideoContent(currentItem) && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Button
-              variant="ghost"
-              size="lg"
-              onClick={() => setIsPlaying(!isPlaying)}
-              className="text-white hover:bg-white/20 opacity-0 hover:opacity-100 transition-opacity"
-              data-testid="button-play-pause"
-            >
-              {isPlaying ? <Pause className="h-12 w-12" /> : <Play className="h-12 w-12" />}
-            </Button>
-          </div>
+          <AnimatePresence>
+            {playFlash && (
+              <motion.div
+                key={playFlash}
+                initial={{ scale: 0.6, opacity: 0.9 }}
+                animate={{ scale: 1.1, opacity: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.55, ease: 'easeOut' }}
+                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                style={{ zIndex: 15 }}
+              >
+                <div style={{
+                  width: 72, height: 72, borderRadius: '50%',
+                  background: 'rgba(0,0,0,0.45)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {playFlash === 'play'
+                    ? <Play className="h-9 w-9 text-white" style={{ marginLeft: 4 }} />
+                    : <Pause className="h-9 w-9 text-white" />}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         )}
       </div>
 
