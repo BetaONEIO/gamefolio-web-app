@@ -82,6 +82,15 @@ pushRouter.post("/unregister", async (req: Request, res: Response) => {
   }
 });
 
+// Receives diagnostic reports from the native client about push init failures.
+// No auth required — the call may arrive before the session is fully established.
+pushRouter.post("/diagnostic", async (req: Request, res: Response) => {
+  const { stage, detail, platform } = req.body ?? {};
+  const userId = (req.user as any)?.id ?? "unauthenticated";
+  console.warn(`[push-diagnostic] userId=${userId} platform=${platform ?? "?"} stage=${stage} detail=${detail}`);
+  return res.json({ ok: true });
+});
+
 // Lets the client send a self-test push to confirm the round-trip works
 // without bothering an admin. Only fires to the caller's own tokens.
 pushRouter.post("/test", async (req: Request, res: Response) => {

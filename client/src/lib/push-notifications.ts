@@ -20,6 +20,19 @@ declare global {
   }
 }
 
+async function reportDiagnostic(stage: string, detail: string): Promise<void> {
+  try {
+    await fetch(resolveApiUrl('/api/push/diagnostic'), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stage, detail, platform: isIOS ? 'ios' : isAndroid ? 'android' : 'web' }),
+    });
+  } catch {
+    // best-effort only
+  }
+}
+
 async function registerTokenWithServer(token: string): Promise<void> {
   if (registeredToken === token) return;
   let appVersion: string | undefined;
@@ -30,21 +43,17 @@ async function registerTokenWithServer(token: string): Promise<void> {
     appVersion = undefined;
   }
   const platform = isIOS ? 'ios' : isAndroid ? 'android' : 'web';
-  // Use apiRequest so the call carries the JWT Authorization header on
-  // native (cookies don't cross the Capacitor WebView origin, so a raw
-  // fetch hits the server unauthenticated and gets a silent 401).
   try {
     await apiRequest('POST', '/api/push/register', { token, platform, appVersion });
     registeredToken = token;
     console.log(`[push] token registered (${platform}, ${appVersion ?? 'unknown'})`);
   } catch (err) {
     console.warn('[push] /api/push/register failed', err);
+    void reportDiagnostic('register-failed', String(err));
   }
 }
 
 async function unregisterTokenWithServer(token: string): Promise<void> {
-  // Unregister tolerates 401 (logout may have already invalidated the
-  // session), so use raw fetch with the URL rewriter rather than apiRequest.
   try {
     await fetch(resolveApiUrl('/api/push/unregister'), {
       method: 'POST',
@@ -56,6 +65,28 @@ async function unregisterTokenWithServer(token: string): Promise<void> {
     console.warn('[push] /api/push/unregister failed', err);
   }
   if (registeredToken === token) registeredToken = null;
+}
+
+async function getTokenWithRetry(maxAttempts = 4, baseDelayMs = 2000): Promise<string | null> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const { token } = await FirebaseMessaging.getToken();
+      if (token) {
+        console.log(`[push] getToken succeeded on attempt ${attempt}`);
+        return token;
+      }
+      console.warn(`[push] getToken returned empty token (attempt ${attempt}/${maxAttempts})`);
+      void reportDiagnostic('getToken-empty', `attempt ${attempt}`);
+    } catch (err) {
+      console.warn(`[push] getToken error (attempt ${attempt}/${maxAttempts}):`, err);
+      void reportDiagnostic('getToken-error', `attempt ${attempt}: ${String(err)}`);
+    }
+    if (attempt < maxAttempts) {
+      // Exponential backoff: 2s, 4s, 8s
+      await new Promise<void>((r) => setTimeout(r, baseDelayMs * attempt));
+    }
+  }
+  return null;
 }
 
 export async function initPushNotifications(): Promise<void> {
@@ -71,13 +102,16 @@ export async function initPushNotifications(): Promise<void> {
     }
     if (!granted) {
       console.log('[push] permission not granted');
+      void reportDiagnostic('permission-denied', 'user denied or not determined');
       return;
     }
 
-    const { token } = await FirebaseMessaging.getToken();
-    if (token) await registerTokenWithServer(token);
+    void reportDiagnostic('permission-granted', 'proceeding to getToken');
 
+    // Register the tokenReceived listener FIRST so we never miss an async
+    // token refresh even if the initial getToken() call below fails.
     await FirebaseMessaging.addListener('tokenReceived', ({ token: newToken }) => {
+      console.log('[push] tokenReceived event fired');
       if (newToken) void registerTokenWithServer(newToken);
     });
 
@@ -97,14 +131,22 @@ export async function initPushNotifications(): Promise<void> {
         /* noop */
       }
     });
+
+    // Try to get the token, retrying up to 4 times with backoff in case
+    // the APNs token exchange hasn't completed yet at app startup.
+    const token = await getTokenWithRetry();
+    if (token) {
+      await registerTokenWithServer(token);
+    } else {
+      console.warn('[push] could not obtain FCM token after all retries');
+      void reportDiagnostic('getToken-all-failed', 'no token after 4 attempts');
+    }
   } catch (err) {
     console.warn('[push] init failed:', err);
+    void reportDiagnostic('init-failed', String(err));
   }
 }
 
-// Called from the auth flow when the user logs out so we don't keep pushing
-// to a device that signed out. Best-effort: failures are logged but don't
-// block the logout itself.
 export async function unregisterCurrentPushToken(): Promise<void> {
   if (!isNative) return;
   try {
