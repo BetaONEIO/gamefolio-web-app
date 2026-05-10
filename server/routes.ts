@@ -5093,6 +5093,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get screenshot by ID
+  // NOTE: /latest and /share/:shareCode must be registered BEFORE /:id to avoid being captured as an id param
+  app.get("/api/screenshots/latest", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const gameId = req.query.gameId ? parseInt(req.query.gameId as string) : undefined;
+      const screenshotsResult = await storage.getLatestScreenshots(limit, gameId);
+      res.json(screenshotsResult);
+    } catch (err) {
+      console.error("Error fetching latest screenshots:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/screenshots/:id", async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
