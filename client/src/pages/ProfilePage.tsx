@@ -4564,7 +4564,7 @@ const ProfilePage = () => {
           </TabsContent>
 
           {/* Favorite Games Tab */}
-          <TabsContent value="favorites" className="pt-6 px-1 md:px-4">
+          <TabsContent value="favorites" className="pt-6 px-1 md:px-4 pb-10">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">

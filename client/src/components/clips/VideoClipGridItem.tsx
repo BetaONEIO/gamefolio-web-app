@@ -165,7 +165,7 @@ const VideoClipGridItem = ({
       </div>
 
       {/* Meta below thumbnail */}
-      <div className="pt-1.5 px-0.5">
+      <div className="pt-1.5 px-0.5 pb-3">
         <h3
           className={`text-[#F5F7F2] font-bold line-clamp-1 leading-tight ${
             compact ? "text-xs" : "text-sm"
