@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
+import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 import TrendingGameCard from "@/components/clips/TrendingGameCard";
 import GameClipsSection from "@/components/clips/GameClipsSection";
 import { LazyImage } from "@/components/ui/lazy-image";
@@ -49,6 +50,7 @@ const HomePage = () => {
   const [selectedGameFilter, setSelectedGameFilter] = useState<string | null>(null);
   const [activeContentTab, setActiveContentTab] = useState<'clips' | 'reels' | 'screenshots'>('clips');
   const [mobileViewer, setMobileViewer] = useState<{ clips: ClipWithUser[]; startId: number } | null>(null);
+  const [reelsViewer, setReelsViewer] = useState<number | null>(null);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   
@@ -643,7 +645,7 @@ const HomePage = () => {
                     return (
                       <div 
                         key={`reel-${reel.id}`}
-                        onClick={() => openClipDialog(reel.id, latestReels)}
+                        onClick={() => setReelsViewer(index)}
                         className="break-inside-avoid mb-1"
                       >
                         <div className={`relative ${aspectRatio} w-full rounded-sm overflow-hidden cursor-pointer group`}>
@@ -703,10 +705,10 @@ const HomePage = () => {
               ) : (
                 // Desktop: Grid with 4 columns
                 <div className="grid grid-cols-4 gap-4 w-full">
-                  {latestReels.map((reel) => (
+                  {latestReels.map((reel, index) => (
                     <div 
                       key={`reel-${reel.id}`}
-                      onClick={() => openClipDialog(reel.id, latestReels)}
+                      onClick={() => setReelsViewer(index)}
                       className="group relative bg-black rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
                     >
                       {/* Thumbnail/Video */}
@@ -1019,6 +1021,15 @@ const HomePage = () => {
         clips={mobileViewer.clips}
         startClipId={mobileViewer.startId}
         onBack={() => setMobileViewer(null)}
+      />
+    )}
+
+    {reelsViewer !== null && latestReels.length > 0 && (
+      <MobileTrendingViewer
+        content={latestReels}
+        initialIndex={reelsViewer}
+        onClose={() => setReelsViewer(null)}
+        hideCloseButton={false}
       />
     )}
     </>
