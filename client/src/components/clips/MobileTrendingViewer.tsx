@@ -353,7 +353,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             contentOwnerId={currentItem.user.id}
             initialLiked={(currentItem as any).isLiked ?? false}
             initialCount={stats.likes}
-            size="md"
+            size="sm"
             variant="vertical"
           />
 
@@ -364,7 +364,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             contentOwnerId={currentItem.user.id}
             initialFired={(currentItem as any).isFired ?? false}
             initialCount={(currentItem as any)._count?.fires || (currentItem as any)._count?.reactions || 0}
-            size="md"
+            size="sm"
             variant="vertical"
             clipRef={containerRef}
           />

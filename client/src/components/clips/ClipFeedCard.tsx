@@ -257,7 +257,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
             <button
               onClick={(e) => { e.stopPropagation(); setCommentsOpen(true); }}
               className="flex items-center gap-1.5 flex-1 justify-center transition-colors"
-              style={{ color: '#7E887A' }}
+              style={{ color: commentsOpen ? '#B7FF1A' : '#7E887A' }}
             >
               <MessageCircle className="h-[18px] w-[18px]" />
               <span className="text-[13px]">{fmt(comments)}</span>
