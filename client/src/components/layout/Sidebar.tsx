@@ -228,9 +228,7 @@ const Sidebar = () => {
   };
 
   const TrendingNavIcon = ({ className }: { className?: string }) => {
-    const [loc] = useLocation();
-    const active = loc === '/trending' || loc.startsWith('/trending/');
-    return <ZapIconSvg active={active} className={className} />;
+    return <ZapIconSvg active={false} className={className} />;
   };
 
   const menuItems = [
