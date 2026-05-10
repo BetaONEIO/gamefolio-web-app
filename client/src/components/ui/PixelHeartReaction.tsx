@@ -24,15 +24,15 @@ const HEART_PATH =
 
 // Pixel sparkles: (x, y) in viewBox units, placed just outside the heart border
 const SPARKLES = [
-  { x:  4.5, y: -1.8, color: '#f472b6', delay:   0 },
-  { x:  7.5, y: -1.8, color: '#a855f7', delay:  40 },
-  { x: 11.5, y:  1.5, color: '#60a5fa', delay:  80 },
-  { x: 11.5, y:  5.5, color: '#22d3ee', delay:  20 },
-  { x:  6.0, y: 10.2, color: '#f472b6', delay:  60 },
-  { x:  0.5, y:  5.5, color: '#a855f7', delay:  80 },
-  { x:  0.5, y:  1.5, color: '#60a5fa', delay:  40 },
-  { x:  2.5, y: -1.8, color: '#22d3ee', delay: 100 },
-  { x:  9.5, y: -1.8, color: '#f472b6', delay:  60 },
+  { x:  4.5, y: -1.8, color: '#ff4d6d', delay:   0 },
+  { x:  7.5, y: -1.8, color: '#ff8fa3', delay:  40 },
+  { x: 11.5, y:  1.5, color: '#ffb3c1', delay:  80 },
+  { x: 11.5, y:  5.5, color: '#ff4d6d', delay:  20 },
+  { x:  6.0, y: 10.2, color: '#ff8fa3', delay:  60 },
+  { x:  0.5, y:  5.5, color: '#ffb3c1', delay:  80 },
+  { x:  0.5, y:  1.5, color: '#ff4d6d', delay:  40 },
+  { x:  2.5, y: -1.8, color: '#ff8fa3', delay: 100 },
+  { x:  9.5, y: -1.8, color: '#ff4d6d', delay:  60 },
 ];
 
 // Inject keyframes once into <head>
@@ -50,11 +50,10 @@ function ensureStyles() {
       100% { transform: scale(1);    }
     }
     @keyframes pixelGradientStroke {
-      0%   { stroke: #f472b6; }
-      25%  { stroke: #a855f7; }
-      50%  { stroke: #60a5fa; }
-      75%  { stroke: #22d3ee; }
-      100% { stroke: #f472b6; }
+      0%   { stroke: #ff4d6d; }
+      33%  { stroke: #ff8fa3; }
+      66%  { stroke: #ffb3c1; }
+      100% { stroke: #ff4d6d; }
     }
     @keyframes pixelSparkleOut {
       0%   { opacity: 1; transform: scale(1.0) translate(0px,  0px); }
@@ -164,7 +163,7 @@ export function PixelHeartReaction({
             active
               ? {
                   animation: 'pixelGradientStroke 2s linear infinite',
-                  stroke: '#f472b6', // initial / fallback
+                  stroke: '#ff4d6d', // initial / fallback
                 }
               : {
                   stroke: 'currentColor',
