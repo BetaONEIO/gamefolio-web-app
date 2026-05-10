@@ -16,6 +16,7 @@ import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { Heart, Trash2 } from "lucide-react";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
+import { PartnerBadge } from "@/components/ui/partner-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
@@ -253,6 +254,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                       {comment.user.username}
                       <ModeratorBadge isModerator={((comment.user as any).role === "moderator" || (comment.user as any).role === "admin") && !(comment.user as any).selectedVerificationBadgeId} size="sm" />
                       <ProBadge selectedVerificationBadgeId={(comment.user as any).selectedVerificationBadgeId} size="sm" />
+                      <PartnerBadge isPartner={(comment.user as any).isPartner} size="sm" />
                     </span>
                   </Link>
                   <MentionText text={comment.content} className="inline text-sm break-words" onLinkClick={onUsernameClick} />

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ClipWithUser } from '@shared/schema';
 import { BadgeCheck, MoreHorizontal, Bookmark, MessageCircle, Share2, BarChart2, ChevronDown, Gamepad2, Play } from 'lucide-react';
+import { PartnerBadge } from '@/components/ui/partner-badge';
 import { useAuth } from '@/hooks/use-auth';
 import { useMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
@@ -183,6 +184,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
                 {isPro && (
                   <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#B7FF1A' }} />
                 )}
+                <PartnerBadge isPartner={(clip.user as any).isPartner} size="sm" />
               </div>
               <Link href={`/profile/${clip.user.username}`} className="no-underline">
                 <span className="text-[13px] block leading-tight mt-0.5" style={{ color: '#7E887A' }}>

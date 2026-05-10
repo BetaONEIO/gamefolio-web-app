@@ -2827,6 +2827,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   })();
 
+  // Run migration to ensure the is_partner column exists
+  (async () => {
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_partner BOOLEAN NOT NULL DEFAULT false`);
+    } catch (err) {
+      // Column already exists or other harmless error
+    }
+  })();
+
   app.get("/api/user/referral-stats", authMiddleware, async (req, res) => {
     try {
       const userId = (req.user as any).id;

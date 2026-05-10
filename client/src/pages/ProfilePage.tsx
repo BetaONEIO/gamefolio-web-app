@@ -74,6 +74,7 @@ import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { ModeratorIcon } from "@/components/ui/moderator-icon";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
+import { PartnerBadge } from "@/components/ui/partner-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { useProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
@@ -2819,6 +2820,7 @@ const ProfilePage = () => {
                 isModerator={(profile.role === "moderator" || profile.role === "admin") && !verificationBadgeData?.verificationBadge} 
                 size="lg" 
               />
+              <PartnerBadge isPartner={(profile as any).isPartner} size="lg" />
             </div>
             <span className="text-sm font-normal" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.6)' }}>@{profile.username}</span>
             {/* User type badges on their own line */}
@@ -3216,6 +3218,7 @@ const ProfilePage = () => {
                 isModerator={(profile.role === "moderator" || profile.role === "admin") && !verificationBadgeData?.verificationBadge} 
                 size="xl" 
               />
+              <PartnerBadge isPartner={(profile as any).isPartner} size="xl" />
               {profile.userType && profile.showUserType !== false && (() => {
                 const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
                 const displayTypes = userTypes.slice(0, 2);

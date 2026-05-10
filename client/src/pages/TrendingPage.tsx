@@ -4,6 +4,7 @@ import { useLikeScreenshot } from '@/hooks/use-clips';
 import { useToast } from '@/hooks/use-toast';
 import { ClipWithUser } from '@shared/schema';
 import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Share2, Heart, Play, MessageCircle, AlertTriangle, Film, Video, Camera, ChevronDown, Check, Search, ArrowLeft, MoreHorizontal, Bookmark, BarChart2, BadgeCheck, Repeat2 } from 'lucide-react';
+import { PartnerBadge } from '@/components/ui/partner-badge';
 import { formatDuration } from '@/lib/constants';
 import { formatDistance } from 'date-fns';
 import { useClipDialog } from '@/hooks/use-clip-dialog';
@@ -244,6 +245,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
               {isPro && (
                 <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#B7FF1A' }} />
               )}
+              <PartnerBadge isPartner={(clip.user as any).isPartner} size="sm" />
             </div>
             <Link href={`/profile/${clip.user.username}`} className="no-underline">
               <span className="text-[13px] block leading-tight mt-0.5" style={{ color: '#7E887A' }}>

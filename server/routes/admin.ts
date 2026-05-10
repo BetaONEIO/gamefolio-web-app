@@ -501,6 +501,42 @@ adminRouter.post("/users/:id/remove-admin", async (req: Request, res: Response) 
   }
 });
 
+// POST /api/admin/users/:id/make-partner - Grant partner status to user
+adminRouter.post("/users/:id/make-partner", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const user = await storage.getUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const updatedUser = await storage.updateUser(userId, { isPartner: true });
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("Error granting partner status:", err);
+    res.status(500).json({ message: "Error granting partner status" });
+  }
+});
+
+// POST /api/admin/users/:id/remove-partner - Remove partner status from user
+adminRouter.post("/users/:id/remove-partner", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const user = await storage.getUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const updatedUser = await storage.updateUser(userId, { isPartner: false });
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("Error removing partner status:", err);
+    res.status(500).json({ message: "Error removing partner status" });
+  }
+});
+
 // POST /api/admin/users/:id/reset-password - Reset user password
 adminRouter.post("/users/:id/reset-password", async (req: Request, res: Response) => {
   try {
