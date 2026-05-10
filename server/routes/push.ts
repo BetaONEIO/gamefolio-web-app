@@ -33,21 +33,28 @@ pushRouter.post("/register", async (req: Request, res: Response) => {
   // recognises cookie/session auth, but on native the request is JWT-only
   // (the global Bearer bridge populates req.user without flipping the
   // passport session flag).
+  const authHeader = req.headers.authorization ?? "(none)";
+  const authType = authHeader.startsWith("Bearer ") ? "JWT" : req.isAuthenticated() ? "session" : "none";
   if (!req.user) {
+    console.warn(`[push] /register called but not authenticated — authHeader=${authHeader.substring(0, 40)}`);
     return res.status(401).json({ message: "Unauthorized" });
   }
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
+    console.warn(`[push] /register bad payload from user=${(req.user as any).id}:`, parsed.error.flatten());
     return res.status(400).json({ message: "Invalid token payload", errors: parsed.error.flatten() });
   }
+  const userId = (req.user as any).id;
+  console.log(`[push] /register attempt — userId=${userId} platform=${parsed.data.platform} authType=${authType} appVersion=${parsed.data.appVersion ?? "?"}`);
   try {
     await storage.upsertPushToken({
-      userId: (req.user as any).id,
+      userId,
       token: parsed.data.token,
       platform: parsed.data.platform,
       deviceModel: parsed.data.deviceModel ?? null,
       appVersion: parsed.data.appVersion ?? null,
     });
+    console.log(`[push] token registered OK — userId=${userId} platform=${parsed.data.platform}`);
     return res.json({ ok: true, pushEnabled: isPushEnabled() });
   } catch (err) {
     console.error("[push] register failed:", err);
