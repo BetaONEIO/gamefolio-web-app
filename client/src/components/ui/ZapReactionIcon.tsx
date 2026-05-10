@@ -187,7 +187,7 @@ export function ZapIconSvg({ size, active = false, className = '', style }: ZapI
       width={w}
       height={size}
       className={className}
-      style={style}
+      style={{ overflow: 'visible', ...style }}
       shapeRendering="crispEdges"
       aria-hidden="true"
     >
