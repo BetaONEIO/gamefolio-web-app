@@ -81,12 +81,31 @@ pushRouter.post("/unregister", async (req: Request, res: Response) => {
   }
 });
 
+const ALLOWED_STAGES = new Set([
+  "permission-denied", "permission-granted", "getToken-empty",
+  "getToken-error", "getToken-all-failed", "register-failed", "init-failed",
+]);
+
+const diagnosticSchema = z.object({
+  stage: z.string().trim().max(40),
+  detail: z.string().trim().max(200).optional(),
+  platform: z.enum(["ios", "android", "web"]),
+});
+
 // Receives diagnostic reports from the native client about push init failures.
-// No auth required — the call may arrive before the session is fully established.
+// Requires authentication so the endpoint cannot be used as an anonymous log-spam surface.
 pushRouter.post("/diagnostic", async (req: Request, res: Response) => {
-  const { stage, detail, platform } = req.body ?? {};
-  const userId = (req.user as any)?.id ?? "unauthenticated";
-  console.warn(`[push-diagnostic] userId=${userId} platform=${platform ?? "?"} stage=${stage} detail=${detail}`);
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  const parsed = diagnosticSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ message: "Invalid diagnostic payload" });
+  }
+  const { stage, detail, platform } = parsed.data;
+  const safeStage = ALLOWED_STAGES.has(stage) ? stage : "unknown";
+  const userId = (req.user as any).id;
+  console.warn(`[push-diagnostic] userId=${userId} platform=${platform} stage=${safeStage} detail=${detail ?? ""}`);
   return res.json({ ok: true });
 });
 

@@ -22,11 +22,10 @@ declare global {
 
 async function reportDiagnostic(stage: string, detail: string): Promise<void> {
   try {
-    await fetch(resolveApiUrl('/api/push/diagnostic'), {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stage, detail, platform: isIOS ? 'ios' : isAndroid ? 'android' : 'web' }),
+    await apiRequest('POST', '/api/push/diagnostic', {
+      stage,
+      detail,
+      platform: isIOS ? 'ios' : isAndroid ? 'android' : 'web',
     });
   } catch {
     // best-effort only
