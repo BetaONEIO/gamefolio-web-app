@@ -171,16 +171,36 @@ router.post('/api/nft/server-sell', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/api/marketplace/listings', async (_req: Request, res: Response) => {
+router.get('/api/marketplace/listings', async (req: Request, res: Response) => {
   try {
-    const listings = await db.execute(
-      sql`SELECT un.token_id, un.listed_price, un.sold_at, un.user_id,
-                 u.username, u.display_name
-          FROM user_nfts un
-          JOIN users u ON u.id = un.user_id
-          WHERE un.sold = true AND un.listing_active = true
-          ORDER BY un.sold_at DESC`
-    );
+    const currentUserId: number | null = (req as any).user?.id ?? null;
+
+    // If the requesting user is authenticated, exclude token IDs they already
+    // own (i.e. have a row with sold = false) so owned NFTs don't appear in
+    // the store for them.
+    const listings = currentUserId
+      ? await db.execute(
+          sql`SELECT un.token_id, un.listed_price, un.sold_at, un.user_id,
+                     u.username, u.display_name
+              FROM user_nfts un
+              JOIN users u ON u.id = un.user_id
+              WHERE un.sold = true AND un.listing_active = true
+                AND NOT EXISTS (
+                  SELECT 1 FROM user_nfts owned
+                  WHERE owned.token_id = un.token_id
+                    AND owned.user_id = ${currentUserId}
+                    AND owned.sold = false
+                )
+              ORDER BY un.sold_at DESC`
+        )
+      : await db.execute(
+          sql`SELECT un.token_id, un.listed_price, un.sold_at, un.user_id,
+                     u.username, u.display_name
+              FROM user_nfts un
+              JOIN users u ON u.id = un.user_id
+              WHERE un.sold = true AND un.listing_active = true
+              ORDER BY un.sold_at DESC`
+        );
 
     const rows = (listings as any).rows || listings;
     return res.json({ listings: rows || [] });
