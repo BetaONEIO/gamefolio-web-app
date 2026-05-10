@@ -82,6 +82,13 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   // isNear: card is within ~1 screen of viewport — mount the VideoPlayer
   const [isNear, setIsNear] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const isMobile = useMobile();
+  const [sheetMounted, setSheetMounted] = useState(false);
+  useEffect(() => {
+    if (!commentsOpen || !isMobile) { setSheetMounted(false); return; }
+    const id = requestAnimationFrame(() => setSheetMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, [commentsOpen, isMobile]);
 
   useEffect(() => {
     const el = cardRef.current;
@@ -147,37 +154,53 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
 
   const canCollapse = caption.length > 120;
 
+  const commentsOverlay = commentsOpen && isMobile;
+
   return (
-    <div ref={cardRef} className="w-full" style={{ background: '#03080A' }}>
+    <div
+      ref={cardRef}
+      className={commentsOverlay ? "fixed inset-0 z-[75] flex flex-col overflow-hidden" : "w-full"}
+      style={{ background: commentsOverlay ? '#000' : '#03080A' }}
+    >
 
-      {/* ── Video (lazy-mounted: only creates the video element when within ~1
-           screen of the viewport; shows a static thumbnail until then) ── */}
-      {isNear ? (
-        <VideoPlayer
-          videoUrl={clip.videoUrl || ''}
-          thumbnailUrl={clip.thumbnailUrl || undefined}
-          autoPlay={isInView}
-          clipId={clip.id}
-          objectFit="contain"
-          autoHideControls
-          externalPaused={!isInView}
-          className="w-full"
-        />
-      ) : (
-        <div className="w-full aspect-video bg-black flex items-center justify-center relative overflow-hidden">
-          {clip.thumbnailUrl ? (
-            <img
-              src={clip.thumbnailUrl}
-              alt={clip.title}
-              className="w-full h-full object-contain"
-              loading="lazy"
-            />
-          ) : (
-            <Play className="h-10 w-10 text-white/30" />
-          )}
-        </div>
-      )}
+      {/* ── Video — shrinks to top 42% when mobile comments open ── */}
+      <div
+        className={commentsOverlay ? "flex-shrink-0 overflow-hidden" : ""}
+        style={commentsOverlay ? {
+          height: '42%',
+          transform: sheetMounted ? 'scale(0.97) translateY(-6px)' : 'scale(1) translateY(0)',
+          transition: 'transform 0.3s ease-out',
+        } : {}}
+      >
+        {isNear ? (
+          <VideoPlayer
+            videoUrl={clip.videoUrl || ''}
+            thumbnailUrl={clip.thumbnailUrl || undefined}
+            autoPlay={isInView}
+            clipId={clip.id}
+            objectFit="contain"
+            autoHideControls
+            externalPaused={!isInView}
+            className={commentsOverlay ? "w-full h-full" : "w-full"}
+          />
+        ) : (
+          <div className={commentsOverlay ? "w-full h-full bg-black flex items-center justify-center" : "w-full aspect-video bg-black flex items-center justify-center relative overflow-hidden"}>
+            {clip.thumbnailUrl ? (
+              <img
+                src={clip.thumbnailUrl}
+                alt={clip.title}
+                className="w-full h-full object-contain"
+                loading="lazy"
+              />
+            ) : (
+              <Play className="h-10 w-10 text-white/30" />
+            )}
+          </div>
+        )}
+      </div>
 
+      {/* ── Header, caption, social — hidden when mobile comments overlay is open ── */}
+      {!commentsOverlay && (<>
       {/* ── Header (creator info) — sits directly BELOW the video ── */}
       <div className="px-4 pt-3 pb-2">
         <div className="flex items-start gap-3">
@@ -335,30 +358,71 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
           </button>
         </div>
       </div>
+      </>)}
 
-      {/* Comments popup — opens in-place instead of navigating away */}
-      <Dialog open={commentsOpen} onOpenChange={setCommentsOpen}>
-        <DialogContent
-          className="p-0 max-w-lg w-[95vw] max-h-[85vh] flex flex-col gap-0 overflow-hidden border"
-          style={{ background: '#0B1218', borderColor: '#1B2A33' }}
+      {/* Mobile: comments bottom sheet — clip stays visible above */}
+      {commentsOverlay && (
+        <div
+          className="flex-1 flex flex-col overflow-hidden"
+          style={{
+            background: '#0F1923',
+            borderRadius: '20px 20px 0 0',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            transform: sheetMounted ? 'translateY(0)' : 'translateY(100%)',
+            transition: 'transform 0.3s ease-out',
+          }}
         >
-          <DialogHeader
-            className="px-4 py-3 flex-shrink-0"
-            style={{ borderBottom: '1px solid #1B2A33' }}
-          >
-            <DialogTitle className="text-base font-semibold text-left" style={{ color: '#F5F7F2' }}>
-              Comments
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-4 py-3">
+          <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+            <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
+          </div>
+          <div className="flex items-center justify-between px-4 py-3 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            <h3 className="text-white font-bold text-base">
+              Comments{' '}
+              <span className="text-white/45 font-normal text-sm">{comments}</span>
+            </h3>
+            <button
+              onClick={() => setCommentsOpen(false)}
+              className="w-8 h-8 flex items-center justify-center rounded-full"
+              style={{ background: 'rgba(255,255,255,0.08)' }}
+            >
+              <ChevronDown className="h-5 w-5 text-white/70" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
             <CommentSection
               clipId={clip.id}
               currentUserId={user?.id}
               onUsernameClick={() => setCommentsOpen(false)}
             />
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
+
+      {/* Desktop: modal dialog */}
+      {!isMobile && (
+        <Dialog open={commentsOpen} onOpenChange={setCommentsOpen}>
+          <DialogContent
+            className="p-0 max-w-lg w-[95vw] max-h-[85vh] flex flex-col gap-0 overflow-hidden border"
+            style={{ background: '#0B1218', borderColor: '#1B2A33' }}
+          >
+            <DialogHeader
+              className="px-4 py-3 flex-shrink-0"
+              style={{ borderBottom: '1px solid #1B2A33' }}
+            >
+              <DialogTitle className="text-base font-semibold text-left" style={{ color: '#F5F7F2' }}>
+                Comments
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto px-4 py-3">
+              <CommentSection
+                clipId={clip.id}
+                currentUserId={user?.id}
+                onUsernameClick={() => setCommentsOpen(false)}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Share dialog */}
       <ClipShareDialog
