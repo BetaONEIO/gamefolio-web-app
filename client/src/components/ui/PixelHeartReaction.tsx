@@ -117,7 +117,7 @@ export function PixelHeartReaction({
       aria-label={active ? 'Unlike' : 'Like'}
     >
       <svg
-        viewBox="-2 -2 16 13"
+        viewBox="-1 -1 14 11"
         width={w}
         height={h}
         shapeRendering="crispEdges"
@@ -157,7 +157,7 @@ export function PixelHeartReaction({
         <path
           d={HEART_PATH}
           fill="none"
-          strokeWidth={0.9}
+          strokeWidth={1.1}
           strokeLinejoin="miter"
           strokeLinecap="square"
           style={
