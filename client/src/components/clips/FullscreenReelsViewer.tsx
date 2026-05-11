@@ -5,6 +5,7 @@ import VideoPlayer from "@/components/shared/VideoPlayer";
 import { MessageCircle, Trash2, ChevronDown, ChevronLeft, BarChart2, Gamepad2, Music } from "lucide-react";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
+import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { Link } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
@@ -205,6 +206,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         ref={videoAreaRef}
         className="relative flex-shrink-0 overflow-hidden transition-[height] duration-300 ease-in-out"
         style={{ height: showComments ? '38%' : '100%', flex: showComments ? 'none' : '1' }}
+        onClick={() => { if (!showComments) setIsPaused(p => !p); }}
       >
         {/* Scrollable video stack */}
         <div
@@ -248,14 +250,6 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                 )}
               </div>
 
-              {/* Tap zone for play/pause — only for current reel */}
-              {index === currentIndex && (
-                <div
-                  className="absolute inset-0 z-[2]"
-                  style={{ pointerEvents: 'auto' }}
-                  onClick={() => setIsPaused(p => !p)}
-                />
-              )}
             </div>
           ))}
         </div>
@@ -360,16 +354,10 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                   <div className="flex items-center gap-2 mb-1.5">
                     <Link
                       href={`/profile/${currentReel.user.username}`}
-                      onClick={onClose}
+                      onClick={(e) => { e.stopPropagation(); onClose(); }}
                       className="flex items-center gap-1.5 no-underline flex-shrink-0 pointer-events-auto"
                     >
-                      <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '1.5px solid #fff' }}>
-                        <img
-                          src={currentReel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                          alt={currentReel.user.displayName || currentReel.user.username}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
+                      <CustomAvatar user={currentReel.user as any} size="sm" showBorder={true} />
                       <span className="text-white font-bold text-[13px] drop-shadow leading-tight">
                         @{currentReel.user.username}
                       </span>
