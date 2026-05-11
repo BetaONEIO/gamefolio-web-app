@@ -1,15 +1,15 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Loader2, Search, Upload, Plus } from "lucide-react";
-import TwitchGameSearch, { TwitchGame } from "@/components/games/TwitchGameSearch";
+import { Loader2, Search, Upload, Plus, Gamepad2 } from "lucide-react";
 import SearchResults from "@/components/explore/SearchResults";
+import { GamePickerSheet } from "@/components/clips/GamePickerSheet";
+import { Game } from "@shared/schema";
 
-interface Game {
+interface TwitchGame {
   id: string;
   name: string;
   box_art_url: string;
@@ -17,56 +17,42 @@ interface Game {
 
 export default function ExplorePage() {
   const [location, setLocation] = useLocation();
-  const [selectedGame, setSelectedGame] = useState<TwitchGame | null>(null);
-  const [showNoClipsMessage, setShowNoClipsMessage] = useState(false);
-  const [isCheckingClips, setIsCheckingClips] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [page, setPage] = useState(0);
   const [gamesPerPage] = useState(12);
-  const [allLoadedGames, setAllLoadedGames] = useState<Game[]>([]);
+  const [allLoadedGames, setAllLoadedGames] = useState<TwitchGame[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const loadingRef = useRef<HTMLDivElement>(null);
-  
+
   // Check for search query in URL
   const urlParams = new URLSearchParams(window.location.search);
   const searchQuery = urlParams.get('q');
-  
-  // If there's a search query, show search results instead of explore
+
   if (searchQuery) {
     return <SearchResults query={searchQuery} />;
   }
 
-
-
   // Fetch games with pagination
-  const { data: games, isLoading: isLoadingGames, error } = useQuery<Game[]>({
+  const { data: games, isLoading: isLoadingGames, error } = useQuery<TwitchGame[]>({
     queryKey: ["/api/twitch/games/top", page],
     queryFn: async () => {
       const offset = page * gamesPerPage;
       const response = await fetch(`/api/twitch/games/top?limit=${gamesPerPage}&offset=${offset}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch trending games");
-      }
+      if (!response.ok) throw new Error("Failed to fetch trending games");
       return response.json();
     },
     enabled: hasMore,
   });
 
-
-
-  // Update displayed games when new data arrives
   useEffect(() => {
     if (games && games.length > 0) {
       setAllLoadedGames(prev => {
-        // Avoid duplicates
         const existingIds = new Set(prev.map(g => g.id));
         const newGames = games.filter(g => !existingIds.has(g.id));
         return [...prev, ...newGames];
       });
-
-      // Check if we have more games to load
-      if (games.length < gamesPerPage) {
-        setHasMore(false);
-      }
+      if (games.length < gamesPerPage) setHasMore(false);
     } else if (games && games.length === 0 && page === 0) {
       setHasMore(false);
     }
@@ -76,7 +62,6 @@ export default function ExplorePage() {
   useEffect(() => {
     const currentLoadingRef = loadingRef.current;
     if (!currentLoadingRef || !hasMore || isLoadingGames) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !isLoadingGames) {
@@ -85,17 +70,11 @@ export default function ExplorePage() {
       },
       { threshold: 0.1 }
     );
-
     observer.observe(currentLoadingRef);
-
-    return () => {
-      if (currentLoadingRef) {
-        observer.unobserve(currentLoadingRef);
-      }
-    };
+    return () => { if (currentLoadingRef) observer.unobserve(currentLoadingRef); };
   }, [hasMore, isLoadingGames]);
 
-  const handleGameClick = (gameId: string, gameName: string) => {
+  const navigateToGame = (gameName: string) => {
     const gameSlug = gameName
       .toLowerCase()
       .replace(/[^a-z0-9\s]/g, '')
@@ -104,20 +83,11 @@ export default function ExplorePage() {
     setLocation(`/games/${gameSlug}`);
   };
 
-  const handleGameSelect = (game: TwitchGame) => {
-    setSelectedGame(game);
-    
-    // Navigate to the game page using slug format (same as clicking game cards)
-    const gameSlug = game.name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    setLocation(`/games/${gameSlug}`);
-  };
+  const handleGameClick = (gameName: string) => navigateToGame(gameName);
 
-  const handleUploadClick = () => {
-    setLocation("/upload");
+  const handleGameSelect = (game: Game | null) => {
+    setSelectedGame(game);
+    if (game) navigateToGame(game.name);
   };
 
   if (isLoadingGames && page === 0) {
@@ -154,47 +124,33 @@ export default function ExplorePage() {
             Browse trending games and discover amazing clips from the community
           </p>
 
-          {/* Game Search Dropdown */}
+          {/* Game Search — opens the full-screen GamePickerSheet */}
           <div className="max-w-md">
-            <TwitchGameSearch
-              onSelectGame={handleGameSelect}
-              selectedGame={selectedGame}
-              placeholder="Search for any game..."
-            />
-            {isCheckingClips && (
-              <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Checking for clips...</span>
-              </div>
-            )}
+            <button
+              onClick={() => setPickerOpen(true)}
+              className="w-full flex items-center gap-3 rounded-full px-4 py-3 text-left transition-colors"
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: selectedGame ? '1.5px solid #B7FF1A' : '1.5px solid rgba(255,255,255,0.15)',
+              }}
+            >
+              {selectedGame ? (
+                <>
+                  <Gamepad2 className="h-5 w-5 shrink-0" style={{ color: '#B7FF1A' }} />
+                  <span className="flex-1 truncate font-medium" style={{ color: '#B7FF1A' }}>
+                    {selectedGame.name}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Search className="h-5 w-5 shrink-0 text-muted-foreground" />
+                  <span className="flex-1 text-muted-foreground">Search for any game...</span>
+                </>
+              )}
+              <Search className="h-4 w-4 shrink-0 text-muted-foreground opacity-50" />
+            </button>
           </div>
         </div>
-
-        {/* No Clips Message */}
-        {showNoClipsMessage && selectedGame && (
-          <div className="mb-8 p-6 bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg text-center">
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                <Upload className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold mb-2">
-                  No clips found for "{selectedGame.name}"
-                </h3>
-                <p className="text-muted-foreground mb-4">
-                  Hey! There are currently no clips for this game, but why not add your own?
-                </p>
-                <Button 
-                  onClick={handleUploadClick}
-                  className="inline-flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Upload
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Games Grid */}
         <div>
@@ -203,10 +159,9 @@ export default function ExplorePage() {
               <Card
                 key={game.id}
                 className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30"
-                onClick={() => handleGameClick(game.id, game.name)}
+                onClick={() => handleGameClick(game.name)}
               >
                 <CardContent className="p-0">
-                  {/* Game Image */}
                   <div className="aspect-[3/4] relative overflow-hidden rounded-t-lg">
                     {game.box_art_url ? (
                       <img
@@ -220,21 +175,15 @@ export default function ExplorePage() {
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                        <span className="text-primary text-4xl font-bold">
-                          {game.name.charAt(0)}
-                        </span>
+                        <span className="text-primary text-4xl font-bold">{game.name.charAt(0)}</span>
                       </div>
                     )}
-
-                    {/* Hover Overlay */}
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                       <Badge className="bg-primary text-primary-foreground font-semibold px-4 py-2">
                         View Content
                       </Badge>
                     </div>
                   </div>
-
-                  {/* Game Info */}
                   <div className="p-4">
                     <h3 className="font-semibold text-sm line-clamp-2 min-h-[2.5rem] text-foreground group-hover:text-primary transition-colors">
                       {game.name}
@@ -244,7 +193,6 @@ export default function ExplorePage() {
               </Card>
             ))}
 
-            {/* Empty State */}
             {allLoadedGames.length === 0 && !isLoadingGames && (
               <div className="col-span-full text-center py-16">
                 <p className="text-muted-foreground text-lg">No games found</p>
@@ -253,7 +201,6 @@ export default function ExplorePage() {
             )}
           </div>
 
-          {/* Loading trigger for infinite scroll */}
           {hasMore && (
             <div ref={loadingRef} className="flex justify-center py-8">
               <div className="flex items-center gap-2 text-muted-foreground">
@@ -263,7 +210,6 @@ export default function ExplorePage() {
             </div>
           )}
 
-          {/* End of Results */}
           {!hasMore && allLoadedGames.length > 0 && (
             <div className="flex justify-center py-8">
               <div className="text-center">
@@ -274,6 +220,15 @@ export default function ExplorePage() {
           )}
         </div>
       </div>
+
+      {/* Game Picker Sheet */}
+      <GamePickerSheet
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        selectedGame={selectedGame}
+        onSelect={handleGameSelect}
+        title="Find a Game"
+      />
     </div>
   );
 }

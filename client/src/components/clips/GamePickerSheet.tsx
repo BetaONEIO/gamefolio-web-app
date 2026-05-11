@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Check, Gamepad2, Loader2, Plus, Search, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Game } from "@shared/schema";
@@ -23,6 +23,8 @@ export function GamePickerSheet({
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isCreatingCustom, setIsCreatingCustom] = useState(false);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -30,9 +32,31 @@ export function GamePickerSheet({
     return () => clearTimeout(t);
   }, [searchQuery]);
 
-  // Reset search when sheet opens
   useEffect(() => {
     if (open) setSearchQuery("");
+  }, [open]);
+
+  // Keyboard-aware: shift sheet up when virtual keyboard appears
+  useEffect(() => {
+    if (!open) {
+      setKeyboardOffset(0);
+      return;
+    }
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const handleResize = () => {
+      const offset = window.innerHeight - vv.height - vv.offsetTop;
+      setKeyboardOffset(offset > 0 ? offset : 0);
+    };
+
+    vv.addEventListener("resize", handleResize);
+    vv.addEventListener("scroll", handleResize);
+    handleResize();
+    return () => {
+      vv.removeEventListener("resize", handleResize);
+      vv.removeEventListener("scroll", handleResize);
+    };
   }, [open]);
 
   const isSearching = debouncedQuery.length >= 2;
@@ -57,7 +81,6 @@ export function GamePickerSheet({
   });
 
   const { data: trendingGames, isLoading: isTrendingLoading } = useQuery<Game[]>({
-    // Use a unique cache key so we don't read raw Twitch objects cached by Sidebar/HomeSection
     queryKey: ["/api/twitch/games/top", "game-picker"],
     queryFn: async () => {
       const res = await fetch("/api/twitch/games/top?limit=30");
@@ -66,7 +89,6 @@ export function GamePickerSheet({
       return data.map((g: any) => ({
         id: parseInt(g.id),
         name: g.name,
-        // box_art_url is already resolved (600x800) by the server — use directly
         imageUrl: g.box_art_url || g.imageUrl || null,
         isUserAdded: false,
         createdAt: new Date(),
@@ -125,7 +147,12 @@ export function GamePickerSheet({
     >
       <div
         className="w-full rounded-t-3xl flex flex-col"
-        style={{ background: "#0F1923", maxHeight: "82vh" }}
+        style={{
+          background: "#0F1923",
+          maxHeight: "82vh",
+          marginBottom: keyboardOffset,
+          transition: "margin-bottom 0.2s ease",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -153,11 +180,16 @@ export function GamePickerSheet({
           >
             <Search className="h-4 w-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.4)" }} />
             <input
-              autoFocus
+              ref={searchInputRef}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => {
+                setTimeout(() => {
+                  searchInputRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                }, 100);
+              }}
               placeholder="Search for games..."
-              className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/40"
+              style={{ fontSize: "16px", color: "#fff", background: "transparent", outline: "none", border: "none", width: "100%" }}
             />
             {searchQuery.length > 0 && (
               <button onClick={() => setSearchQuery("")} className="text-white/40 hover:text-white/70">

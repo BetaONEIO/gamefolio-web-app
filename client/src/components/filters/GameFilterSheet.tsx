@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Gamepad2, X, Search, Check } from "lucide-react";
 import { ClipWithUser } from "@shared/schema";
 
@@ -19,6 +19,8 @@ export function GameFilterSheet({
 }: GameFilterSheetProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const availableGames = useMemo(() => {
     const seen = new Map<number, { id: number; name: string; imageUrl?: string }>();
@@ -39,6 +41,29 @@ export function GameFilterSheet({
     const q = searchQuery.toLowerCase();
     return availableGames.filter((g) => g.name.toLowerCase().includes(q));
   }, [availableGames, searchQuery]);
+
+  // Keyboard-aware: shift sheet up when virtual keyboard appears
+  useEffect(() => {
+    if (!open) {
+      setKeyboardOffset(0);
+      return;
+    }
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const handleResize = () => {
+      const offset = window.innerHeight - vv.height - vv.offsetTop;
+      setKeyboardOffset(offset > 0 ? offset : 0);
+    };
+
+    vv.addEventListener("resize", handleResize);
+    vv.addEventListener("scroll", handleResize);
+    handleResize();
+    return () => {
+      vv.removeEventListener("resize", handleResize);
+      vv.removeEventListener("scroll", handleResize);
+    };
+  }, [open]);
 
   const close = () => {
     setOpen(false);
@@ -65,17 +90,21 @@ export function GameFilterSheet({
         </span>
       </button>
 
-      {/* Full-screen overlay — z-[9999] ensures it covers every fixed element including the navbar */}
+      {/* Full-screen overlay — z-[99999] ensures it covers every fixed element including the navbar */}
       {open && (
         <div
           className="fixed inset-0 flex flex-col"
-          style={{ zIndex: 9999, background: 'rgba(0,0,0,0.92)' }}
+          style={{ zIndex: 99999, background: 'rgba(0,0,0,0.92)' }}
           onClick={close}
         >
-          {/* Sheet panel — takes full height, clicks inside don't close */}
+          {/* Sheet panel — shrinks above keyboard, clicks inside don't close */}
           <div
             className="w-full flex flex-col"
-            style={{ background: '#0F1923', height: '100%' }}
+            style={{
+              background: '#0F1923',
+              height: `calc(100% - ${keyboardOffset}px)`,
+              transition: 'height 0.2s ease',
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -100,8 +129,14 @@ export function GameFilterSheet({
               >
                 <Search className="h-4 w-4 shrink-0" style={{ color: 'rgba(255,255,255,0.4)' }} />
                 <input
+                  ref={searchInputRef}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => {
+                    setTimeout(() => {
+                      searchInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }, 100);
+                  }}
                   placeholder="Search games..."
                   style={{ fontSize: '16px', color: '#fff', background: 'transparent', outline: 'none', border: 'none', width: '100%' }}
                 />
