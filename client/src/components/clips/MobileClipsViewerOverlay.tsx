@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { ClipWithUser } from "@shared/schema";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
@@ -30,10 +31,10 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
     }
   }, [startClipId, clips]);
 
-  return (
+  const content = (
     <div
-      className="fixed inset-0 z-[9999] flex flex-col"
-      style={{ background: '#03080A' }}
+      className="fixed inset-0 flex flex-col"
+      style={{ background: '#03080A', zIndex: 99999 }}
     >
       {/* Top bar */}
       <div
@@ -91,6 +92,8 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
       </div>
     </div>
   );
+
+  return createPortal(content, document.body);
 };
 
 export default MobileClipsViewerOverlay;
