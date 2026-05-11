@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
 import { ArrowLeft, Video } from "lucide-react";
@@ -10,14 +9,15 @@ import { ClipWithUser } from "@shared/schema";
 import { useEffect, useState } from "react";
 import { GameFilter } from "@/components/filters/GameFilter";
 import { useMobile } from "@/hooks/use-mobile";
+import { useClipDialog } from "@/hooks/use-clip-dialog";
 
 const LatestClipsPage = () => {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
   const [timePeriod, setTimePeriod] = useState<string>("recent");
-  const [mobileViewer, setMobileViewer] = useState<{ clips: ClipWithUser[]; startId: number } | null>(null);
   const isMobile = useMobile();
+  const { openClipDialog } = useClipDialog();
 
   useEffect(() => {
     sessionStorage.setItem('clipNavContext', 'latest');
@@ -40,118 +40,146 @@ const LatestClipsPage = () => {
       : clipsData
     : [];
 
+  // ── Mobile: loading skeleton ─────────────────────────────────────────────
+  if (isMobile && isLoadingClips) {
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ background: '#03080A' }}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-[#B7FF1A] border-t-transparent rounded-full animate-spin" />
+          <p className="text-white/60 text-sm">Loading clips…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Mobile: empty state ──────────────────────────────────────────────────
+  if (isMobile && !isLoadingClips && filteredClips.length === 0) {
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ background: '#03080A' }}>
+        <div className="text-center px-8">
+          <Video className="h-14 w-14 mx-auto mb-4" style={{ color: '#B7FF1A' }} />
+          <p className="text-white font-semibold mb-1">No clips yet</p>
+          <p className="text-white/50 text-sm">Be the first to upload a gaming clip!</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Mobile: full-screen clip feed — exactly like Trending ───────────────
+  if (isMobile && filteredClips.length > 0) {
+    return (
+      <MobileClipsViewerOverlay
+        clips={filteredClips}
+        startClipId={filteredClips[0].id}
+        onBack={() => {
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            setLocation('/');
+          }
+        }}
+      />
+    );
+  }
+
+  // ── Desktop: grid layout ─────────────────────────────────────────────────
   return (
-    <>
-      {mobileViewer && (
-        <MobileClipsViewerOverlay
-          clips={mobileViewer.clips}
-          startClipId={mobileViewer.startId}
-          onBack={() => setMobileViewer(null)}
-        />
-      )}
-      <div className={`container mx-auto px-4 py-6 space-y-6 ${isMobile ? 'pb-24' : ''}`}>
-        <div className="space-y-4 mb-8">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setLocation('/')}
-              className="flex items-center gap-2"
-              data-testid="button-back"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold" data-testid="text-page-title">Latest Clips</h1>
-              <p className="text-muted-foreground">
-                Discover the newest gaming clips from the community
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
-              {[
-                { value: 'recent', label: 'Most Recent' },
-                { value: '1d', label: '1D' },
-                { value: '1w', label: '1W' },
-                { value: 'ever', label: 'Ever' },
-              ].map((period) => (
-                <button
-                  key={period.value}
-                  onClick={() => setTimePeriod(period.value)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    timePeriod === period.value
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}
-                >
-                  {period.label}
-                </button>
-              ))}
-            </div>
-
-            {clipsData && clipsData.length > 0 && (
-              <GameFilter
-                clips={clipsData}
-                selectedGameId={selectedGameId}
-                onGameSelect={setSelectedGameId}
-              />
-            )}
+    <div className="container mx-auto px-4 py-6 space-y-6">
+      <div className="space-y-4 mb-8">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocation('/')}
+            className="flex items-center gap-2"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold" data-testid="text-page-title">Latest Clips</h1>
+            <p className="text-muted-foreground">
+              Discover the newest gaming clips from the community
+            </p>
           </div>
         </div>
 
-        {filteredClips.length > 0 ? (
-          <div className={isMobile ? "grid grid-cols-2 gap-1" : "grid grid-cols-4 gap-4 w-full"}>
-            {filteredClips.map((clip) => (
-              <div
-                key={clip.id}
-                onClick={() => setMobileViewer(isMobile ? { clips: filteredClips, startId: clip.id } : null)}
-                className={isMobile ? "w-full" : "group relative bg-black rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+            {[
+              { value: 'recent', label: 'Most Recent' },
+              { value: '1d', label: '1D' },
+              { value: '1w', label: '1W' },
+              { value: 'ever', label: 'Ever' },
+            ].map((period) => (
+              <button
+                key={period.value}
+                onClick={() => setTimePeriod(period.value)}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  timePeriod === period.value
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
               >
-                <VideoClipGridItem
-                  clip={clip}
-                  userId={user?.id}
-                  compact={false}
-                  clipsList={filteredClips}
-                />
-              </div>
+                {period.label}
+              </button>
             ))}
           </div>
-        ) : clipsData && clipsData.length > 0 ? (
-          <div className="col-span-full text-center py-12">
-            <Video className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2" data-testid="text-no-clips-filtered">No clips found for this game</h3>
-            <p className="text-muted-foreground mb-4">
-              Try selecting a different game or view all clips
-            </p>
-            <Button onClick={() => setSelectedGameId(null)} data-testid="button-clear-filter">
-              Clear Filter
-            </Button>
-          </div>
-        ) : (
-          <div className="col-span-full text-center py-12">
-            <Video className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">
-              {timePeriod === '1d' ? 'No clips from today' : timePeriod === '1w' ? 'No clips from this week' : timePeriod === 'ever' ? 'No clips yet' : 'No clips yet'}
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              {timePeriod !== 'recent' ? 'Try selecting a different time period' : 'Be the first to upload a gaming clip!'}
-            </p>
-            {timePeriod !== 'recent' ? (
-              <Button onClick={() => setTimePeriod('recent')} data-testid="button-show-all">
-                Show All Clips
-              </Button>
-            ) : (
-              <Button onClick={() => setLocation('/upload')} data-testid="button-upload-first-clip">
-                Upload Your First Clip
-              </Button>
-            )}
-          </div>
-        )}
+
+          {clipsData && clipsData.length > 0 && (
+            <GameFilter
+              clips={clipsData}
+              selectedGameId={selectedGameId}
+              onGameSelect={setSelectedGameId}
+            />
+          )}
+        </div>
       </div>
-    </>
+
+      {filteredClips.length > 0 ? (
+        <div className="grid grid-cols-4 gap-4 w-full">
+          {filteredClips.map((clip) => (
+            <div
+              key={clip.id}
+              onClick={() => openClipDialog(clip.id, filteredClips)}
+              className="cursor-pointer"
+            >
+              <VideoClipGridItem
+                clip={clip}
+                userId={user?.id}
+                compact={false}
+                clipsList={filteredClips}
+              />
+            </div>
+          ))}
+        </div>
+      ) : clipsData && clipsData.length > 0 ? (
+        <div className="col-span-full text-center py-12">
+          <Video className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-2" data-testid="text-no-clips-filtered">No clips found for this game</h3>
+          <p className="text-muted-foreground mb-4">Try selecting a different game or view all clips</p>
+          <Button onClick={() => setSelectedGameId(null)} data-testid="button-clear-filter">Clear Filter</Button>
+        </div>
+      ) : (
+        <div className="col-span-full text-center py-12">
+          <Video className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-2">
+            {timePeriod === '1d' ? 'No clips from today' : timePeriod === '1w' ? 'No clips from this week' : timePeriod === 'ever' ? 'No clips yet' : 'No clips yet'}
+          </h3>
+          <p className="text-muted-foreground mb-4">
+            {timePeriod !== 'recent' ? 'Try selecting a different time period' : 'Be the first to upload a gaming clip!'}
+          </p>
+          {timePeriod !== 'recent' ? (
+            <Button onClick={() => setTimePeriod('recent')} data-testid="button-show-all">Show All Clips</Button>
+          ) : (
+            <Button onClick={() => setLocation('/upload')} data-testid="button-upload-first-clip">
+              Upload Your First Clip
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 

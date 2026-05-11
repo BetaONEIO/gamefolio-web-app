@@ -3,14 +3,13 @@ import { ClipWithUser } from "@shared/schema";
 import { BarChart2, ChevronLeft, Play } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
+import { formatDuration } from "@/lib/constants";
 import { useState } from "react";
 import { GameFilter } from "@/components/filters/GameFilter";
-import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
-import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
-import { useClipDialog } from "@/hooks/use-clip-dialog";
-import { formatDuration } from "@/lib/constants";
 import { LazyImage } from "@/components/ui/lazy-image";
+import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 
 export default function LatestReelsPage() {
   const [timePeriod, setTimePeriod] = useState<string>("recent");
@@ -22,10 +21,9 @@ export default function LatestReelsPage() {
       return response.json();
     },
   });
-  const isMobile = useMobile();
   const { openClipDialog } = useClipDialog();
+  const isMobile = useMobile();
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
-  const [mobileViewer, setMobileViewer] = useState<{ clips: ClipWithUser[]; startId: number } | null>(null);
 
   const filteredReels = latestReels
     ? selectedGameId
@@ -39,9 +37,53 @@ export default function LatestReelsPage() {
     return num.toString();
   };
 
+  // ── Mobile: loading skeleton ─────────────────────────────────────────────
+  if (isMobile && isLoading) {
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ background: '#131F2A' }}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-[#B7FF1A] border-t-transparent rounded-full animate-spin" />
+          <p className="text-white/60 text-sm">Loading reels…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Mobile: empty state ──────────────────────────────────────────────────
+  if (isMobile && !isLoading && filteredReels.length === 0) {
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ background: '#131F2A' }}>
+        <div className="text-center px-8">
+          <div className="text-6xl mb-4">📱</div>
+          <p className="text-white font-semibold mb-1">No reels yet</p>
+          <p className="text-white/50 text-sm">Be the first to share a reel on Gamefolio!</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Mobile: full-screen viewer — exactly like Trending ──────────────────
+  if (isMobile && filteredReels.length > 0) {
+    return (
+      <MobileTrendingViewer
+        content={filteredReels}
+        initialIndex={0}
+        onClose={() => {
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            window.location.href = '/';
+          }
+        }}
+        hideCloseButton={false}
+      />
+    );
+  }
+
+  // ── Desktop loading skeleton ─────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className={`min-h-screen bg-background p-4 md:p-6 ${isMobile ? 'pb-24' : ''}`}>
+      <div className="min-h-screen bg-background p-4 md:p-6">
         <div className="w-full">
           <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:gap-4 md:mb-8">
             <Link href="/">
@@ -52,10 +94,9 @@ export default function LatestReelsPage() {
             </Link>
             <h1 className="text-2xl md:text-3xl font-bold text-white" data-testid="text-page-title">Latest Reels</h1>
           </div>
-          
-          <div className={isMobile ? "columns-2 gap-1" : "grid grid-cols-4 gap-4"}>
+          <div className="grid grid-cols-4 gap-4">
             {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className={isMobile ? "break-inside-avoid mb-1 aspect-[9/16]" : "aspect-[9/16]"}>
+              <div key={i} className="aspect-[9/16]">
                 <div className="w-full h-full bg-muted rounded-xl animate-pulse" />
               </div>
             ))}
@@ -65,15 +106,9 @@ export default function LatestReelsPage() {
     );
   }
 
+  // ── Desktop: grid layout ─────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen bg-background p-4 md:p-6 ${isMobile ? 'pb-24' : ''}`}>
-      {mobileViewer && (
-        <MobileTrendingViewer
-          content={mobileViewer.clips}
-          initialIndex={Math.max(0, mobileViewer.clips.findIndex((clip) => clip.id === mobileViewer.startId))}
-          onClose={() => setMobileViewer(null)}
-        />
-      )}
+    <div className="min-h-screen bg-background p-4 md:p-6">
       <div className="w-full">
         <div className="space-y-4 mb-6 md:mb-8">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
@@ -124,105 +159,81 @@ export default function LatestReelsPage() {
         </div>
 
         {filteredReels.length > 0 ? (
-          isMobile ? (
-            <div className="grid grid-cols-2 gap-1">
-              {filteredReels.map((reel) => (
-                <div
-                  key={reel.id}
-                  onClick={() => setMobileViewer({ clips: filteredReels, startId: reel.id })}
-                  className="w-full"
-                >
-                  <VideoClipGridItem
-                    clip={reel}
-                    compact={true}
-                    reelsList={filteredReels}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-4 gap-4 w-full">
-              {filteredReels.map((reel) => (
-                <div
-                  key={reel.id}
-                  onClick={() => openClipDialog(reel.id, filteredReels)}
-                  className="group relative bg-black rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
-                >
-                  <div className="absolute inset-0">
-                    <div className="absolute inset-0 bg-gray-800" />
-                    <LazyImage
-                      src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
-                      alt={reel.title}
-                      className="w-full h-full object-cover"
-                      placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
-                      showLoadingSpinner={true}
-                      rootMargin="50px"
-                      containerClassName="absolute inset-0"
-                      fallback={
-                        <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                          <Play className="h-12 w-12 text-gray-500" />
-                        </div>
-                      }
-                    />
-
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
-
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="bg-primary backdrop-blur-sm rounded-full p-3">
-                        <svg className="w-6 h-6 text-white fill-white" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z"/>
-                        </svg>
+          <div className="grid grid-cols-4 gap-4 w-full">
+            {filteredReels.map((reel) => (
+              <div
+                key={reel.id}
+                onClick={() => openClipDialog(reel.id, filteredReels)}
+                className="group relative bg-black rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
+              >
+                <div className="absolute inset-0">
+                  <div className="absolute inset-0 bg-gray-800" />
+                  <LazyImage
+                    src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
+                    alt={reel.title}
+                    className="w-full h-full object-cover"
+                    placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
+                    showLoadingSpinner={true}
+                    rootMargin="50px"
+                    containerClassName="absolute inset-0"
+                    fallback={
+                      <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                        <Play className="h-12 w-12 text-gray-500" />
                       </div>
-                    </div>
+                    }
+                  />
 
-                    <div className="absolute top-3 left-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-semibold">
-                      {(() => {
-                        const actualDuration = reel.trimEnd && reel.trimEnd > 0
-                          ? reel.trimEnd - (reel.trimStart || 0)
-                          : reel.duration || 0;
-                        return formatDuration(actualDuration);
-                      })()}
-                    </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
 
-                    <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-semibold flex items-center gap-1">
-                      <BarChart2 className="h-3 w-3" />
-                      {formatNumber(reel.views || 0)}
-                    </div>
-
-                    <div className="absolute bottom-0 left-0 right-0 p-3" onClick={(e) => e.stopPropagation()}>
-                      <h3 className="text-white font-bold text-sm mb-0.5 drop-shadow-lg line-clamp-2" onClick={() => openClipDialog(reel.id, filteredReels)}>
-                        {reel.title}
-                      </h3>
-
-                      <p className="text-white text-xs mb-1.5 drop-shadow-lg">
-                        @{reel.user.username}
-                      </p>
-
-                      {reel.game && (
-                        <Link
-                          href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-block bg-primary text-[#071013] text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
-                        >
-                          {reel.game.name}
-                        </Link>
-                      )}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="bg-primary backdrop-blur-sm rounded-full p-3">
+                      <svg className="w-6 h-6 text-white fill-white" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                      </svg>
                     </div>
                   </div>
+
+                  <div className="absolute top-3 left-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-semibold">
+                    {(() => {
+                      const actualDuration = reel.trimEnd && reel.trimEnd > 0
+                        ? reel.trimEnd - (reel.trimStart || 0)
+                        : reel.duration || 0;
+                      return formatDuration(actualDuration);
+                    })()}
+                  </div>
+
+                  <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-semibold flex items-center gap-1">
+                    <BarChart2 className="h-3 w-3" />
+                    {formatNumber(reel.views || 0)}
+                  </div>
+
+                  <div className="absolute bottom-0 left-0 right-0 p-3" onClick={(e) => e.stopPropagation()}>
+                    <h3 className="text-white font-bold text-sm mb-0.5 drop-shadow-lg line-clamp-2" onClick={() => openClipDialog(reel.id, filteredReels)}>
+                      {reel.title}
+                    </h3>
+                    <p className="text-white text-xs mb-1.5 drop-shadow-lg">
+                      @{reel.user.username}
+                    </p>
+                    {reel.game && (
+                      <Link
+                        href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-block bg-primary text-[#071013] text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
+                      >
+                        {reel.game.name}
+                      </Link>
+                    )}
+                  </div>
                 </div>
-              ))}
-            </div>
-          )
+              </div>
+            ))}
+          </div>
         ) : latestReels && latestReels.length > 0 ? (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🎮</div>
             <h2 className="text-2xl font-semibold text-white mb-2" data-testid="text-no-reels-filtered">No reels found for this game</h2>
-            <p className="text-muted-foreground mb-6">
-              Try selecting a different game or view all reels
-            </p>
-            <Button onClick={() => setSelectedGameId(null)} data-testid="button-clear-filter">
-              Clear Filter
-            </Button>
+            <p className="text-muted-foreground mb-6">Try selecting a different game or view all reels</p>
+            <Button onClick={() => setSelectedGameId(null)} data-testid="button-clear-filter">Clear Filter</Button>
           </div>
         ) : (
           <div className="text-center py-12">
@@ -234,9 +245,7 @@ export default function LatestReelsPage() {
               {timePeriod !== 'recent' ? 'Try selecting a different time period' : 'Be the first to share a reel on Gamefolio!'}
             </p>
             {timePeriod !== 'recent' ? (
-              <Button onClick={() => setTimePeriod('recent')} data-testid="button-show-all">
-                Show All Reels
-              </Button>
+              <Button onClick={() => setTimePeriod('recent')} data-testid="button-show-all">Show All Reels</Button>
             ) : (
               <Link href="/upload">
                 <Button data-testid="button-upload-first-reel">Upload Your First Reel</Button>
