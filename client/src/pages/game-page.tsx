@@ -392,6 +392,7 @@ const GamePage = () => {
                   userId={user?.id}
                   compact={false}
                   reelsList={displayData}
+                  bottomPadding={true}
                 />
               ))
             ) : (
@@ -402,6 +403,7 @@ const GamePage = () => {
                   userId={user?.id}
                   compact={false}
                   clipsList={displayData}
+                  bottomPadding={true}
                 />
               ))
             )}

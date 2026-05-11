@@ -122,6 +122,7 @@ const LatestClipsPage = () => {
               compact={false}
               clipsList={filteredClips}
               onCardClick={isMobile ? (clipId, clips) => setMobileViewer({ clips, startId: clipId }) : undefined}
+              bottomPadding={true}
             />
           ))
         ) : clipsData && clipsData.length > 0 ? (

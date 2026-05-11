@@ -137,6 +137,7 @@ const HashtagPage = () => {
               <VideoClipGridItem 
                 key={clip.id} 
                 clip={clip}
+                bottomPadding={true}
               />
             ))}
           </div>

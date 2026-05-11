@@ -1072,6 +1072,7 @@ const TrendingPage: React.FC = () => {
             clip={clip}
             userId={user?.id}
             clipsList={trendingClips}
+            bottomPadding={true}
           />
         ))}
       </div>

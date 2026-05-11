@@ -17,6 +17,7 @@ interface VideoClipGridItemProps {
   reelsList?: ClipWithUser[];
   clipsList?: ClipWithUser[];
   onCardClick?: (clipId: number, clips: ClipWithUser[]) => void;
+  bottomPadding?: boolean;
 }
 
 const VideoClipGridItem = ({
@@ -28,6 +29,7 @@ const VideoClipGridItem = ({
   reelsList,
   clipsList,
   onCardClick,
+  bottomPadding = false,
 }: VideoClipGridItemProps) => {
   const { openClipDialog } = useClipDialog();
   const lazyVideo = useLazyVideo({ autoPlay: false });
@@ -157,7 +159,7 @@ const VideoClipGridItem = ({
         </div>
       </div>
 
-      <div className="pt-1.5 px-0.5 pb-10">
+      <div className={`pt-1.5 px-0.5 ${bottomPadding ? 'pb-10' : 'pb-2'}`}>
         <h3
           className={`text-[#F5F7F2] font-bold line-clamp-1 leading-tight ${
             compact ? "text-xs" : "text-sm"
