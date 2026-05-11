@@ -161,6 +161,24 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   // Android hardware back button → go back in history, or exit at root
   useAndroidBackButton();
 
+  // Radix Dropdown/Dialog race condition (iOS WKWebView especially): opening
+  // a Dialog from inside a DropdownMenu item can leave `body { pointer-events:
+  // none }` stuck after the dropdown unmounts, locking out every tap until
+  // app restart. Clear it whenever no Radix-managed overlay is actually open.
+  React.useEffect(() => {
+    const id = window.setInterval(() => {
+      if (document.body.style.pointerEvents !== 'none') return;
+      const openOverlay = document.querySelector(
+        '[data-state="open"][role="dialog"],' +
+        '[data-state="open"][role="alertdialog"],' +
+        '[data-state="open"][role="menu"],' +
+        '[data-state="open"][role="listbox"]'
+      );
+      if (!openOverlay) document.body.style.pointerEvents = '';
+    }, 500);
+    return () => window.clearInterval(id);
+  }, []);
+
   // Tapping a system push surfaces the actionUrl through this custom event.
   // Route into the SPA when the user opens a push that targets a specific
   // page (clip, profile, follow request, etc.).
