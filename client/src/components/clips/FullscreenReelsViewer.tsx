@@ -308,7 +308,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
 
             {/* Right side engagement buttons */}
             <div
-              className="absolute right-3 md:right-4 flex flex-col items-center gap-5 pointer-events-auto"
+              className="absolute right-3 md:right-4 flex flex-col items-center gap-3 pointer-events-auto"
               style={{ bottom: showComments ? '0.75rem' : 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
             >
               <FireButton
@@ -316,7 +316,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                 contentType="clip"
                 contentOwnerId={currentReel.userId}
                 initialCount={parseInt(currentReel._count?.reactions?.toString() || '0')}
-                size="lg"
+                size="sm"
                 showCount={true}
                 variant="vertical"
                 clipRef={videoAreaRef}
@@ -327,36 +327,32 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                 contentOwnerId={currentReel.userId}
                 initialLiked={false}
                 initialCount={parseInt(currentReel._count?.likes?.toString() || '0')}
-                size="lg"
+                size="sm"
                 showCount={true}
                 variant="vertical"
               />
-              <div className="flex flex-col items-center">
-                <button
-                  className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center transition-colors active:bg-black/70"
-                  style={{ color: showComments ? '#B7FF1A' : 'white' }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!user) { openDialog('comment'); }
-                    else { setShowComments(true); setIsPaused(true); }
-                  }}
-                  onPointerDown={(e) => e.stopPropagation()}
-                >
-                  <MessageCircle className="h-7 w-7" />
-                </button>
-                <span className="text-white text-xs mt-1 font-medium drop-shadow-lg">
+              <button
+                className="flex flex-col items-center gap-0.5"
+                style={{ color: showComments ? '#B7FF1A' : 'white' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!user) { openDialog('comment'); }
+                  else { setShowComments(true); setIsPaused(true); }
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <MessageCircle className="h-6 w-6 drop-shadow" />
+                <span className="text-white text-[10px] font-semibold drop-shadow">
                   {currentReel._count?.comments || 0}
                 </span>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white active:bg-black/70 transition-colors">
-                  <ShareLaunchIcon
-                    size={24}
-                    className="text-white"
-                    onClick={(e) => { e.stopPropagation(); setShowShare(true); }}
-                  />
-                </div>
-                <span className="text-white text-xs mt-1 font-medium drop-shadow-lg">Share</span>
+              </button>
+              <div className="flex flex-col items-center gap-0.5">
+                <ShareLaunchIcon
+                  size={24}
+                  className="text-white drop-shadow"
+                  onClick={(e) => { e.stopPropagation(); setShowShare(true); }}
+                />
+                <span className="text-white text-[10px] font-semibold drop-shadow">Share</span>
               </div>
             </div>
 
