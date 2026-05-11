@@ -216,7 +216,7 @@ const Header = () => {
             <Input
               type="text"
               placeholder="Search #hashtags, users, games..."
-              className="w-full py-6 px-10 pr-20 rounded-full bg-secondary text-foreground text-3xl"
+              className="w-full py-2 pl-10 pr-12 rounded-full bg-secondary text-foreground text-sm"
               value={searchQuery}
               onChange={handleSearchChange}
               onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
@@ -225,9 +225,9 @@ const Header = () => {
               type="submit"
               variant="ghost"
               size="icon"
-              className="absolute right-6 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
             >
-              <Search className="h-8 w-8" />
+              <Search className="h-4 w-4" />
             </Button>
           </form>
 
@@ -545,7 +545,7 @@ const Header = () => {
       {/* Mobile Search Overlay */}
       {showMobileSearch && (
         <div
-          className="fixed inset-0 z-[60] md:hidden flex flex-col"
+          className="fixed inset-0 z-[80] md:hidden flex flex-col"
           style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
           onClick={() => {
             setShowMobileSearch(false);
