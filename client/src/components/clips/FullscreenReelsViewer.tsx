@@ -2,10 +2,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { MessageCircle, MoreVertical, Trash2, X, ChevronDown } from "lucide-react";
+import { MessageCircle, Trash2, ChevronDown, ChevronLeft, BarChart2, Gamepad2, Music } from "lucide-react";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
-import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { Link } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
@@ -14,8 +13,6 @@ import ShareMenu from "@/components/clips/ShareMenu";
 import { useAuth } from "@/hooks/use-auth";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
-import { cn } from "@/lib/utils";
-import { ReportDialog } from "@/components/content/ReportDialog";
 import { AgeRestrictionDialog } from "@/components/content/AgeRestrictionDialog";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -264,163 +261,170 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         </div>
 
         {/* Top header (absolute within video area) */}
-        <div className="absolute top-0 left-0 right-0 z-[3] flex items-center justify-end p-3 md:p-4" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}>
-          <div className="flex items-center gap-2">
+        {!showComments && (
+          <div
+            className="absolute top-0 left-0 right-0 z-[3] flex items-center justify-between px-4 pb-4 bg-gradient-to-b from-black/60 to-transparent"
+            style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <Button
+              variant="ghost" size="sm"
+              className="text-white hover:bg-white/20"
+              onClick={(e) => { e.stopPropagation(); onClose(); }}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
             {user && currentReel && user.id === currentReel.userId && (
               <Button
                 variant="ghost" size="sm"
-                className="text-white bg-black/60 backdrop-blur-sm hover:bg-red-600/80 w-10 h-10 p-0 rounded-full"
+                className="text-white hover:bg-red-600/80 w-10 h-10 p-0 rounded-full"
                 onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
                 disabled={deleteReelMutation.isPending}
               >
                 <Trash2 className="h-5 w-5" />
               </Button>
             )}
-            <Button
-              variant="ghost" size="sm"
-              className="text-white bg-black/60 backdrop-blur-sm hover:bg-black/80 w-10 h-10 p-0 rounded-full"
-              onClick={(e) => { e.stopPropagation(); onClose(); }}
-            >
-              <X className="h-5 w-5" />
-            </Button>
           </div>
-        </div>
+        )}
 
         {/* Engagement + user info overlay */}
         {currentReel && (
           <div className="absolute inset-0 z-[3] pointer-events-none">
 
-            {/* Right side engagement buttons */}
-            <div
-              className="absolute right-3 md:right-4 flex flex-col items-center gap-3 pointer-events-auto"
-              style={{ bottom: showComments ? '0.75rem' : 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}
-            >
-              <LikeButton
-                contentId={currentReel.id}
-                contentType="clip"
-                contentOwnerId={currentReel.userId}
-                initialLiked={false}
-                initialCount={parseInt(currentReel._count?.likes?.toString() || '0')}
-                size="sm"
-                showCount={true}
-                variant="vertical"
-              />
-              <FireButton
-                contentId={currentReel.id}
-                contentType="clip"
-                contentOwnerId={currentReel.userId}
-                initialCount={parseInt(currentReel._count?.reactions?.toString() || '0')}
-                size="sm"
-                showCount={true}
-                variant="vertical"
-                clipRef={videoAreaRef}
-              />
-              <button
-                className="flex flex-col items-center gap-0.5"
-                style={{ color: showComments ? '#B7FF1A' : 'white' }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (!user) { openDialog('comment'); }
-                  else { setShowComments(true); setIsPaused(true); }
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
+            {/* Right side engagement buttons — hidden when comments open */}
+            {!showComments && (
+              <div
+                className="absolute right-3 flex flex-col items-center gap-3 pointer-events-auto"
+                style={{ bottom: 110 }}
+                onClick={e => e.stopPropagation()}
               >
-                <MessageCircle className="h-6 w-6 drop-shadow" />
-                <span className="text-white text-[10px] font-semibold drop-shadow">
-                  {currentReel._count?.comments || 0}
-                </span>
-              </button>
-              <div className="flex flex-col items-center gap-0.5">
+                {/* Views */}
+                <div className="flex flex-col items-center gap-0.5">
+                  <BarChart2 className="h-6 w-6 text-white drop-shadow" />
+                  <span className="text-white text-[10px] font-semibold drop-shadow">
+                    {(() => {
+                      const v = currentReel.views || 0;
+                      if (v >= 1000000) return `${(v / 1000000).toFixed(1)}M`;
+                      if (v >= 1000) return `${(v / 1000).toFixed(1)}K`;
+                      return v.toString();
+                    })()}
+                  </span>
+                </div>
+
+                <LikeButton
+                  contentId={currentReel.id}
+                  contentType="clip"
+                  contentOwnerId={currentReel.userId}
+                  initialLiked={false}
+                  initialCount={parseInt(currentReel._count?.likes?.toString() || '0')}
+                  size="sm"
+                  showCount={true}
+                  variant="vertical"
+                />
+                <FireButton
+                  contentId={currentReel.id}
+                  contentType="clip"
+                  contentOwnerId={currentReel.userId}
+                  initialCount={parseInt(currentReel._count?.reactions?.toString() || '0')}
+                  size="sm"
+                  showCount={true}
+                  variant="vertical"
+                  clipRef={videoAreaRef}
+                />
+                <button
+                  className="flex flex-col items-center gap-0.5"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!user) { openDialog('comment'); }
+                    else { setShowComments(true); setIsPaused(true); }
+                  }}
+                >
+                  <MessageCircle className="h-6 w-6 text-white drop-shadow" />
+                  <span className="text-white text-[10px] font-semibold drop-shadow">
+                    {currentReel._count?.comments || 0}
+                  </span>
+                </button>
                 <ShareLaunchIcon
                   size={24}
                   className="text-white drop-shadow"
                   onClick={(e) => { e.stopPropagation(); setShowShare(true); }}
                 />
-                <span className="text-white text-[10px] font-semibold drop-shadow">Share</span>
-              </div>
-            </div>
-
-            {/* Bottom left - user info (hidden when comments open) */}
-            {!showComments && (
-              <div
-                className="absolute left-3 md:left-4 right-20 md:right-24 pointer-events-none"
-                style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <Link href={`/profile/${currentReel.user.username}`} onClick={onClose} className="flex-shrink-0 hover:opacity-80 transition-opacity pointer-events-auto">
-                    <CustomAvatar user={currentReel.user as any} size="sm" showBorder={true} />
-                  </Link>
-                  <Link href={`/profile/${currentReel.user.username}`} onClick={onClose} className="pointer-events-auto">
-                    <span className="text-white font-semibold text-sm drop-shadow-lg">@{currentReel.user.username}</span>
-                  </Link>
-                  {user && user.id !== currentReel.user.id && (
-                    <Button
-                      onClick={(e) => { e.stopPropagation(); handleFollow(); }}
-                      disabled={followMutation.isPending}
-                      size="sm"
-                      className={cn(
-                        "h-7 px-3 text-xs font-semibold rounded-md ml-1 pointer-events-auto",
-                        isFollowing
-                          ? "bg-transparent border border-white/50 text-white hover:bg-white/10"
-                          : "bg-[#B7FF1A] text-black hover:bg-[#A2F000]"
-                      )}
-                    >
-                      {isFollowing ? "Following" : "Follow"}
-                    </Button>
-                  )}
-                </div>
-                <h3 className="text-white font-semibold text-base mb-1 leading-tight line-clamp-1 drop-shadow-lg">
-                  {currentReel.title}
-                </h3>
-                {currentReel.description && (
-                  <p className="text-white/90 text-sm mb-1.5 line-clamp-1 drop-shadow-md">{currentReel.description}</p>
-                )}
-                {currentReel.game && (
-                  <div className="mb-1.5">
-                    <Link
-                      href={`/games/${currentReel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-                      onClick={onClose}
-                      className="text-[#B7FF1A] text-sm font-medium drop-shadow-lg hover:underline pointer-events-auto"
-                    >
-                      {currentReel.game.name}
-                    </Link>
-                  </div>
-                )}
-                <div className="flex items-center gap-1.5 text-white/80 text-xs drop-shadow-md">
-                  <span>Original audio</span>
-                  <span>•</span>
-                  <span>{currentReel.user.displayName || currentReel.user.username}</span>
-                </div>
               </div>
             )}
 
-            {/* Report button (hidden when comments open) */}
+            {/* Bottom gradient overlay — hidden when comments open */}
             {!showComments && (
-              <div
-                className="absolute right-3 md:right-4 pointer-events-auto"
-                style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}
-              >
-                <ReportDialog
-                  contentType="clip"
-                  contentId={currentReel.id}
-                  contentTitle={currentReel.title}
-                  contentAuthor={currentReel.user.username}
-                  trigger={
-                    <button className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors">
-                      <MoreVertical className="h-4 w-4" />
-                    </button>
-                  }
-                />
+              <div className="absolute bottom-0 left-0 right-0 z-[3] px-4 pb-24 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none">
+                <div className="pr-14">
+                  {/* User row */}
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Link
+                      href={`/profile/${currentReel.user.username}`}
+                      onClick={onClose}
+                      className="flex items-center gap-1.5 no-underline flex-shrink-0 pointer-events-auto"
+                    >
+                      <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '1.5px solid #fff' }}>
+                        <img
+                          src={currentReel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                          alt={currentReel.user.displayName || currentReel.user.username}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <span className="text-white font-bold text-[13px] drop-shadow leading-tight">
+                        @{currentReel.user.username}
+                      </span>
+                    </Link>
+                    {user && user.id !== currentReel.user.id && !isFollowing && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleFollow(); }}
+                        disabled={followMutation.isPending}
+                        className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all pointer-events-auto"
+                        style={{ background: '#B7FF1A', color: '#000', border: '1px solid transparent' }}
+                      >
+                        {followMutation.isPending ? '…' : 'Follow'}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Title */}
+                  <p className="text-white font-bold text-[13px] drop-shadow mb-0.5 leading-snug line-clamp-1">
+                    {currentReel.title}
+                  </p>
+
+                  {/* Description */}
+                  {currentReel.description && (
+                    <p className="text-white/75 text-[11px] drop-shadow leading-snug line-clamp-2 mb-1">
+                      {currentReel.description}
+                    </p>
+                  )}
+
+                  {/* Game */}
+                  {currentReel.game?.name && (
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
+                      <Link
+                        href={`/games/${currentReel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                        onClick={onClose}
+                        className="pointer-events-auto"
+                      >
+                        <span className="text-[11px] font-semibold" style={{ color: '#B7FF1A' }}>
+                          {currentReel.game.name}
+                        </span>
+                      </Link>
+                    </div>
+                  )}
+
+                  {/* Original audio */}
+                  <div className="flex items-center gap-1">
+                    <Music className="h-2.5 w-2.5 text-white/60 flex-shrink-0" />
+                    <span className="text-white/60 text-[11px] truncate">
+                      Original audio · {currentReel.user.displayName || currentReel.user.username}
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
-        )}
-
-        {/* Desktop hint */}
-        {!showComments && (
-          <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/30 text-xs z-[3] hidden md:block">
-            Scroll or arrow keys to navigate · ESC to close
-          </p>
         )}
       </div>
 
