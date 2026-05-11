@@ -546,17 +546,13 @@ const Header = () => {
       {/* Mobile Search Overlay - portaled to body so no parent can clip it */}
       {showMobileSearch && typeof document !== 'undefined' && createPortal(
         <div
-          className="md:hidden"
           style={{
             position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            background: 'rgba(3, 8, 10, 0.65)',
+            inset: 0,
+            background: 'rgba(3, 8, 10, 0.75)',
             backdropFilter: 'blur(16px)',
             WebkitBackdropFilter: 'blur(16px)',
-            zIndex: 999,
+            zIndex: 9999,
           }}
           onClick={() => {
             setShowMobileSearch(false);
