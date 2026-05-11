@@ -1,13 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { X, Home, Compass, User, Settings, LogOut, MessageSquare, Trophy, ShoppingBag, Wallet, Gift } from "lucide-react";
+import { X, Home, Compass, Settings, LogOut, MessageSquare, Trophy, ShoppingBag, Wallet, Gift, Plus, Search } from "lucide-react";
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Game } from "@shared/schema";
 import gamefolioLogo from '@assets/gamefolio social logo 3d circle web.png';
 
 const LEVEL_THRESHOLDS = [
@@ -100,6 +103,30 @@ const MobileMenu = () => {
   const { isOpen, close } = useMobileMenu();
   const { user, logoutMutation } = useAuth();
   const [, setLocation] = useLocation();
+
+  const { data: favoriteGames } = useQuery<Game[]>({
+    queryKey: [`/api/users/${user?.id}/favorites`],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const response = await apiRequest("GET", `/api/users/${user.id}/favorites`);
+      if (!response.ok) throw new Error("Failed to fetch favorite games");
+      return response.json();
+    },
+    enabled: !!user?.id,
+  });
+
+  const { data: trendingGames } = useQuery<Game[]>({
+    queryKey: ["/api/twitch/games/top"],
+    queryFn: async () => {
+      const response = await fetch("/api/twitch/games/top");
+      if (!response.ok) throw new Error("Failed to fetch trending games");
+      return response.json();
+    },
+    enabled: !user,
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const displayGames = user ? favoriteGames : trendingGames;
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -309,6 +336,65 @@ const MobileMenu = () => {
                   </li>
                 </ul>
               </>
+            )}
+
+            {/* Games Section */}
+            {displayGames && displayGames.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <div className="flex items-center justify-between px-2 mb-3">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    {user ? "Your Games" : "Top Games"}
+                  </h3>
+                  {user && (
+                    <button
+                      onClick={() => { close(); }}
+                      className="text-muted-foreground hover:text-primary transition-colors"
+                      title="Manage games in your profile"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2 px-1">
+                  {displayGames.slice(0, 9).map((game) => (
+                    <button
+                      key={`menu-game-${game.id}`}
+                      className="flex flex-col items-center gap-1 group"
+                      onClick={() => {
+                        const slug = game.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        setLocation(`/games/${slug}`);
+                        close();
+                      }}
+                    >
+                      <div className="w-full aspect-[3/4] rounded-lg overflow-hidden bg-muted">
+                        {game.imageUrl ? (
+                          <img
+                            src={game.imageUrl.includes('{width}')
+                              ? game.imageUrl.replace('{width}', '80').replace('{height}', '107')
+                              : game.imageUrl.replace('285x380', '80x107')}
+                            alt={game.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className={cn(
+                              "w-4 h-4 rounded-full",
+                              game.id % 5 === 0 ? "bg-red-500" :
+                              game.id % 5 === 1 ? "bg-sky-500" :
+                              game.id % 5 === 2 ? "bg-primary" :
+                              game.id % 5 === 3 ? "bg-yellow-500" :
+                              "bg-orange-500"
+                            )} />
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground text-center line-clamp-2 w-full leading-tight px-0.5">
+                        {game.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </nav>
 
