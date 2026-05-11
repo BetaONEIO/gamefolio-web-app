@@ -400,7 +400,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
               {screenshot.gameId && games?.find((g: Game) => g.id === screenshot.gameId) && (
                 <div className="mt-2">
                   <Link href={`/games/${(games.find((g: Game) => g.id === screenshot.gameId)?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                    <span className="bg-primary text-white px-2 py-1 rounded text-xs font-bold hover:bg-primary cursor-pointer transition-colors">
+                    <span className="bg-primary text-[#071013] px-2 py-1 rounded text-xs font-bold hover:bg-primary cursor-pointer transition-colors">
                       {games.find((g: Game) => g.id === screenshot.gameId)?.name}
                     </span>
                   </Link>
@@ -569,7 +569,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                 {screenshot.gameId && games?.find((g: Game) => g.id === screenshot.gameId) && (
                   <div className="mt-2">
                     <Link href={`/games/${(games.find((g: Game) => g.id === screenshot.gameId)?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                      <span className="bg-primary text-white px-2 py-1 rounded text-xs font-bold hover:bg-primary cursor-pointer transition-colors">
+                      <span className="bg-primary text-[#071013] px-2 py-1 rounded text-xs font-bold hover:bg-primary cursor-pointer transition-colors">
                         {games.find((g: Game) => g.id === screenshot.gameId)?.name}
                       </span>
                     </Link>
