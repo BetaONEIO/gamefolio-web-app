@@ -326,7 +326,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                 onChange={setNewComment}
                 onSubmit={submitComment}
                 placeholder="Add a comment... Use @username to mention other users!"
-                className="min-h-[60px] text-sm resize-none"
+                className="min-h-[60px] text-sm resize-none rounded-xl"
                 data-testid="input-comment"
               />
               <div className="flex justify-end">

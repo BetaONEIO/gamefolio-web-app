@@ -55,6 +55,7 @@ interface MobileTrendingViewerProps {
 export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideCloseButton = false, embedded = false, onCommentsVisibilityChange }: MobileTrendingViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showComments, setShowComments] = useState(false);
+  const [commentsExpanded, setCommentsExpanded] = useState(false);
 
   useEffect(() => {
     onCommentsVisibilityChange?.(showComments);
@@ -70,6 +71,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   // Reset overlay states when switching between content items
   useEffect(() => {
     setShowComments(false);
+    setCommentsExpanded(false);
     setShowShare(false);
     setIsPlaying(true);
     setShowFullDescription(false);
@@ -314,8 +316,8 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
       <div
         className="relative w-full flex-shrink-0 overflow-hidden"
         style={{
-          height: (showComments && !embedded) ? '38%' : '100%',
-          flex: (showComments && !embedded) ? 'none' : '1',
+          height: (commentsExpanded && !embedded) ? '38%' : '100%',
+          flex: (commentsExpanded && !embedded) ? 'none' : '1',
           transition: 'height 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
         }}
         onClick={handleVideoTap}
@@ -375,7 +377,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
 
           {/* Comments */}
           <button
-            onClick={(e) => { e.stopPropagation(); if (!user) { openDialog('comment'); } else { setShowComments(true); } }}
+            onClick={(e) => { e.stopPropagation(); if (!user) { openDialog('comment'); } else { setCommentsExpanded(true); setShowComments(true); } }}
             className="flex flex-col items-center gap-0.5"
             data-testid="button-comments"
           >
@@ -511,7 +513,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
       </div>
 
       {/* Comments bottom sheet — slides up, video visible above */}
-      <AnimatePresence>
+      <AnimatePresence onExitComplete={() => setCommentsExpanded(false)}>
         {showComments && !embedded && (
           <motion.div
             key="comments-sheet"
