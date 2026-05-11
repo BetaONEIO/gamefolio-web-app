@@ -148,16 +148,14 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogPortal>
-        <DialogPrimitive.Overlay 
-          className="fixed inset-0 z-50 w-screen h-screen bg-black/70 backdrop-blur-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-        />
         <DialogPrimitive.Content
-          className="lootbox-dialog-content fixed left-[50%] top-[50%] z-50 w-full max-w-xl md:max-w-3xl lg:max-w-4xl translate-x-[-50%] translate-y-[-50%] p-0 overflow-hidden border-none shadow-none duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg"
+          className="fixed inset-0 z-[200] flex flex-col items-center justify-center w-screen h-screen border-none shadow-none outline-none duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
         >
           <button
             type="button"
             onClick={toggleMuted}
-            className="absolute right-14 top-4 z-50 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            className="absolute right-14 top-4 z-10 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none"
             aria-label={isMuted ? "Unmute lootbox sound" : "Mute lootbox sound"}
             data-testid="button-lootbox-mute-toggle"
           >
@@ -167,11 +165,11 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
               <Volume2 className="h-5 w-5 text-white" />
             )}
           </button>
-          <DialogPrimitive.Close className="absolute right-4 top-4 z-50 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+          <DialogPrimitive.Close className="absolute right-4 top-4 z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none">
             <X className="h-5 w-5 text-white" />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
-        <div className="flex flex-col items-center px-6 py-6">
+        <div className="lootbox-dialog-content w-full max-w-xl flex flex-col items-center px-6 py-6 overflow-y-auto max-h-screen">
           <AnimatePresence mode="wait">
             {phase === "idle" && (
               <motion.div
