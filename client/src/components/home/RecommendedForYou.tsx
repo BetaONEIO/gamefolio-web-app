@@ -215,6 +215,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
           clips={mobileClipsViewer.clips}
           startClipId={mobileClipsViewer.startId}
           onBack={() => setMobileClipsViewer(null)}
+          viewAllHref="/latest-clips"
         />
       )}
 

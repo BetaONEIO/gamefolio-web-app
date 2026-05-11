@@ -474,21 +474,21 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void; v
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: '#03080A' }}>
-      {/* Top bar */}
-      <div
-        className="flex-shrink-0 flex items-center justify-between px-4 pb-3"
-        style={{ background: '#03080A', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
-      >
-        <button
-          onClick={onBack}
-          className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
-          style={{ color: '#F5F7F2' }}
-          aria-label="Back"
+      {/* Top bar — only rendered when there is a back/view-all context */}
+      {viewAllHref && (
+        <div
+          className="flex-shrink-0 flex items-center justify-between px-4 pb-3"
+          style={{ background: '#03080A', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
         >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <span className="sr-only">Clips</span>
-        {viewAllHref && (
+          <button
+            onClick={onBack}
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
+            style={{ color: '#F5F7F2' }}
+            aria-label="Back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <span className="sr-only">Clips</span>
           <Link
             href={viewAllHref}
             onClick={onBack}
@@ -501,8 +501,8 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void; v
           >
             View all
           </Link>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Snap-scrolling feed — one clip per scroll */}
       <div
@@ -1156,7 +1156,7 @@ const TrendingPage: React.FC = () => {
                 <p className="text-white/50 text-sm text-center">Check back later!</p>
               </div>
             ) : (
-              <MobileClipsViewer clips={trendingClips} onBack={() => { if (window.history.length > 1) { window.history.back(); } else { setLocation('/'); } }} viewAllHref="/latest-clips" />
+              <MobileClipsViewer clips={trendingClips} onBack={() => { if (window.history.length > 1) { window.history.back(); } else { setLocation('/'); } }} />
             )}
           </div>
         )}
