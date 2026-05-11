@@ -4,12 +4,10 @@ import { BarChart2, ChevronLeft, Play } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
-import { useMobile } from "@/hooks/use-mobile";
 import { formatDuration } from "@/lib/constants";
 import { useState } from "react";
 import { GameFilter } from "@/components/filters/GameFilter";
 import { LazyImage } from "@/components/ui/lazy-image";
-import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 
 export default function LatestReelsPage() {
   const [timePeriod, setTimePeriod] = useState<string>("recent");
@@ -22,7 +20,6 @@ export default function LatestReelsPage() {
     },
   });
   const { openClipDialog } = useClipDialog();
-  const isMobile = useMobile();
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
 
   const filteredReels = latestReels
@@ -37,99 +34,32 @@ export default function LatestReelsPage() {
     return num.toString();
   };
 
-  // ── Mobile: loading skeleton ─────────────────────────────────────────────
-  if (isMobile && isLoading) {
-    return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ background: '#131F2A' }}>
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-[#B7FF1A] border-t-transparent rounded-full animate-spin" />
-          <p className="text-white/60 text-sm">Loading reels…</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Mobile: empty state ──────────────────────────────────────────────────
-  if (isMobile && !isLoading && filteredReels.length === 0) {
-    return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ background: '#131F2A' }}>
-        <div className="text-center px-8">
-          <div className="text-6xl mb-4">📱</div>
-          <p className="text-white font-semibold mb-1">No reels yet</p>
-          <p className="text-white/50 text-sm">Be the first to share a reel on Gamefolio!</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Mobile: full-screen viewer — exactly like Trending ──────────────────
-  if (isMobile && filteredReels.length > 0) {
-    return (
-      <MobileTrendingViewer
-        content={filteredReels}
-        initialIndex={0}
-        onClose={() => {
-          if (window.history.length > 1) {
-            window.history.back();
-          } else {
-            window.location.href = '/';
-          }
-        }}
-        hideCloseButton={false}
-      />
-    );
-  }
-
-  // ── Desktop loading skeleton ─────────────────────────────────────────────
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background p-4 md:p-6">
-        <div className="w-full">
-          <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:gap-4 md:mb-8">
-            <Link href="/">
-              <Button variant="ghost" size="sm" className="flex items-center gap-2 w-fit" data-testid="button-back-home">
-                <ChevronLeft size={20} />
-                Back to Home
-              </Button>
-            </Link>
-            <h1 className="text-2xl md:text-3xl font-bold text-white" data-testid="text-page-title">Latest Reels</h1>
-          </div>
-          <div className="grid grid-cols-4 gap-4">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="aspect-[9/16]">
-                <div className="w-full h-full bg-muted rounded-xl animate-pulse" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Desktop: grid layout ─────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
+    <div className="min-h-screen bg-background px-3 py-4 sm:p-4 md:p-6">
       <div className="w-full">
-        <div className="space-y-4 mb-6 md:mb-8">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+        {/* Header */}
+        <div className="space-y-3 mb-5 sm:space-y-4 sm:mb-8">
+          <div className="flex items-center gap-3">
             <Link href="/">
-              <Button variant="ghost" size="sm" className="flex items-center gap-2 w-fit" data-testid="button-back-home">
-                <ChevronLeft size={20} />
-                Back to Home
+              <Button variant="ghost" size="sm" className="flex items-center gap-2 w-fit shrink-0" data-testid="button-back-home">
+                <ChevronLeft size={18} />
+                Back
               </Button>
             </Link>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl md:text-3xl font-bold text-white" data-testid="text-page-title">Latest Reels</h1>
-              <span className="text-muted-foreground text-sm md:text-base" data-testid="text-reels-count">
-                {filteredReels.length} reels
-              </span>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-3xl font-bold text-white" data-testid="text-page-title">Latest Reels</h1>
+              {!isLoading && (
+                <span className="text-muted-foreground text-xs sm:text-sm" data-testid="text-reels-count">
+                  {filteredReels.length} reels
+                </span>
+              )}
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
               {[
-                { value: 'recent', label: 'Most Recent' },
+                { value: 'recent', label: 'Recent' },
                 { value: '1d', label: '1D' },
                 { value: '1w', label: '1W' },
                 { value: 'ever', label: 'Ever' },
@@ -137,7 +67,7 @@ export default function LatestReelsPage() {
                 <button
                   key={period.value}
                   onClick={() => setTimePeriod(period.value)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  className={`px-2.5 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                     timePeriod === period.value
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -158,13 +88,22 @@ export default function LatestReelsPage() {
           </div>
         </div>
 
-        {filteredReels.length > 0 ? (
-          <div className="grid grid-cols-4 gap-4 w-full">
+        {/* Grid */}
+        {isLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="aspect-[9/16]">
+                <div className="w-full h-full bg-muted rounded-xl animate-pulse" />
+              </div>
+            ))}
+          </div>
+        ) : filteredReels.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 w-full">
             {filteredReels.map((reel) => (
               <div
                 key={reel.id}
                 onClick={() => openClipDialog(reel.id, filteredReels)}
-                className="group relative bg-black rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
+                className="group relative bg-black rounded-xl sm:rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
               >
                 <div className="absolute inset-0">
                   <div className="absolute inset-0 bg-gray-800" />
@@ -178,7 +117,7 @@ export default function LatestReelsPage() {
                     containerClassName="absolute inset-0"
                     fallback={
                       <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                        <Play className="h-12 w-12 text-gray-500" />
+                        <Play className="h-8 w-8 sm:h-12 sm:w-12 text-gray-500" />
                       </div>
                     }
                   />
@@ -186,14 +125,14 @@ export default function LatestReelsPage() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
 
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="bg-primary backdrop-blur-sm rounded-full p-3">
-                      <svg className="w-6 h-6 text-white fill-white" viewBox="0 0 24 24">
+                    <div className="bg-primary backdrop-blur-sm rounded-full p-2 sm:p-3">
+                      <svg className="w-4 h-4 sm:w-6 sm:h-6 text-white fill-white" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z"/>
                       </svg>
                     </div>
                   </div>
 
-                  <div className="absolute top-3 left-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-semibold">
+                  <div className="absolute top-2 left-2 bg-black/70 text-white text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-md font-semibold">
                     {(() => {
                       const actualDuration = reel.trimEnd && reel.trimEnd > 0
                         ? reel.trimEnd - (reel.trimStart || 0)
@@ -202,23 +141,23 @@ export default function LatestReelsPage() {
                     })()}
                   </div>
 
-                  <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-semibold flex items-center gap-1">
-                    <BarChart2 className="h-3 w-3" />
+                  <div className="absolute top-2 right-2 bg-black/70 text-white text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-md font-semibold flex items-center gap-1">
+                    <BarChart2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                     {formatNumber(reel.views || 0)}
                   </div>
 
-                  <div className="absolute bottom-0 left-0 right-0 p-3" onClick={(e) => e.stopPropagation()}>
-                    <h3 className="text-white font-bold text-sm mb-0.5 drop-shadow-lg line-clamp-2" onClick={() => openClipDialog(reel.id, filteredReels)}>
+                  <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3" onClick={(e) => e.stopPropagation()}>
+                    <h3 className="text-white font-bold text-xs sm:text-sm mb-0.5 drop-shadow-lg line-clamp-2" onClick={() => openClipDialog(reel.id, filteredReels)}>
                       {reel.title}
                     </h3>
-                    <p className="text-white text-xs mb-1.5 drop-shadow-lg">
+                    <p className="text-white/70 text-[10px] sm:text-xs mb-1 drop-shadow-lg">
                       @{reel.user.username}
                     </p>
                     {reel.game && (
                       <Link
                         href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="inline-block bg-primary text-[#071013] text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
+                        className="inline-block bg-primary text-[#071013] text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
                       >
                         {reel.game.name}
                       </Link>
@@ -230,15 +169,15 @@ export default function LatestReelsPage() {
           </div>
         ) : latestReels && latestReels.length > 0 ? (
           <div className="text-center py-12">
-            <div className="text-6xl mb-4">🎮</div>
-            <h2 className="text-2xl font-semibold text-white mb-2" data-testid="text-no-reels-filtered">No reels found for this game</h2>
+            <div className="text-5xl mb-4">🎮</div>
+            <h2 className="text-xl sm:text-2xl font-semibold text-white mb-2" data-testid="text-no-reels-filtered">No reels found for this game</h2>
             <p className="text-muted-foreground mb-6">Try selecting a different game or view all reels</p>
             <Button onClick={() => setSelectedGameId(null)} data-testid="button-clear-filter">Clear Filter</Button>
           </div>
         ) : (
           <div className="text-center py-12">
-            <div className="text-6xl mb-4">📱</div>
-            <h2 className="text-2xl font-semibold text-white mb-2">
+            <div className="text-5xl mb-4">📱</div>
+            <h2 className="text-xl sm:text-2xl font-semibold text-white mb-2">
               {timePeriod === '1d' ? 'No reels from today' : timePeriod === '1w' ? 'No reels from this week' : timePeriod === 'ever' ? 'No reels yet' : 'No Reels Yet'}
             </h2>
             <p className="text-muted-foreground mb-6">
