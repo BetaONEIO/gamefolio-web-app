@@ -1,6 +1,5 @@
 import React from 'react';
 import { Flag, X, ImageOff } from 'lucide-react';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ReportDialog } from '@/components/content/ReportDialog';
@@ -31,14 +30,15 @@ export function ScreenshotCard({
   const { signedUrl: signedAvatarUrl } = useSignedUrl(showUserInfo ? screenshotUser?.avatarUrl : null);
 
   return (
-    <Card 
-      className={`relative overflow-hidden group/card cursor-pointer transition-all duration-500 hover:shadow-lg ${
-        isHighlighted ? 'ring-4 ring-primary ring-offset-2' : ''
+    <div 
+      className={`relative overflow-hidden group/card cursor-pointer ${
+        isHighlighted ? 'ring-2 ring-primary ring-offset-2 ring-offset-background rounded-xl' : ''
       }`}
       id={isHighlighted ? `screenshot-${screenshot.id}` : undefined}
     >
+      {/* Image */}
       <div 
-        className="aspect-video rounded-lg overflow-hidden bg-black relative"
+        className="aspect-video overflow-hidden rounded-xl bg-black relative"
         onClick={() => onSelect?.(screenshot)}
       >
         <LazyImage 
@@ -71,7 +71,7 @@ export function ScreenshotCard({
           </div>
         )}
 
-        {/* Action buttons for screenshots */}
+        {/* Action buttons */}
         {isOwnProfile ? (
           <Button
             size="sm"
@@ -112,10 +112,10 @@ export function ScreenshotCard({
         )}
       </div>
 
-      {/* Info Section - User, Title, Game, Stats */}
-      <div className="p-3 space-y-1">
+      {/* Info Section */}
+      <div className="pt-3 pb-1 space-y-1">
         {showUserInfo && screenshotUser && (
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center mb-1.5">
             <Link href={`/profile/${screenshotUser.username}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
               <div className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
                 {screenshotUser.nftProfileTokenId && screenshotUser.nftProfileImageUrl && (screenshotUser as any).activeProfilePicType === 'nft' ? (
@@ -128,24 +128,26 @@ export function ScreenshotCard({
                     <AvatarFallback className="text-xs">{screenshotUser.displayName?.charAt(0) || '?'}</AvatarFallback>
                   </Avatar>
                 )}
-                <span className="text-sm font-medium text-foreground truncate max-w-[120px]">{screenshotUser.displayName || screenshotUser.username}</span>
+                <span className="text-sm font-medium truncate max-w-[140px]" style={{ color: '#F5F7F2' }}>
+                  {screenshotUser.displayName || screenshotUser.username}
+                </span>
               </div>
             </Link>
           </div>
         )}
-        {/* Title */}
-        <h3 className="font-semibold text-sm line-clamp-1 leading-tight">{screenshot.title}</h3>
-        
-        {/* Game name with green background like clips/reels */}
+
+        <h3 className="font-semibold text-sm line-clamp-1 leading-tight" style={{ color: '#F5F7F2' }}>
+          {screenshot.title}
+        </h3>
+
         {(screenshot as any).game && (
-          <div className="pt-1">
+          <div className="pt-0.5">
             <span className="inline-block bg-primary text-[#071013] text-xs px-2 py-0.5 rounded font-medium">
               {(screenshot as any).game.name}
             </span>
           </div>
         )}
-        
       </div>
-    </Card>
+    </div>
   );
 }
