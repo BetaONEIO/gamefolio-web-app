@@ -423,7 +423,8 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                       contentOwnerId={screenshot.userId}
                       initialLiked={false}
                       initialCount={(screenshot as any)._count?.likes || 0}
-                      size="lg"
+                      size="sm"
+                      iconSize={16}
                     />
                     <FireButton
                       contentId={screenshot.id}
@@ -431,7 +432,8 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                       contentOwnerId={screenshot.userId}
                       initialFired={false}
                       initialCount={(screenshot as any)._count?.reactions || 0}
-                      size="lg"
+                      size="sm"
+                      iconSize={16}
                     />
                     <button
                       onClick={scrollToComments}
