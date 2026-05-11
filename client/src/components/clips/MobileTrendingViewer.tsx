@@ -9,7 +9,7 @@ import { Link } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import CommentSection from "@/components/clips/CommentSection";
-import ShareMenu from "@/components/clips/ShareMenu";
+import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import { useAuth } from "@/hooks/use-auth";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -539,22 +539,14 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         </div>
       )}
 
-      {/* Share overlay */}
-      {showShare && isVideoContent(currentItem) && (
-        <div className="absolute inset-0 bg-black/90 z-20 flex flex-col">
-          <div className="flex justify-between items-center p-4 border-b border-white/20">
-            <h3 className="text-white text-lg font-semibold">Share</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowShare(false)}
-              className="text-white hover:bg-white/20"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-          </div>
-          <ShareMenu clipId={currentItem.id} clipTitle={currentItem.title} />
-        </div>
+      {/* Share dialog */}
+      {isVideoContent(currentItem) && (
+        <ClipShareDialog
+          clipId={currentItem.id}
+          contentType="reel"
+          open={showShare}
+          onOpenChange={setShowShare}
+        />
       )}
 
       {/* Join Dialog for unauthenticated users */}
