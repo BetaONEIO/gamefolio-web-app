@@ -1,13 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { ClipWithUser } from "@shared/schema";
-import { ChevronLeft, BarChart2, Play } from "lucide-react";
+import { BarChart2, ChevronLeft, Play } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
-import { formatDuration } from "@/lib/constants";
 import { useState } from "react";
 import { GameFilter } from "@/components/filters/GameFilter";
+import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
+import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
+import { useClipDialog } from "@/hooks/use-clip-dialog";
+import { formatDuration } from "@/lib/constants";
 import { LazyImage } from "@/components/ui/lazy-image";
 
 export default function LatestReelsPage() {
@@ -20,9 +22,10 @@ export default function LatestReelsPage() {
       return response.json();
     },
   });
-  const { openClipDialog } = useClipDialog();
   const isMobile = useMobile();
+  const { openClipDialog } = useClipDialog();
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
+  const [mobileViewer, setMobileViewer] = useState<{ clips: ClipWithUser[]; startId: number } | null>(null);
 
   const filteredReels = latestReels
     ? selectedGameId
@@ -64,6 +67,13 @@ export default function LatestReelsPage() {
 
   return (
     <div className={`min-h-screen bg-background p-4 md:p-6 ${isMobile ? 'pb-24' : ''}`}>
+      {mobileViewer && (
+        <MobileTrendingViewer
+          content={mobileViewer.clips}
+          initialIndex={Math.max(0, mobileViewer.clips.findIndex((clip) => clip.id === mobileViewer.startId))}
+          onClose={() => setMobileViewer(null)}
+        />
+      )}
       <div className="w-full">
         <div className="space-y-4 mb-6 md:mb-8">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
@@ -116,67 +126,19 @@ export default function LatestReelsPage() {
         {filteredReels.length > 0 ? (
           isMobile ? (
             <div className="grid grid-cols-2 gap-1">
-              {filteredReels.map((reel) => {
-                return (
-                  <div
-                    key={reel.id}
-                    onClick={() => openClipDialog(reel.id, filteredReels)}
-                    className="w-full"
-                  >
-                    <div className="relative aspect-[9/16] w-full rounded-sm overflow-hidden cursor-pointer group">
-                      <div className="absolute inset-0 bg-gray-800" />
-                      <LazyImage
-                        src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
-                        alt={reel.title}
-                        className="w-full h-full object-cover"
-                        placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
-                        showLoadingSpinner={true}
-                        rootMargin="50px"
-                        containerClassName="absolute inset-0"
-                        fallback={
-                          <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                            <Play className="h-8 w-8 text-gray-500" />
-                          </div>
-                        }
-                      />
-
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
-
-                      <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold">
-                        {(() => {
-                          const actualDuration = reel.trimEnd && reel.trimEnd > 0
-                            ? reel.trimEnd - (reel.trimStart || 0)
-                            : reel.duration || 0;
-                          return formatDuration(actualDuration);
-                        })()}
-                      </div>
-
-                      <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold flex items-center gap-1">
-                        <BarChart2 className="h-3 w-3" />
-                        {formatNumber(reel.views || 0)}
-                      </div>
-
-                      <div className="absolute bottom-0 left-0 right-0 p-2">
-                        <h3 className="text-white font-bold text-xs mb-0.5 drop-shadow-lg line-clamp-2">
-                          {reel.title}
-                        </h3>
-                        <p className="text-white text-[10px] mb-1 drop-shadow-lg">
-                          @{reel.user.username}
-                        </p>
-                        {reel.game && (
-                          <Link
-                            href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-block bg-primary text-[#071013] text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
-                          >
-                            {reel.game.name}
-                          </Link>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {filteredReels.map((reel) => (
+                <div
+                  key={reel.id}
+                  onClick={() => setMobileViewer({ clips: filteredReels, startId: reel.id })}
+                  className="w-full"
+                >
+                  <VideoClipGridItem
+                    clip={reel}
+                    compact={true}
+                    reelsList={filteredReels}
+                  />
+                </div>
+              ))}
             </div>
           ) : (
             <div className="grid grid-cols-4 gap-4 w-full">

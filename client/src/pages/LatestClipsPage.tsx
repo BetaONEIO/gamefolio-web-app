@@ -42,88 +42,83 @@ const LatestClipsPage = () => {
 
   return (
     <>
-    {mobileViewer && (
-      <MobileClipsViewerOverlay
-        clips={mobileViewer.clips}
-        startClipId={mobileViewer.startId}
-        onBack={() => setMobileViewer(null)}
-      />
-    )}
-    <div className={`container mx-auto px-4 py-6 space-y-6 ${isMobile ? 'pb-24' : ''}`}>
-      <div className="space-y-4 mb-8">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setLocation('/')}
-            className="flex items-center gap-2"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold" data-testid="text-page-title">Latest Clips</h1>
-            <p className="text-muted-foreground">
-              Discover the newest gaming clips from the community
-            </p>
+      {mobileViewer && (
+        <MobileClipsViewerOverlay
+          clips={mobileViewer.clips}
+          startClipId={mobileViewer.startId}
+          onBack={() => setMobileViewer(null)}
+        />
+      )}
+      <div className={`container mx-auto px-4 py-6 space-y-6 ${isMobile ? 'pb-24' : ''}`}>
+        <div className="space-y-4 mb-8">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation('/')}
+              className="flex items-center gap-2"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold" data-testid="text-page-title">Latest Clips</h1>
+              <p className="text-muted-foreground">
+                Discover the newest gaming clips from the community
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+              {[
+                { value: 'recent', label: 'Most Recent' },
+                { value: '1d', label: '1D' },
+                { value: '1w', label: '1W' },
+                { value: 'ever', label: 'Ever' },
+              ].map((period) => (
+                <button
+                  key={period.value}
+                  onClick={() => setTimePeriod(period.value)}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    timePeriod === period.value
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  }`}
+                >
+                  {period.label}
+                </button>
+              ))}
+            </div>
+
+            {clipsData && clipsData.length > 0 && (
+              <GameFilter
+                clips={clipsData}
+                selectedGameId={selectedGameId}
+                onGameSelect={setSelectedGameId}
+              />
+            )}
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
-            {[
-              { value: 'recent', label: 'Most Recent' },
-              { value: '1d', label: '1D' },
-              { value: '1w', label: '1W' },
-              { value: 'ever', label: 'Ever' },
-            ].map((period) => (
-              <button
-                key={period.value}
-                onClick={() => setTimePeriod(period.value)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  timePeriod === period.value
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                }`}
+        {filteredClips.length > 0 ? (
+          <div className={isMobile ? "grid grid-cols-2 gap-1" : "grid grid-cols-4 gap-4 w-full"}>
+            {filteredClips.map((clip) => (
+              <div
+                key={clip.id}
+                onClick={() => setMobileViewer(isMobile ? { clips: filteredClips, startId: clip.id } : null)}
+                className={isMobile ? "w-full" : "group relative bg-black rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"}
               >
-                {period.label}
-              </button>
+                <VideoClipGridItem
+                  clip={clip}
+                  userId={user?.id}
+                  compact={false}
+                  clipsList={filteredClips}
+                />
+              </div>
             ))}
           </div>
-
-          {clipsData && clipsData.length > 0 && (
-            <GameFilter
-              clips={clipsData}
-              selectedGameId={selectedGameId}
-              onGameSelect={setSelectedGameId}
-            />
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
-        {isLoadingClips ? (
-          Array(9).fill(0).map((_, i) => (
-            <div key={`skeleton-${i}`} className="space-y-3">
-              <Skeleton className="aspect-video w-full rounded-lg" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-1/2" />
-              </div>
-            </div>
-          ))
-        ) : filteredClips.length > 0 ? (
-          filteredClips.map((clip) => (
-            <VideoClipGridItem
-              key={clip.id}
-              clip={clip}
-              userId={user?.id}
-              compact={false}
-              clipsList={filteredClips}
-              onCardClick={isMobile ? (clipId, clips) => setMobileViewer({ clips, startId: clipId }) : undefined}
-            />
-          ))
         ) : clipsData && clipsData.length > 0 ? (
           <div className="col-span-full text-center py-12">
             <Video className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -156,7 +151,6 @@ const LatestClipsPage = () => {
           </div>
         )}
       </div>
-    </div>
     </>
   );
 };

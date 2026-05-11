@@ -125,7 +125,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   const handleFollowPress = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!user) { openDialog('follow'); return; }
+    if (!user) { openDialog('comment'); return; }
     if (isSelf) return;
     followMutation.mutate();
   };
