@@ -5,11 +5,12 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { formatDuration } from "@/lib/constants";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GameFilterSheet } from "@/components/filters/GameFilterSheet";
 import { LazyImage } from "@/components/ui/lazy-image";
 
 export default function LatestReelsPage() {
+  useEffect(() => { window.scrollTo(0, 0); }, []);
   const [timePeriod, setTimePeriod] = useState<string>("recent");
   const { data: latestReels, isLoading } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/reels/trending', timePeriod],
