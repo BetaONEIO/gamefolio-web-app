@@ -34,7 +34,7 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
   const content = (
     <div
       className="fixed inset-0 flex flex-col"
-      style={{ background: '#03080A', zIndex: 99999 }}
+      style={{ background: '#03080A', zIndex: 60 }}
     >
       {/* Top bar */}
       <div
@@ -74,6 +74,7 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
           overflowY: 'auto',
           scrollSnapType: 'y mandatory',
           WebkitOverflowScrolling: 'touch',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)',
         }}
       >
         {clips.map((clip) => (

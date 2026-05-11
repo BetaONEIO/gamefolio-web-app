@@ -111,7 +111,7 @@ const MobileNav = () => {
         </div>
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-area-bottom">
+      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-[70] safe-area-bottom">
         <div className="flex justify-around py-3">
           {navItems.map((item) => {
             if ('isUpload' in item && item.isUpload) {
