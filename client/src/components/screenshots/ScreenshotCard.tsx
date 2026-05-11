@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flag, X, ImageOff } from 'lucide-react';
+import { Flag, X, ImageOff, Heart, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ReportDialog } from '@/components/content/ReportDialog';
@@ -68,6 +68,26 @@ export function ScreenshotCard({
             <div className="text-red-500 text-4xl mb-2">⚠️</div>
             <div className="text-white font-bold text-sm mb-1">Age Restricted</div>
             <div className="text-white/70 text-xs">18+ Content</div>
+          </div>
+        )}
+
+        {/* Stats overlay — likes + views, matches h-2.5 w-2.5 icon size of Latest Clips module */}
+        {!screenshot.ageRestricted && (
+          <div className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 z-20">
+            {((screenshot as any)._count?.likes ?? (screenshot as any).likesCount ?? 0) > 0 && (
+              <div className="bg-black/70 backdrop-blur-sm text-white px-1.5 py-0.5 text-[9px] rounded font-semibold flex items-center gap-0.5">
+                <Heart className="h-2.5 w-2.5" />
+                {((screenshot as any)._count?.likes ?? (screenshot as any).likesCount ?? 0) >= 1000
+                  ? `${(((screenshot as any)._count?.likes ?? (screenshot as any).likesCount ?? 0) / 1000).toFixed(1)}K`
+                  : (screenshot as any)._count?.likes ?? (screenshot as any).likesCount ?? 0}
+              </div>
+            )}
+            <div className="bg-black/70 backdrop-blur-sm text-white px-1.5 py-0.5 text-[9px] rounded font-semibold flex items-center gap-0.5">
+              <Eye className="h-2.5 w-2.5" />
+              {(screenshot.views ?? 0) >= 1000
+                ? `${((screenshot.views ?? 0) / 1000).toFixed(1)}K`
+                : (screenshot.views ?? 0)}
+            </div>
           </div>
         )}
 
