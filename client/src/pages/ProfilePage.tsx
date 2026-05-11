@@ -2666,9 +2666,9 @@ const ProfilePage = () => {
                 <div className="w-3 h-3 rounded-full bg-primary shadow-[0_0_0_2px_rgba(0,0,0,0.8)]"></div>
               </div>
               )}
-              {/* Level Badge with Progress - positioned halfway on/off bottom border */}
+              {/* Level Badge with Progress - bottom-right of avatar */}
               {!selectedProfileNft && !lightboxData.isOpen && (
-              <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 scale-75" style={{ top: '100%' }}>
+              <div className="absolute z-30" style={{ bottom: '-2px', right: '-2px' }}>
                 <LevelBadgeWithProgress 
                   userId={profile.id}
                   level={profile.level || 1}
@@ -3196,9 +3196,9 @@ const ProfilePage = () => {
                   themeColor={avatarThemeColor}
                 />
               </div>
-              {/* Level Badge with Progress */}
+              {/* Level Badge with Progress - bottom-right of avatar */}
               {!selectedProfileNft && !lightboxData.isOpen && (
-              <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 z-30">
+              <div className="absolute z-30" style={{ bottom: '2px', right: '2px' }}>
                 <LevelBadgeWithProgress 
                   userId={profile.id}
                   level={profile.level || 1}
