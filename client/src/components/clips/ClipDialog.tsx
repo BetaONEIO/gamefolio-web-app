@@ -564,11 +564,40 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         <DialogDescription className="sr-only">
           {clip ? `Video by ${clip.user?.displayName || clip.user?.username || 'Unknown user'}` : 'Video content viewer'}
         </DialogDescription>
+        {/* Top left back arrow button */}
+        <div
+          className={cn("absolute z-[110]", !isMobile && "left-4 top-4")}
+          style={isMobile ? { top: 'max(12px, env(safe-area-inset-top, 12px))', left: '12px' } : undefined}
+        >
+          <button
+            onClick={onClose}
+            className={cn(
+              "rounded-full ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 flex items-center gap-1.5",
+              isMobile
+                ? "p-3 bg-black/60 backdrop-blur-sm hover:bg-black/80 opacity-100"
+                : "p-2 opacity-70 hover:opacity-100 bg-black/40 hover:bg-black/60"
+            )}
+            aria-label="Back"
+          >
+            <ChevronLeft className={cn("text-white", isMobile ? "h-6 w-6" : "h-5 w-5")} />
+          </button>
+        </div>
+
         {/* Top right action buttons */}
         <div
           className={cn("absolute z-[110] flex items-center gap-2", !isMobile && "right-4 top-4")}
           style={isMobile ? { top: 'max(12px, env(safe-area-inset-top, 12px))', right: '12px' } : undefined}
         >
+          {/* View All link */}
+          {!isMobile && (
+            <Link
+              href="/latest-clips"
+              onClick={onClose}
+              className="text-xs font-semibold px-3 py-1.5 rounded-full transition-colors text-white/80 hover:text-white border border-white/20 hover:border-white/40 bg-black/40 hover:bg-black/60 whitespace-nowrap"
+            >
+              View all
+            </Link>
+          )}
           {/* Delete button - only show for clip owner, not on mobile (shown in overlay for clips) */}
           {isOwnClip && clip && (!isMobile || clip.videoType === 'reel') && (
             <button

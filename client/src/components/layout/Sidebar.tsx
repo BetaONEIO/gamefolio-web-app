@@ -21,6 +21,7 @@ import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Game } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
+import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -40,6 +41,7 @@ interface TwitchGame {
 const Sidebar = () => {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
+  const { closeClipDialog } = useClipDialog();
   const [showAddGames, setShowAddGames] = useState(false);
   const [gameSearchQuery, setGameSearchQuery] = useState("");
   const [selectedGames, setSelectedGames] = useState<TwitchGame[]>([]);
@@ -258,7 +260,7 @@ const Sidebar = () => {
           {menuItems.map((item) => {
             const isActive = location === item.href;
             return (
-              <Link key={item.href} href={item.href}>
+              <Link key={item.href} href={item.href} onClick={() => { closeClipDialog(); if (item.href === '/' && location === '/') setLocation('/'); }}>
                 <div
                   className={cn(
                     "flex items-center p-3 rounded-lg transition-all cursor-pointer group",

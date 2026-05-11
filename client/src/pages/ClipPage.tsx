@@ -439,6 +439,21 @@ const ClipPage = () => {
       <div className="flex flex-col lg:flex-row min-h-screen">
         {/* Left Side - Video Player */}
         <div className="lg:w-[60%] xl:w-[65%] bg-black flex items-center justify-center relative">
+          {/* Back button */}
+          <button
+            onClick={() => {
+              if (window.history.length > 1) {
+                window.history.back();
+              } else {
+                navigate('/');
+              }
+            }}
+            className="absolute top-4 left-4 z-20 flex items-center gap-1 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm hover:bg-black/80 transition-colors text-white text-sm font-medium"
+            aria-label="Back to home"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </button>
           <VideoPlayer
             videoUrl={(clip as any).videoUrl}
             thumbnailUrl={(clip as any).thumbnailUrl === null ? undefined : (clip as any).thumbnailUrl}

@@ -7,6 +7,7 @@ import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
 import { useState, useCallback, useRef } from "react";
 import AuthModal from "@/components/auth/auth-modal";
 import { ZapIconSvg, useZapFly, ZapFlyOverlay } from "@/components/ui/ZapReactionIcon";
+import { useClipDialog } from "@/hooks/use-clip-dialog";
 
 const uploadOptions = [
   { icon: Video, label: "Upload Clip", type: "clips", tilt: -12 },
@@ -17,6 +18,7 @@ const uploadOptions = [
 const MobileNav = () => {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
+  const { closeClipDialog } = useClipDialog();
   const username = user?.username || "user";
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
@@ -32,6 +34,7 @@ const MobileNav = () => {
   ] as const;
 
   const handleNavClick = (item: typeof navItems[number], e: React.MouseEvent) => {
+    closeClipDialog();
     if ('isUpload' in item && item.isUpload) {
       e.preventDefault();
       setUploadMenuOpen((prev) => !prev);
