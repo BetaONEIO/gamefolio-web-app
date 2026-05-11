@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { formatDuration } from "@/lib/constants";
 import { useState } from "react";
-import { GameFilter } from "@/components/filters/GameFilter";
+import { GameFilterSheet } from "@/components/filters/GameFilterSheet";
 import { LazyImage } from "@/components/ui/lazy-image";
 
 export default function LatestReelsPage() {
@@ -21,6 +21,7 @@ export default function LatestReelsPage() {
   });
   const { openClipDialog } = useClipDialog();
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
+  const [selectedGameName, setSelectedGameName] = useState<string | null>(null);
 
   const filteredReels = latestReels
     ? selectedGameId
@@ -79,10 +80,12 @@ export default function LatestReelsPage() {
             </div>
 
             {latestReels && latestReels.length > 0 && (
-              <GameFilter
+              <GameFilterSheet
                 clips={latestReels}
                 selectedGameId={selectedGameId}
-                onGameSelect={setSelectedGameId}
+                selectedGameName={selectedGameName}
+                onGameSelect={(id, name) => { setSelectedGameId(id); setSelectedGameName(name); }}
+                label="Reels"
               />
             )}
           </div>

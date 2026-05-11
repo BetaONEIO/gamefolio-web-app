@@ -6,13 +6,14 @@ import { ArrowLeft, Video } from "lucide-react";
 import { useLocation } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { useEffect, useState } from "react";
-import { GameFilter } from "@/components/filters/GameFilter";
+import { GameFilterSheet } from "@/components/filters/GameFilterSheet";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 
 const LatestClipsPage = () => {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
+  const [selectedGameName, setSelectedGameName] = useState<string | null>(null);
   const [timePeriod, setTimePeriod] = useState<string>("recent");
   const { openClipDialog } = useClipDialog();
 
@@ -82,10 +83,12 @@ const LatestClipsPage = () => {
           </div>
 
           {clipsData && clipsData.length > 0 && (
-            <GameFilter
+            <GameFilterSheet
               clips={clipsData}
               selectedGameId={selectedGameId}
-              onGameSelect={setSelectedGameId}
+              selectedGameName={selectedGameName}
+              onGameSelect={(id, name) => { setSelectedGameId(id); setSelectedGameName(name); }}
+              label="Clips"
             />
           )}
         </div>
