@@ -466,7 +466,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
 };
 
 // ── Mobile: full-screen clips viewer with top bar ─────────────────────────
-const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void }> = ({ clips, onBack }) => {
+const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void; viewAllHref?: string }> = ({ clips, onBack, viewAllHref }) => {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
@@ -488,6 +488,20 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void }>
           <ArrowLeft className="h-5 w-5" />
         </button>
         <span className="sr-only">Clips</span>
+        {viewAllHref && (
+          <Link
+            href={viewAllHref}
+            onClick={onBack}
+            className="text-sm font-semibold px-3 py-1.5 rounded-full transition-colors"
+            style={{
+              color: '#B7FF1A',
+              border: '1px solid rgba(183, 255, 26, 0.5)',
+              background: 'rgba(183, 255, 26, 0.08)',
+            }}
+          >
+            View all
+          </Link>
+        )}
       </div>
 
       {/* Snap-scrolling feed — one clip per scroll */}
@@ -1142,7 +1156,7 @@ const TrendingPage: React.FC = () => {
                 <p className="text-white/50 text-sm text-center">Check back later!</p>
               </div>
             ) : (
-              <MobileClipsViewer clips={trendingClips} onBack={() => { if (window.history.length > 1) { window.history.back(); } else { setLocation('/'); } }} />
+              <MobileClipsViewer clips={trendingClips} onBack={() => { if (window.history.length > 1) { window.history.back(); } else { setLocation('/'); } }} viewAllHref="/latest-clips" />
             )}
           </div>
         )}
