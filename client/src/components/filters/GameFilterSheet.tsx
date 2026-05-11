@@ -52,7 +52,7 @@ export function GameFilterSheet({
       {/* Pill trigger */}
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm font-medium transition-all"
+        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all"
         style={{
           background: isActive ? 'rgba(183,255,26,0.15)' : 'rgba(255,255,255,0.06)',
           border: isActive ? '1.5px solid #B7FF1A' : '1.5px solid rgba(255,255,255,0.15)',
@@ -65,50 +65,53 @@ export function GameFilterSheet({
         </span>
       </button>
 
-      {/* Bottom-sheet overlay */}
+      {/* Full-screen overlay — z-[9999] ensures it covers every fixed element including the navbar */}
       {open && (
         <div
-          className="fixed inset-0 z-[90] flex items-end"
-          style={{ background: 'rgba(0,0,0,0.78)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
+          className="fixed inset-0 flex flex-col"
+          style={{ zIndex: 9999, background: 'rgba(0,0,0,0.92)' }}
           onClick={close}
         >
+          {/* Sheet panel — takes full height, clicks inside don't close */}
           <div
-            className="w-full rounded-t-3xl flex flex-col"
-            style={{ background: '#0F1923', maxHeight: '100vh', height: '100vh' }}
+            className="w-full flex flex-col"
+            style={{ background: '#0F1923', height: '100%' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 sm:px-5 pt-4 sm:pt-5 pb-3 sm:pb-4">
+            <div className="flex items-center justify-between px-4 pt-12 pb-3">
               <div className="flex items-center gap-2.5 min-w-0">
-                <Gamepad2 className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" style={{ color: '#B7FF1A' }} />
-                <span className="text-white font-bold text-sm sm:text-lg truncate">Filter {label} by Game</span>
+                <Gamepad2 className="h-5 w-5 shrink-0" style={{ color: '#B7FF1A' }} />
+                <span className="text-white font-bold text-base truncate">Filter {label} by Game</span>
               </div>
-              <button onClick={close} className="text-white/70 hover:text-white transition-colors">
-                <X className="h-5 w-5 sm:h-6 sm:w-6" />
+              <button
+                onClick={close}
+                className="text-white/70 hover:text-white transition-colors p-1"
+              >
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Search */}
-            <div className="px-4 pb-3 sm:pb-4">
+            {/* Search — font-size 16px prevents iOS Safari from zooming */}
+            <div className="px-4 pb-3">
               <div
-                className="flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3"
+                className="flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5"
                 style={{ background: 'rgba(255,255,255,0.07)', border: '1.5px solid rgba(183,255,26,0.35)' }}
               >
                 <Search className="h-4 w-4 shrink-0" style={{ color: 'rgba(255,255,255,0.4)' }} />
                 <input
-                  autoFocus
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search games..."
-                  className="flex-1 min-w-0 bg-transparent text-sm leading-none text-white outline-none placeholder:text-white/40"
+                  style={{ fontSize: '16px', color: '#fff', background: 'transparent', outline: 'none', border: 'none', width: '100%' }}
                 />
               </div>
             </div>
 
-            <p className="px-4 pb-3 text-white font-semibold text-sm sm:text-base">Available Games</p>
+            <p className="px-4 pb-3 text-white font-semibold text-sm">Available Games</p>
 
             {/* 3-column grid */}
-            <div className="flex-1 overflow-y-auto px-3 pb-6 sm:pb-8">
+            <div className="flex-1 overflow-y-auto px-3 pb-8">
               <div className="grid grid-cols-3 gap-2">
                 {/* All Games card */}
                 <button
