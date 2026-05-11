@@ -345,7 +345,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         )}
 
         {/* ── Right edge action column — hidden when comments open ─── */}
-        {!showComments && <div className="absolute right-3 z-20 flex flex-col items-center gap-3" style={{ bottom: 110 }} onClick={e => e.stopPropagation()}>
+        {!showComments && <div className="absolute right-3 z-20 flex flex-col items-center gap-3" style={{ bottom: 'calc(7.5rem + env(safe-area-inset-bottom, 0px))' }} onClick={e => e.stopPropagation()}>
           {/* Views */}
           <div className="flex flex-col items-center gap-0.5">
             <BarChart2 className="h-6 w-6 text-white drop-shadow" />
@@ -395,7 +395,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
 
         {/* ── Bottom info overlay — full-width gradient, hidden when comments open ─── */}
         {!showComments && (
-          <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-24 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent">
+          <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-[calc(7rem+env(safe-area-inset-bottom,0px))] pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent">
             {/* Text content — pr-16 keeps it clear of the right action column */}
             <div className="pr-14">
               {/* User row */}
