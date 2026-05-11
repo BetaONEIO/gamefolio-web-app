@@ -334,7 +334,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
           </div>
 
 
-          <div className="px-4 py-3 space-y-3">
+          <div className="px-4 py-3 space-y-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 120px)' }}>
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-3 min-w-0">
                 <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
