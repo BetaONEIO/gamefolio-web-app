@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Settings, LogOut, CheckCircle2, Palette, UserCog, Menu, ShieldCheck, Flame, Trophy, Crown, Video, Film, Camera, Gift } from "lucide-react";
@@ -542,11 +543,21 @@ const Header = () => {
         </div>
       </div>
       
-      {/* Mobile Search Overlay */}
-      {showMobileSearch && (
+      {/* Mobile Search Overlay - portaled to body so no parent can clip it */}
+      {showMobileSearch && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-[80] md:hidden flex flex-col"
-          style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+          className="md:hidden"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(3, 8, 10, 0.65)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            zIndex: 999,
+          }}
           onClick={() => {
             setShowMobileSearch(false);
             setShowDropdown(false);
@@ -554,20 +565,34 @@ const Header = () => {
           }}
         >
           <div
-            className="bg-card w-full px-4 pb-4 shadow-lg"
-            style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
+            style={{
+              position: 'absolute',
+              top: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+              left: 0,
+              right: 0,
+              padding: '0 12px',
+              zIndex: 1000,
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <div
               ref={mobileSearchRef}
-              className="relative max-w-full"
+              className="relative"
+              style={{ width: '100%', maxWidth: 'calc(100vw - 24px)' }}
             >
               <form onSubmit={handleSearch} className="relative flex items-center">
                 <Input
                   type="text"
                   placeholder="Search #hashtags, users, games..."
-                  className="w-full py-2 pl-10 pr-20 rounded-full bg-secondary text-foreground"
-                  style={{ fontSize: '16px' }}
+                  className="rounded-full bg-secondary text-foreground border border-primary/40"
+                  style={{
+                    width: '100%',
+                    height: '52px',
+                    fontSize: '16px',
+                    paddingLeft: '40px',
+                    paddingRight: '76px',
+                    boxSizing: 'border-box',
+                  }}
                   value={searchQuery}
                   onChange={handleSearchChange}
                   onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
@@ -706,7 +731,8 @@ const Header = () => {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </header>
   );
