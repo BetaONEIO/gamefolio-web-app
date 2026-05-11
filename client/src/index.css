@@ -660,6 +660,12 @@ video:focus {
   }
 }
 
+/* Blur the app behind the lootbox dialog */
+#root.lootbox-blur-bg {
+  filter: blur(8px);
+  transition: filter 0.2s ease;
+}
+
 /* Lootbox dialog transparent background override */
 .lootbox-dialog-content {
   background: transparent !important;
