@@ -102,7 +102,7 @@ const LatestClipsPage = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
         {isLoadingClips ? (
           Array(9).fill(0).map((_, i) => (
             <div key={`skeleton-${i}`} className="space-y-3">
@@ -122,7 +122,6 @@ const LatestClipsPage = () => {
               compact={false}
               clipsList={filteredClips}
               onCardClick={isMobile ? (clipId, clips) => setMobileViewer({ clips, startId: clipId }) : undefined}
-              bottomPadding={true}
             />
           ))
         ) : clipsData && clipsData.length > 0 ? (

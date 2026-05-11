@@ -373,7 +373,7 @@ const GamePage = () => {
             ))}
           </div>
         ) : displayData && displayData.length > 0 ? (
-          <div className={gridColsClass}>
+          <div className={`${gridColsClass} pb-20`}>
             {contentType === 'screenshots' ? (
               displayData.map((screenshot: any) => (
                 <ScreenshotCard
@@ -392,7 +392,6 @@ const GamePage = () => {
                   userId={user?.id}
                   compact={false}
                   reelsList={displayData}
-                  bottomPadding={true}
                 />
               ))
             ) : (
@@ -403,7 +402,6 @@ const GamePage = () => {
                   userId={user?.id}
                   compact={false}
                   clipsList={displayData}
-                  bottomPadding={true}
                 />
               ))
             )}
