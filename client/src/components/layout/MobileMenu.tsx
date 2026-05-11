@@ -136,7 +136,7 @@ const MobileMenu = () => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex">
+    <div className="fixed inset-0 bg-black/50 z-50 flex" style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}>
       <div 
         id="mobile-menu-container"
         className="w-4/5 max-w-xs bg-card shadow-xl h-full transition-transform duration-300 transform"
