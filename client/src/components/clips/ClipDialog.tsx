@@ -697,14 +697,17 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 // TikTok-style mobile fullscreen layout for reels only
                 <div
                   className="w-full h-full flex items-center justify-center bg-black relative transition-all duration-300 ease-out"
-                  style={showComments ? { transform: 'translateY(-8px) scale(0.97)', transformOrigin: 'center top' } : undefined}
+                  style={{
+                    paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
+                    ...(showComments ? { transform: 'translateY(-8px) scale(0.97)', transformOrigin: 'center top' } : {}),
+                  }}
                 >
                   <VideoPlayer 
                     videoUrl={clip.videoUrl} 
                     thumbnailUrl={clip.thumbnailUrl || (clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined)} 
                     autoPlay={true}
                     className="w-full h-full"
-                    objectFit="cover"
+                    objectFit="contain"
                     clipId={clip.id}
                     disableAspectRatio={true}
                     hideControls={true}
@@ -751,7 +754,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     isTransitioning ? "opacity-0" : "opacity-100"
                   )}>
                     {/* Bottom left - User info with inline Follow button */}
-                    <div className="absolute bottom-4 left-4 right-20 z-40 pointer-events-auto">
+                    <div className="absolute bottom-20 left-4 right-20 z-40 pointer-events-auto">
                       {/* User row with Follow button */}
                       <div className="flex items-center gap-2 mb-3">
                         <Link href={`/profile/${clip.user?.username}`} onClick={(e: React.MouseEvent) => {
@@ -830,7 +833,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     </div>
                     
                     {/* Right side action buttons */}
-                    <div className="absolute right-3 bottom-8 flex flex-col items-center space-y-5 z-50 pointer-events-auto">
+                    <div className="absolute right-3 bottom-20 flex flex-col items-center space-y-5 z-50 pointer-events-auto">
                       <FireButton 
                         contentId={clip.id}
                         contentType="clip"

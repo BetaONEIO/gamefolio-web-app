@@ -185,7 +185,10 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   if (!currentReel) return null;
 
   return (
-    <div className="fixed inset-0 bg-black z-[60] flex flex-col">
+    <div
+      className="fixed inset-0 bg-black z-[60] flex flex-col"
+      style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+    >
 
       {/* ── Ad overlay ── */}
       {showAd && (
@@ -227,7 +230,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     thumbnailUrl={reel.thumbnailUrl || undefined}
                     autoPlay={index === currentIndex && isPlaying}
                     className="w-full h-full"
-                    objectFit="cover"
+                    objectFit="contain"
                     clipId={reel.id}
                     disableAspectRatio={true}
                     hideControls={true}
@@ -286,7 +289,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             {!showComments && (
               <div
                 className="absolute right-3 flex flex-col items-center gap-3 pointer-events-auto"
-                style={{ bottom: 110 }}
+                style={{ bottom: 24 }}
                 onClick={e => e.stopPropagation()}
               >
                 {/* Views */}
@@ -345,7 +348,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
 
             {/* Bottom gradient overlay — hidden when comments open */}
             {!showComments && (
-              <div className="absolute bottom-0 left-0 right-0 z-[3] px-4 pb-24 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none">
+              <div className="absolute bottom-0 left-0 right-0 z-[3] px-4 pb-8 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none">
                 <div className="pr-14">
                   {/* User row */}
                   <div className="flex items-center gap-2 mb-1.5">

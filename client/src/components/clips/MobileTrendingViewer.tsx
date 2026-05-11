@@ -273,7 +273,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             hideControls={true}
             className="w-full h-full"
             clipId={currentItem.id}
-            objectFit={showComments ? "contain" : "cover"}
+            objectFit="contain"
             data-testid={`video-player-${currentItem.id}`}
           />
         </div>
@@ -309,6 +309,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         background: '#131F2A',
         transform: dragOffset !== 0 ? `translateY(${dragOffset}px)` : undefined,
         transition: dragOffset !== 0 ? 'none' : 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+        paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
       }}
       data-testid="mobile-trending-viewer"
     >
@@ -345,7 +346,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         )}
 
         {/* ── Right edge action column — hidden when comments open ─── */}
-        {!showComments && <div className="absolute right-3 z-20 flex flex-col items-center gap-3" style={{ bottom: 110 }} onClick={e => e.stopPropagation()}>
+        {!showComments && <div className="absolute right-3 z-20 flex flex-col items-center gap-3" style={{ bottom: 24 }} onClick={e => e.stopPropagation()}>
           {/* Views */}
           <div className="flex flex-col items-center gap-0.5">
             <BarChart2 className="h-6 w-6 text-white drop-shadow" />
@@ -395,7 +396,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
 
         {/* ── Bottom info overlay — full-width gradient, hidden when comments open ─── */}
         {!showComments && (
-          <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-24 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent">
+          <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-8 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent">
             {/* Text content — pr-16 keeps it clear of the right action column */}
             <div className="pr-14">
               {/* User row */}
