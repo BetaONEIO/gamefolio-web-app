@@ -424,7 +424,6 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                       initialLiked={false}
                       initialCount={(screenshot as any)._count?.likes || 0}
                       size="sm"
-                      iconSize={16}
                     />
                     <FireButton
                       contentId={screenshot.id}
@@ -433,13 +432,12 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                       initialFired={false}
                       initialCount={(screenshot as any)._count?.reactions || 0}
                       size="sm"
-                      iconSize={16}
                     />
                     <button
                       onClick={scrollToComments}
                       className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      <MessageSquare className="h-4 w-4" />
+                      <MessageSquare className="h-[18px] w-[18px]" />
                       <span className="text-sm">{(screenshot as any)._count?.comments || 0}</span>
                     </button>
                   </div>
@@ -593,7 +591,6 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                         initialLiked={false}
                         initialCount={(screenshot as any)._count?.likes || 0}
                         size="sm"
-                        iconSize={20}
                       />
                       <FireButton
                         contentId={screenshot.id}
@@ -602,14 +599,13 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                         initialFired={false}
                         initialCount={(screenshot as any)._count?.reactions || 0}
                         size="sm"
-                        iconSize={20}
                       />
                       <div className="flex items-center gap-1">
                         <button
                           onClick={scrollToComments}
                           className="p-0 h-auto transition-colors text-muted-foreground hover:text-white focus:outline-none"
                         >
-                          <MessageSquare className="h-5 w-5" />
+                          <MessageSquare className="h-[18px] w-[18px]" />
                         </button>
                         <span className="font-medium min-w-[1rem] text-center text-base text-muted-foreground">
                           {(screenshot as any)._count?.comments || 0}

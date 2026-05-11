@@ -273,7 +273,6 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
                 size="sm"
                 variant="horizontal"
                 clipRef={cardRef}
-                iconSize={18}
               />
             </div>
 
@@ -286,7 +285,6 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
                 initialCount={likes}
                 size="sm"
                 variant="horizontal"
-                iconSize={18}
               />
             </div>
 

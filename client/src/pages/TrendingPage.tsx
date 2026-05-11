@@ -339,7 +339,6 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
               initialCount={fires}
               size="sm"
               variant="horizontal"
-              iconSize={18}
             />
           </div>
 
@@ -353,7 +352,6 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
               initialCount={likes}
               size="sm"
               variant="horizontal"
-              iconSize={18}
             />
           </div>
 

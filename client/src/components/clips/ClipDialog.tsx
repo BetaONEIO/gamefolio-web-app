@@ -1333,7 +1333,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                               initialLiked={false}
                               initialCount={clip._count?.likes || 0}
                               size="sm"
-                              iconSize={20}
                               onUnauthenticatedAction={() => openDialog('like')}
                             />
 
@@ -1344,7 +1343,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                               initialFired={false}
                               initialCount={clip._count?.reactions || 0}
                               size="sm"
-                              iconSize={20}
                               onUnauthenticatedAction={() => openDialog('general')}
                             />
 
@@ -1370,7 +1368,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                                 className="p-0 h-auto transition-colors text-muted-foreground hover:text-white focus:outline-none"
                                 data-testid="button-comments-action"
                               >
-                                <MessageSquare className="h-5 w-5" />
+                                <MessageSquare className="h-[18px] w-[18px]" />
                               </button>
                               <span className="font-medium min-w-[1rem] text-center text-base text-muted-foreground">
                                 {comments?.length || 0}
