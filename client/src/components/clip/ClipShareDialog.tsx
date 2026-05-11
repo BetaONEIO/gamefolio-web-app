@@ -252,7 +252,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
         </DialogTrigger>
       )}
       <DialogContent
-        className="p-0 border-[#1e293b] bg-[#0f172a] w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh]"
+        className="p-0 border-[#1e293b] bg-[#0f172a] w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh] flex flex-col"
         aria-describedby="clip-share-description"
       >
         {/* Header */}
@@ -277,7 +277,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
         </div>
 
         {/* Content */}
-        <div className="p-4 sm:p-5 flex flex-col gap-5 overflow-y-auto flex-1 min-h-0 pb-24 sm:pb-5">
+        <div className="p-4 sm:p-5 flex flex-col gap-5 overflow-y-auto flex-1 min-h-0 pb-5">
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
               <div className="animate-spin w-8 h-8 border-4 border-[#B7FF1A] border-t-transparent rounded-full" />
