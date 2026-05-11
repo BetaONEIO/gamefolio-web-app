@@ -201,10 +201,10 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
 };
 
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
-  streamer: { label: "Streamer", icon: Video, color: "bg-primary/20 text-primary border-primary/30" },
-  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-primary/20 text-primary border-primary/30" },
+  streamer: { label: "Streamer", icon: Video, color: "bg-[#A2F000]/20 text-[#A2F000] border-[#A2F000]/30" },
+  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-[#A2F000]/20 text-[#A2F000] border-[#A2F000]/30" },
   professional_gamer: { label: "Professional Gamer", icon: Trophy, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
-  content_creator: { label: "Content Creator", icon: Upload, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+  content_creator: { label: "Content Creator", icon: Upload, color: "bg-[#A2F000]/20 text-[#A2F000] border-[#A2F000]/30" },
   indie_developer: { label: "Indie Developer", icon: Code, color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
   viewer: { label: "Viewer", icon: Eye, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
   filthy_casual: { label: "Filthy Casual", icon: Coffee, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
@@ -1377,7 +1377,7 @@ const ProfilePage = () => {
     return <NotFound />;
   }
 
-  const accentColor = profile.accentColor || '#B7FF1A';
+  const accentColor = profile.accentColor || '#A2F000';
   const backgroundColor = profile.backgroundColor || '#121F2B';
   const cardColor = profile.cardColor || '#1E3A8A';
 
@@ -1461,7 +1461,7 @@ const ProfilePage = () => {
     : isZombieTheme ? '#9ae600'
     : isCyberpunkTheme ? '#00d3f2'
     : isNeoTheme ? '#9333ea'
-    : isBlocksTheme ? '#B7FF1A'
+    : isBlocksTheme ? '#A2F000'
     : isForestTheme ? '#4a7c59'
     : isGothicTheme ? '#c27aff'
     : isElectricTheme ? '#ffe033'
@@ -1616,7 +1616,7 @@ const ProfilePage = () => {
     boxShadow: '0 0 12px #00ff4122',
   } : isBlocksTheme ? {
     background: '#1a1a1a',
-    border: '3px solid #B7FF1A',
+    border: '3px solid #A2F000',
     borderRadius: '4px',
     boxShadow: '4px 4px 0 #000',
   } : isForestTheme ? {
