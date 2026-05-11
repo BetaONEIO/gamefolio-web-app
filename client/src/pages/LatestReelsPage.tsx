@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { ClipWithUser } from "@shared/schema";
-import { ChevronLeft, Eye } from "lucide-react";
+import { ChevronLeft, BarChart2, Play } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
@@ -8,6 +8,7 @@ import { useMobile } from "@/hooks/use-mobile";
 import { formatDuration } from "@/lib/constants";
 import { useState } from "react";
 import { GameFilter } from "@/components/filters/GameFilter";
+import { LazyImage } from "@/components/ui/lazy-image";
 
 export default function LatestReelsPage() {
   const [timePeriod, setTimePeriod] = useState<string>("recent");
@@ -114,54 +115,62 @@ export default function LatestReelsPage() {
 
         {filteredReels.length > 0 ? (
           isMobile ? (
-            <div className="columns-2 gap-1 space-y-1">
+            <div className="grid grid-cols-2 gap-1">
               {filteredReels.map((reel) => {
                 return (
-                  <div 
+                  <div
                     key={reel.id}
                     onClick={() => openClipDialog(reel.id, filteredReels)}
-                    className="break-inside-avoid mb-1"
+                    className="w-full"
                   >
                     <div className="relative aspect-[9/16] w-full rounded-sm overflow-hidden cursor-pointer group">
-                      <img
+                      <div className="absolute inset-0 bg-gray-800" />
+                      <LazyImage
                         src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
                         alt={reel.title}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = "/placeholder-game.png";
-                        }}
+                        placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
+                        showLoadingSpinner={true}
+                        rootMargin="50px"
+                        containerClassName="absolute inset-0"
+                        fallback={
+                          <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                            <Play className="h-8 w-8 text-gray-500" />
+                          </div>
+                        }
                       />
-                      
+
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
-                      
+
                       <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold">
                         {(() => {
-                          const actualDuration = reel.trimEnd && reel.trimEnd > 0 
+                          const actualDuration = reel.trimEnd && reel.trimEnd > 0
                             ? reel.trimEnd - (reel.trimStart || 0)
                             : reel.duration || 0;
                           return formatDuration(actualDuration);
                         })()}
                       </div>
-                      
+
                       <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
+                        <BarChart2 className="h-3 w-3" />
                         {formatNumber(reel.views || 0)}
                       </div>
-                      
+
                       <div className="absolute bottom-0 left-0 right-0 p-2">
                         <h3 className="text-white font-bold text-xs mb-0.5 drop-shadow-lg line-clamp-2">
                           {reel.title}
                         </h3>
-
                         <p className="text-white text-[10px] mb-1 drop-shadow-lg">
                           @{reel.user.username}
                         </p>
-
                         {reel.game && (
-                          <div className="inline-block bg-primary text-[#071013] text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
+                          <Link
+                            href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-block bg-primary text-[#071013] text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
+                          >
                             {reel.game.name}
-                          </div>
+                          </Link>
                         )}
                       </div>
                     </div>
@@ -172,20 +181,26 @@ export default function LatestReelsPage() {
           ) : (
             <div className="grid grid-cols-4 gap-4 w-full">
               {filteredReels.map((reel) => (
-                <div 
+                <div
                   key={reel.id}
                   onClick={() => openClipDialog(reel.id, filteredReels)}
                   className="group relative bg-black rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
                 >
-                  <div className="relative w-full h-full">
-                    <img
+                  <div className="absolute inset-0">
+                    <div className="absolute inset-0 bg-gray-800" />
+                    <LazyImage
                       src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
                       alt={reel.title}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = "/placeholder-game.png";
-                      }}
+                      placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
+                      showLoadingSpinner={true}
+                      rootMargin="50px"
+                      containerClassName="absolute inset-0"
+                      fallback={
+                        <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                          <Play className="h-12 w-12 text-gray-500" />
+                        </div>
+                      }
                     />
 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
@@ -200,7 +215,7 @@ export default function LatestReelsPage() {
 
                     <div className="absolute top-3 left-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-semibold">
                       {(() => {
-                        const actualDuration = reel.trimEnd && reel.trimEnd > 0 
+                        const actualDuration = reel.trimEnd && reel.trimEnd > 0
                           ? reel.trimEnd - (reel.trimStart || 0)
                           : reel.duration || 0;
                         return formatDuration(actualDuration);
@@ -208,12 +223,12 @@ export default function LatestReelsPage() {
                     </div>
 
                     <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-semibold flex items-center gap-1">
-                      <Eye className="h-3 w-3" />
+                      <BarChart2 className="h-3 w-3" />
                       {formatNumber(reel.views || 0)}
                     </div>
 
-                    <div className="absolute bottom-0 left-0 right-0 p-3">
-                      <h3 className="text-white font-bold text-sm mb-0.5 drop-shadow-lg line-clamp-2">
+                    <div className="absolute bottom-0 left-0 right-0 p-3" onClick={(e) => e.stopPropagation()}>
+                      <h3 className="text-white font-bold text-sm mb-0.5 drop-shadow-lg line-clamp-2" onClick={() => openClipDialog(reel.id, filteredReels)}>
                         {reel.title}
                       </h3>
 
@@ -222,9 +237,13 @@ export default function LatestReelsPage() {
                       </p>
 
                       {reel.game && (
-                        <div className="inline-block bg-primary text-[#071013] text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
+                        <Link
+                          href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-block bg-primary text-[#071013] text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
+                        >
                           {reel.game.name}
-                        </div>
+                        </Link>
                       )}
                     </div>
                   </div>
