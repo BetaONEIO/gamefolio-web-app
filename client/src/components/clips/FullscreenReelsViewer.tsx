@@ -43,8 +43,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const [showShare, setShowShare] = useState(false);
   const [ageRestrictionAccepted, setAgeRestrictionAccepted] = useState<Record<number, boolean>>({});
   const [showAgeRestrictionDialog, setShowAgeRestrictionDialog] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isAcceptingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -180,7 +179,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   useEffect(() => {
     setShowComments(false);
     setShowShare(false);
-    setIsPaused(false);
+    setIsPlaying(true);
   }, [currentIndex]);
 
   if (!currentReel) return null;
@@ -206,7 +205,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         ref={videoAreaRef}
         className="relative flex-shrink-0 overflow-hidden transition-[height] duration-300 ease-in-out"
         style={{ height: showComments ? '38%' : '100%', flex: showComments ? 'none' : '1' }}
-        onClick={() => { if (!showComments) setIsPaused(p => !p); }}
+        onClick={() => { if (!showComments) setIsPlaying(p => !p); }}
       >
         {/* Scrollable video stack */}
         <div
@@ -226,17 +225,14 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                   <VideoPlayer
                     videoUrl={reel.videoUrl}
                     thumbnailUrl={reel.thumbnailUrl || undefined}
-                    autoPlay={index === currentIndex}
+                    autoPlay={index === currentIndex && isPlaying}
                     className="w-full h-full"
                     objectFit="cover"
                     clipId={reel.id}
                     disableAspectRatio={true}
                     hideControls={true}
                     videoStyle={{ pointerEvents: 'none' }}
-                    externalPaused={index === currentIndex ? isPaused : true}
-                    externalMuted={index === currentIndex ? isMuted : undefined}
-                    onPlayingChange={index === currentIndex ? (playing) => setIsPaused(!playing) : undefined}
-                    onMutedChange={index === currentIndex ? (muted) => setIsMuted(muted) : undefined}
+                    externalPaused={!(index === currentIndex && isPlaying)}
                     onEnded={() => {
                       if (index < reels.length - 1 && containerRef.current) {
                         const h = containerRef.current.clientHeight;
@@ -331,7 +327,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                   onClick={(e) => {
                     e.stopPropagation();
                     if (!user) { openDialog('comment'); }
-                    else { setShowComments(true); setIsPaused(true); }
+                    else { setShowComments(true); setIsPlaying(false); }
                   }}
                 >
                   <MessageCircle className="h-6 w-6 text-white drop-shadow" />
@@ -435,7 +431,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
               <span className="text-white/45 font-normal text-sm">{currentReel._count?.comments || 0}</span>
             </h3>
             <button
-              onClick={() => { setShowComments(false); setIsPaused(false); }}
+              onClick={() => { setShowComments(false); setIsPlaying(true); }}
               className="w-8 h-8 flex items-center justify-center rounded-full"
               style={{ background: 'rgba(255,255,255,0.08)' }}
             >
