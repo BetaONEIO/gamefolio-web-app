@@ -73,17 +73,17 @@ export function ScreenshotCard({
 
         {/* Stats overlay — likes + views, matches h-2.5 w-2.5 icon size of Latest Clips module */}
         {!screenshot.ageRestricted && (
-          <div className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 z-20">
+          <div className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 z-20 scale-90 sm:scale-100 origin-bottom-right">
             {((screenshot as any)._count?.likes ?? (screenshot as any).likesCount ?? 0) > 0 && (
-              <div className="bg-black/70 backdrop-blur-sm text-white px-1.5 py-0.5 text-[9px] rounded font-semibold flex items-center gap-0.5">
-                <Heart className="h-2.5 w-2.5" />
+              <div className="bg-black/70 backdrop-blur-sm text-white px-1 py-0.5 text-[8px] sm:text-[9px] rounded font-semibold flex items-center gap-0.5 leading-none">
+                <Heart className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                 {((screenshot as any)._count?.likes ?? (screenshot as any).likesCount ?? 0) >= 1000
                   ? `${(((screenshot as any)._count?.likes ?? (screenshot as any).likesCount ?? 0) / 1000).toFixed(1)}K`
                   : (screenshot as any)._count?.likes ?? (screenshot as any).likesCount ?? 0}
               </div>
             )}
-            <div className="bg-black/70 backdrop-blur-sm text-white px-1.5 py-0.5 text-[9px] rounded font-semibold flex items-center gap-0.5">
-              <Eye className="h-2.5 w-2.5" />
+            <div className="bg-black/70 backdrop-blur-sm text-white px-1 py-0.5 text-[8px] sm:text-[9px] rounded font-semibold flex items-center gap-0.5 leading-none">
+              <Eye className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
               {(screenshot.views ?? 0) >= 1000
                 ? `${((screenshot.views ?? 0) / 1000).toFixed(1)}K`
                 : (screenshot.views ?? 0)}
