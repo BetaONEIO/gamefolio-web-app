@@ -313,7 +313,11 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
       {/* Content - shrinks when comments panel is open */}
       <div
         className="relative w-full flex-shrink-0 overflow-hidden"
-        style={{ height: (showComments && !embedded) ? '38%' : '100%', flex: (showComments && !embedded) ? 'none' : '1' }}
+        style={{
+          height: (showComments && !embedded) ? '38%' : '100%',
+          flex: (showComments && !embedded) ? 'none' : '1',
+          transition: 'height 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
+        }}
         onClick={handleVideoTap}
       >
         {renderContent()}
@@ -507,37 +511,44 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
       </div>
 
       {/* Comments bottom sheet — slides up, video visible above */}
-      {showComments && !embedded && (
-        <div
-          className="flex-1 flex flex-col overflow-hidden"
-          style={{ background: '#0F1923', borderRadius: '20px 20px 0 0' }}
-        >
-          {/* Drag handle */}
-          <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-            <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
-          </div>
+      <AnimatePresence>
+        {showComments && !embedded && (
+          <motion.div
+            key="comments-sheet"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 32, stiffness: 320, mass: 0.9 }}
+            className="flex-1 flex flex-col overflow-hidden"
+            style={{ background: '#0F1923', borderRadius: '20px 20px 0 0' }}
+          >
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+              <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
+            </div>
 
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-            <h3 className="text-white font-bold text-base">
-              Comments{' '}
-              <span className="text-white/45 font-normal text-sm">{stats.comments}</span>
-            </h3>
-            <button
-              onClick={() => setShowComments(false)}
-              className="w-8 h-8 flex items-center justify-center rounded-full"
-              style={{ background: 'rgba(255,255,255,0.08)' }}
-            >
-              <X className="h-4 w-4 text-white/70" />
-            </button>
-          </div>
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              <h3 className="text-white font-bold text-base">
+                Comments{' '}
+                <span className="text-white/45 font-normal text-sm">{stats.comments}</span>
+              </h3>
+              <button
+                onClick={() => setShowComments(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full"
+                style={{ background: 'rgba(255,255,255,0.08)' }}
+              >
+                <X className="h-4 w-4 text-white/70" />
+              </button>
+            </div>
 
-          {/* Comment list + input */}
-          <div className="flex-1 overflow-y-auto px-4 py-2">
-            {isVideoContent(currentItem) && <CommentSection clipId={currentItem.id} />}
-          </div>
-        </div>
-      )}
+            {/* Comment list + input */}
+            <div className="flex-1 overflow-y-auto px-4 py-2">
+              {isVideoContent(currentItem) && <CommentSection clipId={currentItem.id} />}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Share dialog */}
       {isVideoContent(currentItem) && (
