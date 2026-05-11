@@ -374,9 +374,9 @@ function Router() {
           <ProtectedRoute path="/browse/games/categories" component={GameCategoriesPage} />
           <Route path="/leaderboard" component={LeaderboardPage} />
           <ProtectedRoute path="/messages" component={MessagesPage} />
-          <ProtectedRoute path="/latest-reels" component={LatestReelsPage} />
-          <ProtectedRoute path="/latest-clips" component={LatestClipsPage} />
-          <ProtectedRoute path="/latest-screenshots" component={LatestScreenshotsPage} />
+          <Route path="/latest-reels" component={LatestReelsPage} />
+          <Route path="/latest-clips" component={LatestClipsPage} />
+          <Route path="/latest-screenshots" component={LatestScreenshotsPage} />
 
           <AdminProtectedRoute path="/admin" component={AdminPage} />
           <AdminProtectedRoute path="/admin/content-filter" component={AdminContentFilter} />
