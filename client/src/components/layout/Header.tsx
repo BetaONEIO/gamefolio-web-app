@@ -548,11 +548,16 @@ const Header = () => {
         <div
           style={{
             position: 'fixed',
-            inset: 0,
-            background: 'rgba(3, 8, 10, 0.75)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            zIndex: 9999,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(3, 8, 10, 0.93)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            zIndex: 99999,
           }}
           onClick={() => {
             setShowMobileSearch(false);
@@ -567,7 +572,7 @@ const Header = () => {
               left: 0,
               right: 0,
               padding: '0 12px',
-              zIndex: 1000,
+              zIndex: 1,
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -583,7 +588,7 @@ const Header = () => {
                   className="rounded-full bg-secondary text-foreground border border-primary/40"
                   style={{
                     width: '100%',
-                    height: '52px',
+                    height: '44px',
                     fontSize: '16px',
                     paddingLeft: '40px',
                     paddingRight: '76px',
