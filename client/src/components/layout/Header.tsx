@@ -566,7 +566,8 @@ const Header = () => {
                 <Input
                   type="text"
                   placeholder="Search #hashtags, users, games..."
-                  className="w-full py-3 pl-10 pr-20 rounded-full bg-secondary text-foreground text-base"
+                  className="w-full py-2 pl-10 pr-20 rounded-full bg-secondary text-foreground"
+                  style={{ fontSize: '16px' }}
                   value={searchQuery}
                   onChange={handleSearchChange}
                   onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
