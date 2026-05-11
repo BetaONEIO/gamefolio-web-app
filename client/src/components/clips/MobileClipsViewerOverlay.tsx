@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
 import { ClipWithUser } from "@shared/schema";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
@@ -15,11 +14,13 @@ interface MobileClipsViewerOverlayProps {
 const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: MobileClipsViewerOverlayProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Lock body scroll
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
 
+  // Scroll to the starting clip
   useEffect(() => {
     if (!scrollRef.current) return;
     const idx = clips.findIndex(c => c.id === startClipId);
@@ -29,10 +30,10 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
     }
   }, [startClipId, clips]);
 
-  const overlay = (
+  return (
     <div
-      className="fixed inset-0 flex flex-col"
-      style={{ background: '#03080A', zIndex: 9999 }}
+      className="fixed inset-0 z-[9999] flex flex-col"
+      style={{ background: '#03080A' }}
     >
       {/* Top bar */}
       <div
@@ -67,13 +68,22 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
       {/* Snap-scrolling feed */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto"
-        style={{ scrollSnapType: 'y mandatory', WebkitOverflowScrolling: 'touch' }}
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          scrollSnapType: 'y mandatory',
+          WebkitOverflowScrolling: 'touch',
+        }}
       >
         {clips.map((clip) => (
           <div
             key={clip.id}
-            style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always', minHeight: '100%' }}
+            className="flex flex-col"
+            style={{
+              scrollSnapAlign: 'start',
+              scrollSnapStop: 'always',
+              minHeight: '100%',
+            }}
           >
             <ClipFeedCard clip={clip} clips={clips} />
           </div>
@@ -81,8 +91,6 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
       </div>
     </div>
   );
-
-  return createPortal(overlay, document.body);
 };
 
 export default MobileClipsViewerOverlay;
