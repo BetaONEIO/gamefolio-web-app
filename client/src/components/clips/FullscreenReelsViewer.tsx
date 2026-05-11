@@ -232,6 +232,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     clipId={reel.id}
                     disableAspectRatio={true}
                     hideControls={true}
+                    videoStyle={{ pointerEvents: 'none' }}
                     externalPaused={index === currentIndex ? isPaused : true}
                     externalMuted={index === currentIndex ? isMuted : undefined}
                     onPlayingChange={index === currentIndex ? (playing) => setIsPaused(!playing) : undefined}
