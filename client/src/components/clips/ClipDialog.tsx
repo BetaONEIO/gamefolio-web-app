@@ -34,8 +34,6 @@ import {
   UserMinus,
   UserCheck,
   AlertTriangle,
-  Maximize2,
-  Minimize2,
   Trash2,
   Play,
   Pause,
@@ -109,7 +107,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     commentSheetTouchStartY.current = null;
   };
   const [isMobile, setIsMobile] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPortraitClip, setIsPortraitClip] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
@@ -183,7 +180,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   useEffect(() => {
     if (!isOpen) {
       setShowComments(false);
-      setIsFullscreen(false);
       setAgeRestrictionAccepted(false);
       setShowAgeRestrictionDialog(false);
       isAcceptingRef.current = false;
@@ -274,14 +270,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         return;
       }
       
-      // Handle escape for fullscreen first
-      if (e.key === 'Escape' && isFullscreen) {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsFullscreen(false);
-        return;
-      }
-      
       // Only handle navigation if dialog is open and we have navigation functions
       if (!isOpen || !showNavigation || isTransitioning) return;
       
@@ -332,7 +320,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     return () => {
       document.removeEventListener('keydown', handleKeyDown, { capture: true });
     };
-  }, [isOpen, showNavigation, onNext, onPrevious, onClose, isTransitioning, isFullscreen, clip?.videoType]);
+  }, [isOpen, showNavigation, onNext, onPrevious, onClose, isTransitioning, clip?.videoType]);
 
   useEffect(() => {
     if (!isOpen || !showNavigation) return;
@@ -892,40 +880,20 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               ) : clip.videoType === 'reel' ? (
                 // Desktop reels: full height container with video player
                 <div className="h-full w-full flex items-center justify-center bg-black relative">
-                  {!isFullscreen && (
-                    <VideoPlayer 
-                      videoUrl={clip.videoUrl} 
-                      thumbnailUrl={signedThumbnailUrl || clip.thumbnailUrl || undefined} 
-                      autoPlay={true}
-                      className="h-full max-h-full"
-                      objectFit="contain"
-                      clipId={clip.id}
-                    />
-                  )}
-                  {isFullscreen && (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <img 
-                        src={signedThumbnailUrl || "/assets/video-placeholder.svg"} 
-                        alt={clip.title}
-                        loading="lazy"
-                        className="max-w-full max-h-full object-contain opacity-50"
-                      />
-                    </div>
-                  )}
+                  <VideoPlayer 
+                    videoUrl={clip.videoUrl} 
+                    thumbnailUrl={signedThumbnailUrl || clip.thumbnailUrl || undefined} 
+                    autoPlay={true}
+                    className="h-full max-h-full"
+                    objectFit="contain"
+                    clipId={clip.id}
+                  />
                   {/* Reel badge indicator */}
                   <div className="absolute top-4 left-4 z-50">
                     <span className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-bold">
                       Reel
                     </span>
                   </div>
-                  {/* Fullscreen button - top right, away from video controls */}
-                  <button
-                    onClick={() => setIsFullscreen(true)}
-                    className="absolute top-4 right-4 z-50 p-2 rounded-full bg-black/60 hover:bg-black/80 transition-colors"
-                    title="View fullscreen"
-                  >
-                    <Maximize2 className="h-5 w-5 text-white" />
-                  </button>
                 </div>
               ) : isMobile ? (
                 // Mobile clips: flex-column so comments push video up rather than overlaying it
@@ -1465,64 +1433,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         />
       )}
       
-      {/* Fullscreen video overlay */}
-      {clip && isFullscreen && (
-        <div
-          className="fixed z-[100] bg-black flex items-center justify-center"
-          style={isMobile ? {
-            // Rotate the overlay to landscape on portrait mobile screens
-            // so the video fills the full screen in landscape orientation
-            top: 0,
-            left: 0,
-            width: '100vh',
-            height: '100vw',
-            transform: 'rotate(90deg) translateX(0) translateY(-100%)',
-            transformOrigin: 'top left',
-          } : {
-            inset: 0,
-          }}
-        >
-          {/* Exit buttons — positioned relative to the rotated overlay */}
-          <button
-            onClick={() => setIsFullscreen(false)}
-            className="absolute top-4 right-4 z-[110] p-3 rounded-full bg-black/60 hover:bg-black/80 transition-colors"
-            title="Exit fullscreen"
-          >
-            <X className="h-6 w-6 text-white" />
-          </button>
-          <button
-            onClick={() => setIsFullscreen(false)}
-            className="absolute top-4 left-4 z-[110] p-3 rounded-full bg-black/60 hover:bg-black/80 transition-colors"
-            title="Minimize"
-          >
-            <Minimize2 className="h-6 w-6 text-white" />
-          </button>
-
-          {/* Video fills the rotated container */}
-          <div className="w-full h-full flex items-center justify-center">
-            <VideoPlayer 
-              videoUrl={clip.videoUrl} 
-              thumbnailUrl={clip.thumbnailUrl || undefined} 
-              autoPlay={true}
-              className="w-full h-full"
-              objectFit="contain"
-              clipId={clip.id}
-              disableAspectRatio={true}
-            />
-          </div>
-
-          {/* Info bar at the bottom of the rotated overlay */}
-          <div className="absolute bottom-6 left-16 right-16 z-[110] text-white">
-            <h2 className="text-lg font-semibold mb-1">{clip.title}</h2>
-            {clip.game && (
-              <span className="bg-primary text-[#071013] px-3 py-1 rounded text-sm font-bold">
-                {clip.game.name}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent className="z-[200]">

@@ -397,36 +397,6 @@ const VideoPlayer = ({
     };
   }, [isPlaying, onEnded, initialTime]);
 
-  // Auto-enter fullscreen when the device rotates to landscape while a video
-  // is actively playing. enterFullscreen reads videoRef.current and DOM state
-  // only (no React state closures), so attaching the listener once on mount
-  // is sufficient.
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const mq = window.matchMedia("(orientation: landscape)");
-
-    const onOrientationChange = () => {
-      if (!mq.matches) return; // ignore portrait transitions
-      const video = videoRef.current;
-      if (!video || video.paused) return; // only when actively watching
-      void enterFullscreen();
-    };
-
-    // Modern API; fall back to addListener for older Safari/iOS.
-    if (typeof mq.addEventListener === "function") {
-      mq.addEventListener("change", onOrientationChange);
-    } else if (typeof (mq as unknown as { addListener?: (cb: () => void) => void }).addListener === "function") {
-      (mq as unknown as { addListener: (cb: () => void) => void }).addListener(onOrientationChange);
-    }
-
-    return () => {
-      if (typeof mq.removeEventListener === "function") {
-        mq.removeEventListener("change", onOrientationChange);
-      } else if (typeof (mq as unknown as { removeListener?: (cb: () => void) => void }).removeListener === "function") {
-        (mq as unknown as { removeListener: (cb: () => void) => void }).removeListener(onOrientationChange);
-      }
-    };
-  }, []);
 
   return (
     <div 
