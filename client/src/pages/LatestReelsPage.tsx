@@ -103,12 +103,12 @@ export default function LatestReelsPage() {
         ) : filteredReels.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 w-full">
             {filteredReels.map((reel) => (
-              <div
-                key={reel.id}
-                onClick={() => openClipDialog(reel.id, filteredReels)}
-                className="group relative bg-black rounded-xl sm:rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
-              >
-                <div className="absolute inset-0">
+              <div key={reel.id} className="flex flex-col gap-1.5">
+                {/* Thumbnail card */}
+                <div
+                  onClick={() => openClipDialog(reel.id, filteredReels)}
+                  className="group relative bg-black rounded-xl sm:rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
+                >
                   <div className="absolute inset-0 bg-gray-800" />
                   <LazyImage
                     src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
@@ -125,7 +125,7 @@ export default function LatestReelsPage() {
                     }
                   />
 
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/20" />
 
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="bg-primary backdrop-blur-sm rounded-full p-2 sm:p-3">
@@ -148,24 +148,28 @@ export default function LatestReelsPage() {
                     <BarChart2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                     {formatNumber(reel.views || 0)}
                   </div>
+                </div>
 
-                  <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3" onClick={(e) => e.stopPropagation()}>
-                    <h3 className="text-white font-bold text-xs sm:text-sm mb-0.5 drop-shadow-lg line-clamp-2" onClick={() => openClipDialog(reel.id, filteredReels)}>
-                      {reel.title}
-                    </h3>
-                    <p className="text-white/70 text-[10px] sm:text-xs mb-1 drop-shadow-lg">
-                      @{reel.user.username}
-                    </p>
-                    {reel.game && (
-                      <Link
-                        href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-block bg-primary text-[#071013] text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
-                      >
-                        {reel.game.name}
-                      </Link>
-                    )}
-                  </div>
+                {/* Info below card */}
+                <div className="px-0.5" onClick={(e) => e.stopPropagation()}>
+                  <h3
+                    className="text-white font-semibold text-xs sm:text-sm leading-tight line-clamp-2 cursor-pointer hover:text-primary transition-colors"
+                    onClick={() => openClipDialog(reel.id, filteredReels)}
+                  >
+                    {reel.title}
+                  </h3>
+                  <p className="text-muted-foreground text-[10px] sm:text-xs mt-0.5">
+                    @{reel.user.username}
+                  </p>
+                  {reel.game && (
+                    <Link
+                      href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-block mt-1 bg-primary text-[#071013] text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
+                    >
+                      {reel.game.name}
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}
