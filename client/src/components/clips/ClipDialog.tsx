@@ -78,9 +78,10 @@ interface ClipDialogProps {
   onNext?: () => void;
   onPrevious?: () => void;
   showNavigation?: boolean;
+  viewAllHref?: string;
 }
 
-const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigation = false }: ClipDialogProps) => {
+const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigation = false, viewAllHref }: ClipDialogProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { isOpen: joinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
@@ -588,10 +589,10 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           className={cn("absolute z-[110] flex items-center gap-2", !isMobile && "right-4 top-4")}
           style={isMobile ? { top: 'max(12px, env(safe-area-inset-top, 12px))', right: '12px' } : undefined}
         >
-          {/* View All link */}
-          {!isMobile && (
+          {/* View All link - only shown when context provides a viewAllHref */}
+          {!isMobile && viewAllHref && (
             <Link
-              href="/latest-clips"
+              href={viewAllHref}
               onClick={onClose}
               className="text-xs font-semibold px-3 py-1.5 rounded-full transition-colors text-white/80 hover:text-white border border-white/20 hover:border-white/40 bg-black/40 hover:bg-black/60 whitespace-nowrap"
             >

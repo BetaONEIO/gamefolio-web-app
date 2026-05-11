@@ -7,7 +7,7 @@ import { ClipWithUser } from '@shared/schema';
 interface ClipDialogContextType {
   isOpen: boolean;
   clipId: number | null;
-  openClipDialog: (id: number, clipsList?: ClipWithUser[]) => void;
+  openClipDialog: (id: number, clipsList?: ClipWithUser[], viewAllHref?: string) => void;
   closeClipDialog: () => void;
 }
 
@@ -30,10 +30,12 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [clipId, setClipId] = useState<number | null>(null);
   const [clipsList, setClipsList] = useState<ClipWithUser[] | null>(null);
+  const [viewAllHref, setViewAllHref] = useState<string | undefined>(undefined);
 
-  const openClipDialog = (id: number, providedClipsList?: ClipWithUser[]) => {
+  const openClipDialog = (id: number, providedClipsList?: ClipWithUser[], href?: string) => {
     setClipId(id);
     setClipsList(providedClipsList || null);
+    setViewAllHref(href);
     setIsOpen(true);
   };
 
@@ -41,6 +43,7 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
     setIsOpen(false);
     setClipId(null);
     setClipsList(null);
+    setViewAllHref(undefined);
   };
 
   // Get current clip to check if it's a reel
@@ -98,6 +101,7 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
           onNext={hasNavigation ? handleNext : undefined}
           onPrevious={hasNavigation ? handlePrevious : undefined}
           showNavigation={hasNavigation || false}
+          viewAllHref={viewAllHref}
         />
       )}
     </ClipDialogContext.Provider>

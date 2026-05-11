@@ -155,6 +155,7 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
               compact={false}
               clipsList={clips}
               onCardClick={isMobile ? (clipId, clipsArr) => setMobileViewer({ clips: clipsArr, startId: clipId }) : undefined}
+              viewAllHref="/latest-clips"
             />
           </div>
         ))}

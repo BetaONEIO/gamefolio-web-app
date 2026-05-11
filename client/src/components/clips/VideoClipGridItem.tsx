@@ -18,6 +18,7 @@ interface VideoClipGridItemProps {
   clipsList?: ClipWithUser[];
   onCardClick?: (clipId: number, clips: ClipWithUser[]) => void;
   bottomPadding?: boolean;
+  viewAllHref?: string;
 }
 
 const VideoClipGridItem = ({
@@ -30,6 +31,7 @@ const VideoClipGridItem = ({
   clipsList,
   onCardClick,
   bottomPadding = false,
+  viewAllHref,
 }: VideoClipGridItemProps) => {
   const { openClipDialog } = useClipDialog();
   const lazyVideo = useLazyVideo({ autoPlay: false });
@@ -47,7 +49,7 @@ const VideoClipGridItem = ({
     if (onCardClick) {
       onCardClick(clip.id, contextList);
     } else {
-      openClipDialog(clip.id, contextList.length ? contextList : undefined);
+      openClipDialog(clip.id, contextList.length ? contextList : undefined, viewAllHref);
     }
   };
 
