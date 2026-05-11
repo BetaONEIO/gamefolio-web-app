@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { MessageCircle, MoreVertical, Play, Pause, Volume2, VolumeX, Trash2, X, ChevronDown } from "lucide-react";
+import { MessageCircle, MoreVertical, Trash2, X, ChevronDown } from "lucide-react";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
@@ -264,29 +264,13 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         </div>
 
         {/* Top header (absolute within video area) */}
-        <div className="absolute top-0 left-0 right-0 z-[3] flex items-center justify-between p-3 md:p-4" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost" size="sm"
-              className="text-white bg-black/60 backdrop-blur-sm hover:bg-black/80 w-10 h-10 p-0 rounded-full"
-              onClick={() => setIsPaused(p => !p)}
-            >
-              {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
-            </Button>
-            <Button
-              variant="ghost" size="sm"
-              className="text-white bg-black/60 backdrop-blur-sm hover:bg-black/80 w-10 h-10 p-0 rounded-full"
-              onClick={() => setIsMuted(m => !m)}
-            >
-              {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-            </Button>
-          </div>
+        <div className="absolute top-0 left-0 right-0 z-[3] flex items-center justify-end p-3 md:p-4" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}>
           <div className="flex items-center gap-2">
             {user && currentReel && user.id === currentReel.userId && (
               <Button
                 variant="ghost" size="sm"
                 className="text-white bg-black/60 backdrop-blur-sm hover:bg-red-600/80 w-10 h-10 p-0 rounded-full"
-                onClick={() => setShowDeleteConfirm(true)}
+                onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
                 disabled={deleteReelMutation.isPending}
               >
                 <Trash2 className="h-5 w-5" />
@@ -295,7 +279,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             <Button
               variant="ghost" size="sm"
               className="text-white bg-black/60 backdrop-blur-sm hover:bg-black/80 w-10 h-10 p-0 rounded-full"
-              onClick={onClose}
+              onClick={(e) => { e.stopPropagation(); onClose(); }}
             >
               <X className="h-5 w-5" />
             </Button>
@@ -309,18 +293,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             {/* Right side engagement buttons */}
             <div
               className="absolute right-3 md:right-4 flex flex-col items-center gap-3 pointer-events-auto"
-              style={{ bottom: showComments ? '0.75rem' : 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
+              style={{ bottom: showComments ? '0.75rem' : 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}
             >
-              <FireButton
-                contentId={currentReel.id}
-                contentType="clip"
-                contentOwnerId={currentReel.userId}
-                initialCount={parseInt(currentReel._count?.reactions?.toString() || '0')}
-                size="sm"
-                showCount={true}
-                variant="vertical"
-                clipRef={videoAreaRef}
-              />
               <LikeButton
                 contentId={currentReel.id}
                 contentType="clip"
@@ -330,6 +304,16 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                 size="sm"
                 showCount={true}
                 variant="vertical"
+              />
+              <FireButton
+                contentId={currentReel.id}
+                contentType="clip"
+                contentOwnerId={currentReel.userId}
+                initialCount={parseInt(currentReel._count?.reactions?.toString() || '0')}
+                size="sm"
+                showCount={true}
+                variant="vertical"
+                clipRef={videoAreaRef}
               />
               <button
                 className="flex flex-col items-center gap-0.5"
@@ -359,23 +343,23 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             {/* Bottom left - user info (hidden when comments open) */}
             {!showComments && (
               <div
-                className="absolute left-3 md:left-4 right-20 md:right-24 pointer-events-auto"
-                style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
+                className="absolute left-3 md:left-4 right-20 md:right-24 pointer-events-none"
+                style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <Link href={`/profile/${currentReel.user.username}`} onClick={onClose} className="flex-shrink-0 hover:opacity-80 transition-opacity">
+                  <Link href={`/profile/${currentReel.user.username}`} onClick={onClose} className="flex-shrink-0 hover:opacity-80 transition-opacity pointer-events-auto">
                     <CustomAvatar user={currentReel.user as any} size="sm" showBorder={true} />
                   </Link>
-                  <Link href={`/profile/${currentReel.user.username}`} onClick={onClose}>
+                  <Link href={`/profile/${currentReel.user.username}`} onClick={onClose} className="pointer-events-auto">
                     <span className="text-white font-semibold text-sm drop-shadow-lg">@{currentReel.user.username}</span>
                   </Link>
                   {user && user.id !== currentReel.user.id && (
                     <Button
-                      onClick={handleFollow}
+                      onClick={(e) => { e.stopPropagation(); handleFollow(); }}
                       disabled={followMutation.isPending}
                       size="sm"
                       className={cn(
-                        "h-7 px-3 text-xs font-semibold rounded-md ml-1",
+                        "h-7 px-3 text-xs font-semibold rounded-md ml-1 pointer-events-auto",
                         isFollowing
                           ? "bg-transparent border border-white/50 text-white hover:bg-white/10"
                           : "bg-[#B7FF1A] text-black hover:bg-[#A2F000]"
@@ -396,7 +380,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     <Link
                       href={`/games/${currentReel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
                       onClick={onClose}
-                      className="text-[#B7FF1A] text-sm font-medium drop-shadow-lg hover:underline"
+                      className="text-[#B7FF1A] text-sm font-medium drop-shadow-lg hover:underline pointer-events-auto"
                     >
                       {currentReel.game.name}
                     </Link>
@@ -414,7 +398,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             {!showComments && (
               <div
                 className="absolute right-3 md:right-4 pointer-events-auto"
-                style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
+                style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}
               >
                 <ReportDialog
                   contentType="clip"
