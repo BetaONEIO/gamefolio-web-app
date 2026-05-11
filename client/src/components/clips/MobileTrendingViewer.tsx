@@ -262,7 +262,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
     if (isVideoContent(currentItem)) {
       // Render video content (clips/reels) - Force full screen for mobile
       return (
-        <div className="absolute inset-0 w-full h-full">
+        <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-black">
           <VideoPlayer
             videoUrl={currentItem.videoUrl || ''}
             thumbnailUrl={currentItem.thumbnailUrl || undefined}
@@ -271,7 +271,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             hideControls={true}
             className="w-full h-full"
             clipId={currentItem.id}
-            objectFit="cover"
+            objectFit={showComments ? "contain" : "cover"}
             data-testid={`video-player-${currentItem.id}`}
           />
         </div>
