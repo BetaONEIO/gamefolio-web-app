@@ -149,7 +149,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogPortal>
         <DialogPrimitive.Overlay 
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          className="fixed inset-0 z-50 w-screen h-screen bg-black/70 backdrop-blur-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
         />
         <DialogPrimitive.Content
           className="lootbox-dialog-content fixed left-[50%] top-[50%] z-50 w-full max-w-xl md:max-w-3xl lg:max-w-4xl translate-x-[-50%] translate-y-[-50%] p-0 overflow-hidden border-none shadow-none duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg"
