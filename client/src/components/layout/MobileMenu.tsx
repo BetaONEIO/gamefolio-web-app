@@ -3,7 +3,8 @@ import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { X, Home, Compass, Settings, LogOut, MessageSquare, Trophy, ShoppingBag, Wallet, Gift, Plus, Search } from "lucide-react";
+import { X, Home, Settings, LogOut, MessageSquare, Trophy, ShoppingBag, Wallet, Gift, Plus, Search } from "lucide-react";
+import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 import { Button } from "@/components/ui/button";
@@ -225,7 +226,7 @@ const MobileMenu = () => {
                   onClick={close}
                   className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
                 >
-                  <Compass className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioExploreIcon className="mr-3 h-5 w-5 text-primary" />
                   <span className="font-medium">Explore</span>
                 </Link>
               </li>
