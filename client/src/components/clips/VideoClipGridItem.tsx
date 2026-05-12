@@ -5,6 +5,7 @@ import { ClipWithUser } from "@shared/schema";
 import { Play, Eye } from "lucide-react";
 import { Link } from "wouter";
 import { LazyImage } from "@/components/ui/lazy-image";
+import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 
 interface VideoClipGridItemProps {
   clip: ClipWithUser;
@@ -162,44 +163,51 @@ const VideoClipGridItem = ({
       </div>
 
       <div className={`pt-1.5 px-0.5 ${bottomPadding ? 'pb-10' : 'pb-2'}`}>
-        <h3
-          className={`text-[#F5F7F2] font-bold line-clamp-1 leading-tight ${
-            compact ? "text-xs" : "text-sm"
-          }`}
-        >
-          {clip.title}
-        </h3>
-        <Link
-          href={`/profile/${clip.user.username}`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <p
-            className={`text-[#B8C0AE] mt-0.5 hover:text-[#F5F7F2] transition-colors ${
-              compact ? "text-[10px]" : "text-xs"
-            }`}
-          >
-            @{clip.user.username}
-          </p>
-        </Link>
-        {clip.game?.name && (
-          <Link
-            href={`/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, "")}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <span
-              className="inline-block mt-1 font-bold rounded hover:opacity-90 transition-opacity"
-              style={{
-                background: "#B7FF1A",
-                color: "#03080A",
-                fontSize: compact ? "8px" : "10px",
-                padding: compact ? "1px 5px" : "2px 6px",
-                marginBottom: "10px",
-              }}
+        <div className="flex items-start justify-between gap-1">
+          <div className="min-w-0 flex-1">
+            <h3
+              className={`text-[#F5F7F2] font-bold line-clamp-1 leading-tight ${
+                compact ? "text-xs" : "text-sm"
+              }`}
             >
-              {clip.game.name}
-            </span>
-          </Link>
-        )}
+              {clip.title}
+            </h3>
+            <Link
+              href={`/profile/${clip.user.username}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p
+                className={`text-[#B8C0AE] mt-0.5 hover:text-[#F5F7F2] transition-colors ${
+                  compact ? "text-[10px]" : "text-xs"
+                }`}
+              >
+                @{clip.user.username}
+              </p>
+            </Link>
+            {clip.game?.name && (
+              <Link
+                href={`/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, "")}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span
+                  className="inline-block mt-1 font-bold rounded hover:opacity-90 transition-opacity"
+                  style={{
+                    background: "#B7FF1A",
+                    color: "#03080A",
+                    fontSize: compact ? "8px" : "10px",
+                    padding: compact ? "1px 5px" : "2px 6px",
+                    marginBottom: "10px",
+                  }}
+                >
+                  {clip.game.name}
+                </span>
+              </Link>
+            )}
+          </div>
+          <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} className="flex-shrink-0 -mt-0.5">
+            <TrendingClipMenu clip={clip} />
+          </div>
+        </div>
       </div>
     </div>
   );

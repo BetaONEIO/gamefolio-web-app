@@ -217,7 +217,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
       />
       <MenuItem
         icon={<User className="h-4 w-4" />}
-        label="View Profile"
+        label="View Gamefolio"
         onClick={() => {
           close();
           navigate(`/profile/${clip.user.username}`);
@@ -238,7 +238,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
       />
       <MenuDivider />
       <MenuItem
-        icon={<Flag className="h-4 w-4" />}
+        icon={<Flag className="h-4 w-4 text-red-400" style={{ stroke: '#f87171', fill: 'none' }} />}
         label="Report Clip"
         onClick={() => {
           close();
@@ -327,7 +327,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
                 <p className="text-xs text-muted-foreground/60 truncate">@{clip.user.username}</p>
               </div>
               {menuContent}
-              <div className="h-safe-area-inset-bottom pb-2" />
+              <div className="pb-20" />
             </SheetContent>
           </Sheet>
         </>
