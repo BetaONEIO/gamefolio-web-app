@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { ChevronLeft, Heart, MessageCircle, User, Play, Pause, Flag, BarChart2, Gamepad2, Music, X, Send } from "lucide-react";
+import { ChevronLeft, Heart, MessageCircle, User, Play, Pause, Flag, BarChart2, Gamepad2, Music, X, Send, MoreHorizontal } from "lucide-react";
+import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -403,6 +404,13 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             className="text-white drop-shadow"
             onClick={(e) => { e.stopPropagation(); setShowShare(true); }}
           />
+
+          {/* 3-dot menu — only for clips/reels, not screenshots */}
+          {isVideoContent(currentItem) && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <TrendingClipMenu clip={currentItem as ClipWithUser} />
+            </div>
+          )}
         </div>}
 
         {/* ── Bottom info overlay — full-width gradient, hidden when comments open ─── */}

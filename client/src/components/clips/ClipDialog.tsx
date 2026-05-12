@@ -53,6 +53,7 @@ import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { FullscreenReelsViewer } from "./FullscreenReelsViewer";
 import { ReportDialog } from "@/components/content/ReportDialog";
+import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 import { AgeRestrictionDialog } from "@/components/content/AgeRestrictionDialog";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
@@ -1192,7 +1193,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     "border-b border-border flex items-center justify-between flex-shrink-0",
                     isMobile ? "p-3" : "p-4"
                   )}>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="flex-shrink-0">
                         {clip?.user && (
                           <CustomAvatar 
@@ -1202,7 +1203,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           />
                         )}
                       </div>
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
                         {clip.user?.username ? (
                           <Link href={`/profile/${clip.user.username}`} onClick={(e: React.MouseEvent) => {
                             e.stopPropagation();
@@ -1251,6 +1252,10 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           </Button>
                         )}
                       </div>
+                    </div>
+                    {/* 3-dot menu */}
+                    <div className="flex-shrink-0 ml-2">
+                      <TrendingClipMenu clip={clip} />
                     </div>
                   </div>
 
