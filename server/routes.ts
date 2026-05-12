@@ -4512,6 +4512,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // OG image proxy for screenshots — re-signs Supabase URL on every request so
+  // social crawlers always get a valid, non-expiring image URL
+  app.get('/api/og-screenshot/:idOrShareCode', async (req: Request, res: Response) => {
+    try {
+      const { idOrShareCode } = req.params;
+
+      let screenshot: any = null;
+      const parsedId = parseInt(idOrShareCode);
+
+      if (!isNaN(parsedId)) {
+        screenshot = await storage.getScreenshot(parsedId);
+      }
+      if (!screenshot) {
+        screenshot = await storage.getScreenshotByShareCode(idOrShareCode);
+      }
+
+      if (!screenshot) {
+        return res.status(404).json({ error: 'Screenshot not found' });
+      }
+
+      const rawImageUrl = screenshot.thumbnailUrl || screenshot.imageUrl;
+      if (!rawImageUrl) {
+        return res.status(404).json({ error: 'Screenshot image not found' });
+      }
+
+      // Re-sign the Supabase storage URL so the token never expires for crawlers
+      const freshUrl = await refreshSupabaseSignedUrl(rawImageUrl, 60 * 60 * 24 * 7);
+
+      // Proxy the image bytes directly — avoids any expiring tokens in the final og:image URL
+      const imgResponse = await fetch(freshUrl);
+      if (!imgResponse.ok) {
+        return res.status(502).json({ error: 'Failed to fetch screenshot image' });
+      }
+
+      const contentType = imgResponse.headers.get('content-type') || 'image/jpeg';
+      const buffer = Buffer.from(await imgResponse.arrayBuffer());
+
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day cache for bots
+      return res.send(buffer);
+    } catch (error) {
+      console.error('Error serving OG screenshot image:', error);
+      res.status(500).json({ error: 'Failed to serve screenshot image' });
+    }
+  });
+
   // Update user profile
   app.patch("/api/users/:id", authMiddleware, async (req, res) => {
     try {

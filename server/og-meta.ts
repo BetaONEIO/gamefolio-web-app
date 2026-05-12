@@ -107,19 +107,21 @@ export function createOGMetaMiddleware(storage: IStorage) {
         }
       }
 
-      // Match screenshot URLs: /@username/screenshot/:id
-      const screenshotMatch = url.match(/^\/@([^/]+)\/screenshots?\/([^/?]+)/);
+      // Match screenshot URLs: /@username/screenshot/:id  OR  /screenshots/:id
+      const screenshotMatch = url.match(/^\/@([^/]+)\/screenshots?\/([^/?]+)/) ||
+                              url.match(/^\/screenshots?\/([^/?]+)/);
       if (screenshotMatch && !ogTags) {
-        const [, username, idOrShareCode] = screenshotMatch;
-        
+        // Group indices differ depending on which pattern matched
+        const idOrShareCode = screenshotMatch[2] || screenshotMatch[1];
+
         // Try to get screenshot by ID first, then by share code
         let screenshot = null;
         const parsedId = parseInt(idOrShareCode);
-        
+
         if (!isNaN(parsedId)) {
           screenshot = await storage.getScreenshot(parsedId);
         }
-        
+
         // If not found by ID, try share code
         if (!screenshot) {
           screenshot = await storage.getScreenshotByShareCode(idOrShareCode);
@@ -128,19 +130,60 @@ export function createOGMetaMiddleware(storage: IStorage) {
         if (screenshot) {
           // Get user data
           const user = await storage.getUser(screenshot.userId);
-          
+
           // Skip OG preview for suspended/banned accounts
           if (user && user.status !== 'suspended' && user.status !== 'banned') {
-            const rawImage = screenshot.thumbnailUrl || screenshot.imageUrl || '';
-            const freshImage = await refreshSupabaseSignedUrl(rawImage);
+            const baseHost = `https://${req.get('host')}`;
+            // Use our stable server-side proxy endpoint — avoids expiring Supabase signed URL tokens
+            const idOrCode = screenshot.shareCode || screenshot.id;
+            const screenshotImageUrl = `${baseHost}/api/og-screenshot/${idOrCode}`;
+
             ogTags = {
               title: `${screenshot.title} - ${user.displayName || user.username} | Gamefolio`,
               description: screenshot.description || `Check out this screenshot by ${user.displayName || user.username} on Gamefolio`,
-              image: freshImage,
-              url: `https://${req.get('host')}${url}`,
+              image: screenshotImageUrl,
+              url: `${baseHost}${url}`,
               type: 'website',
             };
           }
+        }
+      }
+
+      // Match direct clip/reel URLs without username prefix: /clips/:id  /reels/:id
+      const directClipMatch = url.match(/^\/(clips?|reels?)\/([^/?]+)/);
+      if (directClipMatch && !ogTags) {
+        const [, type, idOrShareCode] = directClipMatch;
+
+        let clip = null;
+        const parsedId = parseInt(idOrShareCode);
+        if (!isNaN(parsedId)) {
+          clip = await storage.getClipWithUser(parsedId);
+        }
+        if (!clip) {
+          const byCode = await storage.getClipByShareCode(idOrShareCode);
+          if (byCode) clip = await storage.getClipWithUser(byCode.id);
+        }
+
+        if (clip && clip.user) {
+          const contentType = type.startsWith('reel') ? 'Reel' : 'Clip';
+          const baseHost = `https://${req.get('host')}`;
+          let imageUrl: string;
+          if (clip.shareCode && clip.thumbnailUrl) {
+            imageUrl = `${baseHost}/api/og-thumbnail/${clip.shareCode}`;
+          } else {
+            const raw = clip.thumbnailUrl || (clip as any).gameImageUrl || clip.user.avatarUrl || '';
+            imageUrl = await refreshSupabaseSignedUrl(raw);
+          }
+          const freshVideoUrl = clip.videoUrl ? await refreshSupabaseSignedUrl(clip.videoUrl) : undefined;
+
+          ogTags = {
+            title: `${clip.title} - ${clip.user.displayName || clip.user.username} | Gamefolio`,
+            description: clip.description || `Watch this amazing ${contentType.toLowerCase()} by ${clip.user.displayName || clip.user.username} on Gamefolio`,
+            image: imageUrl,
+            url: `${baseHost}${url}`,
+            type: 'video.other',
+            videoUrl: freshVideoUrl,
+          };
         }
       }
 
