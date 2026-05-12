@@ -32,7 +32,7 @@ const MobileNav = () => {
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: GamefolioUploadIcon, label: "", href: "/upload", isUpload: true },
     { label: "Trending", href: "/trending", isTrending: true },
-    { icon: GamefolioProfileIcon, label: "Profile", href: `/profile/${username}`, requiresAuth: true },
+    { icon: GamefolioProfileIcon, label: "Gamefolio", href: `/profile/${username}`, requiresAuth: true },
   ] as const;
 
   const handleNavClick = (item: typeof navItems[number], e: React.MouseEvent) => {
