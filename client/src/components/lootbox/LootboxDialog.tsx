@@ -429,12 +429,15 @@ export function LootboxTrigger({ onClick }: { onClick: () => void }) {
       if (!response.ok) throw new Error("Failed to fetch lootbox status");
       return response.json();
     },
+    refetchInterval: 60_000,
   });
+
+  if (!status?.canOpen) return null;
 
   return (
     <div data-testid="button-lootbox-trigger">
       <LootboxIcon
-        isClaimable={status?.canOpen === true}
+        isClaimable
         onClick={onClick}
         size={22}
       />
