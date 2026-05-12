@@ -1,7 +1,7 @@
 import { useLocation, Link } from "wouter";
 import { Video, Film, Camera } from "lucide-react";
 import { GamefolioUploadIcon } from "@/components/icons/GamefolioUploadIcon";
-import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
+import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
@@ -32,7 +32,7 @@ const MobileNav = () => {
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: GamefolioUploadIcon, label: "", href: "/upload", isUpload: true },
     { label: "Trending", href: "/trending", isTrending: true },
-    { icon: GamefolioProfileIcon, label: "Gamefolio", href: `/profile/${username}`, requiresAuth: true },
+    { label: "Gamefolio", href: `/profile/${username}`, requiresAuth: true, isGamefolio: true },
   ] as const;
 
   const handleNavClick = (item: typeof navItems[number], e: React.MouseEvent) => {
@@ -43,7 +43,6 @@ const MobileNav = () => {
       return;
     }
     if ('isTrending' in item && item.isTrending) {
-      // Only play the animation when navigating TO trending, not when already there
       if (location !== '/trending') {
         triggerZapFly(trendingIconRef.current);
       }
@@ -157,6 +156,29 @@ const MobileNav = () => {
                   )}>
                     {item.label}
                   </span>
+                </Link>
+              );
+            }
+
+            if ('isGamefolio' in item && item.isGamefolio) {
+              const isActive = location === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={(e) => handleNavClick(item, e)}
+                  className="flex flex-col items-center text-xs w-full no-underline"
+                >
+                  <GamefolioIcon
+                    glow={isActive}
+                    className={cn(
+                      "mb-1 w-6 h-6",
+                      !isActive && "opacity-60"
+                    )}
+                  />
+                  <span className={cn(
+                    isActive ? 'text-white' : 'text-muted-foreground'
+                  )}>{item.label}</span>
                 </Link>
               );
             }
