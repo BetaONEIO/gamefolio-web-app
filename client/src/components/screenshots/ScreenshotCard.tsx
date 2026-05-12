@@ -6,8 +6,6 @@ import { ReportDialog } from '@/components/content/ReportDialog';
 import { LazyImage } from '@/components/ui/lazy-image';
 import { useSignedUrl } from '@/hooks/use-signed-url';
 import { Link } from 'wouter';
-import { LikeButton } from '@/components/engagement/LikeButton';
-import { FireButton } from '@/components/engagement/FireButton';
 
 interface ScreenshotCardProps {
   screenshot: any;
@@ -170,25 +168,6 @@ export function ScreenshotCard({
           </div>
         )}
 
-        {/* Engagement row — size="sm" resolves to 18px, consistent with horizontal card-bar standard */}
-        {!screenshot.ageRestricted && (
-          <div className="flex items-center gap-3 pt-1" onClick={(e) => e.stopPropagation()}>
-            <LikeButton
-              contentId={screenshot.id}
-              contentType="screenshot"
-              contentOwnerId={screenshot.userId}
-              initialCount={(screenshot as any)._count?.likes ?? (screenshot as any).likesCount ?? 0}
-              size="sm"
-            />
-            <FireButton
-              contentId={screenshot.id}
-              contentType="screenshot"
-              contentOwnerId={screenshot.userId}
-              initialCount={(screenshot as any)._count?.reactions ?? (screenshot as any).reactionsCount ?? 0}
-              size="sm"
-            />
-          </div>
-        )}
       </div>
     </div>
   );
