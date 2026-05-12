@@ -128,7 +128,7 @@ const MobileNav = () => {
                     uploadMenuOpen && "rotate-45"
                   )}>
                     <GamefolioUploadIcon className={cn(
-                      "w-7 h-7 transition-colors duration-200",
+                      "w-6 h-6 transition-colors duration-200",
                       uploadMenuOpen ? "text-primary" : "text-muted-foreground"
                     )} />
                   </div>
@@ -147,7 +147,7 @@ const MobileNav = () => {
                 >
                   <span ref={trendingIconRef} className="mb-1 flex items-center justify-center w-6 h-6">
                     <ZapIconSvg
-                      size={22}
+                      size={24}
                       active={isActive}
                       className={isActive ? '' : 'text-muted-foreground'}
                     />
