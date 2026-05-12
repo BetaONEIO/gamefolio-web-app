@@ -114,7 +114,9 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
       setUploadResult(data);
       toast({ title: 'Success', description: 'Video processed successfully!' });
       queryClient.invalidateQueries({ queryKey: ['/api/clips'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clips/latest'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reels'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reels/latest'] });
       setTimeout(() => {
         onClose();
         resetForm();

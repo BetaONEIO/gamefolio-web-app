@@ -1553,6 +1553,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/clips`] });
                       queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}`] });
                     }
+                    queryClient.invalidateQueries({ queryKey: ['/api/clips/latest'] });
                     queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
                     queryClient.invalidateQueries({ queryKey: ['/api/clips/reels/trending'] });
                     queryClient.invalidateQueries({ queryKey: ['/api/reels/latest'] });

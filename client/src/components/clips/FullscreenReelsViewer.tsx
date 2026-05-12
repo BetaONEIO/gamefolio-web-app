@@ -98,6 +98,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       await apiRequest("DELETE", `/api/clips/${reelId}`);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clips/latest'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reels/latest'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reels/trending'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reels'] });

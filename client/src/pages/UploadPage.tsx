@@ -722,6 +722,8 @@ const UploadPage = () => {
     onSuccess: async (data: any) => {
       // Invalidate all relevant queries to ensure the new clip appears everywhere
       queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clips/latest"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reels/latest"] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/clips`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/upload/limits'] });
