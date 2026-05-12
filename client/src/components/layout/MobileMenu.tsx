@@ -3,7 +3,15 @@ import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { X, Home, Settings, LogOut, MessageSquare, Trophy, ShoppingBag, Wallet, Gift, Plus, Search } from "lucide-react";
+import { X, Plus, Search } from "lucide-react";
+import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
+import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
+import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
+import { GamefolioCollectionIcon } from "@/components/icons/GamefolioCollectionIcon";
+import { GamefolioMessagesIcon } from "@/components/icons/GamefolioMessagesIcon";
+import { GamefolioStoreIcon } from "@/components/icons/GamefolioStoreIcon";
+import { GamefolioSettingsIcon } from "@/components/icons/GamefolioSettingsIcon";
+import { GamefolioSignOutIcon } from "@/components/icons/GamefolioSignOutIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
@@ -216,7 +224,7 @@ const MobileMenu = () => {
                   onClick={close}
                   className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
                 >
-                  <Home className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioHomeIcon className="mr-3 h-5 w-5 text-primary" />
                   <span className="font-medium">Home</span>
                 </Link>
               </li>
@@ -246,7 +254,7 @@ const MobileMenu = () => {
                   onClick={close}
                   className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
                 >
-                  <Trophy className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioLeaderboardIcon className="mr-3 h-5 w-5 text-primary" />
                   <span className="font-medium">Leaderboard</span>
                 </Link>
               </li>
@@ -256,7 +264,7 @@ const MobileMenu = () => {
                   onClick={close}
                   className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
                 >
-                  <ShoppingBag className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioStoreIcon className="mr-3 h-5 w-5 text-primary" />
                   <span className="font-medium">Store</span>
                 </Link>
               </li>
@@ -266,7 +274,7 @@ const MobileMenu = () => {
                   onClick={close}
                   className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
                 >
-                  <Wallet className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioWalletIcon className="mr-3 h-5 w-5 text-primary" />
                   <span className="font-medium">Wallet</span>
                 </Link>
               </li>
@@ -276,7 +284,7 @@ const MobileMenu = () => {
                   onClick={close}
                   className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
                 >
-                  <Gift className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioCollectionIcon className="mr-3 h-5 w-5 text-primary" />
                   <span className="font-medium">Collection</span>
                 </Link>
               </li>
@@ -287,7 +295,7 @@ const MobileMenu = () => {
                     onClick={close}
                     className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
                   >
-                    <MessageSquare className="mr-3 h-5 w-5 text-primary" />
+                    <GamefolioMessagesIcon className="mr-3 h-5 w-5 text-primary" />
                     <span className="font-medium">Messages</span>
                   </Link>
                 </li>
@@ -321,7 +329,7 @@ const MobileMenu = () => {
                       onClick={close}
                       className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
                     >
-                      <Settings className="mr-3 h-5 w-5 text-muted-foreground" />
+                      <GamefolioSettingsIcon className="mr-3 h-5 w-5 text-muted-foreground" />
                       <span>Account Settings</span>
                     </Link>
                   </li>
@@ -407,7 +415,7 @@ const MobileMenu = () => {
                 className="w-full" 
                 onClick={handleLogout}
               >
-                <LogOut className="mr-2 h-4 w-4" />
+                <GamefolioSignOutIcon className="mr-2 h-4 w-4" />
                 Logout
               </Button>
             ) : (

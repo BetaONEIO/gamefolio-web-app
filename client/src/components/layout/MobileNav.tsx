@@ -1,5 +1,7 @@
 import { useLocation, Link } from "wouter";
-import { PlusCircle, User, Video, Film, Camera } from "lucide-react";
+import { Video, Film, Camera } from "lucide-react";
+import { GamefolioUploadIcon } from "@/components/icons/GamefolioUploadIcon";
+import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
@@ -28,9 +30,9 @@ const MobileNav = () => {
   const navItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
-    { icon: PlusCircle, label: "", href: "/upload", isUpload: true },
+    { icon: GamefolioUploadIcon, label: "", href: "/upload", isUpload: true },
     { label: "Trending", href: "/trending", isTrending: true },
-    { icon: User, label: "Profile", href: `/profile/${username}`, requiresAuth: true },
+    { icon: GamefolioProfileIcon, label: "Profile", href: `/profile/${username}`, requiresAuth: true },
   ] as const;
 
   const handleNavClick = (item: typeof navItems[number], e: React.MouseEvent) => {
@@ -125,7 +127,7 @@ const MobileNav = () => {
                     "mb-1 transition-transform duration-300",
                     uploadMenuOpen && "rotate-45"
                   )}>
-                    <PlusCircle className={cn(
+                    <GamefolioUploadIcon className={cn(
                       "w-7 h-7 transition-colors duration-200",
                       uploadMenuOpen ? "text-primary" : "text-muted-foreground"
                     )} />

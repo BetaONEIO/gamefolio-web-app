@@ -1,16 +1,16 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import {
-  ShieldAlert,
   Plus,
   Search,
   X,
   Check,
   Trash2,
-  HelpCircle,
-  ShoppingBag,
-  Gift
 } from "lucide-react";
+import { GamefolioStoreIcon } from "@/components/icons/GamefolioStoreIcon";
+import { GamefolioCollectionIcon } from "@/components/icons/GamefolioCollectionIcon";
+import { GamefolioHelpIcon } from "@/components/icons/GamefolioHelpIcon";
+import { GamefolioAdminIcon } from "@/components/icons/GamefolioAdminIcon";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
@@ -238,18 +238,18 @@ const Sidebar = () => {
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: TrendingNavIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
-    { icon: ShoppingBag, label: "Store", href: "/store" },
+    { icon: GamefolioStoreIcon, label: "Store", href: "/store" },
     { icon: GamefolioWalletIcon, label: "Wallet", href: "/wallet" },
-    { icon: Gift, label: "Collection", href: "/collection" },
+    { icon: GamefolioCollectionIcon, label: "Collection", href: "/collection" },
 
     // Only show Messages link if user has messaging enabled - default to true for demo user
     ...(user && user.messagingEnabled !== false ? [{ icon: GamefolioMessagesIcon, label: "Messages", href: "/messages" }] : []),
 
     { icon: GamefolioProfileIcon, label: "My Gamefolio", href: user ? `/profile/${user.username}` : "/auth", themed: true },
-    { icon: HelpCircle, label: "Help & Support", href: "/help" },
+    { icon: GamefolioHelpIcon, label: "Help & Support", href: "/help" },
 
     // Only show admin panel link for users with admin role
-    ...(user?.role === "admin" ? [{ icon: ShieldAlert, label: "Admin Panel", href: "/admin" }] : [])
+    ...(user?.role === "admin" ? [{ icon: GamefolioAdminIcon, label: "Admin Panel", href: "/admin" }] : [])
   ];
 
   return (
