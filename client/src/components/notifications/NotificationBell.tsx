@@ -263,10 +263,10 @@ export function NotificationBell() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent 
-          className="w-80 max-h-96 overflow-hidden p-0 ml-3" 
+          className="w-80 max-h-96 overflow-hidden p-0" 
           align="end"
-          alignOffset={-12}
           sideOffset={2}
+          collisionPadding={{ left: 12 }}
         >
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="font-semibold">Notifications</h3>
