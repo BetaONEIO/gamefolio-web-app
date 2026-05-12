@@ -13,6 +13,7 @@ import { useLevelTracker } from "@/hooks/use-level-tracker";
 import { useAuth } from "@/hooks/use-auth";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { playLootboxOpenSound, useLootboxMute } from "@/lib/lootbox-sound";
+import { LootboxIcon } from "@/components/lootbox/LootboxIcon";
 
 interface LootboxStatus {
   canOpen: boolean;
@@ -431,22 +432,12 @@ export function LootboxTrigger({ onClick }: { onClick: () => void }) {
   });
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={onClick}
-      className="relative"
-      title="Daily Lootbox"
-      data-testid="button-lootbox-trigger"
-    >
-      <Gift className="w-5 h-5" />
-      {status?.canOpen && (
-        <motion.span
-          className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full"
-          animate={{ scale: [1, 1.2, 1] }}
-          transition={{ duration: 1, repeat: Infinity }}
-        />
-      )}
-    </Button>
+    <div data-testid="button-lootbox-trigger">
+      <LootboxIcon
+        isClaimable={status?.canOpen === true}
+        onClick={onClick}
+        size={22}
+      />
+    </div>
   );
 }

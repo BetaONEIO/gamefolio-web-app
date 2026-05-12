@@ -1,0 +1,81 @@
+Create a premium Gamefolio Lootbox icon system starting with a clean white base icon, then support animated “claim available” behaviour.
+
+Goal:
+Design a reusable lootbox/crate icon component that matches the Gamefolio dark/neon green aesthetic.
+
+PHASE 1 — Base icon
+Create a clean white lootbox/crate icon first.
+
+Style:
+- White icon only initially
+- Transparent background
+- SVG preferred
+- Clean vector style
+- Modern/futuristic gaming feel
+- Rounded edges/corners
+- Minimal and premium
+- Should work at small mobile navbar sizes
+- Avoid cartoon/chibi style
+- Inspired by gaming reward crates/supply drops
+
+Requirements:
+- Crisp at all sizes
+- Balanced proportions
+- Simple enough to animate later
+- Visually consistent with existing Gamefolio icons
+
+Do NOT initially add:
+- Colour
+- Glow
+- Animation
+- Text
+
+PHASE 2 — Animated claimable state
+After the base icon exists, add support for an animated “lootbox available” state.
+
+Theme:
+- Background: #03080A
+- Surface: #0B1218
+- Neon green: #B7FF1A
+- Border: #1B2A33
+- Font: Space Grotesk
+
+Claim available state:
+When a lootbox is available:
+- Add subtle neon green glow
+- Add soft pulse animation
+- Add slight floating/bobbing movement
+- Optional tiny sparkle particles
+- Optional shine sweep effect
+- Optional small notification badge
+
+Animation style:
+- Smooth and premium
+- Lightweight/mobile friendly
+- Use transform + opacity for performance
+- Do not feel spammy or distracting
+- Animation loop around 2–4 seconds
+- Respect prefers-reduced-motion
+
+Interaction:
+- On tap:
+  - Slight press-down animation
+  - Glow intensifies briefly
+  - Trigger existing lootbox flow if connected
+
+Implementation:
+Create reusable component:
+<LootboxIcon isClaimable={true/false} />
+
+Default state:
+- White icon
+- Minimal/no glow
+
+Claimable state:
+- Neon green glow/accent animation
+
+Important:
+- Do not implement backend lootbox logic
+- Only create the UI/icon/animation component
+- Keep performance optimised
+- Match the premium Gamefolio visual identity
