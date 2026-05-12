@@ -309,7 +309,7 @@ const MobileMenu = () => {
                     onClick={close}
                     className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline group"
                   >
-                    <span className="mr-3 inline-flex transition-all duration-300 group-hover:[filter:drop-shadow(0_0_10px_rgba(183,255,26,0.5))]">
+                    <span className="mr-3 w-6 h-6 flex-shrink-0 inline-flex items-center justify-center overflow-visible transition-all duration-300 group-hover:[filter:drop-shadow(0_0_10px_rgba(183,255,26,0.5))]">
                       <GamefolioIcon size={29} glow={true} />
                     </span>
                     <span className="font-medium">My Gamefolio</span>
