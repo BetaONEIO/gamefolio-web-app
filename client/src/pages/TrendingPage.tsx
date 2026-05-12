@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useLikeScreenshot } from '@/hooks/use-clips';
 import { useToast } from '@/hooks/use-toast';
 import { ClipWithUser } from '@shared/schema';
-import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Heart, Play, MessageCircle, AlertTriangle, Film, Video, Camera, ChevronDown, Check, Search, ArrowLeft, MoreHorizontal, Bookmark, BarChart2, BadgeCheck, Repeat2 } from 'lucide-react';
+import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Heart, Play, MessageCircle, AlertTriangle, Film, Video, Camera, ChevronDown, Check, Search, ArrowLeft, Bookmark, BarChart2, BadgeCheck, Repeat2 } from 'lucide-react';
+import { TrendingClipMenu } from '@/components/clips/TrendingClipMenu';
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { PartnerBadge } from '@/components/ui/partner-badge';
 import { formatDuration } from '@/lib/constants';
@@ -279,9 +280,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
                 {followMutation.isPending ? '…' : 'Follow'}
               </button>
             )}
-            <button className="p-1" style={{ color: '#7E887A' }}>
-              <MoreHorizontal className="h-5 w-5" />
-            </button>
+            <TrendingClipMenu clip={clip} />
           </div>
         </div>
       </div>
