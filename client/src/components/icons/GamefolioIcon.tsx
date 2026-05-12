@@ -12,7 +12,7 @@ export function GamefolioIcon({ glow = false, className }: GamefolioIconProps) {
       src={logoSrc}
       alt="Gamefolio"
       draggable={false}
-      className={cn("block w-6 h-6 object-contain flex-shrink-0", className)}
+      className={cn("block object-contain", className)}
       style={glow ? { filter: "drop-shadow(0 0 6px rgba(183,255,26,0.5))" } : undefined}
     />
   );
