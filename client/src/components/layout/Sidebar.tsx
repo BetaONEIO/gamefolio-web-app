@@ -13,6 +13,7 @@ import { GamefolioHelpIcon } from "@/components/icons/GamefolioHelpIcon";
 import { GamefolioAdminIcon } from "@/components/icons/GamefolioAdminIcon";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
+import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioMessagesIcon } from "@/components/icons/GamefolioMessagesIcon";
@@ -245,7 +246,7 @@ const Sidebar = () => {
     // Only show Messages link if user has messaging enabled - default to true for demo user
     ...(user && user.messagingEnabled !== false ? [{ icon: GamefolioMessagesIcon, label: "Messages", href: "/messages" }] : []),
 
-    { icon: GamefolioProfileIcon, label: "My Gamefolio", href: user ? `/profile/${user.username}` : "/auth", themed: true },
+    { icon: GamefolioProfileIcon, label: "My Gamefolio", href: user ? `/profile/${user.username}` : "/auth", themed: true, gamefolioIcon: true },
     { icon: GamefolioHelpIcon, label: "Help & Support", href: "/help" },
 
     // Only show admin panel link for users with admin role
@@ -269,7 +270,11 @@ const Sidebar = () => {
                       : "text-muted-foreground hover:bg-primary hover:text-[#071013]"
                   )}
                 >
-                  {item.themed ? (
+                  {'gamefolioIcon' in item && item.gamefolioIcon ? (
+                    <span className="transition-all duration-300 inline-flex group-hover:[filter:drop-shadow(0_0_10px_rgba(183,255,26,0.45))]">
+                      <GamefolioIcon size={24} glow={isActive} />
+                    </span>
+                  ) : item.themed ? (
                     <span
                       className={cn(
                         "transition-all duration-300 inline-flex",

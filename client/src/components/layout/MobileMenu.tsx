@@ -13,6 +13,7 @@ import { GamefolioStoreIcon } from "@/components/icons/GamefolioStoreIcon";
 import { GamefolioSettingsIcon } from "@/components/icons/GamefolioSettingsIcon";
 import { GamefolioSignOutIcon } from "@/components/icons/GamefolioSignOutIcon";
 import { GamefolioProfileSettingsIcon } from "@/components/icons/GamefolioProfileSettingsIcon";
+import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
@@ -308,8 +309,8 @@ const MobileMenu = () => {
                     onClick={close}
                     className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline group"
                   >
-                    <span className="mr-3 inline-flex transition-all duration-300 group-hover:[filter:drop-shadow(0_0_7px_#B7FF1A)]">
-                      <GamefolioProfileIcon className="h-5 w-5 text-primary" />
+                    <span className="mr-3 inline-flex transition-all duration-300 group-hover:[filter:drop-shadow(0_0_10px_rgba(183,255,26,0.5))]">
+                      <GamefolioIcon size={22} glow={true} />
                     </span>
                     <span className="font-medium">My Gamefolio</span>
                   </Link>
