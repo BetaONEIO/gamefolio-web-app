@@ -55,6 +55,7 @@ interface CommentSectionProps {
   currentUserId?: number | null;
   onUsernameClick?: () => void; // Function to close parent dialog
   highlightCommentId?: number | null; // Comment ID to highlight
+  hideForm?: boolean; // When true, hides the comment input form (used in bottom-sheet mode)
 }
 
 interface CommentLikeButtonProps {
@@ -113,7 +114,7 @@ function CommentLikeButton({ commentId, isLoggedIn, onNotLoggedIn }: CommentLike
   );
 }
 
-const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightCommentId }: CommentSectionProps) => {
+const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightCommentId, hideForm = false }: CommentSectionProps) => {
   const [newComment, setNewComment] = useState("");
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null);
   
@@ -308,15 +309,15 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
         )}
       </div>
       
-      {/* Comment form - only show to authenticated users */}
-      {user ? (
+      {/* Comment form - only show to authenticated users, hidden in bottom-sheet mode */}
+      {!hideForm && (user ? (
         <form 
           onSubmit={handleSubmitComment} 
           className="mt-4 space-y-3 flex-shrink-0"
         >
           <div className="flex items-start gap-3">
             {currentUser && (
-              <div className="hidden sm:flex flex-shrink-0">
+              <div className="flex flex-shrink-0">
                 <CustomAvatar user={currentUser} size="sm" showBorder={false} />
               </div>
             )}
@@ -354,7 +355,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
             Sign in to add a comment
           </Button>
         </div>
-      )}
+      ))}
       
       <JoinGamefolioDialog 
         open={isOpen} 

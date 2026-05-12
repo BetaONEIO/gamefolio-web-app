@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { ChevronLeft, Heart, MessageCircle, User, Play, Pause, Flag, BarChart2, Gamepad2, Music, X } from "lucide-react";
+import { ChevronLeft, Heart, MessageCircle, User, Play, Pause, Flag, BarChart2, Gamepad2, Music, X, Send } from "lucide-react";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -18,6 +18,8 @@ import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/content/ReportDialog";
 import { LazyImage } from "@/components/ui/lazy-image";
+import { useCreateComment } from "@/hooks/use-clips";
+import { CustomAvatar } from "@/components/ui/custom-avatar";
 
 interface ScreenshotWithUser {
   id: number;
@@ -56,6 +58,15 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showComments, setShowComments] = useState(false);
   const [commentsExpanded, setCommentsExpanded] = useState(false);
+
+  // Swipe-to-dismiss state for the comments bottom sheet
+  const [sheetY, setSheetY] = useState(0);
+  const sheetDragStartY = useRef(0);
+  const sheetIsDragging = useRef(false);
+
+  // Inline comment input state
+  const [inlineComment, setInlineComment] = useState("");
+  const createCommentMutation = useCreateComment();
 
   useEffect(() => {
     onCommentsVisibilityChange?.(showComments);
@@ -514,7 +525,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
       </div>
 
       {/* Comments bottom sheet — slides up, video visible above */}
-      <AnimatePresence onExitComplete={() => setCommentsExpanded(false)}>
+      <AnimatePresence onExitComplete={() => { setCommentsExpanded(false); setSheetY(0); }}>
         {showComments && !embedded && (
           <motion.div
             key="comments-sheet"
@@ -523,15 +534,42 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 32, stiffness: 320, mass: 0.9 }}
             className="flex-1 flex flex-col overflow-hidden"
-            style={{ background: '#0F1923', borderRadius: '20px 20px 0 0' }}
+            style={{
+              background: '#0F1923',
+              borderRadius: '20px 20px 0 0',
+              transform: sheetY > 0 ? `translateY(${sheetY}px)` : undefined,
+              transition: sheetY > 0 ? 'none' : 'transform 0.3s cubic-bezier(0.32,0.72,0,1)',
+            }}
           >
-            {/* Drag handle */}
-            <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-              <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
+            {/* Drag handle — touch this to swipe sheet down and dismiss */}
+            <div
+              className="flex justify-center pt-3 pb-2 flex-shrink-0 cursor-grab active:cursor-grabbing"
+              onTouchStart={(e) => {
+                sheetDragStartY.current = e.touches[0].clientY;
+                sheetIsDragging.current = true;
+              }}
+              onTouchMove={(e) => {
+                if (!sheetIsDragging.current) return;
+                const delta = e.touches[0].clientY - sheetDragStartY.current;
+                if (delta > 0) setSheetY(delta);
+              }}
+              onTouchEnd={() => {
+                sheetIsDragging.current = false;
+                if (sheetY > 100) {
+                  setShowComments(false);
+                } else {
+                  setSheetY(0);
+                }
+              }}
+            >
+              <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.3)' }} />
             </div>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            <div
+              className="flex items-center justify-between px-4 py-2 flex-shrink-0"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+            >
               <h3 className="text-white font-bold text-base">
                 Comments{' '}
                 <span className="text-white/45 font-normal text-sm">{stats.comments}</span>
@@ -545,9 +583,72 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               </button>
             </div>
 
-            {/* Comment list + input */}
-            <div className="flex-1 overflow-y-auto px-4 py-2">
-              {isVideoContent(currentItem) && <CommentSection clipId={currentItem.id} />}
+            {/* Scrollable comment list only — form is below */}
+            <div className="flex-1 overflow-y-auto px-4 py-2 min-h-0">
+              {isVideoContent(currentItem) && (
+                <CommentSection clipId={currentItem.id} hideForm={true} />
+              )}
+            </div>
+
+            {/* Sticky comment input — always visible at bottom of sheet */}
+            <div
+              className="flex-shrink-0 px-3 py-2"
+              style={{
+                borderTop: '1px solid rgba(255,255,255,0.07)',
+                background: '#0F1923',
+                paddingBottom: 'max(env(safe-area-inset-bottom, 8px), 8px)',
+              }}
+            >
+              {user ? (
+                <div className="flex items-center gap-2">
+                  <CustomAvatar user={user} size="sm" showBorder={false} />
+                  <div
+                    className="flex-1 flex items-center gap-2 rounded-full px-3 py-1.5"
+                    style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}
+                  >
+                    <input
+                      type="text"
+                      value={inlineComment}
+                      onChange={(e) => setInlineComment(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey && inlineComment.trim() && isVideoContent(currentItem)) {
+                          e.preventDefault();
+                          createCommentMutation.mutate(
+                            { clipId: currentItem.id, text: inlineComment },
+                            { onSuccess: () => setInlineComment("") }
+                          );
+                        }
+                      }}
+                      placeholder="Add a comment…"
+                      className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/35 min-w-0"
+                      data-testid="input-comment-inline"
+                    />
+                    <button
+                      onClick={() => {
+                        if (!inlineComment.trim() || !isVideoContent(currentItem)) return;
+                        createCommentMutation.mutate(
+                          { clipId: currentItem.id, text: inlineComment },
+                          { onSuccess: () => setInlineComment("") }
+                        );
+                      }}
+                      disabled={!inlineComment.trim() || createCommentMutation.isPending}
+                      className="flex-shrink-0 transition-opacity disabled:opacity-30"
+                      style={{ color: '#B7FF1A' }}
+                      data-testid="button-post-comment-inline"
+                    >
+                      <Send className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => openDialog('comment')}
+                  className="w-full text-center text-sm py-2 rounded-full"
+                  style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)' }}
+                >
+                  Sign in to comment
+                </button>
+              )}
             </div>
           </motion.div>
         )}
