@@ -20,22 +20,23 @@ function CrateSVG({ color, size }: { color: string; size: number }) {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      {/* Lid */}
-      <path d="M4 10h16v3H4z" />
-      {/* Rounded top of lid */}
-      <path d="M5 10V9a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v1" />
       {/* Body */}
-      <path d="M4 13h16v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-7z" />
-      {/* Vertical center strap on body */}
-      <line x1="12" y1="13" x2="12" y2="21" />
-      {/* Horizontal center strap on body */}
-      <line x1="4" y1="17" x2="20" y2="17" />
-      {/* Clasp on lid — small diamond */}
-      <path d="M10.5 11.5h3l-1.5 1.5-1.5-1.5z" />
-      {/* Clasp top half */}
-      <path d="M10.5 10.5h3l-1.5-1 -1.5 1z" strokeWidth="1" />
-      {/* Lock pin */}
-      <line x1="12" y1="9.5" x2="12" y2="10.5" strokeWidth="1.4" />
+      <rect x="2" y="13" width="20" height="9" rx="1" />
+      {/* Arched lid */}
+      <path d="M2 13 C2 6.5 22 6.5 22 13" />
+      {/* Horizontal strap across body */}
+      <line x1="2" y1="18" x2="22" y2="18" />
+      {/* Vertical centre strap */}
+      <line x1="12" y1="13" x2="12" y2="22" />
+      {/* Clasp plate */}
+      <rect x="9.5" y="11" width="5" height="3.5" rx="0.6" />
+      {/* Lock keyhole (filled) */}
+      <circle cx="12" cy="12.5" r="0.85" fill={color} stroke="none" />
+      {/* Corner rivets */}
+      <circle cx="4.5" cy="15" r="0.7" fill={color} stroke="none" />
+      <circle cx="19.5" cy="15" r="0.7" fill={color} stroke="none" />
+      <circle cx="4.5" cy="20.5" r="0.7" fill={color} stroke="none" />
+      <circle cx="19.5" cy="20.5" r="0.7" fill={color} stroke="none" />
     </svg>
   );
 }
