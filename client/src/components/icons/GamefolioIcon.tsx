@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import logoSrc from "@assets/White_logo_1778586086030.png";
+import logoSrc from "@assets/logo-white_1778587630337.png";
 
 interface GamefolioIconProps {
   size?: number;
