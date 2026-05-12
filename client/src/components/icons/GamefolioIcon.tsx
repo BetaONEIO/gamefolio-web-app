@@ -7,7 +7,7 @@ interface GamefolioIconProps {
   className?: string;
 }
 
-export function GamefolioIcon({ size = 24, glow = false, className }: GamefolioIconProps) {
+export function GamefolioIcon({ size = 31, glow = false, className }: GamefolioIconProps) {
   return (
     <img
       src={logoSrc}
