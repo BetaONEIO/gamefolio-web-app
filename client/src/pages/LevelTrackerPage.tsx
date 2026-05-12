@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { getQueryFn } from "@/lib/queryClient";
@@ -254,7 +254,7 @@ function ActivityItem({
   );
 }
 
-function SectionCard({ children, accentColor = '#B7FF1A' }: { children: React.ReactNode; accentColor?: string }) {
+function SectionCard({ children, accentColor = '#B7FF1A' }: { children: ReactNode; accentColor?: string }) {
   return (
     <div
       className="rounded-2xl overflow-hidden"
