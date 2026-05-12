@@ -6,18 +6,16 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
-import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import {
   MoreHorizontal,
   Flag,
-  EyeOff,
-  VolumeX,
   Ban,
-  Copy,
   Pencil,
   Trash2,
   Pin,
-  BarChart2,
+  Download,
+  Loader2,
+  User,
 } from "lucide-react";
 import {
   Popover,
@@ -40,7 +38,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ReportDialog } from "@/components/content/ReportDialog";
-import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 
 interface TrendingClipMenuProps {
   clip: ClipWithUser;
@@ -52,16 +49,19 @@ function MenuItem({
   label,
   onClick,
   destructive = false,
+  disabled = false,
 }: {
   icon: React.ReactNode;
   label: string;
-  onClick: () => void;
+  onClick?: () => void;
   destructive?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors text-left ${
+      disabled={disabled}
+      className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed ${
         destructive
           ? "text-red-400 hover:bg-red-500/10"
           : "text-foreground hover:bg-white/5"
@@ -87,8 +87,9 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showShare, setShowShare] = useState(false);
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const [reportPending, setReportPending] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const reportTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -114,6 +115,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
         title: "User blocked",
         description: `You won't see content from @${clip.user.username} anymore.`,
       });
+      setShowBlockConfirm(false);
       onHide?.();
     },
     onError: (err: Error) => {
@@ -148,8 +150,8 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
       toast({
         title: isPinned ? "Pinned to profile" : "Unpinned from profile",
         description: isPinned
-          ? "This clip is now pinned at the top of your profile."
-          : "Clip removed from top of profile.",
+          ? "This clip is now featured at the top of your profile."
+          : "Clip removed from the top of your profile.",
         variant: "gamefolioSuccess",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/clips`] });
@@ -160,32 +162,46 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
     },
   });
 
-  const handleCopyLink = async () => {
-    setIsOpen(false);
+  const handleDownload = async () => {
+    close();
+    setIsDownloading(true);
     try {
-      const res = await fetch(`/api/clips/${clip.id}/share`, { credentials: "include" });
-      const data = await res.json();
-      const url = data.clipUrl || data.shareUrl || `${window.location.origin}/clips/${clip.id}`;
-      await navigator.clipboard.writeText(url);
-      toast({ title: "Link copied!", description: "The link has been copied to your clipboard." });
-    } catch {
-      toast({ title: "Failed to copy", variant: "destructive" });
-    }
-  };
-
-  const handleMute = () => {
-    setIsOpen(false);
-    try {
-      const muted: number[] = JSON.parse(localStorage.getItem("gf_muted_users") || "[]");
-      if (!muted.includes(clip.userId)) {
-        localStorage.setItem("gf_muted_users", JSON.stringify([...muted, clip.userId]));
+      toast({
+        title: "⚡ Preparing your clip…",
+        description: "Adding Gamefolio watermark. This may take a moment.",
+      });
+      const response = await fetch(`/api/clips/${clip.id}/download`, {
+        credentials: "include",
+        headers: { Accept: "video/mp4" },
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error((data as any).error || "Download failed");
       }
-    } catch {}
-    toast({
-      title: "User muted",
-      description: `You won't see @${clip.user.username}'s content for now.`,
-    });
-    onHide?.();
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const safeTitle = clip.title.replace(/[^a-z0-9]/gi, "_").slice(0, 60);
+      a.download = `${safeTitle}_gamefolio.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({
+        title: "Download complete!",
+        description: "Saved with Gamefolio watermark. Share it anywhere!",
+        variant: "gamefolioSuccess",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Download failed",
+        description: err.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const close = () => setIsOpen(false);
@@ -200,48 +216,42 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
         trigger={<button ref={reportTriggerRef} className="sr-only" tabIndex={-1} aria-hidden />}
       />
       <MenuItem
+        icon={<User className="h-4 w-4" />}
+        label="View Profile"
+        onClick={() => {
+          close();
+          navigate(`/profile/${clip.user.username}`);
+        }}
+      />
+      <MenuDivider />
+      <MenuItem
+        icon={
+          isDownloading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4" />
+          )
+        }
+        label={isDownloading ? "Downloading…" : "Download Clip"}
+        disabled={isDownloading}
+        onClick={handleDownload}
+      />
+      <MenuDivider />
+      <MenuItem
         icon={<Flag className="h-4 w-4" />}
-        label="Report clip"
+        label="Report Clip"
         onClick={() => {
           close();
           setReportPending(true);
         }}
       />
       <MenuItem
-        icon={<EyeOff className="h-4 w-4" />}
-        label="Not interested"
-        onClick={() => {
-          close();
-          toast({ title: "Got it", description: "You'll see less content like this." });
-          onHide?.();
-        }}
-      />
-      <MenuItem
-        icon={<VolumeX className="h-4 w-4" />}
-        label="Mute user"
-        onClick={handleMute}
-      />
-      <MenuItem
         icon={<Ban className="h-4 w-4" />}
-        label="Block user"
+        label="Block User"
         destructive
         onClick={() => {
           close();
-          blockMutation.mutate();
-        }}
-      />
-      <MenuDivider />
-      <MenuItem
-        icon={<Copy className="h-4 w-4" />}
-        label="Copy link"
-        onClick={handleCopyLink}
-      />
-      <MenuItem
-        icon={<ShareLaunchIcon size={16} />}
-        label="Share"
-        onClick={() => {
-          close();
-          setShowShare(true);
+          setShowBlockConfirm(true);
         }}
       />
     </>
@@ -251,24 +261,15 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
     <>
       <MenuItem
         icon={<Pencil className="h-4 w-4" />}
-        label="Edit caption"
+        label="Edit Caption"
         onClick={() => {
           close();
           openClipDialog(clip.id);
         }}
       />
       <MenuItem
-        icon={<Trash2 className="h-4 w-4" />}
-        label={clip.videoType === "reel" ? "Delete reel" : "Delete clip"}
-        destructive
-        onClick={() => {
-          close();
-          setShowDeleteConfirm(true);
-        }}
-      />
-      <MenuItem
         icon={<Pin className="h-4 w-4" />}
-        label={clip.pinnedAt ? "Unpin from profile" : "Pin to profile"}
+        label={clip.pinnedAt ? "Unpin from Profile" : "Pin to Profile"}
         onClick={() => {
           close();
           pinMutation.mutate();
@@ -276,16 +277,12 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
       />
       <MenuDivider />
       <MenuItem
-        icon={<Copy className="h-4 w-4" />}
-        label="Copy link"
-        onClick={handleCopyLink}
-      />
-      <MenuItem
-        icon={<BarChart2 className="h-4 w-4" />}
-        label="View insights"
+        icon={<Trash2 className="h-4 w-4" />}
+        label={clip.videoType === "reel" ? "Delete Reel" : "Delete Clip"}
+        destructive
         onClick={() => {
           close();
-          navigate(`/profile/${clip.user.username}`);
+          setShowDeleteConfirm(true);
         }}
       />
     </>
@@ -294,6 +291,8 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
   const menuContent = (
     <div className="py-1">{isOwn ? ownMenu : otherUserMenu}</div>
   );
+
+  const menuLabel = isOwn ? "Creator tools" : "Clip options";
 
   const triggerBtn = (
     <button
@@ -319,7 +318,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
               side="bottom"
               className="p-0 bg-[#0d1b26] border-t border-white/10 rounded-t-2xl [&>button]:hidden"
             >
-              <SheetTitle className="sr-only">Clip options</SheetTitle>
+              <SheetTitle className="sr-only">{menuLabel}</SheetTitle>
               <div className="flex justify-center pt-3 pb-2">
                 <div className="w-10 h-1 rounded-full bg-white/20" />
               </div>
@@ -345,14 +344,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
         </Popover>
       )}
 
-      <ClipShareDialog
-        clipId={clip.id}
-        open={showShare}
-        onOpenChange={setShowShare}
-        isOwnContent={isOwn}
-        contentType={clip.videoType === "reel" ? "reel" : "clip"}
-      />
-
+      {/* Delete confirmation */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -370,7 +362,30 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
               disabled={deleteMutation.isPending}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
-              {deleteMutation.isPending ? "Deleting…" : "Delete"}
+              {deleteMutation.isPending ? "Deleting…" : "Delete permanently"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Block confirmation */}
+      <AlertDialog open={showBlockConfirm} onOpenChange={setShowBlockConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Block @{clip.user.username}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You won't see their clips, comments, or interactions anymore. You can unblock them
+              from your account settings at any time.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={blockMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => blockMutation.mutate()}
+              disabled={blockMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {blockMutation.isPending ? "Blocking…" : "Block user"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ClipWithUser } from '@shared/schema';
-import { BadgeCheck, MoreHorizontal, Bookmark, MessageCircle, BarChart2, ChevronDown, Gamepad2, Play } from 'lucide-react';
+import { BadgeCheck, Bookmark, MessageCircle, BarChart2, ChevronDown, Gamepad2, Play } from 'lucide-react';
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { PartnerBadge } from '@/components/ui/partner-badge';
 import { useAuth } from '@/hooks/use-auth';
@@ -12,6 +12,7 @@ import VideoPlayer from '@/components/shared/VideoPlayer';
 import CommentSection from '@/components/clips/CommentSection';
 import { ClipShareDialog } from '@/components/clip/ClipShareDialog';
 import { CustomAvatar } from '@/components/ui/custom-avatar';
+import { TrendingClipMenu } from '@/components/clips/TrendingClipMenu';
 import { LikeButton } from '@/components/engagement/LikeButton';
 import { FireButton } from '@/components/engagement/FireButton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -218,9 +219,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
                   {followMutation.isPending ? '…' : 'Follow'}
                 </button>
               )}
-              <button className="p-1" style={{ color: '#7E887A' }}>
-                <MoreHorizontal className="h-5 w-5" />
-              </button>
+              <TrendingClipMenu clip={clip} />
             </div>
           </div>
         </div>

@@ -66,6 +66,7 @@ import adminWalletAuditRouter from "./routes/admin-wallet-audit";
 import { pushRouter, adminPushRouter } from "./routes/push";
 import { twitchApi } from "./services/twitch-api";
 import { VideoProcessor } from "./video-processor";
+import ffmpeg from "fluent-ffmpeg";
 import sharp from "sharp";
 import { EmailService } from "./email-service";
 import { createVerificationCode, verifyEmailCode, createPasswordResetCode, verifyPasswordResetCode, deletePasswordResetTokensByUser } from "./services/token-service";
@@ -4555,6 +4556,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error serving OG screenshot image:', error);
       res.status(500).json({ error: 'Failed to serve screenshot image' });
+    }
+  });
+
+  // Download clip with subtle Gamefolio watermark (ffmpeg drawtext overlay)
+  app.get('/api/clips/:id/download', optionalHybridAuth, async (req: Request, res: Response) => {
+    try {
+      const clipId = parseInt(req.params.id);
+      if (isNaN(clipId)) return res.status(400).json({ error: 'Invalid clip ID' });
+
+      const clip = await storage.getClipWithUser(clipId);
+      if (!clip || !clip.videoUrl) return res.status(404).json({ error: 'Clip not found' });
+
+      // Re-sign the Supabase URL so it's fresh
+      const freshUrl = await refreshSupabaseSignedUrl(clip.videoUrl);
+
+      // Build watermark text — sanitise to safe characters for the drawtext filter
+      const safe = (s: string) =>
+        s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/:/g, '\\:').replace(/[[\]]/g, '');
+      const usernameText = safe(`@${clip.user.username}`);
+      const gameText = clip.game?.name ? safe(clip.game.name) : '';
+      const watermarkLine = gameText
+        ? `Gamefolio | ${usernameText} | ${gameText}`
+        : `Gamefolio | ${usernameText}`;
+
+      const safeTitle = (clip.title || 'clip').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 60);
+
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}_gamefolio.mp4"`);
+      res.setHeader('Cache-Control', 'private, no-cache');
+
+      // Drawtext filter — bottom-right corner, semi-transparent box, subtle white text
+      const drawtextFilter =
+        `drawtext=text='${watermarkLine}':fontsize=22:fontcolor=white@0.88:` +
+        `x=w-tw-18:y=h-th-18:` +
+        `shadowcolor=black@0.65:shadowx=2:shadowy=2:` +
+        `box=1:boxcolor=black@0.40:boxborderw=10`;
+
+      const command = (ffmpeg as any)(freshUrl)
+        .videoFilters(drawtextFilter)
+        .audioCodec('copy')
+        .videoCodec('libx264')
+        .outputOptions([
+          '-preset ultrafast',
+          '-crf 24',
+          '-pix_fmt yuv420p',
+          '-movflags frag_keyframe+empty_moov+default_base_moof',
+          '-threads 0',
+        ])
+        .format('mp4');
+
+      command.on('error', (err: Error) => {
+        console.error('FFmpeg watermark error:', err.message);
+        if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
+      });
+
+      command.pipe(res, { end: true });
+    } catch (error) {
+      console.error('Download clip error:', error);
+      if (!res.headersSent) res.status(500).json({ error: 'Failed to download clip' });
     }
   });
 
