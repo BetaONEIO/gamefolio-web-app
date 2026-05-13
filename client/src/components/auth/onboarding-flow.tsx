@@ -74,11 +74,11 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
               onClick={() => onSelectGame(game)}
               className={`group flex flex-col items-center p-1.5 rounded-lg transition-all focus:outline-none focus:ring-2 ${
                 isSelected 
-                  ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/50' 
-                  : 'hover:bg-primary/20 border-2 border-transparent focus:ring-primary/50'
+                  ? 'bg-primary/15 border-2 border-primary/70 ring-2 ring-primary/30' 
+                  : 'bg-[#0d1f12] border-2 border-[#1e3a24] hover:border-primary/40 hover:bg-primary/5 focus:ring-primary/30'
               }`}
             >
-              <div className="relative w-full aspect-[3/4] mb-1.5 overflow-hidden rounded-md">
+              <div className="relative w-full aspect-[3/4] mb-1.5 overflow-hidden rounded-md bg-[#1e3a24]">
                 <img
                   src={game.box_art_url ? game.box_art_url.replace('{width}', '300').replace('{height}', '400') : "https://placehold.co/120x160?text=Game"}
                   alt={game.name}
@@ -89,11 +89,11 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
                 />
                 <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${
                   isSelected 
-                    ? 'bg-primary/30 opacity-100' 
-                    : 'bg-black/50 opacity-0 group-hover:opacity-100'
+                    ? 'bg-primary/20 opacity-100' 
+                    : 'bg-black/40 opacity-0 group-hover:opacity-100'
                 }`}>
                   {isSelected ? (
-                    <Check className="h-6 w-6 text-primary" />
+                    <Check className="h-6 w-6 text-primary drop-shadow" />
                   ) : (
                     <Plus className="h-6 w-6 text-white" />
                   )}
@@ -102,7 +102,7 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
               <span className={`text-xs text-center line-clamp-2 w-full leading-tight transition-colors ${
                 isSelected 
                   ? 'text-primary font-semibold' 
-                  : 'text-gray-300 group-hover:text-primary'
+                  : 'text-gray-400 group-hover:text-gray-200'
               }`}>
                 {game.name}
               </span>
