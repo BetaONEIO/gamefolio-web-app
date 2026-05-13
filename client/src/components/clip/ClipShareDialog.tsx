@@ -13,8 +13,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
-import { FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope, FaPinterest, FaYoutube } from "react-icons/fa";
-import { FaXTwitter, FaInstagram, FaTiktok, FaSnapchat, FaBluesky, FaThreads } from "react-icons/fa6";
+import { FaFacebook, FaReddit, FaWhatsapp, FaTelegram, FaEnvelope } from "react-icons/fa";
+import { FaXTwitter, FaBluesky } from "react-icons/fa6";
 
 interface ClipShareDialogProps {
   clipId: number;
@@ -32,18 +32,11 @@ interface ShareData {
     twitter: string;
     facebook: string;
     reddit: string;
-    linkedin: string;
     whatsapp: string;
     telegram: string;
-    discord: string;
-    instagram: string;
-    tiktok: string;
     bluesky: string;
-    snapchat: string;
-    threads: string;
-    pinterest: string;
-    youtube: string;
     email: string;
+    [key: string]: string;
   };
   clipUrl: string;
   title: string;
@@ -53,27 +46,16 @@ interface ShareData {
   videoType?: string;
 }
 
-const COPY_ONLY_PLATFORMS = ["discord", "instagram", "tiktok", "snapchat", "threads", "youtube"];
-
 const SOCIAL_PLATFORMS = [
   { name: "X", icon: FaXTwitter, key: "twitter" },
   { name: "Facebook", icon: FaFacebook, key: "facebook" },
-  { name: "LinkedIn", icon: FaLinkedin, key: "linkedin" },
   { name: "WhatsApp", icon: FaWhatsapp, key: "whatsapp" },
   { name: "Telegram", icon: FaTelegram, key: "telegram" },
   { name: "Reddit", icon: FaReddit, key: "reddit" },
-  { name: "Discord", icon: FaDiscord, key: "discord" },
-  { name: "Instagram", icon: FaInstagram, key: "instagram" },
-  { name: "TikTok", icon: FaTiktok, key: "tiktok" },
   { name: "Bluesky", icon: FaBluesky, key: "bluesky" },
-  { name: "Snapchat", icon: FaSnapchat, key: "snapchat" },
-  { name: "Threads", icon: FaThreads, key: "threads" },
-  { name: "Pinterest", icon: FaPinterest, key: "pinterest" },
-  { name: "YouTube", icon: FaYoutube, key: "youtube" },
   { name: "Email", icon: FaEnvelope, key: "email" },
 ];
 
-// Component to handle clip thumbnail display with signed URLs
 function ClipThumbnail({ thumbnailUrl, videoUrl }: { thumbnailUrl?: string | null; videoUrl?: string | null }) {
   const { signedUrl: signedThumbUrl } = useSignedUrl(thumbnailUrl);
   const { signedUrl: signedVideoUrl } = useSignedUrl(videoUrl);
@@ -88,9 +70,7 @@ function ClipThumbnail({ thumbnailUrl, videoUrl }: { thumbnailUrl?: string | nul
           const target = e.target as HTMLImageElement;
           target.style.display = 'none';
           const videoElement = target.nextElementSibling as HTMLVideoElement;
-          if (videoElement) {
-            videoElement.style.display = 'block';
-          }
+          if (videoElement) videoElement.style.display = 'block';
         }}
       />
     );
@@ -151,48 +131,29 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
 
   const handleCopyLink = async () => {
     if (!shareData?.clipUrl) return;
-
     try {
       await navigator.clipboard.writeText(shareData.clipUrl);
       setCopySuccess(true);
       trackShare();
-      toast({
-        title: "Link Copied!",
-        description: "The clip link has been copied to your clipboard.",
-      });
-
-      // Reset copy success state after 2 seconds
+      toast({ title: "Link Copied!", description: "The clip link has been copied to your clipboard." });
       setTimeout(() => setCopySuccess(false), 2000);
-    } catch (error) {
-      console.error("Failed to copy link:", error);
-      toast({
-        title: "Copy Failed",
-        description: "Unable to copy link to clipboard.",
-        variant: "destructive",
-      });
+    } catch {
+      toast({ title: "Copy Failed", description: "Unable to copy link to clipboard.", variant: "destructive" });
     }
   };
 
-
-
   const handleNativeShare = async () => {
     if (!shareData) return;
-
-    // Check if Web Share API is available (mobile devices)
     if (navigator.share) {
       try {
         await navigator.share({
           title: shareData.title || `Check out this gaming ${label}!`,
           text: shareData.description || 'Amazing gaming content from Gamefolio',
-          url: shareData.clipUrl
+          url: shareData.clipUrl,
         });
         trackShare();
-        toast({
-          title: "Shared successfully",
-          description: "Content shared using your device's share menu.",
-        });
       } catch (error) {
-        if (error.name !== 'AbortError') {
+        if ((error as Error).name !== 'AbortError') {
           console.error('Native share failed:', error);
         }
       }
@@ -208,41 +169,24 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
         url: shareData.clipUrl,
         dialogTitle: `Share to ${platform}`,
       });
-      if (handled) {
-        trackShare();
-        return;
-      }
-    }
-    if (COPY_ONLY_PLATFORMS.includes(platformKey)) {
-      navigator.clipboard.writeText(shareData?.clipUrl || url);
-      trackShare();
-      toast({
-        title: `Link copied for ${platform}!`,
-        description: `Paste this link in ${platform} to share your ${label}.`,
-        duration: 3000,
-      });
-      return;
+      if (handled) { trackShare(); return; }
     }
     void openShareWindow(url);
     trackShare();
     toast({
       title: `Sharing on ${platform}`,
-      description: isOwnContent ? `🎮 Sharing your gaming ${label} from your Gamefolio! Your followers will see your epic gameplay and can visit your profile to see more content.` : `🎮 Sharing this gaming ${label}! Check out this epic gameplay on Gamefolio.`,
-      duration: 4000,
+      description: isOwnContent
+        ? `🎮 Sharing your gaming ${label} from your Gamefolio!`
+        : `🎮 Sharing this gaming ${label} on Gamefolio.`,
+      duration: 3000,
     });
   };
 
-  const handleRetry = () => {
-    refetch();
-  };
+  const hasNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      {trigger && (
-        <DialogTrigger asChild>
-          {trigger}
-        </DialogTrigger>
-      )}
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       {!trigger && open === undefined && (
         <DialogTrigger asChild>
           <Button variant="outline" size="sm" className="gap-2">
@@ -256,19 +200,19 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
         aria-describedby="clip-share-description"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-5 py-4 sm:py-5 border-b border-[#1e293b]/50">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <ShareLaunchIcon size={20} className="text-[#B7FF1A] shrink-0" />
-            <span className="text-[#f8fafc] text-base sm:text-xl font-bold truncate">
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#1e293b]/50 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <ShareLaunchIcon size={18} className="text-[#B7FF1A] shrink-0" />
+            <span className="text-[#f8fafc] text-base font-bold truncate">
               {isOwnContent ? `Share your ${label}` : `Share ${label}`}
             </span>
           </div>
           <button
             onClick={() => setIsOpen(false)}
             className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/5 transition-colors shrink-0 ml-2"
-            aria-label="Close share dialog"
+            aria-label="Close"
           >
-            <X className="w-5 h-5 sm:w-6 sm:h-6 text-[#94a3b8]" />
+            <X className="w-5 h-5 text-[#94a3b8]" />
           </button>
         </div>
 
@@ -276,98 +220,101 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
           Share your gaming {label} with friends through social media or copy the link
         </div>
 
-        {/* Content */}
-        <div className="p-4 sm:p-5 flex flex-col gap-5 overflow-y-auto flex-1 min-h-0 pb-5">
+        {/* Scrollable content */}
+        <div className="flex flex-col gap-4 overflow-y-auto flex-1 min-h-0 p-4 pb-5">
           {isLoading ? (
-            <div className="flex items-center justify-center py-16">
+            <div className="flex items-center justify-center py-12">
               <div className="animate-spin w-8 h-8 border-4 border-[#B7FF1A] border-t-transparent rounded-full" />
             </div>
           ) : error ? (
             <div className="py-2">
               <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Failed to load sharing options. Please try again.
-                </AlertDescription>
+                <AlertDescription>Failed to load sharing options. Please try again.</AlertDescription>
               </Alert>
-              <Button
-                variant="outline"
-                onClick={handleRetry}
-                className="w-full gap-2"
-              >
+              <Button variant="outline" onClick={() => refetch()} className="w-full gap-2">
                 <RefreshCw className="h-4 w-4" />
                 Try Again
               </Button>
             </div>
           ) : shareData ? (
             <>
-              {/* Clip Thumbnail Preview */}
+              {/* Thumbnail — smaller on mobile to keep modal compact */}
               <div className="flex justify-center">
                 <div
-                  className={`relative bg-[#1e293b] rounded-2xl overflow-hidden border border-[#1e293b] ${
+                  className={`relative bg-[#1e293b] rounded-xl overflow-hidden border border-[#1e293b]/80 ${
                     contentType === 'reel' || shareData.videoType === 'reel'
-                      ? 'w-40 aspect-[9/16]'
-                      : 'w-full aspect-video'
+                      ? 'w-28 sm:w-36 aspect-[9/16]'
+                      : 'w-full max-h-[140px] sm:max-h-[180px] aspect-video'
                   }`}
                 >
                   <ClipThumbnail thumbnailUrl={shareData.thumbnailUrl} videoUrl={shareData.videoUrl} />
                   <div className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none">
-                    <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center">
-                      <div className="w-0 h-0 border-l-[7px] border-l-[#0f172a] border-y-[5px] border-y-transparent ml-0.5" />
+                    <div className="w-9 h-9 bg-white/90 rounded-full flex items-center justify-center">
+                      <div className="w-0 h-0 border-l-[6px] border-l-[#0f172a] border-y-[4px] border-y-transparent ml-0.5" />
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Share Link Section */}
-              <div className="flex flex-col gap-2.5">
-                <span className="text-[#94a3b8] text-sm">{`${label.charAt(0).toUpperCase()}${label.slice(1)} Link`}</span>
+              {/* Copy link row */}
+              <div className="flex flex-col gap-2">
+                <span className="text-[#64748b] text-xs font-medium uppercase tracking-wide">
+                  {`${label.charAt(0).toUpperCase()}${label.slice(1)} Link`}
+                </span>
                 <div className="flex gap-2">
-                  <div className="flex-1 min-w-0 bg-[#1e293b] border border-[#1e293b] rounded-2xl px-3 sm:px-4 py-3 overflow-hidden">
-                    <span className="text-[#94a3b8] text-xs sm:text-sm font-mono truncate block">
+                  <div className="flex-1 min-w-0 bg-[#1e293b] border border-[#2d3f55] rounded-xl px-3 py-2.5 overflow-hidden">
+                    <span className="text-[#94a3b8] text-xs font-mono truncate block">
                       {shareData.clipUrl}
                     </span>
                   </div>
                   <button
                     onClick={handleCopyLink}
-                    className="flex items-center gap-1.5 sm:gap-2 bg-[#B7FF1A] hover:bg-[#A2F000] text-[#071013] rounded-2xl px-3 sm:px-4 py-3 transition-colors shrink-0 font-medium"
-                    aria-label="Copy clip URL to clipboard"
+                    className="flex items-center gap-1.5 bg-[#B7FF1A] hover:bg-[#A2F000] active:scale-95 text-[#071013] rounded-xl px-3 py-2.5 transition-all shrink-0 font-semibold text-sm"
+                    aria-label="Copy clip URL"
                   >
-                    <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="text-sm sm:text-base whitespace-nowrap">{copySuccess ? 'Copied!' : 'Copy'}</span>
+                    <Copy className="w-4 h-4" />
+                    {copySuccess ? 'Copied!' : 'Copy'}
                   </button>
                 </div>
-                {/* Native Share API — full width pill for mobile only */}
-                {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
-                  <button
-                    onClick={handleNativeShare}
-                    className="sm:hidden mt-1 flex items-center justify-center gap-2 border border-[#B7FF1A]/50 hover:bg-[#B7FF1A]/10 text-[#B7FF1A] rounded-2xl py-2.5 transition-colors"
-                    aria-label="Share using device's native share menu"
-                  >
-                    <ShareLaunchIcon size={16} />
-                    <span className="text-sm font-medium">Share via…</span>
-                  </button>
-                )}
               </div>
 
-              {/* Social Media — compact inline icon buttons */}
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                {SOCIAL_PLATFORMS.map((platform) => {
-                  const Icon = platform.icon;
-                  const shareUrl = shareData.socialMediaLinks?.[platform.key as keyof typeof shareData.socialMediaLinks];
-                  return (
-                    <button
-                      key={platform.key}
-                      onClick={() => shareUrl && handleSocialShare(platform.name, shareUrl, platform.key)}
-                      disabled={!shareUrl}
-                      className="w-10 h-10 rounded-full border border-[#B7FF1A]/40 bg-transparent hover:bg-[#B7FF1A]/10 text-[#f8fafc] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
-                      title={platform.name}
-                      aria-label={`Share on ${platform.name}`}
-                    >
-                      <Icon className="w-4 h-4" />
-                    </button>
-                  );
-                })}
+              {/* Native share — prominent on mobile */}
+              {hasNativeShare && (
+                <button
+                  onClick={handleNativeShare}
+                  className="flex items-center justify-center gap-2 bg-[#B7FF1A]/10 border border-[#B7FF1A]/30 hover:bg-[#B7FF1A]/20 active:scale-[0.98] text-[#B7FF1A] rounded-xl py-3 transition-all font-medium text-sm"
+                  aria-label="Share using device share menu"
+                >
+                  <ShareLaunchIcon size={16} />
+                  Share via…
+                </button>
+              )}
+
+              {/* Social platforms */}
+              <div className="flex flex-col gap-2">
+                <span className="text-[#64748b] text-xs font-medium uppercase tracking-wide">Share to</span>
+                <div className="grid grid-cols-7 gap-1">
+                  {SOCIAL_PLATFORMS.map((platform) => {
+                    const Icon = platform.icon;
+                    const shareUrl = shareData.socialMediaLinks?.[platform.key];
+                    return (
+                      <button
+                        key={platform.key}
+                        onClick={() => shareUrl && handleSocialShare(platform.name, shareUrl, platform.key)}
+                        disabled={!shareUrl}
+                        className="flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-white/5 active:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title={platform.name}
+                        aria-label={`Share on ${platform.name}`}
+                      >
+                        <div className="w-9 h-9 rounded-full border border-[#B7FF1A]/30 bg-[#1e293b] flex items-center justify-center">
+                          <Icon className="w-4 h-4 text-[#f8fafc]" />
+                        </div>
+                        <span className="text-[#64748b] text-[9px] leading-tight text-center">{platform.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </>
           ) : (
