@@ -1473,7 +1473,7 @@ export default function OnboardingFlow({
   return (
     <div
       className="w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 min-h-screen sm:min-h-0 bg-[#0d1f12] sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col"
-      style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 1.5rem))' }}
+      style={{ paddingBottom: 'calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)' }}
     >
       <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} />
       <div className="flex-1 flex flex-col">
