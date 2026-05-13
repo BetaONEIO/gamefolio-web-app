@@ -1429,22 +1429,22 @@ export default function OnboardingFlow({
                   Get a blockchain wallet to store GF Tokens, collect NFTs, and unlock exclusive features.
                 </p>
                 
-                <Button
+                <button
                   onClick={handleCreateWalletClick}
                   disabled={isCreatingAnyWallet}
-                  className="w-full h-auto py-4 px-6 bg-primary/15 border border-primary/30 hover:bg-primary/25 text-white"
+                  className="w-full py-4 px-5 bg-[#162a1b] border border-primary/30 hover:bg-[#1e3a24] hover:border-primary/50 active:scale-[0.99] rounded-xl transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="button-create-wallet"
                 >
-                  <div className="flex items-start gap-3 text-left w-full">
-                    <Wallet className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
-                    <div>
-                      <div className="font-semibold mb-1">Create Wallet</div>
-                      <div className="text-sm text-gray-400 font-normal">
+                  <div className="flex items-start gap-3">
+                    <GamefolioWalletIcon className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
+                    <div className="min-w-0">
+                      <div className="font-semibold text-white mb-1">Create Wallet</div>
+                      <div className="text-sm text-gray-400 font-normal break-words">
                         Get a secure blockchain wallet for NFTs and rewards
                       </div>
                     </div>
                   </div>
-                </Button>
+                </button>
 
                 <div className="flex gap-3 mt-auto">
                   <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">
