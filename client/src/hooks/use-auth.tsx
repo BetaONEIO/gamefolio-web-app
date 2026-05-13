@@ -72,6 +72,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         credentials: "include",
       });
       if (!res.ok) return;
+      // Guard against SPA fallback returning index.html with status 200
+      // when the route is missing on a stale deploy.
+      if (!res.headers.get("content-type")?.includes("application/json")) return;
       const data = (await res.json()) as {
         accessToken?: string;
         refreshToken?: string;
@@ -83,6 +86,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.warn("issueNativeTokens failed", e);
     }
   };
+
+  // The first onAuthStateChanged after mount is always Firebase restoring the
+  // existing session (or confirming there isn't one). Treat it as restoration:
+  // refresh the server session silently, but don't toast "Welcome back" or
+  // redirect to "/" — the user is on a deep link (e.g. /profile/mod_tom) and
+  // expects to stay there. Subsequent fires are real sign-in events.
+  const isInitialAuthCheckRef = useRef(true);
 
   // Handle Firebase authentication state changes
   useEffect(() => {
@@ -119,28 +129,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           queryClient.setQueryData(["/api/user"], userData);
 
+          const isInitialRestore = isInitialAuthCheckRef.current;
+          isInitialAuthCheckRef.current = false;
+
           if (userData.needsOnboarding) {
-            if (userData.isNewGoogleUser) {
-              toast({
-                title: "Welcome to Gamefolio!",
-                description: "Let's set up your gaming profile.",
-                variant: "gamefolioSuccess",
-              });
-            } else {
-              toast({
-                title: "Complete your profile",
-                description: "Finish setting up your gaming profile to continue.",
-                variant: "gamefolioSuccess",
-              });
+            if (!isInitialRestore) {
+              if (userData.isNewGoogleUser) {
+                toast({
+                  title: "Welcome to Gamefolio!",
+                  description: "Let's set up your gaming profile.",
+                  variant: "gamefolioSuccess",
+                });
+              } else {
+                toast({
+                  title: "Complete your profile",
+                  description: "Finish setting up your gaming profile to continue.",
+                  variant: "gamefolioSuccess",
+                });
+              }
             }
             setLocation("/onboarding");
-          } else {
+          } else if (!isInitialRestore) {
             toast({
               title: "Welcome back!",
               description: `You're now signed in with Google.`,
               variant: "gamefolioSuccess",
             });
-            
+
             setLocation("/");
           }
         } catch (error) {

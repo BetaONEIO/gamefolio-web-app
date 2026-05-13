@@ -320,6 +320,13 @@ app.use((req, res, next) => {
       res.status(status).json({ message });
     });
 
+    // Unmatched /api/* routes must return JSON 404, otherwise they fall
+    // through to the SPA wildcard below and the client gets index.html
+    // with status 200 — which then crashes any res.json() caller.
+    app.use("/api", (_req, res) => {
+      res.status(404).json({ error: "Not found" });
+    });
+
     // importantly only setup vite in development and after
     // setting up all the other routes so the catch-all route
     // doesn't interfere with the other routes

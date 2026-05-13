@@ -42,7 +42,7 @@ export default function TwoFactorVerifyPage() {
             method: 'POST',
             credentials: 'include',
           });
-          if (res.ok) {
+          if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
             const data = (await res.json()) as {
               accessToken?: string;
               refreshToken?: string;

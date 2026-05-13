@@ -43,7 +43,11 @@ export function ActivityScrollBanner() {
   const duplicatedUploads = [...recentUploads, ...recentUploads];
 
   return (
-    <div className="bg-[#B7FF1A] border-b border-[#A2F000] overflow-hidden py-2">
+    // pointer-events: none on the empty banner bg so taps fall through to the
+    // header buttons above; each item re-enables pointer-events so the clip
+    // links stay tappable. Radix DropdownMenu opens on pointerdown, so if the
+    // banner captures pointerdown, the header dropdowns never open.
+    <div className="bg-[#B7FF1A] border-b border-[#A2F000] overflow-hidden py-2 pointer-events-none">
       <div
         ref={scrollRef}
         className="flex gap-8 whitespace-nowrap overflow-hidden"
@@ -52,7 +56,7 @@ export function ActivityScrollBanner() {
         {duplicatedUploads.map((upload, index) => (
           <div
             key={`${upload.clipId}-${index}`}
-            className="inline-flex items-center gap-2 text-sm font-medium"
+            className="inline-flex items-center gap-2 text-sm font-medium pointer-events-auto"
             data-testid={`activity-${index}`}
             style={{ color: '#131E2B' }}
           >
