@@ -182,12 +182,7 @@ const MobileMenu = () => {
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="p-4 border-b border-border flex justify-between items-center">
-            <img
-              src={gamefolioLogo}
-              alt="Gamefolio"
-              className="h-9 w-9 object-contain"
-            />
+          <div className="p-4 border-b border-border flex justify-end items-center">
             <Button variant="ghost" size="icon" onClick={close}>
               <X className="h-5 w-5" />
             </Button>
@@ -314,7 +309,11 @@ const MobileMenu = () => {
                     onClick={close}
                     className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline group"
                   >
-                    <GamefolioIcon glow={true} className="w-6 h-6 mr-3 transition-all duration-300 group-hover:[filter:drop-shadow(0_0_10px_rgba(183,255,26,0.5))]" />
+                    <img
+                      src={gamefolioLogo}
+                      alt="Gamefolio"
+                      className="w-6 h-6 mr-3 object-contain"
+                    />
                     <span className="font-medium">My Gamefolio</span>
                   </Link>
                 </li>
