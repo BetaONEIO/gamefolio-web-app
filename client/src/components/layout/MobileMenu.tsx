@@ -182,7 +182,12 @@ const MobileMenu = () => {
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="p-4 border-b border-border flex justify-end items-center">
+          <div className="p-4 border-b border-border flex justify-between items-center">
+            <img
+              src={gamefolioLogo}
+              alt="Gamefolio"
+              className="h-9 w-9 object-contain"
+            />
             <Button variant="ghost" size="icon" onClick={close}>
               <X className="h-5 w-5" />
             </Button>
