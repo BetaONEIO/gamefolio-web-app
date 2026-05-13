@@ -88,10 +88,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // The first onAuthStateChanged after mount is always Firebase restoring the
-  // existing session (or confirming there isn't one). Treat it as restoration:
-  // refresh the server session silently, but don't toast "Welcome back" or
-  // redirect to "/" — the user is on a deep link (e.g. /profile/mod_tom) and
-  // expects to stay there. Subsequent fires are real sign-in events.
+  // existing session (or confirming there isn't one). Skip the server-side
+  // re-auth POST entirely in that case — /api/auth/google is also the
+  // daily-streak / welcome-toast trigger, so calling it on every refresh
+  // re-awards XP and re-shows the daily reward. The persisted server session
+  // (web cookie) or stored JWT (native) handles authentication; /api/user
+  // will load the user normally. Subsequent fires are real sign-in events
+  // and run the full flow.
   const isInitialAuthCheckRef = useRef(true);
 
   // Handle Firebase authentication state changes
@@ -105,6 +108,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser && firebaseUser.email) {
+        const isInitialRestore = isInitialAuthCheckRef.current;
+        isInitialAuthCheckRef.current = false;
+
+        if (isInitialRestore) {
+          if (mounted) setFirebaseAuthChecked(true);
+          return;
+        }
+
         try {
           const response = await apiRequest("POST", "/api/auth/google", {
             email: firebaseUser.email,
@@ -129,27 +140,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           queryClient.setQueryData(["/api/user"], userData);
 
-          const isInitialRestore = isInitialAuthCheckRef.current;
-          isInitialAuthCheckRef.current = false;
-
           if (userData.needsOnboarding) {
-            if (!isInitialRestore) {
-              if (userData.isNewGoogleUser) {
-                toast({
-                  title: "Welcome to Gamefolio!",
-                  description: "Let's set up your gaming profile.",
-                  variant: "gamefolioSuccess",
-                });
-              } else {
-                toast({
-                  title: "Complete your profile",
-                  description: "Finish setting up your gaming profile to continue.",
-                  variant: "gamefolioSuccess",
-                });
-              }
+            if (userData.isNewGoogleUser) {
+              toast({
+                title: "Welcome to Gamefolio!",
+                description: "Let's set up your gaming profile.",
+                variant: "gamefolioSuccess",
+              });
+            } else {
+              toast({
+                title: "Complete your profile",
+                description: "Finish setting up your gaming profile to continue.",
+                variant: "gamefolioSuccess",
+              });
             }
             setLocation("/onboarding");
-          } else if (!isInitialRestore) {
+          } else {
             toast({
               title: "Welcome back!",
               description: `You're now signed in with Google.`,
