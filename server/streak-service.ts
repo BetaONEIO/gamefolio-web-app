@@ -94,8 +94,7 @@ export class StreakService {
 
       if (isFirstLogin) {
         currentStreak = 1;
-        dailyXP = DAILY_LOGIN_XP;
-        message = `Welcome! Your login streak has started! +${DAILY_LOGIN_XP} XP`;
+        message = `Welcome! Your login streak has started!`;
       } else if (this.isSameDay(lastStreakUpdate, now)) {
         return {
           currentStreak,
@@ -138,30 +137,32 @@ export class StreakService {
         );
       }
 
-      try {
-        const notif = await storage.createNotification({
-          userId,
-          type: 'streak',
-          title: isNewMilestone ? `🔥 ${currentStreak}-Day Streak Milestone!` : `🔥 Day ${currentStreak} Streak!`,
-          message: isNewMilestone
-            ? `You earned ${DAILY_LOGIN_XP} daily XP + ${bonusAwarded} milestone bonus XP for your ${currentStreak}-day streak!`
-            : `You earned ${DAILY_LOGIN_XP} XP for logging in ${currentStreak} day${currentStreak > 1 ? 's' : ''} in a row.`,
-          isRead: false,
-          fromUserId: null,
-          clipId: null,
-          screenshotId: null,
-          commentId: null,
-          metadata: { streakDay: currentStreak, dailyXP, milestoneBonus: bonusAwarded },
-          actionUrl: '/level-tracker',
-        });
-        void sendPushToUser(userId, {
-          title: notif.title,
-          body: notif.message,
-          actionUrl: notif.actionUrl,
-          data: { notificationId: String(notif.id), type: notif.type },
-        }).catch(err => console.warn('[streak-service] push fan-out failed:', err));
-      } catch (notifError) {
-        console.error("Error creating streak notification:", notifError);
+      if (!isFirstLogin) {
+        try {
+          const notif = await storage.createNotification({
+            userId,
+            type: 'streak',
+            title: isNewMilestone ? `🔥 ${currentStreak}-Day Streak Milestone!` : `🔥 Day ${currentStreak} Streak!`,
+            message: isNewMilestone
+              ? `You earned ${DAILY_LOGIN_XP} daily XP + ${bonusAwarded} milestone bonus XP for your ${currentStreak}-day streak!`
+              : `You earned ${DAILY_LOGIN_XP} XP for logging in ${currentStreak} day${currentStreak > 1 ? 's' : ''} in a row.`,
+            isRead: false,
+            fromUserId: null,
+            clipId: null,
+            screenshotId: null,
+            commentId: null,
+            metadata: { streakDay: currentStreak, dailyXP, milestoneBonus: bonusAwarded },
+            actionUrl: '/level-tracker',
+          });
+          void sendPushToUser(userId, {
+            title: notif.title,
+            body: notif.message,
+            actionUrl: notif.actionUrl,
+            data: { notificationId: String(notif.id), type: notif.type },
+          }).catch(err => console.warn('[streak-service] push fan-out failed:', err));
+        } catch (notifError) {
+          console.error("Error creating streak notification:", notifError);
+        }
       }
 
       if (currentStreak > longestStreak) {
