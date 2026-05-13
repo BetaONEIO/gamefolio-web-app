@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { Redirect, useLocation } from 'wouter';
-import { Loader2, Trash2, AlertTriangle, Shield, Palette, Type, Sparkles, Check, X, Save, Smile, User, KeyRound, Gift, Copy, ExternalLink, Users, Star } from 'lucide-react';
+import { Loader2, Trash2, AlertTriangle, Shield, Palette, Type, Sparkles, Check, X, Save, Smile, User, KeyRound, Gift, Copy, ExternalLink, Users, Star, Pencil, Lock } from 'lucide-react';
 import { validatePassword, isPasswordValid } from '@/lib/password-validation';
 import { PasswordRequirementsDisplay } from '@/components/ui/password-requirements';
 
@@ -193,7 +193,7 @@ const ReferralSection: React.FC = () => {
   const queryClient = useQueryClient();
   const [applyCode, setApplyCode] = useState('');
   const [customCode, setCustomCode] = useState('');
-  const [showCustomize, setShowCustomize] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const { data: referralStats, isLoading } = useQuery<{
@@ -226,13 +226,13 @@ const ReferralSection: React.FC = () => {
     mutationFn: (code: string) =>
       apiRequest('POST', '/api/user/referral-code/customize', { code }),
     onSuccess: () => {
-      toast({ title: 'Referral code updated!', description: 'Your custom referral code is now active.', duration: 3000 });
+      toast({ title: 'Referral code saved!', description: 'Your custom referral code is now permanently set.', duration: 3000 });
       setCustomCode('');
-      setShowCustomize(false);
+      setIsEditing(false);
       queryClient.invalidateQueries({ queryKey: ['/api/user/referral-stats'] });
     },
     onError: (error: Error) => {
-      toast({ title: 'Could not update code', description: parseApiError(error), variant: 'destructive' });
+      toast({ title: 'Could not save code', description: parseApiError(error), variant: 'destructive' });
     },
   });
 
@@ -245,9 +245,13 @@ const ReferralSection: React.FC = () => {
   };
 
   const handleCustomCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only allow alphanumeric characters, max 16 chars
     const value = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 16);
     setCustomCode(value);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setCustomCode('');
   };
 
   if (isLoading) {
@@ -261,6 +265,7 @@ const ReferralSection: React.FC = () => {
   }
 
   const alreadyCustomized = referralStats?.referralCodeCustomized ?? false;
+  const canSave = customCode.trim().length >= 3 && !customizeMutation.isPending;
 
   return (
     <div className="space-y-4">
@@ -275,112 +280,136 @@ const ReferralSection: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Your referral code */}
+
+          {/* Referral code display + edit */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Your Referral Code</h3>
-              {!alreadyCustomized && !showCustomize && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-primary h-auto py-1"
-                  onClick={() => setShowCustomize(true)}
-                >
-                  Customise
-                </Button>
-              )}
               {alreadyCustomized && (
-                <span className="text-xs text-muted-foreground italic">Custom code set (one-time only)</span>
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Lock className="h-3 w-3" /> Permanently set
+                </span>
               )}
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex-1 bg-muted rounded-lg px-4 py-3 font-mono text-xl font-bold tracking-widest text-center border border-border">
-                {referralStats?.referralCode ?? '—'}
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => referralStats?.referralCode && copyToClipboard(referralStats.referralCode, 'Referral code')}
-                disabled={!referralStats?.referralCode}
-                title="Copy code"
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
             </div>
 
-            {/* Customise form */}
-            {showCustomize && !alreadyCustomized && (
-              <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
+            {/* Code row */}
+            {!isEditing ? (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-muted rounded-lg px-4 py-3 font-mono text-xl font-bold tracking-widest text-center border border-border">
+                  {referralStats?.referralCode ?? '—'}
+                </div>
+                {!alreadyCustomized && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    title="Customise your referral code (one-time only)"
+                    onClick={() => { setIsEditing(true); setCustomCode(''); }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => referralStats?.referralCode && copyToClipboard(referralStats.referralCode, 'Referral code')}
+                  disabled={!referralStats?.referralCode}
+                  title="Copy code"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              /* Edit mode */
+              <div className="rounded-xl border border-primary/40 bg-primary/5 p-4 space-y-4">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium">Choose your custom code</p>
+                  <p className="text-sm font-semibold text-foreground">Choose your custom code</p>
                   <p className="text-xs text-muted-foreground">
-                    Letters and numbers only, 3–16 characters. <strong>You can only do this once — it cannot be changed again.</strong>
+                    Letters and numbers only, 3–16 characters.
+                  </p>
+                  <p className="text-xs font-semibold text-amber-500">
+                    ⚠ This can only be done once and cannot be changed afterwards.
                   </p>
                 </div>
+
+                {/* Input + character count */}
+                <div className="space-y-1">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={customCode}
+                      onChange={handleCustomCodeChange}
+                      placeholder="MYGAMERTAG"
+                      maxLength={16}
+                      autoFocus
+                      disabled={customizeMutation.isPending}
+                      className="w-full bg-background border border-border rounded-lg px-4 py-3 text-lg font-mono font-bold uppercase tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground text-right">
+                    {customCode.length}/16 characters
+                  </p>
+                </div>
+
                 <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={customCode}
-                    onChange={handleCustomCodeChange}
-                    placeholder="MYGAMERTAG"
-                    maxLength={16}
-                    disabled={customizeMutation.isPending}
-                    className="flex-1 bg-background border border-border rounded-md px-3 py-2 text-sm font-mono uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-                  />
                   <Button
+                    className="flex-1"
                     onClick={() => setShowConfirm(true)}
-                    disabled={customCode.trim().length < 3 || customizeMutation.isPending}
+                    disabled={!canSave}
                   >
-                    {customizeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+                    {customizeMutation.isPending
+                      ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving…</>
+                      : <><Save className="h-4 w-4 mr-2" />Save code</>
+                    }
                   </Button>
                   <Button
                     variant="ghost"
-                    onClick={() => { setShowCustomize(false); setCustomCode(''); }}
+                    onClick={handleCancelEdit}
                     disabled={customizeMutation.isPending}
                   >
                     Cancel
                   </Button>
                 </div>
-                {customCode.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Preview: <span className="font-mono font-bold text-foreground">{customCode}</span>
-                    {' '}({customCode.length}/16)
-                  </p>
-                )}
               </div>
             )}
-
-            {/* One-time change confirmation dialog */}
-            <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                  <AlertDialogDescription className="space-y-2">
-                    <span className="block">
-                      You're about to set your referral code to{' '}
-                      <span className="font-mono font-bold text-foreground">{customCode}</span>.
-                    </span>
-                    <span className="block font-semibold text-destructive">
-                      This is permanent — you will not be able to change your referral code again.
-                    </span>
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel onClick={() => setShowConfirm(false)}>
-                    Go back
-                  </AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => {
-                      setShowConfirm(false);
-                      customizeMutation.mutate(customCode);
-                    }}
-                  >
-                    Yes, set my code
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
           </div>
+
+          {/* Permanent-save confirmation dialog */}
+          <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+            <AlertDialogContent className="max-w-sm">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                  <Lock className="h-4 w-4 text-amber-500" />
+                  Lock this code permanently?
+                </AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                  <div className="space-y-4 pt-1">
+                    <p className="text-sm text-muted-foreground">
+                      You are about to set your referral code to:
+                    </p>
+                    <div className="rounded-lg bg-muted border border-border px-4 py-3 font-mono text-2xl font-bold tracking-widest text-center text-foreground">
+                      {customCode}
+                    </div>
+                    <p className="text-sm font-semibold text-destructive">
+                      This is permanent and cannot be undone. You will never be able to change your referral code again.
+                    </p>
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Go back</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  onClick={() => {
+                    setShowConfirm(false);
+                    customizeMutation.mutate(customCode);
+                  }}
+                >
+                  <Lock className="h-4 w-4 mr-2" />
+                  Confirm & lock code
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           {/* Shareable link */}
           {referralStats?.referralLink && (
