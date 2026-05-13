@@ -1199,6 +1199,13 @@ export default function OnboardingFlow({
             setUserTypes(userTypes.filter(t => t !== typeId));
           } else if (userTypes.length < 2) {
             setUserTypes([...userTypes, typeId]);
+          } else {
+            toast({
+              title: "Maximum reached",
+              description: "You can only select up to 2 options. Deselect one first.",
+              variant: "default",
+              duration: 2500,
+            });
           }
         };
         
@@ -1221,79 +1228,50 @@ export default function OnboardingFlow({
             
             <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                {
-                  id: "streamer",
-                  label: "Streamer",
-                  icon: Video,
-                },
-                {
-                  id: "gamer",
-                  label: "Gamer",
-                  icon: Gamepad2,
-                },
-                {
-                  id: "professional_gamer",
-                  label: "Pro Gamer",
-                  icon: Trophy,
-                },
-                {
-                  id: "content_creator",
-                  label: "Content Creator",
-                  icon: Upload,
-                },
-                {
-                  id: "indie_developer",
-                  label: "Indie Developer",
-                  icon: Code,
-                },
-                {
-                  id: "viewer",
-                  label: "Viewer",
-                  icon: Eye,
-                },
-                {
-                  id: "filthy_casual",
-                  label: "Filthy Casual",
-                  icon: Coffee,
-                },
-                {
-                  id: "doom_scroller",
-                  label: "Doom Scroller",
-                  icon: Scroll,
-                },
+                { id: "streamer", label: "Streamer", icon: Video },
+                { id: "gamer", label: "Gamer", icon: Gamepad2 },
+                { id: "professional_gamer", label: "Pro Gamer", icon: Trophy },
+                { id: "content_creator", label: "Content Creator", icon: Upload },
+                { id: "indie_developer", label: "Indie Developer", icon: Code },
+                { id: "viewer", label: "Viewer", icon: Eye },
+                { id: "filthy_casual", label: "Filthy Casual", icon: Coffee },
+                { id: "doom_scroller", label: "Doom Scroller", icon: Scroll },
               ].map((type) => {
                 const IconComponent = type.icon;
                 const isSelected = userTypes.includes(type.id);
-                const isDisabled = !isSelected && userTypes.length >= 2;
+                const isLocked = !isSelected && userTypes.length >= 2;
                 
                 return (
-                  <div
+                  <button
                     key={type.id}
-                    onClick={() => !isDisabled && toggleUserType(type.id)}
-                    className={`relative p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      isDisabled ? "opacity-50 cursor-not-allowed" : "hover:scale-105"
-                    } ${
+                    type="button"
+                    onClick={() => toggleUserType(type.id)}
+                    className={`relative p-3 sm:p-4 rounded-lg border-2 transition-all text-left select-none ${
                       isSelected
-                        ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
-                        : "border-gray-700 hover:border-primary/50 hover:bg-primary/5"
+                        ? "border-primary/70 bg-primary/10 shadow-md shadow-primary/10 cursor-pointer active:scale-[0.97]"
+                        : isLocked
+                          ? "border-[#2a3a2a] bg-[#0d1f12]/60 cursor-not-allowed opacity-40"
+                          : "border-[#2a3a2a] bg-[#0d1f12] hover:border-primary/40 hover:bg-primary/5 cursor-pointer active:scale-[0.97]"
                     }`}
                   >
                     <div className="flex flex-col items-center text-center space-y-2">
                       <div className={`p-2.5 rounded-full ${
-                        isSelected 
-                          ? "bg-primary text-white" 
-                          : "bg-gray-700 text-gray-300"
+                        isSelected
+                          ? "bg-primary/20 text-primary"
+                          : "bg-[#1e3a24] text-gray-400"
                       }`}>
                         <IconComponent className="h-5 w-5" />
                       </div>
-                      <h3 className="font-medium text-white text-sm">{type.label}</h3>
+                      <h3 className={`font-medium text-sm ${isSelected ? "text-white" : "text-gray-400"}`}>
+                        {type.label}
+                      </h3>
                     </div>
                     {isSelected && (
-                      <div className="absolute top-2 right-2 rounded-full bg-primary p-1">
-                        <Check className="h-3 w-3 text-white" />
+                      <div className="absolute top-2 right-2 rounded-full bg-primary/20 border border-primary/50 p-0.5">
+                        <Check className="h-3 w-3 text-primary" />
                       </div>
                     )}
-                  </div>
+                  </button>
                 );
               })}
             </div>
