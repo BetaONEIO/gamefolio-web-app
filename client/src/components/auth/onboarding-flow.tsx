@@ -6,6 +6,10 @@ import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop } from "lucide-react";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
+import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
+import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
+import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
+import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
 import { Game } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -776,7 +780,7 @@ export default function OnboardingFlow({
                   <div className="space-y-5">
                     <div className="flex items-start gap-4">
                       <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                        <Gamepad2 className="h-5 w-5 text-primary" />
+                        <GamefolioProfileIcon className="h-5 w-5 text-primary" />
                       </div>
                       <div>
                         <h3 className="font-bold text-white text-[15px]">Build your gaming portfolio</h3>
@@ -786,7 +790,7 @@ export default function OnboardingFlow({
 
                     <div className="flex items-start gap-4">
                       <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                        <Trophy className="h-5 w-5 text-primary" />
+                        <GamefolioLeaderboardIcon className="h-5 w-5 text-primary" />
                       </div>
                       <div>
                         <h3 className="font-bold text-white text-[15px]">Earn XP and level up</h3>
@@ -796,7 +800,7 @@ export default function OnboardingFlow({
 
                     <div className="flex items-start gap-4">
                       <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                        <ShareLaunchIcon size={20} className="text-primary" />
+                        <GamefolioExploreIcon className="h-5 w-5 text-primary" />
                       </div>
                       <div>
                         <h3 className="font-bold text-white text-[15px]">Connect and share</h3>
@@ -806,7 +810,7 @@ export default function OnboardingFlow({
 
                     <div className="flex items-start gap-4">
                       <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                        <Wallet className="h-5 w-5 text-primary" />
+                        <GamefolioWalletIcon className="h-5 w-5 text-primary" />
                       </div>
                       <div>
                         <h3 className="font-bold text-white text-[15px]">Collect NFTs & GF Tokens</h3>
@@ -1489,7 +1493,10 @@ export default function OnboardingFlow({
   };
 
   return (
-    <div className="w-full mx-auto px-5 pt-8 pb-6 sm:p-6 md:p-8 min-h-screen sm:min-h-0 bg-[#0d1f12] sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col">
+    <div
+      className="w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 min-h-screen sm:min-h-0 bg-[#0d1f12] sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col"
+      style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 1.5rem))' }}
+    >
       <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} />
       <div className="flex-1 flex flex-col">
         {renderStepContent()}
