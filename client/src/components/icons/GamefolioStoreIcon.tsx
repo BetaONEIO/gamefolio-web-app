@@ -20,15 +20,16 @@ export function GamefolioStoreIcon({ className }: GamefolioStoreIconProps) {
       aria-hidden="true"
     >
       {/* Bag body */}
-      <path d="M6.5 9.5h11l-1.5 9.5H8z" />
+      <path d="M3 9h18l-2 12H5z" />
       {/* Bag handles */}
-      <path d="M9.5 9.5V7.5a2.5 2.5 0 0 1 5 0v2" />
+      <path d="M9 9V6a3 3 0 0 1 6 0v3" />
       {/* D-pad horizontal */}
-      <path d="M9.5 14.5h2.5" />
+      <path d="M7 15h5" />
       {/* D-pad vertical */}
-      <path d="M10.75 13.25v2.5" />
-      {/* Action button dot */}
-      <circle cx="14.5" cy="14.5" r="0.9" fill="currentColor" stroke="none" />
+      <path d="M9.5 12.5v5" />
+      {/* Action button dots */}
+      <circle cx="15.5" cy="13.5" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="17.5" cy="16.5" r="1.5" fill="currentColor" stroke="none" />
     </svg>
   );
 }
