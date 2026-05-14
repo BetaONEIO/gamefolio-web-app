@@ -652,10 +652,12 @@ const HomePage = () => {
       )}
       
       <div className="space-y-4 sm:space-y-6 md:space-y-8 mt-4 sm:mt-6 md:mt-8">
-      {/* Recommended for You Section */}
-      <LazySection minHeight="300px" rootMargin="300px">
-        <RecommendedForYou userId={userId} />
-      </LazySection>
+      {/* Recommended for You Section - only for logged-in users */}
+      {user && (
+        <LazySection minHeight="300px" rootMargin="300px">
+          <RecommendedForYou userId={userId} />
+        </LazySection>
+      )}
       
       {/* Latest Clips Section */}
       <LazySection minHeight="400px" rootMargin="200px">
