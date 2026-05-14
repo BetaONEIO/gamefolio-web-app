@@ -4500,7 +4500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Download clip with subtle Gamefolio watermark (ffmpeg drawtext overlay)
+  // Download clip with Gamefolio watermark — logo + username, TikTok-style
   app.get('/api/clips/:id/download', optionalHybridAuth, async (req: Request, res: Response) => {
     try {
       const clipId = parseInt(req.params.id);
@@ -4512,14 +4512,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Re-sign the Supabase URL so it's fresh
       const freshUrl = await refreshSupabaseSignedUrl(clip.videoUrl);
 
-      // Build watermark text — sanitise to safe characters for the drawtext filter
+      // Sanitise text for ffmpeg drawtext filter
       const safe = (s: string) =>
         s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/:/g, '\\:').replace(/[[\]]/g, '');
       const usernameText = safe(`@${clip.user.username}`);
       const gameText = clip.game?.name ? safe(clip.game.name) : '';
-      const watermarkLine = gameText
-        ? `Gamefolio | ${usernameText} | ${gameText}`
-        : `Gamefolio | ${usernameText}`;
+      // Top line: username, bottom line: game (if present)
+      const watermarkLine1 = usernameText;
+      const watermarkLine2 = gameText || safe('gamefolio.gg');
 
       const safeTitle = (clip.title || 'clip').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 60);
 
@@ -4527,32 +4527,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}_gamefolio.mp4"`);
       res.setHeader('Cache-Control', 'private, no-cache');
 
-      // Drawtext filter — bottom-right corner, semi-transparent box, subtle white text
-      const drawtextFilter =
-        `drawtext=text='${watermarkLine}':fontsize=22:fontcolor=white@0.88:` +
-        `x=w-tw-18:y=h-th-18:` +
-        `shadowcolor=black@0.65:shadowx=2:shadowy=2:` +
-        `box=1:boxcolor=black@0.40:boxborderw=10`;
+      const logoPath = path.join(process.cwd(), 'attached_assets', 'logo-white_1778587630337.png');
+      const fs = await import('fs');
+      const logoExists = fs.existsSync(logoPath);
 
-      const command = (ffmpeg as any)(freshUrl)
-        .videoFilters(drawtextFilter)
-        .audioCodec('copy')
-        .videoCodec('libx264')
-        .outputOptions([
-          '-preset ultrafast',
-          '-crf 24',
-          '-pix_fmt yuv420p',
-          '-movflags frag_keyframe+empty_moov+default_base_moof',
-          '-threads 0',
-        ])
-        .format('mp4');
+      if (logoExists) {
+        // Two-line text + logo overlay (TikTok style) — complex filtergraph
+        // Layout (bottom-right): logo (44 px tall) → line1 (38 px) → line2 (28 px)
+        // Each layer is stacked with a fixed gap; the box behind both text lines is shared.
+        const line1Filter =
+          `drawtext=text='${watermarkLine1}':fontsize=38:fontcolor=white@0.95:` +
+          `x=W-tw-20:y=H-th-56:` +
+          `shadowcolor=black@0.75:shadowx=2:shadowy=2:` +
+          `box=1:boxcolor=black@0.38:boxborderw=10`;
+        const line2Filter =
+          `drawtext=text='${watermarkLine2}':fontsize=26:fontcolor=white@0.80:` +
+          `x=W-tw-20:y=H-th-20:` +
+          `shadowcolor=black@0.55:shadowx=1:shadowy=1:` +
+          `box=1:boxcolor=black@0.38:boxborderw=8`;
 
-      command.on('error', (err: Error) => {
-        console.error('FFmpeg watermark error:', err.message);
-        if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
-      });
+        const command = (ffmpeg as any)()
+          .input(freshUrl)
+          .input(logoPath)
+          .complexFilter([
+            // Scale logo to 44 px tall (preserving aspect ratio)
+            '[1:v]scale=-1:44[logo]',
+            // Overlay logo in bottom-right above the two text lines
+            '[0:v][logo]overlay=x=W-w-20:y=H-h-108[wl]',
+            // Draw line 1 (username) just below the logo
+            `[wl]${line1Filter}[wl2]`,
+            // Draw line 2 (game / site) at the very bottom
+            `[wl2]${line2Filter}[out]`,
+          ])
+          .outputOptions([
+            '-map', '[out]',
+            '-map', '0:a?',
+            '-c:v', 'libx264',
+            '-c:a', 'copy',
+            '-preset', 'ultrafast',
+            '-crf', '24',
+            '-pix_fmt', 'yuv420p',
+            '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
+            '-threads', '0',
+          ])
+          .format('mp4');
 
-      command.pipe(res, { end: true });
+        command.on('error', (err: Error) => {
+          console.error('FFmpeg watermark error:', err.message);
+          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
+        });
+        command.pipe(res, { end: true });
+      } else {
+        // Fallback: text-only watermark (no logo)
+        const drawtextFilter =
+          `drawtext=text='${watermarkLine1}':fontsize=38:fontcolor=white@0.92:` +
+          `x=w-tw-20:y=h-th-56:shadowcolor=black@0.75:shadowx=2:shadowy=2:` +
+          `box=1:boxcolor=black@0.38:boxborderw=10,` +
+          `drawtext=text='${watermarkLine2}':fontsize=26:fontcolor=white@0.80:` +
+          `x=w-tw-20:y=h-th-20:shadowcolor=black@0.55:shadowx=1:shadowy=1:` +
+          `box=1:boxcolor=black@0.38:boxborderw=8`;
+
+        const command = (ffmpeg as any)(freshUrl)
+          .videoFilters(drawtextFilter)
+          .audioCodec('copy')
+          .videoCodec('libx264')
+          .outputOptions([
+            '-preset ultrafast',
+            '-crf 24',
+            '-pix_fmt yuv420p',
+            '-movflags frag_keyframe+empty_moov+default_base_moof',
+            '-threads 0',
+          ])
+          .format('mp4');
+
+        command.on('error', (err: Error) => {
+          console.error('FFmpeg watermark error:', err.message);
+          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
+        });
+        command.pipe(res, { end: true });
+      }
     } catch (error) {
       console.error('Download clip error:', error);
       if (!res.headersSent) res.status(500).json({ error: 'Failed to download clip' });
