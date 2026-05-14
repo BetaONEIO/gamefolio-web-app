@@ -41,6 +41,31 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   const hasDraggedRef = useRef(false);
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const previousUrlRef = useRef<string | null>(null);
+
+  // Update the address bar URL to reflect the current screenshot so it can be copied/shared
+  useEffect(() => {
+    if (!screenshot) return;
+    if (previousUrlRef.current === null) {
+      previousUrlRef.current = window.location.pathname + window.location.search + window.location.hash;
+    }
+    const username = screenshot.user?.username;
+    const shareCode = screenshot.shareCode;
+    if (username && shareCode) {
+      window.history.replaceState(null, '', `/@${username}/screenshot/${shareCode}`);
+    } else if (username && screenshot.id) {
+      window.history.replaceState(null, '', `/@${username}/screenshot/${screenshot.id}`);
+    }
+    return () => {};
+  }, [screenshot?.id]);
+
+  const handleClose = useCallback(() => {
+    if (previousUrlRef.current !== null) {
+      window.history.replaceState(null, '', previousUrlRef.current);
+      previousUrlRef.current = null;
+    }
+    onClose();
+  }, [onClose]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
@@ -172,7 +197,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
       <div className="fixed inset-0 z-[100] bg-black flex flex-col">
         <div className="absolute top-3 right-3 z-50">
           <button
-            onClick={() => { setIsFullscreen(false); onClose(); }}
+            onClick={() => { setIsFullscreen(false); handleClose(); }}
             className="rounded-sm opacity-70 transition-opacity hover:opacity-100 p-3 bg-black/30 backdrop-blur-sm hover:bg-black/50 flex items-center justify-center"
           >
             <X className="h-6 w-6 text-white" />
@@ -253,7 +278,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
       <div className="fixed inset-0 z-[100] bg-background flex flex-col">
         <div className="flex items-center justify-end px-3 py-2 flex-shrink-0">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-sm opacity-70 transition-opacity hover:opacity-100 p-2 bg-black/30 backdrop-blur-sm hover:bg-black/50 flex items-center justify-center"
           >
             <X className="h-5 w-5 text-white" />
@@ -339,7 +364,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
               <div className="flex items-center gap-3 min-w-0">
                 <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
                   e.stopPropagation();
-                  onClose();
+                  handleClose();
                 }}>
                   {screenshotUser?.nftProfileTokenId && screenshotUser?.nftProfileImageUrl && screenshotUser?.activeProfilePicType === 'nft' ? (
                     <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#B7FF1A]/40 flex-shrink-0">
@@ -357,7 +382,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                 </Link>
                 <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
                   e.stopPropagation();
-                  onClose();
+                  handleClose();
                 }}>
                   <span className="text-foreground font-medium text-sm hover:text-primary transition-colors">
                     {screenshot.user?.displayName || screenshot.user?.username || 'Unknown'}
@@ -479,7 +504,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   }
 
   return (
-    <Dialog open={!!screenshot} onOpenChange={() => onClose()}>
+    <Dialog open={!!screenshot} onOpenChange={() => handleClose()}>
       <DialogPortal>
         <DialogOverlay />
         <DialogPrimitive.Content
@@ -521,7 +546,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                   )}
                   <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
                     e.stopPropagation();
-                    onClose();
+                    handleClose();
                   }}>
                     <div className="text-white flex items-center hover:text-primary transition-colors cursor-pointer font-medium">
                       {screenshot.user?.displayName || screenshot.user?.username}

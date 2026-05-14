@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { ClipDialog } from '@/components/clips/ClipDialog';
 import { FullscreenReelsViewer } from '@/components/clips/FullscreenReelsViewer';
 import { useQuery } from '@tanstack/react-query';
@@ -31,15 +31,22 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   const [clipId, setClipId] = useState<number | null>(null);
   const [clipsList, setClipsList] = useState<ClipWithUser[] | null>(null);
   const [viewAllHref, setViewAllHref] = useState<string | undefined>(undefined);
+  const previousUrlRef = useRef<string | null>(null);
 
   const openClipDialog = (id: number, providedClipsList?: ClipWithUser[], href?: string) => {
+    previousUrlRef.current = window.location.pathname + window.location.search + window.location.hash;
     setClipId(id);
     setClipsList(providedClipsList || null);
     setViewAllHref(href);
     setIsOpen(true);
+    window.history.replaceState(null, '', `/clip/${id}`);
   };
 
   const closeClipDialog = () => {
+    if (previousUrlRef.current) {
+      window.history.replaceState(null, '', previousUrlRef.current);
+      previousUrlRef.current = null;
+    }
     setIsOpen(false);
     setClipId(null);
     setClipsList(null);
@@ -70,18 +77,31 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  // Once we know the clip type, refine the URL to /reel/:id or /clip/:id
+  useEffect(() => {
+    if (!isOpen || !clipId || !currentClip) return;
+    const prefix = currentClip.videoType === 'reel' ? 'reel' : 'clip';
+    window.history.replaceState(null, '', `/${prefix}/${clipId}`);
+  }, [isOpen, clipId, currentClip?.videoType]);
+
   const showFullscreenReelsViewer = isReel && isMobile && isOpen && clipsList && clipsList.length > 0;
 
   const handleNext = () => {
     if (!clipsList || currentIndex === -1) return;
     const nextIndex = (currentIndex + 1) % clipsList.length;
-    setClipId(clipsList[nextIndex].id);
+    const nextClip = clipsList[nextIndex];
+    setClipId(nextClip.id);
+    const prefix = nextClip.videoType === 'reel' ? 'reel' : 'clip';
+    window.history.replaceState(null, '', `/${prefix}/${nextClip.id}`);
   };
 
   const handlePrevious = () => {
     if (!clipsList || currentIndex === -1) return;
     const prevIndex = currentIndex === 0 ? clipsList.length - 1 : currentIndex - 1;
-    setClipId(clipsList[prevIndex].id);
+    const prevClip = clipsList[prevIndex];
+    setClipId(prevClip.id);
+    const prefix = prevClip.videoType === 'reel' ? 'reel' : 'clip';
+    window.history.replaceState(null, '', `/${prefix}/${prevClip.id}`);
   };
 
   return (
