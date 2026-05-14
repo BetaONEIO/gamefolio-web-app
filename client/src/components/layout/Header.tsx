@@ -2,7 +2,17 @@ import { Link, useLocation } from "wouter";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Settings, LogOut, CheckCircle2, Palette, UserCog, Menu, ShieldCheck, Flame, Trophy, Crown, Video, Film, Camera, Gift } from "lucide-react";
+import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera } from "lucide-react";
+import {
+  LevelTrackerIcon,
+  ReferFriendIcon,
+  GoProIcon,
+  ManageProIcon,
+  AccountSettingsIcon,
+  ProfileAppearanceIcon,
+  AdminPanelIcon,
+  LogoutIcon,
+} from "@/components/icons/DropdownIcons";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
@@ -458,7 +468,7 @@ const Header = () => {
                       onClick={() => setLocation("/level-tracker")}
                       data-testid="button-level-tracker"
                     >
-                      <Trophy className="mr-2 h-4 w-4" />
+                      <LevelTrackerIcon className="mr-2 h-4 w-4" />
                       <span>Level Tracker</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -466,7 +476,7 @@ const Header = () => {
                       onClick={() => setLocation("/account/settings?tab=referral")}
                       data-testid="button-referral"
                     >
-                      <Gift className="mr-2 h-4 w-4" />
+                      <ReferFriendIcon className="mr-2 h-4 w-4" />
                       <span>Refer a Friend</span>
                     </DropdownMenuItem>
                     
@@ -477,7 +487,7 @@ const Header = () => {
                         onClick={() => setProUpgradeOpen(true)}
                         data-testid="button-go-pro"
                       >
-                        <img src="/attached_assets/Gamefolio logo copy.png" alt="Gamefolio" className="mr-2 h-4 w-4 rounded-full object-cover" />
+                        <GoProIcon className="mr-2 h-4 w-4" />
                         <span>Go Pro</span>
                       </DropdownMenuItem>
                     )}
@@ -488,7 +498,7 @@ const Header = () => {
                         onClick={() => setManageProOpen(true)}
                         data-testid="button-manage-pro"
                       >
-                        <Crown className="mr-2 h-4 w-4 text-yellow-500" />
+                        <ManageProIcon className="mr-2 h-4 w-4 text-yellow-500" />
                         <span>Manage Pro Subscription</span>
                       </DropdownMenuItem>
                     )}
@@ -502,14 +512,14 @@ const Header = () => {
                         className="cursor-pointer"
                         onClick={() => setLocation("/account/settings")}
                       >
-                        <Settings className="mr-2 h-4 w-4" />
+                        <AccountSettingsIcon className="mr-2 h-4 w-4" />
                         <span>Account Settings</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="cursor-pointer"
                         onClick={() => setLocation("/settings/profile")}
                       >
-                        <UserCog className="mr-2 h-4 w-4" />
+                        <ProfileAppearanceIcon className="mr-2 h-4 w-4" />
                         <span>Profile & Appearance</span>
                       </DropdownMenuItem>
                     </DropdownMenuGroup>
@@ -520,7 +530,7 @@ const Header = () => {
                         className="cursor-pointer"
                         onClick={() => setLocation("/admin")}
                       >
-                        <ShieldCheck className="mr-2 h-4 w-4" />
+                        <AdminPanelIcon className="mr-2 h-4 w-4" />
                         Admin Panel
                       </DropdownMenuItem>
                     )}
@@ -528,7 +538,7 @@ const Header = () => {
                       onClick={handleLogout}
                       className="text-red-600 focus:text-red-600"
                     >
-                      <LogOut className="mr-2 h-4 w-4" />
+                      <LogoutIcon className="mr-2 h-4 w-4" />
                       Logout
                     </DropdownMenuItem>
                   </DropdownMenuContent>
