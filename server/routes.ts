@@ -22,9 +22,9 @@ import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, desc } from "drizzle-orm";
 import { db } from "./db";
-import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings } from "@shared/schema";
+import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots } from "@shared/schema";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -3696,6 +3696,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching daily activity:", error);
       res.status(500).json({ message: "Error fetching daily activity" });
+    }
+  });
+
+  // Admin: Export every clip / reel / screenshot to a CSV the admin can
+  // download. Three columns: title, page URL, username. URLs are hard-coded
+  // to the prod host so the export is useful even when run from a dev/preview
+  // environment.
+  app.get("/api/admin/export-content", adminMiddleware, async (_req, res) => {
+    try {
+      const BASE_URL = "https://app.gamefolio.com";
+
+      const clipRows = await db
+        .select({
+          id: clips.id,
+          title: clips.title,
+          videoType: clips.videoType,
+          username: users.username,
+        })
+        .from(clips)
+        .leftJoin(users, eq(clips.userId, users.id))
+        .orderBy(desc(clips.createdAt));
+
+      const screenshotRows = await db
+        .select({
+          id: screenshots.id,
+          title: screenshots.title,
+          shareCode: screenshots.shareCode,
+          username: users.username,
+        })
+        .from(screenshots)
+        .leftJoin(users, eq(screenshots.userId, users.id))
+        .orderBy(desc(screenshots.createdAt));
+
+      const escape = (v: string | null | undefined): string => {
+        if (v == null) return "";
+        const s = String(v);
+        return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+
+      const lines: string[] = ["Title,URL,Username"];
+
+      for (const r of clipRows) {
+        const slug = r.videoType === "reel" ? "reel" : "clip";
+        const url = `${BASE_URL}/${slug}/${r.id}`;
+        lines.push(`${escape(r.title)},${escape(url)},${escape(r.username)}`);
+      }
+
+      for (const r of screenshotRows) {
+        const code = r.shareCode ?? String(r.id);
+        const url = r.username
+          ? `${BASE_URL}/@${r.username}/screenshot/${code}`
+          : "";
+        lines.push(`${escape(r.title)},${escape(url)},${escape(r.username)}`);
+      }
+
+      const csv = lines.join("\r\n") + "\r\n";
+      const stamp = new Date().toISOString().slice(0, 10);
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="gamefolio-content-${stamp}.csv"`,
+      );
+      res.send(csv);
+    } catch (err) {
+      console.error("Error exporting content:", err);
+      res.status(500).json({ message: "Failed to export content" });
     }
   });
 

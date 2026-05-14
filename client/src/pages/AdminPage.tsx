@@ -1170,6 +1170,7 @@ import {
   ChevronDown,
   Clock,
   PauseCircle,
+  Download,
 } from "lucide-react";
 
 interface PendingGame {
@@ -3511,11 +3512,19 @@ const AdminPage = () => {
         {/* Content Tab */}
         <TabsContent value="content" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Content Moderation</CardTitle>
-              <CardDescription>
-                Manage clips and other content
-              </CardDescription>
+            <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+              <div>
+                <CardTitle>Content Moderation</CardTitle>
+                <CardDescription>
+                  Manage clips and other content
+                </CardDescription>
+              </div>
+              <a href="/api/admin/export-content" download>
+                <Button variant="outline" size="sm" data-testid="button-export-content-csv">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
+              </a>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
