@@ -37,11 +37,10 @@ export function ReferFriendIcon({ className }: IconProps) {
       className={cn("w-4 h-4", className)}
       aria-hidden
     >
-      <circle cx="6" cy="8" r="3" />
-      <path d="M2 21v-1a4 4 0 0 1 4-4h0" />
-      <circle cx="18" cy="8" r="3" />
-      <path d="M22 21v-1a4 4 0 0 0-4-4h0" />
-      <path d="M12 13v-2m0 0V9m0 2H9m3 0h3" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
+      <line x1="19" y1="8" x2="19" y2="14" />
+      <line x1="16" y1="11" x2="22" y2="11" />
     </svg>
   );
 }
@@ -80,11 +79,11 @@ export function ManageProIcon({ className }: IconProps) {
       className={cn("w-4 h-4", className)}
       aria-hidden
     >
-      <path d="M2 17l3-9 4 5 3-8 4 5 3-9" />
-      <line x1="2" y1="20" x2="22" y2="20" />
-      <circle cx="17" cy="5" r="1.5" fill="currentColor" stroke="none" />
-      <circle cx="7" cy="8" r="1.5" fill="currentColor" stroke="none" />
-      <circle cx="12" cy="4" r="1.5" fill="currentColor" stroke="none" />
+      <path d="M2 20h20" />
+      <path d="M2 20l3-10 5 5 2-8 2 8 5-5 3 10" />
+      <circle cx="12" cy="4" r="1.5" fill="currentColor" strokeWidth="0" />
+      <circle cx="3.5" cy="9" r="1.5" fill="currentColor" strokeWidth="0" />
+      <circle cx="20.5" cy="9" r="1.5" fill="currentColor" strokeWidth="0" />
     </svg>
   );
 }
