@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, User as UserIcon, Heart, MessageCircle, Upload, UserPlus, X, UserCheck, UserX } from "lucide-react";
+import { Bell, User as UserIcon, Heart, MessageCircle, Upload, UserPlus, X, UserCheck, UserX, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -194,6 +194,8 @@ export function NotificationBell() {
         return <Upload className="h-4 w-4 text-primary" />;
       case 'message':
         return <MessageCircle className="h-4 w-4 text-primary" />;
+      case 'reward_available':
+        return <Gift className="h-4 w-4 text-[#B7FF1A]" />;
       default:
         return <Bell className="h-4 w-4 text-gray-500" />;
     }

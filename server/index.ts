@@ -48,6 +48,7 @@ import revenuecatRoutes from './routes/revenuecat';
 import { createOGMetaMiddleware } from './og-meta';
 import { storage } from './storage';
 import { LeaderboardService, loadXpSettingsFromDB } from './leaderboard-service';
+import { startRewardScheduler } from './reward-scheduler';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -348,6 +349,8 @@ app.use((req, res, next) => {
       log(`serving on port ${port}`);
 
       ensureOnboardingTestAccount().catch(console.error);
+
+      startRewardScheduler();
 
       LeaderboardService.processPeriodicLeaderboardClosures()
         .then(() => log('Leaderboard periodic closures check completed'))

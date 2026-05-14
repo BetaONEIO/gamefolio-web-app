@@ -88,6 +88,7 @@ import { createPublicClient, http, parseUnits, decodeEventLog, type Address as V
 import { privateKeyToAccount } from "viem/accounts";
 import { GF_TOKEN_ADDRESS as NFT_GF_TOKEN_ADDRESS, GF_TOKEN_ABI as NFT_GF_TOKEN_ABI, SKALE_NEBULA_TESTNET as NFT_SKALE_CHAIN } from "../shared/contracts";
 import { TwoFactorService } from "./services/two-factor-service";
+import * as RewardService from "./services/reward-service";
 
 // Import upload middlewares from upload router
 import multer from "multer";
@@ -12490,6 +12491,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error resetting lootbox:", error);
       res.status(500).json({ message: "Failed to reset lootbox" });
+    }
+  });
+
+  // ==================== DAILY / WEEKLY REWARDS ====================
+
+  // Active rewards for the signed-in user, with lazy issuance if the cron
+  // hasn't ticked for this user yet (e.g. signed up mid-period).
+  app.get("/api/rewards/status", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const active = await RewardService.getActiveRewards(userId);
+      res.json(active);
+    } catch (err) {
+      console.error("Error fetching reward status:", err);
+      res.status(500).json({ message: "Failed to load rewards" });
+    }
+  });
+
+  app.post("/api/rewards/claim", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const rewardId = Number(req.body?.rewardId);
+      const type = req.body?.type;
+      if (!Number.isInteger(rewardId) || (type !== "xp" && type !== "gft")) {
+        return res.status(400).json({ message: "Invalid claim payload" });
+      }
+      const result = await RewardService.claimReward(userId, rewardId, type);
+      if (!result.ok) {
+        const status =
+          result.error === "WALLET_REQUIRED" ? 409 :
+          result.error === "NOT_FOUND" ? 404 :
+          result.error === "TRANSFER_FAILED" ? 502 :
+          400;
+        return res.status(status).json({ error: result.error });
+      }
+      const { reward, newTotalXp, txHash } = result.result;
+      res.json({
+        success: true,
+        rewardId: reward.id,
+        cadence: reward.cadence,
+        claimType: reward.claimedType,
+        claimAmount: reward.claimedAmount,
+        txHash,
+        newTotalXp,
+      });
+    } catch (err) {
+      console.error("Error claiming reward:", err);
+      res.status(500).json({ message: "Failed to claim reward" });
+    }
+  });
+
+  app.get("/api/admin/rewards/config", adminMiddleware, async (_req, res) => {
+    try {
+      const config = await RewardService.getRewardConfig();
+      res.json(config);
+    } catch (err) {
+      console.error("Error reading reward config:", err);
+      res.status(500).json({ message: "Failed to read reward config" });
+    }
+  });
+
+  app.patch("/api/admin/rewards/config", adminMiddleware, async (req, res) => {
+    try {
+      const patch: Partial<RewardService.RewardConfig> = {};
+      const fields: (keyof RewardService.RewardConfig)[] = [
+        "dailyXpMin", "dailyXpMax",
+        "dailyGftMin", "dailyGftMax",
+        "weeklyXpMin", "weeklyXpMax",
+        "weeklyGftMin", "weeklyGftMax",
+        "proMultiplier",
+      ];
+      for (const f of fields) {
+        const v = req.body?.[f];
+        if (v != null) {
+          const n = Number(v);
+          if (!Number.isFinite(n) || n < 0) {
+            return res.status(400).json({ message: `Invalid value for ${f}` });
+          }
+          patch[f] = n;
+        }
+      }
+      const config = await RewardService.setRewardConfig(patch);
+      res.json(config);
+    } catch (err) {
+      console.error("Error updating reward config:", err);
+      res.status(500).json({ message: "Failed to update reward config" });
     }
   });
 

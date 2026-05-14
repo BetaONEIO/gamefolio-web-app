@@ -3,6 +3,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { AlertSettings } from "@/components/admin/AlertSettings";
 import { PushBroadcastPanel } from "@/components/admin/PushBroadcastPanel";
+import { RewardRangesPanel } from "@/components/admin/RewardRangesPanel";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect, useLocation } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
@@ -5498,6 +5499,9 @@ const AdminPage = () => {
 
         {/* Asset Rewards Tab */}
         <TabsContent value="asset-rewards" className="space-y-4">
+          {/* Daily / Weekly Reward Ranges */}
+          <RewardRangesPanel />
+
           {/* Bucket Browser Card */}
           <Card>
             <CardHeader>

@@ -194,6 +194,22 @@ function MainLayout({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('gf-push-deeplink', handler as EventListener);
   }, [setLocation]);
 
+  // Honour `?reward=daily|weekly` deep-link query params (from push notifications
+  // and the in-app reward notification entries) by dispatching an event the
+  // Header's RewardsDialog listens for. We strip the param afterwards so a
+  // refresh doesn't keep re-opening the dialog.
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reward = params.get("reward");
+    if (reward !== "daily" && reward !== "weekly") return;
+    window.dispatchEvent(new CustomEvent("gf-open-rewards", { detail: { cadence: reward } }));
+    params.delete("reward");
+    const cleanUrl = params.toString()
+      ? `${window.location.pathname}?${params.toString()}`
+      : window.location.pathname;
+    window.history.replaceState({}, "", cleanUrl);
+  }, [location]);
+
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("pro_payment") === "success") {

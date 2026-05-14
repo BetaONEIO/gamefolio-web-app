@@ -1216,6 +1216,34 @@ export const insertAssetRewardClaimSchema = createInsertSchema(assetRewardClaims
   claimedAt: true,
 });
 
+// Daily / weekly claimable rewards. Each row is one issuance for a single
+// (user, cadence, period). The XP and GFT amounts are pre-rolled at issue
+// time (random within admin-configured ranges, multiplied for Pro users).
+// User picks one currency to claim; the other is forfeited when the row's
+// expiresAt passes. Unclaimed rows stay in the DB for auditing.
+export const userRewards = pgTable("user_rewards", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  cadence: text("cadence").notNull(), // 'daily' | 'weekly'
+  period: text("period").notNull(),   // 'YYYY-MM-DD' for daily, 'YYYY-Www' for weekly
+  xpAmount: integer("xp_amount").notNull(),
+  gftAmount: real("gft_amount").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  claimedAt: timestamp("claimed_at"),
+  claimedType: text("claimed_type"), // 'xp' | 'gft' once claimed
+  claimedAmount: real("claimed_amount"),
+  txHash: text("tx_hash"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index("user_rewards_user_id_idx").on(table.userId),
+  uniqueUserCadencePeriod: unique("user_rewards_user_cadence_period_unique").on(
+    table.userId, table.cadence, table.period,
+  ),
+}));
+
+export type UserReward = typeof userRewards.$inferSelect;
+export type InsertUserReward = typeof userRewards.$inferInsert;
+
 // Daily lootbox tracking table
 export const userDailyLootbox = pgTable("user_daily_lootbox", {
   id: serial("id").primaryKey(),

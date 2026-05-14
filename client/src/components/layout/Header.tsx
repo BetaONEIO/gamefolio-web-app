@@ -25,6 +25,9 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { LootboxDialog, LootboxTrigger } from "@/components/lootbox/LootboxDialog";
+import { RewardsIcon } from "@/components/rewards/RewardsIcon";
+import { RewardsDialog } from "@/components/rewards/RewardsDialog";
+import { useRewards } from "@/hooks/use-rewards";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
 import { LevelTrackerModal } from "@/components/level/LevelTrackerModal";
@@ -39,6 +42,17 @@ const Header = () => {
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [lootboxOpen, setLootboxOpen] = useState(false);
+  const [rewardsOpen, setRewardsOpen] = useState(false);
+  const { hasClaimable: hasRewardClaimable } = useRewards();
+
+  // Push notifications and in-app reward notification entries deep-link via
+  // /?reward=daily|weekly. App.tsx parses the param and fires this event; we
+  // pop the dialog open in response.
+  useEffect(() => {
+    const handler = () => setRewardsOpen(true);
+    window.addEventListener("gf-open-rewards", handler as EventListener);
+    return () => window.removeEventListener("gf-open-rewards", handler as EventListener);
+  }, []);
   const [levelTrackerOpen, setLevelTrackerOpen] = useState(false);
 
   useEffect(() => {
@@ -364,8 +378,13 @@ const Header = () => {
           {user ? (
             <>
               <LootboxTrigger onClick={() => setLootboxOpen(true)} />
+              <RewardsIcon
+                isClaimable={hasRewardClaimable}
+                onClick={() => setRewardsOpen(true)}
+              />
               <NotificationBell />
               <LootboxDialog open={lootboxOpen} onOpenChange={setLootboxOpen} />
+              <RewardsDialog open={rewardsOpen} onOpenChange={setRewardsOpen} />
               <LevelTrackerModal 
                 open={isLevelTrackerOpen} 
                 onOpenChange={handleLevelTrackerClose}
