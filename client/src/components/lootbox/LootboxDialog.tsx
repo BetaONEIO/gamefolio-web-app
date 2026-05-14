@@ -156,7 +156,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
       <DialogPortal>
         <DialogPrimitive.Content
           className="fixed inset-0 z-[200] flex flex-col items-center justify-center w-screen h-screen border-none shadow-none outline-none duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-          style={{ background: 'rgba(0,0,0,0.55)' }}
+          style={{ background: 'rgba(2,23,44,0.65)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
         >
           <button
             type="button"
