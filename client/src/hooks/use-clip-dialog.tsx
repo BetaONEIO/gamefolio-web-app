@@ -33,13 +33,27 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   const [viewAllHref, setViewAllHref] = useState<string | undefined>(undefined);
   const previousUrlRef = useRef<string | null>(null);
 
+  const buildClipUrl = (clip: ClipWithUser) => {
+    const username = clip.user?.username;
+    const shareCode = clip.shareCode;
+    const type = clip.videoType === 'reel' ? 'reel' : 'clip';
+    if (username && shareCode) return `/@${username}/${type}/${shareCode}`;
+    return `/${type}/${clip.id}`;
+  };
+
   const openClipDialog = (id: number, providedClipsList?: ClipWithUser[], href?: string) => {
     previousUrlRef.current = window.location.pathname + window.location.search + window.location.hash;
     setClipId(id);
     setClipsList(providedClipsList || null);
     setViewAllHref(href);
     setIsOpen(true);
-    window.history.replaceState(null, '', `/clip/${id}`);
+    // If the clip is in the provided list we can build the pretty URL right away
+    const matchingClip = providedClipsList?.find(c => c.id === id);
+    if (matchingClip) {
+      window.history.replaceState(null, '', buildClipUrl(matchingClip));
+    } else {
+      window.history.replaceState(null, '', `/clip/${id}`);
+    }
   };
 
   const closeClipDialog = () => {
@@ -77,12 +91,11 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Once we know the clip type, refine the URL to /reel/:id or /clip/:id
+  // Once currentClip data loads, refine the URL to the pretty /@username/type/shareCode format
   useEffect(() => {
     if (!isOpen || !clipId || !currentClip) return;
-    const prefix = currentClip.videoType === 'reel' ? 'reel' : 'clip';
-    window.history.replaceState(null, '', `/${prefix}/${clipId}`);
-  }, [isOpen, clipId, currentClip?.videoType]);
+    window.history.replaceState(null, '', buildClipUrl(currentClip));
+  }, [isOpen, clipId, currentClip?.shareCode, currentClip?.videoType]);
 
   const showFullscreenReelsViewer = isReel && isMobile && isOpen && clipsList && clipsList.length > 0;
 
@@ -91,8 +104,7 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
     const nextIndex = (currentIndex + 1) % clipsList.length;
     const nextClip = clipsList[nextIndex];
     setClipId(nextClip.id);
-    const prefix = nextClip.videoType === 'reel' ? 'reel' : 'clip';
-    window.history.replaceState(null, '', `/${prefix}/${nextClip.id}`);
+    window.history.replaceState(null, '', buildClipUrl(nextClip));
   };
 
   const handlePrevious = () => {
@@ -100,8 +112,7 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
     const prevIndex = currentIndex === 0 ? clipsList.length - 1 : currentIndex - 1;
     const prevClip = clipsList[prevIndex];
     setClipId(prevClip.id);
-    const prefix = prevClip.videoType === 'reel' ? 'reel' : 'clip';
-    window.history.replaceState(null, '', `/${prefix}/${prevClip.id}`);
+    window.history.replaceState(null, '', buildClipUrl(prevClip));
   };
 
   return (
