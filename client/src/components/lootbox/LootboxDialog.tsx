@@ -123,16 +123,11 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
   };
 
   useEffect(() => {
-    const root = document.getElementById("root");
-    if (open) {
-      root?.classList.add("lootbox-blur-bg");
-    } else {
-      root?.classList.remove("lootbox-blur-bg");
+    if (!open) {
       setPhase("idle");
       setReward(null);
       setIsDuplicate(false);
     }
-    return () => root?.classList.remove("lootbox-blur-bg");
   }, [open]);
 
   const formatTimeRemaining = (nextOpenAt: string) => {
@@ -154,9 +149,17 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogPortal>
+        {/* Separate backdrop overlay so backdrop-filter isn't broken by Content's CSS animations */}
+        <DialogPrimitive.Overlay
+          className="fixed inset-0 z-[199]"
+          style={{
+            background: 'rgba(2,23,44,0.6)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+          }}
+        />
         <DialogPrimitive.Content
-          className="fixed inset-0 z-[200] flex flex-col items-center justify-center w-screen h-screen border-none shadow-none outline-none duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-          style={{ background: 'rgba(2,23,44,0.65)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
+          className="fixed inset-0 z-[200] flex flex-col items-center justify-center w-screen h-screen border-none shadow-none outline-none bg-transparent duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
         >
           <button
             type="button"
