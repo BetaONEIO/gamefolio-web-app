@@ -14,6 +14,7 @@ import { GamefolioSettingsIcon } from "@/components/icons/GamefolioSettingsIcon"
 import { GamefolioSignOutIcon } from "@/components/icons/GamefolioSignOutIcon";
 import { GamefolioProfileSettingsIcon } from "@/components/icons/GamefolioProfileSettingsIcon";
 import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
+
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
@@ -22,7 +23,6 @@ import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Game } from "@shared/schema";
-import gamefolioLogo from '@assets/gamefolio social logo 3d circle web.png';
 
 const LEVEL_THRESHOLDS = [
   { level: 1,  xpRequired: 0 },
@@ -309,11 +309,7 @@ const MobileMenu = () => {
                     onClick={close}
                     className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline group"
                   >
-                    <img
-                      src={gamefolioLogo}
-                      alt="Gamefolio"
-                      className="w-6 h-6 mr-3 object-contain"
-                    />
+                    <GamefolioIcon className="mr-3 h-5 w-5 flex-shrink-0" />
                     <span className="font-medium">My Gamefolio</span>
                   </Link>
                 </li>
