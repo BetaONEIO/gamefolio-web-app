@@ -8,6 +8,7 @@ import QuickShareButton from "@/components/clips/QuickShareButton";
 import { Link, useLocation } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
+import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 
 interface UserClipItemProps {
   clip: ClipWithUser;
@@ -185,6 +186,16 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
         </div>
       </div>
       
+      {/* Three-dot menu — always visible so it works on mobile (no hover) */}
+      <div
+        className="absolute bottom-2 right-2 z-30"
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      >
+        <div className="bg-black/60 backdrop-blur-sm rounded-full">
+          <TrendingClipMenu clip={clip} />
+        </div>
+      </div>
+
       {/* Top right badges: duration and views - same structure as VideoClipGridItem */}
       <div className="absolute top-2 right-2 flex items-center gap-1">
         {/* Duration badge - use actual duration from database */}
