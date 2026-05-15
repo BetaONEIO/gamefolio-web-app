@@ -631,7 +631,10 @@ const DesktopShortsViewer: React.FC<{
   clips: ClipWithUser[];
   initialIndex: number;
   onClose: () => void;
-}> = ({ clips, initialIndex, onClose }) => {
+  onOpenGameFilter: () => void;
+  selectedGameId: number | null;
+  selectedGameName: string | null;
+}> = ({ clips, initialIndex, onClose, onOpenGameFilter, selectedGameId, selectedGameName }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const wheelCooldown = useRef(false);
   const { user } = useAuth();
@@ -711,7 +714,7 @@ const DesktopShortsViewer: React.FC<{
         ↑ ↓ arrow keys or scroll · Esc to close
       </div>
 
-      {/* ── Centred group: video ── */}
+      {/* ── Centred group: video + engagement column ── */}
       <div className="flex items-end gap-4" style={{ height: 'calc(100% - 24px)' }}>
 
         {/* Video container — 9:16 */}
@@ -739,7 +742,7 @@ const DesktopShortsViewer: React.FC<{
           />
 
           {/* Creator / title / game — bottom-left overlay */}
-          <div className="absolute bottom-0 left-0 right-14 p-4">
+          <div className="absolute bottom-0 left-0 right-0 p-4">
             <div className="flex items-center gap-2.5 mb-2">
               <div
                 className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border-2"
@@ -778,51 +781,83 @@ const DesktopShortsViewer: React.FC<{
               </Link>
             )}
           </div>
+        </div>
 
-          {/* Engagement — inside video, right column, bottom-aligned */}
-          <div className="absolute bottom-4 right-2 flex flex-col items-center gap-3">
-            <LikeButton
-              contentId={clip.id}
-              contentType="clip"
-              contentOwnerId={clip.user.id}
-              initialLiked={(clip as any).isLiked ?? false}
-              initialCount={likes}
-              size="sm"
-              variant="vertical"
-              showCount={true}
-            />
-            <FireButton
-              contentId={clip.id}
-              contentType="clip"
-              contentOwnerId={clip.user.id}
-              initialFired={(clip as any).isFired ?? false}
-              initialCount={fires}
-              size="sm"
-              variant="vertical"
-              showCount={true}
-            />
-            <div className="flex flex-col items-center gap-0.5">
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)' }}
-              >
-                <MessageCircle className="h-5 w-5 text-white/80" />
-              </div>
-              <span className="text-white/60 text-[11px]">{fmt(comments)}</span>
+        {/* ── Right engagement column — outside the video, bottom-aligned ── */}
+        <div className="flex flex-col items-center gap-4 pb-4 flex-shrink-0">
+          {/* Like */}
+          <LikeButton
+            contentId={clip.id}
+            contentType="clip"
+            contentOwnerId={clip.user.id}
+            initialLiked={(clip as any).isLiked ?? false}
+            initialCount={likes}
+            size="sm"
+            variant="vertical"
+            showCount={true}
+          />
+
+          {/* Fire */}
+          <FireButton
+            contentId={clip.id}
+            contentType="clip"
+            contentOwnerId={clip.user.id}
+            initialFired={(clip as any).isFired ?? false}
+            initialCount={fires}
+            size="sm"
+            variant="vertical"
+            showCount={true}
+          />
+
+          {/* Comments */}
+          <div className="flex flex-col items-center gap-1">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+            >
+              <MessageCircle className="h-5 w-5 text-white/70" />
             </div>
-            <div className="flex flex-col items-center gap-0.5">
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)' }}
-              >
-                <BarChart2 className="h-5 w-5 text-white/80" />
-              </div>
-              <span className="text-white/60 text-[11px]">{fmt(views)}</span>
-            </div>
-            <div onClick={(e) => e.stopPropagation()}>
-              <TrendingClipMenu clip={clip} />
-            </div>
+            <span className="text-white/50 text-[11px] font-medium">{fmt(comments)}</span>
           </div>
+
+          {/* Views */}
+          <div className="flex flex-col items-center gap-1">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+            >
+              <BarChart2 className="h-5 w-5 text-white/70" />
+            </div>
+            <span className="text-white/50 text-[11px] font-medium">{fmt(views)}</span>
+          </div>
+
+          {/* 3-dot menu */}
+          <div onClick={(e) => e.stopPropagation()}>
+            <TrendingClipMenu clip={clip} />
+          </div>
+
+          {/* Game filter */}
+          <button
+            onClick={onOpenGameFilter}
+            className="flex flex-col items-center gap-1 group"
+            aria-label="Filter by game"
+          >
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+              style={selectedGameId
+                ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
+                : { background: '#0B1218', border: '1px solid #1B2A33' }
+              }
+            >
+              <Gamepad2 className="h-5 w-5" style={{ color: selectedGameId ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+            </div>
+            <span
+              className="text-[11px] font-medium max-w-[52px] truncate text-center leading-tight"
+              style={{ color: selectedGameId ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }}
+            >
+              {selectedGameName || 'Games'}
+            </span>
+          </button>
         </div>
       </div>
 
@@ -1870,6 +1905,9 @@ const TrendingPage: React.FC = () => {
           clips={desktopShortsClips}
           initialIndex={desktopShortsIndex}
           onClose={() => setDesktopShortsOpen(false)}
+          onOpenGameFilter={() => setShowGameFilter(true)}
+          selectedGameId={selectedGameId}
+          selectedGameName={selectedGameName}
         />
       )}
 
