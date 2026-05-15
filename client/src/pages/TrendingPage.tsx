@@ -684,31 +684,35 @@ const DesktopShortsViewer: React.FC<{
 
   return (
     <div
-      className="fixed inset-0 z-[9500] flex items-center justify-center"
-      style={{ background: 'rgba(3, 8, 10, 0.97)' }}
+      className="fixed top-0 right-0 bottom-0 z-[45] flex flex-col lg:left-64 left-0"
+      style={{ background: 'rgba(3, 8, 10, 0.98)' }}
     >
-      {/* Close — top-right */}
-      <button
-        onClick={onClose}
-        className="absolute top-5 right-5 z-20 w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
-        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
-        aria-label="Close"
-      >
-        <X className="h-5 w-5 text-white" />
-      </button>
-
-      {/* Counter — top-left */}
-      <div className="absolute top-5 left-5 z-20 text-white/35 text-sm font-mono select-none">
-        {currentIndex + 1} / {clips.length}
+      {/* Top bar — sits below the app header (header is z-50, we are z-45) */}
+      {/* We use pt-16 to clear the sticky header (~64px tall) */}
+      <div className="flex items-center justify-between px-5 pt-[68px] pb-2 flex-shrink-0">
+        <span className="text-white/35 text-sm font-mono select-none">
+          {currentIndex + 1} / {clips.length}
+        </span>
+        <button
+          onClick={onClose}
+          className="w-9 h-9 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
+          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
+          aria-label="Close"
+        >
+          <X className="h-4 w-4 text-white" />
+        </button>
       </div>
 
+      {/* Main area — fills remaining height, centred */}
+      <div className="flex-1 flex items-center justify-center relative min-h-0">
+
       {/* Keyboard hint — bottom-center */}
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 text-white/20 text-xs select-none pointer-events-none">
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 text-white/20 text-xs select-none pointer-events-none">
         ↑ ↓ arrow keys or scroll · Esc to close
       </div>
 
-      {/* ── Centred group: video + engagement column ── */}
-      <div className="flex items-end gap-4" style={{ height: '85vh' }}>
+      {/* ── Centred group: video ── */}
+      <div className="flex items-end gap-4" style={{ height: 'calc(100% - 24px)' }}>
 
         {/* Video container — 9:16 */}
         <div
@@ -822,12 +826,12 @@ const DesktopShortsViewer: React.FC<{
         </div>
       </div>
 
-      {/* ── Navigation arrows — fixed to right edge, vertically centred ── */}
-      <div className="absolute right-10 top-1/2 -translate-y-1/2 flex flex-col items-center gap-3 z-20">
+      {/* ── Navigation arrows — anchored to right edge, vertically centred ── */}
+      <div className="absolute right-6 top-1/2 -translate-y-1/2 flex flex-col items-center gap-3 z-20">
         <button
           onClick={goPrev}
           disabled={currentIndex === 0}
-          className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20"
+          className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
           style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
           aria-label="Previous"
         >
@@ -836,12 +840,14 @@ const DesktopShortsViewer: React.FC<{
         <button
           onClick={goNext}
           disabled={currentIndex === clips.length - 1}
-          className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20"
+          className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
           style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
           aria-label="Next"
         >
           <ChevronDown className="h-6 w-6 text-white" />
         </button>
+      </div>
+
       </div>
     </div>
   );
