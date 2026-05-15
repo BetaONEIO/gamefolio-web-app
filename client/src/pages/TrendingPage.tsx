@@ -687,31 +687,32 @@ const DesktopShortsViewer: React.FC<{
       className="fixed inset-0 z-[9500] flex items-center justify-center"
       style={{ background: 'rgba(3, 8, 10, 0.97)' }}
     >
-      {/* Close */}
+      {/* Close — top-right */}
       <button
         onClick={onClose}
-        className="absolute top-5 right-5 z-10 w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
+        className="absolute top-5 right-5 z-20 w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
         style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
         aria-label="Close"
       >
         <X className="h-5 w-5 text-white" />
       </button>
 
-      {/* Counter */}
-      <div className="absolute top-5 left-5 text-white/35 text-sm font-mono select-none">
+      {/* Counter — top-left */}
+      <div className="absolute top-5 left-5 z-20 text-white/35 text-sm font-mono select-none">
         {currentIndex + 1} / {clips.length}
       </div>
 
-      {/* Keyboard hint */}
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-white/20 text-xs select-none">
-        ↑ ↓ arrow keys or scroll to navigate · Esc to close
+      {/* Keyboard hint — bottom-center */}
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 text-white/20 text-xs select-none pointer-events-none">
+        ↑ ↓ arrow keys or scroll · Esc to close
       </div>
 
-      {/* Main layout: video + right panel */}
-      <div className="flex items-center gap-5">
-        {/* Video container — 9:16, tall */}
+      {/* ── Centred group: video + engagement column ── */}
+      <div className="flex items-end gap-4" style={{ height: '85vh' }}>
+
+        {/* Video container — 9:16 */}
         <div
-          className="relative rounded-2xl overflow-hidden bg-black shadow-2xl"
+          className="relative rounded-2xl overflow-hidden bg-black shadow-2xl flex-shrink-0"
           style={{ height: '85vh', aspectRatio: '9/16' }}
         >
           <VideoPlayer
@@ -729,12 +730,12 @@ const DesktopShortsViewer: React.FC<{
 
           {/* Bottom gradient */}
           <div
-            className="absolute bottom-0 left-0 right-0 h-52 pointer-events-none"
-            style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.45) 55%, transparent 100%)' }}
+            className="absolute bottom-0 left-0 right-0 h-56 pointer-events-none"
+            style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.93) 0%, rgba(0,0,0,0.5) 50%, transparent 100%)' }}
           />
 
-          {/* Creator info overlay */}
-          <div className="absolute bottom-0 left-0 right-0 p-4">
+          {/* Creator / title / game — bottom-left overlay */}
+          <div className="absolute bottom-0 left-0 right-14 p-4">
             <div className="flex items-center gap-2.5 mb-2">
               <div
                 className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border-2"
@@ -773,83 +774,74 @@ const DesktopShortsViewer: React.FC<{
               </Link>
             )}
           </div>
-        </div>
 
-        {/* Right panel: nav + engagement */}
-        <div className="flex flex-col items-center gap-4">
-          {/* Up */}
-          <button
-            onClick={goPrev}
-            disabled={currentIndex === 0}
-            className="w-11 h-11 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:border-[#B7FF1A]/40"
-            style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
-            aria-label="Previous"
-          >
-            <ChevronUp className="h-5 w-5 text-white" />
-          </button>
-
-          {/* Likes */}
-          <LikeButton
-            contentId={clip.id}
-            contentType="clip"
-            contentOwnerId={clip.user.id}
-            initialLiked={(clip as any).isLiked ?? false}
-            initialCount={likes}
-            size="sm"
-            variant="vertical"
-            showCount={true}
-          />
-
-          {/* Fires */}
-          <FireButton
-            contentId={clip.id}
-            contentType="clip"
-            contentOwnerId={clip.user.id}
-            initialFired={(clip as any).isFired ?? false}
-            initialCount={fires}
-            size="sm"
-            variant="vertical"
-            showCount={true}
-          />
-
-          {/* Views */}
-          <div className="flex flex-col items-center gap-1">
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
-            >
-              <BarChart2 className="h-5 w-5" style={{ color: '#7E887A' }} />
+          {/* Engagement — inside video, right column, bottom-aligned */}
+          <div className="absolute bottom-4 right-2 flex flex-col items-center gap-3">
+            <LikeButton
+              contentId={clip.id}
+              contentType="clip"
+              contentOwnerId={clip.user.id}
+              initialLiked={(clip as any).isLiked ?? false}
+              initialCount={likes}
+              size="sm"
+              variant="vertical"
+              showCount={true}
+            />
+            <FireButton
+              contentId={clip.id}
+              contentType="clip"
+              contentOwnerId={clip.user.id}
+              initialFired={(clip as any).isFired ?? false}
+              initialCount={fires}
+              size="sm"
+              variant="vertical"
+              showCount={true}
+            />
+            <div className="flex flex-col items-center gap-0.5">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center"
+                style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)' }}
+              >
+                <MessageCircle className="h-5 w-5 text-white/80" />
+              </div>
+              <span className="text-white/60 text-[11px]">{fmt(comments)}</span>
             </div>
-            <span className="text-xs" style={{ color: '#7E887A' }}>{fmt(views)}</span>
-          </div>
-
-          {/* Comments */}
-          <div className="flex flex-col items-center gap-1">
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
-            >
-              <MessageCircle className="h-5 w-5" style={{ color: '#7E887A' }} />
+            <div className="flex flex-col items-center gap-0.5">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center"
+                style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)' }}
+              >
+                <BarChart2 className="h-5 w-5 text-white/80" />
+              </div>
+              <span className="text-white/60 text-[11px]">{fmt(views)}</span>
             </div>
-            <span className="text-xs" style={{ color: '#7E887A' }}>{fmt(comments)}</span>
+            <div onClick={(e) => e.stopPropagation()}>
+              <TrendingClipMenu clip={clip} />
+            </div>
           </div>
-
-          {/* 3-dot menu */}
-          <div onClick={(e) => e.stopPropagation()}>
-            <TrendingClipMenu clip={clip} />
-          </div>
-
-          {/* Down */}
-          <button
-            onClick={goNext}
-            disabled={currentIndex === clips.length - 1}
-            className="w-11 h-11 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:border-[#B7FF1A]/40"
-            style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
-            aria-label="Next"
-          >
-            <ChevronDown className="h-5 w-5 text-white" />
-          </button>
         </div>
+      </div>
+
+      {/* ── Navigation arrows — fixed to right edge, vertically centred ── */}
+      <div className="absolute right-10 top-1/2 -translate-y-1/2 flex flex-col items-center gap-3 z-20">
+        <button
+          onClick={goPrev}
+          disabled={currentIndex === 0}
+          className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20"
+          style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+          aria-label="Previous"
+        >
+          <ChevronUp className="h-6 w-6 text-white" />
+        </button>
+        <button
+          onClick={goNext}
+          disabled={currentIndex === clips.length - 1}
+          className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20"
+          style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+          aria-label="Next"
+        >
+          <ChevronDown className="h-6 w-6 text-white" />
+        </button>
       </div>
     </div>
   );
