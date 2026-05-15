@@ -637,6 +637,8 @@ const DesktopShortsViewer: React.FC<{
 }> = ({ clips, initialIndex, onClose, onOpenGameFilter, selectedGameId, selectedGameName }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const wheelCooldown = useRef(false);
+  const wheelAccum = useRef(0);
+  const wheelIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { user } = useAuth();
 
   const clip = clips[currentIndex];
@@ -655,19 +657,40 @@ const DesktopShortsViewer: React.FC<{
       else if (e.key === 'ArrowUp') { e.preventDefault(); goPrev(); }
       else if (e.key === 'Escape') { onClose(); }
     };
+
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
+
+      // Reset accumulated delta after scroll gesture goes idle (150 ms of silence)
+      if (wheelIdleTimer.current) clearTimeout(wheelIdleTimer.current);
+      wheelIdleTimer.current = setTimeout(() => { wheelAccum.current = 0; }, 150);
+
       if (wheelCooldown.current) return;
-      wheelCooldown.current = true;
-      if (e.deltaY > 30 || e.deltaX > 30) goNext();
-      else if (e.deltaY < -30 || e.deltaX < -30) goPrev();
-      setTimeout(() => { wheelCooldown.current = false; }, 750);
+
+      // Accumulate delta — Mac trackpads send many small events; mice send one large one
+      wheelAccum.current += e.deltaY + e.deltaX;
+
+      const THRESHOLD = 80; // px accumulated before triggering navigation
+
+      if (wheelAccum.current > THRESHOLD) {
+        wheelAccum.current = 0;
+        wheelCooldown.current = true;
+        goNext();
+        setTimeout(() => { wheelCooldown.current = false; }, 700);
+      } else if (wheelAccum.current < -THRESHOLD) {
+        wheelAccum.current = 0;
+        wheelCooldown.current = true;
+        goPrev();
+        setTimeout(() => { wheelCooldown.current = false; }, 700);
+      }
     };
+
     window.addEventListener('keydown', handleKey);
     window.addEventListener('wheel', handleWheel, { passive: false });
     return () => {
       window.removeEventListener('keydown', handleKey);
       window.removeEventListener('wheel', handleWheel);
+      if (wheelIdleTimer.current) clearTimeout(wheelIdleTimer.current);
     };
   }, [goNext, goPrev, onClose]);
 
