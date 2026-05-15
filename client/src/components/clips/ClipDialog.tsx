@@ -1253,10 +1253,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         )}
                       </div>
                     </div>
-                    {/* 3-dot menu */}
-                    <div className="flex-shrink-0 ml-2">
-                      <TrendingClipMenu clip={clip} />
-                    </div>
                   </div>
 
                   {/* Comments and content section - scrollable area */}
@@ -1367,6 +1363,8 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                               contentTitle={clip.title}
                               contentAuthor={clip.user.username}
                             />
+
+                            <TrendingClipMenu clip={clip} />
                           </div>
                         </div>
                       </div>

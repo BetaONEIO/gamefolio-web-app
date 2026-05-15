@@ -32,6 +32,7 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   const [clipsList, setClipsList] = useState<ClipWithUser[] | null>(null);
   const [viewAllHref, setViewAllHref] = useState<string | undefined>(undefined);
   const previousUrlRef = useRef<string | null>(null);
+  const closeTimestampRef = useRef<number>(0);
 
   const buildClipUrl = (clip: ClipWithUser) => {
     const username = clip.user?.username;
@@ -42,6 +43,8 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   };
 
   const openClipDialog = (id: number, providedClipsList?: ClipWithUser[], href?: string) => {
+    // Block ghost clicks that arrive within 250ms of the dialog closing
+    if (Date.now() - closeTimestampRef.current < 250) return;
     previousUrlRef.current = window.location.pathname + window.location.search + window.location.hash;
     setClipId(id);
     setClipsList(providedClipsList || null);
@@ -57,6 +60,7 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   };
 
   const closeClipDialog = () => {
+    closeTimestampRef.current = Date.now();
     if (previousUrlRef.current) {
       window.history.replaceState(null, '', previousUrlRef.current);
       previousUrlRef.current = null;
