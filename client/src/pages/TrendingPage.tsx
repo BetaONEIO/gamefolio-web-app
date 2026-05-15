@@ -715,12 +715,12 @@ const DesktopShortsViewer: React.FC<{
       </div>
 
       {/* ── Centred group: video + engagement column ── */}
-      <div className="flex items-end gap-4" style={{ height: 'calc(100% - 24px)' }}>
+      <div className="flex items-end gap-4" style={{ height: '100%', paddingBottom: '28px' }}>
 
-        {/* Video container — 9:16 */}
+        {/* Video container — 9:16, height fills available space */}
         <div
           className="relative rounded-2xl overflow-hidden bg-black shadow-2xl flex-shrink-0"
-          style={{ height: '85vh', aspectRatio: '9/16' }}
+          style={{ height: '100%', aspectRatio: '9/16' }}
         >
           <VideoPlayer
             key={clip.id}
@@ -851,12 +851,16 @@ const DesktopShortsViewer: React.FC<{
             >
               <Gamepad2 className="h-5 w-5" style={{ color: selectedGameId ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
             </div>
-            <span
-              className="text-[11px] font-medium max-w-[52px] truncate text-center leading-tight"
-              style={{ color: selectedGameId ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }}
-            >
-              {selectedGameName || 'Games'}
-            </span>
+            {selectedGameId ? (
+              <span
+                className="text-[11px] font-medium max-w-[52px] truncate text-center leading-tight"
+                style={{ color: '#B7FF1A' }}
+              >
+                {selectedGameName}
+              </span>
+            ) : (
+              <span className="text-[11px] font-medium text-white/40">Games</span>
+            )}
           </button>
         </div>
       </div>
