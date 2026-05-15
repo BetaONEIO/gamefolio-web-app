@@ -941,65 +941,70 @@ const DesktopShortsViewer: React.FC<{
       ) : (
         /* ── PORTRAIT layout (Reels): video + right engagement column ── */
         <>
-          {/* ── Centred group: [video+info column] + engagement column ── */}
+          {/* ── Centred group: video + engagement column ── */}
           <div className="flex items-end gap-4" style={{ height: '100%', paddingBottom: '28px' }}>
 
-            {/* Left column: video on top, creator info below */}
-            <div className="flex flex-col min-h-0" style={{ height: '100%' }}>
-              {/* Video container — 9:16 */}
-              <div
-                className="relative rounded-2xl overflow-hidden bg-black shadow-2xl flex-shrink-0 flex-1 min-h-0"
-                style={{ aspectRatio: '9/16' }}
-              >
-                <VideoPlayer
-                  key={clip.id}
-                  videoUrl={clip.videoUrl || ''}
-                  thumbnailUrl={clip.thumbnailUrl || undefined}
-                  autoPlay={true}
-                  disableAspectRatio={true}
-                  objectFit="contain"
-                  transparentBg={true}
-                  autoHideControls={true}
-                  className="w-full h-full"
-                  clipId={clip.id}
-                />
-              </div>
+            {/* Video container — 9:16, height fills available space */}
+            <div
+              className="relative rounded-2xl overflow-hidden bg-black shadow-2xl flex-shrink-0"
+              style={{ height: '100%', aspectRatio: '9/16' }}
+            >
+              <VideoPlayer
+                key={clip.id}
+                videoUrl={clip.videoUrl || ''}
+                thumbnailUrl={clip.thumbnailUrl || undefined}
+                autoPlay={true}
+                disableAspectRatio={true}
+                objectFit="contain"
+                transparentBg={true}
+                autoHideControls={true}
+                className="w-full h-full"
+                clipId={clip.id}
+              />
 
-              {/* Creator info — below the video */}
-              <div className="flex items-center gap-2.5 pt-2.5 flex-shrink-0">
-                <div
-                  className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border-2"
-                  style={{ borderColor: 'rgba(183,255,26,0.4)' }}
-                >
-                  {clip.user.avatarUrl ? (
-                    <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
-                      <UserIcon className="h-4 w-4 text-white/60" />
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
-                    <p className="text-white font-semibold text-sm leading-tight hover:text-[#B7FF1A] transition-colors">
-                      {clip.user.displayName || clip.user.username}
-                    </p>
-                  </Link>
-                  <p className="text-white/45 text-xs">@{clip.user.username}</p>
-                  {clip.game && (
-                    <Link
-                      href={`/games/${gameSlug}`}
-                      className="inline-block mt-1 text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
-                      style={{ background: '#B7FF1A' }}
-                      onClick={onClose}
-                    >
-                      {clip.game.name}
+              {/* Bottom gradient */}
+              <div
+                className="absolute bottom-0 left-0 right-0 h-56 pointer-events-none"
+                style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.93) 0%, rgba(0,0,0,0.5) 50%, transparent 100%)' }}
+              />
+
+              {/* Creator / title / game */}
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div
+                    className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border-2"
+                    style={{ borderColor: 'rgba(183,255,26,0.4)' }}
+                  >
+                    {clip.user.avatarUrl ? (
+                      <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
+                        <UserIcon className="h-4 w-4 text-white/60" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
+                      <p className="text-white font-semibold text-sm leading-tight hover:text-[#B7FF1A] transition-colors">
+                        {clip.user.displayName || clip.user.username}
+                      </p>
                     </Link>
-                  )}
-                  {clip.title && (
-                    <p className="text-white/50 text-xs mt-0.5 line-clamp-2">{clip.title}</p>
-                  )}
+                    <p className="text-white/50 text-xs">@{clip.user.username}</p>
+                  </div>
                 </div>
+                {clip.title && (
+                  <p className="text-white text-sm font-medium mb-2 drop-shadow line-clamp-2">{clip.title}</p>
+                )}
+                {clip.game && (
+                  <Link
+                    href={`/games/${gameSlug}`}
+                    className="inline-block text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
+                    style={{ background: '#B7FF1A' }}
+                    onClick={onClose}
+                  >
+                    {clip.game.name}
+                  </Link>
+                )}
               </div>
             </div>
 
