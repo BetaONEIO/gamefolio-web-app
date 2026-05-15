@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLikeScreenshot } from '@/hooks/use-clips';
 import { useToast } from '@/hooks/use-toast';
 import { ClipWithUser } from '@shared/schema';
-import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Heart, Play, MessageCircle, AlertTriangle, Film, Video, Camera, ChevronDown, Check, Search, ArrowLeft, Bookmark, BarChart2, BadgeCheck, Repeat2 } from 'lucide-react';
+import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Heart, Play, MessageCircle, AlertTriangle, Film, Video, Camera, ChevronDown, ChevronUp, Check, Search, ArrowLeft, Bookmark, BarChart2, BadgeCheck, Repeat2 } from 'lucide-react';
 import { TrendingClipMenu } from '@/components/clips/TrendingClipMenu';
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { PartnerBadge } from '@/components/ui/partner-badge';
@@ -528,12 +528,17 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void; v
 };
 
 // Reel card component - TikTok/YouTube Shorts style
-const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({ reel, reelsList }) => {
+const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[]; onOpenViewer?: (index: number) => void }> = ({ reel, reelsList, onOpenViewer }) => {
   const { openClipDialog } = useClipDialog();
 
   const handleReelClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    openClipDialog(reel.id, reelsList); // Enable fullscreen mode for reels
+    if (onOpenViewer) {
+      const index = reelsList.findIndex(r => r.id === reel.id);
+      onOpenViewer(index >= 0 ? index : 0);
+    } else {
+      openClipDialog(reel.id, reelsList);
+    }
   };
 
   const formatNumber = (num: number) => {
@@ -621,6 +626,235 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
   );
 };
 
+// ── Desktop YouTube Shorts-style viewer ─────────────────────────────────────
+const DesktopShortsViewer: React.FC<{
+  clips: ClipWithUser[];
+  initialIndex: number;
+  onClose: () => void;
+}> = ({ clips, initialIndex, onClose }) => {
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const wheelCooldown = useRef(false);
+  const { user } = useAuth();
+
+  const clip = clips[currentIndex];
+
+  const goNext = useCallback(() => {
+    setCurrentIndex(i => Math.min(i + 1, clips.length - 1));
+  }, [clips.length]);
+
+  const goPrev = useCallback(() => {
+    setCurrentIndex(i => Math.max(i - 1, 0));
+  }, []);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); goNext(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); goPrev(); }
+      else if (e.key === 'Escape') { onClose(); }
+    };
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (wheelCooldown.current) return;
+      wheelCooldown.current = true;
+      if (e.deltaY > 30 || e.deltaX > 30) goNext();
+      else if (e.deltaY < -30 || e.deltaX < -30) goPrev();
+      setTimeout(() => { wheelCooldown.current = false; }, 750);
+    };
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('wheel', handleWheel);
+    };
+  }, [goNext, goPrev, onClose]);
+
+  const fmt = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    return String(n);
+  };
+
+  if (!clip) return null;
+
+  const likes = (clip as any)._count?.likes || 0;
+  const fires = (clip as any)._count?.fires || (clip as any)._count?.reactions || 0;
+  const comments = (clip as any)._count?.comments || 0;
+  const views = clip.views || 0;
+  const gameSlug = clip.game?.name?.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  return (
+    <div
+      className="fixed inset-0 z-[9500] flex items-center justify-center"
+      style={{ background: 'rgba(3, 8, 10, 0.97)' }}
+    >
+      {/* Close */}
+      <button
+        onClick={onClose}
+        className="absolute top-5 right-5 z-10 w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
+        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
+        aria-label="Close"
+      >
+        <X className="h-5 w-5 text-white" />
+      </button>
+
+      {/* Counter */}
+      <div className="absolute top-5 left-5 text-white/35 text-sm font-mono select-none">
+        {currentIndex + 1} / {clips.length}
+      </div>
+
+      {/* Keyboard hint */}
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-white/20 text-xs select-none">
+        ↑ ↓ arrow keys or scroll to navigate · Esc to close
+      </div>
+
+      {/* Main layout: video + right panel */}
+      <div className="flex items-center gap-5">
+        {/* Video container — 9:16, tall */}
+        <div
+          className="relative rounded-2xl overflow-hidden bg-black shadow-2xl"
+          style={{ height: '85vh', aspectRatio: '9/16' }}
+        >
+          <VideoPlayer
+            key={clip.id}
+            videoUrl={clip.videoUrl || ''}
+            thumbnailUrl={clip.thumbnailUrl || undefined}
+            autoPlay={true}
+            disableAspectRatio={true}
+            objectFit="contain"
+            transparentBg={true}
+            autoHideControls={true}
+            className="w-full h-full"
+            clipId={clip.id}
+          />
+
+          {/* Bottom gradient */}
+          <div
+            className="absolute bottom-0 left-0 right-0 h-52 pointer-events-none"
+            style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.45) 55%, transparent 100%)' }}
+          />
+
+          {/* Creator info overlay */}
+          <div className="absolute bottom-0 left-0 right-0 p-4">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div
+                className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border-2"
+                style={{ borderColor: 'rgba(183,255,26,0.4)' }}
+              >
+                {clip.user.avatarUrl ? (
+                  <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
+                    <UserIcon className="h-4 w-4 text-white/60" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
+                  <p className="text-white font-semibold text-sm leading-tight hover:text-[#B7FF1A] transition-colors">
+                    {clip.user.displayName || clip.user.username}
+                  </p>
+                </Link>
+                <p className="text-white/50 text-xs">@{clip.user.username}</p>
+              </div>
+            </div>
+
+            {clip.title && (
+              <p className="text-white text-sm font-medium mb-2 drop-shadow line-clamp-2">{clip.title}</p>
+            )}
+
+            {clip.game && (
+              <Link
+                href={`/games/${gameSlug}`}
+                className="inline-block text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
+                style={{ background: '#B7FF1A' }}
+                onClick={onClose}
+              >
+                {clip.game.name}
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {/* Right panel: nav + engagement */}
+        <div className="flex flex-col items-center gap-4">
+          {/* Up */}
+          <button
+            onClick={goPrev}
+            disabled={currentIndex === 0}
+            className="w-11 h-11 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:border-[#B7FF1A]/40"
+            style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+            aria-label="Previous"
+          >
+            <ChevronUp className="h-5 w-5 text-white" />
+          </button>
+
+          {/* Likes */}
+          <LikeButton
+            contentId={clip.id}
+            contentType="clip"
+            contentOwnerId={clip.user.id}
+            initialLiked={(clip as any).isLiked ?? false}
+            initialCount={likes}
+            size="sm"
+            variant="vertical"
+            showCount={true}
+          />
+
+          {/* Fires */}
+          <FireButton
+            contentId={clip.id}
+            contentType="clip"
+            contentOwnerId={clip.user.id}
+            initialFired={(clip as any).isFired ?? false}
+            initialCount={fires}
+            size="sm"
+            variant="vertical"
+            showCount={true}
+          />
+
+          {/* Views */}
+          <div className="flex flex-col items-center gap-1">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+            >
+              <BarChart2 className="h-5 w-5" style={{ color: '#7E887A' }} />
+            </div>
+            <span className="text-xs" style={{ color: '#7E887A' }}>{fmt(views)}</span>
+          </div>
+
+          {/* Comments */}
+          <div className="flex flex-col items-center gap-1">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+            >
+              <MessageCircle className="h-5 w-5" style={{ color: '#7E887A' }} />
+            </div>
+            <span className="text-xs" style={{ color: '#7E887A' }}>{fmt(comments)}</span>
+          </div>
+
+          {/* 3-dot menu */}
+          <div onClick={(e) => e.stopPropagation()}>
+            <TrendingClipMenu clip={clip} />
+          </div>
+
+          {/* Down */}
+          <button
+            onClick={goNext}
+            disabled={currentIndex === clips.length - 1}
+            className="w-11 h-11 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:border-[#B7FF1A]/40"
+            style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+            aria-label="Next"
+          >
+            <ChevronDown className="h-5 w-5 text-white" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TrendingPage: React.FC = () => {
   const { user } = useAuth();
   const isMobile = useMobile();
@@ -652,6 +886,9 @@ const TrendingPage: React.FC = () => {
   const [screenshotsScrollStart, setScreenshotsScrollStart] = useState(0);
   const [screenshotsTouchStart, setScreenshotsTouchStart] = useState(0);
   const [screenshotsTouchScrollStart, setScreenshotsTouchScrollStart] = useState(0);
+  const [desktopShortsOpen, setDesktopShortsOpen] = useState(false);
+  const [desktopShortsIndex, setDesktopShortsIndex] = useState(0);
+  const [desktopShortsClips, setDesktopShortsClips] = useState<ClipWithUser[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -1050,7 +1287,7 @@ const TrendingPage: React.FC = () => {
         );
       }
 
-      // Desktop: 1 row with 4 columns filling the page
+      // Desktop: 1 row with 4 columns filling the page — clicking opens the Shorts viewer
       return (
         <div className="grid grid-cols-4 gap-4 w-full">
           {trendingReels.slice(0, 4).map((reel) => (
@@ -1058,6 +1295,11 @@ const TrendingPage: React.FC = () => {
               key={reel.id}
               reel={reel}
               reelsList={trendingReels}
+              onOpenViewer={(index) => {
+                setDesktopShortsClips(trendingReels);
+                setDesktopShortsIndex(index);
+                setDesktopShortsOpen(true);
+              }}
             />
           ))}
         </div>
@@ -1083,6 +1325,12 @@ const TrendingPage: React.FC = () => {
             clip={clip}
             userId={user?.id}
             clipsList={trendingClips}
+            onCardClick={(clipId, clips) => {
+              const idx = clips.findIndex(c => c.id === clipId);
+              setDesktopShortsClips(clips);
+              setDesktopShortsIndex(idx >= 0 ? idx : 0);
+              setDesktopShortsOpen(true);
+            }}
           />
         ))}
       </div>
@@ -1615,6 +1863,15 @@ const TrendingPage: React.FC = () => {
             }
           }}
           contentType="screenshot"
+        />
+      )}
+
+      {/* Desktop Shorts-style viewer — clips & reels */}
+      {desktopShortsOpen && !isMobile && desktopShortsClips.length > 0 && (
+        <DesktopShortsViewer
+          clips={desktopShortsClips}
+          initialIndex={desktopShortsIndex}
+          onClose={() => setDesktopShortsOpen(false)}
         />
       )}
 
