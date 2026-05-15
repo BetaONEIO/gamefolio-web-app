@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
@@ -8,7 +8,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import {
   MoreHorizontal,
-  Flag,
   Ban,
   Pencil,
   Trash2,
@@ -37,7 +36,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ReportDialog } from "@/components/content/ReportDialog";
 
 interface TrendingClipMenuProps {
   clip: ClipWithUser;
@@ -88,9 +86,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
-  const [reportPending, setReportPending] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const reportTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -98,13 +94,6 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
-
-  useEffect(() => {
-    if (reportPending && reportTriggerRef.current) {
-      reportTriggerRef.current.click();
-      setReportPending(false);
-    }
-  }, [reportPending]);
 
   const isOwn = user?.id === clip.userId;
 
@@ -208,13 +197,6 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
 
   const otherUserMenu = (
     <>
-      <ReportDialog
-        contentType="clip"
-        contentId={clip.id}
-        contentTitle={clip.title}
-        contentAuthor={clip.user.username}
-        trigger={<button ref={reportTriggerRef} className="sr-only" tabIndex={-1} aria-hidden />}
-      />
       <MenuItem
         icon={<User className="h-4 w-4" />}
         label="View Gamefolio"
@@ -237,14 +219,6 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
         onClick={handleDownload}
       />
       <MenuDivider />
-      <MenuItem
-        icon={<Flag className="h-4 w-4 text-red-400" style={{ stroke: '#f87171', fill: 'none' }} />}
-        label="Report Clip"
-        onClick={() => {
-          close();
-          setReportPending(true);
-        }}
-      />
       <MenuItem
         icon={<Ban className="h-4 w-4" />}
         label="Block User"
