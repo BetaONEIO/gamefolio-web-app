@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { users } from '@shared/schema';
-import { and, eq, desc } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
 import { EmailService } from '../email-service';
+import { syncPartnerToMarketing } from '../marketing-sync';
 
 const router = Router();
 
@@ -131,35 +132,13 @@ router.patch('/api/partner/settings', hybridAuth, async (req: Request, res: Resp
         partnerStreamerVisible: users.partnerStreamerVisible,
       });
 
+    // Mirror the updated settings to the marketing site's streamers directory.
+    void syncPartnerToMarketing({ ...user, ...updates });
+
     res.json({ success: true, ...updated });
   } catch (err) {
     console.error('[Partner] Error updating partner settings:', err);
     res.status(500).json({ message: 'Error updating partner settings' });
-  }
-});
-
-/**
- * GET /api/streamers
- * Public list of approved, visible Streamer Partners.
- * Consumed by the gamefolio.com marketing site's /streamer page.
- */
-router.get('/api/streamers', async (_req: Request, res: Response) => {
-  try {
-    const partners = await db
-      .select({
-        username: users.username,
-        displayName: users.displayName,
-        avatarUrl: users.avatarUrl,
-        featuredStreamUrl: users.partnerFeaturedStreamUrl,
-      })
-      .from(users)
-      .where(and(eq(users.isPartner, true), eq(users.partnerStreamerVisible, true)))
-      .orderBy(desc(users.createdAt));
-
-    res.json({ streamers: partners });
-  } catch (err) {
-    console.error('[Partner] Error listing streamers:', err);
-    res.status(500).json({ message: 'Error listing streamers' });
   }
 });
 

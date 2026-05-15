@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { getUncachableStripeClient, getStripeSecretKey } from '../stripeClient';
 import { transferGfTokens } from '../gf-token-service';
 import { EmailService } from '../email-service';
+import { removePartnerFromMarketing } from '../marketing-sync';
 import Stripe from 'stripe';
 
 const router = Router();
@@ -249,6 +250,9 @@ router.post('/api/stripe/webhook',
 
           console.log(`[GF Webhook] Removed Pro + Partner status for user ${user.id} (subscription deleted)`);
 
+          // Partner status was revoked above — remove them from the marketing site too.
+          void removePartnerFromMarketing(user.id);
+
           if (user.email) {
             EmailService.sendProCancelledEmail(
               user.email,
@@ -285,6 +289,9 @@ router.post('/api/stripe/webhook',
             }).where(eq(users.id, user.id));
 
             console.log(`[GF Webhook] Revoked Pro + Partner for user ${user.id} due to subscription status: ${subscription.status}`);
+
+            // Partner status was revoked above — remove them from the marketing site too.
+            void removePartnerFromMarketing(user.id);
           } else {
             console.warn(`[GF Webhook] No user found for subscription: ${subscriptionId}`);
           }
