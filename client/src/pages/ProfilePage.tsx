@@ -2875,7 +2875,7 @@ const ProfilePage = () => {
           )}
 
           {/* Profile Info Card — stats only, Collection button on top-right border */}
-          <div className="relative mx-4 mt-2 mb-1">
+          <div className="relative mt-2 mb-1">
             {/* Collection button pinned to top-right border of the card */}
             <button 
               onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
@@ -2954,7 +2954,7 @@ const ProfilePage = () => {
                 border: '1px solid #c27aff55',
                 boxShadow: '0 0 20px #c27aff22, 0 0 40px #c27aff11',
               } : {
-                background: `${accentColor}14`,
+                background: 'rgba(255,255,255,0.04)',
                 border: `1px solid rgba(183, 255, 26, 0.25)`,
                 boxShadow: `0 0 18px rgba(183, 255, 26, 0.08)`,
               }}
@@ -3341,7 +3341,7 @@ const ProfilePage = () => {
                   background: '#e8d5b7',
                   border: '1px solid #c4a88266',
                 } : {
-                  background: `${accentColor}14`,
+                  background: 'rgba(255,255,255,0.04)',
                   border: `1px solid rgba(183, 255, 26, 0.25)`,
                   boxShadow: `0 0 18px rgba(183, 255, 26, 0.08)`,
                 }}
