@@ -159,7 +159,7 @@ export function GameFilterSheet({
               >
                 <div
                   className="flex-shrink-0 rounded overflow-hidden flex items-center justify-center"
-                  style={{ width: '48px', height: '36px', background: '#1A2736', border: '1px solid rgba(255,255,255,0.1)' }}
+                  style={{ width: '45px', height: '60px', background: '#1A2736', border: '1px solid rgba(255,255,255,0.1)' }}
                 >
                   <Gamepad2 className="h-4 w-4" style={{ color: '#B7FF1A' }} />
                 </div>
@@ -182,7 +182,7 @@ export function GameFilterSheet({
               {filteredGames.map((game) => {
                 const isSelected = selectedGameId === game.id;
                 const imgSrc = game.imageUrl
-                  ? game.imageUrl.replace('{width}', '96').replace('{height}', '72')
+                  ? game.imageUrl.replace('{width}', '60').replace('{height}', '80')
                   : null;
                 return (
                   <button
@@ -193,10 +193,10 @@ export function GameFilterSheet({
                   >
                     <div
                       className="flex-shrink-0 rounded overflow-hidden"
-                      style={{ width: '48px', height: '36px', background: '#1A2736', border: isSelected ? '1.5px solid #B7FF1A' : '1px solid rgba(255,255,255,0.1)' }}
+                      style={{ width: '45px', height: '60px', background: '#1A2736', border: isSelected ? '1.5px solid #B7FF1A' : '1px solid rgba(255,255,255,0.1)' }}
                     >
                       {imgSrc ? (
-                        <img src={imgSrc} alt={game.name} className="w-full h-full object-cover" />
+                        <img src={imgSrc} alt={game.name} className="w-full h-full object-contain" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <Gamepad2 className="h-3 w-3" style={{ color: 'rgba(255,255,255,0.3)' }} />
