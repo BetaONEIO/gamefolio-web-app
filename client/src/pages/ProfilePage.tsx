@@ -2917,6 +2917,7 @@ const ProfilePage = () => {
             {/* Stats card container */}
             <div
               className="relative mt-4 rounded-lg transition-all duration-300"
+              style={{ width: '100%', maxWidth: '600px' }}
             >
 
             <div 
