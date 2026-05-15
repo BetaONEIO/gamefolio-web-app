@@ -294,7 +294,8 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
 
   const menuLabel = isOwn ? "Creator tools" : "Clip options";
 
-  const triggerBtn = (
+  // Mobile: manually toggles the Sheet (no SheetTrigger wrapper)
+  const mobileTriggerBtn = (
     <button
       onClick={(e) => {
         e.preventDefault();
@@ -308,11 +309,27 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
     </button>
   );
 
+  // Desktop: only stops propagation — Radix Popover owns the toggle via onOpenChange.
+  // Do NOT call setIsOpen here; doing so causes a same-event double-toggle where Radix
+  // reads the stale isOpen value and immediately flips the popover closed again.
+  const desktopTriggerBtn = (
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      className="p-1.5 rounded-full hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground focus:outline-none"
+      aria-label="More options"
+    >
+      <MoreHorizontal className="h-4 w-4" />
+    </button>
+  );
+
   return (
     <>
       {isMobile ? (
         <>
-          {triggerBtn}
+          {mobileTriggerBtn}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetContent
               side="bottom"
@@ -333,7 +350,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
         </>
       ) : (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
-          <PopoverTrigger asChild>{triggerBtn}</PopoverTrigger>
+          <PopoverTrigger asChild>{desktopTriggerBtn}</PopoverTrigger>
           <PopoverContent
             align="end"
             sideOffset={6}

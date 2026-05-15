@@ -307,7 +307,6 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
                     ? "w-56 sm:w-64 lg:w-72 xl:w-80 flex-shrink-0"
                     : "w-[280px] sm:w-[320px] md:w-[400px] lg:w-[480px] flex-shrink-0"
                   }
-                  onClick={() => handleCardClick(clip)}
                 >
                   <VideoClipGridItem
                     clip={clip}
