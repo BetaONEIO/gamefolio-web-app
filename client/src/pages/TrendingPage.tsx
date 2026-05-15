@@ -636,6 +636,7 @@ const DesktopShortsViewer: React.FC<{
   selectedGameName: string | null;
 }> = ({ clips, initialIndex, onClose, onOpenGameFilter, selectedGameId, selectedGameName }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [showComments, setShowComments] = useState(false);
   const wheelCooldown = useRef(false);
   const wheelAccum = useRef(0);
   const wheelIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -730,7 +731,47 @@ const DesktopShortsViewer: React.FC<{
       </div>
 
       {/* Main area — fills remaining height, centred */}
-      <div className="flex-1 flex items-center justify-center relative min-h-0">
+      <div className="flex-1 flex items-center justify-center relative min-h-0 overflow-hidden">
+
+      {/* ── Comment panel — slides in from the left ── */}
+      <div
+        className="absolute left-0 top-0 bottom-0 z-30 flex flex-col"
+        style={{
+          width: '360px',
+          background: '#0B1218',
+          borderRight: '1px solid rgba(255,255,255,0.07)',
+          transform: showComments ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1)',
+          boxShadow: showComments ? '4px 0 24px rgba(0,0,0,0.5)' : 'none',
+        }}
+      >
+        {/* Panel header */}
+        <div
+          className="flex items-center justify-between px-4 pb-3 flex-shrink-0"
+          style={{ paddingTop: '16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5" style={{ color: '#B7FF1A' }} />
+            <span className="text-white font-bold text-base">Comments</span>
+          </div>
+          <button
+            onClick={() => setShowComments(false)}
+            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+            aria-label="Close comments"
+          >
+            <X className="h-4 w-4 text-white/60" />
+          </button>
+        </div>
+        {/* Comment content */}
+        <div className="flex-1 overflow-hidden">
+          {showComments && (
+            <CommentSection
+              clipId={clip.id}
+              currentUserId={user?.id ?? null}
+            />
+          )}
+        </div>
+      </div>
 
       {/* Keyboard hint — bottom-center */}
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 text-white/20 text-xs select-none pointer-events-none">
@@ -832,16 +873,25 @@ const DesktopShortsViewer: React.FC<{
             showCount={true}
           />
 
-          {/* Comments */}
-          <div className="flex flex-col items-center gap-1">
+          {/* Comments — toggles the left panel */}
+          <button
+            className="flex flex-col items-center gap-1 group"
+            onClick={() => setShowComments(v => !v)}
+            aria-label="Toggle comments"
+          >
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+              style={showComments
+                ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
+                : { background: '#0B1218', border: '1px solid #1B2A33' }
+              }
             >
-              <MessageCircle className="h-5 w-5 text-white/70" />
+              <MessageCircle className="h-5 w-5" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
             </div>
-            <span className="text-white/50 text-[11px] font-medium">{fmt(comments)}</span>
-          </div>
+            <span className="text-[11px] font-medium" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }}>
+              {fmt(comments)}
+            </span>
+          </button>
 
           {/* Views */}
           <div className="flex flex-col items-center gap-1">
