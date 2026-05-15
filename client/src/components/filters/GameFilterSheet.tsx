@@ -127,8 +127,8 @@ export function GameFilterSheet({
             style={{
               background: '#0F1923',
               border: '1px solid rgba(255,255,255,0.1)',
-              width: '420px',
-              maxHeight: '480px',
+              width: '700px',
+              maxHeight: '600px',
             }}
           >
             {/* Header */}
