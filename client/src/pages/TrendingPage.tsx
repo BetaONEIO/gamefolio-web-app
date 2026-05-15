@@ -818,59 +818,55 @@ const DesktopShortsViewer: React.FC<{
                 clipId={clip.id}
               />
 
-              {/* Bottom gradient */}
-              <div
-                className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none"
-                style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 55%, transparent 100%)' }}
-              />
+            </div>
+          </div>
 
-              {/* Creator / title / game overlay */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
-                <div>
-                  <div className="flex items-center gap-2.5 mb-1.5">
-                    <div
-                      className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border-2"
-                      style={{ borderColor: 'rgba(183,255,26,0.4)' }}
-                    >
-                      {clip.user.avatarUrl ? (
-                        <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
-                          <UserIcon className="h-3.5 w-3.5 text-white/60" />
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
-                        <p className="text-white font-semibold text-sm leading-tight hover:text-[#B7FF1A] transition-colors">
-                          {clip.user.displayName || clip.user.username}
-                        </p>
-                      </Link>
-                      <p className="text-white/50 text-xs">@{clip.user.username}</p>
-                    </div>
-                  </div>
-                  {clip.title && (
-                    <p className="text-white text-sm font-medium mb-1.5 drop-shadow line-clamp-1">{clip.title}</p>
-                  )}
-                  {clip.game && (
-                    <Link
-                      href={`/games/${gameSlug}`}
-                      className="inline-block text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
-                      style={{ background: '#B7FF1A' }}
-                      onClick={onClose}
-                    >
-                      {clip.game.name}
-                    </Link>
-                  )}
+          {/* Creator info — outside the video, between video and engagement row */}
+          <div
+            className="flex items-center gap-3 flex-shrink-0 px-20"
+            style={{ paddingTop: '8px', paddingBottom: '4px' }}
+          >
+            <div
+              className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border-2"
+              style={{ borderColor: 'rgba(183,255,26,0.4)' }}
+            >
+              {clip.user.avatarUrl ? (
+                <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
+                  <UserIcon className="h-3.5 w-3.5 text-white/60" />
                 </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
+                  <span className="text-white font-semibold text-sm hover:text-[#B7FF1A] transition-colors">
+                    {clip.user.displayName || clip.user.username}
+                  </span>
+                </Link>
+                <span className="text-white/40 text-xs">@{clip.user.username}</span>
+                {clip.game && (
+                  <Link
+                    href={`/games/${gameSlug}`}
+                    className="inline-block text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity flex-shrink-0"
+                    style={{ background: '#B7FF1A' }}
+                    onClick={onClose}
+                  >
+                    {clip.game.name}
+                  </Link>
+                )}
               </div>
+              {clip.title && (
+                <p className="text-white/70 text-xs mt-0.5 line-clamp-1">{clip.title}</p>
+              )}
             </div>
           </div>
 
           {/* Horizontal engagement row */}
           <div
             className="flex items-center gap-5 flex-shrink-0 px-4"
-            style={{ paddingTop: '10px', paddingBottom: '14px' }}
+            style={{ paddingTop: '6px', paddingBottom: '14px' }}
           >
             <LikeButton
               contentId={clip.id}
