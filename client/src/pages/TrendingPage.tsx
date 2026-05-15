@@ -634,7 +634,8 @@ const DesktopShortsViewer: React.FC<{
   onOpenGameFilter: () => void;
   selectedGameId: number | null;
   selectedGameName: string | null;
-}> = ({ clips, initialIndex, onClose, onOpenGameFilter, selectedGameId, selectedGameName }) => {
+  isLandscape?: boolean;
+}> = ({ clips, initialIndex, onClose, onOpenGameFilter, selectedGameId, selectedGameName, isLandscape = false }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showComments, setShowComments] = useState(false);
   const wheelCooldown = useRef(false);
@@ -654,8 +655,8 @@ const DesktopShortsViewer: React.FC<{
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown') { e.preventDefault(); goNext(); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); goPrev(); }
+      if (e.key === 'ArrowDown' || (isLandscape && e.key === 'ArrowRight')) { e.preventDefault(); goNext(); }
+      else if (e.key === 'ArrowUp' || (isLandscape && e.key === 'ArrowLeft')) { e.preventDefault(); goPrev(); }
       else if (e.key === 'Escape') { onClose(); }
     };
 
@@ -730,8 +731,8 @@ const DesktopShortsViewer: React.FC<{
         </button>
       </div>
 
-      {/* Main area — fills remaining height, centred */}
-      <div className="flex-1 flex items-center justify-center relative min-h-0 overflow-hidden">
+      {/* Main area — fills remaining height */}
+      <div className={`flex-1 relative min-h-0 overflow-hidden flex ${isLandscape ? 'flex-col items-center justify-center gap-0' : 'items-center justify-center'}`}>
 
       {/* ── Comment panel — slides in from the left ── */}
       <div
@@ -745,7 +746,6 @@ const DesktopShortsViewer: React.FC<{
           boxShadow: showComments ? '4px 0 24px rgba(0,0,0,0.5)' : 'none',
         }}
       >
-        {/* Panel header */}
         <div
           className="flex items-center justify-between px-4 pb-3 flex-shrink-0"
           style={{ paddingTop: '16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
@@ -762,203 +762,360 @@ const DesktopShortsViewer: React.FC<{
             <X className="h-4 w-4 text-white/60" />
           </button>
         </div>
-        {/* Comment content */}
         <div className="flex-1 overflow-hidden">
           {showComments && (
-            <CommentSection
-              clipId={clip.id}
-              currentUserId={user?.id ?? null}
-            />
+            <CommentSection clipId={clip.id} currentUserId={user?.id ?? null} />
           )}
         </div>
       </div>
 
-      {/* Keyboard hint — bottom-center */}
+      {/* Keyboard hint */}
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 text-white/20 text-xs select-none pointer-events-none">
-        ↑ ↓ arrow keys or scroll · Esc to close
+        {isLandscape ? '← → arrow keys or scroll · Esc to close' : '↑ ↓ arrow keys or scroll · Esc to close'}
       </div>
 
-      {/* ── Centred group: video + engagement column ── */}
-      <div className="flex items-end gap-4" style={{ height: '100%', paddingBottom: '28px' }}>
+      {isLandscape ? (
+        /* ── LANDSCAPE layout: video stacked above engagement row ── */
+        <>
+          {/* Left nav arrow */}
+          <button
+            onClick={goPrev}
+            disabled={currentIndex === 0}
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
+            style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+            aria-label="Previous"
+          >
+            <ChevronLeft className="h-6 w-6 text-white" />
+          </button>
 
-        {/* Video container — 9:16, height fills available space */}
-        <div
-          className="relative rounded-2xl overflow-hidden bg-black shadow-2xl flex-shrink-0"
-          style={{ height: '100%', aspectRatio: '9/16' }}
-        >
-          <VideoPlayer
-            key={clip.id}
-            videoUrl={clip.videoUrl || ''}
-            thumbnailUrl={clip.thumbnailUrl || undefined}
-            autoPlay={true}
-            disableAspectRatio={true}
-            objectFit="contain"
-            transparentBg={true}
-            autoHideControls={true}
-            className="w-full h-full"
-            clipId={clip.id}
-          />
+          {/* Right nav arrow */}
+          <button
+            onClick={goNext}
+            disabled={currentIndex === clips.length - 1}
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
+            style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+            aria-label="Next"
+          >
+            <ChevronRight className="h-6 w-6 text-white" />
+          </button>
 
-          {/* Bottom gradient */}
-          <div
-            className="absolute bottom-0 left-0 right-0 h-56 pointer-events-none"
-            style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.93) 0%, rgba(0,0,0,0.5) 50%, transparent 100%)' }}
-          />
+          {/* Video — 16:9, constrained by both width and height */}
+          <div className="flex-1 flex items-center justify-center w-full min-h-0 px-20 pt-2">
+            <div
+              className="relative rounded-2xl overflow-hidden bg-black shadow-2xl w-full"
+              style={{ aspectRatio: '16/9', maxHeight: '100%' }}
+            >
+              <VideoPlayer
+                key={clip.id}
+                videoUrl={clip.videoUrl || ''}
+                thumbnailUrl={clip.thumbnailUrl || undefined}
+                autoPlay={true}
+                disableAspectRatio={true}
+                objectFit="contain"
+                transparentBg={true}
+                autoHideControls={true}
+                className="w-full h-full"
+                clipId={clip.id}
+              />
 
-          {/* Creator / title / game — bottom-left overlay */}
-          <div className="absolute bottom-0 left-0 right-0 p-4">
-            <div className="flex items-center gap-2.5 mb-2">
+              {/* Bottom gradient */}
               <div
-                className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border-2"
-                style={{ borderColor: 'rgba(183,255,26,0.4)' }}
-              >
-                {clip.user.avatarUrl ? (
-                  <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
-                    <UserIcon className="h-4 w-4 text-white/60" />
+                className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none"
+                style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 55%, transparent 100%)' }}
+              />
+
+              {/* Creator / title / game overlay */}
+              <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
+                <div>
+                  <div className="flex items-center gap-2.5 mb-1.5">
+                    <div
+                      className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border-2"
+                      style={{ borderColor: 'rgba(183,255,26,0.4)' }}
+                    >
+                      {clip.user.avatarUrl ? (
+                        <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
+                          <UserIcon className="h-3.5 w-3.5 text-white/60" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
+                        <p className="text-white font-semibold text-sm leading-tight hover:text-[#B7FF1A] transition-colors">
+                          {clip.user.displayName || clip.user.username}
+                        </p>
+                      </Link>
+                      <p className="text-white/50 text-xs">@{clip.user.username}</p>
+                    </div>
                   </div>
+                  {clip.title && (
+                    <p className="text-white text-sm font-medium mb-1.5 drop-shadow line-clamp-1">{clip.title}</p>
+                  )}
+                  {clip.game && (
+                    <Link
+                      href={`/games/${gameSlug}`}
+                      className="inline-block text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
+                      style={{ background: '#B7FF1A' }}
+                      onClick={onClose}
+                    >
+                      {clip.game.name}
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Horizontal engagement row */}
+          <div
+            className="flex items-center gap-5 flex-shrink-0 px-4"
+            style={{ paddingTop: '10px', paddingBottom: '14px' }}
+          >
+            <LikeButton
+              contentId={clip.id}
+              contentType="clip"
+              contentOwnerId={clip.user.id}
+              initialLiked={(clip as any).isLiked ?? false}
+              initialCount={likes}
+              size="sm"
+              variant="horizontal"
+              showCount={true}
+            />
+            <FireButton
+              contentId={clip.id}
+              contentType="clip"
+              contentOwnerId={clip.user.id}
+              initialFired={(clip as any).isFired ?? false}
+              initialCount={fires}
+              size="sm"
+              variant="horizontal"
+              showCount={true}
+            />
+            {/* Comments toggle */}
+            <button
+              className="flex items-center gap-2 group"
+              onClick={() => setShowComments(v => !v)}
+              aria-label="Toggle comments"
+            >
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+                style={showComments
+                  ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
+                  : { background: '#0B1218', border: '1px solid #1B2A33' }
+                }
+              >
+                <MessageCircle className="h-4 w-4" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+              </div>
+              <span className="text-sm font-medium" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }}>
+                {fmt(comments)}
+              </span>
+            </button>
+            {/* Views */}
+            <div className="flex items-center gap-2">
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center"
+                style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              >
+                <BarChart2 className="h-4 w-4 text-white/70" />
+              </div>
+              <span className="text-sm font-medium text-white/50">{fmt(views)}</span>
+            </div>
+            {/* 3-dot menu */}
+            <div onClick={(e) => e.stopPropagation()}>
+              <TrendingClipMenu clip={clip} />
+            </div>
+            {/* Game filter */}
+            <button
+              onClick={onOpenGameFilter}
+              className="flex items-center gap-2 group"
+              aria-label="Filter by game"
+            >
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+                style={selectedGameId
+                  ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
+                  : { background: '#0B1218', border: '1px solid #1B2A33' }
+                }
+              >
+                <Gamepad2 className="h-4 w-4" style={{ color: selectedGameId ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+              </div>
+              <span className="text-sm font-medium" style={{ color: selectedGameId ? '#B7FF1A' : 'rgba(255,255,255,0.4)' }}>
+                {selectedGameId ? selectedGameName : 'Games'}
+              </span>
+            </button>
+          </div>
+        </>
+      ) : (
+        /* ── PORTRAIT layout (Reels): video + right engagement column ── */
+        <>
+          {/* ── Centred group: video + engagement column ── */}
+          <div className="flex items-end gap-4" style={{ height: '100%', paddingBottom: '28px' }}>
+
+            {/* Video container — 9:16, height fills available space */}
+            <div
+              className="relative rounded-2xl overflow-hidden bg-black shadow-2xl flex-shrink-0"
+              style={{ height: '100%', aspectRatio: '9/16' }}
+            >
+              <VideoPlayer
+                key={clip.id}
+                videoUrl={clip.videoUrl || ''}
+                thumbnailUrl={clip.thumbnailUrl || undefined}
+                autoPlay={true}
+                disableAspectRatio={true}
+                objectFit="contain"
+                transparentBg={true}
+                autoHideControls={true}
+                className="w-full h-full"
+                clipId={clip.id}
+              />
+
+              {/* Bottom gradient */}
+              <div
+                className="absolute bottom-0 left-0 right-0 h-56 pointer-events-none"
+                style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.93) 0%, rgba(0,0,0,0.5) 50%, transparent 100%)' }}
+              />
+
+              {/* Creator / title / game */}
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div
+                    className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border-2"
+                    style={{ borderColor: 'rgba(183,255,26,0.4)' }}
+                  >
+                    {clip.user.avatarUrl ? (
+                      <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
+                        <UserIcon className="h-4 w-4 text-white/60" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
+                      <p className="text-white font-semibold text-sm leading-tight hover:text-[#B7FF1A] transition-colors">
+                        {clip.user.displayName || clip.user.username}
+                      </p>
+                    </Link>
+                    <p className="text-white/50 text-xs">@{clip.user.username}</p>
+                  </div>
+                </div>
+                {clip.title && (
+                  <p className="text-white text-sm font-medium mb-2 drop-shadow line-clamp-2">{clip.title}</p>
+                )}
+                {clip.game && (
+                  <Link
+                    href={`/games/${gameSlug}`}
+                    className="inline-block text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
+                    style={{ background: '#B7FF1A' }}
+                    onClick={onClose}
+                  >
+                    {clip.game.name}
+                  </Link>
                 )}
               </div>
-              <div>
-                <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
-                  <p className="text-white font-semibold text-sm leading-tight hover:text-[#B7FF1A] transition-colors">
-                    {clip.user.displayName || clip.user.username}
-                  </p>
-                </Link>
-                <p className="text-white/50 text-xs">@{clip.user.username}</p>
+            </div>
+
+            {/* ── Right engagement column ── */}
+            <div className="flex flex-col items-center gap-4 pb-4 flex-shrink-0">
+              <LikeButton
+                contentId={clip.id}
+                contentType="clip"
+                contentOwnerId={clip.user.id}
+                initialLiked={(clip as any).isLiked ?? false}
+                initialCount={likes}
+                size="sm"
+                variant="vertical"
+                showCount={true}
+              />
+              <FireButton
+                contentId={clip.id}
+                contentType="clip"
+                contentOwnerId={clip.user.id}
+                initialFired={(clip as any).isFired ?? false}
+                initialCount={fires}
+                size="sm"
+                variant="vertical"
+                showCount={true}
+              />
+              <button
+                className="flex flex-col items-center gap-1 group"
+                onClick={() => setShowComments(v => !v)}
+                aria-label="Toggle comments"
+              >
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+                  style={showComments
+                    ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
+                    : { background: '#0B1218', border: '1px solid #1B2A33' }
+                  }
+                >
+                  <MessageCircle className="h-5 w-5" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+                </div>
+                <span className="text-[11px] font-medium" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }}>
+                  {fmt(comments)}
+                </span>
+              </button>
+              <div className="flex flex-col items-center gap-1">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+                >
+                  <BarChart2 className="h-5 w-5 text-white/70" />
+                </div>
+                <span className="text-white/50 text-[11px] font-medium">{fmt(views)}</span>
               </div>
-            </div>
-
-            {clip.title && (
-              <p className="text-white text-sm font-medium mb-2 drop-shadow line-clamp-2">{clip.title}</p>
-            )}
-
-            {clip.game && (
-              <Link
-                href={`/games/${gameSlug}`}
-                className="inline-block text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
-                style={{ background: '#B7FF1A' }}
-                onClick={onClose}
+              <div onClick={(e) => e.stopPropagation()}>
+                <TrendingClipMenu clip={clip} />
+              </div>
+              <button
+                onClick={onOpenGameFilter}
+                className="flex flex-col items-center gap-1 group"
+                aria-label="Filter by game"
               >
-                {clip.game.name}
-              </Link>
-            )}
-          </div>
-        </div>
-
-        {/* ── Right engagement column — outside the video, bottom-aligned ── */}
-        <div className="flex flex-col items-center gap-4 pb-4 flex-shrink-0">
-          {/* Like */}
-          <LikeButton
-            contentId={clip.id}
-            contentType="clip"
-            contentOwnerId={clip.user.id}
-            initialLiked={(clip as any).isLiked ?? false}
-            initialCount={likes}
-            size="sm"
-            variant="vertical"
-            showCount={true}
-          />
-
-          {/* Fire */}
-          <FireButton
-            contentId={clip.id}
-            contentType="clip"
-            contentOwnerId={clip.user.id}
-            initialFired={(clip as any).isFired ?? false}
-            initialCount={fires}
-            size="sm"
-            variant="vertical"
-            showCount={true}
-          />
-
-          {/* Comments — toggles the left panel */}
-          <button
-            className="flex flex-col items-center gap-1 group"
-            onClick={() => setShowComments(v => !v)}
-            aria-label="Toggle comments"
-          >
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
-              style={showComments
-                ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
-                : { background: '#0B1218', border: '1px solid #1B2A33' }
-              }
-            >
-              <MessageCircle className="h-5 w-5" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+                  style={selectedGameId
+                    ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
+                    : { background: '#0B1218', border: '1px solid #1B2A33' }
+                  }
+                >
+                  <Gamepad2 className="h-5 w-5" style={{ color: selectedGameId ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+                </div>
+                {selectedGameId ? (
+                  <span className="text-[11px] font-medium max-w-[52px] truncate text-center leading-tight" style={{ color: '#B7FF1A' }}>
+                    {selectedGameName}
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-medium text-white/40">Games</span>
+                )}
+              </button>
             </div>
-            <span className="text-[11px] font-medium" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }}>
-              {fmt(comments)}
-            </span>
-          </button>
+          </div>
 
-          {/* Views */}
-          <div className="flex flex-col items-center gap-1">
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center"
+          {/* ── Portrait nav arrows — right edge, vertically centred ── */}
+          <div className="absolute right-6 top-1/2 -translate-y-1/2 flex flex-col items-center gap-3 z-20">
+            <button
+              onClick={goPrev}
+              disabled={currentIndex === 0}
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
               style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              aria-label="Previous"
             >
-              <BarChart2 className="h-5 w-5 text-white/70" />
-            </div>
-            <span className="text-white/50 text-[11px] font-medium">{fmt(views)}</span>
-          </div>
-
-          {/* 3-dot menu */}
-          <div onClick={(e) => e.stopPropagation()}>
-            <TrendingClipMenu clip={clip} />
-          </div>
-
-          {/* Game filter */}
-          <button
-            onClick={onOpenGameFilter}
-            className="flex flex-col items-center gap-1 group"
-            aria-label="Filter by game"
-          >
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
-              style={selectedGameId
-                ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
-                : { background: '#0B1218', border: '1px solid #1B2A33' }
-              }
+              <ChevronUp className="h-6 w-6 text-white" />
+            </button>
+            <button
+              onClick={goNext}
+              disabled={currentIndex === clips.length - 1}
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
+              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              aria-label="Next"
             >
-              <Gamepad2 className="h-5 w-5" style={{ color: selectedGameId ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
-            </div>
-            {selectedGameId ? (
-              <span
-                className="text-[11px] font-medium max-w-[52px] truncate text-center leading-tight"
-                style={{ color: '#B7FF1A' }}
-              >
-                {selectedGameName}
-              </span>
-            ) : (
-              <span className="text-[11px] font-medium text-white/40">Games</span>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* ── Navigation arrows — anchored to right edge, vertically centred ── */}
-      <div className="absolute right-6 top-1/2 -translate-y-1/2 flex flex-col items-center gap-3 z-20">
-        <button
-          onClick={goPrev}
-          disabled={currentIndex === 0}
-          className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
-          style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
-          aria-label="Previous"
-        >
-          <ChevronUp className="h-6 w-6 text-white" />
-        </button>
-        <button
-          onClick={goNext}
-          disabled={currentIndex === clips.length - 1}
-          className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
-          style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
-          aria-label="Next"
-        >
-          <ChevronDown className="h-6 w-6 text-white" />
-        </button>
-      </div>
+              <ChevronDown className="h-6 w-6 text-white" />
+            </button>
+          </div>
+        </>
+      )}
 
       </div>
     </div>
@@ -999,6 +1156,7 @@ const TrendingPage: React.FC = () => {
   const [desktopShortsOpen, setDesktopShortsOpen] = useState(false);
   const [desktopShortsIndex, setDesktopShortsIndex] = useState(0);
   const [desktopShortsClips, setDesktopShortsClips] = useState<ClipWithUser[]>([]);
+  const [desktopShortsLandscape, setDesktopShortsLandscape] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -1428,13 +1586,20 @@ const TrendingPage: React.FC = () => {
     }
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-20">
         {trendingClips.map((clip) => (
           <VideoClipGridItem
             key={clip.id}
             clip={clip}
             userId={user?.id}
             clipsList={trendingClips}
+            onCardClick={(clipId, clips) => {
+              const idx = clips.findIndex(c => c.id === clipId);
+              setDesktopShortsLandscape(true);
+              setDesktopShortsClips(clips);
+              setDesktopShortsIndex(idx >= 0 ? idx : 0);
+              setDesktopShortsOpen(true);
+            }}
           />
         ))}
       </div>
@@ -1979,6 +2144,7 @@ const TrendingPage: React.FC = () => {
           onOpenGameFilter={() => setShowGameFilter(true)}
           selectedGameId={selectedGameId}
           selectedGameName={selectedGameName}
+          isLandscape={desktopShortsLandscape}
         />
       )}
 
