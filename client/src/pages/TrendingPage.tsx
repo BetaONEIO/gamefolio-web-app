@@ -655,8 +655,8 @@ const DesktopShortsViewer: React.FC<{
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown' || (isLandscape && e.key === 'ArrowRight')) { e.preventDefault(); goNext(); }
-      else if (e.key === 'ArrowUp' || (isLandscape && e.key === 'ArrowLeft')) { e.preventDefault(); goPrev(); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); goNext(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); goPrev(); }
       else if (e.key === 'Escape') { onClose(); }
     };
 
@@ -771,36 +771,36 @@ const DesktopShortsViewer: React.FC<{
 
       {/* Keyboard hint */}
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 text-white/20 text-xs select-none pointer-events-none">
-        {isLandscape ? '← → arrow keys or scroll · Esc to close' : '↑ ↓ arrow keys or scroll · Esc to close'}
+        ↑ ↓ arrow keys or scroll · Esc to close
       </div>
 
       {isLandscape ? (
         /* ── LANDSCAPE layout: video stacked above engagement row ── */
         <>
-          {/* Left nav arrow */}
-          <button
-            onClick={goPrev}
-            disabled={currentIndex === 0}
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
-            style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
-            aria-label="Previous"
-          >
-            <ChevronLeft className="h-6 w-6 text-white" />
-          </button>
-
-          {/* Right nav arrow */}
-          <button
-            onClick={goNext}
-            disabled={currentIndex === clips.length - 1}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
-            style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
-            aria-label="Next"
-          >
-            <ChevronRight className="h-6 w-6 text-white" />
-          </button>
+          {/* Up/Down nav arrows — right edge, vertically centred */}
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-3">
+            <button
+              onClick={goPrev}
+              disabled={currentIndex === 0}
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
+              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              aria-label="Previous"
+            >
+              <ChevronUp className="h-6 w-6 text-white" />
+            </button>
+            <button
+              onClick={goNext}
+              disabled={currentIndex === clips.length - 1}
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
+              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              aria-label="Next"
+            >
+              <ChevronDown className="h-6 w-6 text-white" />
+            </button>
+          </div>
 
           {/* Video — 16:9, constrained by both width and height */}
-          <div className="flex-1 flex items-center justify-center w-full min-h-0 px-20 pt-2">
+          <div className="flex-1 flex items-center justify-center w-full min-h-0 px-16 pt-2">
             <div
               className="relative rounded-2xl overflow-hidden bg-black shadow-2xl w-full"
               style={{ aspectRatio: '16/9', maxHeight: '100%' }}
@@ -818,48 +818,50 @@ const DesktopShortsViewer: React.FC<{
                 clipId={clip.id}
               />
 
-            </div>
-          </div>
+              {/* Bottom gradient for readability */}
+              <div
+                className="absolute bottom-0 left-0 right-0 h-28 pointer-events-none"
+                style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)' }}
+              />
 
-          {/* Creator info — outside the video, between video and engagement row */}
-          <div
-            className="flex items-center gap-3 flex-shrink-0 px-20"
-            style={{ paddingTop: '8px', paddingBottom: '4px' }}
-          >
-            <div
-              className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border-2"
-              style={{ borderColor: 'rgba(183,255,26,0.4)' }}
-            >
-              {clip.user.avatarUrl ? (
-                <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
-                  <UserIcon className="h-3.5 w-3.5 text-white/60" />
+              {/* Creator info — bottom-left overlay */}
+              <div className="absolute bottom-0 left-0 p-4 flex items-end gap-3">
+                <div
+                  className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border-2"
+                  style={{ borderColor: 'rgba(183,255,26,0.5)' }}
+                >
+                  {clip.user.avatarUrl ? (
+                    <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
+                      <UserIcon className="h-4 w-4 text-white/60" />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
-                  <span className="text-white font-semibold text-sm hover:text-[#B7FF1A] transition-colors">
-                    {clip.user.displayName || clip.user.username}
-                  </span>
-                </Link>
-                <span className="text-white/40 text-xs">@{clip.user.username}</span>
-                {clip.game && (
-                  <Link
-                    href={`/games/${gameSlug}`}
-                    className="inline-block text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity flex-shrink-0"
-                    style={{ background: '#B7FF1A' }}
-                    onClick={onClose}
-                  >
-                    {clip.game.name}
-                  </Link>
-                )}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
+                      <span className="text-white font-semibold text-sm hover:text-[#B7FF1A] transition-colors drop-shadow">
+                        {clip.user.displayName || clip.user.username}
+                      </span>
+                    </Link>
+                    <span className="text-white/50 text-xs drop-shadow">@{clip.user.username}</span>
+                    {clip.game && (
+                      <Link
+                        href={`/games/${gameSlug}`}
+                        className="inline-block text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
+                        style={{ background: '#B7FF1A' }}
+                        onClick={onClose}
+                      >
+                        {clip.game.name}
+                      </Link>
+                    )}
+                  </div>
+                  {clip.title && (
+                    <p className="text-white/70 text-xs mt-0.5 line-clamp-1 drop-shadow">{clip.title}</p>
+                  )}
+                </div>
               </div>
-              {clip.title && (
-                <p className="text-white/70 text-xs mt-0.5 line-clamp-1">{clip.title}</p>
-              )}
             </div>
           </div>
 
