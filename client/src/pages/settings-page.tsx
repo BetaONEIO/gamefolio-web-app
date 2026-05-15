@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video, Star } from "lucide-react";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -494,6 +494,261 @@ function validatePlatformInput(key: PlatformKey, username: string): string | nul
     default:
       return null;
   }
+}
+
+// How recently a user must NOT have applied before the application form
+// reappears. Mirrors REAPPLY_COOLDOWN_MS in server/routes/partner.ts.
+const PARTNER_REAPPLY_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
+
+// apiRequest throws `Error("<status>: <body>")`; pull a friendly message out.
+function extractErrorMessage(error: unknown, fallback: string): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  const jsonStart = raw.indexOf("{");
+  if (jsonStart !== -1) {
+    try {
+      const parsed = JSON.parse(raw.slice(jsonStart));
+      if (parsed && typeof parsed.message === "string") return parsed.message;
+    } catch {
+      /* fall through */
+    }
+  }
+  return fallback;
+}
+
+function PartnerSettings() {
+  const { user, refreshUser } = useAuth();
+  const { toast } = useToast();
+  const [message, setMessage] = useState("");
+  const [featuredUrl, setFeaturedUrl] = useState((user as any)?.partnerFeaturedStreamUrl ?? "");
+  const [visible, setVisible] = useState<boolean>((user as any)?.partnerStreamerVisible ?? true);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+
+  const isPro = !!(user as any)?.isPro;
+  const isPartner = !!(user as any)?.isPartner;
+  const partnerAppliedAt = (user as any)?.partnerAppliedAt ?? null;
+  const appliedRecently =
+    !!partnerAppliedAt &&
+    Date.now() - new Date(partnerAppliedAt).getTime() < PARTNER_REAPPLY_COOLDOWN_MS;
+
+  // Keep local partner-settings state in sync if the user object refreshes.
+  useEffect(() => {
+    setFeaturedUrl((user as any)?.partnerFeaturedStreamUrl ?? "");
+    setVisible((user as any)?.partnerStreamerVisible ?? true);
+  }, [(user as any)?.partnerFeaturedStreamUrl, (user as any)?.partnerStreamerVisible]);
+
+  const applyMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/partner/apply", { message });
+      return res.json();
+    },
+    onSuccess: async () => {
+      toast({
+        title: "Application submitted",
+        description: "Thanks! Our team will review your application and be in touch.",
+      });
+      setMessage("");
+      await refreshUser?.();
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Could not submit application",
+        description: extractErrorMessage(error, "Please try again later."),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("PATCH", "/api/partner/settings", {
+        featuredStreamUrl: featuredUrl.trim() === "" ? null : featuredUrl.trim(),
+        streamerVisible: visible,
+      });
+      return res.json();
+    },
+    onSuccess: async () => {
+      toast({ title: "Partner settings saved" });
+      await refreshUser?.();
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Could not save settings",
+        description: extractErrorMessage(error, "Please try again later."),
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Not Pro — show the gated state with an upgrade prompt.
+  if (!isPro) {
+    return (
+      <>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-[#B7FF1A]" />
+              Streamer Partner
+            </CardTitle>
+            <CardDescription>
+              Become an official Gamefolio Streamer Partner — earn a Partner badge on your
+              profile and a featured spot on the Gamefolio streamers page.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-start gap-3 rounded-lg border border-primary/40 bg-primary/10 p-4">
+              <Lock className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+              <div className="space-y-3">
+                <div>
+                  <p className="font-medium">Gamefolio Pro required</p>
+                  <p className="text-sm text-muted-foreground">
+                    The Streamer Partner programme is exclusive to Gamefolio Pro members.
+                    Upgrade to Pro to apply.
+                  </p>
+                </div>
+                <Button onClick={() => setUpgradeOpen(true)}>
+                  <Crown className="h-4 w-4 mr-2" />
+                  Upgrade to Pro
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <ProUpgradeDialog
+          open={upgradeOpen}
+          onOpenChange={setUpgradeOpen}
+          subtitle="Unlock the Streamer Partner programme and more"
+        />
+      </>
+    );
+  }
+
+  // Pro and an approved Partner — show the management panel.
+  if (isPartner) {
+    const dirty =
+      (featuredUrl.trim() || "") !== ((user as any)?.partnerFeaturedStreamUrl || "") ||
+      visible !== ((user as any)?.partnerStreamerVisible ?? true);
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Star className="h-5 w-5 text-[#B7FF1A] fill-current" />
+            Streamer Partner
+          </CardTitle>
+          <CardDescription>
+            You're an official Gamefolio Streamer Partner. Manage your partner settings below.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="partner-featured-url">Featured stream link</Label>
+            <Input
+              id="partner-featured-url"
+              type="url"
+              inputMode="url"
+              placeholder="https://twitch.tv/yourchannel"
+              value={featuredUrl}
+              onChange={(e) => setFeaturedUrl(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              The primary stream link shown on your profile and the Gamefolio streamers page.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
+            <div>
+              <p className="text-sm font-medium">Show me on the Gamefolio streamers page</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                When off, you keep your Partner badge but won't be listed publicly on
+                gamefolio.com/streamer.
+              </p>
+            </div>
+            <Switch checked={visible} onCheckedChange={setVisible} />
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={() => saveMutation.mutate()} disabled={!dirty || saveMutation.isPending}>
+              {saveMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Save partner settings
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Pro, not a partner, applied within the cooldown window — show pending state.
+  if (appliedRecently) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Star className="h-5 w-5 text-[#B7FF1A]" />
+            Streamer Partner
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-start gap-3 rounded-lg border border-primary/40 bg-primary/10 p-4">
+            <Check className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="font-medium">Application under review</p>
+              <p className="text-sm text-muted-foreground">
+                Thanks for applying to the Streamer Partner programme. Our team is reviewing
+                your application and will be in touch by email.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Pro, not a partner — show the application form.
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Star className="h-5 w-5 text-[#B7FF1A]" />
+          Apply to be a Streamer Partner
+        </CardTitle>
+        <CardDescription>
+          Official Streamer Partners earn a Partner badge on their profile and a featured
+          spot on the Gamefolio streamers page. Tell us about yourself and your channel.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="partner-application-message">Your application</Label>
+          <Textarea
+            id="partner-application-message"
+            placeholder="Tell us about your streaming — which platforms, your audience, why you'd like to be a Gamefolio Streamer Partner, and a link to your channel."
+            rows={6}
+            maxLength={2000}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">{message.length}/2000</p>
+        </div>
+        <div className="flex justify-end">
+          <Button
+            onClick={() => applyMutation.mutate()}
+            disabled={message.trim().length < 10 || applyMutation.isPending}
+          >
+            {applyMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Star className="h-4 w-4 mr-2" />
+            )}
+            Submit application
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function SettingsPage() {
@@ -1771,7 +2026,7 @@ export default function SettingsPage() {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 gap-1">
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 gap-1">
             <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Profile</span>
@@ -1796,6 +2051,11 @@ export default function SettingsPage() {
               <Video className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Streamer</span>
               <span className="sm:hidden">Stream</span>
+            </TabsTrigger>
+            <TabsTrigger value="partner" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Star className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Partner</span>
+              <span className="sm:hidden">Partner</span>
             </TabsTrigger>
           </TabsList>
 
@@ -4650,6 +4910,11 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Partner Tab */}
+          <TabsContent value="partner">
+            <PartnerSettings />
           </TabsContent>
         </Tabs>
 

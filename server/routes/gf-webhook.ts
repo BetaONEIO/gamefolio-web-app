@@ -238,13 +238,16 @@ router.post('/api/stripe/webhook',
         if (user) {
           await db.update(users).set({
             isPro: false,
+            // Streamer Partner status requires an active Pro subscription — revoke it on lapse.
+            isPartner: false,
+            partnerAppliedAt: null,
             stripeSubscriptionId: null,
             proSubscriptionType: null,
             proSubscriptionEndDate: null,
             updatedAt: new Date(),
           }).where(eq(users.id, user.id));
 
-          console.log(`[GF Webhook] Removed Pro status for user ${user.id} (subscription deleted)`);
+          console.log(`[GF Webhook] Removed Pro + Partner status for user ${user.id} (subscription deleted)`);
 
           if (user.email) {
             EmailService.sendProCancelledEmail(
@@ -275,10 +278,13 @@ router.post('/api/stripe/webhook',
           if (user) {
             await db.update(users).set({
               isPro: false,
+              // Streamer Partner status requires an active Pro subscription — revoke it on lapse.
+              isPartner: false,
+              partnerAppliedAt: null,
               updatedAt: new Date(),
             }).where(eq(users.id, user.id));
 
-            console.log(`[GF Webhook] Revoked Pro for user ${user.id} due to subscription status: ${subscription.status}`);
+            console.log(`[GF Webhook] Revoked Pro + Partner for user ${user.id} due to subscription status: ${subscription.status}`);
           } else {
             console.warn(`[GF Webhook] No user found for subscription: ${subscriptionId}`);
           }

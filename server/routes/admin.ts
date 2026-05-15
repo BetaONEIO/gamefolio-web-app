@@ -511,6 +511,11 @@ adminRouter.post("/users/:id/make-partner", async (req: Request, res: Response) 
       return res.status(404).json({ message: "User not found" });
     }
 
+    // Streamer Partner status requires an active Gamefolio Pro subscription.
+    if (!user.isPro) {
+      return res.status(400).json({ message: "User must have an active Gamefolio Pro subscription to become a Streamer Partner" });
+    }
+
     const updatedUser = await storage.updateUser(userId, { isPartner: true });
     res.json(updatedUser);
   } catch (err) {
