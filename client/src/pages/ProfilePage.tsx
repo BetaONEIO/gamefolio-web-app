@@ -2917,10 +2917,11 @@ const ProfilePage = () => {
             {/* Stats card container */}
             <div
               className="relative mt-4 rounded-lg transition-all duration-300"
+              style={{ width: '100%' }}
             >
 
             <div 
-              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''}`}
+              className={`w-full rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''}`}
               style={isWatermelonTheme ? {
                 background: '#ffb3c1',
               } : isCartoonTheme ? {
