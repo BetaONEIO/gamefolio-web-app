@@ -310,12 +310,15 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
   );
 
   // Desktop: only stops propagation — Radix Popover owns the toggle via onOpenChange.
-  // Do NOT call setIsOpen here; doing so causes a same-event double-toggle where Radix
-  // reads the stale isOpen value and immediately flips the popover closed again.
+  // CRITICAL: Do NOT call e.preventDefault() here. Radix's PopoverTrigger uses
+  // composeEventHandlers which checks `event.defaultPrevented` and SKIPS its own
+  // click handler when true — meaning the popover would never toggle open.
+  // We only stopPropagation so the parent card's onClick (which opens the clip
+  // dialog) doesn't fire when the user clicks the 3-dot button.
   const desktopTriggerBtn = (
     <button
+      type="button"
       onClick={(e) => {
-        e.preventDefault();
         e.stopPropagation();
       }}
       className="p-1.5 rounded-full hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground focus:outline-none"
