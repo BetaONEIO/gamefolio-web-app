@@ -1435,12 +1435,6 @@ const TrendingPage: React.FC = () => {
             clip={clip}
             userId={user?.id}
             clipsList={trendingClips}
-            onCardClick={(clipId, clips) => {
-              const idx = clips.findIndex(c => c.id === clipId);
-              setDesktopShortsClips(clips);
-              setDesktopShortsIndex(idx >= 0 ? idx : 0);
-              setDesktopShortsOpen(true);
-            }}
           />
         ))}
       </div>
