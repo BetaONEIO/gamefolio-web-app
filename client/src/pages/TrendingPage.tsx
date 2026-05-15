@@ -718,17 +718,22 @@ const DesktopShortsViewer: React.FC<{
       {/* Top bar — sits below the app header (header is z-50, we are z-45) */}
       {/* We use pt-16 to clear the sticky header (~64px tall) */}
       <div className="flex items-center justify-between px-5 pt-[68px] pb-2 flex-shrink-0">
+        <button
+          onClick={onClose}
+          className="flex items-center gap-2 group"
+          aria-label="Back"
+        >
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center transition-colors group-hover:bg-white/10"
+            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
+          >
+            <ArrowLeft className="h-4 w-4 text-white" />
+          </div>
+          <span className="text-white/40 text-sm font-medium group-hover:text-white/70 transition-colors">Back</span>
+        </button>
         <span className="text-white/35 text-sm font-mono select-none">
           {currentIndex + 1} / {clips.length}
         </span>
-        <button
-          onClick={onClose}
-          className="w-9 h-9 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
-          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
-          aria-label="Close"
-        >
-          <X className="h-4 w-4 text-white" />
-        </button>
       </div>
 
       {/* Main area — fills remaining height */}
