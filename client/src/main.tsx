@@ -1,3 +1,4 @@
+import "./lib/native-history"; // MUST be first: captures history.replaceState before wouter patches it
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";

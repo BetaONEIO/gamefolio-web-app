@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
+import { silentReplaceState } from "@/lib/native-history";
 import { createPortal } from "react-dom";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
@@ -52,16 +53,16 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
     const username = screenshot.user?.username;
     const shareCode = screenshot.shareCode;
     if (username && shareCode) {
-      window.history.replaceState(null, '', `/@${username}/screenshot/${shareCode}`);
+      silentReplaceState(`/@${username}/screenshot/${shareCode}`);
     } else if (username && screenshot.id) {
-      window.history.replaceState(null, '', `/@${username}/screenshot/${screenshot.id}`);
+      silentReplaceState(`/@${username}/screenshot/${screenshot.id}`);
     }
     return () => {};
   }, [screenshot?.id]);
 
   const handleClose = useCallback(() => {
     if (previousUrlRef.current !== null) {
-      window.history.replaceState(null, '', previousUrlRef.current);
+      silentReplaceState(previousUrlRef.current);
       previousUrlRef.current = null;
     }
     onClose();
