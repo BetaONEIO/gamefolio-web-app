@@ -80,7 +80,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
-  const { openClipDialog } = useClipDialog();
+  const { openClipDialog, closeClipDialog } = useClipDialog();
 
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -202,6 +202,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
         label="View Gamefolio"
         onClick={() => {
           close();
+          closeClipDialog();
           navigate(`/profile/${clip.user.username}`);
         }}
       />
