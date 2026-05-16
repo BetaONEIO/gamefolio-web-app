@@ -1084,37 +1084,9 @@ const DesktopShortsViewer: React.FC<{
                 )}
               </div>
 
-              {/* Creator info */}
-              <div className="flex flex-col items-center gap-1.5">
-                <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
-                  <div
-                    className="w-11 h-11 rounded-full overflow-hidden border-2 hover:scale-105 transition-transform"
-                    style={{ borderColor: '#B7FF1A' }}
-                  >
-                    {clip.user.avatarUrl ? (
-                      <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
-                        <UserIcon className="h-5 w-5 text-white/60" />
-                      </div>
-                    )}
-                  </div>
-                </Link>
-                <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
-                  <p className="text-white font-semibold text-[10px] text-center hover:text-[#B7FF1A] transition-colors leading-tight max-w-[64px] truncate">
-                    {clip.user.displayName || clip.user.username}
-                  </p>
-                </Link>
-                {clip.game && (
-                  <Link
-                    href={`/games/${gameSlug}`}
-                    className="inline-block text-[#071013] text-[9px] px-1.5 py-0.5 rounded font-bold hover:opacity-80 transition-opacity text-center leading-tight"
-                    style={{ background: '#B7FF1A', maxWidth: '64px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}
-                    onClick={onClose}
-                  >
-                    {clip.game.name}
-                  </Link>
-                )}
+              {/* 3-dot menu — swapped up, directly below Eye */}
+              <div onClick={(e) => e.stopPropagation()}>
+                <TrendingClipMenu clip={clip} />
               </div>
 
               {/* Engagement icons */}
@@ -1165,8 +1137,48 @@ const DesktopShortsViewer: React.FC<{
                 </div>
                 <span className="text-white/50 text-[11px] font-medium">{fmt(views)}</span>
               </div>
-              <div onClick={(e) => e.stopPropagation()}>
-                <TrendingClipMenu clip={clip} />
+
+              {/* Creator info — horizontal row, avatar on right, text extends left */}
+              <div
+                className="flex flex-row-reverse items-center gap-3"
+                style={{ alignSelf: 'flex-end', overflow: 'visible', whiteSpace: 'nowrap' }}
+              >
+                {/* Avatar — anchored in column */}
+                <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
+                  <div
+                    className="w-11 h-11 rounded-full overflow-hidden border-2 flex-shrink-0 hover:scale-105 transition-transform"
+                    style={{ borderColor: '#B7FF1A' }}
+                  >
+                    {clip.user.avatarUrl ? (
+                      <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
+                        <UserIcon className="h-5 w-5 text-white/60" />
+                      </div>
+                    )}
+                  </div>
+                </Link>
+                {/* Text flows to the left */}
+                <div className="flex flex-col gap-1 items-end">
+                  <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
+                    <p className="text-white font-bold text-sm hover:text-[#B7FF1A] transition-colors leading-tight">
+                      {clip.user.displayName || clip.user.username}
+                    </p>
+                  </Link>
+                  {clip.title && (
+                    <p className="text-white/60 text-xs leading-snug">{clip.title}</p>
+                  )}
+                  {clip.game && (
+                    <Link
+                      href={`/games/${gameSlug}`}
+                      className="inline-block text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
+                      style={{ background: '#B7FF1A' }}
+                      onClick={onClose}
+                    >
+                      {clip.game.name}
+                    </Link>
+                  )}
+                </div>
               </div>
             </div>
           </div>
