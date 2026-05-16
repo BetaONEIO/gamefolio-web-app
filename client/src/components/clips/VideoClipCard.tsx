@@ -4,6 +4,7 @@ import { formatDuration } from "@/lib/constants";
 import { Eye, Play } from "lucide-react";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { LazyImage } from "@/components/ui/lazy-image";
+import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 
 interface VideoClipCardProps {
   clip: ClipWithUser;
@@ -127,27 +128,34 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
 
       {/* Meta below thumbnail */}
       <div className="pt-2 px-0.5">
-        <h3 className="text-[#F5F7F2] font-bold text-sm line-clamp-2 leading-tight">
-          {clip.title}
-        </h3>
-        <Link href={`/profile/${clip.user.username}`} onClick={(e) => e.stopPropagation()}>
-          <p className="text-[#B8C0AE] text-xs mt-0.5 hover:text-[#F5F7F2] transition-colors">
-            @{clip.user.username}
-          </p>
-        </Link>
-        {clip.game?.name && (
-          <Link
-            href={`/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, "")}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <span
-              className="inline-block mt-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded hover:opacity-90 transition-opacity"
-              style={{ background: "#B7FF1A", color: "#03080A" }}
-            >
-              {clip.game.name}
-            </span>
-          </Link>
-        )}
+        <div className="flex items-start justify-between gap-1">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[#F5F7F2] font-bold text-sm line-clamp-2 leading-tight">
+              {clip.title}
+            </h3>
+            <Link href={`/profile/${clip.user.username}`} onClick={(e) => e.stopPropagation()}>
+              <p className="text-[#B8C0AE] text-xs mt-0.5 hover:text-[#F5F7F2] transition-colors">
+                @{clip.user.username}
+              </p>
+            </Link>
+            {clip.game?.name && (
+              <Link
+                href={`/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, "")}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span
+                  className="inline-block mt-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded hover:opacity-90 transition-opacity"
+                  style={{ background: "#B7FF1A", color: "#03080A" }}
+                >
+                  {clip.game.name}
+                </span>
+              </Link>
+            )}
+          </div>
+          <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} className="flex-shrink-0 -mt-0.5">
+            <TrendingClipMenu clip={clip} />
+          </div>
+        </div>
       </div>
     </div>
   );

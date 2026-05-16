@@ -104,18 +104,13 @@ const LatestClipsPage = () => {
       ) : filteredClips.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 w-full">
           {filteredClips.map((clip) => (
-            <div
+            <VideoClipGridItem
               key={clip.id}
-              onClick={() => openClipDialog(clip.id, filteredClips)}
-              className="cursor-pointer"
-            >
-              <VideoClipGridItem
-                clip={clip}
-                userId={user?.id}
-                compact={false}
-                clipsList={filteredClips}
-              />
-            </div>
+              clip={clip}
+              userId={user?.id}
+              compact={false}
+              clipsList={filteredClips}
+            />
           ))}
         </div>
       ) : clipsData && clipsData.length > 0 ? (

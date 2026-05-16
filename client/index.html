@@ -8,6 +8,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Plus+Jakarta+Sans:wght@500;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
     <script>
+      window.__nativeReplaceState = window.history.replaceState.bind(window.history);
+    </script>
+    <script>
       window.addEventListener('unhandledrejection', function(event) {
         var error = event.reason;
         var errorMessage = (error && error.message) || error || '';

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
+import { silentReplaceState } from "@/lib/native-history";
 import { createPortal } from "react-dom";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
@@ -52,16 +53,16 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
     const username = screenshot.user?.username;
     const shareCode = screenshot.shareCode;
     if (username && shareCode) {
-      window.history.replaceState(null, '', `/@${username}/screenshot/${shareCode}`);
+      silentReplaceState(`/@${username}/screenshot/${shareCode}`);
     } else if (username && screenshot.id) {
-      window.history.replaceState(null, '', `/@${username}/screenshot/${screenshot.id}`);
+      silentReplaceState(`/@${username}/screenshot/${screenshot.id}`);
     }
     return () => {};
   }, [screenshot?.id]);
 
   const handleClose = useCallback(() => {
     if (previousUrlRef.current !== null) {
-      window.history.replaceState(null, '', previousUrlRef.current);
+      silentReplaceState(previousUrlRef.current);
       previousUrlRef.current = null;
     }
     onClose();
@@ -508,7 +509,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
       <DialogPortal>
         <DialogOverlay />
         <DialogPrimitive.Content
-          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] max-w-[80%] w-[80%] p-0 bg-background text-foreground max-h-[76vh] h-[76vh] overflow-hidden rounded-lg border shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]"
+          className="fixed left-[50%] top-[50%] z-[10000] translate-x-[-50%] translate-y-[-50%] max-w-[80%] w-[80%] p-0 bg-background text-foreground max-h-[76vh] h-[76vh] overflow-hidden rounded-lg border shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]"
         >
           <DialogPrimitive.Close className="absolute right-3 top-3 z-[100] w-8 h-8 flex items-center justify-center rounded-lg bg-black/40 hover:bg-black/60 text-white opacity-100 transition-colors">
             <X className="h-4 w-4" />

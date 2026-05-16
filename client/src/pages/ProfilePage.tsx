@@ -2917,6 +2917,7 @@ const ProfilePage = () => {
             {/* Stats card container */}
             <div
               className="relative mt-4 rounded-lg transition-all duration-300"
+              style={{ width: '100%', maxWidth: '600px' }}
             >
 
             <div 
@@ -2954,9 +2955,8 @@ const ProfilePage = () => {
                 border: '1px solid #c27aff55',
                 boxShadow: '0 0 20px #c27aff22, 0 0 40px #c27aff11',
               } : {
-                background: `${accentColor}14`,
-                border: `1px solid rgba(183, 255, 26, 0.25)`,
-                boxShadow: `0 0 18px rgba(183, 255, 26, 0.08)`,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.1)',
               }}
             >
               <div className="p-4">
@@ -3341,9 +3341,8 @@ const ProfilePage = () => {
                   background: '#e8d5b7',
                   border: '1px solid #c4a88266',
                 } : {
-                  background: `${accentColor}14`,
-                  border: `1px solid rgba(183, 255, 26, 0.25)`,
-                  boxShadow: `0 0 18px rgba(183, 255, 26, 0.08)`,
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                 }}
               >
                 <div className="p-5">

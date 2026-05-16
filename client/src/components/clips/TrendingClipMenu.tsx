@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
@@ -8,7 +8,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import {
   MoreHorizontal,
-  Flag,
   Ban,
   Pencil,
   Trash2,
@@ -37,7 +36,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ReportDialog } from "@/components/content/ReportDialog";
 
 interface TrendingClipMenuProps {
   clip: ClipWithUser;
@@ -82,15 +80,13 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
-  const { openClipDialog } = useClipDialog();
+  const { openClipDialog, closeClipDialog } = useClipDialog();
 
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
-  const [reportPending, setReportPending] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const reportTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -98,13 +94,6 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
-
-  useEffect(() => {
-    if (reportPending && reportTriggerRef.current) {
-      reportTriggerRef.current.click();
-      setReportPending(false);
-    }
-  }, [reportPending]);
 
   const isOwn = user?.id === clip.userId;
 
@@ -208,18 +197,12 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
 
   const otherUserMenu = (
     <>
-      <ReportDialog
-        contentType="clip"
-        contentId={clip.id}
-        contentTitle={clip.title}
-        contentAuthor={clip.user.username}
-        trigger={<button ref={reportTriggerRef} className="sr-only" tabIndex={-1} aria-hidden />}
-      />
       <MenuItem
         icon={<User className="h-4 w-4" />}
         label="View Gamefolio"
         onClick={() => {
           close();
+          closeClipDialog();
           navigate(`/profile/${clip.user.username}`);
         }}
       />
@@ -237,14 +220,6 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
         onClick={handleDownload}
       />
       <MenuDivider />
-      <MenuItem
-        icon={<Flag className="h-4 w-4 text-red-400" style={{ stroke: '#f87171', fill: 'none' }} />}
-        label="Report Clip"
-        onClick={() => {
-          close();
-          setReportPending(true);
-        }}
-      />
       <MenuItem
         icon={<Ban className="h-4 w-4" />}
         label="Block User"
@@ -294,7 +269,8 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
 
   const menuLabel = isOwn ? "Creator tools" : "Clip options";
 
-  const triggerBtn = (
+  // Mobile: manually toggles the Sheet (no SheetTrigger wrapper)
+  const mobileTriggerBtn = (
     <button
       onClick={(e) => {
         e.preventDefault();
@@ -308,11 +284,30 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
     </button>
   );
 
+  // Desktop: only stops propagation — Radix Popover owns the toggle via onOpenChange.
+  // CRITICAL: Do NOT call e.preventDefault() here. Radix's PopoverTrigger uses
+  // composeEventHandlers which checks `event.defaultPrevented` and SKIPS its own
+  // click handler when true — meaning the popover would never toggle open.
+  // We only stopPropagation so the parent card's onClick (which opens the clip
+  // dialog) doesn't fire when the user clicks the 3-dot button.
+  const desktopTriggerBtn = (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+      }}
+      className="p-1.5 rounded-full hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground focus:outline-none"
+      aria-label="More options"
+    >
+      <MoreHorizontal className="h-4 w-4" />
+    </button>
+  );
+
   return (
     <>
       {isMobile ? (
         <>
-          {triggerBtn}
+          {mobileTriggerBtn}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetContent
               side="bottom"
@@ -333,7 +328,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
         </>
       ) : (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
-          <PopoverTrigger asChild>{triggerBtn}</PopoverTrigger>
+          <PopoverTrigger asChild>{desktopTriggerBtn}</PopoverTrigger>
           <PopoverContent
             align="end"
             sideOffset={6}

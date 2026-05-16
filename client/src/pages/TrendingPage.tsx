@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLikeScreenshot } from '@/hooks/use-clips';
 import { useToast } from '@/hooks/use-toast';
 import { ClipWithUser } from '@shared/schema';
-import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Heart, Play, MessageCircle, AlertTriangle, Film, Video, Camera, ChevronDown, Check, Search, ArrowLeft, Bookmark, BarChart2, BadgeCheck, Repeat2 } from 'lucide-react';
+import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Heart, Play, MessageCircle, AlertTriangle, Film, Video, Camera, ChevronDown, ChevronUp, Check, Search, ArrowLeft, Bookmark, BarChart2, BadgeCheck, Repeat2 } from 'lucide-react';
 import { TrendingClipMenu } from '@/components/clips/TrendingClipMenu';
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { PartnerBadge } from '@/components/ui/partner-badge';
@@ -528,12 +528,17 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void; v
 };
 
 // Reel card component - TikTok/YouTube Shorts style
-const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({ reel, reelsList }) => {
+const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[]; onOpenViewer?: (index: number) => void }> = ({ reel, reelsList, onOpenViewer }) => {
   const { openClipDialog } = useClipDialog();
 
   const handleReelClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    openClipDialog(reel.id, reelsList); // Enable fullscreen mode for reels
+    if (onOpenViewer) {
+      const index = reelsList.findIndex(r => r.id === reel.id);
+      onOpenViewer(index >= 0 ? index : 0);
+    } else {
+      openClipDialog(reel.id, reelsList);
+    }
   };
 
   const formatNumber = (num: number) => {
@@ -621,6 +626,494 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
   );
 };
 
+// ── Desktop YouTube Shorts-style viewer ─────────────────────────────────────
+const DesktopShortsViewer: React.FC<{
+  clips: ClipWithUser[];
+  initialIndex: number;
+  onClose: () => void;
+  onOpenGameFilter: () => void;
+  selectedGameId: number | null;
+  selectedGameName: string | null;
+  isLandscape?: boolean;
+}> = ({ clips, initialIndex, onClose, onOpenGameFilter, selectedGameId, selectedGameName, isLandscape = false }) => {
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [showComments, setShowComments] = useState(false);
+  const wheelCooldown = useRef(false);
+  const wheelAccum = useRef(0);
+  const wheelIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { user } = useAuth();
+
+  const clip = clips[currentIndex];
+
+  const goNext = useCallback(() => {
+    setCurrentIndex(i => Math.min(i + 1, clips.length - 1));
+  }, [clips.length]);
+
+  const goPrev = useCallback(() => {
+    setCurrentIndex(i => Math.max(i - 1, 0));
+  }, []);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); goNext(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); goPrev(); }
+      else if (e.key === 'Escape') { onClose(); }
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+
+      // Reset accumulated delta after scroll gesture goes idle (150 ms of silence)
+      if (wheelIdleTimer.current) clearTimeout(wheelIdleTimer.current);
+      wheelIdleTimer.current = setTimeout(() => { wheelAccum.current = 0; }, 150);
+
+      if (wheelCooldown.current) return;
+
+      // Accumulate delta — Mac trackpads send many small events; mice send one large one
+      wheelAccum.current += e.deltaY + e.deltaX;
+
+      const THRESHOLD = 80; // px accumulated before triggering navigation
+
+      if (wheelAccum.current > THRESHOLD) {
+        wheelAccum.current = 0;
+        wheelCooldown.current = true;
+        goNext();
+        setTimeout(() => { wheelCooldown.current = false; }, 700);
+      } else if (wheelAccum.current < -THRESHOLD) {
+        wheelAccum.current = 0;
+        wheelCooldown.current = true;
+        goPrev();
+        setTimeout(() => { wheelCooldown.current = false; }, 700);
+      }
+    };
+
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('wheel', handleWheel);
+      if (wheelIdleTimer.current) clearTimeout(wheelIdleTimer.current);
+    };
+  }, [goNext, goPrev, onClose]);
+
+  const fmt = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    return String(n);
+  };
+
+  if (!clip) return null;
+
+  const likes = (clip as any)._count?.likes || 0;
+  const fires = (clip as any)._count?.fires || (clip as any)._count?.reactions || 0;
+  const comments = (clip as any)._count?.comments || 0;
+  const views = clip.views || 0;
+  const gameSlug = clip.game?.name?.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  return (
+    <div
+      className="fixed top-0 right-0 bottom-0 z-[45] flex flex-col lg:left-64 left-0"
+      style={{ background: 'rgba(3, 8, 10, 0.98)' }}
+    >
+      {/* Top bar — sits below the app header (header is z-50, we are z-45) */}
+      {/* We use pt-16 to clear the sticky header (~64px tall) */}
+      <div className="flex items-center justify-between px-5 pt-[68px] pb-2 flex-shrink-0">
+        <button
+          onClick={onClose}
+          className="flex items-center gap-2 group"
+          aria-label="Back"
+        >
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center transition-colors group-hover:bg-white/10"
+            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
+          >
+            <ArrowLeft className="h-4 w-4 text-white" />
+          </div>
+          <span className="text-white/40 text-sm font-medium group-hover:text-white/70 transition-colors">Back</span>
+        </button>
+        <span className="text-white/35 text-sm font-mono select-none">
+          {currentIndex + 1} / {clips.length}
+        </span>
+      </div>
+
+      {/* Main area — fills remaining height */}
+      <div className={`flex-1 relative min-h-0 overflow-hidden flex ${isLandscape ? 'flex-col items-center justify-center gap-0' : 'items-center justify-center'}`}>
+
+      {/* ── Comment panel — slides in from the left ── */}
+      <div
+        className="absolute left-0 top-0 bottom-0 z-30 flex flex-col"
+        style={{
+          width: '360px',
+          background: '#0B1218',
+          borderRight: '1px solid rgba(255,255,255,0.07)',
+          transform: showComments ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1)',
+          boxShadow: showComments ? '4px 0 24px rgba(0,0,0,0.5)' : 'none',
+        }}
+      >
+        <div
+          className="flex items-center justify-between px-4 pb-3 flex-shrink-0"
+          style={{ paddingTop: '16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5" style={{ color: '#B7FF1A' }} />
+            <span className="text-white font-bold text-base">Comments</span>
+          </div>
+          <button
+            onClick={() => setShowComments(false)}
+            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+            aria-label="Close comments"
+          >
+            <X className="h-4 w-4 text-white/60" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          {showComments && (
+            <CommentSection clipId={clip.id} currentUserId={user?.id ?? null} />
+          )}
+        </div>
+      </div>
+
+      {isLandscape ? (
+        /* ── LANDSCAPE layout: video stacked above engagement row ── */
+        <>
+          {/* Up/Down nav arrows — right edge, vertically centred */}
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-3">
+            <button
+              onClick={goPrev}
+              disabled={currentIndex === 0}
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
+              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              aria-label="Previous"
+            >
+              <ChevronUp className="h-6 w-6 text-white" />
+            </button>
+            <button
+              onClick={goNext}
+              disabled={currentIndex === clips.length - 1}
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
+              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              aria-label="Next"
+            >
+              <ChevronDown className="h-6 w-6 text-white" />
+            </button>
+          </div>
+
+          {/* Video — 16:9, constrained by both width and height */}
+          <div className="flex-1 flex items-center justify-center w-full min-h-0 px-16 pt-2">
+            <div
+              className="relative rounded-2xl overflow-hidden bg-black shadow-2xl w-full"
+              style={{ aspectRatio: '16/9', maxHeight: '100%' }}
+            >
+              <VideoPlayer
+                key={clip.id}
+                videoUrl={clip.videoUrl || ''}
+                thumbnailUrl={clip.thumbnailUrl || undefined}
+                autoPlay={true}
+                disableAspectRatio={true}
+                objectFit="contain"
+                transparentBg={true}
+                autoHideControls={true}
+                className="w-full h-full"
+                clipId={clip.id}
+              />
+            </div>
+          </div>
+
+          {/* Creator info — below the video, left-aligned */}
+          <div className="flex items-center gap-3 flex-shrink-0 px-16 pt-2 pb-1">
+            <div
+              className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border-2"
+              style={{ borderColor: 'rgba(183,255,26,0.5)' }}
+            >
+              {clip.user.avatarUrl ? (
+                <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
+                  <UserIcon className="h-4 w-4 text-white/60" />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
+                  <span className="text-white font-semibold text-sm hover:text-[#B7FF1A] transition-colors">
+                    {clip.user.displayName || clip.user.username}
+                  </span>
+                </Link>
+                <span className="text-white/45 text-xs">@{clip.user.username}</span>
+                {clip.game && (
+                  <Link
+                    href={`/games/${gameSlug}`}
+                    className="inline-block text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
+                    style={{ background: '#B7FF1A' }}
+                    onClick={onClose}
+                  >
+                    {clip.game.name}
+                  </Link>
+                )}
+              </div>
+              {clip.title && (
+                <p className="text-white/55 text-xs mt-0.5 line-clamp-1">{clip.title}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Horizontal engagement row */}
+          <div
+            className="flex items-center gap-5 flex-shrink-0 px-4"
+            style={{ paddingTop: '6px', paddingBottom: '14px' }}
+          >
+            <LikeButton
+              contentId={clip.id}
+              contentType="clip"
+              contentOwnerId={clip.user.id}
+              initialLiked={(clip as any).isLiked ?? false}
+              initialCount={likes}
+              size="sm"
+              variant="horizontal"
+              showCount={true}
+            />
+            <FireButton
+              contentId={clip.id}
+              contentType="clip"
+              contentOwnerId={clip.user.id}
+              initialFired={(clip as any).isFired ?? false}
+              initialCount={fires}
+              size="sm"
+              variant="horizontal"
+              showCount={true}
+            />
+            {/* Comments toggle */}
+            <button
+              className="flex items-center gap-2 group"
+              onClick={() => setShowComments(v => !v)}
+              aria-label="Toggle comments"
+            >
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+                style={showComments
+                  ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
+                  : { background: '#0B1218', border: '1px solid #1B2A33' }
+                }
+              >
+                <MessageCircle className="h-4 w-4" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+              </div>
+              <span className="text-sm font-medium" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }}>
+                {fmt(comments)}
+              </span>
+            </button>
+            {/* Views */}
+            <div className="flex items-center gap-2">
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center"
+                style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              >
+                <BarChart2 className="h-4 w-4 text-white/70" />
+              </div>
+              <span className="text-sm font-medium text-white/50">{fmt(views)}</span>
+            </div>
+            {/* 3-dot menu */}
+            <div onClick={(e) => e.stopPropagation()}>
+              <TrendingClipMenu clip={clip} />
+            </div>
+            {/* Game filter */}
+            <button
+              onClick={onOpenGameFilter}
+              className="flex items-center gap-2 group"
+              aria-label="Filter by game"
+            >
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+                style={selectedGameId
+                  ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
+                  : { background: '#0B1218', border: '1px solid #1B2A33' }
+                }
+              >
+                <Gamepad2 className="h-4 w-4" style={{ color: selectedGameId ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+              </div>
+              <span className="text-sm font-medium" style={{ color: selectedGameId ? '#B7FF1A' : 'rgba(255,255,255,0.4)' }}>
+                {selectedGameId ? selectedGameName : 'Games'}
+              </span>
+            </button>
+          </div>
+        </>
+      ) : (
+        /* ── PORTRAIT layout (Reels): video + right engagement column ── */
+        <>
+          {/* ── Centred group: video + engagement column ── */}
+          <div className="flex items-end gap-4" style={{ height: '100%', paddingBottom: '28px' }}>
+
+            {/* Video container — 9:16, height fills available space */}
+            <div
+              className="relative rounded-2xl overflow-hidden bg-black shadow-2xl flex-shrink-0"
+              style={{ height: '100%', aspectRatio: '9/16' }}
+            >
+              <VideoPlayer
+                key={clip.id}
+                videoUrl={clip.videoUrl || ''}
+                thumbnailUrl={clip.thumbnailUrl || undefined}
+                autoPlay={true}
+                disableAspectRatio={true}
+                objectFit="contain"
+                transparentBg={true}
+                autoHideControls={true}
+                className="w-full h-full"
+                clipId={clip.id}
+              />
+
+              {/* Bottom gradient */}
+              <div
+                className="absolute bottom-0 left-0 right-0 h-56 pointer-events-none"
+                style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.93) 0%, rgba(0,0,0,0.5) 50%, transparent 100%)' }}
+              />
+
+              {/* Creator / title / game */}
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div
+                    className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border-2"
+                    style={{ borderColor: 'rgba(183,255,26,0.4)' }}
+                  >
+                    {clip.user.avatarUrl ? (
+                      <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
+                        <UserIcon className="h-4 w-4 text-white/60" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
+                      <p className="text-white font-semibold text-sm leading-tight hover:text-[#B7FF1A] transition-colors">
+                        {clip.user.displayName || clip.user.username}
+                      </p>
+                    </Link>
+                    <p className="text-white/50 text-xs">@{clip.user.username}</p>
+                  </div>
+                </div>
+                {clip.title && (
+                  <p className="text-white text-sm font-medium mb-2 drop-shadow line-clamp-2">{clip.title}</p>
+                )}
+                {clip.game && (
+                  <Link
+                    href={`/games/${gameSlug}`}
+                    className="inline-block text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
+                    style={{ background: '#B7FF1A' }}
+                    onClick={onClose}
+                  >
+                    {clip.game.name}
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            {/* ── Right engagement column ── */}
+            <div className="flex flex-col items-center gap-4 pb-4 flex-shrink-0">
+              <LikeButton
+                contentId={clip.id}
+                contentType="clip"
+                contentOwnerId={clip.user.id}
+                initialLiked={(clip as any).isLiked ?? false}
+                initialCount={likes}
+                size="sm"
+                variant="vertical"
+                showCount={true}
+              />
+              <FireButton
+                contentId={clip.id}
+                contentType="clip"
+                contentOwnerId={clip.user.id}
+                initialFired={(clip as any).isFired ?? false}
+                initialCount={fires}
+                size="sm"
+                variant="vertical"
+                showCount={true}
+              />
+              <button
+                className="flex flex-col items-center gap-1 group"
+                onClick={() => setShowComments(v => !v)}
+                aria-label="Toggle comments"
+              >
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+                  style={showComments
+                    ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
+                    : { background: '#0B1218', border: '1px solid #1B2A33' }
+                  }
+                >
+                  <MessageCircle className="h-5 w-5" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+                </div>
+                <span className="text-[11px] font-medium" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }}>
+                  {fmt(comments)}
+                </span>
+              </button>
+              <div className="flex flex-col items-center gap-1">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+                >
+                  <BarChart2 className="h-5 w-5 text-white/70" />
+                </div>
+                <span className="text-white/50 text-[11px] font-medium">{fmt(views)}</span>
+              </div>
+              <div onClick={(e) => e.stopPropagation()}>
+                <TrendingClipMenu clip={clip} />
+              </div>
+              <button
+                onClick={onOpenGameFilter}
+                className="flex flex-col items-center gap-1 group"
+                aria-label="Filter by game"
+              >
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+                  style={selectedGameId
+                    ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
+                    : { background: '#0B1218', border: '1px solid #1B2A33' }
+                  }
+                >
+                  <Gamepad2 className="h-5 w-5" style={{ color: selectedGameId ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+                </div>
+                {selectedGameId ? (
+                  <span className="text-[11px] font-medium max-w-[52px] truncate text-center leading-tight" style={{ color: '#B7FF1A' }}>
+                    {selectedGameName}
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-medium text-white/40">Games</span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* ── Portrait nav arrows — right edge, vertically centred ── */}
+          <div className="absolute right-6 top-1/2 -translate-y-1/2 flex flex-col items-center gap-3 z-20">
+            <button
+              onClick={goPrev}
+              disabled={currentIndex === 0}
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
+              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              aria-label="Previous"
+            >
+              <ChevronUp className="h-6 w-6 text-white" />
+            </button>
+            <button
+              onClick={goNext}
+              disabled={currentIndex === clips.length - 1}
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
+              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              aria-label="Next"
+            >
+              <ChevronDown className="h-6 w-6 text-white" />
+            </button>
+          </div>
+        </>
+      )}
+
+      </div>
+    </div>
+  );
+};
+
 const TrendingPage: React.FC = () => {
   const { user } = useAuth();
   const isMobile = useMobile();
@@ -652,6 +1145,10 @@ const TrendingPage: React.FC = () => {
   const [screenshotsScrollStart, setScreenshotsScrollStart] = useState(0);
   const [screenshotsTouchStart, setScreenshotsTouchStart] = useState(0);
   const [screenshotsTouchScrollStart, setScreenshotsTouchScrollStart] = useState(0);
+  const [desktopShortsOpen, setDesktopShortsOpen] = useState(false);
+  const [desktopShortsIndex, setDesktopShortsIndex] = useState(0);
+  const [desktopShortsClips, setDesktopShortsClips] = useState<ClipWithUser[]>([]);
+  const [desktopShortsLandscape, setDesktopShortsLandscape] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -1050,7 +1547,7 @@ const TrendingPage: React.FC = () => {
         );
       }
 
-      // Desktop: 1 row with 4 columns filling the page
+      // Desktop: 1 row with 4 columns filling the page — clicking opens the Shorts viewer
       return (
         <div className="grid grid-cols-4 gap-4 w-full">
           {trendingReels.slice(0, 4).map((reel) => (
@@ -1058,6 +1555,11 @@ const TrendingPage: React.FC = () => {
               key={reel.id}
               reel={reel}
               reelsList={trendingReels}
+              onOpenViewer={(index) => {
+                setDesktopShortsClips(trendingReels);
+                setDesktopShortsIndex(index);
+                setDesktopShortsOpen(true);
+              }}
             />
           ))}
         </div>
@@ -1076,13 +1578,20 @@ const TrendingPage: React.FC = () => {
     }
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-20">
         {trendingClips.map((clip) => (
           <VideoClipGridItem
             key={clip.id}
             clip={clip}
             userId={user?.id}
             clipsList={trendingClips}
+            onCardClick={(clipId, clips) => {
+              const idx = clips.findIndex(c => c.id === clipId);
+              setDesktopShortsLandscape(true);
+              setDesktopShortsClips(clips);
+              setDesktopShortsIndex(idx >= 0 ? idx : 0);
+              setDesktopShortsOpen(true);
+            }}
           />
         ))}
       </div>
@@ -1615,6 +2124,19 @@ const TrendingPage: React.FC = () => {
             }
           }}
           contentType="screenshot"
+        />
+      )}
+
+      {/* Desktop Shorts-style viewer — clips & reels */}
+      {desktopShortsOpen && !isMobile && desktopShortsClips.length > 0 && (
+        <DesktopShortsViewer
+          clips={desktopShortsClips}
+          initialIndex={desktopShortsIndex}
+          onClose={() => setDesktopShortsOpen(false)}
+          onOpenGameFilter={() => setShowGameFilter(true)}
+          selectedGameId={selectedGameId}
+          selectedGameName={selectedGameName}
+          isLandscape={desktopShortsLandscape}
         />
       )}
 

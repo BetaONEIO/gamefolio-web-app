@@ -3,6 +3,7 @@ import { ClipDialog } from '@/components/clips/ClipDialog';
 import { FullscreenReelsViewer } from '@/components/clips/FullscreenReelsViewer';
 import { useQuery } from '@tanstack/react-query';
 import { ClipWithUser } from '@shared/schema';
+import { silentReplaceState } from '@/lib/native-history';
 
 interface ClipDialogContextType {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   const [clipsList, setClipsList] = useState<ClipWithUser[] | null>(null);
   const [viewAllHref, setViewAllHref] = useState<string | undefined>(undefined);
   const previousUrlRef = useRef<string | null>(null);
+  const closeTimestampRef = useRef<number>(0);
 
   const buildClipUrl = (clip: ClipWithUser) => {
     const username = clip.user?.username;
@@ -42,6 +44,8 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   };
 
   const openClipDialog = (id: number, providedClipsList?: ClipWithUser[], href?: string) => {
+    // Block ghost clicks that arrive within 250ms of the dialog closing
+    if (Date.now() - closeTimestampRef.current < 250) return;
     previousUrlRef.current = window.location.pathname + window.location.search + window.location.hash;
     setClipId(id);
     setClipsList(providedClipsList || null);
@@ -49,16 +53,13 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
     setIsOpen(true);
     // If the clip is in the provided list we can build the pretty URL right away
     const matchingClip = providedClipsList?.find(c => c.id === id);
-    if (matchingClip) {
-      window.history.replaceState(null, '', buildClipUrl(matchingClip));
-    } else {
-      window.history.replaceState(null, '', `/clip/${id}`);
-    }
+    silentReplaceState(matchingClip ? buildClipUrl(matchingClip) : `/clip/${id}`);
   };
 
   const closeClipDialog = () => {
+    closeTimestampRef.current = Date.now();
     if (previousUrlRef.current) {
-      window.history.replaceState(null, '', previousUrlRef.current);
+      silentReplaceState(previousUrlRef.current);
       previousUrlRef.current = null;
     }
     setIsOpen(false);
@@ -94,7 +95,7 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   // Once currentClip data loads, refine the URL to the pretty /@username/type/shareCode format
   useEffect(() => {
     if (!isOpen || !clipId || !currentClip) return;
-    window.history.replaceState(null, '', buildClipUrl(currentClip));
+    silentReplaceState(buildClipUrl(currentClip));
   }, [isOpen, clipId, currentClip?.shareCode, currentClip?.videoType]);
 
   const showFullscreenReelsViewer = isReel && isMobile && isOpen && clipsList && clipsList.length > 0;
@@ -104,7 +105,7 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
     const nextIndex = (currentIndex + 1) % clipsList.length;
     const nextClip = clipsList[nextIndex];
     setClipId(nextClip.id);
-    window.history.replaceState(null, '', buildClipUrl(nextClip));
+    silentReplaceState(buildClipUrl(nextClip));
   };
 
   const handlePrevious = () => {
@@ -112,7 +113,7 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
     const prevIndex = currentIndex === 0 ? clipsList.length - 1 : currentIndex - 1;
     const prevClip = clipsList[prevIndex];
     setClipId(prevClip.id);
-    window.history.replaceState(null, '', buildClipUrl(prevClip));
+    silentReplaceState(buildClipUrl(prevClip));
   };
 
   return (

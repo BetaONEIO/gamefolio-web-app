@@ -255,6 +255,12 @@ video:focus {
   contain: layout style paint;
 }
 
+/* Ensure Radix popper (Popover, Tooltip, Select, etc.) always renders above
+   hardware-accelerated video compositing layers and other stacking contexts. */
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important;
+}
+
 /* Apply Gamefolio theme globally to all modals and dialogs */
 [data-radix-popper-content-wrapper],
 [role="dialog"],
