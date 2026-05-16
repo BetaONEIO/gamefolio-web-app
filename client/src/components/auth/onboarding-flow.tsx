@@ -1248,7 +1248,7 @@ export default function OnboardingFlow({
                     onClick={() => toggleUserType(type.id)}
                     className={`relative p-3 sm:p-4 rounded-lg border-2 transition-all text-left select-none ${
                       isSelected
-                        ? "border-primary bg-primary/25 shadow-lg shadow-primary/20 cursor-pointer active:scale-[0.97]"
+                        ? "border-primary bg-[#051a08] shadow-lg shadow-primary/20 cursor-pointer active:scale-[0.97]"
                         : isLocked
                           ? "border-[#2a3a2a] bg-[#0d1f12]/60 cursor-not-allowed opacity-40"
                           : "border-[#2a3a2a] bg-[#0d1f12] hover:border-primary/40 hover:bg-primary/5 cursor-pointer active:scale-[0.97]"
