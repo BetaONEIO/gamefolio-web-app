@@ -45,9 +45,17 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const [showAgeRestrictionDialog, setShowAgeRestrictionDialog] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
   const isAcceptingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const { user } = useAuth();
   const { toast } = useToast();
   const { isOpen: isJoinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
@@ -287,9 +295,9 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           <div className="absolute inset-0 z-[3] pointer-events-none">
 
             {/* Right side engagement buttons — hidden when comments open, hidden on desktop (moved to right panel) */}
-            {!showComments && (
+            {!showComments && !isDesktop && (
               <div
-                className="absolute right-3 flex flex-col items-center gap-3 pointer-events-auto lg:hidden"
+                className="absolute right-3 flex flex-col items-center gap-3 pointer-events-auto"
                 style={{ bottom: 24 }}
                 onClick={e => e.stopPropagation()}
               >
@@ -348,8 +356,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             )}
 
             {/* Bottom gradient overlay — hidden when comments open, hidden on desktop (moved to right panel) */}
-            {!showComments && (
-              <div className="absolute bottom-0 left-0 right-0 z-[3] px-4 pb-8 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none lg:hidden">
+            {!showComments && !isDesktop && (
+              <div className="absolute bottom-0 left-0 right-0 z-[3] px-4 pb-8 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none">
                 <div className="pr-14">
                   {/* User row */}
                   <div className="flex items-center gap-2 mb-1.5">
@@ -417,10 +425,10 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         )}
       </div>
 
-      {/* ── Desktop right panel — hidden on mobile ── */}
-      {currentReel && (
+      {/* ── Desktop right panel — shown only on desktop ── */}
+      {currentReel && isDesktop && (
         <div
-          className="hidden lg:flex flex-col justify-between w-[340px] flex-shrink-0 h-full border-l border-white/10"
+          className="flex flex-col justify-between w-[340px] flex-shrink-0 h-full border-l border-white/10"
           style={{ background: '#0a0f14', paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
           onClick={e => e.stopPropagation()}
         >
