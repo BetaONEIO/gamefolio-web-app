@@ -1258,11 +1258,11 @@ export default function OnboardingFlow({
                       <div className={`p-2.5 rounded-full ${
                         isSelected
                           ? "bg-primary/20 text-primary"
-                          : "bg-[#1e3a24] text-gray-400"
+                          : "bg-[#1e3a24] text-gray-200"
                       }`}>
                         <IconComponent className="h-5 w-5" />
                       </div>
-                      <h3 className={`font-medium text-sm ${isSelected ? "text-white" : "text-gray-400"}`}>
+                      <h3 className={`font-medium text-sm ${isSelected ? "text-white" : "text-gray-200"}`}>
                         {type.label}
                       </h3>
                     </div>
