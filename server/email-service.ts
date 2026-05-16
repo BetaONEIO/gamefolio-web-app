@@ -565,4 +565,99 @@ export class EmailService {
       return false;
     }
   }
+
+  static async sendStreamerPartnerApplication(applicationData: {
+    username: string;
+    displayName: string;
+    email: string;
+    message: string;
+  }): Promise<boolean> {
+    const { username, displayName, email, message } = applicationData;
+    const partnerEmail = 'hello@gamefolio.com';
+    const applicationTime = new Date().toLocaleString();
+    const escapedMessage = (message || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Streamer Partner Application - Gamefolio</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { text-align: center; margin-bottom: 30px; background-color: #4C8; color: white; padding: 20px; border-radius: 8px; }
+            .logo { color: #ffffff; font-size: 24px; font-weight: bold; }
+            .content { background-color: #ffffff; padding: 30px; border-radius: 8px; border: 1px solid #ddd; }
+            .details { background-color: #f8f9fa; padding: 20px; border-radius: 6px; margin: 20px 0; }
+            .detail-row { padding: 8px 0; border-bottom: 1px solid #eee; }
+            .detail-row:last-child { border-bottom: none; }
+            .label { font-weight: bold; color: #555; display: inline-block; width: 140px; }
+            .value { color: #333; }
+            .message-box { background-color: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 6px; margin: 20px 0; white-space: pre-wrap; }
+            .button { display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin: 10px 5px; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">⭐ Streamer Partner Application</div>
+              <p style="margin: 10px 0 0 0;">Gamefolio Platform</p>
+            </div>
+            <div class="content">
+              <h1 style="color: #4C8;">New Streamer Partner Application</h1>
+              <p>A Gamefolio Pro member has applied to become an official Streamer Partner.</p>
+
+              <div class="details">
+                <h3>Applicant</h3>
+                <div class="detail-row">
+                  <span class="label">Username:</span>
+                  <span class="value">${username}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Display Name:</span>
+                  <span class="value">${displayName}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Email:</span>
+                  <span class="value">${email}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Applied At:</span>
+                  <span class="value">${applicationTime}</span>
+                </div>
+              </div>
+
+              <div class="message-box">
+                <h3 style="margin-top: 0; color: #856404;">Application Message</h3>
+                <p style="margin-bottom: 0;">${escapedMessage}</p>
+              </div>
+
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${SITE_URL}/${username}" class="button">View Profile</a>
+                <a href="${SITE_URL}/admin" class="button" style="background-color: #28a745;">Admin Panel</a>
+              </div>
+            </div>
+            <div class="footer">
+              <p>To approve, grant Partner status in the Admin Panel → Users.</p>
+              <p>Application received at ${applicationTime}</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    try {
+      return await sendEmail({
+        to: partnerEmail,
+        subject: `⭐ Streamer Partner Application: ${username} (${displayName})`,
+        html,
+      });
+    } catch (error) {
+      console.error('Failed to send streamer partner application:', error);
+      return false;
+    }
+  }
 }

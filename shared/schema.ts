@@ -116,6 +116,9 @@ export const users = pgTable("users", {
   // Gamefolio Pro subscription
   isPro: boolean("is_pro").default(false).notNull(), // Gamefolio Pro subscriber status
   isPartner: boolean("is_partner").default(false).notNull(), // Official Gamefolio Partner
+  partnerFeaturedStreamUrl: text("partner_featured_stream_url"), // Partner's featured stream link
+  partnerStreamerVisible: boolean("partner_streamer_visible").default(true).notNull(), // Show on public /streamer page
+  partnerAppliedAt: timestamp("partner_applied_at"), // When the user submitted a Streamer Partner application
   proSubscriptionType: text("pro_subscription_type"), // "yearly", "monthly", etc.
   proSubscriptionStartDate: timestamp("pro_subscription_start_date"), // When subscription started
   proSubscriptionEndDate: timestamp("pro_subscription_end_date"), // When subscription expires

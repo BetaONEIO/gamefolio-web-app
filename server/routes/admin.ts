@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { storage } from "../storage";
 import { adminMiddleware } from "../middleware/admin";
+import { syncPartnerToMarketing, removePartnerFromMarketing } from "../marketing-sync";
 import { randomBytes } from "crypto";
 import { VideoProcessor } from '../video-processor';
 import path from 'path';
@@ -511,7 +512,16 @@ adminRouter.post("/users/:id/make-partner", async (req: Request, res: Response) 
       return res.status(404).json({ message: "User not found" });
     }
 
+    // Streamer Partner status requires an active Gamefolio Pro subscription.
+    if (!user.isPro) {
+      return res.status(400).json({ message: "User must have an active Gamefolio Pro subscription to become a Streamer Partner" });
+    }
+
     const updatedUser = await storage.updateUser(userId, { isPartner: true });
+    if (updatedUser) {
+      // Register the new partner on the marketing site's streamers directory.
+      void syncPartnerToMarketing(updatedUser);
+    }
     res.json(updatedUser);
   } catch (err) {
     console.error("Error granting partner status:", err);
@@ -530,6 +540,8 @@ adminRouter.post("/users/:id/remove-partner", async (req: Request, res: Response
     }
 
     const updatedUser = await storage.updateUser(userId, { isPartner: false });
+    // Remove the partner from the marketing site's streamers directory.
+    void removePartnerFromMarketing(userId);
     res.json(updatedUser);
   } catch (err) {
     console.error("Error removing partner status:", err);
