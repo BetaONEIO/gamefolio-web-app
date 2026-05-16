@@ -2275,7 +2275,7 @@ const ProfilePage = () => {
           .neo-canvas {
             position: fixed; inset: 0; pointer-events: none; z-index: 0;
             opacity: 0.18;
-            animation: neoFlicker 8s step-start infinite;
+            animation: neoFlicker 16s step-start infinite;
           }
           .neo-vignette {
             position: fixed; inset: 0; pointer-events: none; z-index: 0;
@@ -2284,16 +2284,16 @@ const ProfilePage = () => {
           .neo-scanline {
             position: fixed; left: 0; width: 100%; height: 2px; pointer-events: none; z-index: 0;
             background: linear-gradient(180deg, transparent 0%, #00ff4122 50%, transparent 100%);
-            animation: neoScanline 6s linear infinite;
+            animation: neoScanline 12s linear infinite;
           }
           .neo-stats-card {
-            animation: neoGlow 3s ease-in-out infinite;
+            animation: neoGlow 6s ease-in-out infinite;
           }
           .neo-tab-list {
             background: #000800 !important;
             border: 1px solid #00ff4177 !important;
             border-radius: 2px !important;
-            animation: neoGlow 3s ease-in-out infinite;
+            animation: neoGlow 6s ease-in-out infinite;
           }
           .neo-gradient-text {
             background: linear-gradient(90deg, #00ff41 0%, #88ffaa 50%, #00ff41 100%);
@@ -2301,7 +2301,7 @@ const ProfilePage = () => {
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            animation: neoTextShift 4s linear infinite;
+            animation: neoTextShift 8s linear infinite;
           }
           @keyframes neoTextShift {
             0%   { background-position: 0% center; }
