@@ -635,13 +635,37 @@ const DesktopShortsViewer: React.FC<{
   selectedGameId: number | null;
   selectedGameName: string | null;
   isLandscape?: boolean;
-}> = ({ clips, initialIndex, onClose, onOpenGameFilter, selectedGameId, selectedGameName, isLandscape = false }) => {
+  activeTab: ContentType;
+  onTabChange: (tab: ContentType) => void;
+  timePeriod: TimePeriod;
+  onTimePeriodChange: (p: TimePeriod) => void;
+}> = ({ clips, initialIndex, onClose, onOpenGameFilter, selectedGameId, selectedGameName, isLandscape = false, activeTab, onTabChange, timePeriod, onTimePeriodChange }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showComments, setShowComments] = useState(false);
+  const [showContentDropdown, setShowContentDropdown] = useState(false);
+  const [showTimeDropdown, setShowTimeDropdown] = useState(false);
   const wheelCooldown = useRef(false);
   const wheelAccum = useRef(0);
   const wheelIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { user } = useAuth();
+
+  const contentMeta: Record<ContentType, { label: string; Icon: React.ElementType }> = {
+    reels:       { label: 'Reels',       Icon: Film   },
+    clips:       { label: 'Clips',       Icon: Video  },
+    screenshots: { label: 'Screenshots', Icon: Camera },
+  };
+  const timeMeta: Record<TimePeriod, string> = {
+    recent: 'Most Recent',
+    '1w':   '1 Week',
+    '1m':   '1 Month',
+    ever:   'All Time',
+  };
+  const { label: activeLabel, Icon: ActiveIcon } = contentMeta[activeTab];
+  const pillBase = (active: boolean) => ({
+    background: active ? 'rgba(183,255,26,0.15)' : 'rgba(255,255,255,0.07)',
+    border: `1px solid ${active ? '#B7FF1A' : 'rgba(255,255,255,0.12)'}`,
+    color: active ? '#B7FF1A' : '#F5F7F2',
+  });
 
   const clip = clips[currentIndex];
 
@@ -717,10 +741,10 @@ const DesktopShortsViewer: React.FC<{
     >
       {/* Top bar — sits below the app header (header is z-50, we are z-45) */}
       {/* We use pt-16 to clear the sticky header (~64px tall) */}
-      <div className="flex items-center justify-between px-5 pt-[68px] pb-2 flex-shrink-0">
+      <div className="flex items-center justify-between px-5 pt-[68px] pb-2 flex-shrink-0 gap-3">
         <button
           onClick={onClose}
-          className="flex items-center gap-2 group"
+          className="flex items-center gap-2 group flex-shrink-0"
           aria-label="Back"
         >
           <div
@@ -731,7 +755,91 @@ const DesktopShortsViewer: React.FC<{
           </div>
           <span className="text-white/40 text-sm font-medium group-hover:text-white/70 transition-colors">Back</span>
         </button>
-        <span className="text-white/35 text-sm font-mono select-none">
+
+        {/* Filter controls */}
+        <div className="flex items-center gap-2 flex-1 justify-center" onClick={e => e.stopPropagation()}>
+          {/* Gamepad — game filter */}
+          <button
+            onClick={onOpenGameFilter}
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
+            style={pillBase(!!selectedGameId)}
+            title={selectedGameId ? selectedGameName || 'Game filter active' : 'Filter by game'}
+          >
+            <Gamepad2 className="h-5 w-5" />
+          </button>
+
+          {/* Clock — time period */}
+          <div className="relative">
+            <button
+              onClick={() => { setShowTimeDropdown(v => !v); setShowContentDropdown(false); }}
+              className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
+              style={pillBase(showTimeDropdown)}
+            >
+              <Clock className="h-5 w-5" />
+            </button>
+            {showTimeDropdown && (
+              <div
+                className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 rounded-xl overflow-hidden min-w-[148px] z-50"
+                style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
+              >
+                <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>Time Period</p>
+                {(Object.entries(timeMeta) as [TimePeriod, string][]).map(([period, label]) => (
+                  <button
+                    key={period}
+                    className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                    style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#94A3B8' }}
+                    onClick={() => { onTimePeriodChange(period); setShowTimeDropdown(false); }}
+                  >
+                    {label}
+                    {timePeriod === period && <Check className="h-3 w-3 ml-auto" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Content type pill */}
+          <div className="relative">
+            <button
+              onClick={() => { setShowContentDropdown(v => !v); setShowTimeDropdown(false); }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold transition-all hover:scale-105"
+              style={pillBase(showContentDropdown)}
+            >
+              <ActiveIcon className="h-4 w-4" />
+              {activeLabel}
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+            {showContentDropdown && (
+              <div
+                className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 rounded-xl overflow-hidden min-w-[155px] z-50"
+                style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
+              >
+                {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
+                  <button
+                    key={type}
+                    className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                    style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#94A3B8' }}
+                    onClick={() => { onTabChange(type); setShowContentDropdown(false); onClose(); }}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {label}
+                    {activeTab === type && <Check className="h-3 w-3 ml-auto" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Eye indicator — always green when viewer is open */}
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{ border: '2px solid #B7FF1A', background: 'rgba(183,255,26,0.1)' }}
+          >
+            <Eye className="h-5 w-5" style={{ color: '#B7FF1A' }} />
+          </div>
+        </div>
+
+        <span className="text-white/35 text-sm font-mono select-none flex-shrink-0">
           {currentIndex + 1} / {clips.length}
         </span>
       </div>
@@ -2137,6 +2245,10 @@ const TrendingPage: React.FC = () => {
           selectedGameId={selectedGameId}
           selectedGameName={selectedGameName}
           isLandscape={desktopShortsLandscape}
+          activeTab={activeTab}
+          onTabChange={(tab) => { setActiveTab(tab); setDesktopShortsOpen(false); }}
+          timePeriod={timePeriod}
+          onTimePeriodChange={setTimePeriod}
         />
       )}
 
