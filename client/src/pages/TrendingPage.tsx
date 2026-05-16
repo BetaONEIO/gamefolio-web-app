@@ -740,11 +740,10 @@ const DesktopShortsViewer: React.FC<{
       style={{ background: 'rgba(3, 8, 10, 0.98)' }}
     >
       {/* Top bar — sits below the app header (header is z-50, we are z-45) */}
-      {/* We use pt-16 to clear the sticky header (~64px tall) */}
-      <div className="flex items-center justify-between px-5 pt-[68px] pb-2 flex-shrink-0 gap-3">
+      <div className="flex items-center justify-between px-5 pt-[68px] pb-2 flex-shrink-0">
         <button
           onClick={onClose}
-          className="flex items-center gap-2 group flex-shrink-0"
+          className="flex items-center gap-2 group"
           aria-label="Back"
         >
           <div
@@ -755,91 +754,7 @@ const DesktopShortsViewer: React.FC<{
           </div>
           <span className="text-white/40 text-sm font-medium group-hover:text-white/70 transition-colors">Back</span>
         </button>
-
-        {/* Filter controls */}
-        <div className="flex items-center gap-2 flex-1 justify-center" onClick={e => e.stopPropagation()}>
-          {/* Gamepad — game filter */}
-          <button
-            onClick={onOpenGameFilter}
-            className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
-            style={pillBase(!!selectedGameId)}
-            title={selectedGameId ? selectedGameName || 'Game filter active' : 'Filter by game'}
-          >
-            <Gamepad2 className="h-5 w-5" />
-          </button>
-
-          {/* Clock — time period */}
-          <div className="relative">
-            <button
-              onClick={() => { setShowTimeDropdown(v => !v); setShowContentDropdown(false); }}
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
-              style={pillBase(showTimeDropdown)}
-            >
-              <Clock className="h-5 w-5" />
-            </button>
-            {showTimeDropdown && (
-              <div
-                className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 rounded-xl overflow-hidden min-w-[148px] z-50"
-                style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
-              >
-                <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>Time Period</p>
-                {(Object.entries(timeMeta) as [TimePeriod, string][]).map(([period, label]) => (
-                  <button
-                    key={period}
-                    className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                    style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#94A3B8' }}
-                    onClick={() => { onTimePeriodChange(period); setShowTimeDropdown(false); }}
-                  >
-                    {label}
-                    {timePeriod === period && <Check className="h-3 w-3 ml-auto" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Content type pill */}
-          <div className="relative">
-            <button
-              onClick={() => { setShowContentDropdown(v => !v); setShowTimeDropdown(false); }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold transition-all hover:scale-105"
-              style={pillBase(showContentDropdown)}
-            >
-              <ActiveIcon className="h-4 w-4" />
-              {activeLabel}
-              <ChevronDown className="h-3.5 w-3.5" />
-            </button>
-            {showContentDropdown && (
-              <div
-                className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 rounded-xl overflow-hidden min-w-[155px] z-50"
-                style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
-              >
-                {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
-                  <button
-                    key={type}
-                    className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                    style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#94A3B8' }}
-                    onClick={() => { onTabChange(type); setShowContentDropdown(false); onClose(); }}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {label}
-                    {activeTab === type && <Check className="h-3 w-3 ml-auto" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Eye indicator — always green when viewer is open */}
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-            style={{ border: '2px solid #B7FF1A', background: 'rgba(183,255,26,0.1)' }}
-          >
-            <Eye className="h-5 w-5" style={{ color: '#B7FF1A' }} />
-          </div>
-        </div>
-
-        <span className="text-white/35 text-sm font-mono select-none flex-shrink-0">
+        <span className="text-white/35 text-sm font-mono select-none">
           {currentIndex + 1} / {clips.length}
         </span>
       </div>
@@ -1047,10 +962,10 @@ const DesktopShortsViewer: React.FC<{
           </div>
         </>
       ) : (
-        /* ── PORTRAIT layout (Reels): video + right engagement column ── */
+        /* ── PORTRAIT layout (Reels): video + right panel ── */
         <>
-          {/* ── Centred group: video + engagement column ── */}
-          <div className="flex items-end gap-4" style={{ height: '100%', paddingBottom: '28px' }}>
+          {/* Outer row: video + right panel, centred vertically */}
+          <div className="flex items-stretch gap-0" style={{ height: '100%', paddingBottom: '16px', paddingLeft: '24px' }}>
 
             {/* Video container — 9:16, height fills available space */}
             <div
@@ -1069,44 +984,125 @@ const DesktopShortsViewer: React.FC<{
                 className="w-full h-full"
                 clipId={clip.id}
               />
+            </div>
 
-              {/* Bottom gradient */}
-              <div
-                className="absolute bottom-0 left-0 right-0 h-56 pointer-events-none"
-                style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.93) 0%, rgba(0,0,0,0.5) 50%, transparent 100%)' }}
-              />
+            {/* ── Right panel ── */}
+            <div
+              className="flex flex-col flex-shrink-0 overflow-y-auto"
+              style={{ width: '280px', background: '#0a0f14', borderLeft: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px', paddingBottom: '16px' }}
+            >
+              {/* Filter bar */}
+              <div className="flex items-center gap-2 px-4 pb-4 flex-wrap" onClick={e => e.stopPropagation()} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                {/* Gamepad */}
+                <button
+                  onClick={onOpenGameFilter}
+                  className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-105 flex-shrink-0"
+                  style={pillBase(!!selectedGameId)}
+                  title={selectedGameId ? selectedGameName || 'Game filter' : 'Filter by game'}
+                >
+                  <Gamepad2 className="h-4 w-4" />
+                </button>
 
-              {/* Creator / title / game */}
-              <div className="absolute bottom-0 left-0 right-0 p-4">
-                <div className="flex items-center gap-2.5 mb-2">
+                {/* Clock */}
+                <div className="relative flex-shrink-0">
+                  <button
+                    onClick={() => { setShowTimeDropdown(v => !v); setShowContentDropdown(false); }}
+                    className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-105"
+                    style={pillBase(showTimeDropdown)}
+                  >
+                    <Clock className="h-4 w-4" />
+                  </button>
+                  {showTimeDropdown && (
+                    <div
+                      className="absolute top-full mt-1.5 left-0 rounded-xl overflow-hidden min-w-[148px] z-50"
+                      style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
+                    >
+                      <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>Time Period</p>
+                      {(Object.entries(timeMeta) as [TimePeriod, string][]).map(([period, label]) => (
+                        <button
+                          key={period}
+                          className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                          style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#94A3B8' }}
+                          onClick={() => { onTimePeriodChange(period); setShowTimeDropdown(false); }}
+                        >
+                          {label}
+                          {timePeriod === period && <Check className="h-3 w-3 ml-auto" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Content type pill */}
+                <div className="relative flex-shrink-0">
+                  <button
+                    onClick={() => { setShowContentDropdown(v => !v); setShowTimeDropdown(false); }}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all hover:scale-105"
+                    style={pillBase(showContentDropdown)}
+                  >
+                    <ActiveIcon className="h-3.5 w-3.5" />
+                    {activeLabel}
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                  {showContentDropdown && (
+                    <div
+                      className="absolute top-full mt-1.5 left-0 rounded-xl overflow-hidden min-w-[155px] z-50"
+                      style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
+                    >
+                      {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
+                        <button
+                          key={type}
+                          className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                          style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#94A3B8' }}
+                          onClick={() => { onTabChange(type); setShowContentDropdown(false); onClose(); }}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                          {label}
+                          {activeTab === type && <Check className="h-3 w-3 ml-auto" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Eye — always active indicator */}
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ border: '2px solid #B7FF1A', background: 'rgba(183,255,26,0.1)' }}
+                >
+                  <Eye className="h-4 w-4" style={{ color: '#B7FF1A' }} />
+                </div>
+              </div>
+
+              {/* Profile section */}
+              <div className="flex flex-col items-center px-4 pt-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
                   <div
-                    className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border-2"
-                    style={{ borderColor: 'rgba(183,255,26,0.4)' }}
+                    className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 border-2 mb-3"
+                    style={{ borderColor: '#B7FF1A' }}
                   >
                     {clip.user.avatarUrl ? (
                       <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
-                        <UserIcon className="h-4 w-4 text-white/60" />
+                        <UserIcon className="h-7 w-7 text-white/60" />
                       </div>
                     )}
                   </div>
-                  <div>
-                    <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
-                      <p className="text-white font-semibold text-sm leading-tight hover:text-[#B7FF1A] transition-colors">
-                        {clip.user.displayName || clip.user.username}
-                      </p>
-                    </Link>
-                    <p className="text-white/50 text-xs">@{clip.user.username}</p>
-                  </div>
-                </div>
+                </Link>
+                <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
+                  <p className="text-white font-bold text-sm text-center hover:text-[#B7FF1A] transition-colors leading-tight">
+                    {clip.user.displayName || clip.user.username}
+                  </p>
+                </Link>
+                <p className="text-white/45 text-xs text-center mt-0.5 mb-3">@{clip.user.username}</p>
                 {clip.title && (
-                  <p className="text-white text-sm font-medium mb-2 drop-shadow line-clamp-2">{clip.title}</p>
+                  <p className="text-white/70 text-xs text-center line-clamp-3 mb-2 leading-relaxed">{clip.title}</p>
                 )}
                 {clip.game && (
                   <Link
                     href={`/games/${gameSlug}`}
-                    className="inline-block text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
+                    className="inline-block text-[#071013] text-[10px] px-2.5 py-0.5 rounded font-bold hover:opacity-80 transition-opacity mt-1"
                     style={{ background: '#B7FF1A' }}
                     onClick={onClose}
                   >
@@ -1114,105 +1110,83 @@ const DesktopShortsViewer: React.FC<{
                   </Link>
                 )}
               </div>
-            </div>
 
-            {/* ── Right engagement column ── */}
-            <div className="flex flex-col items-center gap-4 pb-4 flex-shrink-0">
-              <LikeButton
-                contentId={clip.id}
-                contentType="clip"
-                contentOwnerId={clip.user.id}
-                initialLiked={(clip as any).isLiked ?? false}
-                initialCount={likes}
-                size="sm"
-                variant="vertical"
-                showCount={true}
-              />
-              <FireButton
-                contentId={clip.id}
-                contentType="clip"
-                contentOwnerId={clip.user.id}
-                initialFired={(clip as any).isFired ?? false}
-                initialCount={fires}
-                size="sm"
-                variant="vertical"
-                showCount={true}
-              />
-              <button
-                className="flex flex-col items-center gap-1 group"
-                onClick={() => setShowComments(v => !v)}
-                aria-label="Toggle comments"
-              >
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
-                  style={showComments
-                    ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
-                    : { background: '#0B1218', border: '1px solid #1B2A33' }
-                  }
+              {/* Engagement buttons */}
+              <div className="flex flex-col items-center gap-4 px-4 pt-5 flex-1">
+                <LikeButton
+                  contentId={clip.id}
+                  contentType="clip"
+                  contentOwnerId={clip.user.id}
+                  initialLiked={(clip as any).isLiked ?? false}
+                  initialCount={likes}
+                  size="sm"
+                  variant="vertical"
+                  showCount={true}
+                />
+                <FireButton
+                  contentId={clip.id}
+                  contentType="clip"
+                  contentOwnerId={clip.user.id}
+                  initialFired={(clip as any).isFired ?? false}
+                  initialCount={fires}
+                  size="sm"
+                  variant="vertical"
+                  showCount={true}
+                />
+                <button
+                  className="flex flex-col items-center gap-1 group"
+                  onClick={() => setShowComments(v => !v)}
+                  aria-label="Toggle comments"
                 >
-                  <MessageCircle className="h-5 w-5" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
-                </div>
-                <span className="text-[11px] font-medium" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }}>
-                  {fmt(comments)}
-                </span>
-              </button>
-              <div className="flex flex-col items-center gap-1">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center"
-                  style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
-                >
-                  <BarChart2 className="h-5 w-5 text-white/70" />
-                </div>
-                <span className="text-white/50 text-[11px] font-medium">{fmt(views)}</span>
-              </div>
-              <div onClick={(e) => e.stopPropagation()}>
-                <TrendingClipMenu clip={clip} />
-              </div>
-              <button
-                onClick={onOpenGameFilter}
-                className="flex flex-col items-center gap-1 group"
-                aria-label="Filter by game"
-              >
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
-                  style={selectedGameId
-                    ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
-                    : { background: '#0B1218', border: '1px solid #1B2A33' }
-                  }
-                >
-                  <Gamepad2 className="h-5 w-5" style={{ color: selectedGameId ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
-                </div>
-                {selectedGameId ? (
-                  <span className="text-[11px] font-medium max-w-[52px] truncate text-center leading-tight" style={{ color: '#B7FF1A' }}>
-                    {selectedGameName}
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+                    style={showComments
+                      ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
+                      : { background: '#0B1218', border: '1px solid #1B2A33' }
+                    }
+                  >
+                    <MessageCircle className="h-5 w-5" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+                  </div>
+                  <span className="text-[11px] font-medium" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }}>
+                    {fmt(comments)}
                   </span>
-                ) : (
-                  <span className="text-[11px] font-medium text-white/40">Games</span>
-                )}
-              </button>
-            </div>
-          </div>
+                </button>
+                <div className="flex flex-col items-center gap-1">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center"
+                    style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+                  >
+                    <BarChart2 className="h-5 w-5 text-white/70" />
+                  </div>
+                  <span className="text-white/50 text-[11px] font-medium">{fmt(views)}</span>
+                </div>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <TrendingClipMenu clip={clip} />
+                </div>
+              </div>
 
-          {/* ── Portrait nav arrows — right edge, vertically centred ── */}
-          <div className="absolute right-6 top-1/2 -translate-y-1/2 flex flex-col items-center gap-3 z-20">
-            <button
-              onClick={goPrev}
-              disabled={currentIndex === 0}
-              className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
-              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
-              aria-label="Previous"
-            >
-              <ChevronUp className="h-6 w-6 text-white" />
-            </button>
-            <button
-              onClick={goNext}
-              disabled={currentIndex === clips.length - 1}
-              className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
-              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
-              aria-label="Next"
-            >
-              <ChevronDown className="h-6 w-6 text-white" />
-            </button>
+              {/* Nav arrows at bottom */}
+              <div className="flex items-center justify-center gap-4 px-4 pt-4 flex-shrink-0">
+                <button
+                  onClick={goPrev}
+                  disabled={currentIndex === 0}
+                  className="w-11 h-11 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
+                  style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+                  aria-label="Previous"
+                >
+                  <ChevronUp className="h-5 w-5 text-white" />
+                </button>
+                <button
+                  onClick={goNext}
+                  disabled={currentIndex === clips.length - 1}
+                  className="w-11 h-11 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
+                  style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+                  aria-label="Next"
+                >
+                  <ChevronDown className="h-5 w-5 text-white" />
+                </button>
+              </div>
+            </div>
           </div>
         </>
       )}
