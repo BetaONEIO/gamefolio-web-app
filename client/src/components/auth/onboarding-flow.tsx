@@ -1248,7 +1248,7 @@ export default function OnboardingFlow({
                     onClick={() => toggleUserType(type.id)}
                     className={`relative p-3 sm:p-4 rounded-lg border-2 transition-all text-left select-none ${
                       isSelected
-                        ? "border-primary bg-[#051a08] shadow-lg shadow-primary/20 cursor-pointer active:scale-[0.97]"
+                        ? "border-primary bg-primary shadow-lg shadow-primary/30 cursor-pointer active:scale-[0.97]"
                         : isLocked
                           ? "border-[#2a3a2a] bg-[#0d1f12]/60 cursor-not-allowed opacity-40"
                           : "border-[#2a3a2a] bg-[#0d1f12] hover:border-primary/40 hover:bg-primary/5 cursor-pointer active:scale-[0.97]"
@@ -1257,18 +1257,18 @@ export default function OnboardingFlow({
                     <div className="flex flex-col items-center text-center space-y-2">
                       <div className={`p-2.5 rounded-full ${
                         isSelected
-                          ? "bg-primary/20 text-primary"
+                          ? "bg-black/20 text-[#051a08]"
                           : "bg-[#1e3a24] text-gray-500"
                       }`}>
                         <IconComponent className="h-5 w-5" />
                       </div>
-                      <h3 className={`font-medium text-sm ${isSelected ? "text-white" : "text-gray-500"}`}>
+                      <h3 className={`font-medium text-sm ${isSelected ? "text-[#051a08] font-semibold" : "text-gray-500"}`}>
                         {type.label}
                       </h3>
                     </div>
                     {isSelected && (
-                      <div className="absolute top-2 right-2 rounded-full bg-primary/20 border border-primary/50 p-0.5">
-                        <Check className="h-3 w-3 text-primary" />
+                      <div className="absolute top-2 right-2 rounded-full bg-black/20 border border-black/30 p-0.5">
+                        <Check className="h-3 w-3 text-[#051a08]" />
                       </div>
                     )}
                   </button>
