@@ -1003,10 +1003,10 @@ const DesktopShortsViewer: React.FC<{
                   <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(183,255,26,0.6)' }} />
                 </button>
 
-                {/* Horizontal flyout — expands to the LEFT of Eye when open */}
+                {/* Horizontal flyout — expands to the RIGHT of Eye when open */}
                 {controlsVisible && (
                   <div
-                    className="absolute top-0 right-full mr-2 flex flex-row-reverse items-center gap-2"
+                    className="absolute top-0 left-full ml-2 flex flex-row items-center gap-2"
                     style={{ pointerEvents: 'auto' }}
                   >
                     {/* Gamepad */}
@@ -1138,12 +1138,12 @@ const DesktopShortsViewer: React.FC<{
                 <span className="text-white/50 text-[11px] font-medium">{fmt(views)}</span>
               </div>
 
-              {/* Creator info — horizontal row, avatar on right, text extends left */}
+              {/* Creator info — horizontal row, avatar on left, text extends right */}
               <div
-                className="flex flex-row-reverse items-center gap-3"
-                style={{ alignSelf: 'flex-end', overflow: 'visible', whiteSpace: 'nowrap' }}
+                className="flex flex-row items-center gap-3"
+                style={{ alignSelf: 'flex-start', overflow: 'visible', whiteSpace: 'nowrap' }}
               >
-                {/* Avatar — anchored in column */}
+                {/* Avatar — anchored in column on the left */}
                 <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
                   <div
                     className="w-11 h-11 rounded-full overflow-hidden border-2 flex-shrink-0 hover:scale-105 transition-transform"
@@ -1158,8 +1158,8 @@ const DesktopShortsViewer: React.FC<{
                     )}
                   </div>
                 </Link>
-                {/* Text flows to the left */}
-                <div className="flex flex-col gap-1 items-end">
+                {/* Text flows to the right */}
+                <div className="flex flex-col gap-1 items-start">
                   <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
                     <p className="text-white font-bold text-sm hover:text-[#B7FF1A] transition-colors leading-tight">
                       {clip.user.displayName || clip.user.username}
