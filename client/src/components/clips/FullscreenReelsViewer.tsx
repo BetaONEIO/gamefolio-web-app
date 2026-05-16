@@ -187,7 +187,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
 
   return (
     <div
-      className="fixed inset-0 bg-black z-[60] flex flex-col"
+      className="fixed inset-0 bg-black z-[60] flex flex-col lg:flex-row"
       style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
     >
 
@@ -207,7 +207,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       {/* ── Video area — shrinks to 38% when comments open ── */}
       <div
         ref={videoAreaRef}
-        className="relative flex-shrink-0 overflow-hidden transition-[height] duration-300 ease-in-out"
+        className="relative flex-shrink-0 overflow-hidden transition-[height,width] duration-300 ease-in-out lg:flex-shrink lg:h-full"
         style={{ height: showComments ? '38%' : '100%', flex: showComments ? 'none' : '1' }}
         onClick={() => { if (!showComments) setIsPlaying(p => !p); }}
       >
@@ -286,10 +286,10 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         {currentReel && (
           <div className="absolute inset-0 z-[3] pointer-events-none">
 
-            {/* Right side engagement buttons — hidden when comments open */}
+            {/* Right side engagement buttons — hidden when comments open, hidden on desktop (moved to right panel) */}
             {!showComments && (
               <div
-                className="absolute right-3 flex flex-col items-center gap-3 pointer-events-auto"
+                className="absolute right-3 flex flex-col items-center gap-3 pointer-events-auto lg:hidden"
                 style={{ bottom: 24 }}
                 onClick={e => e.stopPropagation()}
               >
@@ -347,9 +347,9 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
               </div>
             )}
 
-            {/* Bottom gradient overlay — hidden when comments open */}
+            {/* Bottom gradient overlay — hidden when comments open, hidden on desktop (moved to right panel) */}
             {!showComments && (
-              <div className="absolute bottom-0 left-0 right-0 z-[3] px-4 pb-8 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none">
+              <div className="absolute bottom-0 left-0 right-0 z-[3] px-4 pb-8 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none lg:hidden">
                 <div className="pr-14">
                   {/* User row */}
                   <div className="flex items-center gap-2 mb-1.5">
@@ -416,6 +416,139 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           </div>
         )}
       </div>
+
+      {/* ── Desktop right panel — hidden on mobile ── */}
+      {currentReel && (
+        <div
+          className="hidden lg:flex flex-col justify-between w-[340px] flex-shrink-0 h-full border-l border-white/10"
+          style={{ background: '#0a0f14', paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Profile + info */}
+          <div className="flex flex-col gap-5 p-6 overflow-y-auto flex-1">
+            {/* Avatar + username + follow */}
+            <div className="flex items-center gap-3">
+              <Link
+                href={`/profile/${currentReel.user.username}`}
+                onClick={onClose}
+                className="flex-shrink-0"
+              >
+                <CustomAvatar user={currentReel.user as any} size="lg" showBorder={true} />
+              </Link>
+              <div className="flex-1 min-w-0">
+                <Link
+                  href={`/profile/${currentReel.user.username}`}
+                  onClick={onClose}
+                  className="no-underline"
+                >
+                  <p className="text-white font-bold text-sm leading-tight truncate">
+                    {currentReel.user.displayName || currentReel.user.username}
+                  </p>
+                  <p className="text-white/50 text-xs truncate">@{currentReel.user.username}</p>
+                </Link>
+              </div>
+              {user && user.id !== currentReel.user.id && !isFollowing && (
+                <button
+                  onClick={handleFollow}
+                  disabled={followMutation.isPending}
+                  className="text-xs font-bold px-3 py-1.5 rounded-full flex-shrink-0 transition-all"
+                  style={{ background: '#B7FF1A', color: '#000' }}
+                >
+                  {followMutation.isPending ? '…' : 'Follow'}
+                </button>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div className="h-px w-full" style={{ background: 'rgba(255,255,255,0.07)' }} />
+
+            {/* Title */}
+            <div>
+              <p className="text-white font-bold text-base leading-snug mb-2">
+                {currentReel.title}
+              </p>
+              {currentReel.description && (
+                <p className="text-white/60 text-sm leading-relaxed">
+                  {currentReel.description}
+                </p>
+              )}
+            </div>
+
+            {/* Game */}
+            {currentReel.game?.name && (
+              <div className="flex items-center gap-1.5">
+                <Gamepad2 className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#B7FF1A' }} />
+                <Link
+                  href={`/games/${currentReel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                  onClick={onClose}
+                >
+                  <span className="text-sm font-semibold" style={{ color: '#B7FF1A' }}>
+                    {currentReel.game.name}
+                  </span>
+                </Link>
+              </div>
+            )}
+
+            {/* Original audio */}
+            <div className="flex items-center gap-1.5">
+              <Music className="h-3.5 w-3.5 text-white/40 flex-shrink-0" />
+              <span className="text-white/40 text-xs truncate">
+                Original audio · {currentReel.user.displayName || currentReel.user.username}
+              </span>
+            </div>
+          </div>
+
+          {/* Engagement buttons at bottom */}
+          <div className="flex items-center justify-around px-6 py-5 border-t border-white/10">
+            <div className="flex flex-col items-center gap-1">
+              <BarChart2 className="h-6 w-6 text-white/60" />
+              <span className="text-white/60 text-xs font-semibold">
+                {(() => {
+                  const v = currentReel.views || 0;
+                  if (v >= 1000000) return `${(v / 1000000).toFixed(1)}M`;
+                  if (v >= 1000) return `${(v / 1000).toFixed(1)}K`;
+                  return v.toString();
+                })()}
+              </span>
+            </div>
+            <LikeButton
+              contentId={currentReel.id}
+              contentType="clip"
+              contentOwnerId={currentReel.userId}
+              initialLiked={false}
+              initialCount={parseInt(currentReel._count?.likes?.toString() || '0')}
+              size="sm"
+              showCount={true}
+              variant="vertical"
+            />
+            <FireButton
+              contentId={currentReel.id}
+              contentType="clip"
+              contentOwnerId={currentReel.userId}
+              initialCount={parseInt(currentReel._count?.reactions?.toString() || '0')}
+              size="sm"
+              showCount={true}
+              variant="vertical"
+              clipRef={videoAreaRef}
+            />
+            <button
+              className="flex flex-col items-center gap-1"
+              onClick={() => {
+                if (!user) { openDialog('comment'); }
+                else { setShowComments(true); setIsPlaying(false); }
+              }}
+            >
+              <MessageCircle className="h-6 w-6 text-white/60" />
+              <span className="text-white/60 text-xs font-semibold">{currentReel._count?.comments || 0}</span>
+            </button>
+            <ShareLaunchIcon
+              size={24}
+              className="text-white/60"
+              onClick={() => setShowShare(true)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* ── Comments panel — flex-1, pushes video up ── */}
       {showComments && currentReel && (
