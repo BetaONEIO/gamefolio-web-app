@@ -481,7 +481,7 @@ export default function LevelTrackerPage() {
             <TabsTrigger
               key={tab}
               value={tab}
-              className="flex-1 text-xs whitespace-nowrap py-2 rounded-lg data-[state=active]:text-black font-semibold capitalize"
+              className="flex-1 text-xs whitespace-nowrap py-2 rounded-lg data-[state=active]:text-[#B7FF1A] font-semibold capitalize"
               style={{}}
             >
               {tab === 'earnxp' ? 'Earn XP' : tab.charAt(0).toUpperCase() + tab.slice(1)}
