@@ -1011,7 +1011,7 @@ const DesktopShortsViewer: React.FC<{
                   >
                     {/* Gamepad */}
                     <button
-                      onClick={onOpenGameFilter}
+                      onClick={() => { setControlsVisible(false); onOpenGameFilter(); }}
                       className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
                       style={pillBase(!!selectedGameId)}
                       title={selectedGameId ? selectedGameName || 'Game filter' : 'Filter by game'}
@@ -1138,10 +1138,10 @@ const DesktopShortsViewer: React.FC<{
                 <span className="text-white/50 text-[11px] font-medium">{fmt(views)}</span>
               </div>
 
-              {/* Creator info — horizontal row, avatar on left, text extends right */}
+              {/* Creator info — fixed layout width (56px) so it doesn't widen the column; visual content overflows right */}
               <div
                 className="flex flex-row items-center gap-3"
-                style={{ alignSelf: 'flex-start', overflow: 'visible', whiteSpace: 'nowrap' }}
+                style={{ alignSelf: 'flex-start', width: '56px', overflow: 'visible', whiteSpace: 'nowrap' }}
               >
                 {/* Avatar — anchored in column on the left */}
                 <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
