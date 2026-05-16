@@ -962,12 +962,12 @@ const DesktopShortsViewer: React.FC<{
           </div>
         </>
       ) : (
-        /* ── PORTRAIT layout (Reels): video + right panel ── */
+        /* ── PORTRAIT layout (Reels): video | right floating column ── */
         <>
-          {/* Outer row: video + right panel, centred vertically */}
-          <div className="flex items-stretch gap-0" style={{ height: '100%', paddingBottom: '16px', paddingLeft: '24px' }}>
+          {/* Outer row — video left, right column no background */}
+          <div className="flex items-end gap-5 px-6" style={{ height: '100%', paddingBottom: '28px' }}>
 
-            {/* Video container — 9:16, height fills available space */}
+            {/* Video — 9:16, fills available height */}
             <div
               className="relative rounded-2xl overflow-hidden bg-black shadow-2xl flex-shrink-0"
               style={{ height: '100%', aspectRatio: '9/16' }}
@@ -986,35 +986,88 @@ const DesktopShortsViewer: React.FC<{
               />
             </div>
 
-            {/* ── Right panel ── */}
-            <div
-              className="flex flex-col flex-shrink-0 overflow-y-auto"
-              style={{ width: '280px', background: '#0a0f14', borderLeft: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px', paddingBottom: '16px' }}
-            >
-              {/* Filter bar */}
-              <div className="flex items-center gap-2 px-4 pb-4 flex-wrap" onClick={e => e.stopPropagation()} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            {/* ── Right column — no background, just floating elements ── */}
+            <div className="flex flex-col items-center gap-4 flex-shrink-0 pb-1" style={{ minWidth: '64px' }}>
+
+              {/* Engagement icons */}
+              <LikeButton
+                contentId={clip.id}
+                contentType="clip"
+                contentOwnerId={clip.user.id}
+                initialLiked={(clip as any).isLiked ?? false}
+                initialCount={likes}
+                size="sm"
+                variant="vertical"
+                showCount={true}
+              />
+              <FireButton
+                contentId={clip.id}
+                contentType="clip"
+                contentOwnerId={clip.user.id}
+                initialFired={(clip as any).isFired ?? false}
+                initialCount={fires}
+                size="sm"
+                variant="vertical"
+                showCount={true}
+              />
+              <button
+                className="flex flex-col items-center gap-1 group"
+                onClick={() => setShowComments(v => !v)}
+                aria-label="Toggle comments"
+              >
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+                  style={showComments
+                    ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
+                    : { background: '#0B1218', border: '1px solid #1B2A33' }
+                  }
+                >
+                  <MessageCircle className="h-5 w-5" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+                </div>
+                <span className="text-[11px] font-medium" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }}>
+                  {fmt(comments)}
+                </span>
+              </button>
+              <div className="flex flex-col items-center gap-1">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+                >
+                  <BarChart2 className="h-5 w-5 text-white/70" />
+                </div>
+                <span className="text-white/50 text-[11px] font-medium">{fmt(views)}</span>
+              </div>
+              <div onClick={(e) => e.stopPropagation()}>
+                <TrendingClipMenu clip={clip} />
+              </div>
+
+              {/* Divider */}
+              <div className="w-8 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
+
+              {/* Filter controls */}
+              <div className="flex flex-col items-center gap-3" onClick={e => e.stopPropagation()}>
                 {/* Gamepad */}
                 <button
                   onClick={onOpenGameFilter}
-                  className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-105 flex-shrink-0"
+                  className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
                   style={pillBase(!!selectedGameId)}
                   title={selectedGameId ? selectedGameName || 'Game filter' : 'Filter by game'}
                 >
-                  <Gamepad2 className="h-4 w-4" />
+                  <Gamepad2 className="h-5 w-5" />
                 </button>
 
                 {/* Clock */}
-                <div className="relative flex-shrink-0">
+                <div className="relative">
                   <button
                     onClick={() => { setShowTimeDropdown(v => !v); setShowContentDropdown(false); }}
-                    className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-105"
+                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
                     style={pillBase(showTimeDropdown)}
                   >
-                    <Clock className="h-4 w-4" />
+                    <Clock className="h-5 w-5" />
                   </button>
                   {showTimeDropdown && (
                     <div
-                      className="absolute top-full mt-1.5 left-0 rounded-xl overflow-hidden min-w-[148px] z-50"
+                      className="absolute bottom-full mb-2 right-0 rounded-xl overflow-hidden min-w-[148px] z-50"
                       style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
                     >
                       <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>Time Period</p>
@@ -1034,19 +1087,19 @@ const DesktopShortsViewer: React.FC<{
                 </div>
 
                 {/* Content type pill */}
-                <div className="relative flex-shrink-0">
+                <div className="relative">
                   <button
                     onClick={() => { setShowContentDropdown(v => !v); setShowTimeDropdown(false); }}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all hover:scale-105"
+                    className="flex items-center gap-1 px-2 py-1.5 rounded-full text-[10px] font-semibold transition-all hover:scale-105"
                     style={pillBase(showContentDropdown)}
                   >
-                    <ActiveIcon className="h-3.5 w-3.5" />
-                    {activeLabel}
-                    <ChevronDown className="h-3 w-3" />
+                    <ActiveIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span className="hidden xl:inline">{activeLabel}</span>
+                    <ChevronDown className="h-3 w-3 flex-shrink-0" />
                   </button>
                   {showContentDropdown && (
                     <div
-                      className="absolute top-full mt-1.5 left-0 rounded-xl overflow-hidden min-w-[155px] z-50"
+                      className="absolute bottom-full mb-2 right-0 rounded-xl overflow-hidden min-w-[155px] z-50"
                       style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
                     >
                       {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
@@ -1065,45 +1118,44 @@ const DesktopShortsViewer: React.FC<{
                   )}
                 </div>
 
-                {/* Eye — always active indicator */}
+                {/* Eye — active indicator */}
                 <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
                   style={{ border: '2px solid #B7FF1A', background: 'rgba(183,255,26,0.1)' }}
                 >
-                  <Eye className="h-4 w-4" style={{ color: '#B7FF1A' }} />
+                  <Eye className="h-5 w-5" style={{ color: '#B7FF1A' }} />
                 </div>
               </div>
 
-              {/* Profile section */}
-              <div className="flex flex-col items-center px-4 pt-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              {/* Divider */}
+              <div className="w-8 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
+
+              {/* Creator info — no background, floating */}
+              <div className="flex flex-col items-center gap-1.5">
                 <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
                   <div
-                    className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 border-2 mb-3"
+                    className="w-11 h-11 rounded-full overflow-hidden border-2 hover:scale-105 transition-transform"
                     style={{ borderColor: '#B7FF1A' }}
                   >
                     {clip.user.avatarUrl ? (
                       <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
-                        <UserIcon className="h-7 w-7 text-white/60" />
+                        <UserIcon className="h-5 w-5 text-white/60" />
                       </div>
                     )}
                   </div>
                 </Link>
                 <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
-                  <p className="text-white font-bold text-sm text-center hover:text-[#B7FF1A] transition-colors leading-tight">
+                  <p className="text-white font-semibold text-[10px] text-center hover:text-[#B7FF1A] transition-colors leading-tight max-w-[72px] truncate">
                     {clip.user.displayName || clip.user.username}
                   </p>
                 </Link>
-                <p className="text-white/45 text-xs text-center mt-0.5 mb-3">@{clip.user.username}</p>
-                {clip.title && (
-                  <p className="text-white/70 text-xs text-center line-clamp-3 mb-2 leading-relaxed">{clip.title}</p>
-                )}
                 {clip.game && (
                   <Link
                     href={`/games/${gameSlug}`}
-                    className="inline-block text-[#071013] text-[10px] px-2.5 py-0.5 rounded font-bold hover:opacity-80 transition-opacity mt-1"
-                    style={{ background: '#B7FF1A' }}
+                    className="inline-block text-[#071013] text-[9px] px-1.5 py-0.5 rounded font-bold hover:opacity-80 transition-opacity text-center"
+                    style={{ background: '#B7FF1A', maxWidth: '72px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                     onClick={onClose}
                   >
                     {clip.game.name}
@@ -1111,81 +1163,28 @@ const DesktopShortsViewer: React.FC<{
                 )}
               </div>
 
-              {/* Engagement buttons */}
-              <div className="flex flex-col items-center gap-4 px-4 pt-5 flex-1">
-                <LikeButton
-                  contentId={clip.id}
-                  contentType="clip"
-                  contentOwnerId={clip.user.id}
-                  initialLiked={(clip as any).isLiked ?? false}
-                  initialCount={likes}
-                  size="sm"
-                  variant="vertical"
-                  showCount={true}
-                />
-                <FireButton
-                  contentId={clip.id}
-                  contentType="clip"
-                  contentOwnerId={clip.user.id}
-                  initialFired={(clip as any).isFired ?? false}
-                  initialCount={fires}
-                  size="sm"
-                  variant="vertical"
-                  showCount={true}
-                />
-                <button
-                  className="flex flex-col items-center gap-1 group"
-                  onClick={() => setShowComments(v => !v)}
-                  aria-label="Toggle comments"
-                >
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
-                    style={showComments
-                      ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
-                      : { background: '#0B1218', border: '1px solid #1B2A33' }
-                    }
-                  >
-                    <MessageCircle className="h-5 w-5" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
-                  </div>
-                  <span className="text-[11px] font-medium" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }}>
-                    {fmt(comments)}
-                  </span>
-                </button>
-                <div className="flex flex-col items-center gap-1">
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center"
-                    style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
-                  >
-                    <BarChart2 className="h-5 w-5 text-white/70" />
-                  </div>
-                  <span className="text-white/50 text-[11px] font-medium">{fmt(views)}</span>
-                </div>
-                <div onClick={(e) => e.stopPropagation()}>
-                  <TrendingClipMenu clip={clip} />
-                </div>
-              </div>
+              {/* Divider */}
+              <div className="w-8 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
 
-              {/* Nav arrows at bottom */}
-              <div className="flex items-center justify-center gap-4 px-4 pt-4 flex-shrink-0">
-                <button
-                  onClick={goPrev}
-                  disabled={currentIndex === 0}
-                  className="w-11 h-11 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
-                  style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
-                  aria-label="Previous"
-                >
-                  <ChevronUp className="h-5 w-5 text-white" />
-                </button>
-                <button
-                  onClick={goNext}
-                  disabled={currentIndex === clips.length - 1}
-                  className="w-11 h-11 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
-                  style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
-                  aria-label="Next"
-                >
-                  <ChevronDown className="h-5 w-5 text-white" />
-                </button>
-              </div>
+              {/* Nav arrows */}
+              <button
+                onClick={goPrev}
+                disabled={currentIndex === 0}
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
+                style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+                aria-label="Previous"
+              >
+                <ChevronUp className="h-5 w-5 text-white" />
+              </button>
+              <button
+                onClick={goNext}
+                disabled={currentIndex === clips.length - 1}
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
+                style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+                aria-label="Next"
+              >
+                <ChevronDown className="h-5 w-5 text-white" />
+              </button>
             </div>
           </div>
         </>
