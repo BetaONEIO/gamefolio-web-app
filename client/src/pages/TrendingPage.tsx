@@ -644,6 +644,7 @@ const DesktopShortsViewer: React.FC<{
   const [showComments, setShowComments] = useState(false);
   const [showContentDropdown, setShowContentDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(false);
   const wheelCooldown = useRef(false);
   const wheelAccum = useRef(0);
   const wheelIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
