@@ -441,6 +441,25 @@ export default function LevelTrackerPage() {
                   />
                 </div>
               </div>
+
+              {/* Streak */}
+              <div className="flex items-center gap-3 pt-1">
+                <div
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
+                  style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.25)' }}
+                >
+                  <Flame className="w-4 h-4 text-orange-400" />
+                  <span className="text-sm font-bold text-orange-400">
+                    {activityLoading ? '—' : (currentStreak)}
+                  </span>
+                  <span className="text-xs font-medium" style={{ color: '#B8C0AE' }}>day streak</span>
+                </div>
+                {!activityLoading && streak?.longestStreak != null && streak.longestStreak > 0 && (
+                  <div className="text-xs" style={{ color: '#B8C0AE' }}>
+                    Best: <span className="font-semibold" style={{ color: '#F5F7F2' }}>{streak.longestStreak}d</span>
+                  </div>
+                )}
+              </div>
             </div>
           ) : progressLoading ? (
             <div className="flex-1 space-y-3">
