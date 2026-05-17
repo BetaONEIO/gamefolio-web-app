@@ -3589,7 +3589,7 @@ export class DatabaseStorage implements IStorage {
         eq(monthlyLeaderboard.month, month),
         eq(monthlyLeaderboard.year, year),
         gt(monthlyLeaderboard.totalPoints, 0),
-        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND u.status IN ('suspended', 'banned'))`
+        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system')))`
       ))
       .orderBy(desc(monthlyLeaderboard.totalPoints));
 
@@ -3647,7 +3647,7 @@ export class DatabaseStorage implements IStorage {
         totalPoints: sql<number>`CAST(SUM(${monthlyLeaderboard.totalPoints}) AS INTEGER)`,
       })
       .from(monthlyLeaderboard)
-      .where(sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND u.status IN ('suspended', 'banned'))`)
+      .where(sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system')))`)
       .groupBy(monthlyLeaderboard.userId)
       .having(sql`SUM(${monthlyLeaderboard.totalPoints}) > 0`)
       .orderBy(desc(sql`SUM(${monthlyLeaderboard.totalPoints})`))
@@ -3704,7 +3704,7 @@ export class DatabaseStorage implements IStorage {
         eq(weeklyLeaderboard.week, week),
         eq(weeklyLeaderboard.year, year),
         gt(weeklyLeaderboard.totalPoints, 0),
-        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${weeklyLeaderboard.userId} AND u.status IN ('suspended', 'banned'))`
+        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${weeklyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system')))`
       ))
       .orderBy(desc(weeklyLeaderboard.totalPoints));
 
