@@ -124,7 +124,7 @@ export default function WalletHomepage({
       <div 
         className="w-full"
         style={{ 
-          background: 'linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #101D27 100%)',
+          background: '#101D27',
           borderBottom: '1px solid rgba(30, 41, 59, 0.3)'
         }}
       >
