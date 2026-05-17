@@ -463,7 +463,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
 };
 
 // ── Mobile: full-screen clips viewer with top bar ─────────────────────────
-const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void; viewAllHref?: string }> = ({ clips, onBack, viewAllHref }) => {
+const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void; viewAllHref?: string }> = ({ clips, onBack }) => {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
@@ -471,35 +471,20 @@ const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void; v
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: '#03080A' }}>
-      {/* Top bar — only rendered when there is a back/view-all context */}
-      {viewAllHref && (
-        <div
-          className="flex-shrink-0 flex items-center justify-between px-4 pb-3"
-          style={{ background: '#03080A', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+      {/* Top bar — back button only */}
+      <div
+        className="flex-shrink-0 flex items-center px-4 pb-3"
+        style={{ background: '#03080A', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+      >
+        <button
+          onClick={onBack}
+          className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
+          style={{ color: '#F5F7F2' }}
+          aria-label="Back"
         >
-          <button
-            onClick={onBack}
-            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
-            style={{ color: '#F5F7F2' }}
-            aria-label="Back"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <span className="sr-only">Clips</span>
-          <Link
-            href={viewAllHref}
-            onClick={onBack}
-            className="text-sm font-semibold px-3 py-1.5 rounded-full transition-colors"
-            style={{
-              color: '#B7FF1A',
-              border: '1px solid rgba(183, 255, 26, 0.5)',
-              background: 'rgba(183, 255, 26, 0.08)',
-            }}
-          >
-            View all
-          </Link>
-        </div>
-      )}
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+      </div>
 
       {/* Snap-scrolling feed — one clip per scroll */}
       <div

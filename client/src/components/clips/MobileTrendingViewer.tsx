@@ -80,6 +80,13 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   const [playFlash, setPlayFlash] = useState<'play' | 'pause' | null>(null);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Scroll-snap refs
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track index without re-renders during scroll
+  const committedIndexRef = useRef(initialIndex);
+
   // Reset overlay states when switching between content items
   useEffect(() => {
     setShowComments(false);
@@ -97,6 +104,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
       document.body.style.overflow = 'auto';
     };
   }, []);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -160,64 +168,40 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
     );
   }
 
-  // Touch handling for mobile — use refs so values are always current
-  // without triggering re-renders mid-swipe that would re-attach listeners
-  const touchStartYRef = useRef(0);
-  const touchStartTimeRef = useRef(0);
-  // Rubberband offset for visual feedback when swiping past start/end of feed
-  const [dragOffset, setDragOffset] = useState(0);
-
-  const handleTouchStart = useCallback((e: TouchEvent) => {
-    touchStartYRef.current = e.touches[0].clientY;
-    touchStartTimeRef.current = Date.now();
-  }, []);
-
-  const handleTouchMove = useCallback((e: TouchEvent) => {
-    const deltaY = touchStartYRef.current - e.touches[0].clientY;
-    const atStart = currentIndex <= 0;
-    const atEnd = currentIndex >= content.length - 1;
-
-    // Only show rubberband when at a boundary AND swiping further past it.
-    // Outside those branches setDragOffset(0) is a no-op when offset is already 0
-    // (React bails out on identical values), so this is cheap to call every move.
-    if (deltaY > 0 && atEnd) {
-      setDragOffset(-deltaY * 0.3);
-    } else if (deltaY < 0 && atStart) {
-      setDragOffset(-deltaY * 0.3);
-    } else {
-      setDragOffset(0);
-    }
-  }, [currentIndex, content.length]);
-
-  const handleTouchEnd = useCallback((e: TouchEvent) => {
-    const deltaY = touchStartYRef.current - e.changedTouches[0].clientY;
-    const deltaTime = Date.now() - touchStartTimeRef.current;
-
-    // Snap rubberband offset back to 0 with CSS transition
-    setDragOffset(0);
-
-    // Trigger swipe on a clear vertical gesture — relaxed thresholds so
-    // slower swipes on screenshots/reels still navigate.
-    if (deltaTime < 1500 && Math.abs(deltaY) > 30) {
-      if (deltaY > 0 && currentIndex < content.length - 1) {
-        // Swipe up - next content
-        setCurrentIndex(prev => prev + 1);
-      } else if (deltaY < 0 && currentIndex > 0) {
-        // Swipe down - previous content
-        setCurrentIndex(prev => prev - 1);
+  // ── Scroll-snap navigation ──────────────────────────────────────────────
+  // Debounced scroll handler: updates currentIndex after scroll settles
+  const handleScrollEvent = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    if (scrollTimer.current) clearTimeout(scrollTimer.current);
+    scrollTimer.current = setTimeout(() => {
+      const newIndex = Math.round(container.scrollTop / container.clientHeight);
+      if (newIndex !== committedIndexRef.current && newIndex >= 0 && newIndex < content.length) {
+        committedIndexRef.current = newIndex;
+        setCurrentIndex(newIndex);
       }
-    }
-  }, [currentIndex, content.length]);
+    }, 80);
+  }, [content.length]);
+
+  // Programmatic navigation (keyboard) — scroll the container, state updates via scroll handler
+  const scrollToIndex = useCallback((index: number) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const clamped = Math.max(0, Math.min(index, content.length - 1));
+    committedIndexRef.current = clamped;
+    setCurrentIndex(clamped);
+    container.scrollTo({ top: clamped * container.clientHeight, behavior: 'smooth' });
+  }, [content.length]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     switch (e.key) {
       case 'ArrowUp':
         e.preventDefault();
-        if (currentIndex > 0) setCurrentIndex(prev => prev - 1);
+        if (currentIndex > 0) scrollToIndex(currentIndex - 1);
         break;
       case 'ArrowDown':
         e.preventDefault();
-        if (currentIndex < content.length - 1) setCurrentIndex(prev => prev + 1);
+        if (currentIndex < content.length - 1) scrollToIndex(currentIndex + 1);
         break;
       case 'Escape':
         onClose();
@@ -229,24 +213,15 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         }
         break;
     }
-  }, [currentIndex, content.length, onClose, currentItem]);
+  }, [currentIndex, content.length, onClose, currentItem, scrollToIndex]);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    container.addEventListener('touchstart', handleTouchStart, { passive: true });
-    container.addEventListener('touchmove', handleTouchMove, { passive: true });
-    container.addEventListener('touchend', handleTouchEnd, { passive: true });
     document.addEventListener('keydown', handleKeyDown);
-
     return () => {
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchmove', handleTouchMove);
-      container.removeEventListener('touchend', handleTouchEnd);
       document.removeEventListener('keydown', handleKeyDown);
+      if (scrollTimer.current) clearTimeout(scrollTimer.current);
     };
-  }, [handleTouchStart, handleTouchMove, handleTouchEnd, handleKeyDown]);
+  }, [handleKeyDown]);
 
   // Tap the video area to toggle play/pause with a brief icon flash
   const handleVideoTap = useCallback(() => {
@@ -265,49 +240,16 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
     return 'videoUrl' in item;
   };
 
-
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
     return num.toString();
   };
 
-  const renderContent = () => {
-    if (isVideoContent(currentItem)) {
-      // Render video content (clips/reels) - Force full screen for mobile
-      return (
-        <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-black">
-          <VideoPlayer
-            videoUrl={currentItem.videoUrl || ''}
-            thumbnailUrl={currentItem.thumbnailUrl || undefined}
-            autoPlay={isPlaying}
-            externalPaused={!isPlaying}
-            hideControls={true}
-            className="w-full h-full"
-            clipId={currentItem.id}
-            objectFit="contain"
-            data-testid={`video-player-${currentItem.id}`}
-          />
-        </div>
-      );
-    } else {
-      // Render screenshot content with signed URL support
-      return (
-        <LazyImage
-          src={currentItem.imageUrl}
-          alt={currentItem.title}
-          className="w-full h-full object-cover"
-          data-testid={`screenshot-${currentItem.id}`}
-        />
-      );
-    }
-  };
-
   const getContentStats = () => {
     const views = currentItem.views || 0;
     const likes = parseInt((currentItem as any)._count?.likes?.toString() || '0');
     const comments = parseInt((currentItem as any)._count?.comments?.toString() || '0');
-    
     return { views, likes, comments };
   };
 
@@ -316,82 +258,139 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   return (
     <div
       ref={containerRef}
-      className={embedded ? "relative w-full h-full flex flex-col" : "fixed inset-0 z-[60] flex flex-col"}
-      style={{
-        background: '#0B1218',
-        transform: dragOffset !== 0 ? `translateY(${dragOffset}px)` : undefined,
-        transition: dragOffset !== 0 ? 'none' : 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
-        paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
-      }}
+      className={embedded ? "relative w-full h-full overflow-hidden" : "fixed inset-0 z-[60] overflow-hidden"}
+      style={{ background: '#0B1218' }}
       data-testid="mobile-trending-viewer"
     >
-      {/* Content - shrinks when comments panel is open */}
+      {/* ── Scroll-snap content stack ─────────────────────────────────────── */}
       <div
-        className="relative w-full flex-shrink-0 overflow-hidden"
+        ref={scrollContainerRef}
+        onScroll={handleScrollEvent}
         style={{
-          height: (commentsExpanded && !embedded) ? '38%' : '100%',
-          flex: (commentsExpanded && !embedded) ? 'none' : '1',
-          transition: 'height 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
+          position: 'absolute',
+          inset: 0,
+          overflowY: 'scroll',
+          scrollSnapType: 'y mandatory',
+          WebkitOverflowScrolling: 'touch',
         }}
-        onClick={handleVideoTap}
       >
-        {renderContent()}
-
-        {/* Top overlay with close button — hidden when comments open */}
-        {!hideCloseButton && !showComments && (
+        {content.map((item, index) => (
           <div
-            className="absolute top-0 left-0 right-0 flex justify-between items-center px-4 pb-4 bg-gradient-to-b from-black/60 to-transparent z-10"
-            style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)' }}
+            key={item.id}
+            ref={el => { itemRefs.current[index] = el; }}
+            className="relative w-full bg-black"
+            style={{
+              height: '100%',
+              scrollSnapAlign: 'start',
+              scrollSnapStop: 'always',
+            }}
+            onClick={handleVideoTap}
+          >
+            {/* Only render video/image for current + adjacent items (performance) */}
+            {Math.abs(index - currentIndex) <= 1 && (
+              isVideoContent(item) ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-black">
+                  <VideoPlayer
+                    key={item.id}
+                    videoUrl={item.videoUrl || ''}
+                    thumbnailUrl={item.thumbnailUrl || undefined}
+                    autoPlay={isPlaying && index === currentIndex}
+                    externalPaused={!isPlaying || index !== currentIndex}
+                    hideControls={true}
+                    className="w-full h-full"
+                    clipId={item.id}
+                    objectFit="contain"
+                    data-testid={`video-player-${item.id}`}
+                  />
+                </div>
+              ) : (
+                <div className="absolute inset-0">
+                  <LazyImage
+                    src={(item as ScreenshotWithUser).imageUrl}
+                    alt={item.title}
+                    className="w-full h-full object-cover"
+                    data-testid={`screenshot-${item.id}`}
+                  />
+                </div>
+              )
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* ── Overlay UI — absolute above scroll stack ──────────────────────── */}
+
+      {/* Close button — top left */}
+      {!hideCloseButton && !showComments && (
+        <div
+          className="absolute top-0 left-0 right-0 flex justify-between items-center px-4 pb-4 bg-gradient-to-b from-black/60 to-transparent z-20"
+          style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)', pointerEvents: 'none' }}
+          onClick={e => e.stopPropagation()}
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            className="text-white hover:bg-white/20"
+            style={{ pointerEvents: 'auto' }}
+            data-testid="button-close"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+        </div>
+      )}
+
+      {/* ── Right edge action column ── */}
+      {!showComments && (
+        <div
+          className="absolute right-3 z-20 flex flex-col items-center gap-3"
+          style={{
+            bottom: 'calc(88px + env(safe-area-inset-bottom, 0px))',
+            pointerEvents: 'none',
+          }}
+        >
+          {/* Views */}
+          <div
+            className="flex flex-col items-center gap-0.5"
+            style={{ pointerEvents: 'auto' }}
             onClick={e => e.stopPropagation()}
           >
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => { e.stopPropagation(); onClose(); }}
-              className="text-white hover:bg-white/20"
-              data-testid="button-close"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            
-          </div>
-        )}
-
-        {/* ── Right edge action column — hidden when comments open ─── */}
-        {!showComments && <div className="absolute right-3 z-20 flex flex-col items-center gap-3" style={{ bottom: 24 }} onClick={e => e.stopPropagation()}>
-          {/* Views */}
-          <div className="flex flex-col items-center gap-0.5">
             <BarChart2 className="h-6 w-6 text-white drop-shadow" />
             <span className="text-white text-[10px] font-semibold drop-shadow">{formatNumber(stats.views)}</span>
           </div>
 
           {/* Likes */}
-          <LikeButton
-            contentId={currentItem.id}
-            contentType={isVideoContent(currentItem) ? "clip" : "screenshot"}
-            contentOwnerId={currentItem.user.id}
-            initialLiked={(currentItem as any).isLiked ?? false}
-            initialCount={stats.likes}
-            size="sm"
-            variant="vertical"
-          />
+          <div style={{ pointerEvents: 'auto' }} onClick={e => e.stopPropagation()}>
+            <LikeButton
+              contentId={currentItem.id}
+              contentType={isVideoContent(currentItem) ? "clip" : "screenshot"}
+              contentOwnerId={currentItem.user.id}
+              initialLiked={(currentItem as any).isLiked ?? false}
+              initialCount={stats.likes}
+              size="sm"
+              variant="vertical"
+            />
+          </div>
 
           {/* Fires */}
-          <FireButton
-            contentId={currentItem.id}
-            contentType={isVideoContent(currentItem) ? "clip" : "screenshot"}
-            contentOwnerId={currentItem.user.id}
-            initialFired={(currentItem as any).isFired ?? false}
-            initialCount={(currentItem as any)._count?.fires || (currentItem as any)._count?.reactions || 0}
-            size="sm"
-            variant="vertical"
-            clipRef={containerRef}
-          />
+          <div style={{ pointerEvents: 'auto' }} onClick={e => e.stopPropagation()}>
+            <FireButton
+              contentId={currentItem.id}
+              contentType={isVideoContent(currentItem) ? "clip" : "screenshot"}
+              contentOwnerId={currentItem.user.id}
+              initialFired={(currentItem as any).isFired ?? false}
+              initialCount={(currentItem as any)._count?.fires || (currentItem as any)._count?.reactions || 0}
+              size="sm"
+              variant="vertical"
+              clipRef={containerRef}
+            />
+          </div>
 
           {/* Comments */}
           <button
             onClick={(e) => { e.stopPropagation(); if (!user) { openDialog('comment'); } else { setCommentsExpanded(true); setShowComments(true); } }}
             className="flex flex-col items-center gap-0.5"
+            style={{ pointerEvents: 'auto' }}
             data-testid="button-comments"
           >
             <MessageCircle className="h-6 w-6 text-white drop-shadow" />
@@ -399,155 +398,165 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
           </button>
 
           {/* Share */}
-          <ShareLaunchIcon
-            size={24}
-            className="text-white drop-shadow"
-            onClick={(e) => { e.stopPropagation(); setShowShare(true); }}
-          />
+          <div style={{ pointerEvents: 'auto' }} onClick={e => e.stopPropagation()}>
+            <ShareLaunchIcon
+              size={24}
+              className="text-white drop-shadow"
+              onClick={(e) => { e.stopPropagation(); setShowShare(true); }}
+            />
+          </div>
 
           {/* 3-dot menu — only for clips/reels, not screenshots */}
           {isVideoContent(currentItem) && (
-            <div onClick={(e) => e.stopPropagation()}>
+            <div style={{ pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()}>
               <TrendingClipMenu clip={currentItem as ClipWithUser} />
             </div>
           )}
-        </div>}
+        </div>
+      )}
 
-        {/* ── Bottom info overlay — full-width gradient, hidden when comments open ─── */}
-        {!showComments && (
-          <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-8 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent">
-            {/* Text content — pr-16 keeps it clear of the right action column */}
-            <div className="pr-14">
-              {/* User row */}
-              <div className="flex items-center gap-2 mb-1.5">
-                <Link
-                  href={`/profile/${currentItem.user.username}`}
-                  className="flex items-center gap-1.5 no-underline flex-shrink-0"
-                  data-testid={`link-user-${currentItem.user.username}`}
-                >
-                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '1.5px solid #fff' }}>
-                    <img
-                      src={currentItem.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                      alt={currentItem.user.displayName}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <span className="text-white font-bold text-[13px] drop-shadow leading-tight">
-                    @{currentItem.user.username}
-                  </span>
-                </Link>
-                {!isSelf && !isFollowing && (
-                  <button
-                    onClick={handleFollowPress}
-                    disabled={followMutation.isPending}
-                    className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all"
-                    style={{ background: '#B7FF1A', color: '#000', border: '1px solid transparent' }}
-                  >
-                    {followMutation.isPending ? '…' : 'Follow'}
-                  </button>
-                )}
-              </div>
-
-              {/* Title */}
-              {(() => {
-                const titleText = currentItem.title ?? '';
-                const titleTruncated = !showFullDescription && titleText.length > 50;
-                return (
-                  <p className="text-white font-bold text-[13px] drop-shadow mb-0.5 leading-snug">
-                    {titleTruncated ? titleText.slice(0, 50) + '…' : titleText}
-                  </p>
-                );
-              })()}
-
-              {/* Description with "see more" — also reveals full title */}
-              {(() => {
-                const desc = (currentItem as any).description ?? '';
-                const titleText = currentItem.title ?? '';
-                const needsExpand = titleText.length > 50 || desc.length > 80;
-                return needsExpand || desc ? (
-                  <div className="mb-1">
-                    {desc ? (
-                      <p className={`text-white/75 text-[11px] drop-shadow leading-snug ${showFullDescription ? '' : 'line-clamp-2'}`}>
-                        {desc}
-                      </p>
-                    ) : null}
-                    {needsExpand && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setShowFullDescription(v => !v); }}
-                        className="text-white/50 text-[11px] mt-0.5"
-                      >
-                        {showFullDescription ? 'see less' : 'see more'}
-                      </button>
-                    )}
-                  </div>
-                ) : null;
-              })()}
-
-              {/* Game */}
-              {currentItem.game?.name && (
-                <div className="flex items-center gap-1 mb-0.5">
-                  <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-                  <span className="text-[11px] font-semibold" style={{ color: '#B7FF1A' }}>
-                    {currentItem.game.name}
-                  </span>
+      {/* ── Bottom info overlay ── */}
+      {!showComments && (
+        <div
+          className="absolute left-0 right-0 z-10 px-4 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent"
+          style={{
+            bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
+            paddingBottom: '8px',
+            pointerEvents: 'none',
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Text content — pr-16 keeps it clear of the right action column */}
+          <div className="pr-14" style={{ pointerEvents: 'auto' }}>
+            {/* User row */}
+            <div className="flex items-center gap-2 mb-1.5">
+              <Link
+                href={`/profile/${currentItem.user.username}`}
+                className="flex items-center gap-1.5 no-underline flex-shrink-0"
+                data-testid={`link-user-${currentItem.user.username}`}
+              >
+                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '1.5px solid #fff' }}>
+                  <img
+                    src={currentItem.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                    alt={currentItem.user.displayName}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
+                <span className="text-white font-bold text-[13px] drop-shadow leading-tight">
+                  @{currentItem.user.username}
+                </span>
+              </Link>
+              {!isSelf && !isFollowing && (
+                <button
+                  onClick={handleFollowPress}
+                  disabled={followMutation.isPending}
+                  className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all"
+                  style={{ background: '#B7FF1A', color: '#000', border: '1px solid transparent' }}
+                >
+                  {followMutation.isPending ? '…' : 'Follow'}
+                </button>
               )}
+            </div>
 
-              {/* Original audio */}
-              <div className="flex items-center gap-1">
-                <Music className="h-2.5 w-2.5 text-white/60 flex-shrink-0" />
-                <span className="text-white/60 text-[11px] truncate">
-                  Original audio · {currentItem.user.displayName || currentItem.user.username}
+            {/* Title */}
+            {(() => {
+              const titleText = currentItem.title ?? '';
+              const titleTruncated = !showFullDescription && titleText.length > 50;
+              return (
+                <p className="text-white font-bold text-[13px] drop-shadow mb-0.5 leading-snug">
+                  {titleTruncated ? titleText.slice(0, 50) + '…' : titleText}
+                </p>
+              );
+            })()}
+
+            {/* Description with "see more" — also reveals full title */}
+            {(() => {
+              const desc = (currentItem as any).description ?? '';
+              const titleText = currentItem.title ?? '';
+              const needsExpand = titleText.length > 50 || desc.length > 80;
+              return needsExpand || desc ? (
+                <div className="mb-1">
+                  {desc ? (
+                    <p className={`text-white/75 text-[11px] drop-shadow leading-snug ${showFullDescription ? '' : 'line-clamp-2'}`}>
+                      {desc}
+                    </p>
+                  ) : null}
+                  {needsExpand && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowFullDescription(v => !v); }}
+                      className="text-white/50 text-[11px] mt-0.5"
+                    >
+                      {showFullDescription ? 'see less' : 'see more'}
+                    </button>
+                  )}
+                </div>
+              ) : null;
+            })()}
+
+            {/* Game */}
+            {currentItem.game?.name && (
+              <div className="flex items-center gap-1 mb-0.5">
+                <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
+                <span className="text-[11px] font-semibold" style={{ color: '#B7FF1A' }}>
+                  {currentItem.game.name}
                 </span>
               </div>
+            )}
+
+            {/* Original audio */}
+            <div className="flex items-center gap-1">
+              <Music className="h-2.5 w-2.5 text-white/60 flex-shrink-0" />
+              <span className="text-white/60 text-[11px] truncate">
+                Original audio · {currentItem.user.displayName || currentItem.user.username}
+              </span>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Tap-to-play flash indicator — shown briefly on each tap */}
-        {!showComments && isVideoContent(currentItem) && (
-          <AnimatePresence>
-            {playFlash && (
-              <motion.div
-                key={playFlash}
-                initial={{ scale: 0.6, opacity: 0.9 }}
-                animate={{ scale: 1.1, opacity: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.55, ease: 'easeOut' }}
-                className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                style={{ zIndex: 15 }}
-              >
-                <div style={{
-                  width: 72, height: 72, borderRadius: '50%',
-                  background: 'rgba(0,0,0,0.45)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {playFlash === 'play'
-                    ? <Play className="h-9 w-9 text-white" style={{ marginLeft: 4 }} />
-                    : <Pause className="h-9 w-9 text-white" />}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        )}
-      </div>
+      {/* Tap-to-play flash indicator — shown briefly on each tap */}
+      {!showComments && isVideoContent(currentItem) && (
+        <AnimatePresence>
+          {playFlash && (
+            <motion.div
+              key={playFlash}
+              initial={{ scale: 0.6, opacity: 0.9 }}
+              animate={{ scale: 1.1, opacity: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.55, ease: 'easeOut' }}
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              style={{ zIndex: 15 }}
+            >
+              <div style={{
+                width: 72, height: 72, borderRadius: '50%',
+                background: 'rgba(0,0,0,0.45)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {playFlash === 'play'
+                  ? <Play className="h-9 w-9 text-white" style={{ marginLeft: 4 }} />
+                  : <Pause className="h-9 w-9 text-white" />}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
 
-      {/* Comments bottom sheet — slides up, video visible above */}
+      {/* Comments bottom sheet — slides up from bottom */}
       <AnimatePresence onExitComplete={() => { setCommentsExpanded(false); setSheetY(0); }}>
         {showComments && !embedded && (
           <motion.div
             key="comments-sheet"
             initial={{ y: "100%" }}
-            animate={{ y: 0 }}
+            animate={{ y: sheetY > 0 ? sheetY : 0 }}
             exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 32, stiffness: 320, mass: 0.9 }}
-            className="flex-1 flex flex-col overflow-hidden"
+            transition={sheetY > 0 ? { duration: 0 } : { type: "spring", damping: 32, stiffness: 320, mass: 0.9 }}
+            className="absolute bottom-0 left-0 right-0 z-30 flex flex-col overflow-hidden"
             style={{
+              height: '70%',
               background: '#0B1218',
               borderRadius: '20px 20px 0 0',
-              transform: sheetY > 0 ? `translateY(${sheetY}px)` : undefined,
-              transition: sheetY > 0 ? 'none' : 'transform 0.3s cubic-bezier(0.32,0.72,0,1)',
             }}
+            onClick={e => e.stopPropagation()}
           >
             {/* Drag handle — touch this to swipe sheet down and dismiss */}
             <div
