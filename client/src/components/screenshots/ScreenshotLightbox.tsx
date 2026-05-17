@@ -276,7 +276,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   if (isMobile) {
     const visibleDotsMobile = getVisibleDots(totalSlides, currentIndex);
     return createPortal(
-      <div className="fixed inset-0 z-[100] bg-background flex flex-col">
+      <div className="fixed left-0 right-0 top-0 z-[100] bg-background flex flex-col" style={{ height: 'calc(100dvh - 64px)' }}>
         <div className="flex items-center justify-end px-3 py-2 flex-shrink-0">
           <button
             onClick={handleClose}
