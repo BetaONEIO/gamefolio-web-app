@@ -741,19 +741,19 @@ const DesktopShortsViewer: React.FC<{
       style={{ background: 'rgba(3, 8, 10, 0.98)' }}
     >
       {/* Top bar — sits below the app header (header is z-50, we are z-45) */}
-      <div className="flex items-center justify-between px-5 pt-[68px] pb-2 flex-shrink-0">
+      <div className="flex items-center justify-between px-5 pt-[72px] pb-2 flex-shrink-0">
         <button
           onClick={onClose}
-          className="flex items-center gap-2 group"
+          className="flex items-center gap-2.5 group"
           aria-label="Back"
         >
           <div
-            className="w-9 h-9 rounded-full flex items-center justify-center transition-colors group-hover:bg-white/10"
-            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-colors group-hover:scale-105"
+            style={{ background: 'rgba(183,255,26,0.18)', border: '1.5px solid rgba(183,255,26,0.65)' }}
           >
-            <ArrowLeft className="h-4 w-4 text-white" />
+            <ArrowLeft className="h-5 w-5" style={{ color: '#B7FF1A' }} />
           </div>
-          <span className="text-white/40 text-sm font-medium group-hover:text-white/70 transition-colors">Back</span>
+          <span className="text-white text-sm font-semibold group-hover:text-[#B7FF1A] transition-colors">Back</span>
         </button>
         <span className="text-white/35 text-sm font-mono select-none">
           {currentIndex + 1} / {clips.length}
