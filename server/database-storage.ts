@@ -2257,6 +2257,7 @@ export class DatabaseStorage implements IStorage {
           role: users.role,
           nftProfileTokenId: users.nftProfileTokenId,
           nftProfileImageUrl: users.nftProfileImageUrl,
+          activeProfilePicType: users.activeProfilePicType,
           selectedVerificationBadgeId: users.selectedVerificationBadgeId
         }
       })

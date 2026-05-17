@@ -40,7 +40,7 @@ function CommentAvatar({ avatarUrl, username }: { avatarUrl: string | null | und
   return (
     <Avatar className="h-8 w-8 flex-shrink-0">
       <AvatarImage 
-        src={signedUrl || avatarUrl || undefined} 
+        src={signedUrl ?? undefined} 
         alt={username || "User"} 
       />
       <AvatarFallback className="text-xs">
