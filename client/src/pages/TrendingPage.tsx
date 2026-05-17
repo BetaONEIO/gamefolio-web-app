@@ -791,7 +791,7 @@ const DesktopShortsViewer: React.FC<{
             <X className="h-4 w-4 text-white/60" />
           </button>
         </div>
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4">
           {showComments && (
             <CommentSection clipId={clip.id} currentUserId={user?.id ?? null} />
           )}
@@ -827,7 +827,7 @@ const DesktopShortsViewer: React.FC<{
           <div className="flex-1 flex items-center justify-center w-full min-h-0 px-16 pt-2">
             <div
               className="relative rounded-2xl overflow-hidden bg-black shadow-2xl w-full"
-              style={{ aspectRatio: '16/9', maxHeight: '100%' }}
+              style={{ aspectRatio: '16/9', maxHeight: '100%', isolation: 'isolate' }}
             >
               <VideoPlayer
                 key={clip.id}
@@ -971,7 +971,7 @@ const DesktopShortsViewer: React.FC<{
             {/* Video — 9:16, fills available height */}
             <div
               className="relative rounded-2xl overflow-hidden bg-black shadow-2xl flex-shrink-0"
-              style={{ height: '100%', aspectRatio: '9/16' }}
+              style={{ height: '100%', aspectRatio: '9/16', isolation: 'isolate' }}
             >
               <VideoPlayer
                 key={clip.id}
