@@ -63,6 +63,7 @@ interface GamefolioShareDialogProps {
     bio?: string | null;
     avatarUrl?: string | null;
     bannerUrl?: string | null;
+    hideBanner?: boolean | null;
     selectedAvatarBorderId?: number | null;
     avatarBorderColor?: string | null;
     nftProfileTokenId?: number | null;
@@ -218,7 +219,7 @@ export function GamefolioShareDialog({
     { name: 'Email', icon: FaEnvelope, key: 'email' },
   ];
 
-  const bannerUrl = bannerSignedUrl || userProfile?.bannerUrl;
+  const bannerUrl = userProfile?.hideBanner ? null : (bannerSignedUrl || userProfile?.bannerUrl);
   const themeAccent = userProfile?.accentColor || '#B7FF1A';
   const themeBg = userProfile?.backgroundColor || '#071013';
 
