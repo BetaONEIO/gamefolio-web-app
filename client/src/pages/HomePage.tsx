@@ -16,7 +16,6 @@ import { ChevronRight, ChevronLeft, Video, Plus, Camera, Image, Eye } from "luci
 import BannerImage from "@assets/Untitled (1920 x 1080 px).png";
 import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
 import { useLocation, Link } from "wouter";
-import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
@@ -52,7 +51,6 @@ const HomePage = () => {
   const [activeContentTab, setActiveContentTab] = useState<'clips' | 'reels' | 'screenshots'>('clips');
   const [mobileViewer, setMobileViewer] = useState<{ clips: ClipWithUser[]; startId: number } | null>(null);
   const [reelsViewer, setReelsViewer] = useState<number | null>(null);
-  const [showProUpgrade, setShowProUpgrade] = useState(false);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   
@@ -490,7 +488,7 @@ const HomePage = () => {
                               if (!slide.buttonLink) return;
                               const link = slide.buttonLink.toLowerCase();
                               if (link === '#pro' || link === '/pro' || link.includes('pro')) {
-                                setShowProUpgrade(true);
+                                window.dispatchEvent(new CustomEvent('open-pro-upgrade'));
                               } else {
                                 setLocation(slide.buttonLink);
                               }
@@ -1043,7 +1041,6 @@ const HomePage = () => {
       />
     )}
 
-    <ProUpgradeDialog open={showProUpgrade} onOpenChange={setShowProUpgrade} />
     </>
   );
 };
