@@ -350,7 +350,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetContent
               side="bottom"
-              className="p-0 bg-[#0d1b26] border-t border-white/10 rounded-t-2xl [&>button]:hidden"
+              className="p-0 bg-[#0B1218] border-t border-white/10 rounded-t-2xl [&>button]:hidden"
             >
               <SheetTitle className="sr-only">{menuLabel}</SheetTitle>
               <div className="flex justify-center pt-3 pb-2">
@@ -371,7 +371,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
           <PopoverContent
             align="end"
             sideOffset={6}
-            className="w-52 p-0 bg-[#0d1b26] border border-white/10 shadow-2xl rounded-xl overflow-hidden"
+            className="w-52 p-0 bg-[#0B1218] border border-white/10 shadow-2xl rounded-xl overflow-hidden"
           >
             {menuContent}
           </PopoverContent>
@@ -381,7 +381,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
       {/* Edit Caption dialog */}
       <Dialog open={showEditCaption} onOpenChange={setShowEditCaption}>
         <DialogContent
-          className="bg-[#0d1b26] border border-white/10 text-foreground sm:max-w-md"
+          className="bg-[#0B1218] border border-white/10 text-foreground sm:max-w-md"
           onClick={(e) => e.stopPropagation()}
         >
           <DialogHeader>

@@ -389,7 +389,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
         <div
           className="flex-1 flex flex-col overflow-hidden"
           style={{
-            background: '#0F1923',
+            background: '#0B1218',
             borderRadius: '20px 20px 0 0',
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
             transform: sheetMounted ? `translateY(${sheetDragY}px)` : 'translateY(100%)',
@@ -1032,7 +1032,7 @@ const DesktopShortsViewer: React.FC<{
                             <button
                               key={period}
                               className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                              style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#94A3B8' }}
+                              style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
                               onClick={() => { onTimePeriodChange(period); setShowTimeDropdown(false); }}
                             >
                               {label}
@@ -1063,7 +1063,7 @@ const DesktopShortsViewer: React.FC<{
                             <button
                               key={type}
                               className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                              style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#94A3B8' }}
+                              style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
                               onClick={() => { onTabChange(type); setShowContentDropdown(false); setControlsVisible(false); onClose(); }}
                             >
                               <Icon className="h-3.5 w-3.5" />
@@ -1772,7 +1772,7 @@ const TrendingPage: React.FC = () => {
 
         {/* Loading — reels / screenshots only */}
         {activeTab !== 'clips' && isLoadingContent && (
-          <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ background: '#131F2A' }}>
+          <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ background: '#0B1218' }}>
             <div className="flex flex-col items-center gap-3">
               <div className="w-8 h-8 border-2 border-[#B7FF1A] border-t-transparent rounded-full animate-spin" />
               <p className="text-white/60 text-sm">Loading {activeLabel.toLowerCase()}…</p>
@@ -1782,7 +1782,7 @@ const TrendingPage: React.FC = () => {
 
         {/* Empty state — reels / screenshots only */}
         {activeTab !== 'clips' && !isLoadingContent && activeContent.length === 0 && (
-          <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ background: '#131F2A' }}>
+          <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ background: '#0B1218' }}>
             <div className="text-center px-8">
               <TrendingUp className="h-14 w-14 mx-auto mb-4" style={{ color: '#B7FF1A' }} />
               <p className="text-white font-semibold mb-1">No trending {activeLabel.toLowerCase()}</p>
@@ -1880,7 +1880,7 @@ const TrendingPage: React.FC = () => {
                   <button
                     key={type}
                     className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                    style={activeTab === type ? { background: 'rgba(183, 255, 26,0.15)', color: '#B7FF1A' } : { color: '#94A3B8' }}
+                    style={activeTab === type ? { background: 'rgba(183, 255, 26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
                     onClick={() => { setActiveTab(type); setShowContentDropdown(false); }}
                   >
                     <Icon className="h-3.5 w-3.5" />
@@ -1953,7 +1953,7 @@ const TrendingPage: React.FC = () => {
                   <button
                     key={period}
                     className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                    style={timePeriod === period ? { background: 'rgba(183, 255, 26,0.15)', color: '#B7FF1A' } : { color: '#94A3B8' }}
+                    style={timePeriod === period ? { background: 'rgba(183, 255, 26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
                     onClick={() => { setTimePeriod(period); setShowTimeDropdown(false); }}
                   >
                     {label}
@@ -1976,7 +1976,7 @@ const TrendingPage: React.FC = () => {
           >
             <div
               className="w-full rounded-t-3xl flex flex-col"
-              style={{ background: '#0F1923', maxHeight: '82vh' }}
+              style={{ background: '#0B1218', maxHeight: '82vh' }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -2030,7 +2030,7 @@ const TrendingPage: React.FC = () => {
                     className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center transition-all"
                     style={{
                       aspectRatio: '3/4',
-                      background: '#1A2736',
+                      background: '#101923',
                       border: !selectedGameId ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                     }}
                     onClick={() => {
@@ -2080,7 +2080,7 @@ const TrendingPage: React.FC = () => {
                           className="relative rounded-xl overflow-hidden flex flex-col justify-end transition-all"
                           style={{
                             aspectRatio: '3/4',
-                            background: '#1A2736',
+                            background: '#101923',
                             border: isSelected ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                             opacity: isInCurrentTab ? 1 : 0.4,
                             filter: isInCurrentTab ? 'none' : 'grayscale(70%)',
@@ -2249,7 +2249,7 @@ const TrendingPage: React.FC = () => {
         >
           <div
             className="rounded-2xl flex flex-col"
-            style={{ background: '#0F1923', maxHeight: '80vh', width: '480px', maxWidth: '90vw' }}
+            style={{ background: '#0B1218', maxHeight: '80vh', width: '480px', maxWidth: '90vw' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -2303,7 +2303,7 @@ const TrendingPage: React.FC = () => {
                   className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center transition-all"
                   style={{
                     aspectRatio: '3/4',
-                    background: '#1A2736',
+                    background: '#101923',
                     border: !selectedGameId ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                   }}
                   onClick={() => {
@@ -2343,7 +2343,7 @@ const TrendingPage: React.FC = () => {
                         className="relative rounded-xl overflow-hidden flex flex-col justify-end transition-all"
                         style={{
                           aspectRatio: '3/4',
-                          background: '#1A2736',
+                          background: '#101923',
                           border: isSelected ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                           opacity: isInCurrentTab ? 1 : 0.4,
                           filter: isInCurrentTab ? 'none' : 'grayscale(70%)',

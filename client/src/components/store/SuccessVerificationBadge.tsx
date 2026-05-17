@@ -34,7 +34,7 @@ export function SuccessVerificationBadge({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#101D27] border-none text-white p-0 max-w-[430px] w-full overflow-hidden flex flex-col [&>button]:hidden">
+      <DialogContent className="bg-[#0B1218] border-none text-white p-0 max-w-[430px] w-full overflow-hidden flex flex-col [&>button]:hidden">
         <div className="relative flex-1 flex flex-col items-center px-6 pt-16 pb-8 text-center overflow-hidden">
           {/* Background Glows */}
           <div className="absolute top-[-10%] left-[-20%] w-[344px] h-[746px] bg-[#00c95033] blur-[60px] rounded-full pointer-events-none" />
@@ -47,11 +47,11 @@ export function SuccessVerificationBadge({
             </span>
           </div>
 
-          <h2 className="relative z-10 text-4xl font-black text-[#f8fafc] uppercase tracking-[-0.9px] mb-4 leading-tight">
+          <h2 className="relative z-10 text-4xl font-black text-[#F5F7F2] uppercase tracking-[-0.9px] mb-4 leading-tight">
             Identity Verified
           </h2>
           
-          <p className="relative z-10 text-[#94a3b8] text-base font-medium leading-[26px] mb-12 max-w-[283px]">
+          <p className="relative z-10 text-[#B8C0AE] text-base font-medium leading-[26px] mb-12 max-w-[283px]">
             You've unlocked the ultimate status symbol. Your profile now features the official verification badge.
           </p>
 
@@ -69,16 +69,16 @@ export function SuccessVerificationBadge({
               />
               
               {/* Checkmark Floating Badge */}
-              <div className="absolute bottom-[-10px] right-[-10px] w-[62px] h-[62px] bg-[#00c950] border-[4px] border-[#101D27] rounded-full flex items-center justify-center shadow-[0_8px_10px_-6px_rgba(0,0,0,0.1),0_20px_25px_-5px_rgba(0,0,0,0.1)]">
-                <Check className="w-[31px] h-[31px] text-[#101D27] stroke-[4px]" />
+              <div className="absolute bottom-[-10px] right-[-10px] w-[62px] h-[62px] bg-[#00c950] border-[4px] border-[#0B1218] rounded-full flex items-center justify-center shadow-[0_8px_10px_-6px_rgba(0,0,0,0.1),0_20px_25px_-5px_rgba(0,0,0,0.1)]">
+                <Check className="w-[31px] h-[31px] text-[#0B1218] stroke-[4px]" />
               </div>
             </div>
           </div>
 
           {/* Transaction Info - Optional addition for utility */}
-          <div className="relative z-10 w-full bg-[#0f172a]/50 backdrop-blur-sm border border-[#1e293b80] rounded-2xl p-4 mb-8">
+          <div className="relative z-10 w-full bg-[#0B1218]/50 backdrop-blur-sm border border-[#1B2A3380] rounded-2xl p-4 mb-8">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-[#94a3b8] uppercase tracking-[1px]">
+              <span className="text-[10px] font-black text-[#B8C0AE] uppercase tracking-[1px]">
                 Verification Hash
               </span>
               <button 
@@ -89,7 +89,7 @@ export function SuccessVerificationBadge({
               </button>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-mono text-[#f8fafc] truncate flex-1 text-left">
+              <span className="text-sm font-mono text-[#F5F7F2] truncate flex-1 text-left">
                 {transactionId}
               </span>
               <ExternalLink className="w-4 h-4 text-[#475569]" />
@@ -100,7 +100,7 @@ export function SuccessVerificationBadge({
           <div className="relative z-10 w-full space-y-3">
             <Button
               onClick={() => onOpenChange(false)}
-              className="w-full h-[68px] rounded-2xl text-[#101D27] text-lg font-black uppercase bg-[#f8fafc] hover:bg-white transition-all active:scale-[0.98] shadow-[0_8px_10px_-6px_rgba(0,0,0,0.1),0_20px_25px_-5px_rgba(0,0,0,0.1)]"
+              className="w-full h-[68px] rounded-2xl text-[#0B1218] text-lg font-black uppercase bg-[#F5F7F2] hover:bg-white transition-all active:scale-[0.98] shadow-[0_8px_10px_-6px_rgba(0,0,0,0.1),0_20px_25px_-5px_rgba(0,0,0,0.1)]"
               style={{ letterSpacing: '-0.9px' }}
             >
               Equip Badge
@@ -108,7 +108,7 @@ export function SuccessVerificationBadge({
             <Button
               variant="ghost"
               onClick={() => setLocation('/profile')}
-              className="w-full h-[52px] rounded-2xl text-[#f8fafc] text-sm font-bold uppercase bg-[#1e293b80] hover:bg-[#1e293b] transition-all"
+              className="w-full h-[52px] rounded-2xl text-[#F5F7F2] text-sm font-bold uppercase bg-[#1B2A3380] hover:bg-[#1B2A33] transition-all"
               style={{ letterSpacing: '1.4px' }}
             >
               Back to Profile

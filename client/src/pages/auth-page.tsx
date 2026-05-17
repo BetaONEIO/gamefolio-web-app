@@ -117,7 +117,7 @@ export default function AuthPage() {
         </div>
 
         {/* Popup Card Module */}
-        <div className="w-full max-w-md rounded-2xl bg-[#0f172a]/90 backdrop-blur-xl border border-white/10 shadow-2xl p-4 sm:p-6">
+        <div className="w-full max-w-md rounded-2xl bg-[#0B1218]/90 backdrop-blur-xl border border-white/10 shadow-2xl p-4 sm:p-6">
           <Tabs
             defaultValue="login"
             value={activeTab}

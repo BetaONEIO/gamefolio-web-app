@@ -196,14 +196,14 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
         </DialogTrigger>
       )}
       <DialogContent
-        className="p-0 border-[#1e293b] bg-[#0f172a] w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh] flex flex-col"
+        className="p-0 border-[#1B2A33] bg-[#0B1218] w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh] flex flex-col"
         aria-describedby="clip-share-description"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#1e293b]/50 shrink-0">
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#1B2A33]/50 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <ShareLaunchIcon size={18} className="text-[#B7FF1A] shrink-0" />
-            <span className="text-[#f8fafc] text-base font-bold truncate">
+            <span className="text-[#F5F7F2] text-base font-bold truncate">
               {isOwnContent ? `Share your ${label}` : `Share ${label}`}
             </span>
           </div>
@@ -212,7 +212,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
             className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/5 transition-colors shrink-0 ml-2"
             aria-label="Close"
           >
-            <X className="w-5 h-5 text-[#94a3b8]" />
+            <X className="w-5 h-5 text-[#B8C0AE]" />
           </button>
         </div>
 
@@ -242,7 +242,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
               {/* Thumbnail — smaller on mobile to keep modal compact */}
               <div className="flex justify-center">
                 <div
-                  className={`relative bg-[#1e293b] rounded-xl overflow-hidden border border-[#1e293b]/80 ${
+                  className={`relative bg-[#101923] rounded-xl overflow-hidden border border-[#1B2A33]/80 ${
                     contentType === 'reel' || shareData.videoType === 'reel'
                       ? 'w-28 sm:w-36 aspect-[9/16]'
                       : 'w-full max-h-[140px] sm:max-h-[180px] aspect-video'
@@ -251,7 +251,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                   <ClipThumbnail thumbnailUrl={shareData.thumbnailUrl} videoUrl={shareData.videoUrl} />
                   <div className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none">
                     <div className="w-9 h-9 bg-white/90 rounded-full flex items-center justify-center">
-                      <div className="w-0 h-0 border-l-[6px] border-l-[#0f172a] border-y-[4px] border-y-transparent ml-0.5" />
+                      <div className="w-0 h-0 border-l-[6px] border-l-[#0B1218] border-y-[4px] border-y-transparent ml-0.5" />
                     </div>
                   </div>
                 </div>
@@ -263,8 +263,8 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                   {`${label.charAt(0).toUpperCase()}${label.slice(1)} Link`}
                 </span>
                 <div className="flex gap-2">
-                  <div className="flex-1 min-w-0 bg-[#1e293b] border border-[#2d3f55] rounded-xl px-3 py-2.5 overflow-hidden">
-                    <span className="text-[#94a3b8] text-xs font-mono truncate block">
+                  <div className="flex-1 min-w-0 bg-[#1B2A33] border border-[#2d3f55] rounded-xl px-3 py-2.5 overflow-hidden">
+                    <span className="text-[#B8C0AE] text-xs font-mono truncate block">
                       {shareData.clipUrl}
                     </span>
                   </div>
@@ -307,8 +307,8 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                         title={platform.name}
                         aria-label={`Share on ${platform.name}`}
                       >
-                        <div className="w-9 h-9 rounded-full border border-[#B7FF1A]/30 bg-[#1e293b] flex items-center justify-center">
-                          <Icon className="w-4 h-4 text-[#f8fafc]" />
+                        <div className="w-9 h-9 rounded-full border border-[#B7FF1A]/30 bg-[#1B2A33] flex items-center justify-center">
+                          <Icon className="w-4 h-4 text-[#F5F7F2]" />
                         </div>
                         <span className="text-[#64748b] text-[9px] leading-tight text-center">{platform.name}</span>
                       </button>
@@ -319,8 +319,8 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
             </>
           ) : (
             <div className="text-center py-10">
-              <AlertCircle className="w-10 h-10 text-[#94a3b8] mx-auto mb-3" />
-              <p className="text-[#94a3b8]">Unable to generate sharing options</p>
+              <AlertCircle className="w-10 h-10 text-[#B8C0AE] mx-auto mb-3" />
+              <p className="text-[#B8C0AE]">Unable to generate sharing options</p>
             </div>
           )}
         </div>

@@ -125,7 +125,7 @@ export function GameFilterSheet({
             ref={dropdownRef}
             className="absolute left-0 top-full mt-1.5 z-[9999] flex flex-col rounded-xl overflow-hidden shadow-2xl"
             style={{
-              background: '#0F1923',
+              background: '#0B1218',
               border: '1px solid rgba(255,255,255,0.1)',
               width: '300px',
               maxHeight: '480px',
@@ -159,7 +159,7 @@ export function GameFilterSheet({
               >
                 <div
                   className="flex-shrink-0 rounded overflow-hidden flex items-center justify-center"
-                  style={{ width: '45px', height: '60px', background: '#1A2736', border: '1px solid rgba(255,255,255,0.1)' }}
+                  style={{ width: '45px', height: '60px', background: '#101923', border: '1px solid rgba(255,255,255,0.1)' }}
                 >
                   <Gamepad2 className="h-4 w-4" style={{ color: '#B7FF1A' }} />
                 </div>
@@ -193,7 +193,7 @@ export function GameFilterSheet({
                   >
                     <div
                       className="flex-shrink-0 rounded overflow-hidden"
-                      style={{ width: '45px', height: '60px', background: '#1A2736', border: isSelected ? '1.5px solid #B7FF1A' : '1px solid rgba(255,255,255,0.1)' }}
+                      style={{ width: '45px', height: '60px', background: '#101923', border: isSelected ? '1.5px solid #B7FF1A' : '1px solid rgba(255,255,255,0.1)' }}
                     >
                       {imgSrc ? (
                         <img src={imgSrc} alt={game.name} className="w-full h-full object-contain" />
@@ -229,7 +229,7 @@ export function GameFilterSheet({
           <div
             className="w-full flex flex-col"
             style={{
-              background: '#0F1923',
+              background: '#0B1218',
               height: `calc(100% - ${keyboardOffset}px)`,
               transition: 'height 0.2s ease',
             }}
@@ -278,7 +278,7 @@ export function GameFilterSheet({
                   className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center transition-all"
                   style={{
                     aspectRatio: '3/4',
-                    background: '#1A2736',
+                    background: '#101923',
                     border: !selectedGameId ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                   }}
                   onClick={() => { onGameSelect(null, null); close(); }}
@@ -315,7 +315,7 @@ export function GameFilterSheet({
                       className="relative rounded-xl overflow-hidden flex flex-col justify-end transition-all"
                       style={{
                         aspectRatio: '3/4',
-                        background: '#1A2736',
+                        background: '#101923',
                         border: isSelected ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                       }}
                       onClick={() => { onGameSelect(game.id, game.name); close(); }}

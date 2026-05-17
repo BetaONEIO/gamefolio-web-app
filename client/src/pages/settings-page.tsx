@@ -288,8 +288,8 @@ const PRESET_THEMES = [
     name: "None",
     backgroundColor: "#121F2B",
     accentColor: "#B7FF1A",
-    gradientTopColor: "#02172C",
-    primaryColor: "#02172C"
+    gradientTopColor: "#071013",
+    primaryColor: "#071013"
   },
   {
     name: "Cutesy Pink",
@@ -2648,8 +2648,8 @@ export default function SettingsPage() {
                       <CardContent>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {PRESET_THEMES.map((theme) => {
-                            const topColor = theme.gradientTopColor || '#0B2232';
-                            const defaultThemeColor = '#0B2232';
+                            const topColor = theme.gradientTopColor || '#071013';
+                            const defaultThemeColor = '#071013';
                             const isActive = profileData.accentColor === theme.accentColor && profileData.backgroundColor === theme.backgroundColor;
                             const isLocked = (theme as any).proOnly && !user?.isPro && theme.name !== "None";
                             return (
@@ -4792,7 +4792,7 @@ export default function SettingsPage() {
       {showNftSelector && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/70" onClick={() => setShowNftSelector(false)} />
-          <div className="relative bg-[#0f172a] border border-slate-700 rounded-xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl mx-4">
+          <div className="relative bg-[#0B1218] border border-slate-700 rounded-xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl mx-4">
             <div className="flex items-center justify-between p-4 border-b border-slate-700">
               <h3 className="text-lg font-semibold text-white">Select NFT as Profile Picture</h3>
               <button
@@ -4852,7 +4852,7 @@ export default function SettingsPage() {
                         legendary: "bg-primary shadow-[0_0_8px_#A2F000]",
                         epic: "bg-primary shadow-[0_0_8px_#6FA800]",
                         rare: "bg-primary shadow-[0_0_8px_#B7FF1A]",
-                        common: "bg-slate-400/50 shadow-[0_0_8px_#1e293b]",
+                        common: "bg-slate-400/50 shadow-[0_0_8px_#1B2A33]",
                       };
                       const rarityText: Record<string, string> = {
                         legendary: "bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] bg-clip-text text-transparent font-black",
@@ -4879,7 +4879,7 @@ export default function SettingsPage() {
                           }}
                           disabled={setNftProfileMutation.isPending}
                           className={`relative rounded-2xl overflow-hidden transition-all duration-200 hover:scale-[1.03] text-left ${cardBg[rarityLabel]} ${cardGlow[rarityLabel]} ${
-                            isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#0f172a]' : ''
+                            isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#0B1218]' : ''
                           }`}
                         >
                           <div className="relative">

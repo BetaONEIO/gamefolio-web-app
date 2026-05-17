@@ -220,7 +220,7 @@ export function GamefolioShareDialog({
 
   const bannerUrl = bannerSignedUrl || userProfile?.bannerUrl;
   const themeAccent = userProfile?.accentColor || '#B7FF1A';
-  const themeBg = userProfile?.backgroundColor || '#0B2232';
+  const themeBg = userProfile?.backgroundColor || '#071013';
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -238,19 +238,19 @@ export function GamefolioShareDialog({
         </DialogTrigger>
       )}
       <DialogContent 
-        className="p-0 border-[#1e293b] bg-[#0f172a] w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh]"
+        className="p-0 border-[#1B2A33] bg-[#0B1218] w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-5 py-4 sm:py-5 border-b border-[#1e293b]/50">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-4 sm:py-5 border-b border-[#1B2A33]/50">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <ShareLaunchIcon size={20} className="text-[#B7FF1A] shrink-0" />
-            <span className="text-[#f8fafc] text-base sm:text-xl font-bold truncate">Share Gamefolio</span>
+            <span className="text-[#F5F7F2] text-base sm:text-xl font-bold truncate">Share Gamefolio</span>
           </div>
           <button
             onClick={() => setOpen(false)}
             className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/5 transition-colors shrink-0 ml-2"
           >
-            <X className="w-5 h-5 sm:w-6 sm:h-6 text-[#94a3b8]" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6 text-[#B8C0AE]" />
           </button>
         </div>
 
@@ -305,7 +305,7 @@ export function GamefolioShareDialog({
                         </div>
                       </div>
                     ) : (
-                      <div className="w-20 h-20 rounded-full border-4 border-[#0f172a] overflow-hidden bg-[#0f172a]">
+                      <div className="w-20 h-20 rounded-full border-4 border-[#0B1218] overflow-hidden bg-[#0B1218]">
                         <CustomAvatar 
                           user={{
                             username,
@@ -324,7 +324,7 @@ export function GamefolioShareDialog({
 
                   {/* Name & Username with badges */}
                   <div className="flex items-center gap-1 mb-0.5 flex-wrap">
-                    <span className="text-[#f8fafc] text-lg font-bold leading-7 truncate">
+                    <span className="text-[#F5F7F2] text-lg font-bold leading-7 truncate">
                       {userProfile?.displayName || username}
                     </span>
                     {verificationBadgeData?.verificationBadge ? (
@@ -338,7 +338,7 @@ export function GamefolioShareDialog({
                       <VerificationBadge isVerified={true} size="sm" />
                     ) : null}
                   </div>
-                  <span className="text-[#94a3b8] text-sm leading-5">@{username}</span>
+                  <span className="text-[#B8C0AE] text-sm leading-5">@{username}</span>
 
                   {/* User type badges */}
                   {userProfile?.userType && userProfile?.showUserType !== false && (
@@ -363,7 +363,7 @@ export function GamefolioShareDialog({
 
                   {/* Bio */}
                   {userProfile?.bio && (
-                    <p className="text-[#94a3b8] text-sm leading-5 mt-1 line-clamp-1 pr-8">
+                    <p className="text-[#B8C0AE] text-sm leading-5 mt-1 line-clamp-1 pr-8">
                       {userProfile.bio}
                     </p>
                   )}
@@ -393,18 +393,18 @@ export function GamefolioShareDialog({
                   )}
 
                   {/* Stats */}
-                  <div className="flex items-center gap-4 border-t border-[#1e293b]/30 mt-3 pt-3">
+                  <div className="flex items-center gap-4 border-t border-[#1B2A33]/30 mt-3 pt-3">
                     <div className="flex items-center gap-1">
-                      <span className="text-[#f8fafc] text-lg font-bold leading-7">{userStats?.clips || 0}</span>
-                      <span className="text-[#94a3b8] text-xs leading-4">Clips</span>
+                      <span className="text-[#F5F7F2] text-lg font-bold leading-7">{userStats?.clips || 0}</span>
+                      <span className="text-[#B8C0AE] text-xs leading-4">Clips</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-[#f8fafc] text-lg font-bold leading-7">{userStats?.followers || 0}</span>
-                      <span className="text-[#94a3b8] text-xs leading-4">Followers</span>
+                      <span className="text-[#F5F7F2] text-lg font-bold leading-7">{userStats?.followers || 0}</span>
+                      <span className="text-[#B8C0AE] text-xs leading-4">Followers</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-[#f8fafc] text-lg font-bold leading-7">{userStats?.following || 0}</span>
-                      <span className="text-[#94a3b8] text-xs leading-4">Following</span>
+                      <span className="text-[#F5F7F2] text-lg font-bold leading-7">{userStats?.following || 0}</span>
+                      <span className="text-[#B8C0AE] text-xs leading-4">Following</span>
                     </div>
                   </div>
                 </div>
@@ -412,10 +412,10 @@ export function GamefolioShareDialog({
 
               {/* Profile Link Section */}
               <div className="flex flex-col gap-2.5">
-                <span className="text-[#94a3b8] text-sm">Gamefolio Link</span>
+                <span className="text-[#B8C0AE] text-sm">Gamefolio Link</span>
                 <div className="flex gap-2">
-                  <div className="flex-1 min-w-0 bg-[#1e293b] border border-[#1e293b] rounded-2xl px-3 sm:px-4 py-3 overflow-hidden">
-                    <span className="text-[#94a3b8] text-xs sm:text-sm font-mono truncate block">
+                  <div className="flex-1 min-w-0 bg-[#101923] border border-[#1B2A33] rounded-2xl px-3 sm:px-4 py-3 overflow-hidden">
+                    <span className="text-[#B8C0AE] text-xs sm:text-sm font-mono truncate block">
                       {shareData.profileUrl}
                     </span>
                   </div>
@@ -431,7 +431,7 @@ export function GamefolioShareDialog({
 
               {/* Social Media Section - desktop only */}
               <div className="hidden sm:flex flex-col gap-3">
-                <span className="text-[#94a3b8] text-sm">Share on Social Media</span>
+                <span className="text-[#B8C0AE] text-sm">Share on Social Media</span>
                 <div className="flex flex-wrap gap-2 sm:gap-2.5">
                   {socialPlatforms.map((platform) => {
                     const IconComponent = platform.icon;
@@ -441,7 +441,7 @@ export function GamefolioShareDialog({
                         key={platform.name}
                         onClick={() => shareUrl && handleSocialShare(shareUrl, platform.key, platform.name)}
                         disabled={!shareUrl}
-                        className="w-14 h-14 rounded-full border-2 border-[#B7FF1A] bg-transparent hover:bg-[#B7FF1A]/10 text-[#f8fafc] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        className="w-14 h-14 rounded-full border-2 border-[#B7FF1A] bg-transparent hover:bg-[#B7FF1A]/10 text-[#F5F7F2] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                         title={platform.name}
                       >
                         <IconComponent className="w-6 h-6" />
@@ -453,7 +453,7 @@ export function GamefolioShareDialog({
             </>
           ) : (
             <div className="text-center py-12">
-              <p className="text-[#94a3b8]">Unable to generate sharing options</p>
+              <p className="text-[#B8C0AE]">Unable to generate sharing options</p>
             </div>
           )}
         </div>

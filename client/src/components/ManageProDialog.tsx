@@ -158,8 +158,8 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
       <>
         <Dialog open={open} onOpenChange={onOpenChange}>
           <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-md md:max-w-lg [&>button]:hidden">
-            <div className="bg-[#101D27] rounded-2xl overflow-hidden border border-slate-800/50 flex flex-col max-h-[90vh]">
-              <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800/50 backdrop-blur-md bg-[#101D27]/80 shrink-0">
+            <div className="bg-[#0B1218] rounded-2xl overflow-hidden border border-slate-800/50 flex flex-col max-h-[90vh]">
+              <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800/50 backdrop-blur-md bg-[#0B1218]/80 shrink-0">
                 <button onClick={resetCancelState} className="p-2 rounded-full hover:bg-slate-800 transition-colors">
                   <ArrowLeft className="h-5 w-5 text-slate-50" />
                 </button>
@@ -191,7 +191,7 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
                         value={cancelPassword}
                         onChange={(e) => { setCancelPassword(e.target.value); setPasswordError(''); }}
                         onKeyDown={(e) => { if (e.key === 'Enter' && cancelPassword) handleVerifyPassword(); }}
-                        className="w-full px-4 py-3 rounded-2xl border border-slate-700/50 bg-[#0f172a] text-sm text-slate-50 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                        className="w-full px-4 py-3 rounded-2xl border border-slate-700/50 bg-[#0B1218] text-sm text-slate-50 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/50"
                       />
                       {passwordError && (
                         <p className="text-sm text-red-400">{passwordError}</p>
@@ -202,7 +202,7 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
                       <button
                         onClick={resetCancelState}
                         disabled={cancelling}
-                        className="flex-1 py-4 rounded-2xl bg-[#1e293b] text-slate-50 font-bold text-base hover:bg-slate-700 transition-colors"
+                        className="flex-1 py-4 rounded-2xl bg-[#1B2A33] text-slate-50 font-bold text-base hover:bg-slate-700 transition-colors"
                       >
                         Go Back
                       </button>
@@ -245,7 +245,7 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
                             className={`w-full text-left px-4 py-3.5 rounded-2xl border text-sm transition-colors ${
                               cancelReason === val
                                 ? "border-red-500/50 bg-red-500/10 text-slate-50"
-                                : "border-slate-700/30 bg-[#1e293b]/30 hover:border-slate-600 text-slate-400"
+                                : "border-slate-700/30 bg-[#1B2A33]/30 hover:border-slate-600 text-slate-400"
                             }`}
                           >
                             {option}
@@ -259,7 +259,7 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
                         placeholder="Please tell us more..."
                         value={cancelReasonOther}
                         onChange={(e) => setCancelReasonOther(e.target.value)}
-                        className="w-full min-h-[80px] px-4 py-3 rounded-2xl border border-slate-700/50 bg-[#0f172a] text-sm text-slate-50 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 resize-none"
+                        className="w-full min-h-[80px] px-4 py-3 rounded-2xl border border-slate-700/50 bg-[#0B1218] text-sm text-slate-50 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 resize-none"
                       />
                     )}
 
@@ -273,7 +273,7 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
                       <button
                         onClick={() => setCancelStep('password')}
                         disabled={cancelling}
-                        className="flex-1 py-4 rounded-2xl bg-[#1e293b] text-slate-50 font-bold text-base hover:bg-slate-700 transition-colors"
+                        className="flex-1 py-4 rounded-2xl bg-[#1B2A33] text-slate-50 font-bold text-base hover:bg-slate-700 transition-colors"
                       >
                         Go Back
                       </button>
@@ -298,8 +298,8 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-md md:max-w-lg [&>button]:hidden">
-        <div className="bg-[#101D27] rounded-2xl overflow-hidden border border-slate-800/50 flex flex-col max-h-[90vh]">
-          <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800/50 backdrop-blur-md bg-[#101D27]/80 shrink-0">
+        <div className="bg-[#0B1218] rounded-2xl overflow-hidden border border-slate-800/50 flex flex-col max-h-[90vh]">
+          <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800/50 backdrop-blur-md bg-[#0B1218]/80 shrink-0">
             <div className="w-10 h-10" />
             <span className="text-slate-50 font-bold text-lg">Manage Subscription</span>
             <button onClick={() => onOpenChange(false)} className="p-2 rounded-full hover:bg-slate-800 transition-colors">
@@ -332,9 +332,9 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
             </div>
 
             <div className="px-6 pb-4">
-              <div className="bg-[#0f172a] border border-slate-800/50 rounded-2xl p-5 space-y-5 shadow-lg">
+              <div className="bg-[#0B1218] border border-slate-800/50 rounded-2xl p-5 space-y-5 shadow-lg">
                 <div className="flex items-center gap-3">
-                  <div className="bg-[#1e293b] rounded-2xl p-2.5 shrink-0">
+                  <div className="bg-[#1B2A33] rounded-2xl p-2.5 shrink-0">
                     <Calendar className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -346,7 +346,7 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
                 <div className="h-px bg-slate-700/50" />
 
                 <div className="flex items-center gap-3">
-                  <div className="bg-[#1e293b] rounded-2xl p-2.5 shrink-0">
+                  <div className="bg-[#1B2A33] rounded-2xl p-2.5 shrink-0">
                     <Tag className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -358,7 +358,7 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
                 <div className="h-px bg-slate-700/50" />
 
                 <div className="flex items-center gap-3">
-                  <div className="bg-[#1e293b] rounded-2xl p-2.5 shrink-0">
+                  <div className="bg-[#1B2A33] rounded-2xl p-2.5 shrink-0">
                     <Wallet className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -373,7 +373,7 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
               <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.1em] mb-4">Included Benefits</p>
               <div className="space-y-2">
                 {benefits.map((benefit) => (
-                  <div key={benefit} className="flex items-center gap-3 bg-[#1e293b]/30 border border-slate-800/20 rounded-2xl px-3.5 py-3">
+                  <div key={benefit} className="flex items-center gap-3 bg-[#1B2A33]/30 border border-slate-800/20 rounded-2xl px-3.5 py-3">
                     <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
                     <span className="text-slate-50 text-sm font-medium">{benefit}</span>
                   </div>

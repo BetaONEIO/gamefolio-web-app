@@ -55,7 +55,7 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
 
   return (
     <div 
-      className="overflow-hidden relative group bg-[#1E2327] rounded-sm cursor-pointer aspect-square"
+      className="overflow-hidden relative group bg-[#101923] rounded-sm cursor-pointer aspect-square"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleClipClick}

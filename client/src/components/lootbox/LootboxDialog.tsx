@@ -297,7 +297,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                       rarityStyle.bg
                     )}
                   >
-                  <div className="w-40 h-40 rounded-xl overflow-hidden flex items-center justify-center bg-[#1a1a2e]">
+                  <div className="w-40 h-40 rounded-xl overflow-hidden flex items-center justify-center bg-[#0B1218]">
                     {reward.assetType === 'xp_reward' ? (
                       <div className="w-28 h-28 rounded-full bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-yellow-500/30">
                         <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-300 to-amber-400 flex flex-col items-center justify-center border-4 border-yellow-200/50">

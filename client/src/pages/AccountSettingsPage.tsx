@@ -591,8 +591,8 @@ const AccountSettingsPage: React.FC = () => {
     resolver: zodResolver(appearanceFormSchema),
     defaultValues: {
       accentColor: user?.accentColor || '#4C8',
-      primaryColor: user?.primaryColor || '#02172C',
-      backgroundColor: user?.backgroundColor || '#0B2232',
+      primaryColor: user?.primaryColor || '#071013',
+      backgroundColor: user?.backgroundColor || '#071013',
       profileFont: user?.profileFont || 'default',
       layoutStyle: (user?.layoutStyle as 'grid' | 'masonry' | 'classic') || 'grid',
       bannerUrl: user?.bannerUrl || '',
@@ -907,7 +907,7 @@ const AccountSettingsPage: React.FC = () => {
                                         value={field.value}
                                         onChange={(e) => field.onChange(e.target.value)}
                                         className="w-32 font-mono text-sm"
-                                        placeholder="#0B2232"
+                                        placeholder="#071013"
                                       />
                                     </div>
                                     <div

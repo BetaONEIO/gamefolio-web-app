@@ -319,7 +319,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
         <div
           className="flex-1 flex flex-col overflow-hidden"
           style={{
-            background: '#0F1923',
+            background: '#0B1218',
             borderRadius: '20px 20px 0 0',
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
             transform: sheetMounted ? `translateY(${sheetDragY}px)` : 'translateY(100%)',

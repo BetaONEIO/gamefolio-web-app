@@ -161,18 +161,18 @@ export function LevelTrackerModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="bg-[#0f172a]/95 backdrop-blur-sm border border-[#1e293b] text-white p-0 w-[92vw] max-w-[340px] lg:max-w-[385px] lg:w-[385px] rounded-2xl overflow-hidden [&>button]:hidden fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+        className="bg-[#0B1218]/95 backdrop-blur-sm border border-[#1B2A33] text-white p-0 w-[92vw] max-w-[340px] lg:max-w-[385px] lg:w-[385px] rounded-2xl overflow-hidden [&>button]:hidden fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
         data-testid="dialog-level-progress"
       >
         <div className="flex flex-col">
           <div className="flex items-center justify-between px-4 pt-4 pb-2 lg:px-6 lg:pt-5 lg:pb-3">
-            <span className="text-base lg:text-xl font-bold text-[#f8fafc]">Level Progress</span>
+            <span className="text-base lg:text-xl font-bold text-[#F5F7F2]">Level Progress</span>
             <button
               onClick={handleClose}
-              className="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-[#1e293b] border border-[#1e293b] flex items-center justify-center hover:bg-[#334155] transition-colors"
+              className="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-[#1B2A33] border border-[#1B2A33] flex items-center justify-center hover:bg-[#22313A] transition-colors"
             >
               <svg className="w-4 h-4 lg:w-5 lg:h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path fillRule="evenodd" clipRule="evenodd" d="M22 12C22 17.523 17.523 22 12 22C6.477 22 2 17.523 2 12C2 6.477 6.477 2 12 2C17.523 2 22 6.477 22 12ZM8.97 8.97C9.26282 8.67755 9.73718 8.67755 10.03 8.97L12 10.94L13.97 8.97C14.2655 8.69464 14.726 8.70277 15.0116 8.98838C15.2972 9.27399 15.3054 9.73449 15.03 10.03L13.06 12L15.03 13.97C15.3054 14.2655 15.2972 14.726 15.0116 15.0116C14.726 15.2972 14.2655 15.3054 13.97 15.03L12 13.06L10.03 15.03C9.73449 15.3054 9.27399 15.2972 8.98838 15.0116C8.70277 14.726 8.69464 14.2655 8.97 13.97L10.94 12L8.97 10.03C8.67755 9.73718 8.67755 9.26282 8.97 8.97Z" fill="#94A3B8" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M22 12C22 17.523 17.523 22 12 22C6.477 22 2 17.523 2 12C2 6.477 6.477 2 12 2C17.523 2 22 6.477 22 12ZM8.97 8.97C9.26282 8.67755 9.73718 8.67755 10.03 8.97L12 10.94L13.97 8.97C14.2655 8.69464 14.726 8.70277 15.0116 8.98838C15.2972 9.27399 15.3054 9.73449 15.03 10.03L13.06 12L15.03 13.97C15.3054 14.2655 15.2972 14.726 15.0116 15.0116C14.726 15.2972 14.2655 15.3054 13.97 15.03L12 13.06L10.03 15.03C9.73449 15.3054 9.27399 15.2972 8.98838 15.0116C8.70277 14.726 8.69464 14.2655 8.97 13.97L10.94 12L8.97 10.03C8.67755 9.73718 8.67755 9.26282 8.97 8.97Z" fill="#B8C0AE" />
               </svg>
             </button>
           </div>
@@ -201,7 +201,7 @@ export function LevelTrackerModal({
                   cx="50"
                   cy="50"
                   r="45"
-                  stroke="#1E293B"
+                  stroke="#1B2A33"
                   strokeWidth="6"
                   fill="none"
                 />
@@ -227,7 +227,7 @@ export function LevelTrackerModal({
                   <path fillRule="evenodd" clipRule="evenodd" d="M19.9566 3.33301C22.9299 3.33301 25.3783 3.59468 27.2517 3.91135C29.15 4.23135 30.0983 4.39135 30.8917 5.36803C31.685 6.34471 31.6417 7.39972 31.5584 9.50974C31.2717 16.7582 29.7083 25.8099 21.2066 26.6099V32.5H23.5899C24.3841 32.5005 25.0676 33.0612 25.2233 33.84L25.54 35.4167H29.9567C30.647 35.4167 31.2067 35.9763 31.2067 36.6667C31.2067 37.3571 30.647 37.9167 29.9567 37.9167H9.95646C9.2661 37.9167 8.70645 37.357 8.70645 36.6667C8.70645 35.9763 9.2661 35.4167 9.95646 35.4167H14.3732L14.6899 33.84C14.8455 33.0612 15.5291 32.5005 16.3232 32.5H18.7066V26.6099C10.2049 25.8099 8.64156 16.7582 8.35489 9.50974C8.27156 7.39972 8.22823 6.34471 9.02156 5.36803C9.8149 4.39135 10.7632 4.23135 12.6616 3.91135C14.5349 3.59468 16.9832 3.33301 19.9566 3.33301Z" fill="#EAB308" />
                 </svg>
                 <motion.span 
-                  className="text-4xl lg:text-5xl font-black text-[#f8fafc] leading-tight"
+                  className="text-4xl lg:text-5xl font-black text-[#F5F7F2] leading-tight"
                   key={actualLevel}
                   initial={{ scale: 1 }}
                   animate={{ scale: [1, 1.1, 1] }}
@@ -235,7 +235,7 @@ export function LevelTrackerModal({
                 >
                   {actualLevel}
                 </motion.span>
-                <span className="text-[9px] lg:text-sm font-bold text-[#94a3b8] uppercase tracking-wider">
+                <span className="text-[9px] lg:text-sm font-bold text-[#B8C0AE] uppercase tracking-wider">
                   Level
                 </span>
               </div>
@@ -250,14 +250,14 @@ export function LevelTrackerModal({
               >
                 {Math.round(xpProgress).toLocaleString()}
               </motion.span>
-              <span className="text-sm lg:text-lg font-medium text-[#94a3b8]">/</span>
-              <span className="text-sm lg:text-lg font-medium text-[#f8fafc]">{xpNeeded.toLocaleString()} XP to Lvl</span>
-              <span className="text-sm lg:text-lg font-bold text-[#f8fafc]">{actualLevel + 1}</span>
+              <span className="text-sm lg:text-lg font-medium text-[#B8C0AE]">/</span>
+              <span className="text-sm lg:text-lg font-medium text-[#F5F7F2]">{xpNeeded.toLocaleString()} XP to Lvl</span>
+              <span className="text-sm lg:text-lg font-bold text-[#F5F7F2]">{actualLevel + 1}</span>
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-xs lg:text-sm font-medium text-[#94a3b8]">Total:</span>
+              <span className="text-xs lg:text-sm font-medium text-[#B8C0AE]">Total:</span>
               <motion.span 
-                className="text-xs lg:text-sm font-bold text-[#f8fafc]"
+                className="text-xs lg:text-sm font-bold text-[#F5F7F2]"
                 key={Math.round(displayXP)}
               >
                 {Math.round(displayXP).toLocaleString()} XP
@@ -269,7 +269,7 @@ export function LevelTrackerModal({
                 <motion.div
                   key={segment}
                   className={`flex-1 h-1.5 lg:h-2 rounded-full ${
-                    segment <= filledSegments ? 'bg-[#B7FF1A]' : 'bg-[#1e293b]'
+                    segment <= filledSegments ? 'bg-[#B7FF1A]' : 'bg-[#1B2A33]'
                   }`}
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}

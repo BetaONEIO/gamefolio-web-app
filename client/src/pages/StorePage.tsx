@@ -1872,7 +1872,7 @@ export default function StorePage() {
           {activeTab === "mint" && (
             <div className="flex flex-col items-center justify-center min-h-[50vh] md:min-h-[60vh] px-4">
               <Sparkles className="h-16 w-16 md:h-20 md:w-20 mb-4 text-[#B7FF1A]" />
-              <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center text-[#94a3b8]" data-testid="heading-mint-coming-soon">
+              <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center text-[#B8C0AE]" data-testid="heading-mint-coming-soon">
                 Mint Your Own NFT
               </h3>
               <p className="text-sm md:text-base text-[#B7FF1A] text-center max-w-md" data-testid="text-mint-description">
@@ -2011,7 +2011,7 @@ export default function StorePage() {
 
       {/* Wallet Redirect Dialog */}
       <WalletDialog open={walletRedirectOpen} onOpenChange={setWalletRedirectOpen}>
-        <WalletDialogContent className="bg-[#0f172a] border-gray-700 text-white max-w-sm">
+        <WalletDialogContent className="bg-[#0B1218] border-gray-700 text-white max-w-sm">
           <WalletDialogHeader>
             <WalletDialogTitle className="text-white text-lg">Wallet Required</WalletDialogTitle>
             <WalletDialogDescription className="text-gray-400">

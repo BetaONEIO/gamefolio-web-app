@@ -429,7 +429,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       {currentReel && isDesktop && (
         <div
           className="flex flex-col justify-between w-[340px] flex-shrink-0 h-full border-l border-white/10"
-          style={{ background: '#0a0f14', paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+          style={{ background: '#03080A', paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
           onClick={e => e.stopPropagation()}
         >
           {/* Profile + info */}
@@ -562,7 +562,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       {showComments && currentReel && (
         <div
           className="flex-1 flex flex-col overflow-hidden"
-          style={{ background: '#0F1923', borderRadius: '20px 20px 0 0', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          style={{ background: '#0B1218', borderRadius: '20px 20px 0 0', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
           {/* Drag handle */}
           <div className="flex justify-center pt-3 pb-1 flex-shrink-0">

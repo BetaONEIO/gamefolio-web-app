@@ -318,7 +318,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
       ref={containerRef}
       className={embedded ? "relative w-full h-full flex flex-col" : "fixed inset-0 z-[60] flex flex-col"}
       style={{
-        background: '#131F2A',
+        background: '#0B1218',
         transform: dragOffset !== 0 ? `translateY(${dragOffset}px)` : undefined,
         transition: dragOffset !== 0 ? 'none' : 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
         paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
@@ -543,7 +543,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             transition={{ type: "spring", damping: 32, stiffness: 320, mass: 0.9 }}
             className="flex-1 flex flex-col overflow-hidden"
             style={{
-              background: '#0F1923',
+              background: '#0B1218',
               borderRadius: '20px 20px 0 0',
               transform: sheetY > 0 ? `translateY(${sheetY}px)` : undefined,
               transition: sheetY > 0 ? 'none' : 'transform 0.3s cubic-bezier(0.32,0.72,0,1)',
@@ -603,7 +603,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               className="flex-shrink-0 px-3 py-2"
               style={{
                 borderTop: '1px solid rgba(255,255,255,0.07)',
-                background: '#0F1923',
+                background: '#0B1218',
                 paddingBottom: 'max(env(safe-area-inset-bottom, 8px), 8px)',
               }}
             >

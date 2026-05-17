@@ -226,7 +226,7 @@ export function MarketplacePurchaseDialog({
       : pendingNftPurchase?.currentBalance || "0";
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : onCancel())}>
-      <DialogContent className="bg-[#0f172a] border-gray-700 text-white max-w-sm">
+      <DialogContent className="bg-[#0B1218] border-gray-700 text-white max-w-sm">
         <DialogHeader>
           <DialogTitle className="text-white text-lg">Confirm NFT Purchase</DialogTitle>
           <DialogDescription className="text-gray-400">

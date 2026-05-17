@@ -11,8 +11,8 @@ import { Palette, Eye, RotateCcw } from "lucide-react";
 
 const DEFAULT_COLORS = {
   accentColor: "#4C8",
-  primaryColor: "#02172C", 
-  backgroundColor: "#0B2232",
+  primaryColor: "#071013", 
+  backgroundColor: "#071013",
   cardColor: "#1E3A8A"
 };
 
@@ -20,7 +20,7 @@ const PRESET_THEMES = [
   {
     name: "Default",
     accentColor: "#4C8",
-    backgroundColor: "#0B2232",
+    backgroundColor: "#071013",
     cardColor: "#1E3A8A"
   },
   {
@@ -44,7 +44,7 @@ const PRESET_THEMES = [
   {
     name: "Sunset Orange",
     accentColor: "#FF6B35",
-    backgroundColor: "#1A1A2E",
+    backgroundColor: "#0B1218",
     cardColor: "#16213E"
   },
   {

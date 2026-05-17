@@ -73,7 +73,7 @@ export async function initMobileShell(): Promise<void> {
   try {
     await StatusBar.setStyle({ style: Style.Dark });
     if (isAndroid) {
-      await StatusBar.setBackgroundColor({ color: '#101D27' });
+      await StatusBar.setBackgroundColor({ color: '#0B1218' });
     }
     if (isIOS) {
       await StatusBar.setOverlaysWebView({ overlay: false });

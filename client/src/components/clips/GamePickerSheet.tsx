@@ -148,7 +148,7 @@ export function GamePickerSheet({
       <div
         className="w-full rounded-t-3xl flex flex-col"
         style={{
-          background: "#0F1923",
+          background: "#0B1218",
           maxHeight: "82vh",
           marginBottom: keyboardOffset,
           transition: "margin-bottom 0.2s ease",
@@ -219,7 +219,7 @@ export function GamePickerSheet({
                 className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center transition-all"
                 style={{
                   aspectRatio: "3/4",
-                  background: "#1A2736",
+                  background: "#101923",
                   border: !selectedGame
                     ? "2.5px solid #B7FF1A"
                     : "2px solid rgba(255,255,255,0.08)",
@@ -249,7 +249,7 @@ export function GamePickerSheet({
                   className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center gap-1 transition-all"
                   style={{
                     aspectRatio: "3/4",
-                    background: "#1A2736",
+                    background: "#101923",
                     border: "2px dashed rgba(183,255,26,0.4)",
                   }}
                   onClick={handleCreateCustomGame}
@@ -284,7 +284,7 @@ export function GamePickerSheet({
                     className="relative rounded-xl overflow-hidden flex flex-col justify-end transition-all"
                     style={{
                       aspectRatio: "3/4",
-                      background: "#1A2736",
+                      background: "#101923",
                       border: isSelected
                         ? "2.5px solid #B7FF1A"
                         : "2px solid rgba(255,255,255,0.08)",

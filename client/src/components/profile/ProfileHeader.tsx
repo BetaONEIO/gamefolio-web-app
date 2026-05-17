@@ -188,7 +188,7 @@ const ProfileHeader = ({
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const bannerStyle = {
-    backgroundColor: "#02172C",
+    backgroundColor: "#071013",
     backgroundImage: signedBannerUrl ? `url(${signedBannerUrl})` : undefined,
     backgroundSize: "cover",
     backgroundPosition: "center",
@@ -294,7 +294,7 @@ const ProfileHeader = ({
               </Link>
 
               {(() => {
-                const isLight = getRelativeLuminance(profile.backgroundColor || "#0B2232") > 0.179;
+                const isLight = getRelativeLuminance(profile.backgroundColor || "#071013") > 0.179;
                 const numColor = isLight ? "#111827" : "#FFFFFF";
                 const lblColor = isLight ? "#374151" : profile.accentColor || undefined;
 

@@ -25,7 +25,7 @@ function getTokenIdPadded(id: number): string {
 }
 
 const RARITY_MAP: Record<string, { label: string; color: string; bg: string; percent: string }> = {
-  common: { label: "Common", color: "text-[#94a3b8]", bg: "bg-[#94a3b8]/10 border-[#94a3b8]/20", percent: "62%" },
+  common: { label: "Common", color: "text-[#B8C0AE]", bg: "bg-[#B8C0AE]/10 border-[#B8C0AE]/20", percent: "62%" },
   uncommon: { label: "Uncommon", color: "text-[#B7FF1A]", bg: "bg-[#B7FF1A]/10 border-[#B7FF1A]/20", percent: "25%" },
   rare: { label: "Rare", color: "text-[#38bdf8]", bg: "bg-[#38bdf8]/10 border-[#38bdf8]/20", percent: "10%" },
   epic: { label: "Epic", color: "text-[#a78bfa]", bg: "bg-[#a78bfa]/10 border-[#a78bfa]/20", percent: "3%" },
@@ -126,23 +126,23 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
 
       <div
         ref={popupRef}
-        className={`${hasAnchor ? 'absolute' : `fixed top-4 left-2 right-2 bottom-4 md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 ${manyTraits ? 'md:w-[860px]' : 'md:w-[680px]'} md:h-auto md:bottom-auto md:right-auto`} z-10 ${hasAnchor ? `w-[340px] ${manyTraits ? 'md:w-[860px]' : 'md:w-[680px]'}` : ''} max-w-full md:max-w-[95vw] max-h-full md:max-h-[85vh] bg-[#0f172a] rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] border border-[#1e293b] flex flex-col md:flex-row animate-in fade-in slide-in-from-left-2 duration-200`}
+        className={`${hasAnchor ? 'absolute' : `fixed top-4 left-2 right-2 bottom-4 md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 ${manyTraits ? 'md:w-[860px]' : 'md:w-[680px]'} md:h-auto md:bottom-auto md:right-auto`} z-10 ${hasAnchor ? `w-[340px] ${manyTraits ? 'md:w-[860px]' : 'md:w-[680px]'}` : ''} max-w-full md:max-w-[95vw] max-h-full md:max-h-[85vh] bg-[#0B1218] rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] border border-[#1B2A33] flex flex-col md:flex-row animate-in fade-in slide-in-from-left-2 duration-200`}
         style={hasAnchor && position ? { top: `${position.top}px`, left: `${position.left}px` } : hasAnchor ? { visibility: 'hidden' } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative w-full md:w-[340px] flex-shrink-0">
           {isLoading ? (
-            <div className="w-full aspect-square bg-[#1e293b] flex items-center justify-center">
+            <div className="w-full aspect-square bg-[#1B2A33] flex items-center justify-center">
               <div className="w-10 h-10 rounded-full border-2 border-[#B7FF1A]/30 border-t-[#B7FF1A] animate-spin" />
             </div>
           ) : nftImage ? (
             <img
               src={nftImage}
               alt={displayName}
-              className="w-full aspect-square object-cover bg-[#1e293b]"
+              className="w-full aspect-square object-cover bg-[#1B2A33]"
             />
           ) : (
-            <div className="w-full aspect-square bg-[#1e293b] flex items-center justify-center">
+            <div className="w-full aspect-square bg-[#1B2A33] flex items-center justify-center">
               <span className="text-[#64748b] text-sm">No image</span>
             </div>
           )}
@@ -185,7 +185,7 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
               </svg>
             </div>
 
-            <h2 className="text-lg font-bold text-[#f8fafc] leading-6">
+            <h2 className="text-lg font-bold text-[#F5F7F2] leading-6">
               {displayName}
             </h2>
 
@@ -193,15 +193,15 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
               <div className="w-4 h-4 rounded-full bg-[#B7FF1A]/20 flex items-center justify-center overflow-hidden">
                 <div className="w-full h-full opacity-60 bg-gradient-to-br from-[#B7FF1A] to-[#A2F000]" />
               </div>
-              <span className="text-[11px] text-[#94a3b8]">Owned by</span>
-              <span className="text-[11px] text-[#f8fafc] font-medium">{ownerDisplay}</span>
+              <span className="text-[11px] text-[#B8C0AE]">Owned by</span>
+              <span className="text-[11px] text-[#F5F7F2] font-medium">{ownerDisplay}</span>
             </div>
           </div>
 
-          <div className="w-full rounded-xl bg-[#1e293b]/50 border border-[#1e293b] p-3 mb-3">
+          <div className="w-full rounded-xl bg-[#1B2A33]/50 border border-[#1B2A33] p-3 mb-3">
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-0.5">
-                <span className="text-[9px] font-bold text-[#94a3b8] uppercase tracking-[1px]">
+                <span className="text-[9px] font-bold text-[#B8C0AE] uppercase tracking-[1px]">
                   Mint Status
                 </span>
                 <div className="flex items-center gap-1.5">
@@ -212,17 +212,17 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
                 </div>
               </div>
               <div className="flex flex-col gap-0.5 text-right">
-                <span className="text-[9px] font-bold text-[#94a3b8] uppercase tracking-[1px]">
+                <span className="text-[9px] font-bold text-[#B8C0AE] uppercase tracking-[1px]">
                   Token ID
                 </span>
-                <span className="text-sm font-bold text-[#f8fafc]">{getTokenIdPadded(tokenId)}</span>
+                <span className="text-sm font-bold text-[#F5F7F2]">{getTokenIdPadded(tokenId)}</span>
               </div>
             </div>
           </div>
 
           {allAttributes.length > 0 && (
             <div className="flex flex-col gap-2">
-              <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-[0.6px]">
+              <span className="text-[10px] font-bold text-[#B8C0AE] uppercase tracking-[0.6px]">
                 Traits & Rarity
               </span>
               <div className={`grid ${manyTraits ? 'grid-cols-3' : 'grid-cols-2'} gap-1.5`}>
@@ -241,10 +241,10 @@ export default function NftProfilePopup({ userId, tokenId, imageUrl, onClose, an
                       key={index}
                       className={`${rarity.bg} border rounded-lg px-2.5 py-1.5 flex flex-col gap-0.5`}
                     >
-                      <span className="text-[8px] font-bold text-[#94a3b8] uppercase tracking-wider">
+                      <span className="text-[8px] font-bold text-[#B8C0AE] uppercase tracking-wider">
                         {attr.trait_type}
                       </span>
-                      <span className="text-[11px] font-medium text-[#f8fafc] truncate">
+                      <span className="text-[11px] font-medium text-[#F5F7F2] truncate">
                         {String(attr.value).replace(/_/g, " ")}
                       </span>
                       <div className="flex items-center justify-between">

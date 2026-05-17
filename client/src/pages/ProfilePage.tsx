@@ -194,7 +194,7 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
   common: {
     bg: "bg-slate-900",
     glow: "",
-    dotColor: "bg-slate-400/50 shadow-[0_0_8px_#1e293b]",
+    dotColor: "bg-slate-400/50 shadow-[0_0_8px_#1B2A33]",
     textStyle: "text-slate-400 font-normal",
     nameColor: "text-slate-50",
   },
@@ -1108,8 +1108,8 @@ const ProfilePage = () => {
   const bannerStyle = useMemo(() => ({
     backgroundImage: resolvedBannerUrl 
       ? `url(${resolvedBannerUrl})` 
-      : `linear-gradient(135deg, ${profile?.primaryColor || '#0f172a'}, ${profile?.accentColor || '#B7FF1A'}, transparent)`,
-    backgroundColor: resolvedBannerUrl ? 'transparent' : (profile?.primaryColor || '#0f172a'),
+      : `linear-gradient(135deg, ${profile?.primaryColor || '#0B1218'}, ${profile?.accentColor || '#B7FF1A'}, transparent)`,
+    backgroundColor: resolvedBannerUrl ? 'transparent' : (profile?.primaryColor || '#0B1218'),
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     boxShadow: 'inset 0 -10px 20px rgba(0, 0, 0, 0.2)',
@@ -1128,7 +1128,7 @@ const ProfilePage = () => {
   //     requestAnimationFrame(() => {
   //       // Ensure complete isolation - set CSS custom properties only on this element
   //       scope.style.setProperty('--user-accent-color', profile.accentColor || '#B7FF1A');
-  //       scope.style.setProperty('--user-primary-color', profile.primaryColor || '#02172C');
+  //       scope.style.setProperty('--user-primary-color', profile.primaryColor || '#071013');
   //       scope.style.setProperty('--user-avatar-border-color', profile.avatarBorderColor || '#B7FF1A');
 
   //       // Calculate alpha version of accent color for subtle effects
@@ -1759,7 +1759,7 @@ const ProfilePage = () => {
 
   const bgRgb = hexToRgb(backgroundColor);
   const accentRgb = hexToRgb(accentColor);
-  const defaultThemeColor = profile.primaryColor || '#0B2232';
+  const defaultThemeColor = profile.primaryColor || '#071013';
 
   const selectedProfileNftDetail = selectedProfileNft ? (() => {
     const { score } = getNftRarity(selectedProfileNft);
@@ -2781,7 +2781,7 @@ const ProfilePage = () => {
                       style={{
                         width: '120px',
                         height: '28px',
-                        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
+                        background: 'linear-gradient(135deg, rgba(16, 25, 35, 0.8) 0%, rgba(11, 18, 24, 0.9) 100%)',
                         border: '1px solid rgba(148, 163, 184, 0.2)',
                         boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
                       }}
@@ -2882,7 +2882,7 @@ const ProfilePage = () => {
               className="absolute -top-3 -right-1 z-10 px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
               style={{ 
                 background: profileSectionTab === 'collection'
-                  ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : '#1a1a2e')
+                  ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : '#0B1218')
                   : isWatermelonTheme
                     ? '#ffb3c1'
                     : isLightBackground
@@ -3274,7 +3274,7 @@ const ProfilePage = () => {
                 className="absolute -top-3 -right-1 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
                 style={{ 
                   background: profileSectionTab === 'collection'
-                    ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : isCartoonTheme ? '#fffaec' : '#1a1a2e')
+                    ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : isCartoonTheme ? '#fffaec' : '#0B1218')
                     : isWatermelonTheme
                       ? '#ffb3c1'
                       : isLightBackground

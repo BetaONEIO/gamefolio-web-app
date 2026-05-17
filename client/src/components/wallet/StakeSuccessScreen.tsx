@@ -49,18 +49,18 @@ export default function StakeSuccessScreen({
         <button
           onClick={onBack}
           className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
-          style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+          style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
         >
-          <ArrowLeft className="w-6 h-6" style={{ color: "#f8fafc" }} />
+          <ArrowLeft className="w-6 h-6" style={{ color: "#F5F7F2" }} />
         </button>
 
-        <span className="text-xl font-bold" style={{ color: "#f8fafc" }}>
+        <span className="text-xl font-bold" style={{ color: "#F5F7F2" }}>
           Transaction Result
         </span>
 
         <button
           className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
-          style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+          style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path fillRule="evenodd" clipRule="evenodd" d="M11.5026 4.44413C11.5026 2.91079 12.7526 1.66663 14.2926 1.66663C15.0311 1.66463 15.7401 1.9562 16.2635 2.47713C16.7869 2.99806 17.0819 3.70565 17.0834 4.44413C17.0834 5.97829 15.8334 7.22246 14.2926 7.22246C13.5463 7.22301 12.8308 6.92469 12.3059 6.39413L8.44341 9.02413C8.55079 9.55997 8.49804 10.1156 8.29175 10.6216L12.5267 13.405C13.0257 12.9984 13.6498 12.7767 14.2934 12.7775C15.0319 12.7757 15.7408 13.0675 16.2641 13.5886C16.7873 14.1096 17.0821 14.8173 17.0834 15.5558C17.0834 17.0891 15.8334 18.3333 14.2926 18.3333C13.5543 18.3351 12.8455 18.0434 12.3222 17.5225C11.799 17.0016 11.5041 16.2941 11.5026 15.5558C11.5019 15.1663 11.584 14.7812 11.7434 14.4258L7.54175 11.6666C7.03277 12.1088 6.38096 12.3518 5.70675 12.3508C4.96827 12.3526 4.25937 12.0608 3.73609 11.5397C3.21282 11.0186 2.91807 10.3109 2.91675 9.57246C2.91829 8.83413 3.21313 8.12666 3.73639 7.60576C4.25964 7.08485 4.96842 6.79319 5.70675 6.79496C6.59341 6.79496 7.38175 7.20579 7.89258 7.84579L11.6367 5.29663C11.5474 5.02129 11.5022 4.73358 11.5026 4.44413Z" fill="#B7FF1A" />
@@ -75,13 +75,13 @@ export default function StakeSuccessScreen({
         <div className="flex flex-col items-center gap-3 text-center">
           <span
             className="text-[30px] font-black leading-[36px]"
-            style={{ color: "#f8fafc", letterSpacing: "-0.75px" }}
+            style={{ color: "#F5F7F2", letterSpacing: "-0.75px" }}
           >
             Stake Confirmed
           </span>
           <span
             className="text-base max-w-[297px] leading-[26px]"
-            style={{ color: "#94a3b8" }}
+            style={{ color: "#B8C0AE" }}
           >
             Your transaction has been validated on the blockchain. Your GFT is now earning rewards.
           </span>
@@ -90,20 +90,20 @@ export default function StakeSuccessScreen({
         {/* Transaction Details Card */}
         <div
           className="flex flex-col gap-5 p-6 rounded-2xl w-full max-w-[383px]"
-          style={{ background: "#0f172a", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+          style={{ background: "#0B1218", border: "1px solid rgba(30, 41, 59, 0.5)" }}
         >
           {/* Transaction ID */}
           <div className="flex items-center justify-between">
             <span
               className="text-xs font-bold uppercase"
-              style={{ color: "#94a3b8", letterSpacing: "0.6px" }}
+              style={{ color: "#B8C0AE", letterSpacing: "0.6px" }}
             >
               Transaction ID
             </span>
             <div className="flex items-center gap-2">
               <span
                 className="text-sm"
-                style={{ color: "#f8fafc", fontFamily: "JetBrains Mono, monospace" }}
+                style={{ color: "#F5F7F2", fontFamily: "JetBrains Mono, monospace" }}
               >
                 {truncatedHash}
               </span>
@@ -127,15 +127,15 @@ export default function StakeSuccessScreen({
           <div className="flex items-center justify-between">
             <span
               className="text-xs font-bold uppercase"
-              style={{ color: "#94a3b8", letterSpacing: "0.6px" }}
+              style={{ color: "#B8C0AE", letterSpacing: "0.6px" }}
             >
               Amount Staked
             </span>
             <div className="flex flex-col items-end gap-0.5">
-              <span className="text-sm font-bold" style={{ color: "#f8fafc" }}>
+              <span className="text-sm font-bold" style={{ color: "#F5F7F2" }}>
                 {amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT
               </span>
-              <span className="text-xs" style={{ color: "#94a3b8" }}>
+              <span className="text-xs" style={{ color: "#B8C0AE" }}>
                 ≈ ${usdValue}
               </span>
             </div>
@@ -145,7 +145,7 @@ export default function StakeSuccessScreen({
           <div className="flex items-center justify-between">
             <span
               className="text-xs font-bold uppercase"
-              style={{ color: "#94a3b8", letterSpacing: "0.6px" }}
+              style={{ color: "#B8C0AE", letterSpacing: "0.6px" }}
             >
               Pool Reward (APR)
             </span>
@@ -158,7 +158,7 @@ export default function StakeSuccessScreen({
           <div className="flex items-center justify-between">
             <span
               className="text-xs font-bold uppercase"
-              style={{ color: "#94a3b8", letterSpacing: "0.6px" }}
+              style={{ color: "#B8C0AE", letterSpacing: "0.6px" }}
             >
               Status
             </span>
@@ -189,13 +189,13 @@ export default function StakeSuccessScreen({
             className="flex items-center gap-2 py-2 transition-opacity hover:opacity-70"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" clipRule="evenodd" d="M0 6.32921C0 2.83368 2.83368 0 6.32921 0C9.82474 0 12.6584 2.83368 12.6584 6.32921C12.6584 9.82474 9.82474 12.6584 6.32921 12.6584C2.83368 12.6584 0 9.82474 0 6.32921Z" stroke="#94A3B8" strokeWidth="0.999349" />
-              <path d="M10.9929 10.9929L13.3247 13.3247" stroke="#94A3B8" strokeWidth="0.999349" strokeLinecap="round" />
+              <path fillRule="evenodd" clipRule="evenodd" d="M0 6.32921C0 2.83368 2.83368 0 6.32921 0C9.82474 0 12.6584 2.83368 12.6584 6.32921C12.6584 9.82474 9.82474 12.6584 6.32921 12.6584C2.83368 12.6584 0 9.82474 0 6.32921Z" stroke="#B8C0AE" strokeWidth="0.999349" />
+              <path d="M10.9929 10.9929L13.3247 13.3247" stroke="#B8C0AE" strokeWidth="0.999349" strokeLinecap="round" />
             </svg>
-            <span className="text-sm font-medium" style={{ color: "#94a3b8" }}>
+            <span className="text-sm font-medium" style={{ color: "#B8C0AE" }}>
               View on Explorer
             </span>
-            <ExternalLink className="w-3 h-3" style={{ color: "#94a3b8" }} />
+            <ExternalLink className="w-3 h-3" style={{ color: "#B8C0AE" }} />
           </a>
         )}
 
@@ -215,7 +215,7 @@ export default function StakeSuccessScreen({
           <div
             className="relative w-32 h-32 rounded-full flex items-center justify-center"
             style={{
-              background: "#0f172a",
+              background: "#0B1218",
               border: "1px solid rgba(183, 255, 26, 0.3)",
               boxShadow: "0 25px 50px -12px rgba(183, 255, 26, 0.1)",
             }}
@@ -256,9 +256,9 @@ export default function StakeSuccessScreen({
             onClick={onStakeMore}
             className="w-full h-[70px] rounded-2xl font-bold text-lg flex items-center justify-center transition-all hover:bg-slate-700"
             style={{
-              background: "#1e293b",
-              border: "1px solid #1e293b",
-              color: "#f8fafc",
+              background: "#1B2A33",
+              border: "1px solid #1B2A33",
+              color: "#F5F7F2",
             }}
           >
             Stake More

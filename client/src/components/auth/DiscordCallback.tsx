@@ -86,7 +86,7 @@ export function DiscordCallback() {
   }, [setLocation, toast, queryClient]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0B2232] via-[#1E3A8A] to-[#4C51BF] flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-[#03080A] via-[#071013] to-[#0B1218] flex items-center justify-center">
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
         <h2 className="text-xl font-semibold text-white mb-2">Completing Discord sign-in...</h2>

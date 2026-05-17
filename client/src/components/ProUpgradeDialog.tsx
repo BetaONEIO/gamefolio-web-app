@@ -175,11 +175,11 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentInt
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#101D27]">
-      <div className="flex items-center py-[25px] px-6 border-b border-[#1e293b80]">
+    <div className="flex flex-col h-full bg-[#0B1218]">
+      <div className="flex items-center py-[25px] px-6 border-b border-[#1B2A3380]">
         <button
           onClick={onBack}
-          className="w-10 h-10 rounded-2xl bg-[#1e293b] flex items-center justify-center flex-shrink-0"
+          className="w-10 h-10 rounded-2xl bg-[#1B2A33] flex items-center justify-center flex-shrink-0"
         >
           <ArrowLeft className="w-5 h-5 text-white" />
         </button>
@@ -188,22 +188,22 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentInt
 
       <div className="flex-1 overflow-y-auto px-6 pt-6 pb-8" style={{ scrollbarWidth: "none" }}>
         <div className="max-w-[382px] mx-auto flex flex-col gap-8">
-          <div className="bg-[#0f172a66] backdrop-blur-[12px] border border-[#1e293b80] rounded-2xl p-6">
-            <p className="text-[#f8fafc] text-lg font-bold leading-7">
+          <div className="bg-[#0B121866] backdrop-blur-[12px] border border-[#1B2A3380] rounded-2xl p-6">
+            <p className="text-[#F5F7F2] text-lg font-bold leading-7">
               Subscribe to {planLabel} Pro Subscription
             </p>
             <div className="flex items-end gap-2 mt-2">
-              <span className="text-[#f8fafc] text-[30px] font-black leading-9">{priceFormatted}</span>
-              <span className="text-[#94a3b8] text-sm pb-1">{periodLabel}</span>
+              <span className="text-[#F5F7F2] text-[30px] font-black leading-9">{priceFormatted}</span>
+              <span className="text-[#B8C0AE] text-sm pb-1">{periodLabel}</span>
             </div>
-            <div className="border-t border-[#1e293b80] pt-4 mt-4 flex items-center justify-between">
-              <span className="text-[#94a3b8] text-sm font-medium">Total due today</span>
+            <div className="border-t border-[#1B2A3380] pt-4 mt-4 flex items-center justify-between">
+              <span className="text-[#B8C0AE] text-sm font-medium">Total due today</span>
               <span className="text-[#B7FF1A] text-2xl font-black">{priceFormatted}</span>
             </div>
           </div>
 
           <div className="flex flex-col gap-6">
-            <div className="rounded-2xl overflow-hidden" style={{ background: "#0f172a" }}>
+            <div className="rounded-2xl overflow-hidden" style={{ background: "#0B1218" }}>
               <PaymentElement
                 onReady={() => setIsReady(true)}
                 options={{ layout: "tabs" }}
@@ -227,7 +227,7 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentInt
               )}
             </button>
 
-            <p className="text-[#94a3b8] text-xs text-center leading-[19.5px]">
+            <p className="text-[#B8C0AE] text-xs text-center leading-[19.5px]">
               By subscribing, you agree to allow Gamefolio to charge you according to their terms until you cancel. Subscription renews automatically. Cancel anytime. Secure checkout by Gamefolio
             </p>
           </div>
@@ -365,13 +365,13 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
   if (isPro && step !== "success" && !purchaseInProgress) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[430px] w-full bg-[#101D27] border-none p-0 overflow-hidden [&>button]:hidden">
+        <DialogContent className="max-w-[430px] w-full bg-[#0B1218] border-none p-0 overflow-hidden [&>button]:hidden">
           <div className="p-8 text-center">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#B7FF1A] to-[#6FA800] mb-6">
               <Crown className="w-10 h-10 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">You're already Pro!</h2>
-            <p className="text-[#94a3b8] mb-6">
+            <p className="text-[#B8C0AE] mb-6">
               You have full access to all Gamefolio Pro features. Thank you for your support!
             </p>
             <button
@@ -402,7 +402,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
             className={`relative w-full rounded-xl border-2 transition-all p-3 text-left ${
               billingPeriod === "yearly"
                 ? "border-[#B7FF1A] bg-[#B7FF1A0d]"
-                : "border-[#1e293b] bg-[#0f172a] hover:border-[#334155]"
+                : "border-[#1B2A33] bg-[#0B1218] hover:border-[#22313A]"
             }`}
           >
             {savings > 0 && (
@@ -419,14 +419,14 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                 </div>
                 <div>
                   <div className="text-white font-semibold text-sm">Yearly</div>
-                  <div className="text-[#94a3b8] text-[11px]">
+                  <div className="text-[#B8C0AE] text-[11px]">
                     {yearlyTotal} billed annually
                   </div>
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-white font-bold text-base">{yearlyPerMonth}</div>
-                <div className="text-[#94a3b8] text-[11px]">/month</div>
+                <div className="text-[#B8C0AE] text-[11px]">/month</div>
               </div>
             </div>
           </button>
@@ -439,7 +439,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
             className={`w-full rounded-xl border-2 transition-all p-3 text-left ${
               billingPeriod === "monthly"
                 ? "border-[#B7FF1A] bg-[#B7FF1A0d]"
-                : "border-[#1e293b] bg-[#0f172a] hover:border-[#334155]"
+                : "border-[#1B2A33] bg-[#0B1218] hover:border-[#22313A]"
             }`}
           >
             <div className="flex items-center justify-between">
@@ -451,14 +451,14 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                 </div>
                 <div>
                   <div className="text-white font-semibold text-sm">Monthly</div>
-                  <div className="text-[#94a3b8] text-[11px]">
+                  <div className="text-[#B8C0AE] text-[11px]">
                     Billed monthly, cancel anytime
                   </div>
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-white font-bold text-base">{monthlyPrice}</div>
-                <div className="text-[#94a3b8] text-[11px]">/month</div>
+                <div className="text-[#B8C0AE] text-[11px]">/month</div>
               </div>
             </div>
           </button>
@@ -527,7 +527,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
           </h2>
         </div>
 
-        <p className="text-[#94a3b8] text-sm text-center md:text-left leading-relaxed hidden md:block max-w-[280px]">
+        <p className="text-[#B8C0AE] text-sm text-center md:text-left leading-relaxed hidden md:block max-w-[280px]">
           {subtitle || "Elevate your gaming identity with premium features designed for elite creators"}
         </p>
       </div>
@@ -535,7 +535,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
   );
 
   const rightPanel = (
-    <div className="flex flex-col justify-between h-full px-5 py-5 bg-[#101D27]">
+    <div className="flex flex-col justify-between h-full px-5 py-5 bg-[#0B1218]">
       <div className="grid grid-cols-2 gap-x-4 gap-y-3 mb-4">
         {premiumBenefits.map((benefit, index) => (
           <motion.div
@@ -545,14 +545,14 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
             transition={{ delay: index * 0.08 }}
             className="flex items-start gap-2"
           >
-            <div className="w-8 h-8 rounded-lg bg-[#1e293b] border border-[#1e293b] flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-[#1B2A33] border border-[#1B2A33] flex items-center justify-center flex-shrink-0">
               {benefit.icon}
             </div>
             <div className="flex flex-col justify-center min-h-[32px]">
-              <span className="text-[#f8fafc] text-xs font-semibold leading-4">
+              <span className="text-[#F5F7F2] text-xs font-semibold leading-4">
                 {benefit.title}
               </span>
-              <span className="text-[#94a3b8] text-[11px] leading-3.5">
+              <span className="text-[#B8C0AE] text-[11px] leading-3.5">
                 {benefit.description}
               </span>
             </div>
@@ -562,7 +562,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
 
       <div className="flex flex-col gap-3 mt-auto">
         <div className="mb-0.5">
-          <span className="text-[#94a3b8] text-[10px] font-bold uppercase tracking-[1.2px]">
+          <span className="text-[#B8C0AE] text-[10px] font-bold uppercase tracking-[1.2px]">
             Choose your plan
           </span>
         </div>
@@ -592,7 +592,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
           <p className="text-red-400 text-xs text-center">{checkoutError}</p>
         )}
 
-        <span className="text-[#94a3b8] text-[11px] text-center">
+        <span className="text-[#B8C0AE] text-[11px] text-center">
           Cancel anytime. Terms and conditions apply.
         </span>
       </div>
@@ -612,8 +612,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
           theme: "night",
           variables: {
             colorPrimary: "#B7FF1A",
-            colorBackground: "#1e293b",
-            colorText: "#f8fafc",
+            colorBackground: "#1B2A33",
+            colorText: "#F5F7F2",
             colorDanger: "#ef4444",
             fontFamily: "Plus Jakarta Sans, system-ui, sans-serif",
             borderRadius: "16px",
@@ -621,7 +621,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
           },
           rules: {
             ".Input": {
-              backgroundColor: "#1e293b",
+              backgroundColor: "#1B2A33",
               border: "1px solid rgba(30, 41, 59, 0.5)",
               padding: "16px",
             },
@@ -630,7 +630,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
               boxShadow: "0 0 0 1px #B7FF1A",
             },
             ".Label": {
-              color: "#94a3b8",
+              color: "#B8C0AE",
               fontSize: "10px",
               fontWeight: "700",
               textTransform: "uppercase",
@@ -638,18 +638,18 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
               marginBottom: "8px",
             },
             ".Tab": {
-              backgroundColor: "#1e293b",
+              backgroundColor: "#1B2A33",
               border: "1px solid rgba(30, 41, 59, 0.5)",
-              color: "#94a3b8",
+              color: "#B8C0AE",
             },
             ".Tab:hover": {
-              backgroundColor: "#334155",
-              color: "#f8fafc",
+              backgroundColor: "#22313A",
+              color: "#F5F7F2",
             },
             ".Tab--selected": {
-              backgroundColor: "#334155",
+              backgroundColor: "#22313A",
               border: "1px solid #B7FF1A",
-              color: "#f8fafc",
+              color: "#F5F7F2",
             },
           },
         },
@@ -666,7 +666,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
       />
     </Elements>
   ) : (
-    <div className="flex items-center justify-center min-h-[400px] bg-[#101D27]">
+    <div className="flex items-center justify-center min-h-[400px] bg-[#0B1218]">
       <Loader2 className="w-8 h-8 animate-spin text-[#B7FF1A]" />
     </div>
   );
@@ -674,7 +674,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[430px] md:max-w-[780px] w-full bg-[#101D27] border-none text-white p-0 overflow-hidden [&>button]:hidden max-h-[100dvh] h-[100dvh] md:h-auto md:max-h-[90vh] gap-0 rounded-none sm:rounded-none top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
+        className="max-w-[430px] md:max-w-[780px] w-full bg-[#0B1218] border-none text-white p-0 overflow-hidden [&>button]:hidden max-h-[100dvh] h-[100dvh] md:h-auto md:max-h-[90vh] gap-0 rounded-none sm:rounded-none top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
         data-testid="dialog-pro-upgrade"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
@@ -724,7 +724,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                     <span className="text-[#B7FF1A]">Gamefolio Pro</span>
                   </h2>
 
-                  <p className="text-[#94a3b8] text-xs text-center leading-relaxed mb-3 max-w-[260px] mx-auto">
+                  <p className="text-[#B8C0AE] text-xs text-center leading-relaxed mb-3 max-w-[260px] mx-auto">
                     Elevate your gaming identity with premium features
                   </p>
 
@@ -737,14 +737,14 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                         transition={{ delay: index * 0.05 }}
                         className="flex items-center gap-3"
                       >
-                        <div className="w-9 h-9 rounded-xl bg-[#1e293b] border border-[#1e293b] flex items-center justify-center flex-shrink-0">
+                        <div className="w-9 h-9 rounded-xl bg-[#1B2A33] border border-[#1B2A33] flex items-center justify-center flex-shrink-0">
                           {benefit.icon}
                         </div>
                         <div className="flex flex-col justify-center">
-                          <span className="text-[#f8fafc] text-sm font-semibold leading-5">
+                          <span className="text-[#F5F7F2] text-sm font-semibold leading-5">
                             {benefit.title}
                           </span>
-                          <span className="text-[#94a3b8] text-[11px] leading-3.5">
+                          <span className="text-[#B8C0AE] text-[11px] leading-3.5">
                             {benefit.description}
                           </span>
                         </div>
@@ -753,7 +753,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                   </div>
 
                   <div className="mb-2">
-                    <span className="text-[#94a3b8] text-[10px] font-bold uppercase tracking-[1px]">
+                    <span className="text-[#B8C0AE] text-[10px] font-bold uppercase tracking-[1px]">
                       Choose your plan
                     </span>
                   </div>
@@ -779,7 +779,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                     )}
                   </button>
 
-                  <span className="text-[#94a3b8] text-[11px] text-center block mt-2">
+                  <span className="text-[#B8C0AE] text-[11px] text-center block mt-2">
                     Cancel anytime. Terms and conditions apply.
                   </span>
                 </div>

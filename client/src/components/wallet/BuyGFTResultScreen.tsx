@@ -61,7 +61,7 @@ export default function BuyGFTResultScreen({
   return (
     <div 
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: '#101D27' }}
+      style={{ background: '#0B1218' }}
     >
       {/* Header */}
       <div 
@@ -71,7 +71,7 @@ export default function BuyGFTResultScreen({
         <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-[600px] lg:max-w-[800px]">
           <div className="w-10 h-10" />
           
-          <span className="text-xl font-bold" style={{ color: '#f8fafc' }}>
+          <span className="text-xl font-bold" style={{ color: '#F5F7F2' }}>
             Transaction Status
           </span>
           
@@ -120,7 +120,7 @@ export default function BuyGFTResultScreen({
             </h1>
             <p 
               className="text-base font-medium max-w-[370px]"
-              style={{ color: '#94a3b8', lineHeight: '24px' }}
+              style={{ color: '#B8C0AE', lineHeight: '24px' }}
             >
               Your purchase of {gftAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT was successful and is now available in your balance.
             </p>
@@ -130,7 +130,7 @@ export default function BuyGFTResultScreen({
           <div 
             className="w-full rounded-2xl p-5 flex flex-col gap-4"
             style={{ 
-              background: '#0f172a',
+              background: '#0B1218',
               border: '1px solid rgba(30, 41, 59, 0.5)'
             }}
           >
@@ -138,7 +138,7 @@ export default function BuyGFTResultScreen({
             <div className="flex items-center justify-between py-1">
               <span 
                 className="text-sm font-medium"
-                style={{ color: '#94a3b8' }}
+                style={{ color: '#B8C0AE' }}
               >
                 Transaction Hash
               </span>
@@ -167,7 +167,7 @@ export default function BuyGFTResultScreen({
             <div className="flex items-center justify-between py-1">
               <span 
                 className="text-sm font-medium"
-                style={{ color: '#94a3b8' }}
+                style={{ color: '#B8C0AE' }}
               >
                 Payment Method
               </span>
@@ -199,9 +199,9 @@ export default function BuyGFTResultScreen({
               onClick={onDone}
               className="w-full py-5 rounded-2xl font-bold text-lg transition-all hover:bg-slate-700"
               style={{ 
-                background: '#1e293b',
-                color: '#f8fafc',
-                border: '1px solid #1e293b'
+                background: '#1B2A33',
+                color: '#F5F7F2',
+                border: '1px solid #1B2A33'
               }}
             >
               Back to Wallet
@@ -214,7 +214,7 @@ export default function BuyGFTResultScreen({
           <div className="flex-1 h-px" style={{ background: 'rgba(30, 41, 59, 0.5)' }} />
           <span 
             className="text-xs font-bold uppercase"
-            style={{ color: '#94a3b8', letterSpacing: '1.2px' }}
+            style={{ color: '#B8C0AE', letterSpacing: '1.2px' }}
           >
             Other Variants
           </span>
@@ -225,8 +225,8 @@ export default function BuyGFTResultScreen({
         <div 
           className="w-full rounded-3xl p-6 flex flex-col gap-6"
           style={{ 
-            background: 'rgba(15, 23, 42, 0.4)',
-            border: '1px solid #1e293b'
+            background: 'rgba(11, 18, 24, 0.4)',
+            border: '1px solid #1B2A33'
           }}
         >
           {/* Progress Header */}
@@ -249,7 +249,7 @@ export default function BuyGFTResultScreen({
               </span>
               <span 
                 className="text-sm font-medium"
-                style={{ color: '#94a3b8' }}
+                style={{ color: '#B8C0AE' }}
               >
                 Delivering GFT to your wallet...
               </span>

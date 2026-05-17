@@ -58,7 +58,7 @@ export function ActivityScrollBanner() {
             key={`${upload.clipId}-${index}`}
             className="inline-flex items-center gap-2 text-sm font-medium pointer-events-auto"
             data-testid={`activity-${index}`}
-            style={{ color: '#131E2B' }}
+            style={{ color: '#071013' }}
           >
             <Upload className="h-4 w-4" />
             <span className="font-semibold">{upload.username}</span>

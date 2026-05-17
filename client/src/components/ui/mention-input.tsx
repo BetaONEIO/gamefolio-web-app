@@ -230,7 +230,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
         {showSuggestions && (
           <div
             ref={suggestionsRef}
-            className="absolute z-50 w-64 max-h-48 overflow-y-auto bg-[#1a1a2e] border border-[#16213e] rounded-lg shadow-xl"
+            className="absolute z-50 w-64 max-h-48 overflow-y-auto bg-[#0B1218] border border-[#1B2A33] rounded-lg shadow-xl"
             style={{ top: '100%', left: 0, marginTop: '4px' }}
           >
             {/* User suggestions */}
@@ -247,19 +247,19 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
                     {users.slice(0, 8).map((user: User) => (
                       <button
                         key={user.id}
-                        className="w-full px-3 py-2 text-left hover:bg-[#16213e] focus:bg-[#16213e] focus:outline-none transition-colors"
+                        className="w-full px-3 py-2 text-left hover:bg-[#1B2A33] focus:bg-[#1B2A33] focus:outline-none transition-colors"
                         onClick={() => selectUser(user)}
                       >
                         <div className="flex items-center space-x-2">
                           {user.avatarUrl ? (
                             <SignedImage src={user.avatarUrl} alt={user.username} className="w-6 h-6 rounded-full" />
                           ) : (
-                            <div className="w-6 h-6 rounded-full bg-[#00d26a]/20 text-[#00d26a] flex items-center justify-center text-xs font-medium">
+                            <div className="w-6 h-6 rounded-full bg-[#B7FF1A]/20 text-[#B7FF1A] flex items-center justify-center text-xs font-medium">
                               {user.username.charAt(0).toUpperCase()}
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-[#00d26a] truncate">@{user.username}</div>
+                            <div className="text-sm font-medium text-[#B7FF1A] truncate">@{user.username}</div>
                             {user.displayName && user.displayName !== user.username && (
                               <div className="text-xs text-gray-400 truncate">{user.displayName}</div>
                             )}
@@ -282,14 +282,14 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
                     {commonHashtags.map((tag) => (
                       <button
                         key={tag}
-                        className="w-full px-3 py-2 text-left hover:bg-[#16213e] focus:bg-[#16213e] focus:outline-none transition-colors"
+                        className="w-full px-3 py-2 text-left hover:bg-[#1B2A33] focus:bg-[#1B2A33] focus:outline-none transition-colors"
                         onClick={() => selectHashtag(tag)}
                       >
                         <div className="flex items-center space-x-2">
-                          <div className="w-6 h-6 rounded-full bg-[#00d26a]/20 text-[#00d26a] flex items-center justify-center">
+                          <div className="w-6 h-6 rounded-full bg-[#B7FF1A]/20 text-[#B7FF1A] flex items-center justify-center">
                             <Hash className="w-3.5 h-3.5" />
                           </div>
-                          <span className="text-sm font-medium text-[#00d26a]">#{tag}</span>
+                          <span className="text-sm font-medium text-[#B7FF1A]">#{tag}</span>
                         </div>
                       </button>
                     ))}
@@ -314,7 +314,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
                     {games.slice(0, 8).map((game: Game) => (
                       <button
                         key={game.id}
-                        className="w-full px-3 py-2 text-left hover:bg-[#16213e] focus:bg-[#16213e] focus:outline-none transition-colors"
+                        className="w-full px-3 py-2 text-left hover:bg-[#1B2A33] focus:bg-[#1B2A33] focus:outline-none transition-colors"
                         onClick={() => selectGame(game)}
                       >
                         <div className="flex items-center space-x-2">
@@ -365,14 +365,14 @@ function renderStyledText(text: string): React.ReactNode[] {
     if (match[1]) {
       // @mention - green
       parts.push(
-        <span key={key++} className="text-[#00d26a] font-medium">
+        <span key={key++} className="text-[#B7FF1A] font-medium">
           {match[1]}
         </span>
       );
     } else if (match[2]) {
       // #hashtag - green
       parts.push(
-        <span key={key++} className="text-[#00d26a] font-medium">
+        <span key={key++} className="text-[#B7FF1A] font-medium">
           {match[2]}
         </span>
       );
@@ -645,7 +645,7 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
         {showSuggestions && (
           <div
             ref={suggestionsRef}
-            className="absolute z-50 w-64 max-h-48 overflow-y-auto bg-[#1a1a2e] border border-[#16213e] rounded-lg shadow-xl"
+            className="absolute z-50 w-64 max-h-48 overflow-y-auto bg-[#0B1218] border border-[#1B2A33] rounded-lg shadow-xl"
             style={{ top: '100%', left: 0, marginTop: '4px' }}
           >
             {/* User suggestions */}
@@ -662,19 +662,19 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
                     {users.slice(0, 8).map((user: User) => (
                       <button
                         key={user.id}
-                        className="w-full px-3 py-2 text-left hover:bg-[#16213e] focus:bg-[#16213e] focus:outline-none transition-colors"
+                        className="w-full px-3 py-2 text-left hover:bg-[#1B2A33] focus:bg-[#1B2A33] focus:outline-none transition-colors"
                         onClick={() => selectUser(user)}
                       >
                         <div className="flex items-center space-x-2">
                           {user.avatarUrl ? (
                             <SignedImage src={user.avatarUrl} alt={user.username} className="w-6 h-6 rounded-full" />
                           ) : (
-                            <div className="w-6 h-6 rounded-full bg-[#00d26a]/20 text-[#00d26a] flex items-center justify-center text-xs font-medium">
+                            <div className="w-6 h-6 rounded-full bg-[#B7FF1A]/20 text-[#B7FF1A] flex items-center justify-center text-xs font-medium">
                               {user.username.charAt(0).toUpperCase()}
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-[#00d26a] truncate">@{user.username}</div>
+                            <div className="text-sm font-medium text-[#B7FF1A] truncate">@{user.username}</div>
                             {user.displayName && user.displayName !== user.username && (
                               <div className="text-xs text-gray-400 truncate">{user.displayName}</div>
                             )}
@@ -697,14 +697,14 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
                     {commonHashtags.map((tag) => (
                       <button
                         key={tag}
-                        className="w-full px-3 py-2 text-left hover:bg-[#16213e] focus:bg-[#16213e] focus:outline-none transition-colors"
+                        className="w-full px-3 py-2 text-left hover:bg-[#1B2A33] focus:bg-[#1B2A33] focus:outline-none transition-colors"
                         onClick={() => selectHashtag(tag)}
                       >
                         <div className="flex items-center space-x-2">
-                          <div className="w-6 h-6 rounded-full bg-[#00d26a]/20 text-[#00d26a] flex items-center justify-center">
+                          <div className="w-6 h-6 rounded-full bg-[#B7FF1A]/20 text-[#B7FF1A] flex items-center justify-center">
                             <Hash className="w-3.5 h-3.5" />
                           </div>
-                          <span className="text-sm font-medium text-[#00d26a]">#{tag}</span>
+                          <span className="text-sm font-medium text-[#B7FF1A]">#{tag}</span>
                         </div>
                       </button>
                     ))}
@@ -729,7 +729,7 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
                     {games.slice(0, 8).map((game: Game) => (
                       <button
                         key={game.id}
-                        className="w-full px-3 py-2 text-left hover:bg-[#16213e] focus:bg-[#16213e] focus:outline-none transition-colors"
+                        className="w-full px-3 py-2 text-left hover:bg-[#1B2A33] focus:bg-[#1B2A33] focus:outline-none transition-colors"
                         onClick={() => selectGame(game)}
                       >
                         <div className="flex items-center space-x-2">

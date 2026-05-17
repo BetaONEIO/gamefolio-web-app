@@ -37,12 +37,12 @@ function UserHoverPreview({ username, onLinkClick }: { username: string; onLinkC
         <Link 
           href={`/@${username}`}
           onClick={onLinkClick}
-          className="text-[#00d26a] hover:text-[#00b359] font-medium cursor-pointer hover:underline"
+          className="text-[#B7FF1A] hover:text-[#A2F000] font-medium cursor-pointer hover:underline"
         >
           @{username}
         </Link>
       </HoverCardTrigger>
-      <HoverCardContent className="w-72 bg-[#1a1a2e] border-[#16213e]">
+      <HoverCardContent className="w-72 bg-[#0B1218] border-[#1B2A33]">
         {isLoading ? (
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 rounded-full bg-gray-700 animate-pulse" />
@@ -56,7 +56,7 @@ function UserHoverPreview({ username, onLinkClick }: { username: string; onLinkC
             <div className="flex items-center space-x-3">
               <Avatar className="h-12 w-12">
                 <AvatarImage src={user.avatarUrl || undefined} alt={user.username} />
-                <AvatarFallback className="bg-[#00d26a]/20 text-[#00d26a]">
+                <AvatarFallback className="bg-[#B7FF1A]/20 text-[#B7FF1A]">
                   {user.username.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -99,7 +99,7 @@ function GameHoverPreview({ gameName, gameSlug, onLinkClick }: { gameName: strin
           {gameName}
         </Link>
       </HoverCardTrigger>
-      <HoverCardContent className="w-64 bg-[#1a1a2e] border-[#16213e] p-3">
+      <HoverCardContent className="w-64 bg-[#0B1218] border-[#1B2A33] p-3">
         {isLoading ? (
           <div className="flex items-center space-x-3">
             <div className="w-16 h-20 rounded bg-gray-700 animate-pulse" />
@@ -174,7 +174,7 @@ export function MentionText({ text, className = "", onLinkClick }: MentionTextPr
           key={`hashtag-${keyIndex}`}
           href={`/hashtag/${hashtag}`}
           onClick={onLinkClick}
-          className="text-[#00d26a] hover:text-[#00b359] font-medium cursor-pointer hover:underline"
+          className="text-[#B7FF1A] hover:text-[#A2F000] font-medium cursor-pointer hover:underline"
         >
           {fullMatch}
         </Link>

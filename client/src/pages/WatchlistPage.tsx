@@ -97,7 +97,7 @@ export default function WatchlistPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#0f1419] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#03080A] flex items-center justify-center p-4">
         <div className="text-center">
           <Heart className="h-16 w-16 text-gray-600 mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Login Required</h2>
@@ -113,9 +113,9 @@ export default function WatchlistPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f1419]">
+    <div className="min-h-screen bg-[#03080A]">
       {/* Header */}
-      <div className="border-b border-gray-800 bg-[#0f1419]/90 backdrop-blur-md sticky top-0 z-10">
+      <div className="border-b border-gray-800 bg-[#03080A]/90 backdrop-blur-md sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">

@@ -246,7 +246,7 @@ video:focus {
 /* Profile-scoped theme variables - STRICTLY isolated to profile pages only */
 .profile-theme-scope {
   --profile-accent-color: var(--user-accent-color, hsl(var(--primary)));
-  --profile-primary-color: var(--user-primary-color, #02172C);
+  --profile-primary-color: var(--user-primary-color, #071013);
   --profile-avatar-border-color: var(--user-avatar-border-color, hsl(var(--primary)));
   --profile-accent-color-alpha: var(--user-accent-color-alpha, rgba(183, 255, 26, 0.2));
   

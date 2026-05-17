@@ -121,7 +121,7 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
   common: {
     bg: "bg-slate-900",
     glow: "",
-    dotColor: "bg-slate-400/50 shadow-[0_0_8px_#1e293b]",
+    dotColor: "bg-slate-400/50 shadow-[0_0_8px_#1B2A33]",
     textStyle: "text-slate-400 font-normal",
     nameColor: "text-slate-50",
   },
@@ -131,7 +131,7 @@ const rarityDotColors: Record<string, string> = {
   legendary: "bg-primary shadow-[0_0_8px_#A2F000]",
   epic: "bg-primary shadow-[0_0_8px_#6FA800]",
   rare: "bg-primary shadow-[0_0_8px_#B7FF1A]",
-  common: "bg-slate-400/50 shadow-[0_0_8px_#1e293b]",
+  common: "bg-slate-400/50 shadow-[0_0_8px_#1B2A33]",
 };
 
 function NftCard({ nft, onClick }: { nft: OwnedNft; onClick: () => void }) {

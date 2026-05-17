@@ -1052,7 +1052,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   {showComments && (
                     <div
                       className="flex-1 flex flex-col overflow-hidden"
-                      style={{ background: '#0F1923', borderRadius: '20px 20px 0 0', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+                      style={{ background: '#0B1218', borderRadius: '20px 20px 0 0', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
                     >
                       <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
                         <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
@@ -1156,7 +1156,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   {/* Drag handle + header */}
                   <div
                     className="flex-shrink-0 px-4 pt-3 pb-3"
-                    style={{ background: '#0F1923', borderRadius: '20px 20px 0 0', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+                    style={{ background: '#0B1218', borderRadius: '20px 20px 0 0', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
                   >
                     <div className="flex justify-center mb-3">
                       <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
@@ -1177,7 +1177,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     </div>
                   </div>
                   {/* Scrollable comments list */}
-                  <div className="flex-1 min-h-0 overflow-y-auto" style={{ background: '#0F1923' }}>
+                  <div className="flex-1 min-h-0 overflow-y-auto" style={{ background: '#0B1218' }}>
                     <CommentSection
                       clipId={clip.id}
                       currentUserId={user?.id || null}

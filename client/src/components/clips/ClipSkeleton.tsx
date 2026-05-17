@@ -9,7 +9,7 @@ const ClipSkeleton = ({ className }: ClipSkeletonProps) => {
   return (
     <div className={cn("space-y-3", className)}>
       {/* Thumbnail skeleton */}
-      <div className="aspect-square relative overflow-hidden rounded-sm bg-[#1E2327]">
+      <div className="aspect-square relative overflow-hidden rounded-sm bg-[#101923]">
         <Skeleton className="h-full w-full" />
         
         {/* Duration badge skeleton */}
