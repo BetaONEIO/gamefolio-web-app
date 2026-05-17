@@ -1621,7 +1621,7 @@ export default function SettingsPage() {
       const combinedUserType = buildUserType(primaryUserType, isStreamingEnabled);
       updateProfileMutation.mutate({
         ...updatedData,
-        avatarBorderColor,
+        avatarBorderColor: avatarBorderColor?.trim() || '#B7FF1A',
         userType: combinedUserType,
         streamPlatform,
         showLiveOverlay,
