@@ -26,15 +26,15 @@ export class CreatorMilestoneService {
   }
 
   private static async hasSourceToday(userId: number, source: string): Promise<boolean> {
-    const history = await storage.getUserXPHistory(userId, 200);
+    const history = await storage.getUserPointsHistory(userId, 500);
     const today = new Date();
     return history.some(
-      (h) => h.source === source && this.isSameCalendarDay(new Date(h.createdAt), today)
+      (h) => h.action === source && this.isSameCalendarDay(new Date(h.createdAt), today)
     );
   }
 
   private static async hasSourceThisWeek(userId: number, source: string): Promise<boolean> {
-    const history = await storage.getUserXPHistory(userId, 500);
+    const history = await storage.getUserPointsHistory(userId, 1000);
     const now = new Date();
     const dayOfWeek = now.getDay();
     const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -43,13 +43,13 @@ export class CreatorMilestoneService {
     startOfWeek.setHours(0, 0, 0, 0);
 
     return history.some(
-      (h) => h.source === source && new Date(h.createdAt) >= startOfWeek
+      (h) => h.action === source && new Date(h.createdAt) >= startOfWeek
     );
   }
 
   private static async hasSourceEver(userId: number, source: string): Promise<boolean> {
-    const history = await storage.getUserXPHistory(userId, 1000);
-    return history.some((h) => h.source === source);
+    const history = await storage.getUserPointsHistory(userId, 999999);
+    return history.some((h) => h.action === source);
   }
 
   static async checkFirstUploadOfDay(userId: number): Promise<void> {
