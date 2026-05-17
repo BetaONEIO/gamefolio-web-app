@@ -1739,7 +1739,7 @@ const TrendingPage: React.FC = () => {
                 <p className="text-white/50 text-sm text-center">Check back later!</p>
               </div>
             ) : (
-              <MobileClipsViewer clips={trendingClips} viewAllHref="/trending" onBack={() => setLocation('/trending')} />
+              <MobileClipsViewer clips={trendingClips} viewAllHref="/trending" onBack={() => setLocation('/')} />
             )}
           </div>
         )}
@@ -1749,7 +1749,7 @@ const TrendingPage: React.FC = () => {
           <MobileTrendingViewer
             key={`${activeTab}-${selectedGameId ?? 'all'}`}
             content={activeContent}
-            onClose={() => setLocation('/trending')}
+            onClose={() => setLocation('/')}
             hideCloseButton={false}
             onCommentsVisibilityChange={setCommentsOpen}
           />

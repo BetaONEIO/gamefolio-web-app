@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { ChevronLeft, Heart, MessageCircle, User, Play, Pause, Flag, BarChart2, Gamepad2, Music, X, Send, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, User, Play, Pause, Flag, BarChart2, Gamepad2, Music, X, Send, MoreHorizontal } from "lucide-react";
 import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
@@ -341,20 +341,19 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
       {/* Close button — top left */}
       {!hideCloseButton && !showComments && (
         <div
-          className="absolute top-0 left-0 right-0 flex justify-between items-center px-4 pb-4 bg-gradient-to-b from-black/60 to-transparent z-20"
-          style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)', pointerEvents: 'none' }}
+          className="absolute top-0 left-0 right-0 flex items-center px-4 pb-3 z-20"
+          style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)', pointerEvents: 'none' }}
           onClick={e => e.stopPropagation()}
         >
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={(e) => { e.stopPropagation(); onClose(); }}
-            className="text-white hover:bg-white/20"
-            style={{ pointerEvents: 'auto' }}
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
+            style={{ color: '#F5F7F2', pointerEvents: 'auto' }}
+            aria-label="Back"
             data-testid="button-close"
           >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
+            <ArrowLeft className="h-5 w-5" />
+          </button>
         </div>
       )}
 
