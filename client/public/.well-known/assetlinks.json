@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.gamefolio.app",
+      "sha256_cert_fingerprints": [
+        "43:AD:72:5A:3B:38:48:88:61:A4:A3:30:39:3A:02:D1:C0:12:67:C5:D7:B0:B1:4A:D1:BA:AC:02:66:A5:8A:01"
+      ]
+    }
+  }
+]

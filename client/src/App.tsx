@@ -47,6 +47,8 @@ import React, { Suspense } from 'react';
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { DiscordCallback } from "./components/auth/DiscordCallback";
 import { XboxCallback } from "./components/auth/XboxCallback";
+import { App as CapacitorApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 
 async function bustViteDepCache() {
   const entries = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
@@ -192,6 +194,30 @@ function MainLayout({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener('gf-push-deeplink', handler as EventListener);
     return () => window.removeEventListener('gf-push-deeplink', handler as EventListener);
+  }, [setLocation]);
+
+  // Universal Links (iOS) / App Links (Android): when the installed app is
+  // opened via an https://app.gamefolio.com content link, Capacitor fires
+  // appUrlOpen with the full URL. Route its path into the SPA so the link
+  // lands on the same page it would have in the browser.
+  React.useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let cleanup: (() => void) | undefined;
+    CapacitorApp.addListener('appUrlOpen', ({ url }) => {
+      try {
+        const parsed = new URL(url);
+        // Only route our web domain — OAuth custom-scheme callbacks
+        // (com.gamefolio.app://…) are handled elsewhere.
+        if (parsed.hostname === 'app.gamefolio.com') {
+          setLocation(parsed.pathname + parsed.search + parsed.hash);
+        }
+      } catch {
+        /* not a parseable URL — ignore */
+      }
+    }).then((handle) => {
+      cleanup = () => handle.remove();
+    });
+    return () => cleanup?.();
   }, [setLocation]);
 
   React.useEffect(() => {

@@ -149,6 +149,19 @@ if (fs.existsSync(attachedAssetsPath) && fs.statSync(attachedAssetsPath).isDirec
 }
 app.use('/attached_assets', express.static(attachedAssetsPath));
 
+// Universal Links (iOS) + App Links (Android) domain-association files.
+// Served explicitly, before the SPA catch-all, with an application/json
+// content type: the AASA file has no extension so express.static would
+// mislabel it, and a miss would otherwise fall through to index.html and
+// break link verification.
+const wellKnownDir = path.resolve(process.cwd(), 'client/public/.well-known');
+app.get('/.well-known/apple-app-site-association', (_req, res) => {
+  res.type('application/json').sendFile(path.join(wellKnownDir, 'apple-app-site-association'));
+});
+app.get('/.well-known/assetlinks.json', (_req, res) => {
+  res.type('application/json').sendFile(path.join(wellKnownDir, 'assetlinks.json'));
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
