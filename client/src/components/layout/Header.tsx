@@ -371,6 +371,10 @@ const Header = () => {
           )}
           
           
+          <ProUpgradeDialog 
+            open={proUpgradeOpen} 
+            onOpenChange={setProUpgradeOpen}
+          />
           {user ? (
             <>
               <LootboxTrigger onClick={() => setLootboxOpen(true)} />
@@ -384,10 +388,6 @@ const Header = () => {
                 username={user?.username}
                 xpDelta={levelTrackerState.xpDelta}
                 previousXP={levelTrackerState.previousXP}
-              />
-              <ProUpgradeDialog 
-                open={proUpgradeOpen} 
-                onOpenChange={setProUpgradeOpen}
               />
               <ManageProDialog 
                 open={manageProOpen} 
