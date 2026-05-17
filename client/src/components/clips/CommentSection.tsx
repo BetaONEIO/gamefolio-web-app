@@ -352,7 +352,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
             className="w-full"
             data-testid="button-join-to-comment"
           >
-            Sign in to add a comment
+            <span style={{ color: '#B7FF1A' }}>Sign in</span>&nbsp;to add a comment
           </Button>
         </div>
       ))}

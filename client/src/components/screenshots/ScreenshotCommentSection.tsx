@@ -18,6 +18,8 @@ import { ProBadge } from "@/components/ui/pro-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useSignedUrl } from "@/hooks/use-signed-url";
+import { useJoinDialog } from "@/hooks/use-join-dialog";
+import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -115,6 +117,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
   
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isOpen: isJoinOpen, actionType: joinActionType, openDialog: openJoinDialog, closeDialog: closeJoinDialog } = useJoinDialog();
   
   const { data: comments, isLoading } = useScreenshotComments(screenshotId);
   const createCommentMutation = useCreateScreenshotComment();
@@ -321,9 +324,24 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
         </form>
       ) : (
         <div className="text-center py-4 border-t">
-          <p className="text-sm text-muted-foreground">Log in to comment</p>
+          <p className="text-sm text-muted-foreground">
+            <button
+              onClick={() => openJoinDialog('comment')}
+              className="cursor-pointer hover:opacity-80 transition-opacity"
+              style={{ color: '#B7FF1A' }}
+            >
+              Log in
+            </button>
+            {' '}to comment
+          </p>
         </div>
       )}
+
+      <JoinGamefolioDialog
+        open={isJoinOpen}
+        onOpenChange={closeJoinDialog}
+        actionType={joinActionType}
+      />
     </div>
   );
 }

@@ -680,7 +680,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                   className="w-full text-center text-sm py-2 rounded-full"
                   style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)' }}
                 >
-                  Sign in to comment
+                  <span style={{ color: '#B7FF1A' }}>Sign in</span> to comment
                 </button>
               )}
             </div>
