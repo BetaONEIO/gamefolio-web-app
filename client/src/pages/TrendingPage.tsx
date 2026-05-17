@@ -1762,7 +1762,7 @@ const TrendingPage: React.FC = () => {
         {/* ── REELS / SCREENSHOTS: full-screen immersive viewer ─────────── */}
         {activeTab !== 'clips' && activeContent.length > 0 && !isLoadingContent && (
           <MobileTrendingViewer
-            key={activeTab}
+            key={`${activeTab}-${selectedGameId ?? 'all'}`}
             content={activeContent}
             onClose={() => setLocation('/trending')}
             hideCloseButton={false}
@@ -2033,7 +2033,15 @@ const TrendingPage: React.FC = () => {
                       background: '#1A2736',
                       border: !selectedGameId ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                     }}
-                    onClick={() => { setSelectedGameId(null); setSelectedGameName(null); setShowGameFilter(false); setGameSearchQuery(''); }}
+                    onClick={() => {
+                      setSelectedGameId(null);
+                      setSelectedGameName(null);
+                      setShowGameFilter(false);
+                      setGameSearchQuery('');
+                      queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
+                      queryClient.invalidateQueries({ queryKey: ['/api/reels/trending'] });
+                      queryClient.invalidateQueries({ queryKey: ['/api/trending/screenshots'] });
+                    }}
                   >
                     {!selectedGameId && (
                       <div
@@ -2085,6 +2093,9 @@ const TrendingPage: React.FC = () => {
                             setSelectedGameName(game.name);
                             setShowGameFilter(false);
                             setGameSearchQuery('');
+                            queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
+                            queryClient.invalidateQueries({ queryKey: ['/api/reels/trending'] });
+                            queryClient.invalidateQueries({ queryKey: ['/api/trending/screenshots'] });
                           }}
                         >
                           {/* Cover art */}
@@ -2157,83 +2168,13 @@ const TrendingPage: React.FC = () => {
         </div>
 
         {/* Header - below tabs on mobile, visible on desktop */}
-        <div className="px-4 mb-4 hidden md:flex flex-col gap-4">
-          <div className="flex flex-row justify-between items-center">
-            <div className="flex items-center gap-3">
-              <TrendingUp className="h-8 w-8 text-primary" />
-              <div>
-                <h1 className="text-3xl font-bold">Trending</h1>
-                <p className="text-muted-foreground">Discover the most popular gaming content</p>
-              </div>
+        <div className="px-4 mb-6 hidden md:flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3">
+            <TrendingUp className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-3xl font-bold">Trending</h1>
+              <p className="text-muted-foreground">Discover the most popular gaming content</p>
             </div>
-
-            {/* Active filter chip */}
-            {selectedGameId && (
-              <button
-                onClick={() => { setSelectedGameId(null); setSelectedGameName(null); }}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all hover:opacity-80"
-                style={{ background: 'rgba(183,255,26,0.15)', border: '1.5px solid #B7FF1A', color: '#B7FF1A' }}
-              >
-                <Gamepad2 className="h-3.5 w-3.5" />
-                {selectedGameName}
-                <X className="h-3.5 w-3.5 opacity-70" />
-              </button>
-            )}
-          </div>
-
-          {/* Game filter pills row */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
-            {/* All Games pill */}
-            <button
-              onClick={() => { setSelectedGameId(null); setSelectedGameName(null); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium flex-shrink-0 transition-all"
-              style={!selectedGameId
-                ? { background: 'rgba(183,255,26,0.18)', border: '1.5px solid #B7FF1A', color: '#B7FF1A' }
-                : { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)' }
-              }
-            >
-              <Gamepad2 className="h-3.5 w-3.5" />
-              All Games
-            </button>
-
-            {/* Per-game pills */}
-            {availableGames.map((game) => {
-              const isSelected = selectedGameId === game.id;
-              const isInTab = activeTabGameIds.has(game.id);
-              return (
-                <button
-                  key={game.id}
-                  onClick={() => { if (!isInTab) return; setSelectedGameId(game.id); setSelectedGameName(game.name); }}
-                  disabled={!isInTab}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium flex-shrink-0 transition-all"
-                  style={isSelected
-                    ? { background: 'rgba(183,255,26,0.18)', border: '1.5px solid #B7FF1A', color: '#B7FF1A' }
-                    : isInTab
-                      ? { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.75)', cursor: 'pointer' }
-                      : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.25)', cursor: 'not-allowed' }
-                  }
-                >
-                  {game.imageUrl && (
-                    <img
-                      src={game.imageUrl.replace('{width}', '20').replace('{height}', '20')}
-                      alt=""
-                      className="w-4 h-4 rounded object-cover flex-shrink-0"
-                    />
-                  )}
-                  {game.name}
-                </button>
-              );
-            })}
-
-            {/* Search more games button */}
-            <button
-              onClick={() => setShowGameFilter(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium flex-shrink-0 transition-all hover:opacity-80"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)' }}
-            >
-              <Search className="h-3.5 w-3.5" />
-              More games…
-            </button>
           </div>
         </div>
 
@@ -2365,7 +2306,15 @@ const TrendingPage: React.FC = () => {
                     background: '#1A2736',
                     border: !selectedGameId ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                   }}
-                  onClick={() => { setSelectedGameId(null); setSelectedGameName(null); setShowGameFilter(false); setGameSearchQuery(''); }}
+                  onClick={() => {
+                    setSelectedGameId(null);
+                    setSelectedGameName(null);
+                    setShowGameFilter(false);
+                    setGameSearchQuery('');
+                    queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/reels/trending'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/trending/screenshots'] });
+                  }}
                 >
                   {!selectedGameId && (
                     <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: '#B7FF1A' }}>
@@ -2407,6 +2356,9 @@ const TrendingPage: React.FC = () => {
                           setSelectedGameName(game.name);
                           setShowGameFilter(false);
                           setGameSearchQuery('');
+                          queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
+                          queryClient.invalidateQueries({ queryKey: ['/api/reels/trending'] });
+                          queryClient.invalidateQueries({ queryKey: ['/api/trending/screenshots'] });
                         }}
                       >
                         {imgSrc && <img src={imgSrc} alt={game.name} className="absolute inset-0 w-full h-full object-cover" />}
