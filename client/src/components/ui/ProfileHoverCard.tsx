@@ -4,6 +4,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { VerificationBadge } from "@/components/ui/verification-badge";
 import { Link } from "wouter";
 import { getQueryFn } from "@/lib/queryClient";
 
@@ -20,35 +21,43 @@ function ProfilePreview({ username }: { username: string }) {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: badgeData } = useQuery<{
+    verificationBadge: { id: number; name: string; imageUrl: string } | null;
+  }>({
+    queryKey: [`/api/user/${profile?.id}/verification-badge`],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: !!profile?.id,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { signedUrl: signedBannerUrl } = useSignedUrl(profile?.bannerUrl ?? null);
-  const bannerSrc =
-    signedBannerUrl ||
-    (profile?.bannerUrl && !profile.bannerUrl.includes("supabase")
-      ? profile.bannerUrl
-      : null);
+  const bannerSrc = signedBannerUrl || profile?.bannerUrl;
 
   if (isLoading) {
     return (
       <>
         <Skeleton
-          className="mb-3"
           style={{
             height: 72,
             margin: "-16px -16px 12px -16px",
             width: "calc(100% + 32px)",
             borderRadius: "16px 16px 0 0",
+            display: "block",
           }}
         />
         <div className="flex items-center gap-3 mb-3">
-          <Skeleton className="h-12 w-12 rounded-full flex-shrink-0" />
+          <Skeleton className="h-11 w-11 rounded-full flex-shrink-0" />
           <div className="space-y-1.5 flex-1">
             <Skeleton className="h-4 w-28" />
             <Skeleton className="h-3 w-20" />
           </div>
         </div>
-        <div className="grid grid-cols-4 gap-1 mb-3">
+        <div className="flex gap-5 mb-3">
           {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-10 rounded-lg" />
+            <div key={i} className="flex flex-col gap-1">
+              <Skeleton className="h-5 w-8" />
+              <Skeleton className="h-2 w-12" />
+            </div>
           ))}
         </div>
         <Skeleton className="h-8 w-full rounded-lg" />
@@ -58,15 +67,18 @@ function ProfilePreview({ username }: { username: string }) {
 
   if (!profile) return null;
 
+  const verificationBadge = badgeData?.verificationBadge ?? null;
+
   const stats = [
-    { label: "Followers", value: profile._count?.followers ?? 0 },
-    { label: "Following", value: profile._count?.following ?? 0 },
-    { label: "Clips", value: profile._count?.clips ?? 0 },
-    { label: "Screenshots", value: profile._count?.screenshots ?? 0 },
+    { label: "CLIPS", value: profile._count?.clips ?? 0 },
+    { label: "SHOTS", value: profile._count?.screenshots ?? 0 },
+    { label: "FOLLOWERS", value: profile._count?.followers ?? 0 },
+    { label: "FOLLOWING", value: profile._count?.following ?? 0 },
   ];
 
   return (
     <>
+      {/* Banner */}
       <div
         className="relative"
         style={{ height: 72, margin: "-16px -16px 0 -16px" }}
@@ -97,17 +109,25 @@ function ProfilePreview({ username }: { username: string }) {
         />
       </div>
 
-      <div
-        className="flex items-end gap-3 mb-2"
-        style={{ marginTop: -22 }}
-      >
+      {/* Avatar — overlaps banner */}
+      <div className="flex items-end gap-3 mb-2" style={{ marginTop: -22 }}>
         <div className="ring-2 ring-[#101923] rounded-full flex-shrink-0">
           <CustomAvatar user={profile} size="md" showBorder />
         </div>
         <div className="min-w-0 pb-0.5">
-          <p className="font-bold text-sm text-white leading-tight truncate">
-            {profile.displayName || profile.username}
-          </p>
+          <div className="flex items-center gap-1 min-w-0">
+            <p className="font-bold text-sm text-white leading-tight truncate">
+              {profile.displayName || profile.username}
+            </p>
+            {verificationBadge && (
+              <VerificationBadge
+                isVerified
+                badgeImageUrl={verificationBadge.imageUrl}
+                badgeName={verificationBadge.name}
+                size="sm"
+              />
+            )}
+          </div>
           <p className="text-xs leading-tight" style={{ color: "#7E887A" }}>
             @{profile.username}
           </p>
@@ -122,32 +142,42 @@ function ProfilePreview({ username }: { username: string }) {
         </div>
       </div>
 
+      {/* Bio */}
       {profile.bio && (
         <p
-          className="text-xs line-clamp-2 mb-2 leading-relaxed"
+          className="text-xs line-clamp-2 mb-3 leading-relaxed"
           style={{ color: "#8C9A87" }}
         >
           {profile.bio}
         </p>
       )}
 
-      <div className="grid grid-cols-4 gap-1 mb-3">
+      {/* Stats — matching profile page style */}
+      <div
+        className="flex mb-3 pb-3"
+        style={{
+          gap: "1.25rem",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
+        }}
+      >
         {stats.map(({ label, value }) => (
-          <div
-            key={label}
-            className="text-center py-1.5 rounded-lg"
-            style={{ background: "rgba(255,255,255,0.04)" }}
-          >
-            <p className="text-sm font-bold text-white leading-tight">
+          <div key={label} className="flex flex-col gap-0.5">
+            <span
+              className="font-black text-base leading-tight text-white"
+            >
               {formatCount(value)}
-            </p>
-            <p className="text-[10px] leading-tight" style={{ color: "#556059" }}>
+            </span>
+            <span
+              className="font-black uppercase leading-tight"
+              style={{ fontSize: "7px", color: "#B7FF1A", letterSpacing: "0.8px" }}
+            >
               {label}
-            </p>
+            </span>
           </div>
         ))}
       </div>
 
+      {/* View profile button */}
       <Link href={`/profile/${username}`}>
         <button
           className="w-full text-xs font-bold py-2 rounded-lg transition-opacity hover:opacity-90"
@@ -180,7 +210,7 @@ export function ProfileHoverCard({ username, children }: ProfileHoverCardProps) 
       <HoverCardContent
         className="p-4 overflow-hidden"
         style={{
-          width: 280,
+          width: 292,
           background: "#101923",
           borderRadius: 16,
           border: "1px solid rgba(27,42,51,0.9)",
