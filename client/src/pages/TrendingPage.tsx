@@ -2157,15 +2157,84 @@ const TrendingPage: React.FC = () => {
         </div>
 
         {/* Header - below tabs on mobile, visible on desktop */}
-        <div className="px-4 mb-6 hidden md:flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-3">
-            <TrendingUp className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-3xl font-bold">Trending</h1>
-              <p className="text-muted-foreground">Discover the most popular gaming content</p>
+        <div className="px-4 mb-4 hidden md:flex flex-col gap-4">
+          <div className="flex flex-row justify-between items-center">
+            <div className="flex items-center gap-3">
+              <TrendingUp className="h-8 w-8 text-primary" />
+              <div>
+                <h1 className="text-3xl font-bold">Trending</h1>
+                <p className="text-muted-foreground">Discover the most popular gaming content</p>
+              </div>
             </div>
+
+            {/* Active filter chip */}
+            {selectedGameId && (
+              <button
+                onClick={() => { setSelectedGameId(null); setSelectedGameName(null); }}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all hover:opacity-80"
+                style={{ background: 'rgba(183,255,26,0.15)', border: '1.5px solid #B7FF1A', color: '#B7FF1A' }}
+              >
+                <Gamepad2 className="h-3.5 w-3.5" />
+                {selectedGameName}
+                <X className="h-3.5 w-3.5 opacity-70" />
+              </button>
+            )}
           </div>
 
+          {/* Game filter pills row */}
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
+            {/* All Games pill */}
+            <button
+              onClick={() => { setSelectedGameId(null); setSelectedGameName(null); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium flex-shrink-0 transition-all"
+              style={!selectedGameId
+                ? { background: 'rgba(183,255,26,0.18)', border: '1.5px solid #B7FF1A', color: '#B7FF1A' }
+                : { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)' }
+              }
+            >
+              <Gamepad2 className="h-3.5 w-3.5" />
+              All Games
+            </button>
+
+            {/* Per-game pills */}
+            {availableGames.map((game) => {
+              const isSelected = selectedGameId === game.id;
+              const isInTab = activeTabGameIds.has(game.id);
+              return (
+                <button
+                  key={game.id}
+                  onClick={() => { if (!isInTab) return; setSelectedGameId(game.id); setSelectedGameName(game.name); }}
+                  disabled={!isInTab}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium flex-shrink-0 transition-all"
+                  style={isSelected
+                    ? { background: 'rgba(183,255,26,0.18)', border: '1.5px solid #B7FF1A', color: '#B7FF1A' }
+                    : isInTab
+                      ? { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.75)', cursor: 'pointer' }
+                      : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.25)', cursor: 'not-allowed' }
+                  }
+                >
+                  {game.imageUrl && (
+                    <img
+                      src={game.imageUrl.replace('{width}', '20').replace('{height}', '20')}
+                      alt=""
+                      className="w-4 h-4 rounded object-cover flex-shrink-0"
+                    />
+                  )}
+                  {game.name}
+                </button>
+              );
+            })}
+
+            {/* Search more games button */}
+            <button
+              onClick={() => setShowGameFilter(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium flex-shrink-0 transition-all hover:opacity-80"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)' }}
+            >
+              <Search className="h-3.5 w-3.5" />
+              More games…
+            </button>
+          </div>
         </div>
 
         {/* Content */}
