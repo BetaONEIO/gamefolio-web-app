@@ -305,7 +305,7 @@ export function GamefolioShareDialog({
                         </div>
                       </div>
                     ) : (
-                      <div className="w-20 h-20 rounded-full overflow-hidden">
+                      <div className="w-20 h-20 rounded-full overflow-hidden bg-[#0B1218]">
                         <CustomAvatar 
                           user={{
                             username,
@@ -317,6 +317,7 @@ export function GamefolioShareDialog({
                           size="lg"
                           showBorder={false}
                           showAvatarBorderOverlay={false}
+                          className="w-20 h-20"
                         />
                       </div>
                     )}
