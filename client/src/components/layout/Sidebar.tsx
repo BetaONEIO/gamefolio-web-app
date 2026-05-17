@@ -295,10 +295,10 @@ const Sidebar = () => {
             );
           })}
 
-          <div className="pt-6 border-t border-border mt-6">
+          {user && <div className="pt-6 border-t border-border mt-6">
             <div className="flex items-center justify-between px-3 mb-3">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                {user ? "Your Games" : "Top Games"}
+                Your Games
               </h3>
               {user && (
                 <Button
@@ -328,9 +328,7 @@ const Sidebar = () => {
                   key={`sidebar-${game.id}`}
                   className="relative flex items-center px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary group cursor-pointer"
                   onClick={() => {
-                    // Navigate to the game page using the game name slug
-                    const gameSlug = game.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-                    setLocation(`/games/${gameSlug}`);
+                    setLocation(`/profile/${user?.username}`);
                   }}
                   onMouseEnter={() => setHoveredGameId(game.id)}
                   onMouseLeave={() => setHoveredGameId(null)}
@@ -425,7 +423,7 @@ const Sidebar = () => {
                 </div>
               )}
             </div>
-          </div>
+          </div>}
         </nav>
       </div>
 
