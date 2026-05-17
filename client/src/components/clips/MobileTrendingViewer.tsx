@@ -21,6 +21,7 @@ import { ReportDialog } from "@/components/content/ReportDialog";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { useCreateComment } from "@/hooks/use-clips";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 
 interface ScreenshotWithUser {
   id: number;
@@ -53,6 +54,27 @@ interface MobileTrendingViewerProps {
   hideCloseButton?: boolean;
   embedded?: boolean;
   onCommentsVisibilityChange?: (open: boolean) => void;
+}
+
+// ── Per-screenshot scroll item — own signed-URL hook ─────────────────────
+function ScreenshotScrollItem({ item }: { item: ScreenshotWithUser }) {
+  const { signedUrl } = useSignedUrl(item.imageUrl);
+  return (
+    <div className="absolute inset-0 flex items-center justify-center bg-black">
+      {signedUrl ? (
+        <img
+          src={signedUrl}
+          alt={item.title}
+          className="w-full h-full object-contain"
+          style={{ maxHeight: '100%', maxWidth: '100%' }}
+        />
+      ) : (
+        <div className="w-full h-full bg-black flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-[#B7FF1A] border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideCloseButton = false, embedded = false, onCommentsVisibilityChange }: MobileTrendingViewerProps) {
@@ -112,6 +134,9 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
 
   // Declare currentItem here so it's available to hooks below
   const currentItem = content[currentIndex];
+
+  // ── Signed URL for the current item's author avatar ────────────────────
+  const { signedUrl: signedAvatarUrl } = useSignedUrl(currentItem?.user?.avatarUrl ?? null);
 
   // ── Follow state for current content item's author ─────────────────────
   const currentAuthorUsername = currentItem?.user?.username;
@@ -304,14 +329,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                   />
                 </div>
               ) : (
-                <div className="absolute inset-0">
-                  <LazyImage
-                    src={(item as ScreenshotWithUser).imageUrl}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                    data-testid={`screenshot-${item.id}`}
-                  />
-                </div>
+                <ScreenshotScrollItem item={item as ScreenshotWithUser} />
               )
             )}
           </div>
@@ -437,7 +455,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               >
                 <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '1.5px solid #fff' }}>
                   <img
-                    src={currentItem.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                    src={signedAvatarUrl || currentItem.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
                     alt={currentItem.user.displayName}
                     className="w-full h-full object-cover"
                   />
