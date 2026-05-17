@@ -17,6 +17,7 @@ import { LikeButton } from '@/components/engagement/LikeButton';
 import { FireButton } from '@/components/engagement/FireButton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Link } from 'wouter';
+import { ProfileHoverCard } from '@/components/ui/ProfileHoverCard';
 
 interface ClipFeedCardProps {
   clip: ClipWithUser;
@@ -176,7 +177,8 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
               <CustomAvatar user={clip.user as any} size="sm" showBorder={true} />
             </Link>
 
-            <div className="flex-1 min-w-0">
+            <ProfileHoverCard username={clip.user.username}>
+            <div className="flex-1 min-w-0 cursor-default">
               <div className="flex items-center gap-1.5">
                 <Link href={`/profile/${clip.user.username}`} className="no-underline min-w-0">
                   <span className="font-bold text-[15px] leading-tight truncate block" style={{ color: '#F5F7F2' }}>
@@ -203,6 +205,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
                 </Link>
               )}
             </div>
+            </ProfileHoverCard>
 
             <div className="flex items-center gap-2 flex-shrink-0">
               {!isSelf && !isAlreadyFollowing && (

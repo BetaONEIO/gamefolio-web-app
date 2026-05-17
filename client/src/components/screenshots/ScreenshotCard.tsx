@@ -6,6 +6,7 @@ import { ReportDialog } from '@/components/content/ReportDialog';
 import { LazyImage } from '@/components/ui/lazy-image';
 import { useSignedUrl } from '@/hooks/use-signed-url';
 import { Link } from 'wouter';
+import { ProfileHoverCard } from '@/components/ui/ProfileHoverCard';
 
 interface ScreenshotCardProps {
   screenshot: any;
@@ -136,23 +137,25 @@ export function ScreenshotCard({
       <div className="pt-3 pb-1 space-y-1">
         {showUserInfo && screenshotUser && (
           <div className="flex items-center mb-1.5">
-            <Link href={`/profile/${screenshotUser.username}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-              <div className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
-                {screenshotUser.nftProfileTokenId && screenshotUser.nftProfileImageUrl && (screenshotUser as any).activeProfilePicType === 'nft' ? (
-                  <div className="h-7 w-7 rounded-lg overflow-hidden border border-[#B7FF1A]/40 flex-shrink-0">
-                    <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName} loading="lazy" className="w-full h-full object-cover" />
-                  </div>
-                ) : (
-                  <Avatar className="h-7 w-7 flex-shrink-0">
-                    <AvatarImage src={signedAvatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'} />
-                    <AvatarFallback className="text-xs">{screenshotUser.displayName?.charAt(0) || '?'}</AvatarFallback>
-                  </Avatar>
-                )}
-                <span className="text-sm font-medium truncate max-w-[140px]" style={{ color: '#F5F7F2' }}>
-                  {screenshotUser.displayName || screenshotUser.username}
-                </span>
-              </div>
-            </Link>
+            <ProfileHoverCard username={screenshotUser.username}>
+              <Link href={`/profile/${screenshotUser.username}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                <div className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
+                  {screenshotUser.nftProfileTokenId && screenshotUser.nftProfileImageUrl && (screenshotUser as any).activeProfilePicType === 'nft' ? (
+                    <div className="h-7 w-7 rounded-lg overflow-hidden border border-[#B7FF1A]/40 flex-shrink-0">
+                      <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName} loading="lazy" className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <Avatar className="h-7 w-7 flex-shrink-0">
+                      <AvatarImage src={signedAvatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'} />
+                      <AvatarFallback className="text-xs">{screenshotUser.displayName?.charAt(0) || '?'}</AvatarFallback>
+                    </Avatar>
+                  )}
+                  <span className="text-sm font-medium truncate max-w-[140px]" style={{ color: '#F5F7F2' }}>
+                    {screenshotUser.displayName || screenshotUser.username}
+                  </span>
+                </div>
+              </Link>
+            </ProfileHoverCard>
           </div>
         )}
 
