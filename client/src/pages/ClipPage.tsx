@@ -435,25 +435,35 @@ const ClipPage = () => {
       onTouchEnd={handleTouchEnd}
       data-testid="clip-page-container"
     >
+      {/* Top navigation bar with back arrow */}
+      <div className="flex items-center px-4 py-2 border-b border-white/10" style={{ background: '#03080A' }}>
+        <button
+          onClick={() => {
+            if (window.history.length > 1) {
+              window.history.back();
+            } else {
+              navigate('/trending');
+            }
+          }}
+          className="flex items-center gap-2 group"
+          aria-label="Back to Trending"
+        >
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center transition-transform group-hover:scale-105"
+            style={{ background: 'rgba(183,255,26,0.18)', border: '1.5px solid rgba(183,255,26,0.65)' }}
+          >
+            <ArrowLeft className="h-4 w-4" style={{ color: '#B7FF1A' }} />
+          </div>
+          <span className="text-sm font-semibold text-white group-hover:text-[#B7FF1A] transition-colors">
+            Trending Clips
+          </span>
+        </button>
+      </div>
+
       {/* Split Layout: Video Left, Info/Comments Right */}
-      <div className="flex flex-col lg:flex-row min-h-screen">
+      <div className="flex flex-col lg:flex-row" style={{ minHeight: 'calc(100vh - 53px)' }}>
         {/* Left Side - Video Player */}
         <div className="lg:w-[60%] xl:w-[65%] bg-black flex items-center justify-center relative">
-          {/* Back button */}
-          <button
-            onClick={() => {
-              if (window.history.length > 1) {
-                window.history.back();
-              } else {
-                navigate('/');
-              }
-            }}
-            className="absolute top-4 left-4 z-20 flex items-center gap-1 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm hover:bg-black/80 transition-colors text-white text-sm font-medium"
-            aria-label="Back to home"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </button>
           <VideoPlayer
             videoUrl={(clip as any).videoUrl}
             thumbnailUrl={(clip as any).thumbnailUrl === null ? undefined : (clip as any).thumbnailUrl}
