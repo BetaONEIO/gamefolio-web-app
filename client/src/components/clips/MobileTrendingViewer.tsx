@@ -566,7 +566,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             initial={{ y: "100%" }}
             animate={{ y: sheetY > 0 ? sheetY : 0 }}
             exit={{ y: "100%" }}
-            transition={sheetY > 0 ? { duration: 0 } : { type: "spring", damping: 32, stiffness: 320, mass: 0.9 }}
+            transition={sheetY > 0 ? { duration: 0 } : { type: "tween", duration: 0.42, ease: [0.32, 0, 0.67, 0] }}
             className="absolute bottom-0 left-0 right-0 z-30 flex flex-col overflow-hidden"
             style={{
               height: '70%',

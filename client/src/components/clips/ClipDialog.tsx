@@ -85,6 +85,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   const { user } = useAuth();
   const { isOpen: joinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
   const [showComments, setShowComments] = useState(false);
+  const [isClosingComments, setIsClosingComments] = useState(false);
   const [commentSheetDragY, setCommentSheetDragY] = useState(0);
   const commentSheetTouchStartY = useRef<number | null>(null);
   const commentSheetTouchStartTime = useRef<number>(0);
@@ -106,6 +107,14 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     }
     setCommentSheetDragY(0);
     commentSheetTouchStartY.current = null;
+  };
+  const closeComments = (callback?: () => void) => {
+    setIsClosingComments(true);
+    setTimeout(() => {
+      setShowComments(false);
+      setIsClosingComments(false);
+      callback?.();
+    }, 420);
   };
   const [isMobile, setIsMobile] = useState(false);
   const [isPortraitClip, setIsPortraitClip] = useState(false);
@@ -1049,10 +1058,16 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   </div>
 
                   {/* ── Comments panel — flex-1, pushes video up ── */}
-                  {showComments && (
+                  {(showComments || isClosingComments) && (
                     <div
                       className="flex-1 flex flex-col overflow-hidden"
-                      style={{ background: '#0B1218', borderRadius: '20px 20px 0 0', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+                      style={{
+                        background: '#0B1218',
+                        borderRadius: '20px 20px 0 0',
+                        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+                        transform: isClosingComments ? 'translateY(100%)' : 'translateY(0)',
+                        transition: 'transform 0.42s cubic-bezier(0.32, 0, 0.67, 0)',
+                      }}
                     >
                       <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
                         <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
@@ -1063,7 +1078,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           <span className="text-white/45 font-normal text-sm">{comments?.length || 0}</span>
                         </h3>
                         <button
-                          onClick={() => setShowComments(false)}
+                          onClick={() => closeComments()}
                           className="w-8 h-8 flex items-center justify-center rounded-full"
                           style={{ background: 'rgba(255,255,255,0.08)' }}
                         >
@@ -1141,11 +1156,14 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       ? "w-full lg:w-[35%] h-full overflow-hidden" // Reels: fixed 35% width for comments
                       : "w-full lg:flex-1 lg:min-w-0 min-h-0 h-full overflow-hidden" // Clips: take remaining space, allow internal scroll
             )}>
-              {clip.videoType === 'reel' && isMobile && showComments ? (
+              {clip.videoType === 'reel' && isMobile && (showComments || isClosingComments) ? (
                 /* ── Mobile reel comments bottom sheet ── */
                 <div
                   className="flex flex-col h-full overflow-hidden"
-                  style={{
+                  style={isClosingComments ? {
+                    transform: 'translateY(100%)',
+                    transition: 'transform 0.42s cubic-bezier(0.32, 0, 0.67, 0)',
+                  } : {
                     transform: `translateY(${commentSheetDragY}px)`,
                     transition: commentSheetDragY > 0 ? 'none' : 'transform 0.3s ease-out',
                   }}
@@ -1167,7 +1185,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         <span className="text-white/45 font-normal text-sm">{comments?.length || 0}</span>
                       </h3>
                       <button
-                        onClick={() => setShowComments(false)}
+                        onClick={() => closeComments()}
                         className="w-8 h-8 flex items-center justify-center rounded-full"
                         style={{ background: 'rgba(255,255,255,0.08)' }}
                         data-testid="button-close-comments"

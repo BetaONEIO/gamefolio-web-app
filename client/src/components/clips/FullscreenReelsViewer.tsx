@@ -40,6 +40,7 @@ interface FullscreenReelsViewerProps {
 export function FullscreenReelsViewer({ reels, initialIndex, onClose }: FullscreenReelsViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showComments, setShowComments] = useState(false);
+  const [isClosingComments, setIsClosingComments] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [ageRestrictionAccepted, setAgeRestrictionAccepted] = useState<Record<number, boolean>>({});
   const [showAgeRestrictionDialog, setShowAgeRestrictionDialog] = useState(false);
@@ -48,6 +49,14 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
   const isAcceptingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const closeComments = (callback?: () => void) => {
+    setIsClosingComments(true);
+    setTimeout(() => {
+      setShowComments(false);
+      setIsClosingComments(false);
+      callback?.();
+    }, 420);
+  };
   const videoAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -157,7 +166,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       e.preventDefault();
       container.scrollTo({ top: (currentIndex + 1) * h, behavior: 'smooth' });
     } else if (e.key === 'Escape') {
-      if (showComments) setShowComments(false);
+      if (showComments) closeComments();
       else onClose();
     }
   }, [currentIndex, reels.length, onClose, showComments]);
@@ -559,10 +568,16 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       )}
 
       {/* ── Comments panel — flex-1, pushes video up ── */}
-      {showComments && currentReel && (
+      {(showComments || isClosingComments) && currentReel && (
         <div
           className="flex-1 flex flex-col overflow-hidden"
-          style={{ background: '#0B1218', borderRadius: '20px 20px 0 0', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          style={{
+            background: '#0B1218',
+            borderRadius: '20px 20px 0 0',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            transform: isClosingComments ? 'translateY(100%)' : 'translateY(0)',
+            transition: 'transform 0.42s cubic-bezier(0.32, 0, 0.67, 0)',
+          }}
         >
           {/* Drag handle */}
           <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
@@ -576,7 +591,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
               <span className="text-white/45 font-normal text-sm">{currentReel._count?.comments || 0}</span>
             </h3>
             <button
-              onClick={() => { setShowComments(false); setIsPlaying(true); }}
+              onClick={() => closeComments(() => setIsPlaying(true))}
               className="w-8 h-8 flex items-center justify-center rounded-full"
               style={{ background: 'rgba(255,255,255,0.08)' }}
             >
