@@ -1541,7 +1541,7 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
     }
 
     const dbNfts = await db.execute(
-      sql`SELECT token_id, tx_hash, minted_at, sold, sold_at, listed_price, listing_active FROM user_nfts WHERE user_id = ${userId} ORDER BY token_id DESC`
+      sql`SELECT token_id, tx_hash, minted_at, sold, sold_at, listed_price, listing_active, image_url FROM user_nfts WHERE user_id = ${userId} ORDER BY token_id DESC`
     );
 
     const rows = (dbNfts as any).rows || dbNfts;
@@ -1549,7 +1549,7 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
       return res.json({ nfts: [], count: 0 });
     }
 
-    const rowMap = new Map<number, { txHash: string; mintedAt: string; sold: boolean; soldAt: string | null; listedPrice: number | null; listingActive: boolean }>();
+    const rowMap = new Map<number, { txHash: string; mintedAt: string; sold: boolean; soldAt: string | null; listedPrice: number | null; listingActive: boolean; imageUrl: string | null }>();
     for (const r of rows) {
       rowMap.set(Number(r.token_id), {
         txHash: r.tx_hash,
@@ -1558,6 +1558,7 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
         soldAt: r.sold_at || null,
         listedPrice: r.listed_price ? Number(r.listed_price) : null,
         listingActive: r.listing_active === true || r.listing_active === 't',
+        imageUrl: r.image_url || null,
       });
     }
     const ownedTokenIds = rows.map((r: any) => Number(r.token_id));
@@ -1568,7 +1569,7 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
         const fallbackData = {
           tokenId,
           name: `Gamefolio Genesis #${tokenId}`,
-          image: null,
+          image: dbRow?.imageUrl || null,
           txHash: dbRow?.txHash || '',
           mintedAt: dbRow?.mintedAt || '',
           sold: dbRow?.sold || false,
@@ -1583,6 +1584,7 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
             return {
               ...fallbackData,
               ...cached.raw,
+              image: cached.raw?.image || dbRow?.imageUrl || null,
               attributes: cached.attributes,
             };
           }

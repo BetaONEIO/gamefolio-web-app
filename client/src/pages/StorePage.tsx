@@ -1350,7 +1350,7 @@ export default function StorePage() {
                           </div>
                           <Button
                             size="sm"
-                            disabled={buyingTokenId === listing.token_id || (!isOfficial && listing.user_id === user?.id)}
+                            disabled={!isOfficial && listing.user_id === user?.id}
                             className={`text-white text-[10px] h-7 px-3 rounded-xl disabled:opacity-50 ${
                               isOfficial
                                 ? 'bg-gradient-to-r from-[#B7FF1A] to-[#6FA800] hover:from-[#B7FF1A] hover:to-[#6FA800]'
@@ -1358,12 +1358,10 @@ export default function StorePage() {
                             }`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleBuyMarketplaceNft({ tokenId: listing.token_id, sellerId: listing.user_id });
+                              navigate(`/nft/${listing.token_id}?from=store`);
                             }}
                           >
-                            {buyingTokenId === listing.token_id ? (
-                              <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                            ) : !isOfficial && listing.user_id === user?.id ? (
+                            {!isOfficial && listing.user_id === user?.id ? (
                               "Your listing"
                             ) : (
                               <>
