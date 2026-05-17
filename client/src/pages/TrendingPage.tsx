@@ -1760,7 +1760,7 @@ const TrendingPage: React.FC = () => {
                 <p className="text-white/50 text-sm text-center">Check back later!</p>
               </div>
             ) : (
-              <MobileClipsViewer clips={trendingClips} onBack={() => { if (window.history.length > 1) { window.history.back(); } else { setLocation('/'); } }} />
+              <MobileClipsViewer clips={trendingClips} viewAllHref="/trending" onBack={() => setLocation('/trending')} />
             )}
           </div>
         )}
@@ -1770,13 +1770,7 @@ const TrendingPage: React.FC = () => {
           <MobileTrendingViewer
             key={activeTab}
             content={activeContent}
-            onClose={() => {
-              if (window.history.length > 1) {
-                window.history.back();
-              } else {
-                setLocation('/');
-              }
-            }}
+            onClose={() => setLocation('/trending')}
             hideCloseButton={false}
             onCommentsVisibilityChange={setCommentsOpen}
           />
@@ -2240,6 +2234,136 @@ const TrendingPage: React.FC = () => {
           timePeriod={timePeriod}
           onTimePeriodChange={setTimePeriod}
         />
+      )}
+
+      {/* Game Filter Modal — desktop */}
+      {showGameFilter && !isMobile && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.65)' }}
+          onClick={() => { setShowGameFilter(false); setGameSearchQuery(''); }}
+        >
+          <div
+            className="rounded-2xl flex flex-col"
+            style={{ background: '#0F1923', maxHeight: '80vh', width: '480px', maxWidth: '90vw' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-4">
+              <div className="flex items-center gap-2.5">
+                <Gamepad2 className="h-6 w-6" style={{ color: '#B7FF1A' }} />
+                <span className="text-white font-bold text-lg">
+                  Filter by Game
+                </span>
+              </div>
+              <button
+                onClick={() => { setShowGameFilter(false); setGameSearchQuery(''); }}
+                className="text-white/70 hover:text-white transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Search input */}
+            <div className="px-4 pb-4">
+              <div
+                className="flex items-center gap-3 rounded-2xl px-4 py-3"
+                style={{ background: 'rgba(255,255,255,0.07)', border: '1.5px solid rgba(183, 255, 26,0.35)' }}
+              >
+                <Search className="h-4 w-4 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.4)' }} />
+                <input
+                  autoFocus
+                  value={gameSearchQuery}
+                  onChange={(e) => setGameSearchQuery(e.target.value)}
+                  placeholder="Search for games..."
+                  className="flex-1 bg-transparent text-sm text-white outline-none"
+                  style={{ color: '#fff' }}
+                />
+              </div>
+            </div>
+
+            {/* Section label */}
+            <p className="px-4 pb-3 text-white font-semibold text-base">Available Games</p>
+
+            {/* 3-column game grid */}
+            <div className="flex-1 overflow-y-auto px-3 pb-6">
+              {isGameSearchLoading && (
+                <div className="flex items-center justify-center py-10">
+                  <div className="w-6 h-6 border-2 border-[#B7FF1A] border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 gap-2">
+                {/* "All Games" card */}
+                <button
+                  className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center transition-all"
+                  style={{
+                    aspectRatio: '3/4',
+                    background: '#1A2736',
+                    border: !selectedGameId ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
+                  }}
+                  onClick={() => { setSelectedGameId(null); setSelectedGameName(null); setShowGameFilter(false); setGameSearchQuery(''); }}
+                >
+                  {!selectedGameId && (
+                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: '#B7FF1A' }}>
+                      <Check className="h-3 w-3 text-black" strokeWidth={3} />
+                    </div>
+                  )}
+                  <Gamepad2 className="h-7 w-7 mb-1" style={{ color: '#B7FF1A' }} />
+                  <span className="text-white text-[11px] font-bold text-center px-1 leading-tight">All Games</span>
+                </button>
+
+                {debouncedGameQuery.length < 2 && availableGames.length === 0 && !isGameSearchLoading && (
+                  <div className="col-span-2 flex flex-col items-center justify-center py-10 gap-2">
+                    <p className="text-white/40 text-sm text-center">Search for a game above</p>
+                  </div>
+                )}
+
+                {(() => {
+                  const gameList = debouncedGameQuery.length >= 2 ? (gameSearchResults || []) : availableGames;
+                  return gameList.map((game: { id: number; name: string; imageUrl?: string }) => {
+                    const isSelected = selectedGameId === game.id;
+                    const isInCurrentTab = activeTabGameIds.has(game.id);
+                    const imgSrc = game.imageUrl ? game.imageUrl.replace('{width}', '144').replace('{height}', '192') : null;
+                    return (
+                      <button
+                        key={game.id}
+                        className="relative rounded-xl overflow-hidden flex flex-col justify-end transition-all"
+                        style={{
+                          aspectRatio: '3/4',
+                          background: '#1A2736',
+                          border: isSelected ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
+                          opacity: isInCurrentTab ? 1 : 0.4,
+                          filter: isInCurrentTab ? 'none' : 'grayscale(70%)',
+                          cursor: isInCurrentTab ? 'pointer' : 'not-allowed',
+                        }}
+                        disabled={!isInCurrentTab}
+                        onClick={() => {
+                          if (!isInCurrentTab) return;
+                          setSelectedGameId(game.id);
+                          setSelectedGameName(game.name);
+                          setShowGameFilter(false);
+                          setGameSearchQuery('');
+                        }}
+                      >
+                        {imgSrc && <img src={imgSrc} alt={game.name} className="absolute inset-0 w-full h-full object-cover" />}
+                        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 55%, transparent 100%)' }} />
+                        {isSelected && (
+                          <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: '#B7FF1A' }}>
+                            <Check className="h-3 w-3 text-black" strokeWidth={3} />
+                          </div>
+                        )}
+                        <div className="relative z-10 px-1.5 pb-1.5">
+                          <p className="text-white text-[11px] font-bold leading-tight line-clamp-2">{game.name}</p>
+                        </div>
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
