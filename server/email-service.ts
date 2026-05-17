@@ -480,7 +480,7 @@ export class EmailService {
     authProvider?: string;
   }): Promise<boolean> {
     const { username, email, displayName, authProvider = 'local' } = userData;
-    const notificationEmail = 'hello@gamefolio.com';
+    const notificationEmail = 'support@gamefolio.com';
     const registrationTime = new Date().toLocaleString();
     const authMethod = authProvider === 'local' ? 'Email/Password' : authProvider.charAt(0).toUpperCase() + authProvider.slice(1);
     
