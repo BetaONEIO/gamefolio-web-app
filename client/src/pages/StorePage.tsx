@@ -856,10 +856,10 @@ export default function StorePage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white">
+    <div className="min-h-screen bg-background text-white">
       <div className="flex flex-col md:flex-row">
       {/* Desktop Sidebar */}
-        <aside className="hidden md:block w-64 min-h-screen bg-gray-900/50 backdrop-blur-sm border-r border-gray-800 p-4">
+        <aside className="hidden md:block w-64 min-h-screen bg-background backdrop-blur-sm border-r border-gray-800 p-4">
           <div className="space-y-2">
             <h2 className="text-2xl font-bold mb-6 text-white" data-testid="text-store-title">
               Store
