@@ -741,21 +741,13 @@ const DesktopShortsViewer: React.FC<{
       style={{ background: 'rgba(3, 8, 10, 0.98)' }}
     >
       {/* Top bar — rendered above main content, below the sticky app header */}
-      <div className="flex items-center justify-between px-5 pb-3 flex-shrink-0" style={{ paddingTop: '104px' }}>
+      <div className="flex items-center justify-between px-5 pb-3 flex-shrink-0" style={{ paddingTop: '128px' }}>
         <button
           onClick={onClose}
-          className="flex items-center gap-2.5 group"
+          className="group"
           aria-label="Back to Trending"
         >
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:scale-105"
-            style={{ background: 'rgba(183,255,26,0.18)', border: '1.5px solid rgba(183,255,26,0.65)' }}
-          >
-            <ArrowLeft className="h-5 w-5" style={{ color: '#B7FF1A' }} />
-          </div>
-          <span className="text-white text-sm font-semibold group-hover:text-[#B7FF1A] transition-colors">
-            Trending Clips
-          </span>
+          <ChevronLeft className="h-8 w-8 text-white/80 group-hover:text-white transition-colors" strokeWidth={2} />
         </button>
         <span className="text-white/35 text-sm font-mono select-none">
           {currentIndex + 1} / {clips.length}
