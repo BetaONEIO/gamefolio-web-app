@@ -1,6 +1,10 @@
 import { storage } from "./storage";
 import { LeaderboardService } from "./leaderboard-service";
 
+// In-memory lock to prevent concurrent view events from double-awarding
+// the first_100_views / first_1000_views bonuses before the DB write lands.
+const inFlightCreatorMilestones = new Set<string>();
+
 export class CreatorMilestoneService {
   private static isSameCalendarDay(date1: Date, date2: Date): boolean {
     return (
@@ -101,33 +105,49 @@ export class CreatorMilestoneService {
   }
 
   static async checkFirst100Views(userId: number, clipId: number): Promise<void> {
+    const lockKey = `${userId}:first_100_views`;
+    if (inFlightCreatorMilestones.has(lockKey)) return;
     try {
       const alreadyClaimed = await this.hasSourceEver(userId, "first_100_views");
       if (!alreadyClaimed) {
-        await LeaderboardService.awardCustomPoints(
-          userId,
-          "first_100_views",
-          250,
-          `First clip to reach 100 views (clip #${clipId})!`
-        );
+        inFlightCreatorMilestones.add(lockKey);
+        try {
+          await LeaderboardService.awardCustomPoints(
+            userId,
+            "first_100_views",
+            250,
+            `First clip to reach 100 views (clip #${clipId})!`
+          );
+        } finally {
+          inFlightCreatorMilestones.delete(lockKey);
+        }
       }
     } catch (error) {
+      inFlightCreatorMilestones.delete(lockKey);
       console.error("Error checking first 100 views:", error);
     }
   }
 
   static async checkFirst1000Views(userId: number, clipId: number): Promise<void> {
+    const lockKey = `${userId}:first_1000_views`;
+    if (inFlightCreatorMilestones.has(lockKey)) return;
     try {
       const alreadyClaimed = await this.hasSourceEver(userId, "first_1000_views");
       if (!alreadyClaimed) {
-        await LeaderboardService.awardCustomPoints(
-          userId,
-          "first_1000_views",
-          1000,
-          `First clip to reach 1,000 views (clip #${clipId})!`
-        );
+        inFlightCreatorMilestones.add(lockKey);
+        try {
+          await LeaderboardService.awardCustomPoints(
+            userId,
+            "first_1000_views",
+            1000,
+            `First clip to reach 1,000 views (clip #${clipId})!`
+          );
+        } finally {
+          inFlightCreatorMilestones.delete(lockKey);
+        }
       }
     } catch (error) {
+      inFlightCreatorMilestones.delete(lockKey);
       console.error("Error checking first 1,000 views:", error);
     }
   }
