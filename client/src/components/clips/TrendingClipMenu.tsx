@@ -36,6 +36,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 interface TrendingClipMenuProps {
   clip: ClipWithUser;
@@ -80,13 +91,16 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
-  const { openClipDialog, closeClipDialog } = useClipDialog();
+  const { closeClipDialog } = useClipDialog();
 
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showEditCaption, setShowEditCaption] = useState(false);
+  const [editTitle, setEditTitle] = useState(clip.title);
+  const [editDescription, setEditDescription] = useState((clip as any).description ?? "");
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -148,6 +162,29 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
     },
     onError: (err: Error) => {
       toast({ title: "Failed to pin", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const editCaptionMutation = useMutation({
+    mutationFn: () =>
+      apiRequest("PATCH", `/api/clips/${clip.id}`, {
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+      }),
+    onSuccess: () => {
+      toast({
+        title: clip.videoType === "reel" ? "Reel updated" : "Clip updated",
+        description: "Your caption has been saved.",
+        variant: "gamefolioSuccess",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/trending"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clips/${clip.id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/clips`] });
+      setShowEditCaption(false);
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to update caption", description: err.message, variant: "destructive" });
     },
   });
 
@@ -239,7 +276,9 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
         label="Edit Caption"
         onClick={() => {
           close();
-          openClipDialog(clip.id);
+          setEditTitle(clip.title);
+          setEditDescription((clip as any).description ?? "");
+          setShowEditCaption(true);
         }}
       />
       <MenuItem
@@ -338,6 +377,76 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
           </PopoverContent>
         </Popover>
       )}
+
+      {/* Edit Caption dialog */}
+      <Dialog open={showEditCaption} onOpenChange={setShowEditCaption}>
+        <DialogContent
+          className="bg-[#0d1b26] border border-white/10 text-foreground sm:max-w-md"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              Edit {clip.videoType === "reel" ? "reel" : "clip"} caption
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-title" className="text-sm text-muted-foreground">
+                Title
+              </Label>
+              <Input
+                id="edit-title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                maxLength={100}
+                className="bg-white/5 border-white/10 focus-visible:ring-primary"
+                placeholder="Enter a title…"
+              />
+              <p className="text-xs text-muted-foreground/60 text-right">
+                {editTitle.length}/100
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-description" className="text-sm text-muted-foreground">
+                Description
+              </Label>
+              <Textarea
+                id="edit-description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                maxLength={500}
+                rows={3}
+                className="bg-white/5 border-white/10 focus-visible:ring-primary resize-none"
+                placeholder="Add a description…"
+              />
+              <p className="text-xs text-muted-foreground/60 text-right">
+                {editDescription.length}/500
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              className="border-white/10 hover:bg-white/5"
+              onClick={() => setShowEditCaption(false)}
+              disabled={editCaptionMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => editCaptionMutation.mutate()}
+              disabled={editCaptionMutation.isPending || !editTitle.trim()}
+              className="bg-primary text-[#071013] hover:bg-primary/90 font-semibold"
+            >
+              {editCaptionMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving…</>
+              ) : (
+                "Save"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
