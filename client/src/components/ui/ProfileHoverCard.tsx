@@ -15,6 +15,8 @@ function formatCount(n: number): string {
 }
 
 function ProfilePreview({ username }: { username: string }) {
+  const [bannerImgError, setBannerImgError] = useState(false);
+
   const { data: profile, isLoading } = useQuery({
     queryKey: [`/api/users/${username}`],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -30,8 +32,15 @@ function ProfilePreview({ username }: { username: string }) {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { signedUrl: signedBannerUrl } = useSignedUrl(profile?.bannerUrl ?? null);
-  const bannerSrc = signedBannerUrl || profile?.bannerUrl;
+  const isSupabaseBanner =
+    !!profile?.bannerUrl &&
+    (profile.bannerUrl.includes("gamefolio-media") ||
+      profile.bannerUrl.includes("gamefolio-assets") ||
+      profile.bannerUrl.includes("gamefolio-name-tags"));
+  const { signedUrl: signedBannerUrl } = useSignedUrl(
+    isSupabaseBanner ? profile!.bannerUrl : null
+  );
+  const bannerSrc = bannerImgError ? null : signedBannerUrl;
 
   if (isLoading) {
     return (
@@ -89,6 +98,7 @@ function ProfilePreview({ username }: { username: string }) {
             alt=""
             className="w-full h-full object-cover"
             style={{ borderRadius: "16px 16px 0 0" }}
+            onError={() => setBannerImgError(true)}
           />
         ) : (
           <div
