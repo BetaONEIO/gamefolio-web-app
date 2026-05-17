@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { X, Plus, Search } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
@@ -126,18 +126,7 @@ const MobileMenu = () => {
     enabled: !!user?.id,
   });
 
-  const { data: trendingGames } = useQuery<Game[]>({
-    queryKey: ["/api/twitch/games/top"],
-    queryFn: async () => {
-      const response = await fetch("/api/twitch/games/top");
-      if (!response.ok) throw new Error("Failed to fetch trending games");
-      return response.json();
-    },
-    enabled: !user,
-    staleTime: 1000 * 60 * 30,
-  });
-
-  const displayGames = user ? favoriteGames : trendingGames;
+  const displayGames = favoriteGames;
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -348,21 +337,19 @@ const MobileMenu = () => {
             )}
 
             {/* Games Section */}
-            {displayGames && displayGames.length > 0 && (
+            {user && displayGames && displayGames.length > 0 && (
               <div className="mt-6 border-t border-border pt-4">
                 <div className="flex items-center justify-between px-2 mb-3">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    {user ? "Your Games" : "Top Games"}
+                    Your Games
                   </h3>
-                  {user && (
-                    <button
-                      onClick={() => { close(); }}
-                      className="text-muted-foreground hover:text-primary transition-colors"
-                      title="Manage games in your profile"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  )}
+                  <button
+                    onClick={() => { close(); }}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                    title="Manage games in your profile"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
                 </div>
                 <div className="grid grid-cols-3 gap-2 px-1">
                   {displayGames.slice(0, 9).map((game) => (
@@ -370,8 +357,7 @@ const MobileMenu = () => {
                       key={`menu-game-${game.id}`}
                       className="flex flex-col items-center gap-1 group"
                       onClick={() => {
-                        const slug = game.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-                        setLocation(`/games/${slug}`);
+                        setLocation(`/profile/${user.username}`);
                         close();
                       }}
                     >
