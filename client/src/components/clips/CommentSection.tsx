@@ -228,8 +228,8 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                   : ''
               }`}
               style={{
-                backgroundColor: highlightCommentId === comment.id ? '#fef3c7' : 'transparent',
-                border: highlightCommentId === comment.id ? '3px solid #f59e0b' : 'none',
+                backgroundColor: highlightCommentId === comment.id ? 'rgba(183, 255, 26, 0.07)' : 'transparent',
+                border: highlightCommentId === comment.id ? '1px solid rgba(183, 255, 26, 0.35)' : '1px solid transparent',
                 animation: highlightCommentId === comment.id ? 'pulse 1s ease-in-out infinite' : 'none'
               }}
             >
