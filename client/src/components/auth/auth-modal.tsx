@@ -13,6 +13,7 @@ interface AuthModalProps {
 }
 
 const CLOSE_MS = 550;
+const DISMISS_THRESHOLD = 80;
 
 export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: AuthModalProps) {
   const [activeTab, setActiveTab] = useState(defaultTab);
@@ -24,6 +25,13 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
   const [slideIn, setSlideIn] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout>>();
 
+  // ── Drag-to-dismiss state ─────────────────────────────────────────────────
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const touchStartY = useRef(0);
+  const touchStartScrollTop = useRef(0);
+  const sheetRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (isOpen) {
       setMounted(true);
@@ -33,6 +41,8 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
   }, [isOpen]);
 
   const triggerClose = () => {
+    setDragY(0);
+    setIsDragging(false);
     setSlideIn(false);
     closeTimer.current = setTimeout(() => {
       setMounted(false);
@@ -54,6 +64,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
     if (isOpen) {
       setActiveTab(defaultTab);
       setShowForgotPassword(false);
+      setDragY(0);
     }
   }, [isOpen, defaultTab]);
 
@@ -61,7 +72,54 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
   const handleForgotPassword = () => setShowForgotPassword(true);
   const handleBackToLogin = () => setShowForgotPassword(false);
 
+  // ── Touch handlers ────────────────────────────────────────────────────────
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    touchStartScrollTop.current = sheetRef.current?.scrollTop ?? 0;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const deltaY = e.touches[0].clientY - touchStartY.current;
+    const scrollTop = sheetRef.current?.scrollTop ?? 0;
+
+    // Only allow drag-to-dismiss when sheet content is at the top
+    if (deltaY > 0 && scrollTop <= 0) {
+      setIsDragging(true);
+      setDragY(deltaY);
+      // Prevent the page from scrolling while we're dismissing
+      e.preventDefault();
+    } else {
+      setIsDragging(false);
+      setDragY(0);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (dragY >= DISMISS_THRESHOLD) {
+      triggerClose();
+    } else {
+      setDragY(0);
+      setIsDragging(false);
+    }
+  };
+
   if (isLoading || !mounted) return null;
+
+  const sheetTransform = isDragging
+    ? `translateY(${dragY}px)`
+    : slideIn
+      ? 'translateY(0)'
+      : 'translateY(100%)';
+
+  const sheetTransition = isDragging
+    ? 'none'
+    : slideIn
+      ? 'transform 350ms cubic-bezier(0.32, 0.72, 0, 1)'
+      : `transform ${CLOSE_MS}ms cubic-bezier(0.4, 0, 1, 1)`;
+
+  const backdropOpacity = isDragging
+    ? Math.max(0, 0.65 * (1 - dragY / 300))
+    : slideIn ? 0.65 : 0;
 
   return (
     <div
@@ -70,33 +128,34 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black transition-opacity"
+        className="absolute inset-0 bg-black"
         style={{
-          opacity: slideIn ? 0.65 : 0,
-          transitionDuration: slideIn ? '300ms' : `${CLOSE_MS}ms`,
-          transitionTimingFunction: slideIn ? 'ease-out' : 'ease-in',
+          opacity: backdropOpacity,
+          transition: isDragging ? 'none' : (slideIn ? '300ms ease-out' : `${CLOSE_MS}ms ease-in`),
         }}
         onClick={triggerClose}
       />
 
       {/* Sheet */}
       <div
+        ref={sheetRef}
         className="relative w-full rounded-t-[20px] md:max-w-md md:rounded-2xl md:mb-8"
         style={{
           background: '#101923',
-          transform: slideIn ? 'translateY(0)' : 'translateY(100%)',
-          transition: slideIn
-            ? 'transform 350ms cubic-bezier(0.32, 0.72, 0, 1)'
-            : `transform ${CLOSE_MS}ms cubic-bezier(0.4, 0, 1, 1)`,
+          transform: sheetTransform,
+          transition: sheetTransition,
           maxHeight: '92dvh',
           overflowY: 'auto',
           scrollbarWidth: 'none',
         }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         <style>{`.__auth-sheet::-webkit-scrollbar { display: none; }`}</style>
 
-        {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+        {/* Drag handle — always dismissible */}
+        <div className="flex justify-center pt-3 pb-1 flex-shrink-0 touch-none select-none">
           <div className="w-10 h-1 rounded-full" style={{ background: '#1B2A33' }} />
         </div>
 
