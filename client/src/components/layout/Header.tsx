@@ -42,6 +42,7 @@ import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useLevelTracker } from "@/hooks/use-level-tracker";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import ManageProDialog from "@/components/ManageProDialog";
+import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -50,20 +51,27 @@ const Header = () => {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [lootboxOpen, setLootboxOpen] = useState(false);
   const [levelTrackerOpen, setLevelTrackerOpen] = useState(false);
+  const [showJoinDialog, setShowJoinDialog] = useState(false);
+  const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
+  const [manageProOpen, setManageProOpen] = useState(false);
+  const { user, logoutMutation } = useAuth();
 
   useEffect(() => {
     const handleOpenLootbox = () => setLootboxOpen(true);
-    const handleOpenProUpgrade = () => setProUpgradeOpen(true);
+    const handleOpenProUpgrade = () => {
+      if (!user) {
+        setShowJoinDialog(true);
+      } else {
+        setProUpgradeOpen(true);
+      }
+    };
     window.addEventListener('open-lootbox', handleOpenLootbox);
     window.addEventListener('open-pro-upgrade', handleOpenProUpgrade);
     return () => {
       window.removeEventListener('open-lootbox', handleOpenLootbox);
       window.removeEventListener('open-pro-upgrade', handleOpenProUpgrade);
     };
-  }, []);
-  const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
-  const [manageProOpen, setManageProOpen] = useState(false);
-  const { user, logoutMutation } = useAuth();
+  }, [user]);
   const { isPro } = useRevenueCat();
   const { state: levelTrackerState, hideLevelTracker } = useLevelTracker();
   
@@ -374,6 +382,10 @@ const Header = () => {
           <ProUpgradeDialog 
             open={proUpgradeOpen} 
             onOpenChange={setProUpgradeOpen}
+          />
+          <JoinGamefolioDialog
+            open={showJoinDialog}
+            onOpenChange={setShowJoinDialog}
           />
           {user ? (
             <>
