@@ -394,7 +394,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     );
   }
 
-  const buttonDisabled = !isInitialized || isLoading || purchasing || !selectedPackage || checkoutLoading;
+  const buttonDisabled = !onAuthRequired && (!isInitialized || isLoading || purchasing || !selectedPackage || checkoutLoading);
 
   const planSelector = (compact: boolean = false) => {
     const yearlyPerMonth = yearlyPkg ? formatCurrency(getPriceAmount(yearlyPkg) / 12, getCurrency(yearlyPkg)) : null;
