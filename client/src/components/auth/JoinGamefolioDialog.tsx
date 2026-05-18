@@ -15,6 +15,7 @@ interface JoinGamefolioDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   actionType?: 'like' | 'comment' | 'share' | 'general';
+  initialView?: 'login' | 'signup';
 }
 
 const CLOSE_MS = 550;
@@ -23,6 +24,7 @@ export function JoinGamefolioDialog({
   open,
   onOpenChange,
   actionType = 'general',
+  initialView,
 }: JoinGamefolioDialogProps) {
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [showLoginForm, setShowLoginForm] = useState(false);
@@ -57,10 +59,12 @@ export function JoinGamefolioDialog({
   useEffect(() => {
     if (open) {
       setMounted(true);
+      if (initialView === 'login') setShowLoginForm(true);
+      if (initialView === 'signup') setShowEmailForm(true);
       const t = setTimeout(() => setSlideIn(true), 16);
       return () => clearTimeout(t);
     }
-  }, [open]);
+  }, [open, initialView]);
 
   const triggerClose = () => {
     setSlideIn(false);

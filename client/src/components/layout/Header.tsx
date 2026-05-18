@@ -52,6 +52,7 @@ const Header = () => {
   const [lootboxOpen, setLootboxOpen] = useState(false);
   const [levelTrackerOpen, setLevelTrackerOpen] = useState(false);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
+  const [joinDialogView, setJoinDialogView] = useState<'login' | 'signup' | undefined>(undefined);
   const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
   const [manageProOpen, setManageProOpen] = useState(false);
   const { user, logoutMutation } = useAuth();
@@ -385,7 +386,11 @@ const Header = () => {
           />
           <JoinGamefolioDialog
             open={showJoinDialog}
-            onOpenChange={setShowJoinDialog}
+            onOpenChange={(open) => {
+              setShowJoinDialog(open);
+              if (!open) setJoinDialogView(undefined);
+            }}
+            initialView={joinDialogView}
           />
           {user ? (
             <>
@@ -558,9 +563,15 @@ const Header = () => {
               </div>
             </>
           ) : (
-            <Link href="/auth">
-              <Button className="ml-3">Sign In</Button>
-            </Link>
+            <Button
+              className="ml-3"
+              onClick={() => {
+                setJoinDialogView('login');
+                setShowJoinDialog(true);
+              }}
+            >
+              Sign In
+            </Button>
           )}
         </div>
       </div>
