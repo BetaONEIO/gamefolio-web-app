@@ -120,7 +120,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
             <img
               src="/attached_assets/Gamefolio logo.png"
               alt="Gamefolio"
-              className="h-16 w-auto drop-shadow-lg"
+              className="h-24 w-auto drop-shadow-lg"
             />
           </div>
 

@@ -19,7 +19,7 @@ import { WelcomePackProvider, useWelcomePack } from "@/hooks/use-welcome-pack";
 import { DailyStreakProvider } from "@/hooks/use-daily-streak";
 import { useVersionCheck } from "@/hooks/use-version-check";
 import { useAndroidBackButton } from "@/hooks/use-android-back-button";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+import AuthModal from "@/components/auth/auth-modal";
 import { WelcomePackDialog } from "@/components/welcome-pack/WelcomePackDialog";
 import DailyXpBonus from "@/components/gamification/DailyXpBonus";
 import DailyStreakOverlay from "@/components/gamification/DailyStreak";
@@ -364,10 +364,11 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
       {isMobile && <MobileNav />}
       
-      {/* Auth Dialog */}
-      <JoinGamefolioDialog
-        open={isOpen}
-        onOpenChange={(v) => { if (!v) closeModal(); }}
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={isOpen} 
+        onClose={closeModal} 
+        defaultTab={defaultTab} 
       />
     </div>
   );

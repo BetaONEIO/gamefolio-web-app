@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
 import { useState, useCallback, useRef } from "react";
-import { useAuthModal } from "@/hooks/use-auth-modal";
+import AuthModal from "@/components/auth/auth-modal";
 import { ZapIconSvg, useZapFly, ZapFlyOverlay } from "@/components/ui/ZapReactionIcon";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 
@@ -22,7 +22,7 @@ const MobileNav = () => {
   const { user } = useAuth();
   const { closeClipDialog } = useClipDialog();
   const username = user?.username || "user";
-  const { openModal } = useAuthModal();
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
   const trendingIconRef = useRef<HTMLSpanElement>(null);
   const { zapFlyState, triggerZapFly, dismissZapFly } = useZapFly();
@@ -50,7 +50,7 @@ const MobileNav = () => {
     }
     if ('requiresAuth' in item && item.requiresAuth && !user) {
       e.preventDefault();
-      openModal("register");
+      setShowAuthModal(true);
     }
   };
 
@@ -208,6 +208,11 @@ const MobileNav = () => {
         <ZapFlyOverlay targetRect={zapFlyState} onDone={dismissZapFly} mode={null} showXpPopup={false} />
       )}
 
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        defaultTab="register"
+      />
     </>
   );
 };
