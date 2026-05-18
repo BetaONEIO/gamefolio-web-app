@@ -80,7 +80,6 @@ function ProfilePreview({ username }: { username: string }) {
 
   const stats = [
     { label: "CLIPS", value: profile._count?.clips ?? 0 },
-    { label: "SHOTS", value: profile._count?.screenshots ?? 0 },
     { label: "FOLLOWERS", value: profile._count?.followers ?? 0 },
     { label: "FOLLOWING", value: profile._count?.following ?? 0 },
   ];
@@ -166,7 +165,7 @@ function ProfilePreview({ username }: { username: string }) {
       <div
         className="flex mb-3 pb-3"
         style={{
-          gap: "1.25rem",
+          gap: "1.5rem",
           borderBottom: "1px solid rgba(255,255,255,0.06)",
         }}
       >

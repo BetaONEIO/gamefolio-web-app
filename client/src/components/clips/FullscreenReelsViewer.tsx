@@ -6,6 +6,7 @@ import { MessageCircle, Trash2, ChevronDown, ChevronLeft, BarChart2, Gamepad2, M
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
+import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
 import { Link } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
@@ -373,13 +374,21 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     <Link
                       href={`/profile/${currentReel.user.username}`}
                       onClick={(e) => { e.stopPropagation(); onClose(); }}
-                      className="flex items-center gap-1.5 no-underline flex-shrink-0 pointer-events-auto"
+                      className="flex-shrink-0 pointer-events-auto"
                     >
                       <CustomAvatar user={currentReel.user as any} size="sm" showBorder={true} />
-                      <span className="text-white font-bold text-[13px] drop-shadow leading-tight">
-                        @{currentReel.user.username}
-                      </span>
                     </Link>
+                    <ProfileHoverCard username={currentReel.user.username}>
+                      <Link
+                        href={`/profile/${currentReel.user.username}`}
+                        onClick={(e) => { e.stopPropagation(); onClose(); }}
+                        className="no-underline flex-shrink-0 pointer-events-auto"
+                      >
+                        <span className="text-white font-bold text-[13px] drop-shadow leading-tight">
+                          @{currentReel.user.username}
+                        </span>
+                      </Link>
+                    </ProfileHoverCard>
                     {user && user.id !== currentReel.user.id && !isFollowing && (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleFollow(); }}
@@ -452,18 +461,20 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
               >
                 <CustomAvatar user={currentReel.user as any} size="lg" showBorder={true} />
               </Link>
-              <div className="flex-1 min-w-0">
-                <Link
-                  href={`/profile/${currentReel.user.username}`}
-                  onClick={onClose}
-                  className="no-underline"
-                >
-                  <p className="text-white font-bold text-sm leading-tight truncate">
-                    {currentReel.user.displayName || currentReel.user.username}
-                  </p>
-                  <p className="text-white/50 text-xs truncate">@{currentReel.user.username}</p>
-                </Link>
-              </div>
+              <ProfileHoverCard username={currentReel.user.username}>
+                <div className="flex-1 min-w-0 cursor-default">
+                  <Link
+                    href={`/profile/${currentReel.user.username}`}
+                    onClick={onClose}
+                    className="no-underline"
+                  >
+                    <p className="text-white font-bold text-sm leading-tight truncate">
+                      {currentReel.user.displayName || currentReel.user.username}
+                    </p>
+                    <p className="text-white/50 text-xs truncate">@{currentReel.user.username}</p>
+                  </Link>
+                </div>
+              </ProfileHoverCard>
               {user && user.id !== currentReel.user.id && !isFollowing && (
                 <button
                   onClick={handleFollow}
