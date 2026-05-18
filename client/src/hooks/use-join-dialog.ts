@@ -1,23 +1,19 @@
-import { useState } from 'react';
+import { useAuthModal } from './use-auth-modal';
 
 type ActionType = 'like' | 'comment' | 'share' | 'general';
 
 export function useJoinDialog() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [actionType, setActionType] = useState<ActionType>('general');
+  const { openModal } = useAuthModal();
 
-  const openDialog = (type: ActionType = 'general') => {
-    setActionType(type);
-    setIsOpen(true);
+  const openDialog = (_type: ActionType = 'general') => {
+    openModal('login');
   };
 
-  const closeDialog = () => {
-    setIsOpen(false);
-  };
+  const closeDialog = () => {};
 
   return {
-    isOpen,
-    actionType,
+    isOpen: false,
+    actionType: 'general' as ActionType,
     openDialog,
     closeDialog,
   };

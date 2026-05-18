@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+
 import PlatformConnections from "./PlatformConnections";
 import { GamefolioShareDialog } from "./GamefolioShareDialog";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
@@ -562,12 +562,6 @@ const ProfileHeader = ({
           <PlatformConnections profile={profile} />
         </div>
       </div>
-
-      <JoinGamefolioDialog
-        open={isOpen}
-        onOpenChange={closeDialog}
-        actionType={actionType}
-      />
 
       {nftPopup && (
         <NftProfilePopup

@@ -23,7 +23,7 @@ import RecommendedForYou from "@/components/home/RecommendedForYou";
 import { ProUpgradeDialog } from "@/components/ProUpgradeDialog";
 import { LazySection } from "@/components/ui/lazy-section";
 import { openExternal } from "@/lib/platform";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+import { useAuthModal } from "@/hooks/use-auth-modal";
 
 interface TrendingContentCarouselProps {
   clips: ClipWithUser[] | undefined;
@@ -230,7 +230,7 @@ interface HeroBannerSlideshowProps {
 }
 
 const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSlides, slideIntervalMs }: HeroBannerSlideshowProps) => {
-  const [showJoinDialog, setShowJoinDialog] = useState(false);
+  const { openModal } = useAuthModal();
   // Filter out Pro slides for users who are already Pro
   const visibleDbSlides = dbSlides?.filter(slide =>
     !(slide.buttonLink === '/pro' && (user as any)?.isPro)
@@ -359,7 +359,7 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
                           void openExternal(slide.buttonLink);
                         } else {
                           if (!user) {
-                            setShowJoinDialog(true);
+                            openModal('login');
                           } else {
                             setLocation(slide.buttonLink || '/');
                           }
@@ -485,7 +485,6 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
           ))}
         </div>
       </div>
-      <JoinGamefolioDialog open={showJoinDialog} onOpenChange={setShowJoinDialog} />
     </section>
   );
 };

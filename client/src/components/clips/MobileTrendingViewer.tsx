@@ -12,7 +12,7 @@ import { FireButton } from "@/components/engagement/FireButton";
 import CommentSection from "@/components/clips/CommentSection";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import { useAuth } from "@/hooks/use-auth";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+import { useAuthModal } from "@/hooks/use-auth-modal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
@@ -129,7 +129,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   const containerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [showJoinDialog, setShowJoinDialog] = useState(false);
+  const { openModal } = useAuthModal();
 
   // Declare currentItem here so it's available to hooks below
   const currentItem = content[currentIndex];
@@ -169,7 +169,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   const handleFollowPress = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!user) { setShowJoinDialog(true); return; }
+    if (!user) { openModal('login'); return; }
     if (isSelf) return;
     followMutation.mutate();
   };
@@ -404,7 +404,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
 
           {/* Comments */}
           <button
-            onClick={(e) => { e.stopPropagation(); if (!user) { setShowJoinDialog(true); } else { setCommentsExpanded(true); setShowComments(true); } }}
+            onClick={(e) => { e.stopPropagation(); if (!user) { openModal('login'); } else { setCommentsExpanded(true); setShowComments(true); } }}
             className="flex flex-col items-center gap-0.5"
             style={{ pointerEvents: 'auto' }}
             data-testid="button-comments"
@@ -675,7 +675,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                 </div>
               ) : (
                 <button
-                  onClick={() => setShowJoinDialog(true)}
+                  onClick={() => openModal('login')}
                   className="w-full text-center text-sm py-2 rounded-full"
                   style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)' }}
                 >
@@ -696,12 +696,6 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
           onOpenChange={setShowShare}
         />
       )}
-
-      <JoinGamefolioDialog
-        open={showJoinDialog}
-        onOpenChange={setShowJoinDialog}
-        actionType="general"
-      />
 
     </div>
   );

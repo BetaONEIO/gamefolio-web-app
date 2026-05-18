@@ -13,7 +13,7 @@ import CommentSection from "@/components/clips/CommentSection";
 import ShareMenu from "@/components/clips/ShareMenu";
 import { useAuth } from "@/hooks/use-auth";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+
 import { AgeRestrictionDialog } from "@/components/content/AgeRestrictionDialog";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -642,12 +642,6 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           contentType="reel"
         />
       )}
-
-      <JoinGamefolioDialog
-        open={isJoinDialogOpen}
-        onOpenChange={(open) => !open && closeDialog()}
-        actionType={actionType}
-      />
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>

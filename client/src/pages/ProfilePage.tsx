@@ -81,7 +81,7 @@ import { VerificationBadge } from "@/components/ui/verification-badge";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { useProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
 import { BannerLightbox, useBannerLightbox } from "@/components/ui/banner-lightbox";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
@@ -5159,13 +5159,6 @@ const ProfilePage = () => {
         bannerUrl={bannerLightboxData.bannerUrl}
         displayName={bannerLightboxData.displayName}
         username={bannerLightboxData.username}
-      />
-
-      {/* Join Dialog for Guest Users */}
-      <JoinGamefolioDialog
-        open={isOpen}
-        onOpenChange={closeDialog}
-        actionType={actionType}
       />
 
       <ProUpgradeDialog

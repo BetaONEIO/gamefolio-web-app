@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { ZapIconSvg, useZapFly, ZapFlyOverlay } from "@/components/ui/ZapReactionIcon";
 import { cn } from "@/lib/utils";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { requireEmailVerified, isEmailVerificationError } from "@/lib/email-verification";
 
@@ -250,11 +250,6 @@ export function FireButton({
             showXpPopup={shouldShowXpPopup()}
           />
         )}
-        <JoinGamefolioDialog 
-          open={isOpen} 
-          onOpenChange={closeDialog} 
-          actionType={actionType} 
-        />
       </>
     );
   }
@@ -296,11 +291,6 @@ export function FireButton({
           showXpPopup={shouldShowXpPopup()}
         />
       )}
-      <JoinGamefolioDialog 
-        open={isOpen} 
-        onOpenChange={closeDialog} 
-        actionType={actionType} 
-      />
     </>
   );
 }

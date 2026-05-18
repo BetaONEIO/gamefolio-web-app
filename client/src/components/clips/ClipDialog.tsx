@@ -44,7 +44,7 @@ import { formatDistance } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+
 import { cn } from "@/lib/utils";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import CommentSection from "@/components/clips/CommentSection";
@@ -1428,12 +1428,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           </>
         )}
       </DialogPortal>
-      
-      <JoinGamefolioDialog 
-        open={joinDialogOpen} 
-        onOpenChange={closeDialog} 
-        actionType={actionType} 
-      />
       
       {clip && (
         <AgeRestrictionDialog

@@ -19,7 +19,7 @@ import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
 import { PartnerBadge } from "@/components/ui/partner-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+import { useAuthModal } from "@/hooks/use-auth-modal";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -117,7 +117,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
   const [newComment, setNewComment] = useState("");
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null);
   
-  const [showJoinDialog, setShowJoinDialog] = useState(false);
+  const { openModal } = useAuthModal();
 
   const { user } = useAuth();
   const { toast } = useToast();
@@ -154,7 +154,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
     if (!newComment.trim()) return;
     
     if (!user) {
-      setShowJoinDialog(true);
+      openModal('login');
       return;
     }
 
@@ -348,7 +348,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
         <div className="mt-4 flex items-center justify-center">
           <Button 
             variant="outline"
-            onClick={() => setShowJoinDialog(true)}
+            onClick={() => openModal('login')}
             className="w-full"
             data-testid="button-join-to-comment"
           >
@@ -357,11 +357,6 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
         </div>
       ))}
 
-      <JoinGamefolioDialog
-        open={showJoinDialog}
-        onOpenChange={setShowJoinDialog}
-        actionType="comment"
-      />
     </div>
   );
 };
