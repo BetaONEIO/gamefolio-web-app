@@ -235,7 +235,7 @@ export function JoinGamefolioDialog({
         >
           {/* Logo */}
           <div className="flex justify-center mb-4 mt-2">
-            <div className="w-14 h-14 rounded-2xl overflow-hidden">
+            <div className="w-[84px] h-[84px] rounded-2xl overflow-hidden">
               <img src={gamefolioLogo} alt="Gamefolio Logo" className="w-full h-full object-cover" />
             </div>
           </div>
