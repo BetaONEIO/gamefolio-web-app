@@ -107,10 +107,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser && firebaseUser.email) {
-        const isInitialRestore = isInitialAuthCheckRef.current;
-        isInitialAuthCheckRef.current = false;
+      // Firebase always emits one onAuthStateChanged on init to report the
+      // restored session state — and that first fire is `null` when there's
+      // no persisted session. Consume the "initial check" flag on that very
+      // first fire regardless: if we only flipped it when a user was present,
+      // a fresh sign-in (whose first fire was the null no-session event)
+      // would be mistaken for a restore and the server-side /api/auth/google
+      // POST + navigation would be skipped, stranding the user on /auth.
+      const isInitialRestore = isInitialAuthCheckRef.current;
+      isInitialAuthCheckRef.current = false;
 
+      if (firebaseUser && firebaseUser.email) {
         if (isInitialRestore) {
           if (mounted) setFirebaseAuthChecked(true);
           return;
