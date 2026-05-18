@@ -18,7 +18,7 @@ import { ProBadge } from "@/components/ui/pro-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useSignedUrl } from "@/hooks/use-signed-url";
-import { useAuthModal } from "@/hooks/use-auth-modal";
+import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -114,9 +114,10 @@ function ScreenshotCommentLikeButton({ commentId, isLoggedIn }: ScreenshotCommen
 export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: ScreenshotCommentSectionProps) {
   const [newComment, setNewComment] = useState("");
   
+  const [showJoinDialog, setShowJoinDialog] = useState(false);
+
   const { user } = useAuth();
   const { toast } = useToast();
-  const { openModal } = useAuthModal();
   
   const { data: comments, isLoading } = useScreenshotComments(screenshotId);
   const createCommentMutation = useCreateScreenshotComment();
@@ -126,11 +127,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
     if (!newComment.trim()) return;
     
     if (!user) {
-      toast({
-        title: "Login required",
-        description: "Please log in to comment",
-        variant: "default"
-      });
+      setShowJoinDialog(true);
       return;
     }
 
@@ -325,7 +322,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
         <div className="text-center py-4 border-t">
           <p className="text-sm text-muted-foreground">
             <button
-              onClick={() => openModal()}
+              onClick={() => setShowJoinDialog(true)}
               className="cursor-pointer hover:opacity-80 transition-opacity"
               style={{ color: '#B7FF1A' }}
             >
@@ -336,6 +333,11 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
         </div>
       )}
 
+      <JoinGamefolioDialog
+        open={showJoinDialog}
+        onOpenChange={setShowJoinDialog}
+        actionType="comment"
+      />
     </div>
   );
 }

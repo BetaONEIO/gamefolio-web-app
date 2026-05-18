@@ -19,7 +19,7 @@ import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
 import { PartnerBadge } from "@/components/ui/partner-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
-import { useAuthModal } from "@/hooks/use-auth-modal";
+import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -117,9 +117,10 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
   const [newComment, setNewComment] = useState("");
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null);
   
+  const [showJoinDialog, setShowJoinDialog] = useState(false);
+
   const { user } = useAuth();
   const { toast } = useToast();
-  const { openModal } = useAuthModal();
   
   const { data: comments, isLoading } = useQuery<CommentWithUser[]>({
     queryKey: [`/api/clips/${clipId}/comments`],
@@ -153,7 +154,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
     if (!newComment.trim()) return;
     
     if (!user) {
-      openModal();
+      setShowJoinDialog(true);
       return;
     }
 
@@ -347,7 +348,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
         <div className="mt-4 flex items-center justify-center">
           <Button 
             variant="outline"
-            onClick={() => openModal()}
+            onClick={() => setShowJoinDialog(true)}
             className="w-full"
             data-testid="button-join-to-comment"
           >
@@ -355,7 +356,12 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
           </Button>
         </div>
       ))}
-      
+
+      <JoinGamefolioDialog
+        open={showJoinDialog}
+        onOpenChange={setShowJoinDialog}
+        actionType="comment"
+      />
     </div>
   );
 };
