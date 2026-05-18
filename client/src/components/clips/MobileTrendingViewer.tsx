@@ -18,6 +18,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/content/ReportDialog";
 import { LazyImage } from "@/components/ui/lazy-image";
+import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
 import { useCreateComment } from "@/hooks/use-clips";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { useSignedUrl } from "@/hooks/use-signed-url";
@@ -448,7 +449,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             <div className="flex items-center gap-2 mb-1.5">
               <Link
                 href={`/profile/${currentItem.user.username}`}
-                className="flex items-center gap-1.5 no-underline flex-shrink-0"
+                className="flex-shrink-0 no-underline"
                 data-testid={`link-user-${currentItem.user.username}`}
               >
                 <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '1.5px solid #fff' }}>
@@ -458,10 +459,17 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <span className="text-white font-bold text-[13px] drop-shadow leading-tight">
-                  @{currentItem.user.username}
-                </span>
               </Link>
+              <ProfileHoverCard username={currentItem.user.username}>
+                <Link
+                  href={`/profile/${currentItem.user.username}`}
+                  className="no-underline flex-shrink-0"
+                >
+                  <span className="text-white font-bold text-[13px] drop-shadow leading-tight">
+                    @{currentItem.user.username}
+                  </span>
+                </Link>
+              </ProfileHoverCard>
               {!isSelf && !isFollowing && (
                 <button
                   onClick={handleFollowPress}

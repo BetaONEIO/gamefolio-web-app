@@ -18,6 +18,7 @@ import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
 import { useLocation, Link } from "wouter";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
+import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient as globalQueryClient } from "@/lib/queryClient";
@@ -679,9 +680,11 @@ const HomePage = () => {
                                 className="w-full h-full object-cover"
                               />
                             </div>
-                            <span className="text-white text-xs font-medium drop-shadow-lg">
-                              {reel.user.displayName || reel.user.username}
-                            </span>
+                            <ProfileHoverCard username={reel.user.username}>
+                              <span className="text-white text-xs font-medium drop-shadow-lg cursor-default">
+                                {reel.user.displayName || reel.user.username}
+                              </span>
+                            </ProfileHoverCard>
                           </div>
                           
                           {/* View count and game - bottom left */}
@@ -753,9 +756,11 @@ const HomePage = () => {
                                 className="w-full h-full object-cover"
                               />
                             </div>
-                            <span className="text-white text-sm font-medium">
-                              {reel.user.displayName || reel.user.username}
-                            </span>
+                            <ProfileHoverCard username={reel.user.username}>
+                              <span className="text-white text-sm font-medium cursor-default">
+                                {reel.user.displayName || reel.user.username}
+                              </span>
+                            </ProfileHoverCard>
                           </div>
 
                           {/* Title */}
@@ -835,11 +840,13 @@ const HomePage = () => {
                     <div className="space-y-1">
                       <h4 className="text-white text-sm font-medium line-clamp-2 leading-tight">{screenshot.title}</h4>
                       {screenshot.user && (
-                        <Link href={`/profile/${screenshot.user.username}`} onClick={(e) => e.stopPropagation()}>
-                          <p className="text-white/80 hover:text-white text-xs cursor-pointer transition-colors">
-                            {screenshot.user.displayName || screenshot.user.username}
-                          </p>
-                        </Link>
+                        <ProfileHoverCard username={screenshot.user.username}>
+                          <Link href={`/profile/${screenshot.user.username}`} onClick={(e) => e.stopPropagation()}>
+                            <p className="text-white/80 hover:text-white text-xs cursor-pointer transition-colors">
+                              {screenshot.user.displayName || screenshot.user.username}
+                            </p>
+                          </Link>
+                        </ProfileHoverCard>
                       )}
                     </div>
                   </div>
