@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { formatNumber } from "@/lib/format";
+import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
 import { formatDuration } from "@/lib/constants";
 
 function LazyReelVideoThumbnail({ src, className }: { src: string | undefined; className: string }) {
@@ -173,9 +174,14 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
                 <h3 className="text-white font-bold text-sm line-clamp-1">
                   {reel.title}
                 </h3>
-                <p className="text-white/60 text-xs mt-0.5">
-                  @{reel.user.username}
-                </p>
+                <ProfileHoverCard username={reel.user.username}>
+                  <p
+                    className="text-white/60 text-xs mt-0.5 cursor-default"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    @{reel.user.username}
+                  </p>
+                </ProfileHoverCard>
                 {reel.game?.name && (
                   <Link
                     href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}

@@ -26,6 +26,7 @@ import { FireButton } from '@/components/engagement/FireButton';
 import { ReportButton } from '@/components/reporting/ReportButton';
 import { MobileTrendingViewer } from '@/components/clips/MobileTrendingViewer';
 import { CustomAvatar } from '@/components/ui/custom-avatar';
+import { ProfileHoverCard } from '@/components/ui/ProfileHoverCard';
 import { Dialog, DialogContent, DialogClose, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import CommentSection from '@/components/clips/CommentSection';
 import { UserIcon, X, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -237,7 +238,8 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
             />
           </Link>
 
-          <div className="flex-1 min-w-0">
+          <ProfileHoverCard username={clip.user.username}>
+          <div className="flex-1 min-w-0 cursor-default">
             <div className="flex items-center gap-1.5">
               <Link href={`/profile/${clip.user.username}`} className="no-underline min-w-0">
                 <span className="font-bold text-[15px] leading-tight truncate block" style={{ color: '#F5F7F2' }}>
@@ -264,6 +266,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
               </Link>
             )}
           </div>
+          </ProfileHoverCard>
 
           <div className="flex items-center gap-2 flex-shrink-0">
             {!isSelf && !isAlreadyFollowing && (
@@ -591,9 +594,11 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[]; onOpen
           </h3>
 
           {/* Username */}
-          <p className="text-white text-xs mb-1.5 drop-shadow-lg">
-            @{reel.user.username}
-          </p>
+          <ProfileHoverCard username={reel.user.username}>
+            <p className="text-white text-xs mb-1.5 drop-shadow-lg cursor-default">
+              @{reel.user.username}
+            </p>
+          </ProfileHoverCard>
 
           {/* Game badge underneath username */}
           {reel.game && (
@@ -837,7 +842,8 @@ const DesktopShortsViewer: React.FC<{
                 </div>
               )}
             </div>
-            <div className="min-w-0 flex-1">
+            <ProfileHoverCard username={clip.user.username}>
+            <div className="min-w-0 flex-1 cursor-default">
               <div className="flex items-center gap-2 flex-wrap">
                 <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
                   <span className="text-white font-semibold text-sm hover:text-[#B7FF1A] transition-colors">
@@ -860,6 +866,7 @@ const DesktopShortsViewer: React.FC<{
                 <p className="text-white/55 text-xs mt-0.5 line-clamp-1">{clip.title}</p>
               )}
             </div>
+            </ProfileHoverCard>
           </div>
 
           {/* Horizontal engagement row */}
@@ -1138,7 +1145,8 @@ const DesktopShortsViewer: React.FC<{
                   </div>
                 </Link>
                 {/* Text flows to the right */}
-                <div className="flex flex-col gap-1 items-start">
+                <ProfileHoverCard username={clip.user.username}>
+                <div className="flex flex-col gap-1 items-start cursor-default">
                   <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
                     <p className="text-white font-bold text-sm hover:text-[#B7FF1A] transition-colors leading-tight">
                       {clip.user.displayName || clip.user.username}
@@ -1158,6 +1166,7 @@ const DesktopShortsViewer: React.FC<{
                     </Link>
                   )}
                 </div>
+                </ProfileHoverCard>
               </div>
             </div>
           </div>
@@ -1602,9 +1611,11 @@ const TrendingPage: React.FC = () => {
                         <h3 className="text-white font-bold text-xs mb-0.5 drop-shadow-lg line-clamp-2">
                           {reel.title}
                         </h3>
-                        <p className="text-white text-[10px] mb-1 drop-shadow-lg">
-                          @{reel.user.username}
-                        </p>
+                        <ProfileHoverCard username={reel.user.username}>
+                          <p className="text-white text-[10px] mb-1 drop-shadow-lg cursor-default">
+                            @{reel.user.username}
+                          </p>
+                        </ProfileHoverCard>
                         {reel.game && (
                           <Link
                             href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
