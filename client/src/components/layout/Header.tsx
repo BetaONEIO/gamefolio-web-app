@@ -58,20 +58,21 @@ const Header = () => {
 
   useEffect(() => {
     const handleOpenLootbox = () => setLootboxOpen(true);
-    const handleOpenProUpgrade = () => {
-      if (!user) {
-        setShowJoinDialog(true);
-      } else {
-        setProUpgradeOpen(true);
-      }
-    };
+    const handleOpenProUpgrade = () => setProUpgradeOpen(true);
     window.addEventListener('open-lootbox', handleOpenLootbox);
     window.addEventListener('open-pro-upgrade', handleOpenProUpgrade);
     return () => {
       window.removeEventListener('open-lootbox', handleOpenLootbox);
       window.removeEventListener('open-pro-upgrade', handleOpenProUpgrade);
     };
-  }, [user]);
+  }, []);
+
+  useEffect(() => {
+    if (user && user.userType && sessionStorage.getItem('pending_pro_upgrade')) {
+      sessionStorage.removeItem('pending_pro_upgrade');
+      setProUpgradeOpen(true);
+    }
+  }, [user?.id, (user as any)?.userType]);
   const { isPro } = useRevenueCat();
   const { state: levelTrackerState, hideLevelTracker } = useLevelTracker();
   
@@ -382,10 +383,20 @@ const Header = () => {
           <ProUpgradeDialog 
             open={proUpgradeOpen} 
             onOpenChange={setProUpgradeOpen}
+            onAuthRequired={() => {
+              setProUpgradeOpen(false);
+              sessionStorage.setItem('pending_pro_upgrade', '1');
+              setShowJoinDialog(true);
+            }}
           />
           <JoinGamefolioDialog
             open={showJoinDialog}
             onOpenChange={setShowJoinDialog}
+            onAuthSuccess={() => {
+              if (sessionStorage.getItem('pending_pro_upgrade')) {
+                setTimeout(() => setProUpgradeOpen(true), 800);
+              }
+            }}
           />
           {user ? (
             <>

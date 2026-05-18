@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Crown, Loader2, X, Check, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
+import { useAuth } from "@/hooks/use-auth";
 import { Package } from "@revenuecat/purchases-js";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import {
@@ -21,6 +22,7 @@ interface ProUpgradeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   subtitle?: string;
+  onAuthRequired?: () => void;
 }
 
 const premiumBenefits = [
@@ -237,8 +239,9 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentInt
   );
 }
 
-export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUpgradeDialogProps) {
+export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthRequired }: ProUpgradeDialogProps) {
   const { isInitialized, isLoading, isPro, getCurrentOffering, purchasePackage } = useRevenueCat();
+  const { user } = useAuth();
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
   const [purchasing, setPurchasing] = useState(false);
   const [step, setStep] = useState<"plans" | "checkout" | "success">("plans");
@@ -318,6 +321,11 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
 
   const handleJoinPro = async () => {
     if (!selectedPackage || purchasing) return;
+
+    if (!user) {
+      onAuthRequired?.();
+      return;
+    }
 
     // On native (iOS/Android) Apple/Google require all digital subscription
     // purchases to flow through the platform's IAP. RevenueCat handles that;

@@ -15,6 +15,7 @@ interface JoinGamefolioDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   actionType?: 'like' | 'comment' | 'share' | 'general';
+  onAuthSuccess?: () => void;
 }
 
 const CLOSE_MS = 550;
@@ -23,6 +24,7 @@ export function JoinGamefolioDialog({
   open,
   onOpenChange,
   actionType = 'general',
+  onAuthSuccess,
 }: JoinGamefolioDialogProps) {
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [showLoginForm, setShowLoginForm] = useState(false);
@@ -124,6 +126,7 @@ export function JoinGamefolioDialog({
         onSuccess: () => {
           toast({ title: 'Welcome to Gamefolio!', description: 'Account created successfully.', variant: 'gamefolioSuccess' });
           triggerClose();
+          onAuthSuccess?.();
         },
         onError: (error: Error) => {
           toast({ title: 'Registration Failed', description: error.message, variant: 'gamefolioError' });
@@ -148,6 +151,7 @@ export function JoinGamefolioDialog({
         onSuccess: () => {
           toast({ title: 'Welcome back!', description: "You've been logged in successfully.", variant: 'gamefolioSuccess' });
           triggerClose();
+          onAuthSuccess?.();
         },
         onError: (error: Error) => {
           const msg = error.message.toLowerCase();
