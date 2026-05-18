@@ -42,7 +42,6 @@ import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useLevelTracker } from "@/hooks/use-level-tracker";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import ManageProDialog from "@/components/ManageProDialog";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,7 +50,6 @@ const Header = () => {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [lootboxOpen, setLootboxOpen] = useState(false);
   const [levelTrackerOpen, setLevelTrackerOpen] = useState(false);
-  const [showJoinDialog, setShowJoinDialog] = useState(false);
   const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
   const [manageProOpen, setManageProOpen] = useState(false);
   const { user, logoutMutation } = useAuth();
@@ -386,16 +384,7 @@ const Header = () => {
             onAuthRequired={() => {
               setProUpgradeOpen(false);
               sessionStorage.setItem('pending_pro_upgrade', '1');
-              setShowJoinDialog(true);
-            }}
-          />
-          <JoinGamefolioDialog
-            open={showJoinDialog}
-            onOpenChange={setShowJoinDialog}
-            onAuthSuccess={() => {
-              if (sessionStorage.getItem('pending_pro_upgrade')) {
-                setTimeout(() => setProUpgradeOpen(true), 800);
-              }
+              setLocation('/register');
             }}
           />
           {user ? (
