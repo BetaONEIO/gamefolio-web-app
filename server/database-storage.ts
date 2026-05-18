@@ -5079,7 +5079,7 @@ export class DatabaseStorage implements IStorage {
       .from(profileBorders)
       .where(and(eq(profileBorders.isActive, true), eq(profileBorders.availableInLootbox, true), eq(profileBorders.shape, 'circle')));
 
-    if (lootboxBorders.length > 0 && Math.random() < 0.03) {
+    if (lootboxBorders.length > 0 && false) { // profile borders temporarily disabled (images not loading)
       const randomBorder = lootboxBorders[Math.floor(Math.random() * lootboxBorders.length)];
       const alreadyHasBorder = await this.userHasUnlockedBorder(userId, randomBorder.id);
 
