@@ -18,8 +18,7 @@ import { ProBadge } from "@/components/ui/pro-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useSignedUrl } from "@/hooks/use-signed-url";
-import { useJoinDialog } from "@/hooks/use-join-dialog";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+import { useAuthModal } from "@/hooks/use-auth-modal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -117,7 +116,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
   
   const { user } = useAuth();
   const { toast } = useToast();
-  const { isOpen: isJoinOpen, actionType: joinActionType, openDialog: openJoinDialog, closeDialog: closeJoinDialog } = useJoinDialog();
+  const { openModal } = useAuthModal();
   
   const { data: comments, isLoading } = useScreenshotComments(screenshotId);
   const createCommentMutation = useCreateScreenshotComment();
@@ -326,7 +325,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
         <div className="text-center py-4 border-t">
           <p className="text-sm text-muted-foreground">
             <button
-              onClick={() => openJoinDialog('comment')}
+              onClick={() => openModal()}
               className="cursor-pointer hover:opacity-80 transition-opacity"
               style={{ color: '#B7FF1A' }}
             >
@@ -337,11 +336,6 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
         </div>
       )}
 
-      <JoinGamefolioDialog
-        open={isJoinOpen}
-        onOpenChange={closeJoinDialog}
-        actionType={joinActionType}
-      />
     </div>
   );
 }

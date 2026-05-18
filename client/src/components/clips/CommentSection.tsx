@@ -19,8 +19,7 @@ import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
 import { PartnerBadge } from "@/components/ui/partner-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
-import { useJoinDialog } from "@/hooks/use-join-dialog";
+import { useAuthModal } from "@/hooks/use-auth-modal";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -120,7 +119,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
   
   const { user } = useAuth();
   const { toast } = useToast();
-  const { isOpen, actionType, openDialog, closeDialog } = useJoinDialog();
+  const { openModal } = useAuthModal();
   
   const { data: comments, isLoading } = useQuery<CommentWithUser[]>({
     queryKey: [`/api/clips/${clipId}/comments`],
@@ -154,7 +153,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
     if (!newComment.trim()) return;
     
     if (!user) {
-      openDialog('comment');
+      openModal();
       return;
     }
 
@@ -348,7 +347,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
         <div className="mt-4 flex items-center justify-center">
           <Button 
             variant="outline"
-            onClick={() => openDialog('comment')}
+            onClick={() => openModal()}
             className="w-full"
             data-testid="button-join-to-comment"
           >
@@ -357,11 +356,6 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
         </div>
       ))}
       
-      <JoinGamefolioDialog 
-        open={isOpen} 
-        onOpenChange={closeDialog} 
-        actionType={actionType} 
-      />
     </div>
   );
 };
