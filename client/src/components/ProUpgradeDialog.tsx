@@ -320,12 +320,12 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   }, [step, loadStripeInstance]);
 
   const handleJoinPro = async () => {
-    if (!selectedPackage || purchasing) return;
-
     if (!user) {
       onAuthRequired?.();
       return;
     }
+
+    if (!selectedPackage || purchasing) return;
 
     // On native (iOS/Android) Apple/Google require all digital subscription
     // purchases to flow through the platform's IAP. RevenueCat handles that;
