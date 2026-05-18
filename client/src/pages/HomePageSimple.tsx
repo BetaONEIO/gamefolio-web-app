@@ -552,7 +552,7 @@ const HomePage = () => {
     enabled: !!userId, // Only run query if user is logged in
   });
 
-  const { data: dbHeroSlides } = useQuery<DbHeroSlide[]>({
+  const { data: dbHeroSlides, isLoading: isLoadingDbSlides } = useQuery<DbHeroSlide[]>({
     queryKey: ["/api/hero-slides"],
     queryFn: async () => {
       const response = await fetch('/api/hero-slides');
@@ -639,8 +639,8 @@ const HomePage = () => {
         </div>
       )}
       
-      {/* Hero Slideshow Section - hidden when all DB slides are disabled */}
-      {(!dbHeroSlides || dbHeroSlides.length > 0) && (
+      {/* Hero Slideshow Section - wait for DB slides before rendering to prevent fallback flash */}
+      {!isLoadingDbSlides && dbHeroSlides && dbHeroSlides.length > 0 && (
         <HeroBannerSlideshow 
           heroText={heroText}
           user={user}
