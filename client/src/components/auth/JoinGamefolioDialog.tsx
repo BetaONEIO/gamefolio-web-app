@@ -177,7 +177,7 @@ export function JoinGamefolioDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex flex-col justify-end"
+      className="fixed inset-0 z-[200] flex flex-col justify-end md:items-center"
       style={{ pointerEvents: slideIn ? 'auto' : 'none' }}
     >
       {/* Backdrop */}
@@ -193,10 +193,9 @@ export function JoinGamefolioDialog({
 
       {/* Sheet */}
       <div
-        className="relative w-full"
+        className="relative w-full rounded-t-[20px] md:max-w-md md:rounded-2xl md:mb-8"
         style={{
           background: '#101923',
-          borderRadius: '20px 20px 0 0',
           transform: slideIn ? 'translateY(0)' : 'translateY(100%)',
           transition: slideIn
             ? 'transform 350ms cubic-bezier(0.32, 0.72, 0, 1)'
