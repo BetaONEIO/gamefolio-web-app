@@ -3288,7 +3288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all-time points leaderboard endpoint
   app.get("/api/leaderboard", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(req.query.limit as string) || 100;
       const leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
@@ -3300,7 +3300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Monthly leaderboard routes
   app.get("/api/leaderboard/monthly/current", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(req.query.limit as string) || 100;
       const leaderboardData = await LeaderboardService.getCurrentMonthLeaderboard(limit);
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
@@ -3311,7 +3311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/leaderboard/monthly/previous", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(req.query.limit as string) || 100;
       const leaderboardData = await LeaderboardService.getPreviousMonthLeaderboard(limit);
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
@@ -3323,7 +3323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Weekly leaderboard routes
   app.get("/api/leaderboard/weekly/current", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(req.query.limit as string) || 100;
       const leaderboardData = await LeaderboardService.getCurrentWeekLeaderboard(limit);
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
@@ -3334,7 +3334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/leaderboard/weekly/previous", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(req.query.limit as string) || 100;
       const leaderboardData = await LeaderboardService.getPreviousWeekLeaderboard(limit);
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
