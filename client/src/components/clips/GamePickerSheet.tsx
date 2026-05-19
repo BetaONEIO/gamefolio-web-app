@@ -243,32 +243,37 @@ export function GamePickerSheet({
                 </span>
               </button>
 
-              {/* Add custom game card */}
-              {showCustomOption && (
-                <button
-                  className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center gap-1 transition-all"
-                  style={{
-                    aspectRatio: "3/4",
-                    background: "#101923",
-                    border: "2px dashed rgba(183,255,26,0.4)",
-                  }}
-                  onClick={handleCreateCustomGame}
-                  disabled={isCreatingCustom}
-                >
-                  {isCreatingCustom ? (
-                    <Loader2 className="h-6 w-6 animate-spin" style={{ color: "#B7FF1A" }} />
-                  ) : (
-                    <Plus className="h-6 w-6" style={{ color: "#B7FF1A" }} />
-                  )}
-                  <span className="text-[10px] font-bold text-center px-1 leading-tight" style={{ color: "#B7FF1A" }}>
-                    Add "{searchQuery.trim()}"
-                  </span>
-                </button>
-              )}
+              {/* Add custom game card — always visible */}
+              <button
+                className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center gap-1 transition-all"
+                style={{
+                  aspectRatio: "3/4",
+                  background: "#101923",
+                  border: "2px dashed rgba(183,255,26,0.4)",
+                }}
+                onClick={() => {
+                  if (showCustomOption) {
+                    handleCreateCustomGame();
+                  } else {
+                    // No query yet — focus the search bar so user can type a name
+                    searchInputRef.current?.focus();
+                  }
+                }}
+                disabled={isCreatingCustom}
+              >
+                {isCreatingCustom ? (
+                  <Loader2 className="h-6 w-6 animate-spin" style={{ color: "#B7FF1A" }} />
+                ) : (
+                  <Plus className="h-6 w-6" style={{ color: "#B7FF1A" }} />
+                )}
+                <span className="text-[10px] font-bold text-center px-1 leading-tight" style={{ color: "#B7FF1A" }}>
+                  {showCustomOption ? `Add "${searchQuery.trim()}"` : "Add Game"}
+                </span>
+              </button>
 
               {/* Empty search state */}
               {isSearching && !isLoading && (searchResults || []).length === 0 && !showCustomOption && (
-                <div className="col-span-2 flex flex-col items-center justify-center py-10 gap-2">
+                <div className="col-span-3 flex flex-col items-center justify-center py-10 gap-2">
                   <p className="text-white/40 text-sm text-center">No games found</p>
                 </div>
               )}
