@@ -66,11 +66,13 @@ export function ScreenshotShareDialog({
   const open = controlledOpen !== undefined ? controlledOpen : isOpen;
   const setOpen = controlledOnOpenChange || setIsOpen;
 
+  const validId = !!screenshotId && screenshotId !== 'undefined' && screenshotId !== 'null' && !isNaN(Number(screenshotId));
+
   const { data: shareData, isLoading, error, refetch } = useQuery<ShareData>({
     queryKey: [`/api/screenshots/${screenshotId}/share`],
-    enabled: open,
-    retry: 2,
-    retryDelay: 1000,
+    enabled: open && validId,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
   });
 
   const trackShare = async () => {

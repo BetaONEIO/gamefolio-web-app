@@ -6860,6 +6860,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/screenshots/:id/share", async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
+      if (isNaN(screenshotId)) {
+        return res.status(400).json({ message: "Invalid screenshot ID" });
+      }
       const screenshot = await storage.getScreenshot(screenshotId);
 
       if (!screenshot) {
@@ -6888,8 +6891,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).from(users).where(eq(users.id, screenshot.userId)).limit(1);
 
       const shareUser = userResult[0];
-      const gamefolioProfileUrl = `${baseUrl}/profile/${shareUser.username}`;
-      const displayName = shareUser.displayName || shareUser.username;
+      const shareUsername = shareUser?.username || user?.username || 'unknown';
+      const gamefolioProfileUrl = `${baseUrl}/profile/${shareUsername}`;
+      const displayName = shareUser?.displayName || shareUsername;
 
       // Generate social media sharing links for screenshot with personalized messaging
       const socialMediaLinks = {
