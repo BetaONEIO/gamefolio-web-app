@@ -1011,7 +1011,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!tokenResponse.ok) {
-        throw new Error('Failed to exchange authorization code for token');
+        const errBody = await tokenResponse.json().catch(() => ({}));
+        console.error("Discord token exchange failed:", tokenResponse.status, errBody);
+        const errMsg = (errBody as any)?.error_description || (errBody as any)?.error || 'Unknown Discord error';
+        throw new Error(`Discord token exchange failed (${tokenResponse.status}): ${errMsg}`);
       }
 
       const tokenData = await tokenResponse.json();

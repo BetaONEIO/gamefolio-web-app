@@ -109,7 +109,10 @@ export const signInWithDiscord = async (): Promise<DiscordNativeResult | void> =
     throw new Error('Discord OAuth not properly configured');
   }
 
-  // Web fallback: full-page redirect to Discord with state.
+  // Web: full-page redirect to Discord with state.
+  // IMPORTANT: Must use window.location.href (same tab) so sessionStorage
+  // persists when Discord redirects back — sessionStorage is never shared
+  // across tabs, so window.open/_blank would break the state check.
   const state = generateOAuthState();
   storeOAuthState(state);
 
@@ -121,7 +124,7 @@ export const signInWithDiscord = async (): Promise<DiscordNativeResult | void> =
   authUrl.searchParams.set('state', state);
   authUrl.searchParams.set('prompt', 'consent');
 
-  await openExternal(authUrl.toString());
+  window.location.href = authUrl.toString();
 };
 
 /**
