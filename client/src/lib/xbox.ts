@@ -1,5 +1,5 @@
 import { Browser } from '@capacitor/browser';
-import { isNative, openExternal, API_BASE } from './platform';
+import { isNative, API_BASE } from './platform';
 import { CAPACITOR_APP_SCHEME, awaitMobileAuthCallback } from './native-auth-bridge';
 
 interface XboxUser {
@@ -95,7 +95,9 @@ export const signInWithXbox = async (): Promise<XboxNativeLoginResult | void> =>
   const state = generateOAuthState();
   storeOAuthState(state);
   localStorage.removeItem('xbox_oauth_mode');
-  await openExternal(buildXboxAuthUrl(state));
+  // Same-tab redirect so localStorage state is readable in the callback tab.
+  // window.open/_blank partitions storage in Chrome 115+ with noopener.
+  window.location.href = buildXboxAuthUrl(state);
 };
 
 export const connectXboxAccount = async (): Promise<XboxNativeConnectResult | void> => {
@@ -114,7 +116,9 @@ export const connectXboxAccount = async (): Promise<XboxNativeConnectResult | vo
   const state = generateOAuthState();
   storeOAuthState(state);
   localStorage.setItem('xbox_oauth_mode', 'connect');
-  await openExternal(buildXboxAuthUrl(state));
+  // Same-tab redirect so localStorage state is readable in the callback tab.
+  // window.open/_blank partitions storage in Chrome 115+ with noopener.
+  window.location.href = buildXboxAuthUrl(state);
 };
 
 export const handleXboxCallback = async (code: string, state: string): Promise<XboxUser> => {
