@@ -141,12 +141,12 @@ export function GamePickerSheet({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-end"
+      className="fixed inset-0 z-[80] flex items-end md:items-center md:justify-center"
       style={{ background: "rgba(0,0,0,0.65)" }}
       onClick={onClose}
     >
       <div
-        className="w-full rounded-t-3xl flex flex-col"
+        className="w-full md:max-w-2xl rounded-t-3xl md:rounded-3xl flex flex-col"
         style={{
           background: "#0B1218",
           maxHeight: "82vh",
@@ -213,7 +213,7 @@ export function GamePickerSheet({
           )}
 
           {!isLoading && (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
               {/* All Games card */}
               <button
                 className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center transition-all"
