@@ -1,5 +1,5 @@
 import { initializeApp, getApps, FirebaseApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, Auth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithRedirect, signOut, Auth } from "firebase/auth";
 import { isNative } from "./platform";
 
 const firebaseConfig = {
@@ -84,23 +84,21 @@ export async function signInWithGoogleNative(): Promise<NativeGoogleAuthResult> 
   };
 }
 
-export const signInWithGoogle = async () => {
-  // Web (and any non-native context) uses the Firebase JS popup. Native
-  // platforms must use the Capacitor plugin via signInWithGoogleNative.
+/**
+ * Web Google sign-in using a full-page redirect.
+ * signInWithPopup is blocked by Cross-Origin-Opener-Policy headers on the
+ * server because it polls window.closed on the popup — COOP prevents that.
+ * signInWithRedirect avoids the popup entirely; the result is retrieved via
+ * getRedirectResult() in use-auth.tsx after the page reloads.
+ */
+export const signInWithGoogle = async (): Promise<void> => {
   if (isNative) {
     throw new Error('Use signInWithGoogleNative on native platforms');
   }
   if (!auth || !googleProvider) {
     throw new Error('Firebase not properly configured');
   }
-
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    return result;
-  } catch (error: any) {
-    console.error('Google sign-in error:', error);
-    throw error;
-  }
+  await signInWithRedirect(auth, googleProvider);
 };
 
 export const signOutUser = async () => {

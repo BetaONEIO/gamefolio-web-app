@@ -1,0 +1,103 @@
+VM29:1  POST https://cca-lite.coinbase.com/amp net::ERR_BLOCKED_BY_CLIENT
+_t @ VM29:1
+Mt @ VM29:1
+(anonymous) @ VM29:1
+setTimeout
+Pt @ VM29:1
+(anonymous) @ VM29:1
+requestIdleCallback
+yt @ VM29:1
+$t @ VM29:1
+analyticsTracker @ VM29:1
+u @ VM29:1
+N @ VM29:1
+q @ VM29:1
+(anonymous) @ VM29:1
+(anonymous) @ VM29:1
+(anonymous) @ VM29:1
+(anonymous) @ VM29:1
+n @ VM29:1
+index-CzjgmQj5.js:2131 Cross-Origin-Opener-Policy policy would block the window.closed call.
+e @ index-CzjgmQj5.js:2131
+setTimeout
+e @ index-CzjgmQj5.js:2131
+setTimeout
+e @ index-CzjgmQj5.js:2131
+pollUserCancellation @ index-CzjgmQj5.js:2131
+onExecution @ index-CzjgmQj5.js:2131
+await in onExecution
+(anonymous) @ index-CzjgmQj5.js:2116
+await in (anonymous)
+execute @ index-CzjgmQj5.js:2116
+executeNotNull @ index-CzjgmQj5.js:2131
+MFe @ index-CzjgmQj5.js:2131
+IBe @ index-CzjgmQj5.js:2326
+o @ index-CzjgmQj5.js:5574
+nTe @ index-CzjgmQj5.js:38
+sTe @ index-CzjgmQj5.js:38
+iTe @ index-CzjgmQj5.js:38
+UY @ index-CzjgmQj5.js:38
+yle @ index-CzjgmQj5.js:38
+(anonymous) @ index-CzjgmQj5.js:38
+DU @ index-CzjgmQj5.js:41
+Uce @ index-CzjgmQj5.js:38
+kN @ index-CzjgmQj5.js:38
+lU @ index-CzjgmQj5.js:38
+wTe @ index-CzjgmQj5.js:38
+index-CzjgmQj5.js:2131 Cross-Origin-Opener-Policy policy would block the window.closed call.
+e @ index-CzjgmQj5.js:2131
+setTimeout
+e @ index-CzjgmQj5.js:2131
+setTimeout
+e @ index-CzjgmQj5.js:2131
+pollUserCancellation @ index-CzjgmQj5.js:2131
+onExecution @ index-CzjgmQj5.js:2131
+await in onExecution
+(anonymous) @ index-CzjgmQj5.js:2116
+await in (anonymous)
+execute @ index-CzjgmQj5.js:2116
+executeNotNull @ index-CzjgmQj5.js:2131
+MFe @ index-CzjgmQj5.js:2131
+IBe @ index-CzjgmQj5.js:2326
+o @ index-CzjgmQj5.js:5574
+nTe @ index-CzjgmQj5.js:38
+sTe @ index-CzjgmQj5.js:38
+iTe @ index-CzjgmQj5.js:38
+UY @ index-CzjgmQj5.js:38
+yle @ index-CzjgmQj5.js:38
+(anonymous) @ index-CzjgmQj5.js:38
+DU @ index-CzjgmQj5.js:41
+Uce @ index-CzjgmQj5.js:38
+kN @ index-CzjgmQj5.js:38
+lU @ index-CzjgmQj5.js:38
+wTe @ index-CzjgmQj5.js:38
+index-CzjgmQj5.js:2131 Cross-Origin-Opener-Policy policy would block the window.closed call.
+e @ index-CzjgmQj5.js:2131
+setTimeout
+e @ index-CzjgmQj5.js:2131
+setTimeout
+e @ index-CzjgmQj5.js:2131
+setTimeout
+e @ index-CzjgmQj5.js:2131
+pollUserCancellation @ index-CzjgmQj5.js:2131
+onExecution @ index-CzjgmQj5.js:2131
+await in onExecution
+(anonymous) @ index-CzjgmQj5.js:2116
+await in (anonymous)
+execute @ index-CzjgmQj5.js:2116
+executeNotNull @ index-CzjgmQj5.js:2131
+MFe @ index-CzjgmQj5.js:2131
+IBe @ index-CzjgmQj5.js:2326
+o @ index-CzjgmQj5.js:5574
+nTe @ index-CzjgmQj5.js:38
+sTe @ index-CzjgmQj5.js:38
+iTe @ index-CzjgmQj5.js:38
+UY @ index-CzjgmQj5.js:38
+yle @ index-CzjgmQj5.js:38
+(anonymous) @ index-CzjgmQj5.js:38
+DU @ index-CzjgmQj5.js:41
+Uce @ index-CzjgmQj5.js:38
+kN @ index-CzjgmQj5.js:38
+lU @ index-CzjgmQj5.js:38
+wTe @ index-CzjgmQj5.js:38
+index-CzjgmQj5.js:2131 Cross-Origin-Opener-Policy policy would block the window.closed call.

@@ -10,7 +10,7 @@ import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, getRedirectResult, User as FirebaseUser } from "firebase/auth";
 import { useDailyStreak } from "@/hooks/use-daily-streak";
 import { isNative } from "@/lib/platform";
 import { clearTokens, setTokens } from "@/lib/auth-token";
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // and run the full flow.
   const isInitialAuthCheckRef = useRef(true);
 
-  // Handle Firebase authentication state changes
+  // Handle Firebase authentication state changes (+ redirect sign-in results)
   useEffect(() => {
     if (!auth) {
       setFirebaseAuthChecked(true);
@@ -106,81 +106,104 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let mounted = true;
 
+    // Dedup: track which Firebase UID we've already processed in this page
+    // load so that getRedirectResult and onAuthStateChanged don't both call
+    // /api/auth/google for the same user.
+    const processedUid = { current: null as string | null };
+
+    const handleFirebaseSignIn = async (firebaseUser: FirebaseUser) => {
+      if (!firebaseUser.email) return;
+      if (processedUid.current === firebaseUser.uid) return;
+      processedUid.current = firebaseUser.uid;
+
+      try {
+        const response = await apiRequest("POST", "/api/auth/google", {
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+          photoURL: firebaseUser.photoURL,
+          uid: firebaseUser.uid
+        });
+
+        if (!mounted) return;
+
+        const userData = await response.json();
+
+        if (!mounted) return;
+
+        // On native, exchange the freshly-created session for a JWT pair.
+        await issueNativeTokens();
+
+        const streakInfo = userData.streakInfo;
+        // Mark reward as shown so the session-restore useEffect doesn't double-fire
+        if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
+          dailyRewardShownRef.current = true;
+        }
+        queryClient.setQueryData(["/api/user"], userData);
+
+        if (userData.needsOnboarding) {
+          if (userData.isNewGoogleUser) {
+            toast({
+              title: "Welcome to Gamefolio!",
+              description: "Let's set up your gaming profile.",
+              variant: "gamefolioSuccess",
+            });
+          } else {
+            toast({
+              title: "Complete your profile",
+              description: "Finish setting up your gaming profile to continue.",
+              variant: "gamefolioSuccess",
+            });
+          }
+          setLocation("/onboarding");
+        } else {
+          toast({
+            title: "Welcome back!",
+            description: `You're now signed in with Google.`,
+            variant: "gamefolioSuccess",
+          });
+          setLocation("/");
+        }
+      } catch (error) {
+        if (!mounted) return;
+        console.error('Google auth error:', error);
+        toast({
+          title: "Authentication failed",
+          description: "There was an error signing you in. Please try again.",
+          variant: "gamefolioError",
+        });
+      }
+    };
+
+    // Check for a pending Google redirect result (signInWithRedirect flow).
+    // signInWithPopup was replaced because COOP headers block window.closed
+    // polling on the popup. getRedirectResult resolves quickly with null when
+    // there's no pending redirect, so it doesn't delay normal page loads.
+    // If it resolves with a user, flip isInitialAuthCheckRef so the first
+    // onAuthStateChanged fire (which would normally be skipped as a restore)
+    // is treated as a real sign-in — then handleFirebaseSignIn's UID dedup
+    // prevents it from being processed twice.
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result?.user && mounted) {
+          isInitialAuthCheckRef.current = false;
+          await handleFirebaseSignIn(result.user);
+        }
+      })
+      .catch((err) => {
+        console.error('getRedirectResult error:', err);
+      });
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       // Firebase always emits one onAuthStateChanged on init to report the
-      // restored session state — and that first fire is `null` when there's
-      // no persisted session. Consume the "initial check" flag on that very
-      // first fire regardless: if we only flipped it when a user was present,
-      // a fresh sign-in (whose first fire was the null no-session event)
-      // would be mistaken for a restore and the server-side /api/auth/google
-      // POST + navigation would be skipped, stranding the user on /auth.
+      // restored session state. Consume the flag on that very first fire
+      // regardless of whether a user is present.
       const isInitialRestore = isInitialAuthCheckRef.current;
       isInitialAuthCheckRef.current = false;
 
-      if (firebaseUser && firebaseUser.email) {
-        if (isInitialRestore) {
-          if (mounted) setFirebaseAuthChecked(true);
-          return;
-        }
-
-        try {
-          const response = await apiRequest("POST", "/api/auth/google", {
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-            photoURL: firebaseUser.photoURL,
-            uid: firebaseUser.uid
-          });
-
-          if (!mounted) return;
-
-          const userData = await response.json();
-
-          if (!mounted) return;
-
-          // On native, exchange the freshly-created session for a JWT pair.
-          await issueNativeTokens();
-
-          const streakInfo = userData.streakInfo;
-          // Mark reward as shown so the session-restore useEffect doesn't double-fire
-          if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
-            dailyRewardShownRef.current = true;
-          }
-          queryClient.setQueryData(["/api/user"], userData);
-
-          if (userData.needsOnboarding) {
-            if (userData.isNewGoogleUser) {
-              toast({
-                title: "Welcome to Gamefolio!",
-                description: "Let's set up your gaming profile.",
-                variant: "gamefolioSuccess",
-              });
-            } else {
-              toast({
-                title: "Complete your profile",
-                description: "Finish setting up your gaming profile to continue.",
-                variant: "gamefolioSuccess",
-              });
-            }
-            setLocation("/onboarding");
-          } else {
-            toast({
-              title: "Welcome back!",
-              description: `You're now signed in with Google.`,
-              variant: "gamefolioSuccess",
-            });
-
-            setLocation("/");
-          }
-        } catch (error) {
-          if (!mounted) return;
-          console.error('Google auth error:', error);
-          toast({
-            title: "Authentication failed",
-            description: "There was an error signing you in. Please try again.",
-            variant: "gamefolioError",
-          });
-        }
+      if (firebaseUser && firebaseUser.email && !isInitialRestore) {
+        if (mounted) await handleFirebaseSignIn(firebaseUser);
       }
+
       if (mounted) {
         setFirebaseAuthChecked(true);
       }

@@ -60,16 +60,10 @@ export function GoogleAuthButton({ disabled = false }: GoogleAuthButtonProps) {
         return;
       }
 
-      // Web: Firebase popup. The auth-state listener in use-auth.tsx
-      // handles user creation/login + navigation.
-      const result = await signInWithGoogle();
-      if (result?.user) {
-        toast({
-          title: "Welcome to Gamefolio!",
-          description: "Successfully authenticated with Google",
-          variant: "gamefolioSuccess",
-        });
-      }
+      // Web: signInWithRedirect — page navigates to Google and returns.
+      // The result is handled by getRedirectResult in use-auth.tsx after the
+      // redirect. Nothing to do here; loading stays true until navigation.
+      await signInWithGoogle();
     } catch (error: any) {
       console.error('Google sign-in error details:', {
         message: error?.message,
@@ -90,18 +84,6 @@ export function GoogleAuthButton({ disabled = false }: GoogleAuthButtonProps) {
         toast({
           title: "Google Sign-in Unavailable",
           description: "Google sign-in needs to be enabled. Please use username/password to log in.",
-          variant: "gamefolioError",
-        });
-      } else if (code === 'auth/popup-blocked') {
-        toast({
-          title: "Popup Blocked",
-          description: "Please allow popups for this site and try again.",
-          variant: "gamefolioError",
-        });
-      } else if (code === 'auth/popup-closed-by-user' || message.includes('cancel')) {
-        toast({
-          title: "Sign-in Cancelled",
-          description: "Google sign-in was cancelled. Please try again.",
           variant: "gamefolioError",
         });
       } else if (code === 'auth/network-request-failed') {
