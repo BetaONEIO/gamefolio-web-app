@@ -447,8 +447,18 @@ export default function OnboardingFlow({
       createdAt: new Date()
     };
     
+    const alreadySelected = selectedGames.some((g) => g.id === convertedGame.id);
+    const willReachMax = !alreadySelected && selectedGames.length + 1 >= 5;
+
     // Toggle selection
     toggleGameSelection(convertedGame);
+
+    // Auto-scroll to action buttons when 5 games are reached
+    if (willReachMax) {
+      setTimeout(() => {
+        document.getElementById('games-step-bottom')?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 150);
+    }
   };
 
   // Toggle game selection
@@ -996,17 +1006,25 @@ export default function OnboardingFlow({
               </div>
             </div>
             
-            <div className="flex gap-3 mt-auto pt-8">
-              <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">
-                Back
-              </Button>
-              <Button 
+            <div id="games-step-bottom" className="flex flex-col gap-3 mt-auto pt-8">
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">
+                  Back
+                </Button>
+                <Button 
+                  onClick={goToNextStep}
+                  disabled={selectedGames.length === 0}
+                  className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold"
+                >
+                  Next <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+              <button
                 onClick={goToNextStep}
-                disabled={selectedGames.length === 0}
-                className="flex-1 bg-primary hover:bg-primary/90 text-white"
+                className="text-sm text-gray-500 hover:text-gray-300 transition-colors text-center py-1"
               >
-                Next <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
+                Skip for now
+              </button>
             </div>
           </div>
         );
@@ -1109,12 +1127,12 @@ export default function OnboardingFlow({
               <Button
                 onClick={goToNextStep}
                 disabled={isUploadingAvatar}
-                className="flex-1 bg-primary hover:bg-primary/90 text-white"
+                className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold"
               >
                 {avatarUrl ? (
                   <>Next <ArrowRight className="h-4 w-4 ml-2" /></>
                 ) : (
-                  <span className="text-white">Skip for now</span>
+                  <span>Skip for now</span>
                 )}
               </Button>
             </div>
@@ -1280,17 +1298,25 @@ export default function OnboardingFlow({
               {userTypes.length}/2 selected
             </p>
             
-            <div className="flex gap-3 mt-auto">
-              <Button variant="outline" onClick={goToPrevStep}>
-                Back
-              </Button>
-              <Button
+            <div className="flex flex-col gap-3 mt-auto">
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={goToPrevStep}>
+                  Back
+                </Button>
+                <Button
+                  onClick={goToNextStep}
+                  disabled={userTypes.length === 0}
+                  className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold"
+                >
+                  Next
+                </Button>
+              </div>
+              <button
                 onClick={goToNextStep}
-                disabled={userTypes.length === 0}
-                className="flex-1"
+                className="text-sm text-gray-500 hover:text-gray-300 transition-colors text-center py-1"
               >
-                Next
-              </Button>
+                Skip for now
+              </button>
             </div>
           </div>
         );
@@ -1403,9 +1429,16 @@ export default function OnboardingFlow({
               </>
             ) : (
               <>
-                <p className="text-gray-300 mb-6">
+                <p className="text-gray-300 mb-4">
                   Get a blockchain wallet to store GF Tokens, collect NFTs, and unlock exclusive features.
                 </p>
+
+                <div className="flex items-center gap-2 mb-6 px-3 py-2.5 rounded-lg bg-primary/10 border border-primary/30">
+                  <span className="text-xl">🎁</span>
+                  <p className="text-sm text-primary font-medium">
+                    Create a wallet now and receive <span className="font-bold">100 GFT tokens free!</span>
+                  </p>
+                </div>
                 
                 <button
                   onClick={handleCreateWalletClick}
