@@ -802,14 +802,14 @@ video:focus {
 /* === Global Gamefolio Design System Component Styles === */
 
 /* Primary button — neon green with dark text and glow on hover */
-button[class*="bg-primary"],
+button[class~="bg-primary"],
 .btn-primary {
   background-color: var(--ds-primary) !important;
   color: var(--ds-btn-text) !important;
   font-weight: 600;
   letter-spacing: 0.01em;
 }
-button[class*="bg-primary"]:hover,
+button[class~="bg-primary"]:hover,
 .btn-primary:hover {
   background-color: var(--ds-primary-hov) !important;
   box-shadow: var(--ds-shadow-glow);
