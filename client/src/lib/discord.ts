@@ -57,18 +57,22 @@ function generateOAuthState(): string {
 }
 
 /**
- * Store and retrieve OAuth state from sessionStorage for security
+ * Store and retrieve OAuth state.
+ * Uses localStorage (not sessionStorage) because Discord's authorization
+ * server sends COOP headers that cause Chrome to create a new browsing
+ * context when redirecting back — which wipes sessionStorage entirely.
+ * localStorage is unaffected by browsing-context-group changes.
  */
 function storeOAuthState(state: string): void {
-  sessionStorage.setItem('discord_oauth_state', state);
+  localStorage.setItem('discord_oauth_state', state);
 }
 
 function getStoredOAuthState(): string | null {
-  return sessionStorage.getItem('discord_oauth_state');
+  return localStorage.getItem('discord_oauth_state');
 }
 
 function clearOAuthState(): void {
-  sessionStorage.removeItem('discord_oauth_state');
+  localStorage.removeItem('discord_oauth_state');
 }
 
 /**
