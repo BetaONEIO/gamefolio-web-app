@@ -118,6 +118,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
 
   const { user } = useAuth();
   const { toast } = useToast();
+  const { signedUrl: currentUserAvatarUrl } = useSignedUrl(user?.avatarUrl ?? null);
   
   const { data: comments, isLoading } = useScreenshotComments(screenshotId);
   const createCommentMutation = useCreateScreenshotComment();
@@ -288,7 +289,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
           <div className="flex items-start gap-3">
             <Avatar className="h-8 w-8 hidden sm:flex flex-shrink-0">
               <AvatarImage 
-                src={user?.avatarUrl || undefined} 
+                src={currentUserAvatarUrl || undefined} 
                 alt={user?.username || "User"} 
               />
               <AvatarFallback className="text-xs">

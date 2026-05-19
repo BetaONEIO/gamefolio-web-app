@@ -146,7 +146,7 @@ export function ScreenshotShareDialog({
         </DialogTrigger>
       )}
       <DialogContent
-        className="p-0 border-[#1B2A33] bg-[#0B1218] w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh] flex flex-col"
+        className="p-0 border-[#1B2A33] bg-[#0B1218] w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh] flex flex-col z-[10001]"
         aria-describedby="screenshot-share-description"
       >
         {/* Header */}
