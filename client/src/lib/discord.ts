@@ -57,22 +57,27 @@ function generateOAuthState(): string {
 }
 
 /**
- * Store and retrieve OAuth state.
- * Uses localStorage (not sessionStorage) because Discord's authorization
- * server sends COOP headers that cause Chrome to create a new browsing
- * context when redirecting back — which wipes sessionStorage entirely.
- * localStorage is unaffected by browsing-context-group changes.
+ * Store and retrieve OAuth state via a short-lived cookie.
+ *
+ * sessionStorage is wiped when Discord's COOP headers cause Chrome to create
+ * a new browsing context group on the return redirect. localStorage can also
+ * be affected by Chrome's Storage Partitioning in some configurations.
+ * Cookies are not subject to either restriction — they are keyed purely by
+ * domain/path and survive all same-origin navigations reliably.
  */
 function storeOAuthState(state: string): void {
-  localStorage.setItem('discord_oauth_state', state);
+  const expires = new Date(Date.now() + 5 * 60 * 1000).toUTCString(); // 5 min TTL
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `discord_oauth_state=${state}; path=/; expires=${expires}; SameSite=Lax${secure}`;
 }
 
 function getStoredOAuthState(): string | null {
-  return localStorage.getItem('discord_oauth_state');
+  const match = document.cookie.match(/(?:^|;\s*)discord_oauth_state=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
 function clearOAuthState(): void {
-  localStorage.removeItem('discord_oauth_state');
+  document.cookie = 'discord_oauth_state=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
 }
 
 /**
