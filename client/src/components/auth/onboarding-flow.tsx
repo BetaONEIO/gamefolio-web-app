@@ -75,10 +75,10 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
               className={`group flex flex-col items-center p-1.5 rounded-lg transition-all focus:outline-none focus:ring-2 ${
                 isSelected 
                   ? 'bg-primary/15 border-2 border-primary/70 ring-2 ring-primary/30' 
-                  : 'bg-[#0d1f12] border-2 border-[#1e3a24] hover:border-primary/40 hover:bg-primary/5 focus:ring-primary/30'
+                  : 'bg-[#0B1218] border-2 border-[#1B2A33] hover:border-primary/40 hover:bg-primary/5 focus:ring-primary/30'
               }`}
             >
-              <div className="relative w-full aspect-[3/4] mb-1.5 overflow-hidden rounded-md bg-[#1e3a24]">
+              <div className="relative w-full aspect-[3/4] mb-1.5 overflow-hidden rounded-md bg-[#1B2A33]">
                 <img
                   src={game.box_art_url ? game.box_art_url.replace('{width}', '300').replace('{height}', '400') : "https://placehold.co/120x160?text=Game"}
                   alt={game.name}
@@ -188,7 +188,7 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser }: OnboardingStepIn
                   ? "bg-primary/20 border-primary text-primary"
                   : currentStep === step.id
                   ? "bg-primary border-primary text-white"
-                  : "bg-[#162a1b] border-primary/20 text-gray-400"
+                  : "bg-[#0B1218] border-primary/20 text-gray-400"
               }`}
             >
               {currentStep > step.id ? <Check className="h-4 w-4" /> : index + 1}
@@ -747,7 +747,7 @@ export default function OnboardingFlow({
               <div className="flex flex-col md:grid md:grid-cols-2 md:gap-8">
                 {/* Left side - Full-height image card with overlay text */}
                 <div className="hidden md:block">
-                  <div className="rounded-2xl overflow-hidden border border-primary/30 relative h-full min-h-[420px] bg-gradient-to-b from-primary/10 to-[#0d1f12]">
+                  <div className="rounded-2xl overflow-hidden border border-primary/30 relative h-full min-h-[420px] bg-gradient-to-b from-primary/10 to-[#071013]">
                     <img 
                       src="/attached_assets/Gamefolio logo.png" 
                       alt="Gamefolio" 
@@ -1250,15 +1250,15 @@ export default function OnboardingFlow({
                       isSelected
                         ? "border-primary bg-primary shadow-lg shadow-primary/30 cursor-pointer active:scale-[0.97]"
                         : isLocked
-                          ? "border-[#2a3a2a] bg-[#0d1f12]/60 cursor-not-allowed opacity-40"
-                          : "border-[#2a3a2a] bg-[#0d1f12] hover:border-primary/40 hover:bg-primary/5 cursor-pointer active:scale-[0.97]"
+                          ? "border-[#1B2A33] bg-[#0B1218]/60 cursor-not-allowed opacity-40"
+                          : "border-[#1B2A33] bg-[#0B1218] hover:border-primary/40 hover:bg-primary/5 cursor-pointer active:scale-[0.97]"
                     }`}
                   >
                     <div className="flex flex-col items-center text-center space-y-2">
                       <div className={`p-2.5 rounded-full ${
                         isSelected
                           ? "bg-black/20 text-[#051a08]"
-                          : "bg-[#1e3a24] text-gray-500"
+                          : "bg-[#1B2A33] text-gray-500"
                       }`}>
                         <IconComponent className="h-5 w-5" />
                       </div>
@@ -1410,7 +1410,7 @@ export default function OnboardingFlow({
                 <button
                   onClick={handleCreateWalletClick}
                   disabled={isCreatingAnyWallet}
-                  className="w-full py-4 px-5 bg-[#162a1b] border border-primary/30 hover:bg-[#1e3a24] hover:border-primary/50 active:scale-[0.99] rounded-xl transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-4 px-5 bg-[#0B1218] border border-primary/30 hover:bg-[#1B2A33] hover:border-primary/50 active:scale-[0.99] rounded-xl transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="button-create-wallet"
                 >
                   <div className="flex items-start gap-3">
@@ -1472,7 +1472,7 @@ export default function OnboardingFlow({
 
   return (
     <div
-      className="w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 min-h-screen sm:min-h-0 bg-[#0d1f12] sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col"
+      className="w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 min-h-screen sm:min-h-0 bg-[#071013] sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col"
       style={{ paddingBottom: 'calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)' }}
     >
       <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} />
