@@ -5220,7 +5220,7 @@ export class DatabaseStorage implements IStorage {
     return db
       .select()
       .from(assetRewards)
-      .where(eq(assetRewards.isActive, true))
+      .where(and(eq(assetRewards.isActive, true), ne(assetRewards.assetType, 'avatar_border')))
       .orderBy(assetRewards.rarity);
   }
 
