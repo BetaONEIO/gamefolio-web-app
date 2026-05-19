@@ -10905,21 +10905,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
   app.get("/api/health", async (req, res) => {
     try {
-      // Test database connection
-      const testQuery = await storage.getClipStats();
+      // Test database connection (result intentionally not returned —
+      // a public health check must not disclose business data).
+      await storage.getClipStats();
 
       res.json({
         status: "healthy",
         timestamp: new Date().toISOString(),
-        database: "connected",
-        clips: testQuery || "accessible"
+        database: "connected"
       });
     } catch (error) {
+      // Log the detail server-side; return only a generic status to the
+      // client so internal error messages aren't disclosed publicly.
       console.error("Health check failed:", error);
       res.status(500).json({
         status: "unhealthy",
-        timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : "Unknown error"
+        timestamp: new Date().toISOString()
       });
     }
   });
