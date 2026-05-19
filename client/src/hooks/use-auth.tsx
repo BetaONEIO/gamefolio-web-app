@@ -182,15 +182,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // onAuthStateChanged fire (which would normally be skipped as a restore)
     // is treated as a real sign-in — then handleFirebaseSignIn's UID dedup
     // prevents it from being processed twice.
+    const hadPendingRedirect = document.cookie.includes('google_redirect_pending=1');
+    // Clear the pending-redirect cookie immediately so it doesn't linger.
+    document.cookie = 'google_redirect_pending=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+
     getRedirectResult(auth)
       .then(async (result) => {
         if (result?.user && mounted) {
           isInitialAuthCheckRef.current = false;
           await handleFirebaseSignIn(result.user);
+        } else if (!result && hadPendingRedirect && mounted) {
+          // We set the cookie before redirecting to Google, but came back
+          // with no result. This usually means:
+          //  - auth/unauthorized-domain (app.gamefolio.com not in Firebase
+          //    authorized domains), or
+          //  - the user cancelled the Google sign-in, or
+          //  - a Firebase internal storage error lost the redirect result.
+          console.warn('Google redirect returned but getRedirectResult was null');
+          toast({
+            title: "Google sign-in incomplete",
+            description: "Sign-in was cancelled or could not be completed. Please try again.",
+            variant: "gamefolioError",
+          });
         }
       })
       .catch((err) => {
         console.error('getRedirectResult error:', err);
+        if (!mounted) return;
+        const code = err?.code as string | undefined;
+        const friendlyMessage =
+          code === 'auth/unauthorized-domain'
+            ? 'This site is not authorised for Google sign-in. Please contact support.'
+            : code === 'auth/network-request-failed'
+            ? 'Network error during Google sign-in. Please check your connection.'
+            : `Google sign-in error: ${err?.message ?? code ?? 'Unknown error'}`;
+        toast({
+          title: "Google sign-in failed",
+          description: friendlyMessage,
+          variant: "gamefolioError",
+        });
       });
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {

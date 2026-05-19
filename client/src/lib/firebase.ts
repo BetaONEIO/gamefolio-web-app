@@ -39,7 +39,10 @@ if (isFirebaseConfigValid) {
     googleProvider.addScope('profile');
     googleProvider.setCustomParameters({
       prompt: 'select_account',
-      display: 'popup'
+      // 'page' is the correct display mode for a full-page redirect flow.
+      // 'popup' was previously set but is only appropriate when using
+      // signInWithPopup — it can confuse the redirect flow.
+      display: 'page'
     });
 
     console.log('Firebase initialized successfully');
@@ -98,6 +101,11 @@ export const signInWithGoogle = async (): Promise<void> => {
   if (!auth || !googleProvider) {
     throw new Error('Firebase not properly configured');
   }
+  // Set a short-lived cookie before navigating so the callback can detect
+  // if getRedirectResult returns null when a result was expected.
+  const expires = new Date(Date.now() + 5 * 60 * 1000).toUTCString();
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `google_redirect_pending=1; path=/; expires=${expires}; SameSite=Lax${secure}`;
   await signInWithRedirect(auth, googleProvider);
 };
 
