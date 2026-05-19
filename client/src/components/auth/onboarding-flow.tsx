@@ -74,11 +74,11 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
               onClick={() => onSelectGame(game)}
               className={`group flex flex-col items-center p-1.5 rounded-lg transition-all focus:outline-none focus:ring-2 ${
                 isSelected 
-                  ? 'bg-primary/15 border-2 border-primary/70 ring-2 ring-primary/30' 
-                  : 'bg-[#0B1218] border-2 border-[#1B2A33] hover:border-primary/40 hover:bg-primary/5 focus:ring-primary/30'
+                  ? 'bg-[#071013] border-2 border-primary/70 ring-2 ring-primary/30' 
+                  : 'bg-[#071013] border-2 border-[#1B2A33] hover:border-primary/40 hover:bg-primary/5 focus:ring-primary/30'
               }`}
             >
-              <div className="relative w-full aspect-[3/4] mb-1.5 overflow-hidden rounded-md bg-[#1B2A33]">
+              <div className="relative w-full aspect-[3/4] mb-1.5 overflow-hidden rounded-md bg-[#071013]">
                 <img
                   src={game.box_art_url ? game.box_art_url.replace('{width}', '300').replace('{height}', '400') : "https://placehold.co/120x160?text=Game"}
                   alt={game.name}
