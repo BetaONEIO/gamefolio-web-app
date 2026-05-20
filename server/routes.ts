@@ -305,6 +305,114 @@ declare global {
 // Simple in-memory tracking for unblocked users
 const unblockedUsers = new Map<string, Set<number>>();
 
+// Whitelist of safe public fields from the users table.
+// NEVER add sensitive fields: password, email, twoFactorSecret, encryptedPrivateKey,
+// stripeCustomerId, stripeSubscriptionId, revenuecatUserId, referralCode, referredBy,
+// walletAddress, dateOfBirth, birthday, externalId, twitchAccessToken, kickAccessToken,
+// bannedReason, lastLoginAt, totalLoginTime, canMintNfts, canSellNfts, welcomePackClaimed,
+// gfTokenBalance, proSubscriptionStartDate, proSubscriptionEndDate, lastBirthdayNotificationYear.
+function toPublicUser(user: any): Record<string, unknown> {
+  return {
+    id: user.id,
+    username: user.username,
+    displayName: user.displayName,
+    avatarUrl: user.avatarUrl,
+    bannerUrl: user.bannerUrl,
+    bio: user.bio,
+    isPrivate: user.isPrivate,
+    isPro: user.isPro,
+    isPartner: user.isPartner,
+    isStreamer: user.isStreamer,
+    role: user.role,
+    status: user.status,
+    level: user.level,
+    totalXP: user.totalXP,
+    currentStreak: user.currentStreak,
+    longestStreak: user.longestStreak,
+    emailVerified: user.emailVerified,
+    twoFactorEnabled: user.twoFactorEnabled,
+    streamPlatform: user.streamPlatform,
+    twitchChannelName: user.twitchChannelName,
+    twitchChannelId: user.twitchChannelId,
+    twitchVerified: user.twitchVerified,
+    kickChannelName: user.kickChannelName,
+    kickChannelId: user.kickChannelId,
+    kickVerified: user.kickVerified,
+    liveEnabled: user.liveEnabled,
+    showLiveOverlay: user.showLiveOverlay,
+    accentColor: user.accentColor,
+    primaryColor: user.primaryColor,
+    backgroundColor: user.backgroundColor,
+    cardColor: user.cardColor,
+    avatarBorderColor: user.avatarBorderColor,
+    profileFont: user.profileFont,
+    profileFontEffect: user.profileFontEffect,
+    profileFontAnimation: user.profileFontAnimation,
+    profileFontColor: user.profileFontColor,
+    profileBackgroundImageUrl: user.profileBackgroundImageUrl,
+    profileBackgroundPositionX: user.profileBackgroundPositionX,
+    profileBackgroundPositionY: user.profileBackgroundPositionY,
+    profileBackgroundZoom: user.profileBackgroundZoom,
+    profileBackgroundDesktopX: user.profileBackgroundDesktopX,
+    profileBackgroundDesktopY: user.profileBackgroundDesktopY,
+    profileBackgroundDesktopZoom: user.profileBackgroundDesktopZoom,
+    profileBackgroundGradient: user.profileBackgroundGradient,
+    hideBanner: user.hideBanner,
+    statsGlassEffect: user.statsGlassEffect,
+    layoutStyle: user.layoutStyle,
+    nftProfileTokenId: user.nftProfileTokenId,
+    nftProfileImageUrl: user.nftProfileImageUrl,
+    activeProfilePicType: user.activeProfilePicType,
+    selectedAvatarBorderId: user.selectedAvatarBorderId,
+    selectedNameTagId: user.selectedNameTagId,
+    selectedBorderId: user.selectedBorderId,
+    selectedVerificationBadgeId: user.selectedVerificationBadgeId,
+    createdAt: user.createdAt,
+    proSubscriptionType: user.proSubscriptionType,
+    messagingEnabled: user.messagingEnabled,
+  };
+}
+
+// Checks whether the requesting user is allowed to access media owned by `ownerId`.
+// Enforces suspended/banned account hiding and private-profile follower gating.
+// Returns true if access is allowed; writes the appropriate HTTP response and returns false otherwise.
+async function checkMediaOwnerAccess(
+  ownerId: number,
+  req: Request,
+  res: Response
+): Promise<boolean> {
+  const owner = await storage.getUser(ownerId);
+  if (!owner) {
+    res.status(404).json({ message: "Not found" });
+    return false;
+  }
+
+  const isAdmin = (req.user as any)?.role === 'admin' || (req.user as any)?.role === 'moderator';
+
+  if ((owner.status === 'suspended' || owner.status === 'banned') && !isAdmin) {
+    res.status(404).json({ message: "Not found" });
+    return false;
+  }
+
+  if (owner.isPrivate) {
+    const requesterId = req.user?.id;
+    const isOwner = requesterId === ownerId;
+    if (!isOwner) {
+      if (!requesterId) {
+        res.status(403).json({ message: "This profile is private. Please log in and follow the user to see their content." });
+        return false;
+      }
+      const isFollowing = await storage.isFollowing(requesterId, ownerId);
+      if (!isFollowing) {
+        res.status(403).json({ message: "This profile is private. Follow the user to see their content." });
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   
@@ -4512,6 +4620,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clip = await storage.getClipWithUser(clipId);
       if (!clip || !clip.videoUrl) return res.status(404).json({ error: 'Clip not found' });
 
+      if (clip.userId && !(await checkMediaOwnerAccess(clip.userId, req, res))) return;
+
       // Re-sign the Supabase URL so it's fresh
       const freshUrl = await refreshSupabaseSignedUrl(clip.videoUrl);
 
@@ -5218,18 +5328,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Screenshot not found" });
       }
 
-      // Get user data for the screenshot
+      if (!(await checkMediaOwnerAccess(screenshot.userId, req, res))) return;
+
+      // Get user data for the screenshot (safe public fields only)
       const user = await storage.getUser(screenshot.userId);
-
-      // Hide content from suspended/banned accounts for non-admins
-      const isAdmin = (req.user as any)?.role === 'admin' || (req.user as any)?.role === 'moderator';
-      if (user && (user.status === 'suspended' || user.status === 'banned') && !isAdmin) {
-        return res.status(404).json({ message: "Screenshot not found" });
-      }
-
       if (user) {
-        const { password, ...userWithoutPassword } = user;
-        screenshot.user = userWithoutPassword;
+        screenshot.user = toPublicUser(user) as any;
       }
 
       res.json(screenshot);
@@ -5252,11 +5356,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Screenshot not found" });
       }
 
-      // Get user data for the screenshot
+      if (!(await checkMediaOwnerAccess(screenshot.userId, req, res))) return;
+
+      // Get user data for the screenshot (safe public fields only)
       const user = await storage.getUser(screenshot.userId);
       if (user) {
-        const { password, ...userWithoutPassword } = user;
-        screenshot.user = userWithoutPassword;
+        screenshot.user = toPublicUser(user) as any;
       }
 
       res.json(screenshot);
@@ -5686,6 +5791,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Clip not found" });
       }
 
+      if (clip.userId && !(await checkMediaOwnerAccess(clip.userId, req, res))) return;
+
       console.log(`✅ Clips API: Found clip ${id}: "${clip.title}"`);
       console.log(`🔍 Clip user data:`, clip.user ? `User ID: ${clip.user.id}, Username: ${clip.user.username}` : 'No user data');
       res.json(clip);
@@ -5712,6 +5819,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`❌ Reels API: Content with shareCode ${shareCode} is not a reel, it's a ${clip.videoType}`);
         return res.status(404).json({ message: "Reel not found" });
       }
+
+      if (clip.userId && !(await checkMediaOwnerAccess(clip.userId, req, res))) return;
 
       // Get full clip with user data
       const fullClip = await storage.getClipById(clip.id);
@@ -5750,6 +5859,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Reel not found" });
       }
 
+      if (reel.userId && !(await checkMediaOwnerAccess(reel.userId, req, res))) return;
+
       console.log(`✅ Reels API: Found reel ${reelId}: "${reel.title}"`);
       res.json(reel);
     } catch (err) {
@@ -5787,6 +5898,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`❌ Clips API: Clip with shareCode ${shareCode} not found`);
         return res.status(404).json({ message: "Clip not found" });
       }
+
+      if (clip.userId && !(await checkMediaOwnerAccess(clip.userId, req, res))) return;
 
       // Get full clip with user data
       const fullClip = await storage.getClipById(clip.id);
@@ -6532,6 +6645,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!clip) {
         return res.status(404).json({ message: "Clip not found" });
       }
+
+      if (clip.userId && !(await checkMediaOwnerAccess(clip.userId, req, res))) return;
 
       if (clip.thumbnailUrl) {
         const signedUrl = await supabaseStorage.convertToSignedUrl(clip.thumbnailUrl, 3600);
