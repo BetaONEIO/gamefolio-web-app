@@ -4530,7 +4530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}_gamefolio.mp4"`);
       res.setHeader('Cache-Control', 'private, no-cache');
 
-      const logoPath = path.join(process.cwd(), 'attached_assets', 'logo-white_1778587630337.png');
+      const logoPath = path.join(process.cwd(), 'client', 'public', 'attached_assets', 'logo-white_1778587630337.png');
       const fs = await import('fs');
       const logoExists = fs.existsSync(logoPath);
 

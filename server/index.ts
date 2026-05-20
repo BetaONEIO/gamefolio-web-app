@@ -134,20 +134,11 @@ app.use(gfWebhookRoutes);
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ extended: false, limit: '500mb' }));
 
-// Serve attached assets (including videos) as static files.
-// Served from the repo-root folder if present (dev + deploys that ship it);
-// a subset is also copied into dist/public/attached_assets at build time via
-// client/public/attached_assets and served by serveStatic as a fallback.
-const attachedAssetsPath = path.resolve(process.cwd(), 'attached_assets');
-if (fs.existsSync(attachedAssetsPath) && fs.statSync(attachedAssetsPath).isDirectory()) {
-  const count = fs.readdirSync(attachedAssetsPath).length;
-  console.log(`📁 attached_assets present at ${attachedAssetsPath} (${count} files)`);
-} else {
-  console.warn(
-    `⚠️  attached_assets folder not found at ${attachedAssetsPath} — falling back to bundled copies in dist/public/attached_assets`
-  );
-}
-app.use('/attached_assets', express.static(attachedAssetsPath));
+// All referenced /attached_assets/* files live under client/public/
+// attached_assets/ and ship via the SPA build to dist/public/attached_assets/,
+// where serveStatic picks them up. The previous public route over the
+// repo-root attached_assets/ directory has been removed to avoid exposing
+// dev/agent scratch content.
 
 // Universal Links (iOS) + App Links (Android) domain-association files.
 // Served explicitly, before the SPA catch-all, with an application/json

@@ -15,7 +15,9 @@ fresh_cookies.txt
 
 # Replit-agent scratch dump (pasted images, prompts, etc).
 # Real app assets live under client/public/attached_assets/.
-attached_assets/
+# Leading slash scopes this to the repo-root dir only, so
+# client/public/attached_assets/ stays tracked.
+/attached_assets/
 
 # EAS Build artifacts + credentials (never commit service account keys or certificates)
 *.jks
