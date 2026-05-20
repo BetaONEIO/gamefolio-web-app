@@ -985,13 +985,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Discord OAuth state initialization (web flow).
+  // Generates a CSRF state token and stores it in the server-side session.
+  // The client redirects to Discord with this state; on return /token verifies
+  // it matches the session-stored value before exchanging the code.
+  // This replaces the previous client-side cookie/localStorage approach which
+  // proved fragile across browser storage-partitioning and cross-site redirects.
+  app.post("/api/auth/discord/init", (req, res) => {
+    const state = randomBytes(16).toString('hex');
+    (req.session as any).discordOAuthState = state;
+    req.session.save((err) => {
+      if (err) {
+        console.error('Failed to persist Discord OAuth state to session:', err);
+        return res.status(500).json({ message: 'Failed to start Discord sign-in' });
+      }
+      res.json({ state });
+    });
+  });
+
   // Discord OAuth token exchange route
   app.post("/api/auth/discord/token", async (req, res) => {
     try {
-      const { code, redirectUri } = req.body;
+      const { code, redirectUri, state } = req.body;
 
       if (!code || !redirectUri) {
         return res.status(400).json({ message: "Missing authorization code or redirect URI" });
+      }
+
+      // CSRF state verification — must match the value /init stored on the
+      // session, then is single-use (cleared whether the rest succeeds or fails).
+      const sessionState = (req.session as any).discordOAuthState;
+      (req.session as any).discordOAuthState = undefined;
+      if (!sessionState || !state || sessionState !== state) {
+        console.warn('Discord OAuth state mismatch', {
+          sessionStatePresent: !!sessionState,
+          bodyStatePresent: !!state,
+        });
+        return res.status(400).json({ message: 'Invalid OAuth state — please try signing in again' });
       }
 
       // Exchange authorization code for access token
