@@ -1753,3 +1753,12 @@ export type AdminAlert = typeof adminAlerts.$inferSelect;
 export type InsertAdminAlert = typeof adminAlerts.$inferInsert;
 
 export type XpSetting = typeof xpSettings.$inferSelect;
+
+export const usedPaymentHashes = pgTable("used_payment_hashes", {
+  id: serial("id").primaryKey(),
+  txHash: text("tx_hash").notNull().unique(),
+  userId: integer("user_id").notNull(),
+  purpose: text("purpose").notNull(),
+  itemId: text("item_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

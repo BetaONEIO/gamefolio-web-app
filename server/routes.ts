@@ -24,7 +24,7 @@ import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
 import { eq, sql, desc } from "drizzle-orm";
 import { db } from "./db";
-import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots } from "@shared/schema";
+import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes } from "@shared/schema";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -8815,8 +8815,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/store/verify-name-tag-purchase", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const { nameTagId, txHash, gfCost } = req.body;
-      if (!nameTagId || !txHash || gfCost === undefined) return res.status(400).json({ error: "nameTagId, txHash, and gfCost are required" });
+      const { nameTagId, txHash } = req.body;
+      if (!nameTagId || !txHash) return res.status(400).json({ error: "nameTagId and txHash are required" });
 
       const user = await storage.getUserById(req.user.id);
       if (!user || !user.walletAddress) return res.status(400).json({ error: "Wallet address required" });
@@ -8824,12 +8824,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasUnlocked = await storage.userHasUnlockedNameTag(req.user.id, nameTagId);
       if (hasUnlocked) return res.json({ success: true, message: "Already owned" });
 
+      const nameTagForPrice = await storage.getNameTag(nameTagId);
+      if (!nameTagForPrice) return res.status(404).json({ error: "Name tag not found" });
+      if (!nameTagForPrice.availableInStore || !nameTagForPrice.isActive) return res.status(400).json({ error: "Not available for purchase" });
+      if (nameTagForPrice.isDefault) return res.status(400).json({ error: "This name tag is free for everyone" });
+
+      const baseCost = nameTagForPrice.gfCost || 0;
+      if (baseCost <= 0) return res.status(400).json({ error: "This name tag has no price set" });
+
+      const serverGfCost = user.isPro ? Math.floor(baseCost * 0.8) : baseCost;
+
       const receipt = await nftPublicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
       if (receipt.status !== 'success') return res.status(400).json({ error: 'Transaction failed on-chain' });
 
       const treasuryAddress = getNftTreasuryAddress().toLowerCase();
       const buyerAddress = (user.walletAddress as string).toLowerCase();
-      const expectedAmount = parseUnits(String(gfCost), NFT_GF_DECIMALS);
+      const expectedAmount = parseUnits(String(serverGfCost), NFT_GF_DECIMALS);
 
       let validTransfer = false;
       for (const log of receipt.logs) {
@@ -8848,6 +8858,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!validTransfer) return res.status(400).json({ error: 'Invalid transfer: amount, sender, or recipient mismatch' });
 
+      const claimed = await db.insert(usedPaymentHashes)
+        .values({ txHash, userId: req.user.id, purpose: 'name_tag', itemId: String(nameTagId) })
+        .onConflictDoNothing()
+        .returning();
+      if (!claimed.length) {
+        return res.status(400).json({ error: 'Transaction hash has already been used for another purchase' });
+      }
+
       const nameTag = await storage.getNameTag(nameTagId);
       await storage.unlockNameTagForUser(req.user.id, nameTagId);
 
@@ -8862,63 +8880,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Legacy name tag purchase (deprecated — kept for compatibility)
-  app.post("/api/store/purchase-name-tag", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.sendStatus(401);
-    }
-
-    try {
-      const { nameTagId } = req.body;
-      if (!nameTagId) {
-        return res.status(400).json({ message: "nameTagId is required" });
-      }
-
-      const nameTag = await storage.getNameTag(nameTagId);
-      if (!nameTag) {
-        return res.status(404).json({ message: "Name tag not found" });
-      }
-
-      if (!nameTag.availableInStore || !nameTag.isActive) {
-        return res.status(400).json({ message: "This name tag is not available for purchase" });
-      }
-
-      if (nameTag.isDefault) {
-        return res.status(400).json({ message: "This name tag is free for everyone" });
-      }
-
-      const baseCost = nameTag.gfCost || 0;
-      if (baseCost <= 0) {
-        return res.status(400).json({ message: "This name tag has no price set" });
-      }
-
-      const hasUnlocked = await storage.userHasUnlockedNameTag(req.user.id, nameTagId);
-      if (hasUnlocked) {
-        return res.status(400).json({ message: "You already own this name tag" });
-      }
-
-      const user = await storage.getUserById(req.user.id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      const cost = user.isPro ? Math.floor(baseCost * 0.8) : baseCost;
-
-      await storage.unlockNameTagForUser(req.user.id, nameTagId);
-
-      res.json({ 
-        success: true, 
-        message: `Successfully purchased "${nameTag.name}"!` + (user.isPro ? ` (20% Pro discount applied!)` : ''),
-        nameTag,
-        discountApplied: user.isPro,
-        originalPrice: baseCost,
-        finalPrice: cost,
-      });
-    } catch (err) {
-      console.error("Error purchasing name tag:", err);
-      return res.status(500).json({ message: "Error purchasing name tag" });
-    }
-  });
 
   // Sync name tags from the gamefolio-name-tags Supabase bucket
   app.post("/api/admin/name-tags/sync-bucket", adminMiddleware, async (req, res) => {
@@ -9065,21 +9026,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/store/verify-border-purchase", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const { borderId, txHash, gfCost } = req.body;
-      if (!borderId || !txHash || gfCost === undefined) return res.status(400).json({ error: "borderId, txHash, and gfCost are required" });
+      const { borderId, txHash } = req.body;
+      if (!borderId || !txHash) return res.status(400).json({ error: "borderId and txHash are required" });
 
       const user = await storage.getUserById(req.user.id);
       if (!user || !user.walletAddress) return res.status(400).json({ error: "Wallet address required" });
+      if (!user.isPro) return res.status(403).json({ error: "Profile borders are a Pro-only feature. Upgrade to Pro to use borders!" });
 
       const hasUnlocked = await storage.userHasUnlockedBorder(req.user.id, borderId);
       if (hasUnlocked) return res.json({ success: true, message: "Already owned" });
+
+      const borderForPrice = await storage.getProfileBorder(borderId);
+      if (!borderForPrice) return res.status(404).json({ error: "Border not found" });
+      if (!borderForPrice.availableInStore || !borderForPrice.isActive) return res.status(400).json({ error: "Not available for purchase" });
+      if (borderForPrice.isDefault) return res.status(400).json({ error: "This border is free for everyone" });
+
+      const serverGfCost = borderForPrice.gfCost || 0;
+      if (serverGfCost <= 0) return res.status(400).json({ error: "This border has no price set" });
 
       const receipt = await nftPublicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
       if (receipt.status !== 'success') return res.status(400).json({ error: 'Transaction failed on-chain' });
 
       const treasuryAddress = getNftTreasuryAddress().toLowerCase();
       const buyerAddress = (user.walletAddress as string).toLowerCase();
-      const expectedAmount = parseUnits(String(gfCost), NFT_GF_DECIMALS);
+      const expectedAmount = parseUnits(String(serverGfCost), NFT_GF_DECIMALS);
 
       let validTransfer = false;
       for (const log of receipt.logs) {
@@ -9098,6 +9068,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!validTransfer) return res.status(400).json({ error: 'Invalid transfer: amount, sender, or recipient mismatch' });
 
+      const claimed = await db.insert(usedPaymentHashes)
+        .values({ txHash, userId: req.user.id, purpose: 'border', itemId: String(borderId) })
+        .onConflictDoNothing()
+        .returning();
+      if (!claimed.length) {
+        return res.status(400).json({ error: 'Transaction hash has already been used for another purchase' });
+      }
+
       const border = await storage.getProfileBorder(borderId);
       await storage.unlockBorderForUser(req.user.id, borderId);
 
@@ -9112,62 +9090,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Legacy border purchase (deprecated — kept for compatibility)
-  app.post("/api/store/purchase-border", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.sendStatus(401);
-    }
-
-    try {
-      const { borderId } = req.body;
-      if (!borderId) {
-        return res.status(400).json({ message: "borderId is required" });
-      }
-
-      const user = await storage.getUserById(req.user.id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      if (!user.isPro) {
-        return res.status(403).json({ message: "Profile borders are a Pro-only feature. Upgrade to Pro to use borders!" });
-      }
-
-      const border = await storage.getProfileBorder(borderId);
-      if (!border) {
-        return res.status(404).json({ message: "Border not found" });
-      }
-
-      if (!border.availableInStore || !border.isActive) {
-        return res.status(400).json({ message: "This border is not available for purchase" });
-      }
-
-      if (border.isDefault) {
-        return res.status(400).json({ message: "This border is free for everyone" });
-      }
-
-      const cost = border.gfCost || 0;
-      if (cost <= 0) {
-        return res.status(400).json({ message: "This border has no price set" });
-      }
-
-      const hasUnlocked = await storage.userHasUnlockedBorder(req.user.id, borderId);
-      if (hasUnlocked) {
-        return res.status(400).json({ message: "You already own this border" });
-      }
-
-      await storage.unlockBorderForUser(req.user.id, borderId);
-
-      res.json({
-        success: true,
-        message: `Successfully purchased "${border.name}"!`,
-        border,
-      });
-    } catch (err) {
-      console.error("Error purchasing border:", err);
-      return res.status(500).json({ message: "Error purchasing border" });
-    }
-  });
 
   app.post("/api/admin/borders/sync-bucket", adminMiddleware, async (req, res) => {
     try {
@@ -9402,58 +9324,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Purchase a verification badge with GF tokens
-  app.post("/api/store/purchase-verification-badge", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.sendStatus(401);
-    }
-
-    try {
-      const { badgeId } = req.body;
-      if (!badgeId) {
-        return res.status(400).json({ message: "badgeId is required" });
-      }
-
-      const user = await storage.getUserById(req.user.id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      const badge = await storage.getVerificationBadge(badgeId);
-      if (!badge) {
-        return res.status(404).json({ message: "Verification badge not found" });
-      }
-
-      if (!badge.availableInStore || !badge.isActive) {
-        return res.status(400).json({ message: "This verification badge is not available for purchase" });
-      }
-
-      if (badge.isDefault) {
-        return res.status(400).json({ message: "This verification badge is free for everyone" });
-      }
-
-      const cost = badge.gfCost || 0;
-      if (cost <= 0) {
-        return res.status(400).json({ message: "This verification badge has no price set" });
-      }
-
-      const hasUnlocked = await storage.userHasUnlockedVerificationBadge(req.user.id, badgeId);
-      if (hasUnlocked) {
-        return res.status(400).json({ message: "You already own this verification badge" });
-      }
-
-      await storage.unlockVerificationBadgeForUser(req.user.id, badgeId);
-
-      res.json({
-        success: true,
-        message: `Successfully purchased "${badge.name}"!`,
-        badge,
-      });
-    } catch (err) {
-      console.error("Error purchasing verification badge:", err);
-      return res.status(500).json({ message: "Error purchasing verification badge" });
-    }
-  });
 
   // Admin sync verification badges from the gamefolio-verification Supabase bucket
   app.post("/api/admin/verification-badges/sync-bucket", adminMiddleware, async (req, res) => {

@@ -565,7 +565,7 @@ export default function StorePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ nameTagId, txHash, gfCost }),
+        body: JSON.stringify({ nameTagId, txHash }),
       });
       if (!verifyRes.ok) throw new Error("Failed to verify purchase");
       const result = await verifyRes.json();
@@ -642,7 +642,7 @@ export default function StorePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ borderId, txHash, gfCost }),
+        body: JSON.stringify({ borderId, txHash }),
       });
       if (!verifyRes.ok) throw new Error("Failed to verify purchase");
       const result = await verifyRes.json();
