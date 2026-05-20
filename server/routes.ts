@@ -4748,20 +4748,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .jpeg({ quality: 85 })
           .toBuffer();
 
-        // For demo user, save to attached_assets directory
-        const avatarFileName = `demo_avatar_${Date.now()}.jpg`;
-        const avatarPath = path.join('attached_assets', avatarFileName);
-
-        // Ensure attached_assets directory exists
-        const attachedAssetsDir = path.join(process.cwd(), 'attached_assets');
-        if (!fs.existsSync(attachedAssetsDir)) {
-          fs.mkdirSync(attachedAssetsDir, { recursive: true });
-        }
-
-        // Write the processed avatar
-        await fsPromises.writeFile(path.join(process.cwd(), avatarPath), avatarBuffer);
-
-        const avatarUrl = `/attached_assets/${avatarFileName}`;
+        // Store via the same Supabase path real avatars use — no more
+        // writing into attached_assets/ (that dir is gitignored and no
+        // longer publicly served).
+        const fileName = `demo_avatar_${Date.now()}.jpg`;
+        const { url: avatarUrl } = await supabaseStorage.uploadBuffer(
+          avatarBuffer,
+          fileName,
+          'image/jpeg',
+          'image',
+          userId
+        );
 
         // Update demo user's avatar in storage
         await storage.updateUser(userId, { avatarUrl });
@@ -10925,9 +10922,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Static file serving for banner images and attached assets
+  // Static file serving for banner images and (admin-only) server statics.
+  // The referenced /attached_assets/* files now live under client/public/
+  // and are served by the SPA build — the public express.static route over
+  // the repo-root attached_assets/ directory has been removed to avoid
+  // exposing dev/agent scratch content.
   app.use('/banners', express.static(path.join(__dirname, '../client/public/banners')));
-  app.use('/attached_assets', express.static(path.join(__dirname, '../attached_assets')));
   app.use('/api/static', express.static(path.join(__dirname, 'static')));
 
   // ==========================================
