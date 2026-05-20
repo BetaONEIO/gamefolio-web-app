@@ -12,6 +12,7 @@ vite.config.ts.*
 /temp
 /playwright-report
 fresh_cookies.txt
+.firebase/
 
 # Replit-agent scratch dump (pasted images, prompts, etc).
 # Real app assets live under client/public/attached_assets/.

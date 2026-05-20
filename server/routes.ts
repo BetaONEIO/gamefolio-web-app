@@ -1107,6 +1107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Failed to persist Discord OAuth state to session:', err);
         return res.status(500).json({ message: 'Failed to start Discord sign-in' });
       }
+      console.log(`[discord-auth] /init sid=${req.sessionID} stored state`);
       res.json({ state });
     });
   });
@@ -1121,9 +1122,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // CSRF state verification — must match the value /init stored on the
-      // session, then is single-use (cleared whether the rest succeeds or fails).
+      // session. We DON'T clear the state on first read: that would make a
+      // double-fired callback (React re-mount, browser back/forward, etc.)
+      // appear as an "invalid state" failure to the user, even though the
+      // first call already succeeded. Instead the state is naturally
+      // single-use because Discord rejects the code on the second exchange
+      // (invalid_grant), and the session entry expires with the session.
       const sessionState = (req.session as any).discordOAuthState;
-      (req.session as any).discordOAuthState = undefined;
+      console.log(
+        `[discord-auth] /token sid=${req.sessionID} sessionStatePresent=${!!sessionState} bodyStatePresent=${!!state} match=${sessionState === state}`
+      );
       if (!sessionState || !state || sessionState !== state) {
         console.warn('Discord OAuth state mismatch', {
           sessionStatePresent: !!sessionState,
