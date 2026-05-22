@@ -379,7 +379,7 @@ video:focus {
   --ds-border:       #1B2A33;
   --ds-border-muted: #22313A;
   --ds-primary:      #B7FF1A;
-  --ds-primary-hov:  #A2F000;
+  --ds-primary-hov:  #B7FF1A;
   --ds-primary-dark: #6FA800;
   --ds-text:         #F5F7F2;
   --ds-text-sec:     #B8C0AE;
@@ -600,7 +600,7 @@ video:focus {
 
 /* Professional badge styles */
 .pro-badge {
-  background: linear-gradient(90deg, #B7FF1A 0%, #A2F000 100%);
+  background: #B7FF1A;
   box-shadow: 0 0 10px rgba(183, 255, 26, 0.5);
 }
 

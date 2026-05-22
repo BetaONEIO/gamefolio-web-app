@@ -4849,13 +4849,13 @@ export default function SettingsPage() {
                         common: "",
                       };
                       const dotColor: Record<string, string> = {
-                        legendary: "bg-primary shadow-[0_0_8px_#A2F000]",
+                        legendary: "bg-primary shadow-[0_0_8px_#B7FF1A]",
                         epic: "bg-primary shadow-[0_0_8px_#6FA800]",
                         rare: "bg-primary shadow-[0_0_8px_#B7FF1A]",
                         common: "bg-slate-400/50 shadow-[0_0_8px_#1B2A33]",
                       };
                       const rarityText: Record<string, string> = {
-                        legendary: "bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] bg-clip-text text-transparent font-black",
+                        legendary: "text-[#B7FF1A] font-black",
                         epic: "text-slate-400 font-normal",
                         rare: "text-slate-400 font-normal",
                         common: "text-slate-400 font-normal",

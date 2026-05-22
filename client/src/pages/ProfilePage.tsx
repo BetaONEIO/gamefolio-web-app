@@ -173,8 +173,8 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
   legendary: {
     bg: "bg-gradient-to-b from-[#f6cfff] via-[#cefafe] to-[#fff085]",
     glow: "shadow-[0_0_25px_rgba(236,72,153,0.4)]",
-    dotColor: "bg-primary shadow-[0_0_8px_#A2F000]",
-    textStyle: "bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] bg-clip-text text-transparent font-black",
+    dotColor: "bg-primary shadow-[0_0_8px_#B7FF1A]",
+    textStyle: "bg-gradient-to-r from-[#B7FF1A] to-[#B7FF1A] bg-clip-text text-transparent font-black",
     nameColor: "text-slate-800",
   },
   epic: {
@@ -1380,7 +1380,7 @@ const ProfilePage = () => {
     return <NotFound />;
   }
 
-  const accentColor = profile.accentColor || '#A2F000';
+  const accentColor = profile.accentColor || '#B7FF1A';
   const backgroundColor = profile.backgroundColor || '#121F2B';
   const cardColor = profile.cardColor || '#1E3A8A';
 
@@ -1464,7 +1464,7 @@ const ProfilePage = () => {
     : isZombieTheme ? '#9ae600'
     : isCyberpunkTheme ? '#00d3f2'
     : isNeoTheme ? '#9333ea'
-    : isBlocksTheme ? '#A2F000'
+    : isBlocksTheme ? '#B7FF1A'
     : isForestTheme ? '#4a7c59'
     : isGothicTheme ? '#c27aff'
     : isElectricTheme ? '#ffe033'
@@ -1619,7 +1619,7 @@ const ProfilePage = () => {
     boxShadow: '0 0 12px #00ff4122',
   } : isBlocksTheme ? {
     background: '#1a1a1a',
-    border: '3px solid #A2F000',
+    border: '3px solid #B7FF1A',
     borderRadius: '4px',
     boxShadow: '4px 4px 0 #000',
   } : isForestTheme ? {
@@ -1854,7 +1854,7 @@ const ProfilePage = () => {
         if (profile.birthday !== todayMMDD) return null;
         return (
           <div className="relative overflow-hidden rounded-xl mx-1 md:mx-0 mb-3" style={{
-            background: 'linear-gradient(135deg, #B7FF1A 0%, #A2F000 50%, #EAB308 100%)',
+            background: 'linear-gradient(135deg, #B7FF1A 0%, #B7FF1A 50%, #EAB308 100%)',
             padding: '1px',
           }}>
             <div className="relative rounded-xl px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-center gap-3 text-center" style={{
@@ -2894,14 +2894,14 @@ const ProfilePage = () => {
                           : isNeoTheme
                             ? 'linear-gradient(180deg, #003300 0%, #001400 100%)'
                             : isBlocksTheme
-                              ? 'linear-gradient(180deg, #B7FF1A 0%, #A2F000 100%)'
+                              ? '#B7FF1A'
                               : isForestTheme
                                 ? '#1d3932'
                                 : isGothicTheme
                                   ? 'linear-gradient(135deg, #3d0070 0%, #1e053a 100%)'
                                   : isCartoonTheme
                                     ? (profileSectionTab === 'collection' ? '#fffaec' : 'linear-gradient(135deg, #ff5e5e 0%, #ff7a5e 100%)')
-                                    : 'linear-gradient(270deg, #B7FF1A 0%, #A2F000 100%)',
+                                    : '#B7FF1A',
                 color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : '#0f172b',
                 border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #B7FF1A' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : undefined,
                 fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : isGothicTheme ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" : isCartoonTheme ? "'Bricolage Grotesque', 'Arial Black', sans-serif" : undefined,
@@ -3286,14 +3286,14 @@ const ProfilePage = () => {
                             : isNeoTheme
                               ? 'linear-gradient(180deg, #003300 0%, #001400 100%)'
                               : isBlocksTheme
-                                ? 'linear-gradient(180deg, #B7FF1A 0%, #A2F000 100%)'
+                                ? '#B7FF1A'
                                 : isForestTheme
                                   ? '#1d3932'
                                   : isGothicTheme
                                     ? 'linear-gradient(135deg, #3d0070 0%, #1e053a 100%)'
                                     : isCartoonTheme
                                       ? 'linear-gradient(135deg, #ff5e5e 0%, #ff7a5e 100%)'
-                                      : 'linear-gradient(270deg, #B7FF1A 0%, #A2F000 100%)',
+                                      : '#B7FF1A',
                   color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : '#0f172b',
                   border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #B7FF1A' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : undefined,
                   fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : isGothicTheme ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" : isCartoonTheme ? "'Bricolage Grotesque', 'Arial Black', sans-serif" : undefined,
@@ -4254,7 +4254,7 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(15 clip limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] text-[#071013] font-semibold px-8"
+                  className="bg-[#B7FF1A] hover:bg-[#B7FF1A]/90 text-[#071013] font-semibold px-8"
                 >
                   Go PRO
                 </Button>
@@ -4404,7 +4404,7 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(15 reel limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] text-[#071013] font-semibold px-8"
+                  className="bg-[#B7FF1A] hover:bg-[#B7FF1A]/90 text-[#071013] font-semibold px-8"
                 >
                   Go PRO
                 </Button>
@@ -4562,7 +4562,7 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(10 screenshot limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] text-[#071013] font-semibold px-8"
+                  className="bg-[#B7FF1A] hover:bg-[#B7FF1A]/90 text-[#071013] font-semibold px-8"
                 >
                   Go PRO
                 </Button>
