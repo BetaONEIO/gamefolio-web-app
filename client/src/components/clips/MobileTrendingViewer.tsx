@@ -519,7 +519,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
 
             {/* Game */}
             {currentItem.game?.name && (
-              <div className="flex items-center gap-1 mb-0.5">
+              <div className="flex items-center gap-1 mb-2">
                 <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
                 <span className="text-[11px] font-semibold" style={{ color: '#B7FF1A' }}>
                   {currentItem.game.name}
