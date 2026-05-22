@@ -151,7 +151,7 @@ const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
                     key={filter.id}
                     className={`
                       cursor-pointer text-center rounded-md p-3 transition-all
-                      ${selectedFilter === filter.id ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-secondary'}
+                      ${selectedFilter === filter.id ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'}
                     `}
                     onClick={() => setSelectedFilter(filter.id)}
                   >
