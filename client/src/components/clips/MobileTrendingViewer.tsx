@@ -332,6 +332,95 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                 <ScreenshotScrollItem item={item as ScreenshotWithUser} />
               )
             )}
+            {!showComments && (
+              <div
+                className="absolute left-0 right-0 z-10 px-4 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent"
+                style={{
+                  bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
+                  paddingBottom: '8px',
+                  pointerEvents: 'none',
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="pr-14" style={{ pointerEvents: 'auto' }}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Link
+                      href={`/profile/${item.user.username}`}
+                      className="flex-shrink-0 no-underline"
+                      data-testid={`link-user-${item.user.username}`}
+                    >
+                      <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '1.5px solid #fff' }}>
+                        <img
+                          src={item.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                          alt={item.user.displayName}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </Link>
+                    <ProfileHoverCard username={item.user.username}>
+                      <Link
+                        href={`/profile/${item.user.username}`}
+                        className="no-underline flex-shrink-0"
+                      >
+                        <span className="text-white font-bold text-[13px] drop-shadow leading-tight">
+                          @{item.user.username}
+                        </span>
+                      </Link>
+                    </ProfileHoverCard>
+                    {!isSelf && !isFollowing && (
+                      <button
+                        onClick={handleFollowPress}
+                        disabled={followMutation.isPending}
+                        className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all"
+                        style={{ background: '#B7FF1A', color: '#000', border: '1px solid transparent' }}
+                      >
+                        {followMutation.isPending ? '…' : 'Follow'}
+                      </button>
+                    )}
+                  </div>
+
+                  <p className="text-white font-bold text-[13px] drop-shadow mb-0.5 leading-snug">
+                    {(() => {
+                      const titleText = item.title ?? '';
+                      const titleTruncated = !showFullDescription && titleText.length > 50;
+                      return titleTruncated ? titleText.slice(0, 50) + '…' : titleText;
+                    })()}
+                  </p>
+
+                  {(() => {
+                    const desc = (item as any).description ?? '';
+                    const titleText = item.title ?? '';
+                    const needsExpand = titleText.length > 50 || desc.length > 80;
+                    return needsExpand || desc ? (
+                      <div className="mb-1">
+                        {desc ? (
+                          <p className={`text-white/75 text-[11px] drop-shadow leading-snug pr-8 ${showFullDescription ? '' : 'line-clamp-2'}`}>
+                            {desc}
+                          </p>
+                        ) : null}
+                        {needsExpand && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setShowFullDescription(v => !v); }}
+                            className="text-white/50 text-[11px] mt-0.5"
+                          >
+                            {showFullDescription ? 'see less' : 'see more'}
+                          </button>
+                        )}
+                      </div>
+                    ) : null;
+                  })()}
+
+                  {item.game?.name && (
+                    <div className="flex items-center gap-1 mb-2">
+                      <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
+                      <span className="text-[11px] font-semibold" style={{ color: '#B7FF1A' }}>
+                        {item.game.name}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -429,105 +518,6 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               <TrendingClipMenu clip={currentItem as ClipWithUser} />
             </div>
           )}
-        </div>
-      )}
-
-      {/* ── Bottom info overlay ── */}
-      {!showComments && (
-        <div
-          className="absolute left-0 right-0 z-10 px-4 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent"
-          style={{
-            bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
-            paddingBottom: '8px',
-            pointerEvents: 'none',
-          }}
-          onClick={e => e.stopPropagation()}
-        >
-          {/* Text content — pr-16 keeps it clear of the right action column */}
-          <div className="pr-14" style={{ pointerEvents: 'auto' }}>
-            {/* User row */}
-            <div className="flex items-center gap-2 mb-1.5">
-              <Link
-                href={`/profile/${currentItem.user.username}`}
-                className="flex-shrink-0 no-underline"
-                data-testid={`link-user-${currentItem.user.username}`}
-              >
-                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '1.5px solid #fff' }}>
-                  <img
-                    src={signedAvatarUrl || currentItem.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                    alt={currentItem.user.displayName}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </Link>
-              <ProfileHoverCard username={currentItem.user.username}>
-                <Link
-                  href={`/profile/${currentItem.user.username}`}
-                  className="no-underline flex-shrink-0"
-                >
-                  <span className="text-white font-bold text-[13px] drop-shadow leading-tight">
-                    @{currentItem.user.username}
-                  </span>
-                </Link>
-              </ProfileHoverCard>
-              {!isSelf && !isFollowing && (
-                <button
-                  onClick={handleFollowPress}
-                  disabled={followMutation.isPending}
-                  className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all"
-                  style={{ background: '#B7FF1A', color: '#000', border: '1px solid transparent' }}
-                >
-                  {followMutation.isPending ? '…' : 'Follow'}
-                </button>
-              )}
-            </div>
-
-            {/* Title */}
-            {(() => {
-              const titleText = currentItem.title ?? '';
-              const titleTruncated = !showFullDescription && titleText.length > 50;
-              return (
-                <p className="text-white font-bold text-[13px] drop-shadow mb-0.5 leading-snug">
-                  {titleTruncated ? titleText.slice(0, 50) + '…' : titleText}
-                </p>
-              );
-            })()}
-
-            {/* Description with "see more" — also reveals full title */}
-            {(() => {
-              const desc = (currentItem as any).description ?? '';
-              const titleText = currentItem.title ?? '';
-              const needsExpand = titleText.length > 50 || desc.length > 80;
-              return needsExpand || desc ? (
-                <div className="mb-1">
-                  {desc ? (
-                    <p className={`text-white/75 text-[11px] drop-shadow leading-snug pr-8 ${showFullDescription ? '' : 'line-clamp-2'}`}>
-                      {desc}
-                    </p>
-                  ) : null}
-                  {needsExpand && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowFullDescription(v => !v); }}
-                      className="text-white/50 text-[11px] mt-0.5"
-                    >
-                      {showFullDescription ? 'see less' : 'see more'}
-                    </button>
-                  )}
-                </div>
-              ) : null;
-            })()}
-
-            {/* Game */}
-            {currentItem.game?.name && (
-              <div className="flex items-center gap-1 mb-2">
-                <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-                <span className="text-[11px] font-semibold" style={{ color: '#B7FF1A' }}>
-                  {currentItem.game.name}
-                </span>
-              </div>
-            )}
-
-          </div>
         </div>
       )}
 
