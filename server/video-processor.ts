@@ -235,15 +235,15 @@ export class VideoProcessor {
         const randomTime = Math.random() * (maxTime - minTime) + minTime;
 
         // Use appropriate size based on video type
-        // Reels: 9:16 (720x1280), Clips: 16:9 (1280x720)
-        const thumbnailSize = videoType === 'reel' ? '720x1280' : '1280x720';
+        // Reels: 9:16 (1080x1920), Clips: 16:9 (1920x1080)
+        const thumbnailSize = videoType === 'reel' ? '1080x1920' : '1920x1080';
 
         // Generate thumbnail at random timestamp
         ffmpeg(videoPath)
           .seekInput(randomTime)
           .frames(1)
           .size(thumbnailSize)
-          .outputOptions(['-q:v 2']) // High quality JPEG
+          .outputOptions(['-q:v 1']) // Highest quality JPEG
           .output(thumbnailPath)
           .on('end', async () => {
             try {
@@ -441,8 +441,8 @@ export class VideoProcessor {
       console.log(`Generating thumbnail from trimmed video: ${videoPath}`);
       
       // Use appropriate aspect ratio based on video type
-      // Reels: 9:16 (180x320), Clips: 16:9 (320x180)
-      const thumbnailSize = videoType === 'reel' ? '180x320' : '320x180';
+      // Reels: 9:16 (540x960), Clips: 16:9 (960x540)
+      const thumbnailSize = videoType === 'reel' ? '540x960' : '960x540';
       
       ffmpeg(videoPath)
         .seekInput(1) // 1 second into the trimmed video
@@ -458,7 +458,7 @@ export class VideoProcessor {
             
             // Optimize with sharp
             await sharp(thumbnailPath)
-              .jpeg({ quality: 85 })
+              .jpeg({ quality: 92, mozjpeg: true })
               .toFile(thumbnailPath.replace('.jpg', '_opt.jpg'));
             
             // Replace original with optimized
