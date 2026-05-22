@@ -201,10 +201,10 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
 };
 
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
-  streamer: { label: "Streamer", icon: Video, color: "bg-[#A2F000]/20 text-[#A2F000] border-[#A2F000]/30" },
-  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-[#A2F000]/20 text-[#A2F000] border-[#A2F000]/30" },
+  streamer: { label: "Streamer", icon: Video, color: "bg-[#B7FF1A]/20 text-[#B7FF1A] border-[#B7FF1A]/30" },
+  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-[#B7FF1A]/20 text-[#B7FF1A] border-[#B7FF1A]/30" },
   professional_gamer: { label: "Professional Gamer", icon: Trophy, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
-  content_creator: { label: "Content Creator", icon: Upload, color: "bg-[#A2F000]/20 text-[#A2F000] border-[#A2F000]/30" },
+  content_creator: { label: "Content Creator", icon: Upload, color: "bg-[#B7FF1A]/20 text-[#B7FF1A] border-[#B7FF1A]/30" },
   indie_developer: { label: "Indie Developer", icon: Code, color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
   viewer: { label: "Viewer", icon: Eye, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
   filthy_casual: { label: "Filthy Casual", icon: Coffee, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
