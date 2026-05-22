@@ -527,11 +527,10 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               </div>
             )}
 
-            {/* Original audio */}
             <div className="flex items-center gap-1">
               <Music className="h-2.5 w-2.5 text-white/60 flex-shrink-0" />
               <span className="text-white/60 text-[11px] truncate">
-                Original audio · {currentItem.user.displayName || currentItem.user.username}
+                {currentItem.user.displayName || currentItem.user.username}
               </span>
             </div>
           </div>
