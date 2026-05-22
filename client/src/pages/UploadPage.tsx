@@ -183,6 +183,7 @@ const UploadPage = () => {
   
   // XP Dialog state
   const [showProUpgrade, setShowProUpgrade] = useState(false);
+  const [showUploadSizeTip, setShowUploadSizeTip] = useState(false);
   const [xpDialogOpen, setXpDialogOpen] = useState(false);
   const [xpGained, setXpGained] = useState(0);
   const [userXP, setUserXP] = useState(0);
@@ -238,6 +239,7 @@ const UploadPage = () => {
   } | null>(null);
 
   const userId = user?.id;
+  const uploadSizeTipStorageKey = "gamefolio_upload_size_tip_dismissed";
 
   // Fetch upload limits (size + duration only — no count caps)
   const { data: uploadLimits, isLoading: limitsLoading } = useQuery<{
@@ -251,6 +253,16 @@ const UploadPage = () => {
     queryKey: ['/api/upload/limits'],
     enabled: !!userId,
   });
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem(uploadSizeTipStorageKey) === "true";
+    setShowUploadSizeTip(!dismissed);
+  }, []);
+
+  const dismissUploadSizeTip = () => {
+    localStorage.setItem(uploadSizeTipStorageKey, "true");
+    setShowUploadSizeTip(false);
+  };
 
   // Reset form function
   const resetFormAndNavigate = () => {
@@ -910,8 +922,16 @@ const UploadPage = () => {
       <EmailVerificationBanner />
 
       {/* Upload Limits Display — unlimited uploads, capped by file size & duration */}
-      {!limitsLoading && uploadLimits && !uploadLimits.isPro && (
-        <Alert className="mb-4">
+      {!limitsLoading && uploadLimits && !uploadLimits.isPro && showUploadSizeTip && (
+        <Alert className="mb-4 relative pr-10">
+          <button
+            type="button"
+            onClick={dismissUploadSizeTip}
+            className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Dismiss upload size tip"
+          >
+            <X className="h-4 w-4" />
+          </button>
           <Info className="h-4 w-4" />
           <AlertTitle>Upload Limits</AlertTitle>
           <AlertDescription>
