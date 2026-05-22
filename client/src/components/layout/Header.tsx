@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera } from "lucide-react";
+import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera, Clock, X as XIcon } from "lucide-react";
 import {
   LevelTrackerIcon,
   ReferFriendIcon,
@@ -44,11 +44,48 @@ import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import ManageProDialog from "@/components/ManageProDialog";
 import { useAuthModal } from "@/hooks/use-auth-modal";
 
+const RECENT_SEARCHES_KEY = "gamefolio_recent_searches";
+const MAX_RECENT = 8;
+
+function loadRecentSearches(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || "[]");
+  } catch { return []; }
+}
+
+function persistRecentSearches(searches: string[]) {
+  localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
+}
+
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [recentSearches, setRecentSearches] = useState<string[]>(loadRecentSearches);
+
+  const saveRecentSearch = (term: string) => {
+    const trimmed = term.trim();
+    if (!trimmed) return;
+    setRecentSearches(prev => {
+      const deduped = [trimmed, ...prev.filter(s => s.toLowerCase() !== trimmed.toLowerCase())].slice(0, MAX_RECENT);
+      persistRecentSearches(deduped);
+      return deduped;
+    });
+  };
+
+  const removeRecentSearch = (term: string) => {
+    setRecentSearches(prev => {
+      const next = prev.filter(s => s !== term);
+      persistRecentSearches(next);
+      return next;
+    });
+  };
+
+  const clearRecentSearches = () => {
+    persistRecentSearches([]);
+    setRecentSearches([]);
+  };
   const [lootboxOpen, setLootboxOpen] = useState(false);
   const [levelTrackerOpen, setLevelTrackerOpen] = useState(false);
   const { openModal } = useAuthModal();
@@ -140,9 +177,9 @@ const Header = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
+      saveRecentSearch(searchQuery.trim());
       const isHashtag = searchQuery.startsWith('#');
       if (isHashtag) {
-        // For hashtag searches, route to dedicated hashtag page
         setLocation(`/hashtag/${encodeURIComponent(searchQuery.slice(1))}`);
       } else {
         setLocation(`/explore?q=${encodeURIComponent(searchQuery)}`);
@@ -156,10 +193,11 @@ const Header = () => {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
-    setShowDropdown(value.length >= 2);
+    setShowDropdown(value.length >= 2 || (value.length === 0 && recentSearches.length > 0));
   };
 
   const handleUserSelect = (username: string) => {
+    saveRecentSearch(searchQuery.trim() || username);
     setLocation(`/profile/${username}`);
     setShowDropdown(false);
     setShowMobileSearch(false);
@@ -167,7 +205,7 @@ const Header = () => {
   };
 
   const handleGameSelect = (gameId: number, gameName: string) => {
-    // Create a URL-safe slug from the game name to match explore page behavior
+    saveRecentSearch(searchQuery.trim() || gameName);
     const gameSlug = gameName
       .toLowerCase()
       .replace(/[^a-z0-9\s]/g, '')
@@ -239,7 +277,7 @@ const Header = () => {
               className="w-full py-2 pl-10 pr-12 rounded-full bg-secondary text-foreground text-sm"
               value={searchQuery}
               onChange={handleSearchChange}
-              onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
+              onFocus={() => setShowDropdown(searchQuery.length >= 2 || recentSearches.length > 0)}
             />
             <Button
               type="submit"
@@ -252,9 +290,48 @@ const Header = () => {
           </form>
 
           {/* Search Dropdown */}
-          {showDropdown && (searchQuery.startsWith('#') || (userResults && userResults.length > 0) || (gameResults && gameResults.length > 0)) && (
+          {showDropdown && (recentSearches.length > 0 || searchQuery.startsWith('#') || (userResults && userResults.length > 0) || (gameResults && gameResults.length > 0)) && (
             <div className="absolute top-full mt-2 w-full bg-card border border-border rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
               <div className="p-2">
+                {/* Recent Searches — shown when input is empty */}
+                {searchQuery.length === 0 && recentSearches.length > 0 && (
+                  <>
+                    <div className="flex items-center justify-between px-3 py-2">
+                      <span className="text-xs text-muted-foreground font-medium">Recent searches</span>
+                      <button
+                        onClick={clearRecentSearches}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Clear all
+                      </button>
+                    </div>
+                    {recentSearches.map((term) => (
+                      <div key={term} className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-secondary transition-colors group">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                        <button
+                          className="flex-1 text-sm text-foreground text-left truncate"
+                          onClick={() => {
+                            setSearchQuery(term);
+                            setDebouncedQuery(term);
+                            setShowDropdown(true);
+                          }}
+                        >
+                          {term}
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeRecentSearch(term); }}
+                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-opacity"
+                        >
+                          <XIcon className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    {(searchQuery.startsWith('#') || (userResults && userResults.length > 0) || (gameResults && gameResults.length > 0)) && (
+                      <div className="border-t border-border my-2" />
+                    )}
+                  </>
+                )}
+
                 {/* Hashtag Section */}
                 {searchQuery.startsWith('#') && searchQuery.length > 1 && (
                   <>
@@ -620,7 +697,7 @@ const Header = () => {
                   }}
                   value={searchQuery}
                   onChange={handleSearchChange}
-                  onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
+                  onFocus={() => setShowDropdown(searchQuery.length >= 2 || recentSearches.length > 0)}
                   autoFocus
                   inputMode="search"
                   data-testid="mobile-search-input"
@@ -643,9 +720,48 @@ const Header = () => {
               </form>
 
               {/* Mobile Search Dropdown */}
-              {showDropdown && (searchQuery.startsWith('#') || (userResults && userResults.length > 0) || (gameResults && gameResults.length > 0)) && (
+              {showDropdown && (recentSearches.length > 0 || searchQuery.startsWith('#') || (userResults && userResults.length > 0) || (gameResults && gameResults.length > 0)) && (
                 <div className="absolute top-full mt-2 w-full bg-card border border-border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto left-0 right-0">
                   <div className="p-2">
+                    {/* Recent Searches — shown when input is empty */}
+                    {searchQuery.length === 0 && recentSearches.length > 0 && (
+                      <>
+                        <div className="flex items-center justify-between px-3 py-2">
+                          <span className="text-xs text-muted-foreground font-medium">Recent searches</span>
+                          <button
+                            onClick={clearRecentSearches}
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            Clear all
+                          </button>
+                        </div>
+                        {recentSearches.map((term) => (
+                          <div key={term} className="flex items-center gap-2 px-3 py-2.5 rounded-md active:bg-secondary transition-colors">
+                            <Clock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                            <button
+                              className="flex-1 text-sm text-foreground text-left truncate touch-manipulation"
+                              onClick={() => {
+                                setSearchQuery(term);
+                                setDebouncedQuery(term);
+                                setShowDropdown(true);
+                              }}
+                            >
+                              {term}
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); removeRecentSearch(term); }}
+                              className="text-muted-foreground p-1 touch-manipulation"
+                            >
+                              <XIcon className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                        {(searchQuery.startsWith('#') || (userResults && userResults.length > 0) || (gameResults && gameResults.length > 0)) && (
+                          <div className="border-t border-border my-2" />
+                        )}
+                      </>
+                    )}
+
                     {/* Hashtag Section */}
                     {searchQuery.startsWith('#') && searchQuery.length > 1 && (
                       <>
