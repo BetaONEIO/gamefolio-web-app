@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { ArrowLeft, Heart, MessageCircle, User, Play, Pause, Flag, BarChart2, Gamepad2, Music, X, Send, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, User, Play, Pause, Flag, BarChart2, Gamepad2, X, Send, MoreHorizontal } from "lucide-react";
 import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
@@ -527,12 +527,9 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               </div>
             )}
 
-            <div className="flex items-center gap-1">
-              <Music className="h-2.5 w-2.5 text-white/60 flex-shrink-0" />
-              <span className="text-white/60 text-[11px] truncate">
-                {currentItem.user.displayName || currentItem.user.username}
-              </span>
-            </div>
+            <span className="text-white/60 text-[11px] truncate">
+              {currentItem.user.displayName || currentItem.user.username}
+            </span>
           </div>
         </div>
       )}
