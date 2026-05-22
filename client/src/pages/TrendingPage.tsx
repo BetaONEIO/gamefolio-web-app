@@ -982,11 +982,11 @@ const DesktopShortsViewer: React.FC<{
                   onClick={() => { setShowContentDropdown(false); setShowTimeDropdown(false); setControlsVisible(v => !v); }}
                   className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
                   style={{
-                    border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(183,255,26,0.4)'}`,
+                    border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.5)'}`,
                     background: controlsVisible ? 'rgba(183,255,26,0.12)' : 'rgba(30,41,59,0.5)',
                   }}
                 >
-                  <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(183,255,26,0.6)' }} />
+                  <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.7)' }} />
                 </button>
 
                 {/* Horizontal flyout — expands to the RIGHT of Eye when open */}
@@ -1836,12 +1836,12 @@ const TrendingPage: React.FC = () => {
             }}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0"
             style={{
-              border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(183, 255, 26,0.35)'}`,
+              border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.5)'}`,
               background: 'rgba(30,41,59,0.7)',
               order: orderEye,
             }}
           >
-            <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(183, 255, 26,0.5)' }} />
+            <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.7)' }} />
           </button>
 
           {/* 2. Content-type pill (Clips ▼) */}
