@@ -47,6 +47,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Progress } from "@/components/ui/progress";
 import { DualRangeSlider } from "@/components/ui/slider";
 import SimpleVideoPlayer from "@/components/shared/SimpleVideoPlayer";
+import ImageCropModal from "@/components/shared/ImageCropModal";
 import { ShareDialog } from "@/components/shared/ShareDialog";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { XPGainedDialog } from "@/components/gamification/XPGainedDialog";
@@ -153,6 +154,7 @@ const UploadPage = () => {
   // Screenshot-specific state - supports multiple screenshots
   const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
   const [screenshotPreviews, setScreenshotPreviews] = useState<string[]>([]);
+  const [screenshotCropQueue, setScreenshotCropQueue] = useState<File[]>([]);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
   const [cropPosition, setCropPosition] = useState({ x: 0, y: 0 });
   const [cropSize, setCropSize] = useState({ width: 100, height: 100 });
@@ -447,13 +449,9 @@ const UploadPage = () => {
       }
     }
     
-    // Add files and create previews synchronously to keep them in sync
-    const newFiles = [...screenshotFiles, ...files];
-    const newPreviews = [...screenshotPreviews, ...files.map(file => URL.createObjectURL(file))];
-    
-    setScreenshotFiles(newFiles);
-    setScreenshotPreviews(newPreviews);
-    
+    // Queue files for crop modal instead of adding directly
+    setScreenshotCropQueue(prev => [...prev, ...files]);
+
     // Clear the input so the same file can be selected again if needed
     e.target.value = '';
   };
@@ -2345,6 +2343,22 @@ const UploadPage = () => {
           // Clear success data
           setUploadSuccessData(null);
         }}
+      />
+
+      <ImageCropModal
+        file={screenshotCropQueue[0] ?? null}
+        onConfirm={(croppedFile) => {
+          setScreenshotFiles(prev => [...prev, croppedFile]);
+          setScreenshotPreviews(prev => [...prev, URL.createObjectURL(croppedFile)]);
+          setScreenshotCropQueue(q => q.slice(1));
+        }}
+        onSkip={() => {
+          const file = screenshotCropQueue[0];
+          setScreenshotFiles(prev => [...prev, file]);
+          setScreenshotPreviews(prev => [...prev, URL.createObjectURL(file)]);
+          setScreenshotCropQueue(q => q.slice(1));
+        }}
+        onCancel={() => setScreenshotCropQueue([])}
       />
     </div>
   );
