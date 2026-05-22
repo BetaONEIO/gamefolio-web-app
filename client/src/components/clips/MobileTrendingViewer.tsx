@@ -501,7 +501,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               return needsExpand || desc ? (
                 <div className="mb-1">
                   {desc ? (
-                    <p className={`text-white/75 text-[11px] drop-shadow leading-snug ${showFullDescription ? '' : 'line-clamp-2'}`}>
+                    <p className={`text-white/75 text-[11px] drop-shadow leading-snug pr-6 ${showFullDescription ? '' : 'line-clamp-2'}`}>
                       {desc}
                     </p>
                   ) : null}
@@ -527,9 +527,6 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               </div>
             )}
 
-            <span className="text-white/60 text-[11px] truncate">
-              {currentItem.user.displayName || currentItem.user.username}
-            </span>
           </div>
         </div>
       )}
