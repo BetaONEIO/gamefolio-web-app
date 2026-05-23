@@ -76,7 +76,7 @@ export async function initMobileShell(): Promise<void> {
       await StatusBar.setBackgroundColor({ color: '#0B1218' });
     }
     if (isIOS) {
-      await StatusBar.setOverlaysWebView({ overlay: false });
+      await StatusBar.setOverlaysWebView({ overlay: true });
     }
   } catch (err) {
     console.warn('StatusBar init failed:', err);
