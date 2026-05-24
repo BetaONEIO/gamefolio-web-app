@@ -45,6 +45,7 @@ import { Button } from "@/components/ui/button";
 // Lazy-loaded page components for better performance
 import React, { Suspense } from 'react';
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { SplashScreen } from "@/components/SplashScreen";
 import { DiscordCallback } from "./components/auth/DiscordCallback";
 import { XboxCallback } from "./components/auth/XboxCallback";
 import { App as CapacitorApp } from "@capacitor/app";
@@ -490,37 +491,22 @@ function WelcomePackComponents() {
 }
 
 function App() {
+  const [splashDone, setSplashDone] = React.useState(false);
+
   return (
-    <ErrorBoundary level="app">
-      <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <DailyStreakProvider>
-            <AuthProvider>
-              <RevenueCatProvider>
-                <LevelTrackerProvider>
-                  <WelcomePackProvider>
-                    {sequenceConfig ? (
-                    <SequenceConnect config={sequenceConfig}>
-                      <WalletProvider>
-                        <CrossmintProvider>
-                          <AuthModalProvider>
-                            <ClipDialogProvider>
-                              <MainLayout>
-                                <ErrorBoundary level="feature">
-                                  <Router />
-                                </ErrorBoundary>
-                              </MainLayout>
-                              <DailyXpBonus />
-                              <DailyStreakOverlay />
-                            </ClipDialogProvider>
-                            <Toaster />
-                          </AuthModalProvider>
-                        </CrossmintProvider>
-                      </WalletProvider>
-                    </SequenceConnect>
-                    ) : (
-                      <WagmiProvider config={fallbackWagmiConfig}>
+    <>
+      {!splashDone && <SplashScreen onDone={() => setSplashDone(true)} />}
+      <ErrorBoundary level="app">
+        <ThemeProvider>
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+              <DailyStreakProvider>
+              <AuthProvider>
+                <RevenueCatProvider>
+                  <LevelTrackerProvider>
+                    <WelcomePackProvider>
+                      {sequenceConfig ? (
+                      <SequenceConnect config={sequenceConfig}>
                         <WalletProvider>
                           <CrossmintProvider>
                             <AuthModalProvider>
@@ -537,17 +523,37 @@ function App() {
                             </AuthModalProvider>
                           </CrossmintProvider>
                         </WalletProvider>
-                      </WagmiProvider>
-                    )}
-                  </WelcomePackProvider>
-                </LevelTrackerProvider>
-              </RevenueCatProvider>
-            </AuthProvider>
-            </DailyStreakProvider>
-          </TooltipProvider>
-        </QueryClientProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
+                      </SequenceConnect>
+                      ) : (
+                        <WagmiProvider config={fallbackWagmiConfig}>
+                          <WalletProvider>
+                            <CrossmintProvider>
+                              <AuthModalProvider>
+                                <ClipDialogProvider>
+                                  <MainLayout>
+                                    <ErrorBoundary level="feature">
+                                      <Router />
+                                    </ErrorBoundary>
+                                  </MainLayout>
+                                  <DailyXpBonus />
+                                  <DailyStreakOverlay />
+                                </ClipDialogProvider>
+                                <Toaster />
+                              </AuthModalProvider>
+                            </CrossmintProvider>
+                          </WalletProvider>
+                        </WagmiProvider>
+                      )}
+                    </WelcomePackProvider>
+                  </LevelTrackerProvider>
+                </RevenueCatProvider>
+              </AuthProvider>
+              </DailyStreakProvider>
+            </TooltipProvider>
+          </QueryClientProvider>
+        </ThemeProvider>
+      </ErrorBoundary>
+    </>
   );
 }
 

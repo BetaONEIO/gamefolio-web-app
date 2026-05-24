@@ -928,3 +928,23 @@ h1, h2, h3 {
   30%, 52%  { transform: translate(2px, 2px); }
   68%, 100% { transform: translate(0px, 0px); }
 }
+
+@keyframes gf-splash-logo-in {
+  from { opacity: 0; transform: scale(0.82); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes gf-splash-glow-pulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.12); }
+}
+
+@keyframes gf-splash-dot {
+  0%, 100% { opacity: 0.25; transform: scale(0.75); }
+  50%       { opacity: 1;    transform: scale(1.15); }
+}
+
+@keyframes gf-splash-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; pointer-events: none; }
+}
