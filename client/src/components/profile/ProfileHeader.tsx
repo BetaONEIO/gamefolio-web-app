@@ -23,6 +23,7 @@ import {
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
+import { PartnerBadge } from "@/components/ui/partner-badge";
 import {
   Tooltip,
   TooltipContent,
@@ -421,6 +422,8 @@ const ProfileHeader = ({
                     ? profile.displayName.slice(0, 12) + "…"
                     : profile.displayName}
                 </h1>
+
+                <PartnerBadge isPartner={(profile as any).isPartner} size="md" />
 
                 {nameTagData?.nameTag && signedNameTagUrl && (
                   <TooltipProvider>

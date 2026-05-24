@@ -868,6 +868,7 @@ export default function SettingsPage() {
   // Theme preview dialog state
   const [themePreviewData, setThemePreviewData] = useState<typeof PRESET_THEMES[0] | null>(null);
   const [showProUpgradeDialog, setShowProUpgradeDialog] = useState(false);
+  const [showPartnerDialog, setShowPartnerDialog] = useState(false);
 
   // Font preview dialog state
   const [fontPreviewOpen, setFontPreviewOpen] = useState(false);
@@ -4137,6 +4138,38 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
 
+                {/* Streamer Partner upsell / status */}
+                {user?.isPartner ? (
+                  <div className="rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
+                      <Crown className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-primary">You're a Streamer Partner</div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        All Pro perks, your stream on your profile, plus a Gamefolio showcase.
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-transparent px-4 py-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
+                        <Crown className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-slate-100">Become a Streamer Partner</div>
+                        <div className="text-xs text-slate-400 mt-0.5">
+                          Everything in Pro, plus your live stream featured on your profile and across Gamefolio.
+                        </div>
+                        <Button size="sm" className="mt-3" onClick={() => setShowPartnerDialog(true)}>
+                          {user?.isPro ? "Upgrade to Partner" : "Become a Streamer Partner"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Is Streamer Toggle */}
                 <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
                   <div>
@@ -5293,6 +5326,14 @@ export default function SettingsPage() {
         open={showProUpgradeDialog}
         onOpenChange={setShowProUpgradeDialog}
         subtitle="Unlock premium themes and elevate your gaming profile"
+      />
+
+      {/* Streamer Partner Upgrade Dialog */}
+      <ProUpgradeDialog
+        open={showPartnerDialog}
+        onOpenChange={setShowPartnerDialog}
+        tier="partner"
+        subtitle="Feature your live stream on your profile and across Gamefolio"
       />
 
     </KeyboardAvoidingWrapper>

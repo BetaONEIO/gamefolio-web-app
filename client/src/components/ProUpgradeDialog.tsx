@@ -18,11 +18,15 @@ import { isNative } from "@/lib/platform";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 import ProOnboardingScreen from "@/components/pro/ProOnboardingScreen";
 
+type SubscriptionTier = "pro" | "partner";
+
 interface ProUpgradeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   subtitle?: string;
   onAuthRequired?: () => void;
+  /** Which tier this dialog sells. Defaults to "pro". */
+  tier?: SubscriptionTier;
 }
 
 const premiumBenefits = [
@@ -77,6 +81,31 @@ const premiumBenefits = [
   },
 ];
 
+// Streamer Partner includes every Pro perk, plus stream-on-profile + showcase.
+const partnerExtras = [
+  {
+    title: "Stream on your profile",
+    description: "Showcase your live Twitch, Kick or Rumble stream to fans",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="4" width="20" height="14" rx="2" stroke="#B7FF1A" strokeWidth="1.5"/>
+        <path d="M8 21H16M12 18V21" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M10.5 8.5L14 11L10.5 13.5V8.5Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    title: "Featured across Gamefolio",
+    description: "Get your stream spotlighted on Gamefolio pages",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 3L14.09 8.26L20 9.27L15.5 13.14L16.82 19L12 15.77L7.18 19L8.5 13.14L4 9.27L9.91 8.26L12 3Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+];
+const partnerBenefits = [...partnerExtras, ...premiumBenefits];
+
 
 function isYearlyPackage(pkg: Package): boolean {
   const id = pkg.identifier.toLowerCase();
@@ -115,11 +144,13 @@ interface CheckoutFormProps {
   priceFormatted: string;
   periodLabel: string;
   paymentIntentId: string;
+  confirmEndpoint: string;
+  tierName: string;
   onBack: () => void;
   onSuccess: (lootboxReward: LootboxReward | null) => void;
 }
 
-function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentIntentId, onBack, onSuccess }: CheckoutFormProps) {
+function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentIntentId, confirmEndpoint, tierName, onBack, onSuccess }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
@@ -154,7 +185,7 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentInt
       if (result.paymentIntent?.status === "succeeded") {
         let lootboxReward: LootboxReward | null = null;
         try {
-          const confirmRes = await apiRequest("POST", "/api/stripe/confirm-pro-subscription", { paymentIntentId, plan });
+          const confirmRes = await apiRequest("POST", confirmEndpoint, { paymentIntentId, plan });
           const confirmData = await confirmRes.json();
           lootboxReward = confirmData.lootboxReward || null;
         } catch {
@@ -192,7 +223,7 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentInt
         <div className="max-w-[382px] mx-auto flex flex-col gap-8">
           <div className="bg-[#0B121866] backdrop-blur-[12px] border border-[#1B2A3380] rounded-2xl p-6">
             <p className="text-[#F5F7F2] text-lg font-bold leading-7">
-              Subscribe to {planLabel} Pro Subscription
+              Subscribe to {planLabel} {tierName}
             </p>
             <div className="flex items-end gap-2 mt-2">
               <span className="text-[#F5F7F2] text-[30px] font-black leading-9">{priceFormatted}</span>
@@ -239,9 +270,19 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentInt
   );
 }
 
-export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthRequired }: ProUpgradeDialogProps) {
-  const { isInitialized, isLoading, isPro, getCurrentOffering, purchasePackage } = useRevenueCat();
+export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthRequired, tier = "pro" }: ProUpgradeDialogProps) {
+  const { isInitialized, isLoading, isPro, isPartner, getCurrentOffering, getPartnerOffering, purchasePackage } = useRevenueCat();
   const { user } = useAuth();
+  const isPartnerTier = tier === "partner";
+  const tierName = isPartnerTier ? "Streamer Partner" : "Gamefolio Pro";
+  const ownsThisTier = isPartnerTier ? isPartner : isPro;
+  const benefits = isPartnerTier ? partnerBenefits : premiumBenefits;
+  const createEndpoint = isPartnerTier ? "/api/stripe/create-partner-subscription" : "/api/stripe/create-pro-subscription";
+  const confirmEndpoint = isPartnerTier ? "/api/stripe/confirm-partner-subscription" : "/api/stripe/confirm-pro-subscription";
+  const ctaLabel = isPartnerTier ? "Become a Streamer Partner" : "Join Gamefolio Pro";
+  const tagline = isPartnerTier
+    ? "Go pro and put your live stream front and centre across Gamefolio"
+    : "Elevate your gaming identity with premium features designed for elite creators";
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
   const [purchasing, setPurchasing] = useState(false);
   const [step, setStep] = useState<"plans" | "checkout" | "success">("plans");
@@ -258,7 +299,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     }
   }, [step, open]);
 
-  const packages = getCurrentOffering();
+  const packages = isPartnerTier ? getPartnerOffering() : getCurrentOffering();
 
   const { monthlyPkg, yearlyPkg } = useMemo(() => {
     if (!packages) return { monthlyPkg: null, yearlyPkg: null };
@@ -354,7 +395,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     setPurchaseInProgress(true);
     try {
       await loadStripeInstance();
-      const res = await apiRequest("POST", "/api/stripe/create-pro-subscription", { plan: billingPeriod });
+      const res = await apiRequest("POST", createEndpoint, { plan: billingPeriod });
       const data = await res.json();
       setCheckoutClientSecret(data.clientSecret);
       setCheckoutPaymentIntentId(data.paymentIntentId);
@@ -370,7 +411,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   const checkoutPriceFormatted = selectedPackage ? formatPrice(selectedPackage) : "";
   const checkoutPeriodLabel = billingPeriod === "yearly" ? "per year" : "per month";
 
-  if (isPro && step !== "success" && !purchaseInProgress) {
+  if (ownsThisTier && step !== "success" && !purchaseInProgress) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-[430px] w-full bg-[#0B1218] border-none p-0 overflow-hidden [&>button]:hidden">
@@ -378,9 +419,13 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#B7FF1A] to-[#6FA800] mb-6">
               <Crown className="w-10 h-10 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">You're already Pro!</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">
+              {isPartnerTier ? "You're a Streamer Partner!" : "You're already Pro!"}
+            </h2>
             <p className="text-[#B8C0AE] mb-6">
-              You have full access to all Gamefolio Pro features. Thank you for your support!
+              {isPartnerTier
+                ? "You have full access to all Streamer Partner features. Thank you for your support!"
+                : "You have full access to all Gamefolio Pro features. Thank you for your support!"}
             </p>
             <button
               onClick={() => onOpenChange(false)}
@@ -531,12 +576,12 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         <div className="text-center md:text-left mb-1">
           <h2 className="text-xl font-bold leading-tight whitespace-nowrap">
             <span className="text-white">Unlock </span>
-            <span className="text-[#B7FF1A]">Gamefolio Pro</span>
+            <span className="text-[#B7FF1A]">{tierName}</span>
           </h2>
         </div>
 
         <p className="text-[#B8C0AE] text-sm text-center md:text-left leading-relaxed hidden md:block max-w-[280px]">
-          {subtitle || "Elevate your gaming identity with premium features designed for elite creators"}
+          {subtitle || tagline}
         </p>
       </div>
     </div>
@@ -545,7 +590,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   const rightPanel = (
     <div className="flex flex-col justify-between h-full px-5 py-5 bg-[#0B1218]">
       <div className="grid grid-cols-2 gap-x-4 gap-y-3 mb-4">
-        {premiumBenefits.map((benefit, index) => (
+        {benefits.map((benefit, index) => (
           <motion.div
             key={benefit.title}
             initial={{ opacity: 0, x: -20 }}
@@ -588,7 +633,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
             <Loader2 className="w-5 h-5 animate-spin text-[#071013]" />
           ) : (
             <>
-              <span className="text-[#071013] text-base font-bold">Join Gamefolio Pro</span>
+              <span className="text-[#071013] text-base font-bold">{ctaLabel}</span>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="#022C22" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -669,6 +714,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         priceFormatted={checkoutPriceFormatted}
         periodLabel={checkoutPeriodLabel}
         paymentIntentId={checkoutPaymentIntentId}
+        confirmEndpoint={confirmEndpoint}
+        tierName={tierName}
         onBack={() => setStep("plans")}
         onSuccess={(lootboxReward) => { setProLootboxReward(lootboxReward); setStep("success"); }}
       />
@@ -729,15 +776,15 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
                   <h2 className="text-center text-xl font-bold leading-tight mb-0.5">
                     <span className="text-white">Unlock </span>
-                    <span className="text-[#B7FF1A]">Gamefolio Pro</span>
+                    <span className="text-[#B7FF1A]">{tierName}</span>
                   </h2>
 
                   <p className="text-[#B8C0AE] text-xs text-center leading-relaxed mb-3 max-w-[260px] mx-auto">
-                    Elevate your gaming identity with premium features
+                    {subtitle || tagline}
                   </p>
 
                   <div className="flex flex-col gap-3 mb-4 pt-1">
-                    {premiumBenefits.map((benefit, index) => (
+                    {benefits.map((benefit, index) => (
                       <motion.div
                         key={benefit.title}
                         initial={{ opacity: 0, x: -10 }}
@@ -779,7 +826,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                       <Loader2 className="w-5 h-5 animate-spin text-[#071013]" />
                     ) : (
                       <>
-                        <span className="text-[#071013] text-base font-bold">Join Gamefolio Pro</span>
+                        <span className="text-[#071013] text-base font-bold">{ctaLabel}</span>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="#022C22" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
