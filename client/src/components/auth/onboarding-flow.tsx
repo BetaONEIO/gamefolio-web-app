@@ -480,8 +480,8 @@ export default function OnboardingFlow({
 
   // Check username availability
   const checkUsernameAvailability = async (username: string) => {
-    if (!username || username.length < 3) {
-      setUsernameError("Username must be at least 3 characters long");
+    if (!username || username.length < 4) {
+      setUsernameError("Username must be at least 4 characters long");
       return false;
     }
 
@@ -901,7 +901,7 @@ export default function OnboardingFlow({
               </Button>
               <Button
                 onClick={goToNextStep}
-                disabled={!formUsername || formUsername.length < 3 || isCheckingUsername || !!usernameError}
+                disabled={!formUsername || formUsername.length < 4 || isCheckingUsername || !!usernameError}
                 className="flex-1 bg-primary hover:bg-primary/90 text-white"
               >
                 {isCheckingUsername ? (

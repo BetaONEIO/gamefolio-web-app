@@ -895,8 +895,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check username format
-      if (username.length < 3) {
-        return res.status(400).json({ message: "Username must be at least 3 characters long" });
+      if (username.length < 4) {
+        return res.status(400).json({ message: "Username must be at least 4 characters long" });
       }
 
       if (!/^[a-zA-Z0-9_]+$/.test(username)) {
@@ -5012,8 +5012,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { username } = req.params;
 
-      if (!username || username.length < 3) {
-        return res.status(400).json({ available: false, message: "Username must be at least 3 characters" });
+      if (!username || username.length < 4) {
+        return res.status(400).json({ available: false, message: "Username must be at least 4 characters" });
       }
 
       const existingUser = await storage.getUserByUsername(username);
