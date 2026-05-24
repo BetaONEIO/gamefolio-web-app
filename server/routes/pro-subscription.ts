@@ -289,4 +289,232 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
   }
 });
 
+// ---------------------------------------------------------------------------
+// Streamer Partner (paid tier above Pro) — web/Stripe checkout.
+// Grants isPartner AND isPro (partner includes all Pro perks). Requires the
+// partner product/prices to exist in Stripe via STRIPE_PARTNER_MONTHLY_PRICE_ID
+// / STRIPE_PARTNER_YEARLY_PRICE_ID. Native (iOS/Android) purchases go through
+// RevenueCat ("Gamefolio Streamer Partner" offering), not these endpoints.
+// ---------------------------------------------------------------------------
+
+async function getPartnerPriceId(stripe: any, plan: 'monthly' | 'yearly'): Promise<string | null> {
+  const envPriceId = plan === 'monthly'
+    ? process.env.STRIPE_PARTNER_MONTHLY_PRICE_ID
+    : process.env.STRIPE_PARTNER_YEARLY_PRICE_ID;
+  if (!envPriceId) return null;
+  try {
+    await stripe.prices.retrieve(envPriceId);
+    return envPriceId;
+  } catch {
+    console.warn(`Configured partner price ID ${envPriceId} not found in connected Stripe account.`);
+    return null;
+  }
+}
+
+router.post('/api/stripe/create-partner-subscription', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { plan } = req.body;
+    if (!plan || !['monthly', 'yearly'].includes(plan)) {
+      return res.status(400).json({ error: 'Invalid plan. Must be "monthly" or "yearly".' });
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const stripe = await getUncachableStripeClient();
+
+    // Guard: block a new PaymentIntent if the user already has an active partner subscription
+    if (user.isPartner && user.stripeSubscriptionId) {
+      try {
+        const existing = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+        if (existing.status === 'active' || existing.status === 'trialing') {
+          console.warn(`⚠️ User ${userId} already has active subscription ${user.stripeSubscriptionId} — blocking new Partner PaymentIntent`);
+          return res.status(409).json({ error: 'You already have an active Streamer Partner subscription.' });
+        }
+      } catch {
+        // Subscription not found in Stripe — allow proceeding
+      }
+    }
+
+    const email = user.email;
+    if (!email) {
+      return res.status(400).json({ error: 'User must have an email address to subscribe' });
+    }
+
+    const priceId = await getPartnerPriceId(stripe, plan);
+    if (!priceId) {
+      return res.status(503).json({
+        error: 'Streamer Partner web checkout is not configured. Set STRIPE_PARTNER_MONTHLY_PRICE_ID / STRIPE_PARTNER_YEARLY_PRICE_ID.',
+      });
+    }
+
+    // Derive the charge amount straight from the Stripe price so web matches the configured product.
+    const price = await stripe.prices.retrieve(priceId);
+    const amount = price.unit_amount;
+    const currency = price.currency || 'gbp';
+    if (!amount) {
+      return res.status(500).json({ error: 'Configured partner price has no amount.' });
+    }
+
+    let customerId: string;
+    if (user.stripeCustomerId) {
+      customerId = user.stripeCustomerId;
+    } else {
+      const existingCustomers = await stripe.customers.list({ email, limit: 1 });
+      if (existingCustomers.data.length > 0) {
+        customerId = existingCustomers.data[0].id;
+      } else {
+        const newCustomer = await stripe.customers.create({
+          email,
+          metadata: { userId: String(userId) },
+        });
+        customerId = newCustomer.id;
+      }
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency,
+      customer: customerId,
+      setup_future_usage: 'off_session',
+      automatic_payment_methods: { enabled: true },
+      metadata: {
+        userId: String(userId),
+        plan,
+        priceId,
+        type: 'partner_subscription',
+      },
+    });
+
+    return res.json({
+      paymentIntentId: paymentIntent.id,
+      clientSecret: paymentIntent.client_secret,
+    });
+  } catch (error: any) {
+    console.error('Create partner subscription error:', error);
+    return res.status(500).json({
+      error: 'Failed to create partner subscription',
+      message: error.message,
+    });
+  }
+});
+
+router.post('/api/stripe/confirm-partner-subscription', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { paymentIntentId, plan } = req.body;
+    if (!paymentIntentId || !plan || !['monthly', 'yearly'].includes(plan)) {
+      return res.status(400).json({ error: 'Invalid request. Requires paymentIntentId and plan ("monthly" or "yearly").' });
+    }
+
+    const stripe = await getUncachableStripeClient();
+
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    if (paymentIntent.status !== 'succeeded') {
+      return res.status(400).json({ error: 'Payment has not been completed', status: paymentIntent.status });
+    }
+
+    if (paymentIntent.metadata.userId !== String(userId)) {
+      return res.status(403).json({ error: 'Payment does not belong to this user' });
+    }
+
+    // Idempotency: if a subscription is already linked to this PaymentIntent, don't duplicate.
+    const customerId = paymentIntent.customer as string;
+    const existingSubscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      status: 'active',
+      limit: 10,
+    });
+    const alreadyLinked = existingSubscriptions.data.find(
+      (s: any) => s.metadata?.paymentIntentId === paymentIntentId
+    );
+    if (alreadyLinked) {
+      console.log(`ℹ️ confirm-partner-subscription: found existing sub ${alreadyLinked.id} linked to PI ${paymentIntentId} — skipping duplicate`);
+      await db.update(users).set({
+        isPro: true,
+        isPartner: true,
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: alreadyLinked.id,
+        updatedAt: new Date(),
+      }).where(eq(users.id, userId));
+      return res.json({ success: true, isPro: true, isPartner: true, subscriptionId: alreadyLinked.id });
+    }
+
+    const paymentMethodId = paymentIntent.payment_method as string;
+    const priceId = paymentIntent.metadata.priceId;
+
+    await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId }).catch(() => {});
+    await stripe.customers.update(customerId, {
+      invoice_settings: { default_payment_method: paymentMethodId },
+    });
+
+    const subscription = await stripe.subscriptions.create({
+      customer: customerId,
+      items: [{ price: priceId }],
+      default_payment_method: paymentMethodId,
+      metadata: { userId: String(userId), plan, paymentIntentId, tier: 'partner' },
+    });
+
+    const activeStatuses = ['active', 'trialing'];
+    if (!activeStatuses.includes(subscription.status)) {
+      console.warn(`⚠️ Partner subscription ${subscription.id} created with non-active status: ${subscription.status} — not granting Partner to user ${userId}`);
+      return res.status(402).json({
+        error: 'Subscription is not active',
+        status: subscription.status,
+        message: 'Your payment did not complete successfully. Please try again.',
+      });
+    }
+
+    const wasNotPro = !(await db.select().from(users).where(eq(users.id, userId)))[0]?.isPro;
+
+    await db.update(users).set({
+      isPro: true,
+      isPartner: true,
+      proSubscriptionType: plan,
+      proSubscriptionStartDate: new Date(),
+      proSubscriptionEndDate: plan === 'yearly'
+        ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscription.id,
+      updatedAt: new Date(),
+    }).where(eq(users.id, userId));
+
+    // Partner inherits Pro perks, so grant the initial Pro lootbox on first upgrade.
+    let lootboxReward = null;
+    if (wasNotPro) {
+      try {
+        const initialGrant = await storage.grantProLootbox(userId, 'initial');
+        if (initialGrant) {
+          lootboxReward = { reward: initialGrant.reward, isDuplicate: initialGrant.isDuplicate };
+        }
+      } catch (lootboxErr) {
+        console.error('Failed to grant initial pro lootbox on partner confirm:', lootboxErr);
+      }
+    }
+
+    console.log(`✅ User ${userId} upgraded to Streamer Partner via Stripe (sub: ${subscription.id}, plan: ${plan})`);
+
+    return res.json({ success: true, isPro: true, isPartner: true, subscriptionId: subscription.id, lootboxReward });
+  } catch (error: any) {
+    console.error('Confirm partner subscription error:', error);
+    return res.status(500).json({
+      error: 'Failed to confirm partner subscription',
+      message: error.message,
+    });
+  }
+});
+
 export default router;
