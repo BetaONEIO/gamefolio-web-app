@@ -8,18 +8,24 @@ type RevenueCatContextType = {
   isInitialized: boolean;
   isLoading: boolean;
   isPro: boolean;
+  isPartner: boolean;
   customerInfo: CustomerInfo | null;
   offerings: Offerings | null;
   refreshCustomerInfo: () => Promise<void>;
   purchasePackage: (pkg: Package, containerElement?: HTMLElement) => Promise<boolean>;
   presentPaywall: (containerElement: HTMLElement) => Promise<boolean>;
   getCurrentOffering: () => Package[] | null;
+  getPartnerOffering: () => Package[] | null;
   currentOffering: Offering | null;
 };
 
 const RevenueCatContext = createContext<RevenueCatContextType | null>(null);
 
 const PRO_ENTITLEMENT_ID = "pro";
+// Streamer Partner: paid tier above Pro. Entitlement + its own offering
+// ("Gamefolio Streamer Partner", 2 packages). Partner implies Pro perks.
+const PARTNER_ENTITLEMENT_ID = "streamer_partner";
+const PARTNER_OFFERING_ID = "Gamefolio Streamer Partner";
 
 function getRevenueCatApiKey(): string | null {
   const apiKey = import.meta.env.VITE_REVENUECAT_API_KEY;
@@ -38,19 +44,23 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [offerings, setOfferings] = useState<Offerings | null>(null);
 
-  const isPro = customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined || user?.isPro === true;
+  const isPartner = customerInfo?.entitlements?.active?.[PARTNER_ENTITLEMENT_ID] !== undefined || user?.isPartner === true;
+  const isPro = customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined || user?.isPro === true || isPartner;
 
-  const syncProStatusWithBackend = useCallback(async (proStatus: boolean) => {
+  const syncSubscriptionWithBackend = useCallback(async (proStatus: boolean, partnerStatus?: boolean) => {
     try {
       await fetch("/api/subscription/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ isPro: proStatus }),
+        body: JSON.stringify({
+          isPro: proStatus,
+          ...(partnerStatus !== undefined ? { isPartner: partnerStatus } : {}),
+        }),
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     } catch (error) {
-      console.error("Failed to sync Pro status:", error);
+      console.error("Failed to sync subscription status:", error);
     }
   }, []);
 
@@ -90,8 +100,10 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
         setOfferings(offers);
         setIsInitialized(true);
 
-        if (info.entitlements?.active?.[PRO_ENTITLEMENT_ID] && !user.isPro) {
-          await syncProStatusWithBackend(true);
+        const hasPartner = info.entitlements?.active?.[PARTNER_ENTITLEMENT_ID] !== undefined;
+        const hasPro = info.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined || hasPartner;
+        if ((hasPro && !user.isPro) || (hasPartner && !user.isPartner)) {
+          await syncSubscriptionWithBackend(hasPro, hasPartner);
         }
       } catch (error) {
         console.error("Failed to initialize RevenueCat:", error);
@@ -100,7 +112,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     };
 
     initRevenueCat();
-  }, [user?.id, user?.isPro, syncProStatusWithBackend]);
+  }, [user?.id, user?.isPro, user?.isPartner, syncSubscriptionWithBackend]);
 
   const refreshCustomerInfo = useCallback(async () => {
     const purchases = purchasesRef.current;
@@ -111,16 +123,17 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       const info = await purchases.getCustomerInfo();
       setCustomerInfo(info);
 
-      const hasPro = info.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined;
-      if (hasPro !== user?.isPro) {
-        await syncProStatusWithBackend(hasPro);
+      const hasPartner = info.entitlements?.active?.[PARTNER_ENTITLEMENT_ID] !== undefined;
+      const hasPro = info.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined || hasPartner;
+      if (hasPro !== (user?.isPro ?? false) || hasPartner !== (user?.isPartner ?? false)) {
+        await syncSubscriptionWithBackend(hasPro, hasPartner);
       }
     } catch (error) {
       console.error("Failed to refresh customer info:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [user?.isPro, syncProStatusWithBackend]);
+  }, [user?.isPro, user?.isPartner, syncSubscriptionWithBackend]);
 
   const purchasePackage = useCallback(async (pkg: Package, containerElement?: HTMLElement): Promise<boolean> => {
     const purchases = purchasesRef.current;
@@ -142,12 +155,15 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       
       setCustomerInfo(result.customerInfo);
 
-      const hasPro = result.customerInfo.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined;
-      if (hasPro) {
-        await syncProStatusWithBackend(true);
+      const hasPartner = result.customerInfo.entitlements?.active?.[PARTNER_ENTITLEMENT_ID] !== undefined;
+      const hasPro = result.customerInfo.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined || hasPartner;
+      if (hasPro || hasPartner) {
+        await syncSubscriptionWithBackend(hasPro, hasPartner);
         toast({
-          title: "Welcome to Gamefolio Pro!",
-          description: "You now have access to all premium features.",
+          title: hasPartner ? "Welcome, Streamer Partner!" : "Welcome to Gamefolio Pro!",
+          description: hasPartner
+            ? "You now have all Pro perks plus Streamer Partner features."
+            : "You now have access to all premium features.",
           variant: "gamefolioSuccess",
         });
         return true;
@@ -168,11 +184,17 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.email, toast, syncProStatusWithBackend]);
+  }, [user?.email, toast, syncSubscriptionWithBackend]);
 
   const getCurrentOffering = useCallback((): Package[] | null => {
     if (!offerings?.current) return null;
     return offerings.current.availablePackages;
+  }, [offerings]);
+
+  // The Streamer Partner tier lives in its own (non-default) offering.
+  const getPartnerOffering = useCallback((): Package[] | null => {
+    const offering = offerings?.all?.[PARTNER_OFFERING_ID];
+    return offering?.availablePackages ?? null;
   }, [offerings]);
 
   const presentPaywall = useCallback(async (containerElement: HTMLElement): Promise<boolean> => {
@@ -195,12 +217,15 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       
       setCustomerInfo(result.customerInfo);
 
-      const hasPro = result.customerInfo.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined;
-      if (hasPro) {
-        await syncProStatusWithBackend(true);
+      const hasPartner = result.customerInfo.entitlements?.active?.[PARTNER_ENTITLEMENT_ID] !== undefined;
+      const hasPro = result.customerInfo.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined || hasPartner;
+      if (hasPro || hasPartner) {
+        await syncSubscriptionWithBackend(hasPro, hasPartner);
         toast({
-          title: "Welcome to Gamefolio Pro!",
-          description: "You now have access to all premium features.",
+          title: hasPartner ? "Welcome, Streamer Partner!" : "Welcome to Gamefolio Pro!",
+          description: hasPartner
+            ? "You now have all Pro perks plus Streamer Partner features."
+            : "You now have access to all premium features.",
           variant: "gamefolioSuccess",
         });
         return true;
@@ -221,7 +246,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [offerings, toast, syncProStatusWithBackend]);
+  }, [offerings, toast, syncSubscriptionWithBackend]);
 
   return (
     <RevenueCatContext.Provider
@@ -229,12 +254,14 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
         isInitialized,
         isLoading,
         isPro,
+        isPartner,
         customerInfo,
         offerings,
         refreshCustomerInfo,
         purchasePackage,
         presentPaywall,
         getCurrentOffering,
+        getPartnerOffering,
         currentOffering: offerings?.current || null,
       }}
     >

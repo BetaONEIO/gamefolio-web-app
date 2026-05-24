@@ -12742,28 +12742,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/subscription/sync", authMiddleware, async (req, res) => {
     try {
       const userId = (req.user as any).id;
-      const { isPro } = req.body;
+      const { isPro, isPartner } = req.body;
 
       if (typeof isPro !== "boolean") {
         return res.status(400).json({ message: "Invalid isPro value" });
       }
 
+      // Streamer Partner is a paid tier above Pro and includes all Pro perks,
+      // so an active partner entitlement forces isPro true as well.
+      const partnerFlag = typeof isPartner === "boolean" ? isPartner : undefined;
+      const effectiveIsPro = isPro || partnerFlag === true;
+
       // Get current user state to check if this is a new Pro subscription
       const currentUser = await storage.getUserById(userId);
       const wasNotPro = !currentUser?.isPro;
 
-      // Update user's Pro status in database
-      await db.update(users).set({ 
-        isPro,
+      // Update user's Pro (and, if provided, Partner) status in database
+      await db.update(users).set({
+        isPro: effectiveIsPro,
+        ...(partnerFlag !== undefined ? { isPartner: partnerFlag } : {}),
         updatedAt: new Date()
       }).where(eq(users.id, userId));
 
-      console.log(`✅ Updated Pro status for user ${userId}: ${isPro}`);
+      console.log(`✅ Updated subscription for user ${userId}: isPro=${effectiveIsPro}${partnerFlag !== undefined ? `, isPartner=${partnerFlag}` : ''}`);
 
       let lootboxReward = null;
 
       // If user is becoming Pro for the first time, grant initial lootbox
-      if (isPro && wasNotPro) {
+      if (effectiveIsPro && wasNotPro) {
         console.log(`🎁 User ${userId} just became Pro! Granting initial Pro lootbox...`);
         const initialGrant = await storage.grantProLootbox(userId, 'initial');
         if (initialGrant) {
@@ -12777,7 +12783,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Also check for monthly lootbox grant
-      if (isPro) {
+      if (effectiveIsPro) {
         const monthlyGrant = await storage.grantProLootbox(userId, 'monthly');
         if (monthlyGrant && !lootboxReward) {
           lootboxReward = {
@@ -12789,7 +12795,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      res.json({ success: true, isPro, lootboxReward });
+      res.json({ success: true, isPro: effectiveIsPro, isPartner: partnerFlag, lootboxReward });
     } catch (error) {
       console.error("Error syncing subscription:", error);
       res.status(500).json({ message: "Failed to sync subscription status" });

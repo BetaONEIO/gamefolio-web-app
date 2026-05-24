@@ -10,6 +10,10 @@ const router = Router();
 
 const REVENUECAT_API_BASE = 'https://api.revenuecat.com/v1';
 const PRO_ENTITLEMENT_ID = 'pro';
+// Streamer Partner is a paid tier above Pro (separate RevenueCat offering
+// "Gamefolio Streamer Partner"). An active partner entitlement implies Pro
+// perks too, so we set isPro alongside isPartner everywhere below.
+const PARTNER_ENTITLEMENT_ID = 'streamer_partner';
 
 async function fetchRevenueCatSubscriber(appUserId: string): Promise<any> {
   const apiKey = process.env.REVENUECAT_API_KEY;
@@ -80,17 +84,24 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
     }
 
     const subscriber = rcData.subscriber;
-    const entitlement = subscriber?.entitlements?.[PRO_ENTITLEMENT_ID];
+    const proEntitlement = subscriber?.entitlements?.[PRO_ENTITLEMENT_ID];
+    const partnerEntitlement = subscriber?.entitlements?.[PARTNER_ENTITLEMENT_ID];
 
-    if (!isEntitlementActive(entitlement)) {
-      return res.status(403).json({ error: 'No active Pro entitlement found' });
+    const hasPartner = isEntitlementActive(partnerEntitlement);
+    const hasPro = isEntitlementActive(proEntitlement) || hasPartner; // partner implies Pro perks
+
+    if (!hasPro) {
+      return res.status(403).json({ error: 'No active Pro or Streamer Partner entitlement found' });
     }
 
-    const plan = parsePlanFromEntitlement(entitlement);
-    const endDate = getEndDateFromEntitlement(entitlement);
+    // When the partner tier is active it drives the plan/end-date; otherwise Pro does.
+    const activeEntitlement = hasPartner ? partnerEntitlement : proEntitlement;
+    const plan = parsePlanFromEntitlement(activeEntitlement);
+    const endDate = getEndDateFromEntitlement(activeEntitlement);
 
     await db.update(users).set({
       isPro: true,
+      isPartner: hasPartner,
       proSubscriptionType: plan,
       proSubscriptionStartDate: user.proSubscriptionStartDate || new Date(),
       proSubscriptionEndDate: endDate,
@@ -119,9 +130,9 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
       }
     }
 
-    console.log(`[RevenueCat] User ${userId} activated Pro via RevenueCat (appUserId: ${appUserId}, plan: ${plan})`);
+    console.log(`[RevenueCat] User ${userId} activated ${hasPartner ? 'Streamer Partner' : 'Pro'} via RevenueCat (appUserId: ${appUserId}, plan: ${plan})`);
 
-    return res.json({ success: true, isPro: true, plan, endDate, lootboxReward });
+    return res.json({ success: true, isPro: true, isPartner: hasPartner, plan, endDate, lootboxReward });
   } catch (error: any) {
     console.error('[RevenueCat] activate error:', error);
     return res.status(500).json({ error: 'Failed to activate Pro', message: error.message });
@@ -147,6 +158,11 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
     const { type, app_user_id, expiration_at_ms, period_type } = event;
     console.log(`[RevenueCat Webhook] Received event type: ${type}, app_user_id: ${app_user_id}`);
 
+    // Which entitlement(s) this event affects. Older events may omit the array;
+    // treat that as a Pro-only event to preserve the original behavior.
+    const entitlementIds: string[] = event.entitlement_ids || (event.entitlement_id ? [event.entitlement_id] : []);
+    const affectsPartner = entitlementIds.includes(PARTNER_ENTITLEMENT_ID);
+
     if (!app_user_id) {
       return res.status(200).json({ received: true });
     }
@@ -166,6 +182,7 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
 
       await db.update(users).set({
         isPro: true,
+        ...(affectsPartner ? { isPartner: true } : {}),
         proSubscriptionType: plan,
         proSubscriptionStartDate: user.proSubscriptionStartDate || new Date(),
         proSubscriptionEndDate: endDate,
@@ -196,14 +213,16 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
         }
       }
 
-      console.log(`[RevenueCat Webhook] User ${user.id} Pro activated/renewed (type: ${type}, plan: ${plan}, until: ${endDate})`);
+      console.log(`[RevenueCat Webhook] User ${user.id} ${affectsPartner ? 'Streamer Partner' : 'Pro'} activated/renewed (type: ${type}, plan: ${plan}, until: ${endDate})`);
     } else if (deactivatingEvents.includes(type)) {
+      // A lapsed partner sub clears both partner + pro perks; a lapsed Pro sub clears Pro.
       await db.update(users).set({
         isPro: false,
+        ...(affectsPartner ? { isPartner: false } : {}),
         updatedAt: new Date(),
       }).where(eq(users.id, user.id));
 
-      console.log(`[RevenueCat Webhook] User ${user.id} Pro deactivated (type: ${type})`);
+      console.log(`[RevenueCat Webhook] User ${user.id} ${affectsPartner ? 'Streamer Partner' : 'Pro'} deactivated (type: ${type})`);
     } else {
       console.log(`[RevenueCat Webhook] Unhandled event type: ${type} — ignoring`);
     }
