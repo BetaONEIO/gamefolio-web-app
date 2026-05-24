@@ -297,18 +297,73 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
 // RevenueCat ("Gamefolio Streamer Partner" offering), not these endpoints.
 // ---------------------------------------------------------------------------
 
-async function getPartnerPriceId(stripe: any, plan: 'monthly' | 'yearly'): Promise<string | null> {
+const cachedPartnerPriceIds: { monthly: string | null; yearly: string | null } = {
+  monthly: null,
+  yearly: null,
+};
+
+// Streamer Partner pricing: £4.99/mo and £48.00/yr (≈ £4.00/mo billed annually).
+// Keep these in sync with the App Store / Play / RevenueCat Web Billing prices.
+const PARTNER_AMOUNTS = { monthly: 499, yearly: 4800 } as const;
+
+async function getOrCreatePartnerPriceId(stripe: any, plan: 'monthly' | 'yearly'): Promise<string> {
+  if (plan === 'monthly' && cachedPartnerPriceIds.monthly) return cachedPartnerPriceIds.monthly;
+  if (plan === 'yearly' && cachedPartnerPriceIds.yearly) return cachedPartnerPriceIds.yearly;
+
   const envPriceId = plan === 'monthly'
     ? process.env.STRIPE_PARTNER_MONTHLY_PRICE_ID
     : process.env.STRIPE_PARTNER_YEARLY_PRICE_ID;
-  if (!envPriceId) return null;
-  try {
-    await stripe.prices.retrieve(envPriceId);
-    return envPriceId;
-  } catch {
-    console.warn(`Configured partner price ID ${envPriceId} not found in connected Stripe account.`);
-    return null;
+
+  if (envPriceId) {
+    try {
+      await stripe.prices.retrieve(envPriceId);
+      if (plan === 'monthly') cachedPartnerPriceIds.monthly = envPriceId;
+      else cachedPartnerPriceIds.yearly = envPriceId;
+      return envPriceId;
+    } catch {
+      console.warn(`Configured partner price ID ${envPriceId} not found in connected Stripe account. Auto-provisioning...`);
+    }
   }
+
+  const existingProducts = await stripe.products.list({ limit: 100 });
+  let product = existingProducts.data.find((p: any) => p.name === 'Gamefolio Streamer Partner' && p.active);
+
+  if (!product) {
+    product = await stripe.products.create({
+      name: 'Gamefolio Streamer Partner',
+      description: 'Streamer Partner subscription for Gamefolio — every Pro perk plus stream-on-profile and showcase',
+      metadata: { app: 'gamefolio', tier: 'partner' },
+    });
+    console.log(`✅ Created Stripe product: ${product.id}`);
+  }
+
+  const existingPrices = await stripe.prices.list({ product: product.id, active: true, limit: 100 });
+
+  const targetAmount = plan === 'monthly' ? PARTNER_AMOUNTS.monthly : PARTNER_AMOUNTS.yearly;
+  const targetInterval = plan === 'monthly' ? 'month' : 'year';
+
+  let price = existingPrices.data.find((p: any) =>
+    p.unit_amount === targetAmount &&
+    p.currency === 'gbp' &&
+    p.recurring?.interval === targetInterval
+  );
+
+  if (!price) {
+    price = await stripe.prices.create({
+      product: product.id,
+      unit_amount: targetAmount,
+      currency: 'gbp',
+      recurring: { interval: targetInterval },
+      metadata: { plan, app: 'gamefolio', tier: 'partner' },
+    });
+    console.log(`✅ Created Stripe partner price for ${plan}: ${price.id} (£${targetAmount / 100}/${targetInterval})`);
+  }
+
+  if (plan === 'monthly') cachedPartnerPriceIds.monthly = price.id;
+  else cachedPartnerPriceIds.yearly = price.id;
+
+  console.log(`📌 Using Stripe partner price for ${plan}: ${price.id}`);
+  return price.id;
 }
 
 router.post('/api/stripe/create-partner-subscription', hybridAuth, async (req: Request, res: Response) => {
@@ -348,14 +403,9 @@ router.post('/api/stripe/create-partner-subscription', hybridAuth, async (req: R
       return res.status(400).json({ error: 'User must have an email address to subscribe' });
     }
 
-    const priceId = await getPartnerPriceId(stripe, plan);
-    if (!priceId) {
-      return res.status(503).json({
-        error: 'Streamer Partner web checkout is not configured. Set STRIPE_PARTNER_MONTHLY_PRICE_ID / STRIPE_PARTNER_YEARLY_PRICE_ID.',
-      });
-    }
+    const priceId = await getOrCreatePartnerPriceId(stripe, plan);
 
-    // Derive the charge amount straight from the Stripe price so web matches the configured product.
+    // Derive the charge amount straight from the Stripe price so web matches the product (env or auto-provisioned).
     const price = await stripe.prices.retrieve(priceId);
     const amount = price.unit_amount;
     const currency = price.currency || 'gbp';
