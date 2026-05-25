@@ -175,6 +175,7 @@ const UploadPage = () => {
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [videoPreviewError, setVideoPreviewError] = useState<string | null>(null);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [ageRestricted, setAgeRestricted] = useState(false);
@@ -358,6 +359,19 @@ const UploadPage = () => {
     fileInputRef.current?.click();
   };
 
+  // On Android, file.type is sometimes an empty string even for valid video files.
+  // Fall back to extension-based detection so those files aren't rejected.
+  const getEffectiveMimeType = (f: File): string => {
+    if (f.type) return f.type;
+    const ext = f.name.split('.').pop()?.toLowerCase() ?? '';
+    const extMap: Record<string, string> = {
+      mp4: 'video/mp4', m4v: 'video/mp4',
+      mov: 'video/quicktime',
+      webm: 'video/webm',
+    };
+    return extMap[ext] ?? '';
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log('=== FILE SELECTION EVENT ===');
     const selectedFile = e.target.files?.[0];
@@ -374,11 +388,13 @@ const UploadPage = () => {
     }
 
     setFileError(null);
+    setVideoPreviewError(null);
     
-    // Validate file type
+    // Validate file type — use extension fallback for Android where file.type can be empty
+    const effectiveMime = getEffectiveMimeType(selectedFile);
     const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
-    if (!allowedTypes.includes(selectedFile.type)) {
-      console.log('Invalid file type:', selectedFile.type);
+    if (!allowedTypes.includes(effectiveMime)) {
+      console.log('Invalid file type:', selectedFile.type, '(effective:', effectiveMime, ')');
       setFileError("Please upload a valid video file (MP4, WebM, or MOV)");
       return;
     }
@@ -1058,6 +1074,7 @@ const UploadPage = () => {
                                 setShowEditingTools(false);
                                 setGeneratedThumbnails([]);
                                 setThumbnailUrl("");
+                                setVideoPreviewError(null);
                                 if (fileInputRef.current) {
                                   fileInputRef.current.value = '';
                                 }
@@ -1134,10 +1151,10 @@ const UploadPage = () => {
                               onError={(e) => {
                                 console.error('Video preview error:', e);
                                 console.error('Video src:', videoSrc);
-                                console.error('File type:', file?.type);
+                                console.error('File type:', file?.type, '(effective:', file ? getEffectiveMimeType(file) : 'n/a', ')');
                                 console.error('Video readyState:', videoRef.current?.readyState);
                                 console.error('Video networkState:', videoRef.current?.networkState);
-                                setFileError("Failed to load video preview");
+                                setVideoPreviewError("Preview unavailable on this device — your video is still ready to upload.");
                               }}
                               onEnded={() => {
                                 console.log('Video preview ended');
@@ -1167,6 +1184,13 @@ const UploadPage = () => {
                             >
                               Your browser does not support the video tag.
                             </video>
+                            {videoPreviewError && (
+                              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-10 p-4 text-center">
+                                <AlertCircle className="h-8 w-8 text-amber-400 mb-2 shrink-0" />
+                                <p className="text-sm font-medium text-white mb-1">Preview unavailable</p>
+                                <p className="text-xs text-gray-300">{videoPreviewError}</p>
+                              </div>
+                            )}
                           </div>
                         </div>
 
