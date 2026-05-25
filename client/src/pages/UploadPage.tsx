@@ -213,6 +213,7 @@ const UploadPage = () => {
   const [isReelAspectMismatch, setIsReelAspectMismatch] = useState(false);
   const [videoAspectRatio, setVideoAspectRatio] = useState(0);
   const [isDraggingReel, setIsDraggingReel] = useState(false);
+  const [isReelPlaying, setIsReelPlaying] = useState(false);
   const reelDragStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
   const [isDraggingClip, setIsDraggingClip] = useState(false);
   const [isDraggingReelDrop, setIsDraggingReelDrop] = useState(false);
@@ -1505,20 +1506,14 @@ const UploadPage = () => {
                             >
                               <X className="h-4 w-4 text-white" />
                             </button>
-                            <video
-                              ref={videoRef}
-                              src={videoSrc}
-                              controls
-                              preload="auto"
-                              muted
-                              playsInline
-                              className="w-full h-full"
+                            {/* Transform wrapper — only the video scales, not the UI controls */}
+                            <div
                               style={{
-                                objectFit: 'contain',
+                                width: '100%',
+                                height: '100%',
                                 transform: isReelAspectMismatch ? `scale(${reelZoom}) translate(${reelPanX}%, ${reelPanY}%)` : 'none',
                                 transformOrigin: 'center center',
                                 cursor: isReelAspectMismatch && reelZoom > 1 ? (isDraggingReel ? 'grabbing' : 'grab') : 'default',
-                                userSelect: 'none',
                               }}
                               onMouseDown={(e) => {
                                 if (!isReelAspectMismatch || reelZoom <= 1) return;
@@ -1566,55 +1561,89 @@ const UploadPage = () => {
                                 setIsDraggingReel(false);
                                 reelDragStart.current = null;
                               }}
-                              onLoadedMetadata={() => {
-                                if (videoRef.current && videoDuration === 0) {
-                                  const duration = videoRef.current.duration;
-                                  setVideoDuration(duration);
-                                  setTrimEnd(duration);
-                                  setShowEditingTools(true);
-                                  
-                                  const aspectRatio = videoRef.current.videoWidth / videoRef.current.videoHeight;
-                                  const targetRatio = 9 / 16;
-                                  setVideoAspectRatio(aspectRatio);
-                                  
-                                  if (Math.abs(aspectRatio - targetRatio) > 0.1) {
-                                    setIsReelAspectMismatch(true);
-                                    setReelZoom(1);
-                                    setReelPanX(0);
-                                    setReelPanY(0);
-                                  } else {
-                                    setIsReelAspectMismatch(false);
+                            >
+                              <video
+                                ref={videoRef}
+                                src={videoSrc}
+                                preload="auto"
+                                muted
+                                playsInline
+                                className="w-full h-full"
+                                style={{
+                                  objectFit: 'contain',
+                                  userSelect: 'none',
+                                  pointerEvents: 'none',
+                                }}
+                                onLoadedMetadata={() => {
+                                  if (videoRef.current && videoDuration === 0) {
+                                    const duration = videoRef.current.duration;
+                                    setVideoDuration(duration);
+                                    setTrimEnd(duration);
+                                    setShowEditingTools(true);
+                                    
+                                    const aspectRatio = videoRef.current.videoWidth / videoRef.current.videoHeight;
+                                    const targetRatio = 9 / 16;
+                                    setVideoAspectRatio(aspectRatio);
+                                    
+                                    if (Math.abs(aspectRatio - targetRatio) > 0.1) {
+                                      setIsReelAspectMismatch(true);
+                                      setReelZoom(1);
+                                      setReelPanX(0);
+                                      setReelPanY(0);
+                                    } else {
+                                      setIsReelAspectMismatch(false);
+                                    }
+                                    
+                                    setTimeout(() => {
+                                      generateThumbnails();
+                                    }, 1000);
                                   }
-                                  
-                                  setTimeout(() => {
-                                    generateThumbnails();
-                                  }, 1000);
-                                }
-                              }}
-                              onTimeUpdate={() => {
-                                if (videoRef.current) {
-                                  const currentTime = videoRef.current.currentTime;
-                                  setCurrentTime(currentTime);
+                                }}
+                                onTimeUpdate={() => {
+                                  if (videoRef.current) {
+                                    const currentTime = videoRef.current.currentTime;
+                                    setCurrentTime(currentTime);
 
-                                  if (trimEnd > 0 && trimEnd < videoDuration) {
-                                    if (currentTime >= trimEnd) {
-                                      videoRef.current.pause();
+                                    if (trimEnd > 0 && trimEnd < videoDuration) {
+                                      if (currentTime >= trimEnd) {
+                                        videoRef.current.pause();
+                                        videoRef.current.currentTime = trimStart;
+                                      }
+                                    }
+                                    if (currentTime < trimStart - 0.1) {
                                       videoRef.current.currentTime = trimStart;
                                     }
                                   }
-                                  if (currentTime < trimStart - 0.1) {
-                                    videoRef.current.currentTime = trimStart;
+                                }}
+                                onPlay={() => {
+                                  setIsReelPlaying(true);
+                                  if (videoRef.current) {
+                                    if (videoRef.current.currentTime < trimStart || videoRef.current.currentTime >= trimEnd) {
+                                      videoRef.current.currentTime = trimStart;
+                                    }
                                   }
+                                }}
+                                onPause={() => setIsReelPlaying(false)}
+                              />
+                            </div>
+                            {/* Play/pause button — outside the transform wrapper so it stays fixed size */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!videoRef.current) return;
+                                if (videoRef.current.paused) {
+                                  void videoRef.current.play();
+                                } else {
+                                  videoRef.current.pause();
                                 }
                               }}
-                              onPlay={() => {
-                                if (videoRef.current) {
-                                  if (videoRef.current.currentTime < trimStart || videoRef.current.currentTime >= trimEnd) {
-                                    videoRef.current.currentTime = trimStart;
-                                  }
-                                }
-                              }}
-                            />
+                              className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 p-3 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                              title={isReelPlaying ? "Pause" : "Play"}
+                            >
+                              {isReelPlaying
+                                ? <Pause className="h-5 w-5 text-white" />
+                                : <Play className="h-5 w-5 text-white" />}
+                            </button>
                           </div>
                           
                           {/* Zoom/Crop controls for non-9:16 videos */}
