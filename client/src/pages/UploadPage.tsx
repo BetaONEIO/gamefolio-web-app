@@ -2093,7 +2093,7 @@ const UploadPage = () => {
                   ) : (
                     <div className="space-y-4">
                       {/* Screenshot Previews Grid */}
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {screenshotPreviews.map((preview, index) => (
                           <div key={index} className="relative group">
                             <div className="w-full rounded-lg border overflow-hidden bg-muted flex items-center justify-center">
@@ -2132,9 +2132,13 @@ const UploadPage = () => {
                             data-testid="button-add-another-screenshot"
                             asChild
                           >
-                            <span className="cursor-pointer flex items-center justify-center gap-2">
-                              <Upload className="h-5 w-5" />
-                              Add Another Screenshot ({3 - screenshotFiles.length} remaining)
+                            <span className="cursor-pointer flex items-center justify-center gap-2 text-center leading-tight">
+                              <Upload className="h-5 w-5 shrink-0" />
+                              <span>
+                                <span className="hidden sm:inline">Add Another Screenshot </span>
+                                <span className="sm:hidden">Add Screenshot </span>
+                                ({3 - screenshotFiles.length} remaining)
+                              </span>
                             </span>
                           </Button>
                         </label>
