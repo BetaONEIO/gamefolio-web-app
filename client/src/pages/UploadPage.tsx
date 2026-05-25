@@ -1215,33 +1215,31 @@ const UploadPage = () => {
 
                         {/* Format mismatch suggestion — portrait video uploaded as a clip */}
                         {formatSuggestion === 'switch-to-reel' && (
-                          <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
-                            <Info className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-amber-300 leading-snug">Vertical video detected</p>
-                              <p className="text-amber-200/80 mt-0.5 leading-snug">
-                                This looks like a 9:16 portrait video — it'll look and perform much better as a <strong>Reel</strong>. Want to switch?
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
+                          <Alert className="border-primary/40 bg-primary/10 relative pr-10">
+                            <Info className="h-4 w-4 text-primary" />
+                            <button
+                              type="button"
+                              onClick={() => setFormatSuggestion(null)}
+                              className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                              aria-label="Dismiss"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                            <AlertTitle className="text-primary">Vertical video detected</AlertTitle>
+                            <AlertDescription className="flex flex-col sm:flex-row sm:items-center gap-3 mt-1">
+                              <span className="flex-1 text-muted-foreground">
+                                This looks like a 9:16 portrait video — it'll look and perform much better uploaded as a <span className="text-foreground font-medium">Reel</span>.
+                              </span>
                               <Button
                                 type="button"
                                 size="sm"
-                                className="bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs h-8 px-3"
+                                className="shrink-0"
                                 onClick={() => { setContentType('reels'); setFormatSuggestion(null); }}
                               >
                                 Switch to Reels
                               </Button>
-                              <button
-                                type="button"
-                                onClick={() => setFormatSuggestion(null)}
-                                className="text-amber-400/60 hover:text-amber-300 transition-colors p-0.5"
-                                aria-label="Dismiss"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </div>
+                            </AlertDescription>
+                          </Alert>
                         )}
                         
                         {/* Video Trimmer */}
@@ -1715,33 +1713,31 @@ const UploadPage = () => {
                           
                           {/* Format mismatch suggestion — landscape video uploaded as a reel */}
                           {formatSuggestion === 'switch-to-clip' && (
-                            <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm mt-4">
-                              <Info className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-amber-300 leading-snug">Landscape video detected</p>
-                                <p className="text-amber-200/80 mt-0.5 leading-snug">
-                                  This looks like a 16:9 horizontal video — it'll look and perform much better as a <strong>Clip</strong>. Want to switch?
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
+                            <Alert className="border-primary/40 bg-primary/10 relative pr-10 mt-4">
+                              <Info className="h-4 w-4 text-primary" />
+                              <button
+                                type="button"
+                                onClick={() => setFormatSuggestion(null)}
+                                className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                                aria-label="Dismiss"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                              <AlertTitle className="text-primary">Landscape video detected</AlertTitle>
+                              <AlertDescription className="flex flex-col sm:flex-row sm:items-center gap-3 mt-1">
+                                <span className="flex-1 text-muted-foreground">
+                                  This looks like a 16:9 horizontal video — it'll look and perform much better uploaded as a <span className="text-foreground font-medium">Clip</span>.
+                                </span>
                                 <Button
                                   type="button"
                                   size="sm"
-                                  className="bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs h-8 px-3"
+                                  className="shrink-0"
                                   onClick={() => { setContentType('clips'); setFormatSuggestion(null); }}
                                 >
                                   Switch to Clips
                                 </Button>
-                                <button
-                                  type="button"
-                                  onClick={() => setFormatSuggestion(null)}
-                                  className="text-amber-400/60 hover:text-amber-300 transition-colors p-0.5"
-                                  aria-label="Dismiss"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </div>
+                              </AlertDescription>
+                            </Alert>
                           )}
 
                           {/* Zoom/Crop controls for non-9:16 videos */}
