@@ -16,7 +16,9 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
-  const [zoom, setZoom] = useState(1);
+  // minZoom = fit-cover zoom so the image always fills the crop square
+  const [minZoom, setMinZoom] = useState(0.1);
+  const [zoom, setZoom] = useState(0.1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -27,13 +29,19 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
 
   useEffect(() => {
     if (!file) return;
-    setZoom(1);
     setOffset({ x: 0, y: 0 });
     setImageLoaded(false);
 
     const img = new Image();
     img.onload = () => {
       imgRef.current = img;
+
+      // Fit-cover: scale so the image fills the entire crop square.
+      // This gives the best starting view — whole image visible, no empty space.
+      const coverZoom = Math.max(CROP_SIZE / img.naturalWidth, CROP_SIZE / img.naturalHeight);
+      setMinZoom(coverZoom);
+      setZoom(coverZoom);
+      setOffset({ x: 0, y: 0 });
       setImageLoaded(true);
     };
     img.src = URL.createObjectURL(file);
@@ -123,7 +131,7 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const newDist = Math.hypot(dx, dy);
       const ratio = newDist / touchStartRef.current.dist;
-      const newZoom = Math.max(0.5, Math.min(5, zoom * ratio));
+      const newZoom = Math.max(minZoom, Math.min(5, zoom * ratio));
       setZoom(newZoom);
       touchStartRef.current = { ...touchStartRef.current, dist: newDist };
     }
@@ -133,7 +141,7 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    const newZoom = Math.max(0.5, Math.min(5, zoom + delta));
+    const newZoom = Math.max(minZoom, Math.min(5, zoom + delta));
     setZoom(newZoom);
     setOffset(prev => clampOffset(prev.x, prev.y, newZoom));
   };
@@ -144,8 +152,9 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
     setOffset(prev => clampOffset(prev.x, prev.y, newZoom));
   };
 
+  // Reset returns to the initial fit-cover view
   const handleReset = () => {
-    setZoom(1);
+    setZoom(minZoom);
     setOffset({ x: 0, y: 0 });
   };
 
@@ -219,9 +228,9 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
           <div className="flex items-center gap-3">
             <ZoomOut className="h-4 w-4 text-muted-foreground shrink-0" />
             <Slider
-              min={0.5}
+              min={minZoom}
               max={5}
-              step={0.05}
+              step={0.01}
               value={[zoom]}
               onValueChange={handleZoomChange}
               className="flex-1"
