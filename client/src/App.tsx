@@ -165,6 +165,13 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   // Android hardware back button → go back in history, or exit at root
   useAndroidBackButton();
 
+  // Scroll to top on every route change
+  React.useEffect(() => {
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTop = 0;
+    }
+  }, [location]);
+
   // Global keyboard height detection — sets --keyboard-height CSS var and `keyboard-open` class on <html>
   const keyboardHeight = useKeyboardHeight();
 
