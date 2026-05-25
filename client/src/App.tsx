@@ -86,6 +86,7 @@ const GameClipsPage = React.lazy(() => import("./pages/game-clips-page"));
 const GamePage = React.lazy(() => import("./pages/game-page"));
 const HashtagPage = React.lazy(() => import("./pages/hashtag-page"));
 const ClipPage = React.lazy(() => import("./pages/ClipPage"));
+const ClipRedirectPage = React.lazy(() => import("./pages/ClipRedirectPage"));
 const UploadPage = React.lazy(() => import("./pages/UploadPage"));
 const ScreenshotUploadPage = React.lazy(() => import("./pages/ScreenshotUploadPage"));
 const AccountSettingsPage = React.lazy(() => import("./pages/AccountSettingsPage"));
@@ -432,18 +433,18 @@ function Router() {
           {/* Public routes accessible to guests */}
           <Route path="/" component={HomePage} />
           <Route path="/trending" component={TrendingPage} />
-          <Route path="/clip/:id" component={ClipPage} />
-          <Route path="/clips/:id" component={ClipPage} />
-          <Route path="/reel/:id" component={ClipPage} />
-          <Route path="/reels/:id" component={ClipPage} />
-          <Route path="/@:username/clip/:clipId" component={ClipPage} />
-          <Route path="/@:username/clips/:clipId" component={ClipPage} />
-          <Route path="/@:username/reel/:reelId" component={ClipPage} />
-          <Route path="/@:username/reels/:reelId" component={ClipPage} />
+          <Route path="/clip/:id" component={ClipRedirectPage} />
+          <Route path="/clips/:id" component={ClipRedirectPage} />
+          <Route path="/reel/:id" component={ClipRedirectPage} />
+          <Route path="/reels/:id" component={ClipRedirectPage} />
+          <Route path="/@:username/clip/:clipId" component={ClipRedirectPage} />
+          <Route path="/@:username/clips/:clipId" component={ClipRedirectPage} />
+          <Route path="/@:username/reel/:reelId" component={ClipRedirectPage} />
+          <Route path="/@:username/reels/:reelId" component={ClipRedirectPage} />
           
           {/* Test route without @ symbol as fallback */}
-          <Route path="/:username/clip/:clipId" component={ClipPage} />
-          <Route path="/:username/reel/:reelId" component={ClipPage} />
+          <Route path="/:username/clip/:clipId" component={ClipRedirectPage} />
+          <Route path="/:username/reel/:reelId" component={ClipRedirectPage} />
           <Route path="/screenshots/:id" component={ScreenshotUploadPage} />
           <Route path="/@:username/screenshot/:shareCode" component={ProfilePage} />
           <Route path="/@:username/screenshots/:screenshotId" component={ProfilePage} />
