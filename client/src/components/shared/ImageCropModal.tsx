@@ -22,8 +22,8 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
   const imgRef = useRef<HTMLImageElement | null>(null);
 
   // Canvas dimensions adapt to the image's aspect ratio
-  const [cropW, setCropW] = useState(MAX_DIM);
-  const [cropH, setCropH] = useState(MAX_DIM);
+  const [cropW, setCropW] = useState(DESKTOP_MAX);
+  const [cropH, setCropH] = useState(DESKTOP_MAX);
 
   const [minZoom, setMinZoom] = useState(0.1);
   const [zoom, setZoom] = useState(0.1);
