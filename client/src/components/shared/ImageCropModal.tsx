@@ -11,12 +11,17 @@ interface ImageCropModalProps {
   onCancel: () => void;
 }
 
+const MAX_DIM = 480; // max canvas edge in px
+
 export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: ImageCropModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
-  // minZoom = fit-cover zoom so the image always fills the crop square
+  // Canvas dimensions adapt to the image's aspect ratio
+  const [cropW, setCropW] = useState(MAX_DIM);
+  const [cropH, setCropH] = useState(MAX_DIM);
+
   const [minZoom, setMinZoom] = useState(0.1);
   const [zoom, setZoom] = useState(0.1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -24,8 +29,6 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [imageLoaded, setImageLoaded] = useState(false);
   const [applying, setApplying] = useState(false);
-
-  const CROP_SIZE = 480;
 
   useEffect(() => {
     if (!file) return;
@@ -36,9 +39,19 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
     img.onload = () => {
       imgRef.current = img;
 
-      // Fit-contain: scale so the entire image is visible inside the crop square.
-      // User can zoom in from here to choose their crop.
-      const containZoom = Math.min(CROP_SIZE / img.naturalWidth, CROP_SIZE / img.naturalHeight);
+      // Compute canvas size that matches the image's aspect ratio within MAX_DIM
+      const aspect = img.naturalWidth / img.naturalHeight;
+      let w = MAX_DIM;
+      let h = Math.round(w / aspect);
+      if (h > MAX_DIM) {
+        h = MAX_DIM;
+        w = Math.round(h * aspect);
+      }
+      setCropW(w);
+      setCropH(h);
+
+      // With matching aspect ratio, fit-contain zoom = no black bars, full image visible
+      const containZoom = w / img.naturalWidth;
       setMinZoom(containZoom);
       setZoom(containZoom);
       setOffset({ x: 0, y: 0 });
@@ -52,35 +65,33 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
     const canvas = canvasRef.current;
     const img = imgRef.current;
     if (!canvas || !img) return;
-
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const size = CROP_SIZE;
-    canvas.width = size;
-    canvas.height = size;
-
-    ctx.clearRect(0, 0, size, size);
+    canvas.width = cropW;
+    canvas.height = cropH;
+    ctx.clearRect(0, 0, cropW, cropH);
 
     const scaledW = img.naturalWidth * zoom;
     const scaledH = img.naturalHeight * zoom;
-    const drawX = size / 2 - scaledW / 2 + offset.x;
-    const drawY = size / 2 - scaledH / 2 + offset.y;
-
+    const drawX = cropW / 2 - scaledW / 2 + offset.x;
+    const drawY = cropH / 2 - scaledH / 2 + offset.y;
     ctx.drawImage(img, drawX, drawY, scaledW, scaledH);
 
+    // Neon green border + rule-of-thirds grid
     ctx.strokeStyle = "#B7FF1A";
     ctx.lineWidth = 2;
-    ctx.strokeRect(1, 1, size - 2, size - 2);
+    ctx.strokeRect(1, 1, cropW - 2, cropH - 2);
 
-    const third = size / 3;
     ctx.strokeStyle = "rgba(183,255,26,0.25)";
     ctx.lineWidth = 1;
     for (let i = 1; i < 3; i++) {
-      ctx.beginPath(); ctx.moveTo(third * i, 0); ctx.lineTo(third * i, size); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, third * i); ctx.lineTo(size, third * i); ctx.stroke();
+      const tx = (cropW / 3) * i;
+      const ty = (cropH / 3) * i;
+      ctx.beginPath(); ctx.moveTo(tx, 0); ctx.lineTo(tx, cropH); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, ty); ctx.lineTo(cropW, ty); ctx.stroke();
     }
-  }, [zoom, offset]);
+  }, [zoom, offset, cropW, cropH]);
 
   useEffect(() => {
     if (imageLoaded) draw();
@@ -91,13 +102,13 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
     if (!img) return { x: ox, y: oy };
     const scaledW = img.naturalWidth * z;
     const scaledH = img.naturalHeight * z;
-    const maxX = Math.max(0, (scaledW - CROP_SIZE) / 2);
-    const maxY = Math.max(0, (scaledH - CROP_SIZE) / 2);
+    const maxX = Math.max(0, (scaledW - cropW) / 2);
+    const maxY = Math.max(0, (scaledH - cropH) / 2);
     return {
       x: Math.max(-maxX, Math.min(maxX, ox)),
       y: Math.max(-maxY, Math.min(maxY, oy)),
     };
-  }, []);
+  }, [cropW, cropH]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
@@ -105,8 +116,7 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
   };
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging) return;
-    const raw = { x: e.clientX - dragStart.x, y: e.clientY - dragStart.y };
-    setOffset(clampOffset(raw.x, raw.y, zoom));
+    setOffset(clampOffset(e.clientX - dragStart.x, e.clientY - dragStart.y, zoom));
   };
   const handleMouseUp = () => setIsDragging(false);
 
@@ -124,14 +134,12 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
     e.preventDefault();
     if (!touchStartRef.current) return;
     if (e.touches.length === 1 && touchStartRef.current.dist === 0) {
-      const raw = { x: e.touches[0].clientX - touchStartRef.current.x, y: e.touches[0].clientY - touchStartRef.current.y };
-      setOffset(prev => clampOffset(raw.x, raw.y, zoom));
+      setOffset(prev => clampOffset(e.touches[0].clientX - touchStartRef.current!.x, e.touches[0].clientY - touchStartRef.current!.y, zoom));
     } else if (e.touches.length === 2) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const newDist = Math.hypot(dx, dy);
-      const ratio = newDist / touchStartRef.current.dist;
-      const newZoom = Math.max(minZoom, Math.min(5, zoom * ratio));
+      const newZoom = Math.max(minZoom, Math.min(5, zoom * (newDist / touchStartRef.current.dist)));
       setZoom(newZoom);
       touchStartRef.current = { ...touchStartRef.current, dist: newDist };
     }
@@ -140,8 +148,7 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    const newZoom = Math.max(minZoom, Math.min(5, zoom + delta));
+    const newZoom = Math.max(minZoom, Math.min(5, zoom + (e.deltaY > 0 ? -0.1 : 0.1)));
     setZoom(newZoom);
     setOffset(prev => clampOffset(prev.x, prev.y, newZoom));
   };
@@ -152,7 +159,6 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
     setOffset(prev => clampOffset(prev.x, prev.y, newZoom));
   };
 
-  // Reset returns to the initial fit-cover view
   const handleReset = () => {
     setZoom(minZoom);
     setOffset({ x: 0, y: 0 });
@@ -165,16 +171,14 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
     setApplying(true);
 
     const out = document.createElement("canvas");
-    out.width = CROP_SIZE;
-    out.height = CROP_SIZE;
+    out.width = cropW;
+    out.height = cropH;
     const ctx = out.getContext("2d");
     if (!ctx) return;
 
     const scaledW = img.naturalWidth * zoom;
     const scaledH = img.naturalHeight * zoom;
-    const drawX = CROP_SIZE / 2 - scaledW / 2 + offset.x;
-    const drawY = CROP_SIZE / 2 - scaledH / 2 + offset.y;
-    ctx.drawImage(img, drawX, drawY, scaledW, scaledH);
+    ctx.drawImage(img, cropW / 2 - scaledW / 2 + offset.x, cropH / 2 - scaledH / 2 + offset.y, scaledW, scaledH);
 
     out.toBlob((blob) => {
       if (!blob) return;
@@ -200,7 +204,7 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
         <div
           ref={containerRef}
           className="relative mx-auto overflow-hidden rounded-lg cursor-move select-none"
-          style={{ width: CROP_SIZE, height: CROP_SIZE, touchAction: "none" }}
+          style={{ width: cropW, height: cropH, touchAction: "none" }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -217,8 +221,8 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
           )}
           <canvas
             ref={canvasRef}
-            width={CROP_SIZE}
-            height={CROP_SIZE}
+            width={cropW}
+            height={cropH}
             className="rounded-lg"
             style={{ display: imageLoaded ? "block" : "none" }}
           />
