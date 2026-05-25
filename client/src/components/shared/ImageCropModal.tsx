@@ -205,7 +205,7 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
             <span className="text-xs text-muted-foreground font-normal ml-auto hidden sm:inline whitespace-nowrap">
               Drag to pan • Pinch/scroll to zoom
             </span>
-            <span className="text-xs text-muted-foreground font-normal ml-auto sm:hidden whitespace-nowrap">
+            <span className="text-xs text-muted-foreground font-normal ml-auto mr-6 sm:mr-0 sm:hidden whitespace-nowrap">
               Pinch to zoom
             </span>
           </DialogTitle>
