@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { useEffect, useRef } from "react";
-import { Link } from "wouter";
 import { Upload } from "lucide-react";
+import { useClipDialog } from "@/hooks/use-clip-dialog";
 
 interface RecentUpload {
   clipId: number;
@@ -13,6 +13,7 @@ interface RecentUpload {
 
 export function ActivityScrollBanner() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { openClipDialog } = useClipDialog();
 
   const { data: recentUploads = [] } = useQuery<RecentUpload[]>({
     queryKey: ["/api/recent-uploads"],
@@ -63,11 +64,13 @@ export function ActivityScrollBanner() {
             <Upload className="h-4 w-4" />
             <span className="font-semibold">{upload.username}</span>
             <span>has just uploaded a clip</span>
-            <Link href={`/clip/${upload.clipId}`}>
-              <span className="hover:underline cursor-pointer font-semibold">
-                "{upload.clipTitle}"
-              </span>
-            </Link>
+            <button
+              onClick={() => openClipDialog(upload.clipId)}
+              className="hover:underline cursor-pointer font-semibold bg-transparent border-none p-0"
+              style={{ color: '#071013' }}
+            >
+              "{upload.clipTitle}"
+            </button>
           </div>
         ))}
       </div>
