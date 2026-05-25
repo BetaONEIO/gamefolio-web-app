@@ -19,6 +19,7 @@ import { WelcomePackProvider, useWelcomePack } from "@/hooks/use-welcome-pack";
 import { DailyStreakProvider } from "@/hooks/use-daily-streak";
 import { useVersionCheck } from "@/hooks/use-version-check";
 import { useAndroidBackButton } from "@/hooks/use-android-back-button";
+import { useKeyboardHeight } from "@/hooks/use-keyboard-height";
 import AuthModal from "@/components/auth/auth-modal";
 import { WelcomePackDialog } from "@/components/welcome-pack/WelcomePackDialog";
 import DailyXpBonus from "@/components/gamification/DailyXpBonus";
@@ -164,6 +165,40 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   // Android hardware back button → go back in history, or exit at root
   useAndroidBackButton();
 
+  // Global keyboard height detection — sets --keyboard-height CSS var and `keyboard-open` class on <html>
+  const keyboardHeight = useKeyboardHeight();
+
+  // Global focus handler: scroll any focused input/textarea into view above the keyboard
+  React.useEffect(() => {
+    const isMobileDevice = /iPad|iPhone|iPod|Android/.test(navigator.userAgent) || window.innerWidth < 768;
+    if (!isMobileDevice) return;
+
+    const scrollIntoViewSafe = (el: HTMLElement) => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
+    const onFocusIn = (e: FocusEvent) => {
+      const t = e.target as HTMLElement;
+      if (!(t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t.isContentEditable)) return;
+      // Wait for keyboard to fully open (~300ms) then scroll
+      setTimeout(() => scrollIntoViewSafe(t), 320);
+    };
+
+    const onViewportResize = () => {
+      const t = document.activeElement as HTMLElement | null;
+      if (t && (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t.isContentEditable)) {
+        setTimeout(() => scrollIntoViewSafe(t), 100);
+      }
+    };
+
+    document.addEventListener('focusin', onFocusIn);
+    window.visualViewport?.addEventListener('resize', onViewportResize, { passive: true });
+    return () => {
+      document.removeEventListener('focusin', onFocusIn);
+      window.visualViewport?.removeEventListener('resize', onViewportResize);
+    };
+  }, []);
+
   // Radix Dropdown/Dialog race condition (iOS WKWebView especially): opening
   // a Dialog from inside a DropdownMenu item can leave `body { pointer-events:
   // none }` stuck after the dropdown unmounts, locking out every tap until
@@ -296,7 +331,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background relative overflow-hidden">
+    <div className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
       {/* Simple green gradient effect */}
       <div className="fixed top-0 right-0 w-full h-full bg-gradient-to-br from-transparent via-transparent to-primary/5 pointer-events-none"></div>
       <div className="fixed bottom-0 left-0 w-full h-full bg-gradient-to-tr from-transparent via-transparent to-primary/5 pointer-events-none"></div>
@@ -351,6 +386,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
         <main
           ref={mainScrollRef}
           className={`flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide ${!isMobile ? 'ml-64' : ''}`}
+          style={isMobile && keyboardHeight > 0 ? { paddingBottom: `${keyboardHeight}px` } : undefined}
         >
           <PullToRefresh
             containerRef={mainScrollRef}

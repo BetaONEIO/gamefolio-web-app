@@ -302,7 +302,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <KeyboardAvoidingWrapper className="h-screen bg-navy text-white">
+    <KeyboardAvoidingWrapper className="h-full bg-navy text-white">
       <div className="flex h-full">
         {/* Left Sidebar - Conversations */}
         <div className="w-80 border-r border-navy-light flex flex-col">

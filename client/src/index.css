@@ -8,6 +8,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Keyboard-aware layout ── */
+:root {
+  --keyboard-height: 0px;
+  --visual-viewport-height: 100dvh;
+}
+
+/* Give all inputs scroll-margin so they appear above the keyboard when scrolled into view */
+@media (max-width: 768px) {
+  input:not([type="hidden"]),
+  textarea,
+  select,
+  [contenteditable="true"] {
+    scroll-margin-bottom: 80px;
+  }
+}
+
+/* Smooth transitions for keyboard-driven layout shifts */
+.keyboard-aware-scroll {
+  transition: padding-bottom 0.18s ease-out;
+}
+
+/* Upload page: ensure the form content area is always scrollable with keyboard */
+.upload-form-content {
+  padding-bottom: var(--keyboard-height, 0px);
+  transition: padding-bottom 0.18s ease-out;
+}
+
 /* Text selection highlight */
 ::selection {
   background-color: #B7FF1A;

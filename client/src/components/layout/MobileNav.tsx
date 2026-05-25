@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
 import { useState, useCallback, useRef } from "react";
+import { useIsKeyboardOpen } from "@/hooks/use-keyboard-height";
 import AuthModal from "@/components/auth/auth-modal";
 import { ZapIconSvg, useZapFly, ZapFlyOverlay } from "@/components/ui/ZapReactionIcon";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
@@ -26,6 +27,10 @@ const MobileNav = () => {
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
   const trendingIconRef = useRef<HTMLSpanElement>(null);
   const { zapFlyState, triggerZapFly, dismissZapFly } = useZapFly();
+  const isKeyboardOpen = useIsKeyboardOpen();
+
+  // Hide navigation bar when keyboard is open so it doesn't overlap input fields
+  if (isKeyboardOpen) return null;
 
   const navItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
