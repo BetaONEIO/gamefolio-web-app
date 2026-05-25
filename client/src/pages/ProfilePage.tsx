@@ -121,6 +121,26 @@ interface OwnedNftsData {
   count: number;
 }
 
+function ExpandableBio({ bio, limit = 150, className, style }: { bio: string; limit?: number; className?: string; style?: React.CSSProperties }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = bio.length > limit;
+  const displayed = isLong && !expanded ? bio.slice(0, limit).trimEnd() + "…" : bio;
+  return (
+    <span className={className} style={style}>
+      {displayed}
+      {isLong && (
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="ml-1 font-semibold underline-offset-2 hover:underline focus:outline-none"
+          style={{ color: "#B7FF18", background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "inherit", lineHeight: "inherit" }}
+        >
+          {expanded ? "See less" : "See more"}
+        </button>
+      )}
+    </span>
+  );
+}
+
 const RARE_TRAITS: Record<string, string[]> = {
   Background: ["Melting_gold", "Aurora", "Neon_city", "Galaxy", "Diamond"],
   Hand: ["Cyber_punk_sword", "Lightning_staff", "Golden_scepter", "Plasma_gun"],
@@ -2870,7 +2890,9 @@ const ProfilePage = () => {
           {/* Bio — below the streamer badge, outside the card */}
           {profile.bio && (
             <div className="mx-4 mt-2 mb-1">
-              <p className={`text-sm pr-4 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>{profile.bio}</p>
+              <p className={`text-sm pr-4 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>
+                <ExpandableBio bio={profile.bio} style={{ color: isLightBackground ? '#1d293d' : undefined }} />
+              </p>
             </div>
           )}
 
@@ -3263,7 +3285,9 @@ const ProfilePage = () => {
 
             {/* Bio — below the streamer badge, outside the card */}
             {profile.bio && (
-              <p className={`text-sm max-w-md mt-2 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>{profile.bio}</p>
+              <p className={`text-sm max-w-md mt-2 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>
+                <ExpandableBio bio={profile.bio} style={{ color: isLightBackground ? '#1d293d' : undefined }} />
+              </p>
             )}
 
             {/* Profile Info Card — stats only, Collection button on top-right border */}
@@ -4976,7 +5000,9 @@ const ProfilePage = () => {
                 <div>
                   <h3 className="text-lg font-medium mb-2">About {profile.displayName}</h3>
                   <p className="text-muted-foreground">
-                    {profile.bio || `${profile.displayName} hasn't added a bio yet.`}
+                    {profile.bio
+                      ? <ExpandableBio bio={profile.bio} limit={200} className="text-muted-foreground" />
+                      : `${profile.displayName} hasn't added a bio yet.`}
                   </p>
                 </div>
 
