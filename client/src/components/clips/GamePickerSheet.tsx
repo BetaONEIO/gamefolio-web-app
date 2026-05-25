@@ -214,35 +214,6 @@ export function GamePickerSheet({
 
           {!isLoading && (
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-              {/* All Games card */}
-              <button
-                className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center transition-all"
-                style={{
-                  aspectRatio: "3/4",
-                  background: "#101923",
-                  border: !selectedGame
-                    ? "2.5px solid #B7FF1A"
-                    : "2px solid rgba(255,255,255,0.08)",
-                }}
-                onClick={() => {
-                  onSelect(null);
-                  onClose();
-                }}
-              >
-                {!selectedGame && (
-                  <div
-                    className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
-                    style={{ background: "#B7FF1A" }}
-                  >
-                    <Check className="h-3 w-3 text-black" strokeWidth={3} />
-                  </div>
-                )}
-                <Gamepad2 className="h-7 w-7 mb-1" style={{ color: "#B7FF1A" }} />
-                <span className="text-white text-[11px] font-bold text-center px-1 leading-tight">
-                  No Game
-                </span>
-              </button>
-
               {/* Add custom game card — always visible */}
               <button
                 className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center gap-1 transition-all"
