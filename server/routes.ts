@@ -10979,6 +10979,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get the current user's most frequently used hashtags (for tag input suggestions)
+  app.get("/api/user/top-tags", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+      const rows = await db.execute(sql`
+        SELECT LOWER(tag) AS tag, COUNT(*) AS use_count
+        FROM (
+          SELECT UNNEST(tags) AS tag FROM clips
+            WHERE user_id = ${userId} AND tags IS NOT NULL
+          UNION ALL
+          SELECT UNNEST(tags) AS tag FROM screenshots
+            WHERE user_id = ${userId} AND tags IS NOT NULL
+        ) t
+        WHERE tag IS NOT NULL AND TRIM(tag) <> ''
+        GROUP BY LOWER(tag)
+        ORDER BY use_count DESC, LOWER(tag)
+        LIMIT 20
+      `);
+
+      res.json((rows.rows as any[]).map((r) => r.tag));
+    } catch (err) {
+      console.error("Error fetching user top tags:", err);
+      res.status(500).json({ message: "Error fetching top tags" });
+    }
+  });
+
   // Get the current user's most-uploaded games (for game picker "Your Games" section)
   app.get("/api/user/top-games", authMiddleware, async (req, res) => {
     try {
