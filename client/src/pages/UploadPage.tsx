@@ -213,6 +213,8 @@ const UploadPage = () => {
   const [reelPanY, setReelPanY] = useState(0);
   const [isReelAspectMismatch, setIsReelAspectMismatch] = useState(false);
   const [videoAspectRatio, setVideoAspectRatio] = useState(0);
+  // Format suggestion: shown when the uploaded video's orientation doesn't match the active tab
+  const [formatSuggestion, setFormatSuggestion] = useState<'switch-to-reel' | 'switch-to-clip' | null>(null);
   const [isDraggingReel, setIsDraggingReel] = useState(false);
   const [isReelPlaying, setIsReelPlaying] = useState(false);
   const reelDragStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
@@ -425,6 +427,7 @@ const UploadPage = () => {
     setReelPanY(0);
     setIsReelAspectMismatch(false);
     setVideoAspectRatio(0);
+    setFormatSuggestion(null);
     
     // Then set the new file - this will trigger videoSrc recreation via useMemo
     setFile(selectedFile);
@@ -1124,6 +1127,11 @@ const UploadPage = () => {
                                   const videoType = getVideoType(videoRef.current);
                                   console.log('Aspect ratio:', aspectRatio, 'Auto-detected type:', videoType);
                                   
+                                  // Suggest switching to Reels if this is a portrait (9:16-ish) video uploaded as a clip
+                                  if (aspectRatio < 0.75) {
+                                    setFormatSuggestion('switch-to-reel');
+                                  }
+                                  
                                   // Generate thumbnails after video loads
                                   setTimeout(() => {
                                     generateThumbnails();
@@ -1204,6 +1212,37 @@ const UploadPage = () => {
                             </p>
                           </div>
                         </div>
+
+                        {/* Format mismatch suggestion — portrait video uploaded as a clip */}
+                        {formatSuggestion === 'switch-to-reel' && (
+                          <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+                            <Info className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-amber-300 leading-snug">Vertical video detected</p>
+                              <p className="text-amber-200/80 mt-0.5 leading-snug">
+                                This looks like a 9:16 portrait video — it'll look and perform much better as a <strong>Reel</strong>. Want to switch?
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs h-8 px-3"
+                                onClick={() => { setContentType('reels'); setFormatSuggestion(null); }}
+                              >
+                                Switch to Reels
+                              </Button>
+                              <button
+                                type="button"
+                                onClick={() => setFormatSuggestion(null)}
+                                className="text-amber-400/60 hover:text-amber-300 transition-colors p-0.5"
+                                aria-label="Dismiss"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
                         
                         {/* Video Trimmer */}
                         {showEditingTools && videoDuration > 0 && (
@@ -1614,6 +1653,10 @@ const UploadPage = () => {
                                       setReelZoom(1);
                                       setReelPanX(0);
                                       setReelPanY(0);
+                                      // Suggest switching to Clips if this is a landscape (16:9-ish) video uploaded as a reel
+                                      if (aspectRatio > 1.2) {
+                                        setFormatSuggestion('switch-to-clip');
+                                      }
                                     } else {
                                       setIsReelAspectMismatch(false);
                                     }
@@ -1670,6 +1713,37 @@ const UploadPage = () => {
                             </button>
                           </div>
                           
+                          {/* Format mismatch suggestion — landscape video uploaded as a reel */}
+                          {formatSuggestion === 'switch-to-clip' && (
+                            <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm mt-4">
+                              <Info className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-amber-300 leading-snug">Landscape video detected</p>
+                                <p className="text-amber-200/80 mt-0.5 leading-snug">
+                                  This looks like a 16:9 horizontal video — it'll look and perform much better as a <strong>Clip</strong>. Want to switch?
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs h-8 px-3"
+                                  onClick={() => { setContentType('clips'); setFormatSuggestion(null); }}
+                                >
+                                  Switch to Clips
+                                </Button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormatSuggestion(null)}
+                                  className="text-amber-400/60 hover:text-amber-300 transition-colors p-0.5"
+                                  aria-label="Dismiss"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
                           {/* Zoom/Crop controls for non-9:16 videos */}
                           {isReelAspectMismatch && file && (
                             <div className="mt-4 space-y-3 p-4 bg-muted/30 rounded-lg">
