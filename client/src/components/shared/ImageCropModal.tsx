@@ -11,7 +11,10 @@ interface ImageCropModalProps {
   onCancel: () => void;
 }
 
-const MAX_DIM = 480; // max canvas edge in px
+const DESKTOP_MAX = 480; // max canvas edge on desktop
+
+// Available canvas width = viewport width minus dialog horizontal margins/padding (~64px)
+const getMaxDim = () => Math.min(DESKTOP_MAX, Math.max(240, window.innerWidth - 64));
 
 export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: ImageCropModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -39,12 +42,13 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
     img.onload = () => {
       imgRef.current = img;
 
-      // Compute canvas size that matches the image's aspect ratio within MAX_DIM
+      // Compute canvas size that matches the image's aspect ratio within available space
+      const maxDim = getMaxDim();
       const aspect = img.naturalWidth / img.naturalHeight;
-      let w = MAX_DIM;
+      let w = maxDim;
       let h = Math.round(w / aspect);
-      if (h > MAX_DIM) {
-        h = MAX_DIM;
+      if (h > maxDim) {
+        h = maxDim;
         w = Math.round(h * aspect);
       }
       setCropW(w);
@@ -192,7 +196,7 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
 
   return (
     <Dialog open={!!file} onOpenChange={() => onCancel()}>
-      <DialogContent className="max-w-[600px] w-full p-4 gap-3 bg-background border-border">
+      <DialogContent className="w-[calc(100vw-32px)] sm:max-w-[600px] p-4 gap-3 bg-background border-border">
         <DialogHeader className="pb-0">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Crop className="h-4 w-4 text-primary" />
