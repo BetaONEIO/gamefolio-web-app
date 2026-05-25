@@ -10979,6 +10979,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get the current user's most-uploaded games (for game picker "Your Games" section)
+  app.get("/api/user/top-games", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+      // Count uploads per game across clips and screenshots
+      const rows = await db.execute(sql`
+        SELECT g.id, g.name, g.image_url AS "imageUrl", g.twitch_id AS "twitchId",
+               g.is_user_added AS "isUserAdded", g.is_approved AS "isApproved",
+               g.created_at AS "createdAt", SUM(t.cnt) AS upload_count
+        FROM (
+          SELECT game_id, COUNT(*) AS cnt FROM clips
+            WHERE user_id = ${userId} AND game_id IS NOT NULL GROUP BY game_id
+          UNION ALL
+          SELECT game_id, COUNT(*) AS cnt FROM screenshots
+            WHERE user_id = ${userId} AND game_id IS NOT NULL GROUP BY game_id
+        ) t
+        JOIN games g ON g.id = t.game_id
+        WHERE g.is_approved = true
+        GROUP BY g.id, g.name, g.image_url, g.twitch_id, g.is_user_added, g.is_approved, g.created_at
+        ORDER BY upload_count DESC
+        LIMIT 6
+      `);
+
+      res.json(rows.rows);
+    } catch (err) {
+      console.error("Error fetching user top games:", err);
+      res.status(500).json({ message: "Error fetching top games" });
+    }
+  });
+
   // Get personalized recommendations based on user's favorite games
   app.get("/api/recommendations", authMiddleware, async (req, res) => {
     try {
