@@ -23,10 +23,6 @@ export default function ReviewOrderScreen({
   const { wallet } = useCrossmint();
   const displayAddress = walletAddress || wallet?.address || "";
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-  
   const truncateAddress = (address: string) => {
     if (!address) return "";
     return `${address.slice(0, 6)}...${address.slice(-4)}`;

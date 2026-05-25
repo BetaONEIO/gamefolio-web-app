@@ -18,7 +18,6 @@ const LatestClipsPage = () => {
   const { openClipDialog } = useClipDialog();
 
   useEffect(() => {
-    window.scrollTo(0, 0);
     sessionStorage.setItem('clipNavContext', 'latest');
   }, []);
 

@@ -165,8 +165,9 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   // Android hardware back button → go back in history, or exit at root
   useAndroidBackButton();
 
-  // Scroll to top on every route change
-  React.useEffect(() => {
+  // Scroll to top on every route change — useLayoutEffect runs before paint
+  // so the user never sees the old position flashing before the reset.
+  React.useLayoutEffect(() => {
     if (mainScrollRef.current) {
       mainScrollRef.current.scrollTop = 0;
     }
@@ -393,7 +394,10 @@ function MainLayout({ children }: { children: React.ReactNode }) {
         <main
           ref={mainScrollRef}
           className={`flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide ${!isMobile ? 'ml-64' : ''}`}
-          style={isMobile && keyboardHeight > 0 ? { paddingBottom: `${keyboardHeight}px` } : undefined}
+          style={{
+            ...(isMobile && keyboardHeight > 0 ? { paddingBottom: `${keyboardHeight}px` } : {}),
+            overflowAnchor: 'none',
+          }}
         >
           <PullToRefresh
             containerRef={mainScrollRef}

@@ -10,7 +10,6 @@ import { GameFilterSheet } from "@/components/filters/GameFilterSheet";
 import { LazyImage } from "@/components/ui/lazy-image";
 
 export default function LatestReelsPage() {
-  useEffect(() => { window.scrollTo(0, 0); }, []);
   const [timePeriod, setTimePeriod] = useState<string>("recent");
   const { data: latestReels, isLoading } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/reels/trending', timePeriod],

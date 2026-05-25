@@ -23,10 +23,6 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stripe || !elements) return;

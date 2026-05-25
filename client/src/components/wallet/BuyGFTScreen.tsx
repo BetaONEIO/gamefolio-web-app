@@ -23,10 +23,6 @@ export default function BuyGFTScreen({
   const { balance: tokenBalanceStr } = useTokenBalance();
   const balance = parseFloat(tokenBalanceStr || '0') || currentBalance;
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
   const displayAmount = isCustom && customAmount !== null ? customAmount : selectedAmount;
   const gftReceived = displayAmount / GFT_RATE;
 
