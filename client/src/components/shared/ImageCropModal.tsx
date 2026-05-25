@@ -25,7 +25,7 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
   const [imageLoaded, setImageLoaded] = useState(false);
   const [applying, setApplying] = useState(false);
 
-  const CROP_SIZE = 320;
+  const CROP_SIZE = 480;
 
   useEffect(() => {
     if (!file) return;
@@ -36,11 +36,11 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
     img.onload = () => {
       imgRef.current = img;
 
-      // Fit-cover: scale so the image fills the entire crop square.
-      // This gives the best starting view — whole image visible, no empty space.
-      const coverZoom = Math.max(CROP_SIZE / img.naturalWidth, CROP_SIZE / img.naturalHeight);
-      setMinZoom(coverZoom);
-      setZoom(coverZoom);
+      // Fit-contain: scale so the entire image is visible inside the crop square.
+      // User can zoom in from here to choose their crop.
+      const containZoom = Math.min(CROP_SIZE / img.naturalWidth, CROP_SIZE / img.naturalHeight);
+      setMinZoom(containZoom);
+      setZoom(containZoom);
       setOffset({ x: 0, y: 0 });
       setImageLoaded(true);
     };
@@ -188,7 +188,7 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
 
   return (
     <Dialog open={!!file} onOpenChange={() => onCancel()}>
-      <DialogContent className="max-w-[400px] w-full p-4 gap-3 bg-background border-border">
+      <DialogContent className="max-w-[600px] w-full p-4 gap-3 bg-background border-border">
         <DialogHeader className="pb-0">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Crop className="h-4 w-4 text-primary" />
