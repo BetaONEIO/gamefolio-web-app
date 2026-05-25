@@ -136,8 +136,22 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
         title: clip.videoType === "reel" ? "Reel deleted" : "Clip deleted",
         variant: "gamefolioSuccess",
       });
+      // Immediately remove from all caches for instant UI update
+      const removeClip = (old: any) => {
+        if (!old) return old;
+        if (Array.isArray(old)) return old.filter((c: any) => c.id !== clip.id);
+        if (old?.clips && Array.isArray(old.clips)) return { ...old, clips: old.clips.filter((c: any) => c.id !== clip.id) };
+        return old;
+      };
+      queryClient.setQueryData([`/api/users/${clip.user.username}/clips`], removeClip);
+      queryClient.setQueryData(['/api/clips/latest'], removeClip);
+      queryClient.setQueryData(['/api/reels/latest'], removeClip);
+      // Background invalidations
       queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
       queryClient.invalidateQueries({ queryKey: ["/api/trending"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/clips`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clips/latest'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reels/latest'] });
       setShowDeleteConfirm(false);
       onHide?.();
     },

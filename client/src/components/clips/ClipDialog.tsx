@@ -1471,6 +1471,19 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   });
                   if (response.ok) {
                     toast({ title: `${contentLabel.charAt(0).toUpperCase() + contentLabel.slice(1)} deleted successfully` });
+                    // Immediately remove from all caches for instant UI update
+                    const removeClip = (old: any) => {
+                      if (!old) return old;
+                      if (Array.isArray(old)) return old.filter((c: any) => c.id !== clip.id);
+                      if (old?.clips && Array.isArray(old.clips)) return { ...old, clips: old.clips.filter((c: any) => c.id !== clip.id) };
+                      return old;
+                    };
+                    if (clip.user?.username) {
+                      queryClient.setQueryData([`/api/users/${clip.user.username}/clips`], removeClip);
+                    }
+                    queryClient.setQueryData(['/api/clips/latest'], removeClip);
+                    queryClient.setQueryData(['/api/reels/latest'], removeClip);
+                    // Background invalidations for eventual consistency
                     queryClient.invalidateQueries({ queryKey: ['/api/clips'] });
                     if (clip.user?.username) {
                       queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/clips`] });

@@ -560,19 +560,24 @@ const ProfilePage = () => {
       const response = await apiRequest('DELETE', `/api/clips/${clipId}`);
       return response;
     },
-    onSuccess: () => {
-      // Invalidate clips data to refresh the UI
+    onSuccess: (_, clipId) => {
+      // Immediately remove the clip from all caches so the UI updates instantly
+      const removeClip = (old: any) => {
+        if (!old) return old;
+        if (Array.isArray(old)) return old.filter((c: any) => c.id !== clipId);
+        if (old?.clips && Array.isArray(old.clips)) return { ...old, clips: old.clips.filter((c: any) => c.id !== clipId) };
+        return old;
+      };
+      queryClient.setQueryData([`/api/users/${username}/clips`], removeClip);
+      queryClient.setQueryData(['/api/clips/latest'], removeClip);
+      queryClient.setQueryData(['/api/reels/latest'], removeClip);
+
+      // Then invalidate in the background for eventual consistency
       queryClient.invalidateQueries({ queryKey: [`/api/users/${username}/clips`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${username}`] });
-
-      // Invalidate trending content cache so deleted clips don't show up
       queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
       queryClient.invalidateQueries({ queryKey: ['/api/clips/reels/trending'] });
-
-      // Invalidate latest clips queries (home page + dedicated latest page)
       queryClient.invalidateQueries({ queryKey: ['/api/clips/latest'] });
-
-      // Invalidate reels queries (for home page, trending page, etc.)
       queryClient.invalidateQueries({ queryKey: ['/api/reels/latest'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reels/trending'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reels'] });
