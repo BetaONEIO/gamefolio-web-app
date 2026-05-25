@@ -196,12 +196,18 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
 
   return (
     <Dialog open={!!file} onOpenChange={() => onCancel()}>
-      <DialogContent className="w-[calc(100vw-32px)] sm:max-w-[600px] p-4 gap-3 bg-background border-border">
+      <DialogContent className="w-[calc(100vw-32px)] sm:max-w-[600px] p-3 sm:p-4 gap-2 sm:gap-3 bg-background border-border">
         <DialogHeader className="pb-0">
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <Crop className="h-4 w-4 text-primary" />
-            Crop & Zoom
-            <span className="text-xs text-muted-foreground font-normal ml-auto">Drag to pan • Pinch/scroll to zoom</span>
+          <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <Crop className="h-4 w-4 text-primary shrink-0" />
+            <span>Crop & Zoom</span>
+            {/* Full hint on desktop, short hint on mobile */}
+            <span className="text-xs text-muted-foreground font-normal ml-auto hidden sm:inline whitespace-nowrap">
+              Drag to pan • Pinch/scroll to zoom
+            </span>
+            <span className="text-xs text-muted-foreground font-normal ml-auto sm:hidden whitespace-nowrap">
+              Pinch to zoom
+            </span>
           </DialogTitle>
         </DialogHeader>
 
@@ -232,8 +238,8 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
           />
         </div>
 
-        <div className="space-y-2 px-1">
-          <div className="flex items-center gap-3">
+        <div className="space-y-1 px-1">
+          <div className="flex items-center gap-2 sm:gap-3">
             <ZoomOut className="h-4 w-4 text-muted-foreground shrink-0" />
             <Slider
               min={minZoom}
@@ -248,7 +254,7 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
           <div className="text-center text-xs text-muted-foreground">{Math.round(zoom * 100)}%</div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap sm:flex-nowrap">
           <Button
             variant="ghost"
             size="sm"
