@@ -535,6 +535,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   // Note: FullscreenReelsViewer is handled separately via the ClipDialogProvider
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogPortal>
         {/* Custom overlay that leaves footer visible on mobile reels */}
@@ -1429,25 +1430,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         )}
       </DialogPortal>
       
-      {clip && (
-        <AgeRestrictionDialog
-          isOpen={showAgeRestrictionDialog}
-          onAccept={() => {
-            isAcceptingRef.current = true;
-            setAgeRestrictionAccepted(true);
-            // Dialog will auto-close via useEffect
-          }}
-          onDecline={() => {
-            // Only close if we're not in the middle of accepting
-            if (!isAcceptingRef.current) {
-              setShowAgeRestrictionDialog(false);
-              onClose();
-            }
-          }}
-          contentType={clip.videoType === 'reel' ? 'reel' : 'clip'}
-        />
-      )}
-      
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent className="z-[200]">
@@ -1511,6 +1493,24 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         </AlertDialogContent>
       </AlertDialog>
     </Dialog>
+
+    {clip && (
+      <AgeRestrictionDialog
+        isOpen={showAgeRestrictionDialog}
+        onAccept={() => {
+          isAcceptingRef.current = true;
+          setAgeRestrictionAccepted(true);
+        }}
+        onDecline={() => {
+          if (!isAcceptingRef.current) {
+            setShowAgeRestrictionDialog(false);
+            onClose();
+          }
+        }}
+        contentType={clip.videoType === 'reel' ? 'reel' : 'clip'}
+      />
+    )}
+    </>
   );
 };
 
