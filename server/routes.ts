@@ -1896,13 +1896,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) return res.status(404).json({ message: "User not found" });
       if (!user.playstationUsername) return res.status(400).json({ message: "No PlayStation ID saved. Please add your PSN ID first." });
 
+      // psn-api is ESM-formatted but lacks "type":"module", so dynamic import()
+      // fails in production. Instead we load the CJS build via require (dev) or
+      // createRequire (production ESM build).
+      const psnMod: any = await (async () => {
+        const cjsRequire: NodeRequire | undefined = (globalThis as any).require;
+        if (cjsRequire) {
+          return cjsRequire('psn-api');
+        }
+        const { createRequire } = await import('node:module');
+        return createRequire(process.cwd() + '/index.js')('psn-api');
+      })();
       const {
         exchangeNpssoForCode,
         exchangeCodeForAccessToken,
         exchangeRefreshTokenForAuthTokens,
         getProfileFromUserName,
         getUserPlayedGames,
-      } = await (new Function('specifier', 'return import(specifier)'))("psn-api");
+      } = psnMod;
 
       let accessToken: string;
 
