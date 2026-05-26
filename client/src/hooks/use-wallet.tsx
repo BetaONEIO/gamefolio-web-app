@@ -7,9 +7,13 @@ import { useToast } from './use-toast';
 import { SKALE_CHAIN_ID, SKALE_RPC_URL, SKALE_EXPLORER_BASE_URL } from '../../../config/web3';
 import { skaleNebulaTestnet, sequenceConfig } from '../lib/sequence-config';
 
+function useFallbackConnectModal(): { setOpenConnectModal: (open: boolean) => void } {
+  return { setOpenConnectModal: () => {} };
+}
+
 const useConnectModal: () => { setOpenConnectModal: (open: boolean) => void } = sequenceConfig
   ? useOpenConnectModal
-  : () => ({ setOpenConnectModal: () => {} });
+  : useFallbackConnectModal;
 
 export const skaleTestnet = skaleNebulaTestnet;
 
