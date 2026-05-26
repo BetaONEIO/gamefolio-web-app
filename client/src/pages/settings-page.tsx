@@ -2770,7 +2770,10 @@ export default function SettingsPage() {
                                 <div className="flex justify-center p-2">
                                   <Button
                                     onClick={() => setThemePreviewData(theme)}
-                                    className="text-xs px-4 py-1.5 transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)] text-white"
+                                    className={isActive
+                                      ? "text-xs px-4 py-1.5 transition-all duration-300 bg-transparent border border-primary/60 text-primary/80 hover:bg-primary/10 shadow-none"
+                                      : "text-xs px-4 py-1.5 transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)] text-white"
+                                    }
                                   >
                                     {isActive ? 'Active' : 'Preview'}
                                   </Button>
