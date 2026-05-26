@@ -2493,7 +2493,7 @@ export default function SettingsPage() {
                     >
                       {isNamedThemeActive && (
                         <div className="px-3 py-2 rounded-md bg-muted text-xs text-muted-foreground border border-border">
-                          A visual theme is active — its border colour overrides this setting. Switch to "None" in Themes to customise.
+                          A visual theme is active — its border colour overrides this setting. Switch to "Gamefolio Default" in Themes to customise.
                         </div>
                       )}
                       <div className="flex items-center justify-between">
@@ -2682,7 +2682,9 @@ export default function SettingsPage() {
                                     </div>
                                   )}
                                 </div>
-                                <p className="text-center mt-2 text-sm font-medium">{theme.name}</p>
+                                <p className="text-center mt-2 text-sm font-medium">
+                                  {theme.name === 'None' ? 'Gamefolio Default' : theme.name}
+                                </p>
                                 {isLocked && theme.name !== "None" && (
                                   <p className="text-center text-xs text-muted-foreground">Pro only</p>
                                 )}
@@ -2718,7 +2720,7 @@ export default function SettingsPage() {
                     )}
                     {isNamedThemeActive && !profileData.profileBackgroundImageUrl && (
                       <div className="mb-3 px-3 py-2 rounded-md bg-muted text-xs text-muted-foreground border border-border">
-                        A visual theme is active — its colours override this setting. Switch to "None" in Themes to use a custom colour.
+                        A visual theme is active — its colours override this setting. Switch to "Gamefolio Default" in Themes to use a custom colour.
                       </div>
                     )}
                     <Card>
@@ -5088,18 +5090,20 @@ export default function SettingsPage() {
         };
 
         const isThemeLocked = (themePreviewData as any).proOnly && !user?.isPro && tn !== "None";
+        const isCurrentTheme = !isThemeLocked && themePreviewData.accentColor === profileData.accentColor && themePreviewData.backgroundColor === profileData.backgroundColor;
+        const displayName = tn === 'None' ? 'Gamefolio Default' : tn;
 
         return (
           <Dialog open={!!themePreviewData} onOpenChange={(open) => { if (!open) setThemePreviewData(null); }}>
-            <DialogContent className="max-w-sm p-0 overflow-hidden border-none bg-transparent shadow-2xl [&>button:not([data-custom-close])]:hidden">
-              <DialogTitle className="sr-only">{tn} Theme Preview</DialogTitle>
+            <DialogContent className="max-w-[340px] w-[calc(100vw-32px)] p-0 overflow-hidden border-none bg-transparent shadow-2xl [&>button:not([data-custom-close])]:hidden">
+              <DialogTitle className="sr-only">{displayName} Theme Preview</DialogTitle>
               <button
                 onClick={() => setThemePreviewData(null)}
                 data-custom-close
-                className="absolute top-4 right-4 z-20 p-1 hover:bg-white/10 rounded-lg transition-colors"
+                className="absolute top-3 right-3 z-20 p-2 hover:bg-white/15 active:bg-white/25 rounded-xl transition-colors"
                 aria-label="Close"
               >
-                <X className="w-6 h-6 text-white" />
+                <X className="w-5 h-5 text-white" />
               </button>
               <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&family=Bangers&family=Bricolage+Grotesque:wght@400;800&display=swap');
@@ -5203,14 +5207,14 @@ export default function SettingsPage() {
                 </>}
 
                 {/* ── Content ── */}
-                <div className="relative z-10 px-5 pt-5 pb-0 text-center">
-                  <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ fontFamily: themeFont, color: isLight && !isWatermelon ? '#666' : `${accent}cc`, letterSpacing: '1.5px' }}>
-                    {tn} Theme
+                <div className="relative z-10 px-4 pt-4 pb-0 text-center">
+                  <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ fontFamily: themeFont, color: isLight && !isWatermelon ? '#666' : `${accent}cc`, letterSpacing: '1.5px' }}>
+                    {displayName}
                   </p>
 
                   {/* Avatar */}
-                  <div className="flex justify-center mb-3">
-                    <div className="w-20 h-20 overflow-hidden flex-shrink-0" style={{ ...avatarBorderStyle }}>
+                  <div className="flex justify-center mb-2">
+                    <div className="w-16 h-16 overflow-hidden flex-shrink-0" style={{ ...avatarBorderStyle }}>
                       {signedAvatarUrl ? (
                         <img src={signedAvatarUrl} alt="avatar" className="w-full h-full object-cover" />
                       ) : (
@@ -5223,13 +5227,13 @@ export default function SettingsPage() {
 
                   {/* Display Name */}
                   <h2 style={nameStyle}>{profileData.displayName || user?.username}</h2>
-                  <p className="text-xs mt-0.5 mb-4" style={{ color: isLight && !isWatermelon ? '#888' : `${accent}99`, fontFamily: themeFont }}>
+                  <p className="text-xs mt-0.5 mb-3" style={{ color: isLight && !isWatermelon ? '#888' : `${accent}99`, fontFamily: themeFont }}>
                     @{user?.username}
                   </p>
                 </div>
 
                 {/* Stats Card */}
-                <div className="relative z-10 mx-4 mb-5 p-3" style={statsCardStyle}>
+                <div className="relative z-10 mx-4 mb-3 p-2.5" style={statsCardStyle}>
                   <div className="grid grid-cols-3" style={{ gap: 0 }}>
                     {[
                       { label: 'Uploads', value: profileStats?._count?.clips ?? '—' },
@@ -5244,8 +5248,8 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Buttons */}
-                <div className="relative z-10 flex gap-3 px-4 pb-5">
+                {/* Buttons — pb accounts for mobile safe-area (home indicator) */}
+                <div className="relative z-10 flex gap-2.5 px-4 pb-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 1rem))' }}>
                   <button
                     onClick={() => setThemePreviewData(null)}
                     className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
@@ -5257,9 +5261,10 @@ export default function SettingsPage() {
                       fontSize: isBlocks ? '0.5rem' : '0.875rem',
                     }}
                   >
-                    Cancel
+                    Close
                   </button>
                   <button
+                    disabled={isCurrentTheme}
                     onClick={() => {
                       if (isThemeLocked) {
                         setThemePreviewData(null);
@@ -5271,16 +5276,18 @@ export default function SettingsPage() {
                     }}
                     className="flex-1 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2"
                     style={{
-                      background: isThemeLocked ? '#B7FF1A' : accent,
-                      color: isThemeLocked ? '#1a1a1a' : (isLight && !isGothic ? '#1d1d1f' : bg),
-                      boxShadow: isThemeLocked ? '0 8px 24px -8px #B7FF1A66' : `0 8px 24px -8px ${accent}`,
+                      background: isCurrentTheme ? `${accent}40` : isThemeLocked ? '#B7FF1A' : accent,
+                      color: isCurrentTheme ? (isLight ? '#333' : 'rgba(255,255,255,0.5)') : isThemeLocked ? '#1a1a1a' : (isLight && !isGothic ? '#1d1d1f' : bg),
+                      boxShadow: isCurrentTheme ? 'none' : isThemeLocked ? '0 8px 24px -8px #B7FF1A66' : `0 8px 24px -8px ${accent}`,
                       fontFamily: isThemeLocked ? undefined : themeFont,
                       fontSize: '0.875rem',
                       borderRadius: '12px',
+                      cursor: isCurrentTheme ? 'default' : 'pointer',
+                      border: isCurrentTheme ? `1px solid ${accent}44` : 'none',
                     }}
                   >
                     {isThemeLocked && <img src={gamefolioLogo} alt="Gamefolio" className="w-5 h-5 rounded-full flex-shrink-0" />}
-                    {isThemeLocked ? 'Go Pro' : 'Apply Theme'}
+                    {isCurrentTheme ? 'Current Theme' : isThemeLocked ? 'Go Pro' : 'Apply Theme'}
                   </button>
                 </div>
               </div>
