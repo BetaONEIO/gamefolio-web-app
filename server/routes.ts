@@ -1902,7 +1902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         exchangeRefreshTokenForAuthTokens,
         getProfileFromUserName,
         getUserPlayedGames,
-      } = await import("psn-api");
+      } = await (new Function('specifier', 'return import(specifier)'))("psn-api");
 
       let accessToken: string;
 
