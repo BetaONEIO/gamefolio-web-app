@@ -56,6 +56,30 @@ interface MobileTrendingViewerProps {
   onCommentsVisibilityChange?: (open: boolean) => void;
 }
 
+// ── Per-row author avatar — own signed-URL hook ──────────────────────────
+function AuthorAvatar({ avatarUrl, displayName }: { avatarUrl?: string | null; displayName: string }) {
+  const { signedUrl } = useSignedUrl(avatarUrl ?? null);
+  return (
+    <img
+      src={signedUrl || avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+      alt={displayName}
+      className="w-full h-full object-cover"
+      onError={(e) => {
+        (e.currentTarget as HTMLImageElement).src = '/uploaded_assets/gamefolio social logo 3d circle web.png';
+      }}
+    />
+  );
+}
+
+// ── Helper: slugify a game name to match explore-page navigateToGame ─────
+function gameNameToSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 // ── Per-screenshot scroll item — own signed-URL hook ─────────────────────
 function ScreenshotScrollItem({ item }: { item: ScreenshotWithUser }) {
   const { signedUrl } = useSignedUrl(item.imageUrl);
@@ -350,10 +374,9 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                       data-testid={`link-user-${item.user.username}`}
                     >
                       <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '1.5px solid #fff' }}>
-                        <img
-                          src={item.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                          alt={item.user.displayName}
-                          className="w-full h-full object-cover"
+                        <AuthorAvatar
+                          avatarUrl={item.user.avatarUrl}
+                          displayName={item.user.displayName}
                         />
                       </div>
                     </Link>
@@ -411,12 +434,17 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                   })()}
 
                   {item.game?.name && (
-                    <div className="flex items-center gap-1 mb-2">
+                    <Link
+                      href={`/games/${gameNameToSlug(item.game.name)}`}
+                      className="inline-flex items-center gap-1 mb-2 no-underline"
+                      data-testid={`link-game-${item.game.id ?? item.game.name}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-                      <span className="text-[11px] font-semibold" style={{ color: '#B7FF1A' }}>
+                      <span className="text-[11px] font-semibold underline-offset-2 hover:underline" style={{ color: '#B7FF1A' }}>
                         {item.game.name}
                       </span>
-                    </div>
+                    </Link>
                   )}
                 </div>
               </div>
