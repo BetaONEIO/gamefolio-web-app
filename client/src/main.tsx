@@ -49,6 +49,37 @@ document.head.appendChild(ogType);
 // Initialize EmailJS
 initEmailJS();
 
+// ─── Persistent crash logger ─────────────────────────────────────────────────
+// Saves the last crash to sessionStorage so it survives a reload and can be
+// read on the next page load for debugging. Also logs any previously-saved
+// crash on startup.
+const CRASH_KEY = '__gf_last_crash__';
+(() => {
+  const prev = sessionStorage.getItem(CRASH_KEY);
+  if (prev) {
+    try {
+      const { msg, stack, time } = JSON.parse(prev);
+      console.error('[CRASH LOG from previous session]', time, '\n', msg, '\n', stack);
+    } catch {}
+    sessionStorage.removeItem(CRASH_KEY);
+  }
+})();
+window.addEventListener('error', (e) => {
+  const msg = e.error?.message ?? e.message ?? String(e);
+  const stack = e.error?.stack ?? '';
+  if (!msg.includes('MetaMask') && !msg.includes('chrome-extension') && !msg.includes('web3')) {
+    sessionStorage.setItem(CRASH_KEY, JSON.stringify({ msg, stack, time: new Date().toISOString() }));
+  }
+});
+window.addEventListener('unhandledrejection', (e) => {
+  const msg = e.reason?.message ?? String(e.reason ?? '');
+  const stack = e.reason?.stack ?? '';
+  if (!msg.includes('MetaMask') && !msg.includes('chrome-extension') && !msg.includes('web3')) {
+    sessionStorage.setItem(CRASH_KEY, JSON.stringify({ msg, stack, time: new Date().toISOString() }));
+  }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Add global error handlers to prevent unhandled promise rejections
 // This prevents MetaMask connection errors from browser extensions
 window.addEventListener('unhandledrejection', (event) => {

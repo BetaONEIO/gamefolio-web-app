@@ -3,8 +3,8 @@ import { useConfig } from 'wagmi';
 import { watchAccount, watchChainId, getAccount, getChainId, disconnect as wagmiDisconnectCore } from '@wagmi/core';
 import { useOpenConnectModal } from '@0xsequence/connect';
 import { createPublicClient, http, type PublicClient, type Address } from 'viem';
-import { useAuth } from './use-auth';
 import { useToast } from './use-toast';
+import { queryClient } from '../lib/queryClient';
 import { SKALE_CHAIN_ID, SKALE_RPC_URL } from '../../../config/web3';
 import { skaleNebulaTestnet } from '../lib/sequence-config';
 
@@ -143,7 +143,6 @@ function WalletProviderInner({
   setWalletMode: (m: WalletMode) => void;
   children: ReactNode;
 }) {
-  const { user, refreshUser } = useAuth();
   const { toast } = useToast();
   const wagmiConfig = useConfig();
   const { setOpenConnectModal } = useOpenConnectModal();
@@ -204,7 +203,7 @@ function WalletProviderInner({
 
   useEffect(() => {
     if (
-      isReady && walletAddress && user &&
+      isReady && walletAddress &&
       walletAddress !== lastSavedAddress.current &&
       !isUpdatingWallet.current
     ) {
@@ -223,7 +222,8 @@ function WalletProviderInner({
                 variant: 'gamefolioSuccess',
               });
             }
-            return refreshUser();
+            queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+            return;
           }
           if (data?.needsManualMove && data?.oldWalletBalance) {
             toast({
@@ -243,20 +243,33 @@ function WalletProviderInner({
         })
         .finally(() => { isUpdatingWallet.current = false; });
     }
-  }, [isReady, walletAddress, user?.id, refreshUser]);
+  }, [isReady, walletAddress]);
 
   const connect = useCallback(() => {
-    if (!user) {
-      toast({
-        title: 'Please log in first',
-        description: 'You need to be logged in to connect a wallet',
-        variant: 'destructive',
+    // Check auth imperatively so we never read from useQuery / useSyncExternalStore
+    // during the wallet-provider render phase.
+    fetch('/api/user', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((u) => {
+        if (!u?.id) {
+          toast({
+            title: 'Please log in first',
+            description: 'You need to be logged in to connect a wallet',
+            variant: 'destructive',
+          });
+          return;
+        }
+        setUserInitiatedConnect(true);
+        setOpenConnectModal(true);
+      })
+      .catch(() => {
+        toast({
+          title: 'Please log in first',
+          description: 'You need to be logged in to connect a wallet',
+          variant: 'destructive',
+        });
       });
-      return;
-    }
-    setUserInitiatedConnect(true);
-    setOpenConnectModal(true);
-  }, [user, setOpenConnectModal, toast]);
+  }, [setOpenConnectModal, toast]);
 
   const disconnect = useCallback(() => {
     wagmiDisconnectCore(wagmiConfig).catch(() => {});

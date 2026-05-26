@@ -27,6 +27,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("[ErrorBoundary] Caught error:", error, errorInfo);
     this.props.onError?.(error, errorInfo);
+    try {
+      sessionStorage.setItem('__gf_last_crash__', JSON.stringify({
+        msg: error.message,
+        stack: (error.stack ?? '') + '\n\nComponent stack:\n' + (errorInfo.componentStack ?? ''),
+        time: new Date().toISOString(),
+      }));
+    } catch {}
   }
 
   handleReload = () => {
