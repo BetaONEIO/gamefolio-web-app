@@ -76,7 +76,9 @@ router.get('/auth/kick/connect', (req: Request, res: Response) => {
       code_challenge_method: 'S256',
     });
 
-    res.redirect(`https://id.kick.com/oauth/authorize?${params.toString()}`);
+    const authorizeUrl = `https://id.kick.com/oauth/authorize?${params.toString()}`;
+    console.log('[Kick OAuth] Redirecting to:', authorizeUrl);
+    res.redirect(authorizeUrl);
   });
 });
 
