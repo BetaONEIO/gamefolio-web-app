@@ -2663,11 +2663,90 @@ export default function SettingsPage() {
                                 }}
                               >
                                 <div
-                                  className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm relative"
+                                  className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm relative overflow-hidden"
                                   style={{ 
                                     background: `linear-gradient(180deg, ${topColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
                                   }}
                                 >
+                                  {/* ── Theme-specific visual overlays ── */}
+                                  {theme.name === 'None' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, #B7FF1A06 1px, transparent 1px), linear-gradient(90deg, #B7FF1A06 1px, transparent 1px)', backgroundSize:'14px 14px' }} />
+                                    <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'2px', background:'linear-gradient(90deg, transparent, #B7FF1Acc, transparent)', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Zombie' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, #9ae60028 1px, transparent 1px), linear-gradient(90deg, #9ae60028 1px, transparent 1px)', backgroundSize:'18px 18px' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 80% 60% at 50% 100%, #9ae60033 0%, transparent 70%)' }} />
+                                    <div style={{ position:'absolute', top:'-50%', left:'-50%', width:'200%', height:'200%', pointerEvents:'none', background:'linear-gradient(90deg, transparent 44%, #9ae60006 46%, #9ae60044 49%, #9ae600aa 50%, #9ae60044 51%, #9ae60006 54%, transparent 58%)', opacity:0.5 }} />
+                                  </>}
+                                  {theme.name === 'Cyberpunk' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'radial-gradient(circle, #00d3f230 1.5px, transparent 1.5px), linear-gradient(45deg, #00b8db18 1px, transparent 1px)', backgroundSize:'16px 16px' }} />
+                                    <div style={{ position:'absolute', left:0, right:0, top:'42%', height:'1px', pointerEvents:'none', background:'linear-gradient(90deg, transparent, #00d3f2aa 30%, #e12afbaa 70%, transparent)' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'repeating-linear-gradient(0deg, transparent, transparent 5px, rgba(0,0,0,0.15) 5px, rgba(0,0,0,0.15) 6px)' }} />
+                                  </>}
+                                  {theme.name === 'NEO' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'radial-gradient(circle at 50% 50%, #00ff4118 1px, transparent 1px)', backgroundSize:'10px 10px' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #00ff4100 30%, #00ff4118 100%)' }} />
+                                    <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', opacity:0.6 }} viewBox="0 0 120 80" preserveAspectRatio="none">
+                                      {['0','1','ア','イ','2','カ','3','ウ','キ','エ'].map((c,i) => (
+                                        <text key={i} x={8 + i*11} y={20 + (i%3)*22} style={{ font: '9px "Courier New", monospace', fill: i%3===0 ? '#ccffcc' : '#00ff41', opacity: 0.7 }}>{c}</text>
+                                      ))}
+                                    </svg>
+                                  </>}
+                                  {theme.name === 'Blocks' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #5ba3d0 0%, #87ceeb 45%, #5ea832 55%, #8b5e3c 72%, #6b4a2e 88%)', opacity:0.9 }} />
+                                    <div style={{ position:'absolute', top:'8%', left:'12%', width:'22px', height:'9px', background:'rgba(255,255,255,0.85)', borderRadius:'3px', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', top:'5%', left:'55%', width:'16px', height:'7px', background:'rgba(255,255,255,0.85)', borderRadius:'2px', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, rgba(0,0,0,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.12) 1px, transparent 1px)', backgroundSize:'12px 12px', opacity:0.5 }} />
+                                  </>}
+                                  {theme.name === 'Watermelon' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #1d3932 0%, #1d3932 30%, #ff4d6d 30%, #ff4d6d 100%)', opacity:0.9 }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'radial-gradient(ellipse 5px 8px at center, #1d393288 100%, transparent 100%)', backgroundSize:'18px 22px', backgroundPosition:'4px 36px', opacity:0.7 }} />
+                                    <div style={{ position:'absolute', top:'18%', left:'50%', transform:'translateX(-50%)', width:'40px', height:'1px', background:'rgba(255,255,255,0.3)', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Forest' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #e8d5b7 0%, #c5a97a 35%, #2d5a27 35%, #0a2f1f 100%)', opacity:0.88 }} />
+                                    <div style={{ position:'absolute', bottom:'38%', left:'8%', width:0, height:0, borderLeft:'10px solid transparent', borderRight:'10px solid transparent', borderBottom:'22px solid #1a4a2e', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'38%', left:'32%', width:0, height:0, borderLeft:'13px solid transparent', borderRight:'13px solid transparent', borderBottom:'28px solid #0d3520', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'38%', right:'15%', width:0, height:0, borderLeft:'9px solid transparent', borderRight:'9px solid transparent', borderBottom:'20px solid #1a4a2e', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Ice' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, rgba(56,189,248,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.1) 1px, transparent 1px)', backgroundSize:'12px 12px' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(135deg, rgba(255,255,255,0.55) 0%, transparent 45%, rgba(56,189,248,0.2) 100%)' }} />
+                                    <div style={{ position:'absolute', top:'10%', left:'10%', width:'30%', height:'1px', background:'rgba(255,255,255,0.8)', transform:'rotate(45deg)', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Gothic' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 90% 90% at 50% 40%, rgba(194,122,255,0.2) 0%, rgba(30,5,58,0.75) 100%)' }} />
+                                    <div style={{ position:'absolute', bottom:'15%', left:'50%', transform:'translateX(-50%)', width:'36px', height:'36px', borderRadius:'50%', background:'radial-gradient(circle, #c27aff55 0%, transparent 70%)', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', top:'10%', left:'15%', fontSize:'14px', color:'#c27affaa', pointerEvents:'none', lineHeight:1 }}>✦</div>
+                                    <div style={{ position:'absolute', top:'8%', right:'18%', fontSize:'10px', color:'#c27aff88', pointerEvents:'none', lineHeight:1 }}>✦</div>
+                                  </>}
+                                  {theme.name === 'Mac' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'rgba(255,255,255,0.55)' }} />
+                                    <div style={{ position:'absolute', top:'-20%', left:'-10%', width:'80%', height:'80%', borderRadius:'50%', background:'radial-gradient(circle, rgba(255,80,80,0.25) 0%, rgba(255,200,0,0.2) 30%, rgba(0,200,100,0.2) 55%, rgba(0,100,255,0.2) 80%, transparent 100%)', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'8px', left:'50%', transform:'translateX(-50%)', width:'75%', height:'7px', background:'rgba(0,0,0,0.07)', borderRadius:'6px', pointerEvents:'none', backdropFilter:'blur(2px)' }} />
+                                  </>}
+                                  {theme.name === 'Cartoon' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'rgba(255,255,255,0.55)' }} />
+                                    <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'28%', background:'#ff5e5e44', pointerEvents:'none', borderTop:'2px solid #1d1d1f33' }} />
+                                    <div style={{ position:'absolute', top:'18%', left:'50%', transform:'translateX(-50%)', width:'30px', height:'4px', background:'#1d1d1f55', borderRadius:'2px', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', top:'30%', left:'50%', transform:'translateX(-50%)', width:'20px', height:'4px', background:'#1d1d1f33', borderRadius:'2px', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Bubble Tea' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #ffedd4bb 0%, #fefce8bb 100%)' }} />
+                                    <div style={{ position:'absolute', bottom:'10px', left:'16%', width:'11px', height:'11px', borderRadius:'50%', background:'#d4a574', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'22px', left:'28%', width:'8px', height:'8px', borderRadius:'50%', background:'#c49060', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'8px', left:'42%', width:'10px', height:'10px', borderRadius:'50%', background:'#d4a574bb', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'18px', right:'22%', width:'9px', height:'9px', borderRadius:'50%', background:'#c49060', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'7px', right:'12%', width:'12px', height:'12px', borderRadius:'50%', background:'#d4a574aa', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Cutesy Pink' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 100% 70% at 50% 110%, #fce7f3cc 0%, transparent 60%)' }} />
+                                    <div style={{ position:'absolute', top:'18%', left:'18%', fontSize:'13px', color:'#ff2056bb', pointerEvents:'none', lineHeight:1, userSelect:'none' }}>♥</div>
+                                    <div style={{ position:'absolute', top:'12%', right:'22%', fontSize:'9px', color:'#ff2056dd', pointerEvents:'none', lineHeight:1, userSelect:'none' }}>♥</div>
+                                    <div style={{ position:'absolute', bottom:'22%', left:'38%', fontSize:'11px', color:'#ff205699', pointerEvents:'none', lineHeight:1, userSelect:'none' }}>♥</div>
+                                    <div style={{ position:'absolute', bottom:'15%', right:'14%', fontSize:'8px', color:'#ff2056bb', pointerEvents:'none', lineHeight:1, userSelect:'none' }}>♥</div>
+                                  </>}
+                                  {/* ── Badges ── */}
                                   {isActive && (
                                     <div
                                       className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
