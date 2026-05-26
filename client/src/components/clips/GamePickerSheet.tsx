@@ -122,7 +122,7 @@ export function GamePickerSheet({
       return data.map((g: TwitchGame) => ({
         id: parseInt(g.id),
         name: g.name,
-        imageUrl: g.box_art_url?.replace("{width}", "144").replace("{height}", "192") || null,
+        imageUrl: g.box_art_url?.replace("{width}", "285").replace("{height}", "380") || null,
         isUserAdded: false,
         createdAt: new Date(),
       }));
@@ -141,8 +141,8 @@ export function GamePickerSheet({
         id: parseInt(g.id),
         name: g.name,
         imageUrl: (g.box_art_url || g.imageUrl || null)
-          ?.replace("{width}", "144")
-          .replace("{height}", "192") ?? null,
+          ?.replace("{width}", "285")
+          .replace("{height}", "380") ?? null,
         isUserAdded: false,
         createdAt: new Date(),
       }));
