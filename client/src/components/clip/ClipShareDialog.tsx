@@ -310,7 +310,6 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                         <div className="w-9 h-9 rounded-full border border-[#B7FF1A]/30 bg-[#1B2A33] flex items-center justify-center">
                           <Icon className="w-4 h-4 text-[#F5F7F2]" />
                         </div>
-                        <span className="text-[#64748b] text-[9px] leading-tight text-center">{platform.name}</span>
                       </button>
                     );
                   })}

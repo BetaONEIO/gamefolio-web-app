@@ -1,10 +1,9 @@
 import React from 'react';
 import { Flag, X, ImageOff, Heart, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ReportDialog } from '@/components/content/ReportDialog';
 import { LazyImage } from '@/components/ui/lazy-image';
-import { useSignedUrl } from '@/hooks/use-signed-url';
+import { CustomAvatar } from '@/components/ui/custom-avatar';
 import { Link } from 'wouter';
 import { ProfileHoverCard } from '@/components/ui/ProfileHoverCard';
 
@@ -28,7 +27,6 @@ export function ScreenshotCard({
   showUserInfo = false
 }: ScreenshotCardProps) {
   const screenshotUser = (screenshot as any).user;
-  const { signedUrl: signedAvatarUrl } = useSignedUrl(showUserInfo ? screenshotUser?.avatarUrl : null);
 
   return (
     <div 
@@ -140,16 +138,7 @@ export function ScreenshotCard({
             <ProfileHoverCard username={screenshotUser.username}>
               <Link href={`/profile/${screenshotUser.username}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
                 <div className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
-                  {screenshotUser.nftProfileTokenId && screenshotUser.nftProfileImageUrl && (screenshotUser as any).activeProfilePicType === 'nft' ? (
-                    <div className="h-7 w-7 rounded-lg overflow-hidden border border-[#B7FF1A]/40 flex-shrink-0">
-                      <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName} loading="lazy" className="w-full h-full object-cover" />
-                    </div>
-                  ) : (
-                    <Avatar className="h-7 w-7 flex-shrink-0">
-                      <AvatarImage src={signedAvatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'} />
-                      <AvatarFallback className="text-xs">{screenshotUser.displayName?.charAt(0) || '?'}</AvatarFallback>
-                    </Avatar>
-                  )}
+                  <CustomAvatar user={screenshotUser} size="sm" showBorder={false} />
                   <span className="text-sm font-medium truncate max-w-[140px]" style={{ color: '#F5F7F2' }}>
                     {screenshotUser.displayName || screenshotUser.username}
                   </span>
