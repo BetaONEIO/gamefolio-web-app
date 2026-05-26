@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, ReactNode, useCallback, useRef, useState } from 'react';
-import { useConfig, useDisconnect } from 'wagmi';
-import { watchAccount, watchChainId, getAccount, getChainId } from '@wagmi/core';
+import { useConfig } from 'wagmi';
+import { watchAccount, watchChainId, getAccount, getChainId, disconnect as wagmiDisconnectCore } from '@wagmi/core';
 import { useOpenConnectModal } from '@0xsequence/connect';
 import { createPublicClient, http, type PublicClient, type Address } from 'viem';
 import { useAuth } from './use-auth';
@@ -97,7 +97,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const { user, refreshUser } = useAuth();
   const { toast } = useToast();
   const wagmiConfig = useConfig();
-  const { disconnect: wagmiDisconnect } = useDisconnect();
   const { setOpenConnectModal } = useOpenConnectModal();
 
   const lastSavedAddress = useRef<string | null>(null);
@@ -204,13 +203,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [user, setOpenConnectModal, toast]);
 
   const disconnect = useCallback(() => {
-    wagmiDisconnect();
+    wagmiDisconnectCore(wagmiConfig).catch(() => {});
     setUserInitiatedConnect(false);
     toast({
       title: 'Wallet disconnected',
       description: 'Your wallet has been disconnected',
     });
-  }, [wagmiDisconnect, toast]);
+  }, [wagmiConfig, toast]);
 
   const value: WalletContextType = {
     walletAddress,
