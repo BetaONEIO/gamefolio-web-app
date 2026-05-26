@@ -373,7 +373,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                       className="flex-shrink-0 no-underline"
                       data-testid={`link-user-${item.user.username}`}
                     >
-                      <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '1.5px solid #fff' }}>
+                      <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid #B7FF1A' }}>
                         <AuthorAvatar
                           avatarUrl={item.user.avatarUrl}
                           displayName={item.user.displayName}
