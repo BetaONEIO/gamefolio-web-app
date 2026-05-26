@@ -50,6 +50,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
   const isAcceptingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const isSwiping = useRef(false);
   const closeComments = (callback?: () => void) => {
     setIsClosingComments(true);
     setTimeout(() => {
@@ -234,6 +236,28 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           ref={containerRef}
           className="absolute inset-0 overflow-y-scroll overflow-x-hidden snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
           style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain', pointerEvents: showComments ? 'none' : 'auto' }}
+          onTouchStart={(e) => {
+            touchStartYRef.current = e.touches[0].clientY;
+            isSwiping.current = false;
+          }}
+          onTouchMove={(e) => {
+            if (touchStartYRef.current === null) return;
+            const diff = touchStartYRef.current - e.touches[0].clientY;
+            if (Math.abs(diff) > 8) isSwiping.current = true;
+          }}
+          onTouchEnd={(e) => {
+            if (touchStartYRef.current === null) return;
+            const diff = touchStartYRef.current - e.changedTouches[0].clientY;
+            touchStartYRef.current = null;
+            const container = containerRef.current;
+            if (!container || !isSwiping.current) return;
+            const h = container.clientHeight;
+            if (diff > 40 && currentIndex < reels.length - 1) {
+              container.scrollTo({ top: (currentIndex + 1) * h, behavior: 'smooth' });
+            } else if (diff < -40 && currentIndex > 0) {
+              container.scrollTo({ top: (currentIndex - 1) * h, behavior: 'smooth' });
+            }
+          }}
         >
           {reels.map((reel, index) => (
             <div
@@ -419,7 +443,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                       <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
                       <Link
                         href={`/games/${currentReel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-                        onClick={onClose}
+                        onClick={(e) => { e.stopPropagation(); onClose(); }}
                         className="pointer-events-auto"
                       >
                         <span className="text-[11px] font-semibold" style={{ color: '#B7FF1A' }}>
@@ -508,7 +532,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                 <Gamepad2 className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#B7FF1A' }} />
                 <Link
                   href={`/games/${currentReel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-                  onClick={onClose}
+                  onClick={(e) => { e.stopPropagation(); onClose(); }}
                 >
                   <span className="text-sm font-semibold" style={{ color: '#B7FF1A' }}>
                     {currentReel.game.name}
