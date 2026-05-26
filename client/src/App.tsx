@@ -578,6 +578,7 @@ function App() {
                                 </MainLayout>
                                 <DailyXpBonus />
                                 <DailyStreakOverlay />
+                                <WelcomePackComponents />
                               </ClipDialogProvider>
                               <Toaster />
                             </AuthModalProvider>
@@ -596,6 +597,7 @@ function App() {
                                 </MainLayout>
                                 <DailyXpBonus />
                                 <DailyStreakOverlay />
+                                <WelcomePackComponents />
                               </ClipDialogProvider>
                               <Toaster />
                             </AuthModalProvider>
