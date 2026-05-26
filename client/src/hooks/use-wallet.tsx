@@ -4,16 +4,8 @@ import { useOpenConnectModal } from '@0xsequence/connect';
 import { createPublicClient, http, type PublicClient, type Address } from 'viem';
 import { useAuth } from './use-auth';
 import { useToast } from './use-toast';
-import { SKALE_CHAIN_ID, SKALE_RPC_URL, SKALE_EXPLORER_BASE_URL } from '../../../config/web3';
-import { skaleNebulaTestnet, sequenceConfig } from '../lib/sequence-config';
-
-function useFallbackConnectModal(): { setOpenConnectModal: (open: boolean) => void } {
-  return { setOpenConnectModal: () => {} };
-}
-
-const useConnectModal: () => { setOpenConnectModal: (open: boolean) => void } = sequenceConfig
-  ? useOpenConnectModal
-  : useFallbackConnectModal;
+import { SKALE_CHAIN_ID, SKALE_RPC_URL } from '../../../config/web3';
+import { skaleNebulaTestnet } from '../lib/sequence-config';
 
 export const skaleTestnet = skaleNebulaTestnet;
 
@@ -22,11 +14,6 @@ export type WalletMode = 'auto' | 'gamefolio' | 'external';
 const WALLET_MODE_STORAGE_KEY = 'gf:wallet-mode';
 
 function readStoredWalletMode(): WalletMode {
-  // Default to the built-in Gamefolio (custodial) wallet so users can mint
-  // without being pushed into the Sequence "log in" flow. Anyone who wants to
-  // use an external wallet can flip the toggle and we'll persist it.
-  // NOTE: existing browsers may have 'auto' stored from before — treat that as
-  // gamefolio so they get the new default too.
   if (typeof window === 'undefined') return 'gamefolio';
   try {
     const v = window.localStorage.getItem(WALLET_MODE_STORAGE_KEY);
@@ -59,6 +46,19 @@ const publicClient = createPublicClient({
   transport: http(SKALE_RPC_URL),
 });
 
+const defaultContextValue: WalletContextType = {
+  walletAddress: null,
+  isReady: false,
+  chainId: SKALE_CHAIN_ID,
+  publicClient,
+  isConnecting: false,
+  isEmbeddedWallet: false,
+  connect: () => {},
+  disconnect: () => {},
+  walletMode: 'gamefolio',
+  setWalletMode: () => {},
+};
+
 async function updateWalletAddressOnServer(
   walletAddress: string,
 ): Promise<{ ok: boolean; data: any }> {
@@ -80,6 +80,8 @@ async function updateWalletAddressOnServer(
   }
 }
 
+// Full WalletProvider that uses wagmi hooks — only used when SequenceConnect
+// provides the wagmi context (i.e. VITE_SEQUENCE_* env vars are set).
 export function WalletProvider({ children }: { children: ReactNode }) {
   const { user, refreshUser } = useAuth();
   const { toast } = useToast();
@@ -98,12 +100,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const { disconnect: wagmiDisconnect } = useDisconnect();
   const { data: walletClient } = useWalletClient();
   const chainId = useChainId();
-  const { setOpenConnectModal } = useConnectModal();
+  const { setOpenConnectModal } = useOpenConnectModal();
 
   const walletAddress = (address as Address) || null;
   const isReady = isConnected && !!address;
   const isEmbeddedWallet = isConnected && !!walletClient;
-  
   const isConnecting = userInitiatedConnect && wagmiIsConnecting;
 
   useEffect(() => {
@@ -139,7 +140,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
               description: `Your previous wallet still holds ${data.oldWalletBalance} GFT. Send those tokens to ${walletAddress} from that wallet, then reconnect.`,
               variant: 'destructive',
             });
-            // Allow another attempt after the user moves funds.
             lastSavedAddress.current = null;
           } else if (data?.message) {
             toast({
@@ -185,6 +185,32 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     isEmbeddedWallet,
     connect,
     disconnect,
+    walletMode,
+    setWalletMode,
+  };
+
+  return (
+    <WalletContext.Provider value={value}>
+      {children}
+    </WalletContext.Provider>
+  );
+}
+
+// Lightweight fallback used when Sequence keys are absent (no WagmiProvider in
+// the tree). Provides the same context shape with sensible defaults so all
+// consumers keep working without any wagmi hook calls.
+export function NoWalletProvider({ children }: { children: ReactNode }) {
+  const [walletMode, setWalletModeState] = useState<WalletMode>(() => readStoredWalletMode());
+
+  const setWalletMode = useCallback((mode: WalletMode) => {
+    setWalletModeState(mode);
+    try {
+      window.localStorage.setItem(WALLET_MODE_STORAGE_KEY, mode);
+    } catch {}
+  }, []);
+
+  const value: WalletContextType = {
+    ...defaultContextValue,
     walletMode,
     setWalletMode,
   };
