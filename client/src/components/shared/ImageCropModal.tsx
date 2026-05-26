@@ -174,15 +174,35 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
     if (!canvas || !img || !file) return;
     setApplying(true);
 
+    // Compute the visible image region in original image pixel coordinates.
+    // The draw function positions the scaled image so its centre aligns with
+    // the canvas centre plus offset.  We invert that to find the source rect.
+    const scaledW = img.naturalWidth * zoom;
+    const scaledH = img.naturalHeight * zoom;
+    const drawX = cropW / 2 - scaledW / 2 + offset.x;
+    const drawY = cropH / 2 - scaledH / 2 + offset.y;
+
+    // Source rect in original image pixels
+    const sx = Math.max(0, -drawX / zoom);
+    const sy = Math.max(0, -drawY / zoom);
+    const sw = Math.min(cropW / zoom, img.naturalWidth - sx);
+    const sh = Math.min(cropH / zoom, img.naturalHeight - sy);
+
+    // Output at original resolution, capped at 1920 px on the longest edge
+    const MAX_OUT = 1920;
+    const ratio = sw / sh;
+    let outW = sw;
+    let outH = sh;
+    if (outW > MAX_OUT) { outW = MAX_OUT; outH = Math.round(MAX_OUT / ratio); }
+    if (outH > MAX_OUT) { outH = MAX_OUT; outW = Math.round(MAX_OUT * ratio); }
+
     const out = document.createElement("canvas");
-    out.width = cropW;
-    out.height = cropH;
+    out.width = Math.round(outW);
+    out.height = Math.round(outH);
     const ctx = out.getContext("2d");
     if (!ctx) return;
 
-    const scaledW = img.naturalWidth * zoom;
-    const scaledH = img.naturalHeight * zoom;
-    ctx.drawImage(img, cropW / 2 - scaledW / 2 + offset.x, cropH / 2 - scaledH / 2 + offset.y, scaledW, scaledH);
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, out.width, out.height);
 
     out.toBlob((blob) => {
       if (!blob) return;

@@ -9689,16 +9689,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filename = req.file.filename;
       const userId = req.user!.id;
 
-      // Optimize original image
+      // Optimize original image (rotate() normalises EXIF orientation so
+      // portrait photos from mobile are stored upright with no EXIF tag)
       const optimizedImageBuffer = await sharp(originalPath, { failOn: 'none' })
+        .rotate()
         .jpeg({ quality: 85 })
         .resize(1920, 1080, { fit: 'inside', withoutEnlargement: true })
         .toBuffer();
 
-      // Generate thumbnail
+      // Generate thumbnail (rotate first so portrait thumbnails aren't sideways)
       const thumbnailBuffer = await sharp(originalPath, { failOn: 'none' })
+        .rotate()
         .jpeg({ quality: 80 })
-        .resize(400, 300, { fit: 'cover' })
+        .resize(400, 300, { fit: 'inside', withoutEnlargement: true })
         .toBuffer();
 
       // Upload optimized image to Supabase
