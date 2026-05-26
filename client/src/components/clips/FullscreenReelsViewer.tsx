@@ -7,7 +7,7 @@ import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import CommentSection from "@/components/clips/CommentSection";
@@ -68,6 +68,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
   const { isOpen: isJoinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
@@ -441,15 +442,19 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                   {currentReel.game?.name && (
                     <div className="flex items-center gap-1 mb-0.5">
                       <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-                      <Link
-                        href={`/games/${currentReel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-                        onClick={(e) => { e.stopPropagation(); onClose(); }}
+                      <button
                         className="pointer-events-auto"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const slug = currentReel.game!.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                          onClose();
+                          navigate(`/games/${slug}`);
+                        }}
                       >
                         <span className="text-[11px] font-semibold" style={{ color: '#B7FF1A' }}>
                           {currentReel.game.name}
                         </span>
-                      </Link>
+                      </button>
                     </div>
                   )}
 
@@ -530,14 +535,18 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             {currentReel.game?.name && (
               <div className="flex items-center gap-1.5">
                 <Gamepad2 className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-                <Link
-                  href={`/games/${currentReel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-                  onClick={(e) => { e.stopPropagation(); onClose(); }}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const slug = currentReel.game!.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    onClose();
+                    navigate(`/games/${slug}`);
+                  }}
                 >
                   <span className="text-sm font-semibold" style={{ color: '#B7FF1A' }}>
                     {currentReel.game.name}
                   </span>
-                </Link>
+                </button>
               </div>
             )}
 
