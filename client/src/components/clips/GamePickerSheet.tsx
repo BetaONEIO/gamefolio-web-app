@@ -140,7 +140,9 @@ export function GamePickerSheet({
       return data.map((g: any) => ({
         id: parseInt(g.id),
         name: g.name,
-        imageUrl: g.box_art_url || g.imageUrl || null,
+        imageUrl: (g.box_art_url || g.imageUrl || null)
+          ?.replace("{width}", "144")
+          .replace("{height}", "192") ?? null,
         isUserAdded: false,
         createdAt: new Date(),
       }));
@@ -207,7 +209,7 @@ export function GamePickerSheet({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-end md:items-center md:justify-center"
+      className="fixed inset-0 z-[80] flex items-end md:items-start md:justify-center md:pt-20"
       style={{ background: "rgba(0,0,0,0.65)" }}
       onClick={onClose}
     >
