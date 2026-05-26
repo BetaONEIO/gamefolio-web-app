@@ -13,7 +13,7 @@ import {
   AdminPanelIcon,
   LogoutIcon,
 } from "@/components/icons/DropdownIcons";
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useMobile } from "@/hooks/use-mobile";
@@ -49,12 +49,56 @@ const MAX_RECENT = 8;
 
 function loadRecentSearches(): string[] {
   try {
-    return JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || "[]");
+    if (typeof window === "undefined" || typeof localStorage === "undefined") return [];
+    const raw = localStorage.getItem(RECENT_SEARCHES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    // Only keep actual non-empty strings
+    return parsed.filter((s): s is string => typeof s === "string" && s.length > 0);
   } catch { return []; }
 }
 
 function persistRecentSearches(searches: string[]) {
-  localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
+    }
+  } catch {}
+}
+
+// Error boundary specifically for the mobile search overlay
+class MobileSearchErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; errorMsg: string }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, errorMsg: "" };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, errorMsg: error?.message ?? "Unknown error" };
+  }
+  componentDidCatch(error: Error) {
+    console.error("[MobileSearch] Render crash:", error?.message, error?.stack);
+    try {
+      sessionStorage.setItem("__gf_search_crash__", JSON.stringify({
+        msg: error?.message ?? "",
+        stack: error?.stack ?? "",
+        time: new Date().toISOString(),
+      }));
+    } catch {}
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, padding: "16px", zIndex: 99999, background: "rgba(3,8,10,0.93)", backdropFilter: "blur(20px)" }}>
+          <p style={{ color: "#fff", textAlign: "center", fontSize: 14, margin: 0 }}>Search could not load. Please try again.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 const Header = () => {
@@ -645,7 +689,8 @@ const Header = () => {
       </div>
       
       {/* Mobile Search Overlay - portaled to body so no parent can clip it */}
-      {showMobileSearch && typeof document !== 'undefined' && createPortal(
+      {showMobileSearch && typeof document !== 'undefined' && !!document.body && createPortal(
+        <MobileSearchErrorBoundary>
         <div
           style={{
             position: 'fixed',
@@ -695,9 +740,15 @@ const Header = () => {
                     paddingRight: '76px',
                     boxSizing: 'border-box',
                   }}
-                  value={searchQuery}
+                  value={searchQuery ?? ""}
                   onChange={handleSearchChange}
-                  onFocus={() => setShowDropdown(searchQuery.length >= 2 || recentSearches.length > 0)}
+                  onFocus={() => {
+                    try {
+                      const sq = searchQuery ?? "";
+                      const sr = Array.isArray(recentSearches) ? recentSearches : [];
+                      setShowDropdown(sq.length >= 2 || sr.length > 0);
+                    } catch {}
+                  }}
                   autoFocus
                   inputMode="search"
                   data-testid="mobile-search-input"
@@ -872,7 +923,8 @@ const Header = () => {
               )}
             </div>
           </div>
-        </div>,
+        </div>
+        </MobileSearchErrorBoundary>,
         document.body
       )}
     </header>
