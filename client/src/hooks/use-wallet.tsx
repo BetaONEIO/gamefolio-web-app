@@ -166,18 +166,29 @@ function WalletProviderInner({
     try { return getChainId(wagmiConfig); } catch { return SKALE_CHAIN_ID; }
   });
 
-  // Subscribe to wagmi store changes via imperative watchers (safe in useEffect).
+  // Subscribe to wagmi store changes via imperative watchers.
+  //
+  // IMPORTANT: the onChange callbacks MUST defer all setState calls via
+  // setTimeout.  wagmi's Hydrate component calls onMount() synchronously on
+  // EVERY render (not just the first), so whenever any ancestor re-renders
+  // (e.g. AuthProvider loading the user), Hydrate re-renders → onMount() →
+  // wagmi store update → watchAccount fires → if we call setState here
+  // synchronously React throws "Cannot update while rendering".
+  // setTimeout(fn, 0) pushes the update to the next macro-task, safely outside
+  // any React render phase.
   useEffect(() => {
     const unwatchAccount = watchAccount(wagmiConfig, {
       onChange(account) {
-        setWagmiAddress(account.address as Address | undefined);
-        setWagmiIsConnected(account.isConnected);
-        setWagmiIsConnecting(account.isConnecting);
+        setTimeout(() => {
+          setWagmiAddress(account.address as Address | undefined);
+          setWagmiIsConnected(account.isConnected);
+          setWagmiIsConnecting(account.isConnecting);
+        }, 0);
       },
     });
     const unwatchChain = watchChainId(wagmiConfig, {
       onChange(newChainId) {
-        setChainId(newChainId);
+        setTimeout(() => setChainId(newChainId), 0);
       },
     });
     return () => { unwatchAccount(); unwatchChain(); };
