@@ -14,16 +14,13 @@ import { WalletProvider, NoWalletProvider } from "@/hooks/use-wallet";
 import { CrossmintProvider } from "@/hooks/use-crossmint";
 import { RevenueCatProvider } from "@/hooks/use-revenuecat";
 import { LevelTrackerProvider } from "@/hooks/use-level-tracker";
-import { WelcomePackProvider, useWelcomePack } from "@/hooks/use-welcome-pack";
 import { DailyStreakProvider } from "@/hooks/use-daily-streak";
 import { useVersionCheck } from "@/hooks/use-version-check";
 import { useAndroidBackButton } from "@/hooks/use-android-back-button";
 import { useKeyboardHeight } from "@/hooks/use-keyboard-height";
 import AuthModal from "@/components/auth/auth-modal";
-import { WelcomePackDialog } from "@/components/welcome-pack/WelcomePackDialog";
 import DailyXpBonus from "@/components/gamification/DailyXpBonus";
 import DailyStreakOverlay from "@/components/gamification/DailyStreak";
-import { WalletPointer } from "@/components/welcome-pack/WalletPointer";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AdminProtectedRoute } from "@/components/auth/admin-protected-route";
 import { OnboardingGuard } from "@/components/auth/onboarding-guard";
@@ -532,24 +529,6 @@ function Router() {
   );
 }
 
-function WelcomePackComponents() {
-  const { showWelcomePack, showWalletPointer, closeWelcomePack, onClaimComplete, dismissWalletPointer } = useWelcomePack();
-  
-  return (
-    <>
-      <WelcomePackDialog 
-        open={showWelcomePack} 
-        onOpenChange={closeWelcomePack}
-        onClaimComplete={onClaimComplete}
-      />
-      <WalletPointer 
-        show={showWalletPointer} 
-        onDismiss={dismissWalletPointer}
-      />
-    </>
-  );
-}
-
 function App() {
   const [splashDone, setSplashDone] = React.useState(false);
 
@@ -564,7 +543,6 @@ function App() {
               <AuthProvider>
                 <RevenueCatProvider>
                   <LevelTrackerProvider>
-                    <WelcomePackProvider>
                       {sequenceConfig ? (
                       <SequenceConnect config={sequenceConfig}>
                         <WalletProvider>
@@ -578,7 +556,6 @@ function App() {
                                 </MainLayout>
                                 <DailyXpBonus />
                                 <DailyStreakOverlay />
-                                <WelcomePackComponents />
                               </ClipDialogProvider>
                               <Toaster />
                             </AuthModalProvider>
@@ -597,14 +574,12 @@ function App() {
                                 </MainLayout>
                                 <DailyXpBonus />
                                 <DailyStreakOverlay />
-                                <WelcomePackComponents />
                               </ClipDialogProvider>
                               <Toaster />
                             </AuthModalProvider>
                           </CrossmintProvider>
                         </NoWalletProvider>
                       )}
-                    </WelcomePackProvider>
                   </LevelTrackerProvider>
                 </RevenueCatProvider>
               </AuthProvider>
