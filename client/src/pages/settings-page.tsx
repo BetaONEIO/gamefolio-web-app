@@ -1135,6 +1135,7 @@ export default function SettingsPage() {
     profileData.profileFontAnimation !== ((user as any)?.profileFontAnimation || "none") ||
     profileData.profileFontColor !== ((user as any)?.profileFontColor || "#FFFFFF") ||
     profileData.statsGlassEffect !== ((user as any)?.statsGlassEffect || false) ||
+    profileData.hideBanner !== ((user as any)?.hideBanner || false) ||
     profileData.profileBackgroundGradient !== ((user as any)?.profileBackgroundGradient !== false) ||
     avatarFile !== null ||
     selectedPreviousAvatar !== null ||
