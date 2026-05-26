@@ -81,19 +81,68 @@ async function updateWalletAddressOnServer(
   }
 }
 
-// Full WalletProvider — used inside SequenceConnect (when Sequence keys are set).
+// ─── WalletProvider (outer shell) ────────────────────────────────────────────
 //
-// wagmi v2 hooks like useAccount/useChainId use useSyncExternalStore which fires
-// synchronous subscriber callbacks. When wagmi's internal Hydrate component runs
-// during the same render cycle, these callbacks collide and cause React's
-// "Cannot update while rendering" warning, which cascades into the
-// "Rendered fewer hooks than expected" crash.
+// Wagmi's Hydrate component (inside SequenceConnect) calls onMount() DURING its
+// own render phase, which synchronously updates the wagmi Zustand store and
+// notifies any useSyncExternalStore subscribers.  In React 18 this manifests as
+// "Cannot update a component while rendering a different component" → "Rendered
+// fewer hooks than expected" crash.
 //
-// The fix: replace all useSyncExternalStore-based hooks (useAccount, useChainId,
-// useWalletClient) with imperative @wagmi/core watchers called from useEffect.
-// Only useConfig (context), useDisconnect (mutation), and useOpenConnectModal
-// (context) remain as hooks — none of those use useSyncExternalStore.
+// Fix: keep WalletProvider's initial render completely free of hooks that use
+// useSyncExternalStore (useAccount, useChainId, useDisconnect/useConnections,
+// useQuery via useAuth, etc.).  Those are all delegated to WalletProviderInner,
+// which only mounts AFTER the first useEffect fires — i.e. after Hydrate's
+// render has committed and onMount() has already run.
 export function WalletProvider({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  const [walletMode, setWalletModeState] = useState<WalletMode>(() => readStoredWalletMode());
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const setWalletMode = useCallback((mode: WalletMode) => {
+    setWalletModeState(mode);
+    try { window.localStorage.setItem(WALLET_MODE_STORAGE_KEY, mode); } catch {}
+  }, []);
+
+  if (mounted) {
+    return (
+      <WalletProviderInner walletMode={walletMode} setWalletMode={setWalletMode}>
+        {children}
+      </WalletProviderInner>
+    );
+  }
+
+  // Before mount: serve safe defaults so children can render without crashing.
+  const shellValue: WalletContextType = {
+    ...defaultContextValue,
+    walletMode,
+    setWalletMode,
+  };
+
+  return (
+    <WalletContext.Provider value={shellValue}>
+      {children}
+    </WalletContext.Provider>
+  );
+}
+
+// ─── WalletProviderInner ──────────────────────────────────────────────────────
+//
+// This component renders ONLY after WalletProvider's useEffect fires, meaning
+// Hydrate's onMount() has already committed.  It is safe to use any wagmi hooks,
+// useAuth (useQuery), useToast etc. here without collision.
+function WalletProviderInner({
+  walletMode,
+  setWalletMode,
+  children,
+}: {
+  walletMode: WalletMode;
+  setWalletMode: (m: WalletMode) => void;
+  children: ReactNode;
+}) {
   const { user, refreshUser } = useAuth();
   const { toast } = useToast();
   const wagmiConfig = useConfig();
@@ -102,9 +151,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const lastSavedAddress = useRef<string | null>(null);
   const isUpdatingWallet = useRef(false);
   const [userInitiatedConnect, setUserInitiatedConnect] = useState(false);
-  const [walletMode, setWalletModeState] = useState<WalletMode>(() => readStoredWalletMode());
 
-  // Imperative reads — safe during render (no store subscription).
+  // Read initial wagmi state imperatively (safe — no subscription during render).
   const [wagmiAddress, setWagmiAddress] = useState<Address | undefined>(() => {
     try { return getAccount(wagmiConfig).address as Address; } catch { return undefined; }
   });
@@ -118,7 +166,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try { return getChainId(wagmiConfig); } catch { return SKALE_CHAIN_ID; }
   });
 
-  // Subscribe to wagmi state imperatively — safe in useEffect, not during render.
+  // Subscribe to wagmi store changes via imperative watchers (safe in useEffect).
   useEffect(() => {
     const unwatchAccount = watchAccount(wagmiConfig, {
       onChange(account) {
@@ -135,23 +183,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return () => { unwatchAccount(); unwatchChain(); };
   }, [wagmiConfig]);
 
-  const setWalletMode = useCallback((mode: WalletMode) => {
-    setWalletModeState(mode);
-    try { window.localStorage.setItem(WALLET_MODE_STORAGE_KEY, mode); } catch {}
-  }, []);
-
   const walletAddress = wagmiAddress ?? null;
   const isReady = wagmiIsConnected && !!wagmiAddress;
   const isConnecting = userInitiatedConnect && wagmiIsConnecting;
 
   useEffect(() => {
-    if (isReady && userInitiatedConnect) {
-      setUserInitiatedConnect(false);
-    }
+    if (isReady && userInitiatedConnect) setUserInitiatedConnect(false);
   }, [isReady, userInitiatedConnect]);
 
   useEffect(() => {
-    if (isReady && walletAddress && user && walletAddress !== lastSavedAddress.current && !isUpdatingWallet.current) {
+    if (
+      isReady && walletAddress && user &&
+      walletAddress !== lastSavedAddress.current &&
+      !isUpdatingWallet.current
+    ) {
       isUpdatingWallet.current = true;
       lastSavedAddress.current = walletAddress;
       updateWalletAddressOnServer(walletAddress)
@@ -231,9 +276,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Lightweight fallback used when Sequence keys are absent (no WagmiProvider /
-// SequenceConnect in the tree). Provides the same context shape with sensible
-// defaults — no wagmi hooks of any kind.
+// ─── NoWalletProvider ─────────────────────────────────────────────────────────
+//
+// Used when Sequence keys are absent (no SequenceConnect / WagmiProvider in the
+// tree).  No wagmi hooks of any kind.
 export function NoWalletProvider({ children }: { children: ReactNode }) {
   const [walletMode, setWalletModeState] = useState<WalletMode>(() => readStoredWalletMode());
 
