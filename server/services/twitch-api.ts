@@ -24,6 +24,22 @@ export interface TwitchGame {
   igdb_id?: string;
 }
 
+// Resolve Twitch box art URL to a specific size, handling all URL formats:
+// 1. Template {width}x{height} → e.g. "...Game-{width}x{height}.jpg"
+// 2. Separate {width} / {height} tokens
+// 3. Pre-baked numeric dimensions → e.g. "...Game-52x72.jpg" (some indie/older games)
+function resolveBoxArtUrl(url: string | null | undefined, w = 600, h = 800): string {
+  if (!url) return '';
+  if (url.includes('{width}x{height}')) {
+    return url.replace('{width}x{height}', `${w}x${h}`);
+  }
+  if (url.includes('{width}') && url.includes('{height}')) {
+    return url.replace('{width}', String(w)).replace('{height}', String(h));
+  }
+  // Replace any existing hard-coded WxH numeric dimensions in the Twitch CDN path
+  return url.replace(/-\d+x\d+(\.\w+)$/, `-${w}x${h}$1`);
+}
+
 // Twitch API service
 class TwitchApiService {
   private accessToken: string | null = null;
@@ -131,23 +147,12 @@ class TwitchApiService {
       const paginatedGames = allGames.slice(offset, offset + limit);
 
       // Return the paginated games with properly formatted URLs
-      return paginatedGames.map((game: any) => {
-        let boxArtUrl = game.box_art_url;
-        
-        // Handle both possible template formats - use higher resolution for crisp display
-        if (boxArtUrl.includes('{width}x{height}')) {
-          boxArtUrl = boxArtUrl.replace('{width}x{height}', '600x800');
-        } else if (boxArtUrl.includes('{width}') && boxArtUrl.includes('{height}')) {
-          boxArtUrl = boxArtUrl.replace('{width}', '600').replace('{height}', '800');
-        }
-        
-        return {
-          id: game.id,
-          name: game.name,
-          box_art_url: boxArtUrl,
-          igdb_id: game.igdb_id
-        };
-      });
+      return paginatedGames.map((game: any) => ({
+        id: game.id,
+        name: game.name,
+        box_art_url: resolveBoxArtUrl(game.box_art_url),
+        igdb_id: game.igdb_id
+      }));
     } catch (error) {
       console.error('Error fetching top games from Twitch:', error);
       throw new Error('Failed to fetch top games from Twitch API');
@@ -178,23 +183,12 @@ class TwitchApiService {
         }
       });
       
-      return response.data.data.map((game: any) => {
-        let boxArtUrl = game.box_art_url;
-        
-        // Handle both possible template formats - use higher resolution for crisp display
-        if (boxArtUrl.includes('{width}x{height}')) {
-          boxArtUrl = boxArtUrl.replace('{width}x{height}', '600x800');
-        } else if (boxArtUrl.includes('{width}') && boxArtUrl.includes('{height}')) {
-          boxArtUrl = boxArtUrl.replace('{width}', '600').replace('{height}', '800');
-        }
-        
-        return {
-          id: game.id,
-          name: game.name,
-          box_art_url: boxArtUrl,
-          igdb_id: game.igdb_id || ''
-        };
-      });
+      return response.data.data.map((game: any) => ({
+        id: game.id,
+        name: game.name,
+        box_art_url: resolveBoxArtUrl(game.box_art_url),
+        igdb_id: game.igdb_id || ''
+      }));
     } catch (error) {
       console.error('Error searching games on Twitch:', error);
       throw new Error('Failed to search games on Twitch API');
@@ -227,19 +221,10 @@ class TwitchApiService {
       }
       
       const game = response.data.data[0];
-      let boxArtUrl = game.box_art_url;
-      
-      // Handle both possible template formats
-      if (boxArtUrl.includes('{width}x{height}')) {
-        boxArtUrl = boxArtUrl.replace('{width}x{height}', '285x380');
-      } else if (boxArtUrl.includes('{width}') && boxArtUrl.includes('{height}')) {
-        boxArtUrl = boxArtUrl.replace('{width}', '285').replace('{height}', '380');
-      }
-      
       return {
         id: game.id,
         name: game.name,
-        box_art_url: boxArtUrl,
+        box_art_url: resolveBoxArtUrl(game.box_art_url),
         igdb_id: game.igdb_id
       };
     } catch (error) {
@@ -270,19 +255,10 @@ class TwitchApiService {
       }
       
       const game = response.data.data[0];
-      let boxArtUrl = game.box_art_url;
-      
-      // Handle both possible template formats
-      if (boxArtUrl.includes('{width}x{height}')) {
-        boxArtUrl = boxArtUrl.replace('{width}x{height}', '285x380');
-      } else if (boxArtUrl.includes('{width}') && boxArtUrl.includes('{height}')) {
-        boxArtUrl = boxArtUrl.replace('{width}', '285').replace('{height}', '380');
-      }
-      
       return {
         id: game.id,
         name: game.name,
-        box_art_url: boxArtUrl,
+        box_art_url: resolveBoxArtUrl(game.box_art_url),
         igdb_id: game.igdb_id
       };
     } catch (error) {
