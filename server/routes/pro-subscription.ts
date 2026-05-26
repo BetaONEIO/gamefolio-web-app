@@ -302,9 +302,9 @@ const cachedPartnerPriceIds: { monthly: string | null; yearly: string | null } =
   yearly: null,
 };
 
-// Streamer Partner pricing: £4.99/mo and £48.00/yr (≈ £4.00/mo billed annually).
+// Streamer Partner pricing: £4.99/mo and £44.99/yr (≈ £3.75/mo billed annually).
 // Keep these in sync with the App Store / Play / RevenueCat Web Billing prices.
-const PARTNER_AMOUNTS = { monthly: 499, yearly: 4800 } as const;
+const PARTNER_AMOUNTS = { monthly: 499, yearly: 4499 } as const;
 
 async function getOrCreatePartnerPriceId(stripe: any, plan: 'monthly' | 'yearly'): Promise<string> {
   if (plan === 'monthly' && cachedPartnerPriceIds.monthly) return cachedPartnerPriceIds.monthly;
