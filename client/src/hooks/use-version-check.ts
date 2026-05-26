@@ -6,6 +6,14 @@ interface VersionData {
   buildHash: string;
 }
 
+// Global flag set by UploadPage (and any other page with active long-running operations)
+// to prevent the version-check from reloading the page mid-operation.
+declare global {
+  interface Window {
+    __gf_uploading__?: boolean;
+  }
+}
+
 export function useVersionCheck() {
   const [currentVersion, setCurrentVersion] = useState<string>('');
   const [isUpdateAvailable, setIsUpdateAvailable] = useState(false);
@@ -18,25 +26,32 @@ export function useVersionCheck() {
           headers: { 'Cache-Control': 'no-cache' }
         });
         const data: VersionData = await response.json();
-        
+
+        // Guard: never reload while an upload (or other long-running op) is active.
+        if (window.__gf_uploading__) return;
+
         const storedHash = localStorage.getItem('app_build_hash');
-        
+
         if (storedHash && storedHash !== data.buildHash) {
           setIsUpdateAvailable(true);
           localStorage.setItem('app_build_hash', data.buildHash);
-          
+
           if ('caches' in window) {
             const cacheNames = await caches.keys();
             await Promise.all(cacheNames.map(name => caches.delete(name)));
           }
-          window.location.reload();
+          // Final check before reload — user may have started uploading while
+          // we were clearing caches above.
+          if (!window.__gf_uploading__) {
+            window.location.reload();
+          }
           return;
         }
-        
+
         if (!storedHash) {
           localStorage.setItem('app_build_hash', data.buildHash);
         }
-        
+
         setCurrentVersion(data.version);
       } catch (error) {
         console.log('Version check failed:', error);

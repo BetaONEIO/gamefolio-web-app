@@ -601,6 +601,12 @@ const UploadPage = () => {
     };
   }, [isUploading]);
 
+  // Signal to useVersionCheck that a reload must not happen mid-upload.
+  useEffect(() => {
+    window.__gf_uploading__ = isUploading;
+    return () => { window.__gf_uploading__ = false; };
+  }, [isUploading]);
+
   // Upload mutation for clips
   const uploadMutation = useMutation({
     mutationFn: async () => {

@@ -2577,8 +2577,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get app version for cache busting
+  // IMPORTANT: must be stable across ALL autoscale instances of the same deployment.
+  // Using Date.now() would give each instance a different hash → reload loop in production.
+  // Instead, hash the built index.html (identical on every instance for the same deploy).
   const SERVER_START_TIME = new Date().toISOString();
-  const SERVER_BUILD_HASH = Date.now().toString(36);
+  const SERVER_BUILD_HASH = (() => {
+    try {
+      const indexPath = path.join(__dirname, '../dist/public/index.html');
+      if (fs.existsSync(indexPath)) {
+        const content = fs.readFileSync(indexPath, 'utf8');
+        const crypto = require('crypto') as typeof import('crypto');
+        return crypto.createHash('sha256').update(content).digest('hex').substring(0, 12);
+      }
+    } catch {}
+    // Dev fallback: no built files exist yet — use a per-session constant so
+    // the dev server doesn't trigger reload loops on every file-save restart.
+    return process.env.npm_package_version ?? Date.now().toString(36);
+  })();
   
   app.get("/api/version", (req, res) => {
     try {
