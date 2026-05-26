@@ -1754,85 +1754,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ── Kick OAuth ───────────────────────────────────────────────────────────
 
   // Kick Connect — redirect to Kick OAuth authorization
-  app.get("/api/auth/kick/connect", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
-    const clientId = process.env.KICK_CLIENT_ID;
-    const clientSecret = process.env.KICK_CLIENT_SECRET;
-    if (!clientId || !clientSecret) {
-      return res.redirect("/settings?tab=platforms&kick_error=not_configured");
-    }
-    const state = randomBytes(16).toString("hex");
-    (req.session as any).kickOAuthState = state;
-    (req.session as any).kickOAuthUserId = (req.user as any).id;
-    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/kick/callback`;
-    const url = new URL("https://id.kick.com/oauth/authorize");
-    url.searchParams.set("client_id", clientId);
-    url.searchParams.set("redirect_uri", redirectUri);
-    url.searchParams.set("response_type", "code");
-    url.searchParams.set("scope", "user:read");
-    url.searchParams.set("state", state);
-    res.redirect(url.toString());
-  });
-
-  // Kick Callback — exchange code, fetch user info, save to DB
-  app.get("/api/auth/kick/callback", async (req, res) => {
-    const { code, state, error } = req.query as Record<string, string>;
-    const storedState = (req.session as any).kickOAuthState;
-    const userId = (req.session as any).kickOAuthUserId;
-    delete (req.session as any).kickOAuthState;
-    delete (req.session as any).kickOAuthUserId;
-
-    if (error) return res.redirect(`/settings?tab=platforms&kick_error=${encodeURIComponent(error)}`);
-    if (!state || state !== storedState || !userId) {
-      return res.redirect("/settings?tab=platforms&kick_error=invalid_state");
-    }
-
-    const clientId = process.env.KICK_CLIENT_ID!;
-    const clientSecret = process.env.KICK_CLIENT_SECRET!;
-    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/kick/callback`;
-
-    try {
-      // Exchange code for access token
-      const tokenRes = await fetch("https://id.kick.com/oauth/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          client_id: clientId,
-          client_secret: clientSecret,
-          code,
-          grant_type: "authorization_code",
-          redirect_uri: redirectUri,
-        }),
-      });
-      if (!tokenRes.ok) throw new Error(`Kick token exchange failed: ${tokenRes.status}`);
-      const tokenData = await tokenRes.json() as any;
-      const accessToken = tokenData.access_token;
-
-      // Fetch Kick user info
-      const userRes = await fetch("https://api.kick.com/public/v1/users/me", {
-        headers: { "Authorization": `Bearer ${accessToken}` },
-      });
-      if (!userRes.ok) throw new Error(`Kick user fetch failed: ${userRes.status}`);
-      const userData = await userRes.json() as any;
-      const kickUser = userData.data ?? userData;
-      const channelName = kickUser.username ?? kickUser.slug ?? kickUser.login;
-      const channelId = String(kickUser.id ?? kickUser.user_id ?? "");
-
-      if (!channelName) throw new Error("No Kick channel data returned");
-
-      await storage.updateUser(userId, {
-        kickChannelName: channelName,
-        kickChannelId: channelId,
-        kickVerified: true,
-        kickAccessToken: accessToken,
-      });
-
-      res.redirect("/settings?tab=platforms&kick_connected=1");
-    } catch (err: any) {
-      console.error("Kick callback error:", err);
-      res.redirect(`/settings?tab=platforms&kick_error=${encodeURIComponent(err.message || "connection_failed")}`);
-    }
-  });
+  // Kick OAuth connect/callback handled by social-oauth router (server/routes/social-oauth.ts)
+  // which includes required PKCE (code_challenge/code_challenge_method) for Kick OAuth 2.1
 
   // Kick Disconnect
   app.post("/api/auth/kick/disconnect", async (req, res) => {
