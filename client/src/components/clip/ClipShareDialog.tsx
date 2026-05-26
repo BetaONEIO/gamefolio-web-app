@@ -22,7 +22,7 @@ interface ClipShareDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   isOwnContent?: boolean;
-  contentType?: 'clip' | 'reel';
+  contentType?: 'clip' | 'reel' | 'screenshot';
 }
 
 interface ShareData {
@@ -43,6 +43,7 @@ interface ShareData {
   description: string;
   thumbnailUrl?: string | null;
   videoUrl?: string | null;
+  imageUrl?: string | null;
   videoType?: string;
 }
 
@@ -56,9 +57,20 @@ const SOCIAL_PLATFORMS = [
   { name: "Email", icon: FaEnvelope, key: "email" },
 ];
 
-function ClipThumbnail({ thumbnailUrl, videoUrl }: { thumbnailUrl?: string | null; videoUrl?: string | null }) {
+function ClipThumbnail({ thumbnailUrl, videoUrl, imageUrl }: { thumbnailUrl?: string | null; videoUrl?: string | null; imageUrl?: string | null }) {
   const { signedUrl: signedThumbUrl } = useSignedUrl(thumbnailUrl);
   const { signedUrl: signedVideoUrl } = useSignedUrl(videoUrl);
+  const { signedUrl: signedImageUrl } = useSignedUrl(imageUrl);
+
+  if (signedImageUrl) {
+    return (
+      <img
+        src={signedImageUrl}
+        alt="Screenshot"
+        className="w-full h-full object-cover"
+      />
+    );
+  }
 
   if (signedThumbUrl) {
     return (
@@ -103,7 +115,14 @@ function ClipThumbnail({ thumbnailUrl, videoUrl }: { thumbnailUrl?: string | nul
 }
 
 export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnContent = false, contentType = 'clip' }: ClipShareDialogProps) {
-  const label = contentType === 'reel' ? 'reel' : 'clip';
+  const label = contentType === 'reel' ? 'reel' : contentType === 'screenshot' ? 'screenshot' : 'clip';
+  const isScreenshot = contentType === 'screenshot';
+  const shareEndpoint = isScreenshot
+    ? `/api/screenshots/${clipId}/share`
+    : `/api/clips/${clipId}/share`;
+  const trackEndpoint = isScreenshot
+    ? `/api/screenshots/${clipId}/track-share`
+    : `/api/clips/${clipId}/track-share`;
   const [internalOpen, setInternalOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const { toast } = useToast();
@@ -112,11 +131,19 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
   const setIsOpen = onOpenChange || setInternalOpen;
 
   const { data: shareData, isLoading, error, refetch } = useQuery<ShareData>({
-    queryKey: [`/api/clips/${clipId}/share`],
+    queryKey: [shareEndpoint],
     queryFn: async () => {
-      const res = await fetch(`/api/clips/${clipId}/share`, { credentials: "include" });
+      const res = await fetch(shareEndpoint, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch share data");
-      return res.json();
+      const data = await res.json();
+      // Normalize screenshot response to share dialog's expected shape
+      if (isScreenshot) {
+        return {
+          ...data,
+          clipUrl: data.clipUrl || data.screenshotUrl,
+        };
+      }
+      return data;
     },
     enabled: isOpen,
     retry: 2,
@@ -125,7 +152,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
 
   const trackShare = async () => {
     try {
-      await fetch(`/api/clips/${clipId}/track-share`, { method: "POST", credentials: "include" });
+      await fetch(trackEndpoint, { method: "POST", credentials: "include" });
     } catch (_) {}
   };
 
@@ -248,12 +275,14 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                       : 'w-full max-h-[140px] sm:max-h-[180px] aspect-video'
                   }`}
                 >
-                  <ClipThumbnail thumbnailUrl={shareData.thumbnailUrl} videoUrl={shareData.videoUrl} />
-                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none">
-                    <div className="w-9 h-9 bg-white/90 rounded-full flex items-center justify-center">
-                      <div className="w-0 h-0 border-l-[6px] border-l-[#0B1218] border-y-[4px] border-y-transparent ml-0.5" />
+                  <ClipThumbnail thumbnailUrl={shareData.thumbnailUrl} videoUrl={shareData.videoUrl} imageUrl={shareData.imageUrl} />
+                  {!isScreenshot && (
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none">
+                      <div className="w-9 h-9 bg-white/90 rounded-full flex items-center justify-center">
+                        <div className="w-0 h-0 border-l-[6px] border-l-[#0B1218] border-y-[4px] border-y-transparent ml-0.5" />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 

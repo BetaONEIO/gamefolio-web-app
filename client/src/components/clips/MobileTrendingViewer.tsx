@@ -162,6 +162,10 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   // ── Signed URL for the current item's author avatar ────────────────────
   const { signedUrl: signedAvatarUrl } = useSignedUrl(currentItem?.user?.avatarUrl ?? null);
 
+  // ── Signed URL for current screenshot image (used by download in menu) ─
+  const currentScreenshotImageUrl = currentItem && !('videoUrl' in currentItem) ? (currentItem as ScreenshotWithUser).imageUrl : null;
+  const { signedUrl: signedCurrentImageUrl } = useSignedUrl(currentScreenshotImageUrl);
+
   // ── Follow state for current content item's author ─────────────────────
   const currentAuthorUsername = currentItem?.user?.username;
   const currentAuthorId = currentItem?.user?.id;
@@ -540,12 +544,14 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             />
           </div>
 
-          {/* 3-dot menu — only for clips/reels, not screenshots */}
-          {isVideoContent(currentItem) && (
-            <div style={{ pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()}>
-              <TrendingClipMenu clip={currentItem as ClipWithUser} />
-            </div>
-          )}
+          {/* 3-dot menu — clips, reels, and screenshots */}
+          <div style={{ pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <TrendingClipMenu
+              clip={currentItem as ClipWithUser}
+              contentType={isVideoContent(currentItem) ? 'clip' : 'screenshot'}
+              screenshotImageUrl={signedCurrentImageUrl}
+            />
+          </div>
         </div>
       )}
 
@@ -707,14 +713,13 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
       </AnimatePresence>
 
       {/* Share dialog */}
-      {isVideoContent(currentItem) && (
-        <ClipShareDialog
-          clipId={currentItem.id}
-          contentType="reel"
-          open={showShare}
-          onOpenChange={setShowShare}
-        />
-      )}
+      <ClipShareDialog
+        clipId={currentItem.id}
+        contentType={isVideoContent(currentItem) ? 'reel' : 'screenshot'}
+        open={showShare}
+        onOpenChange={setShowShare}
+      />
+
 
     </div>
   );
