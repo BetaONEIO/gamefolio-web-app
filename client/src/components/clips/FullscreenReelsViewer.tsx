@@ -307,8 +307,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             {/* Right side engagement buttons — hidden when comments open, hidden on desktop (moved to right panel) */}
             {!showComments && !isDesktop && (
               <div
-                className="absolute right-3 flex flex-col items-center gap-3 pointer-events-auto"
-                style={{ bottom: 24 }}
+                className="absolute right-3 flex flex-col items-center gap-3 pointer-events-auto z-[5]"
+                style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' }}
                 onClick={e => e.stopPropagation()}
               >
                 {/* Views */}
