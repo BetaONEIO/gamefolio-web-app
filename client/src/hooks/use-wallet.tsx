@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, ReactNode, useCallback, useRef, useState } from 'react';
-import { useAccount, useDisconnect, useWalletClient, useChainId } from 'wagmi';
+import { useConfig, useDisconnect } from 'wagmi';
+import { watchAccount, watchChainId, getAccount, getChainId } from '@wagmi/core';
 import { useOpenConnectModal } from '@0xsequence/connect';
 import { createPublicClient, http, type PublicClient, type Address } from 'viem';
 import { useAuth } from './use-auth';
@@ -80,31 +81,68 @@ async function updateWalletAddressOnServer(
   }
 }
 
-// Full WalletProvider that uses wagmi hooks — only used when SequenceConnect
-// provides the wagmi context (i.e. VITE_SEQUENCE_* env vars are set).
+// Full WalletProvider — used inside SequenceConnect (when Sequence keys are set).
+//
+// wagmi v2 hooks like useAccount/useChainId use useSyncExternalStore which fires
+// synchronous subscriber callbacks. When wagmi's internal Hydrate component runs
+// during the same render cycle, these callbacks collide and cause React's
+// "Cannot update while rendering" warning, which cascades into the
+// "Rendered fewer hooks than expected" crash.
+//
+// The fix: replace all useSyncExternalStore-based hooks (useAccount, useChainId,
+// useWalletClient) with imperative @wagmi/core watchers called from useEffect.
+// Only useConfig (context), useDisconnect (mutation), and useOpenConnectModal
+// (context) remain as hooks — none of those use useSyncExternalStore.
 export function WalletProvider({ children }: { children: ReactNode }) {
   const { user, refreshUser } = useAuth();
   const { toast } = useToast();
+  const wagmiConfig = useConfig();
+  const { disconnect: wagmiDisconnect } = useDisconnect();
+  const { setOpenConnectModal } = useOpenConnectModal();
+
   const lastSavedAddress = useRef<string | null>(null);
+  const isUpdatingWallet = useRef(false);
   const [userInitiatedConnect, setUserInitiatedConnect] = useState(false);
   const [walletMode, setWalletModeState] = useState<WalletMode>(() => readStoredWalletMode());
 
+  // Imperative reads — safe during render (no store subscription).
+  const [wagmiAddress, setWagmiAddress] = useState<Address | undefined>(() => {
+    try { return getAccount(wagmiConfig).address as Address; } catch { return undefined; }
+  });
+  const [wagmiIsConnected, setWagmiIsConnected] = useState<boolean>(() => {
+    try { return getAccount(wagmiConfig).isConnected; } catch { return false; }
+  });
+  const [wagmiIsConnecting, setWagmiIsConnecting] = useState<boolean>(() => {
+    try { return getAccount(wagmiConfig).isConnecting; } catch { return false; }
+  });
+  const [chainId, setChainId] = useState<number>(() => {
+    try { return getChainId(wagmiConfig); } catch { return SKALE_CHAIN_ID; }
+  });
+
+  // Subscribe to wagmi state imperatively — safe in useEffect, not during render.
+  useEffect(() => {
+    const unwatchAccount = watchAccount(wagmiConfig, {
+      onChange(account) {
+        setWagmiAddress(account.address as Address | undefined);
+        setWagmiIsConnected(account.isConnected);
+        setWagmiIsConnecting(account.isConnecting);
+      },
+    });
+    const unwatchChain = watchChainId(wagmiConfig, {
+      onChange(newChainId) {
+        setChainId(newChainId);
+      },
+    });
+    return () => { unwatchAccount(); unwatchChain(); };
+  }, [wagmiConfig]);
+
   const setWalletMode = useCallback((mode: WalletMode) => {
     setWalletModeState(mode);
-    try {
-      window.localStorage.setItem(WALLET_MODE_STORAGE_KEY, mode);
-    } catch {}
+    try { window.localStorage.setItem(WALLET_MODE_STORAGE_KEY, mode); } catch {}
   }, []);
 
-  const { address, isConnected, isConnecting: wagmiIsConnecting } = useAccount();
-  const { disconnect: wagmiDisconnect } = useDisconnect();
-  const { data: walletClient } = useWalletClient();
-  const chainId = useChainId();
-  const { setOpenConnectModal } = useOpenConnectModal();
-
-  const walletAddress = (address as Address) || null;
-  const isReady = isConnected && !!address;
-  const isEmbeddedWallet = isConnected && !!walletClient;
+  const walletAddress = wagmiAddress ?? null;
+  const isReady = wagmiIsConnected && !!wagmiAddress;
   const isConnecting = userInitiatedConnect && wagmiIsConnecting;
 
   useEffect(() => {
@@ -112,8 +150,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setUserInitiatedConnect(false);
     }
   }, [isReady, userInitiatedConnect]);
-
-  const isUpdatingWallet = useRef(false);
 
   useEffect(() => {
     if (isReady && walletAddress && user && walletAddress !== lastSavedAddress.current && !isUpdatingWallet.current) {
@@ -182,7 +218,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     chainId: chainId || SKALE_CHAIN_ID,
     publicClient,
     isConnecting,
-    isEmbeddedWallet,
+    isEmbeddedWallet: false,
     connect,
     disconnect,
     walletMode,
@@ -196,17 +232,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Lightweight fallback used when Sequence keys are absent (no WagmiProvider in
-// the tree). Provides the same context shape with sensible defaults so all
-// consumers keep working without any wagmi hook calls.
+// Lightweight fallback used when Sequence keys are absent (no WagmiProvider /
+// SequenceConnect in the tree). Provides the same context shape with sensible
+// defaults — no wagmi hooks of any kind.
 export function NoWalletProvider({ children }: { children: ReactNode }) {
   const [walletMode, setWalletModeState] = useState<WalletMode>(() => readStoredWalletMode());
 
   const setWalletMode = useCallback((mode: WalletMode) => {
     setWalletModeState(mode);
-    try {
-      window.localStorage.setItem(WALLET_MODE_STORAGE_KEY, mode);
-    } catch {}
+    try { window.localStorage.setItem(WALLET_MODE_STORAGE_KEY, mode); } catch {}
   }, []);
 
   const value: WalletContextType = {
