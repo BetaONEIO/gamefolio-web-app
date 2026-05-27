@@ -401,7 +401,7 @@ const GamePage = () => {
                   clip={clip}
                   userId={user?.id}
                   compact={false}
-                  clipsList={displayData}
+                  clipsList={displayData as ClipWithUser[]}
                 />
               ))
             )}

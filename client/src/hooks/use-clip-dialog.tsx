@@ -9,6 +9,7 @@ const MobileTrendingViewer = lazy(() =>
 import { useQuery } from '@tanstack/react-query';
 import { ClipWithUser } from '@shared/schema';
 import { silentReplaceState } from '@/lib/native-history';
+import { useMobile } from '@/hooks/use-mobile';
 
 interface ClipDialogContextType {
   isOpen: boolean;
@@ -89,13 +90,7 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   // Enable navigation for any clip list with more than 1 clip
   const hasNavigation = clipsList && clipsList.length > 1;
 
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
+  const isMobile = useMobile();
 
   // Once currentClip data loads, refine the URL to the pretty /@username/type/shareCode format
   useEffect(() => {
