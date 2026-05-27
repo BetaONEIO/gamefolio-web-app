@@ -716,7 +716,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
       {/* Share dialog */}
       <ClipShareDialog
         clipId={currentItem.id}
-        contentType={isVideoContent(currentItem) ? 'reel' : 'screenshot'}
+        contentType={isVideoContent(currentItem) ? (currentItem.videoType === 'reel' ? 'reel' : 'clip') : 'screenshot'}
         open={showShare}
         onOpenChange={setShowShare}
       />

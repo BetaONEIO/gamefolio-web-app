@@ -157,7 +157,13 @@ const GamePage = () => {
       if (contentType === 'reels') return c.videoType === 'reel';
       return true;
     });
-  const rawDisplayData = currentData?.length ? currentData : fallbackData;
+  const rawDisplayData = (() => {
+    const source = currentData?.length ? currentData : fallbackData;
+    if (!source) return source;
+    if (contentType === 'clips') return (source as any[]).filter((c: any) => !c.videoType || c.videoType === 'clip');
+    if (contentType === 'reels') return (source as any[]).filter((c: any) => c.videoType === 'reel');
+    return source;
+  })();
   
   const uniqueUsers = useMemo(() => {
     if (!rawDisplayData) return [];
