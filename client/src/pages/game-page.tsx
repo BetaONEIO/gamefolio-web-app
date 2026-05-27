@@ -7,6 +7,7 @@ import { Upload, ArrowLeft, Play, TrendingUp, Camera, Users, Clock, Calendar, Ca
 import { Link, useLocation } from "wouter";
 import { ClipWithUser, Game } from "@shared/schema";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
+import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
@@ -29,6 +30,8 @@ const GamePage = () => {
   const [contentType, setContentType] = useState<'clips' | 'reels' | 'screenshots'>('clips');
   const [selectedUserId, setSelectedUserId] = useState<string>('all');
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [mobileViewerOpen, setMobileViewerOpen] = useState(false);
+  const [mobileViewerIndex, setMobileViewerIndex] = useState(0);
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -181,6 +184,13 @@ const GamePage = () => {
     return rawDisplayData.filter((item: any) => item.user?.id === userId);
   }, [rawDisplayData, selectedUserId]);
 
+  const handleClipClick = (clipId: number) => {
+    const clips = displayData as ClipWithUser[];
+    const idx = clips.findIndex(c => c.id === clipId);
+    setMobileViewerIndex(idx >= 0 ? idx : 0);
+    setMobileViewerOpen(true);
+  };
+
   if (!match || !gameSlug) {
     return <div>Game not found</div>;
   }
@@ -224,6 +234,14 @@ const GamePage = () => {
     : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6";
 
   return (
+    <>
+    {isMobile && mobileViewerOpen && (displayData as ClipWithUser[]).length > 0 && (
+      <MobileTrendingViewer
+        content={displayData as ClipWithUser[]}
+        initialIndex={mobileViewerIndex}
+        onClose={() => setMobileViewerOpen(false)}
+      />
+    )}
     <div className="py-6 px-4 sm:px-6">
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="sm" onClick={() => navigate("/explore")}>
@@ -402,6 +420,7 @@ const GamePage = () => {
                   userId={user?.id}
                   compact={false}
                   clipsList={displayData as ClipWithUser[]}
+                  onCardClick={isMobile ? handleClipClick : undefined}
                 />
               ))
             )}
@@ -443,6 +462,7 @@ const GamePage = () => {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 };
 
