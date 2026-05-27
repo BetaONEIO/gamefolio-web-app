@@ -1,12 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import { ArrowLeft, Video } from "lucide-react";
 import { useLocation } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { useEffect, useState } from "react";
 import { GameFilterSheet } from "@/components/filters/GameFilterSheet";
-import ClipFeedCard from "@/components/clips/ClipFeedCard";
+import { useClipDialog } from "@/hooks/use-clip-dialog";
+import { useMobile } from "@/hooks/use-mobile";
+import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
 
 const LatestClipsPage = () => {
   const { user } = useAuth();
@@ -14,6 +17,12 @@ const LatestClipsPage = () => {
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
   const [selectedGameName, setSelectedGameName] = useState<string | null>(null);
   const [timePeriod, setTimePeriod] = useState<string>("recent");
+  const { openClipDialog } = useClipDialog();
+  const isMobile = useMobile();
+
+  // Mobile viewer state
+  const [mobileViewerOpen, setMobileViewerOpen] = useState(false);
+  const [mobileViewerStartId, setMobileViewerStartId] = useState<number>(0);
 
   useEffect(() => {
     sessionStorage.setItem('clipNavContext', 'latest');
@@ -36,102 +45,107 @@ const LatestClipsPage = () => {
       : clipsData
     : [];
 
+  const handleCardClick = (clipId: number, clips: ClipWithUser[]) => {
+    if (isMobile) {
+      setMobileViewerStartId(clipId);
+      setMobileViewerOpen(true);
+    } else {
+      openClipDialog(clipId, clips);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="px-3 py-4 sm:px-4 sm:py-6 md:container md:mx-auto md:px-4 md:py-6">
-        <div className="space-y-3 mb-5 sm:space-y-4 sm:mb-6">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setLocation('/')}
-              className="flex items-center gap-2 shrink-0"
-              data-testid="button-back"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Button>
-            <div>
-              <h1 className="text-xl sm:text-3xl font-bold" data-testid="text-page-title">Latest Clips</h1>
-              <p className="text-muted-foreground text-xs sm:text-sm hidden sm:block">
-                Discover the newest gaming clips from the community
-              </p>
-            </div>
+    <div className="min-h-screen bg-background px-3 py-4 sm:px-4 sm:py-6 md:container md:mx-auto md:px-4 md:py-6">
+      {mobileViewerOpen && filteredClips.length > 0 && (
+        <MobileClipsViewerOverlay
+          clips={filteredClips}
+          startClipId={mobileViewerStartId}
+          onBack={() => setMobileViewerOpen(false)}
+        />
+      )}
+
+      <div className="space-y-3 mb-5 sm:space-y-4 sm:mb-8">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocation('/')}
+            className="flex items-center gap-2 shrink-0"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+          <div>
+            <h1 className="text-xl sm:text-3xl font-bold" data-testid="text-page-title">Latest Clips</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm hidden sm:block">
+              Discover the newest gaming clips from the community
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+            {[
+              { value: 'recent', label: 'Recent' },
+              { value: '1d', label: '1D' },
+              { value: '1w', label: '1W' },
+              { value: 'ever', label: 'Ever' },
+            ].map((period) => (
+              <button
+                key={period.value}
+                onClick={() => setTimePeriod(period.value)}
+                className={`px-2.5 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${
+                  timePeriod === period.value
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                {period.label}
+              </button>
+            ))}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
-              {[
-                { value: 'recent', label: 'Recent' },
-                { value: '1d', label: '1D' },
-                { value: '1w', label: '1W' },
-                { value: 'ever', label: 'Ever' },
-              ].map((period) => (
-                <button
-                  key={period.value}
-                  onClick={() => setTimePeriod(period.value)}
-                  className={`px-2.5 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${
-                    timePeriod === period.value
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}
-                >
-                  {period.label}
-                </button>
-              ))}
-            </div>
-
-            {clipsData && clipsData.length > 0 && (
-              <GameFilterSheet
-                clips={clipsData}
-                selectedGameId={selectedGameId}
-                selectedGameName={selectedGameName}
-                onGameSelect={(id, name) => { setSelectedGameId(id); setSelectedGameName(name); }}
-                label="Clips"
-              />
-            )}
-          </div>
+          {clipsData && clipsData.length > 0 && (
+            <GameFilterSheet
+              clips={clipsData}
+              selectedGameId={selectedGameId}
+              selectedGameName={selectedGameName}
+              onGameSelect={(id, name) => { setSelectedGameId(id); setSelectedGameName(name); }}
+              label="Clips"
+            />
+          )}
         </div>
       </div>
 
-      {/* Feed */}
       {isLoadingClips ? (
-        <div className="max-w-2xl mx-auto px-0 sm:px-4 space-y-0">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="w-full">
-              <div className="w-full aspect-video bg-muted animate-pulse" />
-              <div className="px-4 pt-4 pb-3 space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-muted animate-pulse" />
-                  <div className="space-y-1.5 flex-1">
-                    <div className="h-3.5 bg-muted animate-pulse rounded w-32" />
-                    <div className="h-3 bg-muted animate-pulse rounded w-24" />
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 w-full">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="aspect-video bg-muted rounded-xl animate-pulse" />
           ))}
         </div>
       ) : filteredClips.length > 0 ? (
-        <div className="max-w-2xl mx-auto divide-y divide-[#1B2A33]">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 w-full">
           {filteredClips.map((clip) => (
-            <ClipFeedCard
+            <VideoClipGridItem
               key={clip.id}
               clip={clip}
-              clips={filteredClips}
+              userId={user?.id}
+              compact={false}
+              clipsList={filteredClips}
+              onCardClick={handleCardClick}
             />
           ))}
         </div>
       ) : clipsData && clipsData.length > 0 ? (
-        <div className="text-center py-12 px-4">
+        <div className="text-center py-12">
           <Video className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-xl font-semibold mb-2" data-testid="text-no-clips-filtered">No clips found for this game</h3>
           <p className="text-muted-foreground mb-4">Try selecting a different game or view all clips</p>
           <Button onClick={() => setSelectedGameId(null)} data-testid="button-clear-filter">Clear Filter</Button>
         </div>
       ) : (
-        <div className="text-center py-12 px-4">
+        <div className="text-center py-12">
           <Video className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-xl font-semibold mb-2">
             {timePeriod === '1d' ? 'No clips from today' : timePeriod === '1w' ? 'No clips from this week' : timePeriod === 'ever' ? 'No clips yet' : 'No clips yet'}
