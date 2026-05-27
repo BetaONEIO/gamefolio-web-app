@@ -466,6 +466,56 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
 };
 
 
+// ── Mobile: full-screen clips viewer with top bar ─────────────────────────
+const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void; viewAllHref?: string }> = ({ clips, onBack }) => {
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: '#03080A' }}>
+      {/* Top bar — back button only */}
+      <div
+        className="flex-shrink-0 flex items-center px-4 pb-3"
+        style={{ background: '#03080A', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+      >
+        <button
+          onClick={onBack}
+          className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
+          style={{ color: '#F5F7F2' }}
+          aria-label="Back"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Snap-scrolling feed — one clip per scroll */}
+      <div
+        className="flex-1 overflow-y-auto"
+        style={{
+          scrollSnapType: 'y mandatory',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        {clips.map((clip) => (
+          <div
+            key={clip.id}
+            className="flex flex-col justify-center"
+            style={{
+              scrollSnapAlign: 'start',
+              scrollSnapStop: 'always',
+              minHeight: '100%',
+            }}
+          >
+            <ClipFeedCard clip={clip} clips={clips} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // Reel card component - TikTok/YouTube Shorts style
 const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[]; onOpenViewer?: (index: number) => void }> = ({ reel, reelsList, onOpenViewer }) => {
   const { openClipDialog } = useClipDialog();
@@ -1701,7 +1751,7 @@ const TrendingPage: React.FC = () => {
                 <p className="text-white/50 text-sm text-center">Check back later!</p>
               </div>
             ) : (
-              <MobileTrendingViewer content={trendingClips} onClose={() => setLocation('/')} />
+              <MobileClipsViewer clips={trendingClips} viewAllHref="/trending" onBack={() => setLocation('/')} />
             )}
           </div>
         )}
