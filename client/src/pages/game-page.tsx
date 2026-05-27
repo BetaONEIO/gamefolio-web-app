@@ -8,6 +8,7 @@ import { Link, useLocation } from "wouter";
 import { ClipWithUser, Game } from "@shared/schema";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
+import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
@@ -32,6 +33,7 @@ const GamePage = () => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [mobileViewerOpen, setMobileViewerOpen] = useState(false);
   const [mobileViewerIndex, setMobileViewerIndex] = useState(0);
+  const [mobileViewerClipId, setMobileViewerClipId] = useState<number | null>(null);
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -194,6 +196,7 @@ const GamePage = () => {
     const clips = displayData as ClipWithUser[];
     const idx = clips.findIndex(c => c.id === clipId);
     setMobileViewerIndex(idx >= 0 ? idx : 0);
+    setMobileViewerClipId(clipId);
     setMobileViewerOpen(true);
   };
 
@@ -242,11 +245,19 @@ const GamePage = () => {
   return (
     <>
     {isMobile && mobileViewerOpen && (displayData as ClipWithUser[]).length > 0 && (
-      <MobileTrendingViewer
-        content={displayData as ClipWithUser[]}
-        initialIndex={mobileViewerIndex}
-        onClose={() => setMobileViewerOpen(false)}
-      />
+      contentType === 'clips' ? (
+        <MobileClipsViewerOverlay
+          clips={displayData as ClipWithUser[]}
+          startClipId={mobileViewerClipId ?? (displayData as ClipWithUser[])[mobileViewerIndex]?.id ?? 0}
+          onBack={() => setMobileViewerOpen(false)}
+        />
+      ) : (
+        <MobileTrendingViewer
+          content={displayData as ClipWithUser[]}
+          initialIndex={mobileViewerIndex}
+          onClose={() => setMobileViewerOpen(false)}
+        />
+      )
     )}
     <div className="py-6 px-4 sm:px-6">
       <div className="flex items-center gap-4 mb-6">
