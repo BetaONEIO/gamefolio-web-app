@@ -76,10 +76,32 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Hashed JS/CSS bundles (e.g. index-Bi09A_U6.js) are content-addressed and
+  // safe to cache aggressively. Everything else (index.html, favicon, etc.)
+  // must never be cached so mobile browsers always get the latest entry point.
+  app.use(express.static(distPath, {
+    setHeaders(res, filePath) {
+      const isHashedAsset = /\.[a-f0-9]{8,}\.(js|css|woff2?|ttf|eot|png|svg|webp)$/i.test(filePath);
+      if (isHashedAsset) {
+        // Immutable — the hash changes when content changes, so this is safe.
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      } else {
+        // index.html and any un-hashed file must always be re-fetched so
+        // mobile browsers pick up new JS chunk filenames after a deploy.
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+      }
+    },
+  }));
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
+    res.set({
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0",
+    });
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

@@ -1,4 +1,30 @@
 import "./lib/native-history"; // MUST be first: captures history.replaceState before wouter patches it
+
+// ─── Service Worker cleanup ───────────────────────────────────────────────────
+// Gamefolio does not use a service worker. If one was ever registered (e.g. by
+// a previous Replit feature or a browser extension), unregister it immediately
+// so it cannot serve stale cached assets to mobile users after a new deploy.
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const reg of registrations) {
+      reg.unregister().then((unregistered) => {
+        if (unregistered) {
+          console.log("[SW] Unregistered stale service worker:", reg.scope);
+        }
+      });
+    }
+  }).catch(() => {});
+  // Also clear any Cache API entries that a previous SW may have left behind.
+  if ("caches" in window) {
+    caches.keys().then((keys) => {
+      keys.forEach((key) => {
+        caches.delete(key).catch(() => {});
+      });
+    }).catch(() => {});
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
