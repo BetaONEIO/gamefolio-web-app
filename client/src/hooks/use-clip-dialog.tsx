@@ -1,6 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode, Suspense, lazy } from 'react';
 import { ClipDialog } from '@/components/clips/ClipDialog';
 import { FullscreenReelsViewer } from '@/components/clips/FullscreenReelsViewer';
+// Lazy-loaded to break the circular dependency:
+// use-clip-dialog → MobileTrendingViewer → TrendingClipMenu → use-clip-dialog
+const MobileTrendingViewer = lazy(() =>
+  import('@/components/clips/MobileTrendingViewer').then(m => ({ default: m.MobileTrendingViewer }))
+);
 import { useQuery } from '@tanstack/react-query';
 import { ClipWithUser } from '@shared/schema';
 import { silentReplaceState } from '@/lib/native-history';
@@ -100,6 +105,15 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
 
   const showFullscreenReelsViewer = isReel && isMobile && isOpen && clipsList && clipsList.length > 0;
 
+  // For mobile clips: use MobileTrendingViewer. Fall back to [currentClip] if no list was provided.
+  const effectiveClipsList: ClipWithUser[] | null =
+    !isReel ? (clipsList || (currentClip ? [currentClip] : null)) : null;
+  const showMobileTrendingViewer =
+    !isReel && isMobile && isOpen && !!effectiveClipsList && effectiveClipsList.length > 0;
+  const effectiveIndex = effectiveClipsList
+    ? Math.max(0, effectiveClipsList.findIndex(c => c.id === clipId))
+    : 0;
+
   const handleNext = () => {
     if (!clipsList || currentIndex === -1) return;
     const nextIndex = (currentIndex + 1) % clipsList.length;
@@ -119,7 +133,15 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   return (
     <ClipDialogContext.Provider value={{ isOpen, clipId, openClipDialog, closeClipDialog }}>
       {children}
-      {showFullscreenReelsViewer ? (
+      {showMobileTrendingViewer ? (
+        <Suspense fallback={null}>
+          <MobileTrendingViewer
+            content={effectiveClipsList!}
+            initialIndex={effectiveIndex}
+            onClose={closeClipDialog}
+          />
+        </Suspense>
+      ) : showFullscreenReelsViewer ? (
         <FullscreenReelsViewer
           reels={clipsList || []}
           initialIndex={currentIndex >= 0 ? currentIndex : 0}

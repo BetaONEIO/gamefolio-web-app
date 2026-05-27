@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
-import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
+import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 import { useMobile } from "@/hooks/use-mobile";
 import { NameTagDetailDialog } from "@/components/store/NameTagDetailDialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -5299,10 +5299,10 @@ const ProfilePage = () => {
       />
 
       {mobileViewer && (
-        <MobileClipsViewerOverlay
-          clips={mobileViewer.clips}
-          startClipId={mobileViewer.startId}
-          onBack={() => setMobileViewer(null)}
+        <MobileTrendingViewer
+          content={mobileViewer.clips}
+          initialIndex={Math.max(0, mobileViewer.clips.findIndex(c => c.id === mobileViewer.startId))}
+          onClose={() => setMobileViewer(null)}
         />
       )}
     </div>

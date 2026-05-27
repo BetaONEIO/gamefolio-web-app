@@ -4,7 +4,6 @@ import { RecommendedIcon } from "@/components/icons/RecommendedIcon";
 import { Link } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
-import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
 import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
@@ -212,11 +211,10 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
     <>
       {/* Mobile clips viewer — same as Trending clips tab */}
       {mobileClipsViewer && (
-        <MobileClipsViewerOverlay
-          clips={mobileClipsViewer.clips}
-          startClipId={mobileClipsViewer.startId}
-          onBack={() => setMobileClipsViewer(null)}
-          viewAllHref="/latest-clips"
+        <MobileTrendingViewer
+          content={mobileClipsViewer.clips}
+          initialIndex={Math.max(0, mobileClipsViewer.clips.findIndex(c => c.id === mobileClipsViewer.startId))}
+          onClose={() => setMobileClipsViewer(null)}
         />
       )}
 

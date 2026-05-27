@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
-import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
+import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 import { useMobile } from "@/hooks/use-mobile";
 import { TrendingSection } from "@/components/trending/TrendingSection";
 
@@ -162,11 +162,10 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
         ))}
       </div>
       {mobileViewer && (
-        <MobileClipsViewerOverlay
-          clips={mobileViewer.clips}
-          startClipId={mobileViewer.startId}
-          onBack={() => setMobileViewer(null)}
-          viewAllHref="/latest-clips"
+        <MobileTrendingViewer
+          content={mobileViewer.clips}
+          initialIndex={Math.max(0, mobileViewer.clips.findIndex(c => c.id === mobileViewer.startId))}
+          onClose={() => setMobileViewer(null)}
         />
       )}
     </div>

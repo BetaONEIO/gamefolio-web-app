@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
-import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
 import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 import TrendingGameCard from "@/components/clips/TrendingGameCard";
 import GameClipsSection from "@/components/clips/GameClipsSection";
@@ -1032,10 +1031,10 @@ const HomePage = () => {
     </div>
 
     {mobileViewer && (
-      <MobileClipsViewerOverlay
-        clips={mobileViewer.clips}
-        startClipId={mobileViewer.startId}
-        onBack={() => setMobileViewer(null)}
+      <MobileTrendingViewer
+        content={mobileViewer.clips}
+        initialIndex={Math.max(0, mobileViewer.clips.findIndex(c => c.id === mobileViewer.startId))}
+        onClose={() => setMobileViewer(null)}
       />
     )}
 
