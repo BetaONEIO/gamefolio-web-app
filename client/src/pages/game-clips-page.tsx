@@ -206,7 +206,6 @@ export default function GameClipsPage() {
   const normalClips = allClips?.filter(clip => clip.videoType === 'clip' || !clip.videoType) || clips || [];
 
   const isMobile = useMobile();
-  const { openClipDialog } = useClipDialog();
   const [mobileViewerOpen, setMobileViewerOpen] = useState(false);
   const [mobileViewerStartId, setMobileViewerStartId] = useState(0);
 
@@ -215,7 +214,7 @@ export default function GameClipsPage() {
       setMobileViewerStartId(clipId);
       setMobileViewerOpen(true);
     } else {
-      openClipDialog(clipId, normalClips as unknown as ClipWithUser[]);
+      setLocation(`/clips/${clipId}`);
     }
   };
 
