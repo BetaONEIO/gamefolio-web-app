@@ -185,13 +185,13 @@ export default function GameClipsPage() {
   });
 
   // Fetch clips for this game
-  const { data: clips, isLoading: clipsLoading } = useQuery<Clip[]>({
+  const { data: clips, isLoading: clipsLoading } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/games/${gameId}/clips`],
     enabled: !!gameId,
   });
 
   // Fetch reels for this game (using clips API with filter)
-  const { data: allClips, isLoading: allClipsLoading } = useQuery<Clip[]>({
+  const { data: allClips, isLoading: allClipsLoading } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/games/${gameId}/clips-all`],
     enabled: !!gameId,
   });
@@ -210,7 +210,7 @@ export default function GameClipsPage() {
   const [mobileViewerOpen, setMobileViewerOpen] = useState(false);
   const [mobileViewerStartId, setMobileViewerStartId] = useState(0);
 
-  const handleClipClick = (clipId: number) => {
+  const handleClipClick = (clipId: number, _clips?: ClipWithUser[]) => {
     if (isMobile) {
       setMobileViewerStartId(clipId);
       setMobileViewerOpen(true);
@@ -388,7 +388,7 @@ export default function GameClipsPage() {
     <>
     {mobileViewerOpen && normalClips.length > 0 && (
       <MobileClipsViewerOverlay
-        clips={normalClips as unknown as ClipWithUser[]}
+        clips={normalClips}
         startClipId={mobileViewerStartId}
         onBack={() => setMobileViewerOpen(false)}
       />
@@ -501,8 +501,8 @@ export default function GameClipsPage() {
                 {normalClips.map((clip) => (
                   <VideoClipGridItem
                     key={clip.id}
-                    clip={clip as unknown as ClipWithUser}
-                    clipsList={normalClips as unknown as ClipWithUser[]}
+                    clip={clip}
+                    clipsList={normalClips}
                     onCardClick={handleClipClick}
                   />
                 ))}
@@ -525,8 +525,8 @@ export default function GameClipsPage() {
                 {reels.map((reel) => (
                   <VideoClipGridItem
                     key={reel.id}
-                    clip={reel as unknown as ClipWithUser}
-                    clipsList={reels as unknown as ClipWithUser[]}
+                    clip={reel}
+                    clipsList={reels}
                     onCardClick={handleClipClick}
                   />
                 ))}
