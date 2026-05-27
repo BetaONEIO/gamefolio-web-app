@@ -8,6 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ClipWithUser } from "@shared/schema";
+import { useMobile } from "@/hooks/use-mobile";
+import { useClipDialog } from "@/hooks/use-clip-dialog";
+import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
 
 interface Clip {
   id: number;
@@ -201,8 +205,18 @@ export default function GameClipsPage() {
   const reels = allClips?.filter(clip => clip.videoType === 'reel') || [];
   const normalClips = allClips?.filter(clip => clip.videoType === 'clip' || !clip.videoType) || clips || [];
 
+  const isMobile = useMobile();
+  const { openClipDialog } = useClipDialog();
+  const [mobileViewerOpen, setMobileViewerOpen] = useState(false);
+  const [mobileViewerStartId, setMobileViewerStartId] = useState(0);
+
   const handleClipClick = (clipId: number) => {
-    setLocation(`/clips/${clipId}`);
+    if (isMobile) {
+      setMobileViewerStartId(clipId);
+      setMobileViewerOpen(true);
+    } else {
+      openClipDialog(clipId, normalClips as unknown as ClipWithUser[]);
+    }
   };
 
   const handleBackClick = () => {
@@ -371,6 +385,14 @@ export default function GameClipsPage() {
   }
 
   return (
+    <>
+    {mobileViewerOpen && normalClips.length > 0 && (
+      <MobileClipsViewerOverlay
+        clips={normalClips as unknown as ClipWithUser[]}
+        startClipId={mobileViewerStartId}
+        onBack={() => setMobileViewerOpen(false)}
+      />
+    )}
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
@@ -531,5 +553,6 @@ export default function GameClipsPage() {
         </Tabs>
       </div>
     </div>
+    </>
   );
 }
