@@ -12,6 +12,7 @@ import { ClipWithUser } from "@shared/schema";
 import { useMobile } from "@/hooks/use-mobile";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
+import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 
 interface Clip {
   id: number;
@@ -496,9 +497,14 @@ export default function GameClipsPage() {
           {/* Clips Tab */}
           <TabsContent value="clips" className="mt-0">
             {normalClips && normalClips.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
                 {normalClips.map((clip) => (
-                  <ClipGridItem key={clip.id} clip={clip} onClipClick={handleClipClick} />
+                  <VideoClipGridItem
+                    key={clip.id}
+                    clip={clip as unknown as ClipWithUser}
+                    clipsList={normalClips as unknown as ClipWithUser[]}
+                    onCardClick={handleClipClick}
+                  />
                 ))}
               </div>
             ) : (
@@ -515,9 +521,14 @@ export default function GameClipsPage() {
           {/* Reels Tab */}
           <TabsContent value="reels" className="mt-0">
             {reels && reels.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
                 {reels.map((reel) => (
-                  <ReelGridItem key={reel.id} reel={reel} onReelClick={handleClipClick} />
+                  <VideoClipGridItem
+                    key={reel.id}
+                    clip={reel as unknown as ClipWithUser}
+                    clipsList={reels as unknown as ClipWithUser[]}
+                    onCardClick={handleClipClick}
+                  />
                 ))}
               </div>
             ) : (
