@@ -203,26 +203,9 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
     followMutation.mutate();
   };
 
-  // Early return if no content or invalid index
-  if (!currentItem || currentIndex < 0 || currentIndex >= content.length) {
-    return (
-      <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
-        <div className="text-white text-center">
-          <p className="text-lg">No content available</p>
-          <Button 
-            onClick={onClose} 
-            variant="outline" 
-            className="mt-4 text-white border-white hover:bg-white/20"
-          >
-            Close
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   // ── Scroll-snap navigation ──────────────────────────────────────────────
   // Debounced scroll handler: updates currentIndex after scroll settles
+  // NOTE: All hooks must be declared before any early return.
   const handleScrollEvent = useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -292,6 +275,24 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   const isVideoContent = (item: ContentItem): item is ClipWithUser => {
     return 'videoUrl' in item;
   };
+
+  // Early return if no content or invalid index — placed after all hooks.
+  if (!currentItem || currentIndex < 0 || currentIndex >= content.length) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
+        <div className="text-white text-center">
+          <p className="text-lg">No content available</p>
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="mt-4 text-white border-white hover:bg-white/20"
+          >
+            Close
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;

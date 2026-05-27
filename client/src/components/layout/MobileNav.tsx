@@ -29,7 +29,14 @@ const MobileNav = () => {
   const { zapFlyState, triggerZapFly, dismissZapFly } = useZapFly();
   const isKeyboardOpen = useIsKeyboardOpen();
 
-  // Hide navigation bar when keyboard is open so it doesn't overlap input fields
+  // All hooks must be declared before any early return.
+  const handleUploadOptionClick = useCallback((type: string) => {
+    setUploadMenuOpen(false);
+    window.dispatchEvent(new CustomEvent("upload-type-change", { detail: type }));
+    setLocation(`/upload?type=${type}`);
+  }, [setLocation]);
+
+  // Hide navigation bar when keyboard is open so it doesn't overlap input fields.
   if (isKeyboardOpen) return null;
 
   const navItems = [
@@ -58,12 +65,6 @@ const MobileNav = () => {
       setShowAuthModal(true);
     }
   };
-
-  const handleUploadOptionClick = useCallback((type: string) => {
-    setUploadMenuOpen(false);
-    window.dispatchEvent(new CustomEvent("upload-type-change", { detail: type }));
-    setLocation(`/upload?type=${type}`);
-  }, [setLocation]);
 
   return (
     <>
