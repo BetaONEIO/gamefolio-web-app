@@ -50,11 +50,16 @@ const VideoClipGridItem = ({
     if (onCardClick) {
       onCardClick(clip.id, contextList);
     } else {
-      openClipDialog(clip.id, contextList.length ? contextList : undefined, viewAllHref);
+      // If opened from a clips context (clipsList provided, no reelsList), force the clip viewer
+      // so that clips with videoType==='reel' in the DB still open in the clip-style UI.
+      const forceViewerType = clipsList && !reelsList ? 'clip' : undefined;
+      openClipDialog(clip.id, contextList.length ? contextList : undefined, viewAllHref, forceViewerType as 'clip' | 'reel' | undefined);
     }
   };
 
-  const isReel = clip.videoType === "reel";
+  // Treat as a reel only when in a reels context (reelsList provided).
+  // A clip with videoType==='reel' that appears in a clips section should render as a clip.
+  const isReel = clip.videoType === "reel" && !!reelsList && !clipsList;
   const aspectRatioClass = isReel ? "aspect-[9/16]" : "aspect-video";
   const thumbnailUrl = clip.thumbnailUrl;
   const hasNoThumbnail = !thumbnailUrl;

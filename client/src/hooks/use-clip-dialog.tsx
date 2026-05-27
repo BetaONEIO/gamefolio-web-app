@@ -14,7 +14,7 @@ import { useMobile } from '@/hooks/use-mobile';
 interface ClipDialogContextType {
   isOpen: boolean;
   clipId: number | null;
-  openClipDialog: (id: number, clipsList?: ClipWithUser[], viewAllHref?: string) => void;
+  openClipDialog: (id: number, clipsList?: ClipWithUser[], viewAllHref?: string, forceViewerType?: 'clip' | 'reel') => void;
   closeClipDialog: () => void;
 }
 
@@ -38,6 +38,7 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   const [clipId, setClipId] = useState<number | null>(null);
   const [clipsList, setClipsList] = useState<ClipWithUser[] | null>(null);
   const [viewAllHref, setViewAllHref] = useState<string | undefined>(undefined);
+  const [forcedViewerType, setForcedViewerType] = useState<'clip' | 'reel' | null>(null);
   const previousUrlRef = useRef<string | null>(null);
   const closeTimestampRef = useRef<number>(0);
 
@@ -49,13 +50,14 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
     return `/${type}/${clip.id}`;
   };
 
-  const openClipDialog = (id: number, providedClipsList?: ClipWithUser[], href?: string) => {
+  const openClipDialog = (id: number, providedClipsList?: ClipWithUser[], href?: string, forceViewerType?: 'clip' | 'reel') => {
     // Block ghost clicks that arrive within 250ms of the dialog closing
     if (Date.now() - closeTimestampRef.current < 250) return;
     previousUrlRef.current = window.location.pathname + window.location.search + window.location.hash;
     setClipId(id);
     setClipsList(providedClipsList || null);
     setViewAllHref(href);
+    setForcedViewerType(forceViewerType ?? null);
     setIsOpen(true);
     // If the clip is in the provided list we can build the pretty URL right away
     const matchingClip = providedClipsList?.find(c => c.id === id);
@@ -72,6 +74,7 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
     setClipId(null);
     setClipsList(null);
     setViewAllHref(undefined);
+    setForcedViewerType(null);
   };
 
   // Get current clip to check if it's a reel
@@ -85,7 +88,14 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
     enabled: !!clipId && isOpen,
   });
 
-  const isReel = currentClip?.videoType === 'reel';
+  // Respect forceViewerType when provided; otherwise fall back to the clip's own videoType.
+  // This ensures clips appearing in a "clips" context always open in the clip viewer,
+  // even if their videoType field in the DB is set to 'reel'.
+  const isReel =
+    forcedViewerType === 'clip' ? false :
+    forcedViewerType === 'reel' ? true :
+    currentClip?.videoType === 'reel';
+
   const currentIndex = clipsList ? clipsList.findIndex(clip => clip.id === clipId) : -1;
   // Enable navigation for any clip list with more than 1 clip
   const hasNavigation = clipsList && clipsList.length > 1;
