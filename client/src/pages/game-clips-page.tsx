@@ -211,12 +211,8 @@ export default function GameClipsPage() {
   const [mobileViewerStartId, setMobileViewerStartId] = useState(0);
 
   const handleClipClick = (clipId: number, _clips?: ClipWithUser[]) => {
-    if (isMobile) {
-      setMobileViewerStartId(clipId);
-      setMobileViewerOpen(true);
-    } else {
-      setLocation(`/clips/${clipId}`);
-    }
+    setMobileViewerStartId(clipId);
+    setMobileViewerOpen(true);
   };
 
   const handleBackClick = () => {

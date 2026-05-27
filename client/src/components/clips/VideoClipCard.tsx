@@ -3,8 +3,6 @@ import { Link } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { formatDuration } from "@/lib/constants";
 import { Eye, Play } from "lucide-react";
-import { useClipDialog } from "@/hooks/use-clip-dialog";
-import { useMobile } from "@/hooks/use-mobile";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
@@ -17,18 +15,12 @@ interface VideoClipCardProps {
 }
 
 const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
-  const { openClipDialog } = useClipDialog();
-  const isMobile = useMobile();
   const [mobileViewerOpen, setMobileViewerOpen] = useState(false);
   const allClips = clipsList || [clip];
 
   const handleCardClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (isMobile) {
-      setMobileViewerOpen(true);
-    } else {
-      openClipDialog(clip.id, allClips);
-    }
+    setMobileViewerOpen(true);
   };
 
   const isNew = clip.createdAt && Date.now() - new Date(clip.createdAt).getTime() < 86400000 * 3;
