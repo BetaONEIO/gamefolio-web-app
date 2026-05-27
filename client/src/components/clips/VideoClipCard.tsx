@@ -5,7 +5,7 @@ import { formatDuration } from "@/lib/constants";
 import { Eye, Play } from "lucide-react";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
-import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
+import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 
 interface VideoClipCardProps {
   clip: ClipWithUser;
@@ -39,10 +39,10 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
   return (
     <>
     {mobileViewerOpen && (
-      <MobileClipsViewerOverlay
-        clips={allClips}
-        startClipId={clip.id}
-        onBack={() => setMobileViewerOpen(false)}
+      <MobileTrendingViewer
+        content={allClips}
+        initialIndex={allClips.findIndex(c => c.id === clip.id)}
+        onClose={() => setMobileViewerOpen(false)}
       />
     )}
     <div

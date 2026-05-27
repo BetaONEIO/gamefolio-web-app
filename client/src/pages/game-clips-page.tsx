@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClipWithUser } from "@shared/schema";
 import { useMobile } from "@/hooks/use-mobile";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
-import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
+import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 
 interface Clip {
@@ -208,10 +208,11 @@ export default function GameClipsPage() {
 
   const isMobile = useMobile();
   const [mobileViewerOpen, setMobileViewerOpen] = useState(false);
-  const [mobileViewerStartId, setMobileViewerStartId] = useState(0);
+  const [mobileViewerStartIndex, setMobileViewerStartIndex] = useState(0);
 
   const handleClipClick = (clipId: number, _clips?: ClipWithUser[]) => {
-    setMobileViewerStartId(clipId);
+    const idx = normalClips.findIndex(c => c.id === clipId);
+    setMobileViewerStartIndex(idx >= 0 ? idx : 0);
     setMobileViewerOpen(true);
   };
 
@@ -383,10 +384,10 @@ export default function GameClipsPage() {
   return (
     <>
     {mobileViewerOpen && normalClips.length > 0 && (
-      <MobileClipsViewerOverlay
-        clips={normalClips}
-        startClipId={mobileViewerStartId}
-        onBack={() => setMobileViewerOpen(false)}
+      <MobileTrendingViewer
+        content={normalClips}
+        initialIndex={mobileViewerStartIndex}
+        onClose={() => setMobileViewerOpen(false)}
       />
     )}
     <div className="min-h-screen bg-background">

@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { GameFilterSheet } from "@/components/filters/GameFilterSheet";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
-import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
+import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 
 const LatestClipsPage = () => {
   const { user } = useAuth();
@@ -22,7 +22,7 @@ const LatestClipsPage = () => {
 
   // Mobile viewer state
   const [mobileViewerOpen, setMobileViewerOpen] = useState(false);
-  const [mobileViewerStartId, setMobileViewerStartId] = useState<number>(0);
+  const [mobileViewerStartIndex, setMobileViewerStartIndex] = useState<number>(0);
 
   useEffect(() => {
     sessionStorage.setItem('clipNavContext', 'latest');
@@ -47,7 +47,8 @@ const LatestClipsPage = () => {
 
   const handleCardClick = (clipId: number, clips: ClipWithUser[]) => {
     if (isMobile) {
-      setMobileViewerStartId(clipId);
+      const idx = filteredClips.findIndex(c => c.id === clipId);
+      setMobileViewerStartIndex(idx >= 0 ? idx : 0);
       setMobileViewerOpen(true);
     } else {
       openClipDialog(clipId, clips);
@@ -57,10 +58,10 @@ const LatestClipsPage = () => {
   return (
     <div className="min-h-screen bg-background px-3 py-4 sm:px-4 sm:py-6 md:container md:mx-auto md:px-4 md:py-6">
       {mobileViewerOpen && filteredClips.length > 0 && (
-        <MobileClipsViewerOverlay
-          clips={filteredClips}
-          startClipId={mobileViewerStartId}
-          onBack={() => setMobileViewerOpen(false)}
+        <MobileTrendingViewer
+          content={filteredClips}
+          initialIndex={mobileViewerStartIndex}
+          onClose={() => setMobileViewerOpen(false)}
         />
       )}
 
