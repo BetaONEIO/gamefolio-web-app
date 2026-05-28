@@ -1023,11 +1023,36 @@ h1, h2, h3 {
   to   { opacity: 0; }
 }
 
+.stinger-logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 140px;
+  height: auto;
+  filter: drop-shadow(0 0 20px rgba(183, 255, 24, 0.55));
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+  animation: stinger-logo-fade 850ms ease-in-out forwards;
+}
+
+@keyframes stinger-logo-fade {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+  20%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  70%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .stinger-panel {
     animation: none;
   }
   .stinger-overlay {
+    animation: none;
+    opacity: 0;
+  }
+  .stinger-logo {
     animation: none;
     opacity: 0;
   }

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import logoGreen from "@assets/gamefolio-logo-green.png";
 
 interface StingerTransitionProps {
   onDone: () => void;
@@ -50,6 +51,12 @@ export function SplashScreen({ onDone }: StingerTransitionProps) {
       <div className="stinger-panel">
         <div className="stinger-trail" />
       </div>
+      <img
+        src={logoGreen}
+        alt="Gamefolio"
+        className="stinger-logo"
+        draggable={false}
+      />
     </div>
   );
 }
