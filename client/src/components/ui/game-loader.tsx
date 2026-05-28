@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Gamepad2, Zap, Target, Trophy, Star, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
-import gamefolioLogo from '@assets/gamefolio-logo-green.png';
 
 interface GameLoaderProps {
   isLoading: boolean;
@@ -145,45 +144,15 @@ export const GameLoader = ({
 
           {/* Main Loading Content */}
           <div className="relative z-10 flex flex-col items-center space-y-6">
-            {/* Gamefolio Logo with Rotating Ring */}
+            {/* Animated Icon */}
             <motion.div
-              className={cn(
-                "relative flex items-center justify-center",
-                config.icon
-              )}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className="flex items-center justify-center"
             >
-              {/* Gamefolio Logo */}
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5 }}
-                className="relative z-10"
-              >
-                <img 
-                  src={gamefolioLogo} 
-                  alt="Gamefolio Logo" 
-                  className={cn(
-                    "object-contain",
-                    size === "sm" ? "w-10 h-10" : 
-                    size === "md" ? "w-14 h-14" :
-                    size === "lg" ? "w-18 h-18" : "w-20 h-20"
-                  )}
-                />
-              </motion.div>
-              
-              {/* Outer Ring */}
-              <motion.div
-                className={cn(
-                  "absolute border-2 border-primary/30 rounded-full",
-                  size === "sm" ? "w-16 h-16" : 
-                  size === "md" ? "w-20 h-20" :
-                  size === "lg" ? "w-24 h-24" : "w-28 h-28"
-                )}
-                animate={{ rotate: 360 }}
-                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-              />
+              <CurrentIcon className={cn("text-primary", config.icon)} />
             </motion.div>
-
 
             {/* Progress Bar for Upload/Processing */}
             {(variant === "upload" || variant === "processing") && (
