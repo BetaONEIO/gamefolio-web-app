@@ -24,6 +24,11 @@ import { ProUpgradeDialog } from "@/components/ProUpgradeDialog";
 import { LazySection } from "@/components/ui/lazy-section";
 import { openExternal } from "@/lib/platform";
 import { useAuthModal } from "@/hooks/use-auth-modal";
+import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
+import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
+import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
+import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
+import { Trophy } from "lucide-react";
 
 interface TrendingContentCarouselProps {
   clips: ClipWithUser[] | undefined;
@@ -655,6 +660,9 @@ const HomePage = () => {
           slideIntervalMs={slideIntervalMs}
         />
       )}
+
+      {/* Ecosystem Activity Rail */}
+      <EcosystemActivityRail />
       
       <div className="space-y-4 sm:space-y-6 md:space-y-8 mt-4 sm:mt-6 md:mt-8">
       {/* Recommended for You Section - only for logged-in users */}
@@ -794,6 +802,37 @@ const HomePage = () => {
           )}
         </section>
       </LazySection>
+
+      {/* Daily XP Challenges */}
+      <LazySection minHeight="280px" rootMargin="200px">
+        <div className="px-4 sm:px-6 md:px-8">
+          <DailyXPChallenges />
+        </div>
+      </LazySection>
+
+      {/* Live Streams Now */}
+      <LazySection minHeight="280px" rootMargin="200px">
+        <div className="px-4 sm:px-6 md:px-8">
+          <LiveStreamsSection />
+        </div>
+      </LazySection>
+
+      {/* Trending Gamefolios */}
+      <LazySection minHeight="260px" rootMargin="200px">
+        <section className="px-4 sm:px-6 md:px-8 pb-10">
+          <div className="flex justify-between items-center mb-5">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-5 h-5" style={{ color: '#B7FF1A' }} />
+              <h2 className="text-xl font-semibold text-foreground">Trending Gamefolios</h2>
+            </div>
+            <Link href="/explore" className="text-primary text-sm font-medium hover:underline flex items-center">
+              View all <ChevronRight className="h-4 w-4 ml-1" />
+            </Link>
+          </div>
+          <FeaturedUsersSection />
+        </section>
+      </LazySection>
+
       </div>
 
       <ScreenshotLightbox
