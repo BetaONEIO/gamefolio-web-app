@@ -5459,25 +5459,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get recent clip uploads for activity banner
+  // Get recent uploads (clips, reels, screenshots) for activity banner
   app.get("/api/recent-uploads", async (req, res) => {
     try {
-      const limit = 15;
-      const clips = await storage.getAllClips(limit, 0);
-      
-      const recentUploads = clips
-        .filter(clip => clip.user && clip.title)
-        .map(clip => ({
-          clipId: clip.id,
-          username: clip.user.username,
-          clipTitle: clip.title,
-          uploadedAt: clip.createdAt,
+      const limit = 8;
+      const [clips, reels, screenshots] = await Promise.all([
+        storage.getAllClips(limit, 0),
+        storage.getLatestReels(limit),
+        storage.getLatestScreenshots(limit),
+      ]);
+
+      const items: Array<{
+        id: number;
+        contentType: 'clip' | 'reel' | 'screenshot';
+        username: string;
+        displayName: string;
+        title: string;
+        uploadedAt: Date | null;
+        thumbnailUrl?: string | null;
+      }> = [];
+
+      clips
+        .filter(c => !c.isReel && c.user && c.title)
+        .forEach(c => items.push({
+          id: c.id,
+          contentType: 'clip',
+          username: c.user.username,
+          displayName: c.user.displayName || c.user.username,
+          title: c.title,
+          uploadedAt: c.createdAt,
+          thumbnailUrl: c.thumbnailUrl,
         }));
-      
-      res.json(recentUploads);
+
+      reels
+        .filter(r => r.user && r.title)
+        .forEach(r => items.push({
+          id: r.id,
+          contentType: 'reel',
+          username: r.user.username,
+          displayName: r.user.displayName || r.user.username,
+          title: r.title,
+          uploadedAt: r.createdAt,
+          thumbnailUrl: r.thumbnailUrl,
+        }));
+
+      screenshots
+        .filter(s => s.user && s.title)
+        .forEach(s => items.push({
+          id: s.id,
+          contentType: 'screenshot',
+          username: s.user.username,
+          displayName: (s.user as any).displayName || s.user.username,
+          title: s.title,
+          uploadedAt: (s as any).createdAt || null,
+          thumbnailUrl: s.imageUrl || (s as any).thumbnailUrl,
+        }));
+
+      items.sort((a, b) => {
+        const ta = a.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
+        const tb = b.uploadedAt ? new Date(b.uploadedAt).getTime() : 0;
+        return tb - ta;
+      });
+
+      res.json(items.slice(0, 24));
     } catch (err) {
       console.error("Error fetching recent uploads:", err);
       return res.status(500).json({ message: "Error fetching recent uploads" });
+    }
+  });
+
+  // Get ecosystem activity feed (recent uploads + trending creators)
+  app.get("/api/activity-feed", async (req, res) => {
+    try {
+      const [clips, leaderboard] = await Promise.all([
+        storage.getAllClips(8, 0),
+        storage.getAllTimeLeaderboard(6),
+      ]);
+
+      const activities: Array<{
+        id: string;
+        type: string;
+        username: string;
+        displayName: string;
+        avatarUrl: string | null;
+        text: string;
+        subtext?: string;
+        href?: string;
+        timestamp?: string | null;
+        rank?: number;
+        contentId?: number;
+      }> = [];
+
+      clips.filter(c => c.user && c.title).forEach(c => {
+        activities.push({
+          id: `${c.isReel ? 'reel' : 'clip'}-${c.id}`,
+          type: c.isReel ? 'reel' : 'clip',
+          username: c.user.username,
+          displayName: c.user.displayName || c.user.username,
+          avatarUrl: c.user.avatarUrl || null,
+          text: `${c.user.displayName || c.user.username} shared a ${c.isReel ? 'reel' : 'clip'}`,
+          subtext: c.title,
+          href: `/view/clip/${c.id}`,
+          timestamp: c.createdAt ? c.createdAt.toISOString() : null,
+          contentId: c.id,
+        });
+      });
+
+      leaderboard.filter(e => e.user).forEach(e => {
+        activities.push({
+          id: `trending-${e.userId}`,
+          type: 'trending',
+          username: e.user.username,
+          displayName: e.user.displayName || e.user.username,
+          avatarUrl: e.user.avatarUrl || null,
+          text: `${e.user.displayName || e.user.username} is trending`,
+          subtext: `${e.totalPoints.toLocaleString()} XP earned`,
+          href: `/profile/${e.user.username}`,
+          timestamp: null,
+          rank: e.rank,
+        });
+      });
+
+      res.json(activities);
+    } catch (err) {
+      console.error("Error fetching activity feed:", err);
+      return res.status(500).json({ message: "Error fetching activity feed" });
     }
   });
 

@@ -24,6 +24,21 @@ export interface TwitchGame {
   igdb_id?: string;
 }
 
+// Interface for Twitch stream data
+export interface TwitchStream {
+  id: string;
+  user_id: string;
+  user_login: string;
+  user_name: string;
+  game_id: string;
+  game_name: string;
+  title: string;
+  viewer_count: number;
+  started_at: string;
+  thumbnail_url: string | null;
+  is_mature: boolean;
+}
+
 // Resolve Twitch box art URL to a specific size, handling all URL formats:
 // 1. Template {width}x{height} → e.g. "...Game-{width}x{height}.jpg"
 // 2. Separate {width} / {height} tokens
@@ -264,6 +279,43 @@ class TwitchApiService {
     } catch (error) {
       console.error('Error fetching game from Twitch:', error);
       throw new Error('Failed to fetch game from Twitch API');
+    }
+  }
+
+  /**
+   * Get top live streams from Twitch
+   */
+  async getTopStreams(limit: number = 12): Promise<TwitchStream[]> {
+    if (!this.isConfigured()) {
+      throw new Error('Twitch API credentials not configured');
+    }
+    try {
+      const token = await this.getAccessToken();
+      const response = await axios.get('https://api.twitch.tv/helix/streams', {
+        headers: {
+          'Client-ID': this.clientId,
+          'Authorization': `Bearer ${token}`
+        },
+        params: { first: limit, language: 'en' }
+      });
+      return (response.data.data || []).map((stream: any) => ({
+        id: stream.id,
+        user_id: stream.user_id,
+        user_login: stream.user_login,
+        user_name: stream.user_name,
+        game_id: stream.game_id,
+        game_name: stream.game_name,
+        title: stream.title,
+        viewer_count: stream.viewer_count,
+        started_at: stream.started_at,
+        thumbnail_url: stream.thumbnail_url
+          ? stream.thumbnail_url.replace('{width}', '440').replace('{height}', '248')
+          : null,
+        is_mature: stream.is_mature,
+      }));
+    } catch (error) {
+      console.error('Error fetching top streams from Twitch:', error);
+      throw new Error('Failed to fetch top streams from Twitch API');
     }
   }
 
