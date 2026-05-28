@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { Heart, MessageCircle, Upload, UserPlus, X, UserCheck, UserX, Flame, Video } from "lucide-react";
-import { GamefolioNotificationIcon } from "./GamefolioNotificationIcon";
+import { Bell, Heart, MessageCircle, Upload, UserPlus, X, UserCheck, UserX, Flame, Video } from "lucide-react";
 import { ZapIconFire } from "@/components/ui/ZapReactionIcon";
 import { Button } from "@/components/ui/button";
 import {
@@ -225,7 +224,7 @@ export function NotificationBell() {
       case 'streak':
         return <Flame className="h-4 w-4 text-orange-500" />;
       default:
-        return <GamefolioNotificationIcon className="h-4 w-4 text-gray-500" />;
+        return <Bell className="h-4 w-4 text-gray-500" />;
     }
   };
 
@@ -264,7 +263,7 @@ export function NotificationBell() {
       {showGreenPopup && (
         <div className="absolute -top-16 -right-2 bg-primary text-white px-4 py-2 rounded-lg shadow-lg animate-bounce z-50">
           <div className="flex items-center gap-2">
-            <GamefolioNotificationIcon className="h-4 w-4" />
+            <Bell className="h-4 w-4" />
             <span className="text-sm font-medium">New notification!</span>
           </div>
           <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#B7FF1A]"></div>
@@ -279,10 +278,8 @@ export function NotificationBell() {
             style={{ padding: '12px' }}
             aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
           >
-            <GamefolioNotificationIcon
-              className="w-5 h-5 sm:w-9 sm:h-9"
-              hasUnread={unreadCount > 0}
-              isOpen={isOpen}
+            <Bell 
+              className="text-gray-400 hover:text-gray-300 transition-colors w-5 h-5 sm:w-9 sm:h-9" 
             />
             {unreadCount > 0 && !isOpen && (
               <>
@@ -330,7 +327,7 @@ export function NotificationBell() {
         <div className="max-h-80 overflow-y-auto">
           {notifications.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
-              <GamefolioNotificationIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p>No notifications yet</p>
               <p className="text-sm">You'll see notifications for likes, comments, and follows here</p>
             </div>

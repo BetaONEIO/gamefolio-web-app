@@ -1,7 +1,6 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { User, MessageCircle, Video, X, Flame } from "lucide-react";
-import { GamefolioNotificationIcon } from "./GamefolioNotificationIcon";
+import { Bell, User, MessageCircle, Video, X, Flame } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -179,7 +178,7 @@ export function NotificationPanel({
       case 'streak':
         return <Flame className="h-4 w-4 text-orange-500" />;
       default:
-        return <GamefolioNotificationIcon className="h-4 w-4 text-gray-500" />;
+        return <Bell className="h-4 w-4 text-gray-500" />;
     }
   };
 
@@ -273,7 +272,7 @@ export function NotificationPanel({
                 </div>
               ) : notifications.length === 0 ? (
                 <div className="p-8 text-center text-gray-500" data-testid="no-notifications">
-                  <GamefolioNotificationIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <Bell className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <p>No notifications yet</p>
                   <p className="text-sm mt-1">We'll notify you when someone mentions you!</p>
                 </div>

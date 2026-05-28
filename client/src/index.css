@@ -926,16 +926,6 @@ h1, h2, h3 {
   68%, 100% { filter: drop-shadow(0 0 0px rgba(183,255,26,0));    }
 }
 
-@keyframes notifPulseRing {
-  0%, 100% { transform: scale(0.85); opacity: 0.6; }
-  50% { transform: scale(1.15); opacity: 0.2; }
-}
-
-@keyframes notifPing {
-  0% { transform: scale(1); opacity: 0.6; }
-  75%, 100% { transform: scale(2.5); opacity: 0; }
-}
-
 @keyframes rec-spin {
   0%,  12%  { transform: rotate(0deg); }
   30%, 52%  { transform: rotate(9deg); }
