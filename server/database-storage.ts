@@ -2628,6 +2628,14 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async hasContentByUserId(userId: number): Promise<{ hasClips: boolean; hasScreenshots: boolean }> {
+    const [clipResult, screenshotResult] = await Promise.all([
+      db.select({ id: clips.id }).from(clips).where(eq(clips.userId, userId)).limit(1),
+      db.select({ id: screenshots.id }).from(screenshots).where(eq(screenshots.userId, userId)).limit(1),
+    ]);
+    return { hasClips: clipResult.length > 0, hasScreenshots: screenshotResult.length > 0 };
+  }
+
   async getNotification(id: number): Promise<any> {
     const [notification] = await db
       .select()

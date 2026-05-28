@@ -7125,67 +7125,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const userId = req.user!.id;
-      
-      // Check if the clip exists
+
       const clip = await storage.getClip(clipId);
       if (!clip) {
         return res.status(404).json({ message: "Clip not found" });
       }
-
-      // Prevent users from liking their own content
       if (clip.userId === userId) {
         return res.status(400).json({ message: "Cannot like your own content, casual!" });
       }
 
-      // Check if user already liked this clip
       const hasLiked = await storage.hasUserLikedClip(userId, clipId);
 
       if (hasLiked) {
-        // Unlike the clip
         await storage.deleteLike(userId, clipId);
-        
-        // Get actual like count after deletion
         const likes = await storage.getLikesByClipId(clipId);
-        const likeCount = likes.length;
-        
-        res.json({ message: "Clip unliked", liked: false, count: likeCount });
-      } else {
-        // Like the clip
-        const likeData = insertLikeSchema.parse({
-          clipId,
-          userId,
-        });
-        const like = await storage.createLike(likeData);
-
-        // Award points to the user for liking (only if they haven't earned points for this clip before)
-        const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'like', 'clip', clipId);
-        if (!hasEarnedPoints) {
-          await LeaderboardService.awardPoints(
-            userId,
-            'like',
-            `Liked clip #${clipId}`
-          );
-          // Award like_received XP to the clip owner
-          const likedClip = await storage.getClip(clipId);
-          if (likedClip && likedClip.userId !== userId) {
-            await LeaderboardService.awardCustomPoints(
-              likedClip.userId,
-              'like_received',
-              10,
-              `Received a like on clip #${clipId}`
-            );
-          }
-        }
-
-        // Create notification for the clip owner
-        await NotificationService.createLikeNotification(clipId, userId);
-
-        // Get actual like count after adding
-        const likes = await storage.getLikesByClipId(clipId);
-        const likeCount = likes.length;
-
-        res.status(201).json({ message: "Clip liked", liked: true, like, count: likeCount });
+        return res.json({ message: "Clip unliked", liked: false, count: likes.length });
       }
+
+      // Like the clip
+      const likeData = insertLikeSchema.parse({ clipId, userId });
+      const like = await storage.createLike(likeData);
+      const likes = await storage.getLikesByClipId(clipId);
+
+      // Respond immediately — XP and notification happen in background
+      res.status(201).json({ message: "Clip liked", liked: true, like, count: likes.length });
+
+      const clipOwnerId = clip.userId;
+      (async () => {
+        try {
+          const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'like', 'clip', clipId);
+          if (!hasEarnedPoints) {
+            await LeaderboardService.awardPoints(userId, 'like', `Liked clip #${clipId}`);
+            if (clipOwnerId !== userId) {
+              await LeaderboardService.awardCustomPoints(clipOwnerId, 'like_received', 10, `Received a like on clip #${clipId}`);
+            }
+          }
+          await NotificationService.createLikeNotification(clipId, userId);
+        } catch (bgErr) {
+          console.error('Error in like side-effects for clip', clipId, bgErr);
+        }
+      })();
     } catch (error) {
       console.error("Error toggling clip like:", error);
       res.status(500).json({ error: "Failed to toggle like" });
@@ -7319,52 +7298,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const reaction = await storage.createClipReaction(reactionData);
-      
-      // Award 5 points for fire reactions (only if they haven't earned points for this clip before)
-      if (emoji === '🔥') {
-        const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'fire', 'clip', clipId);
-        if (!hasEarnedPoints) {
-          await LeaderboardService.awardPoints(
-            userId,
-            'fire',
-            `Fire reaction given to clip #${clipId}`
-          );
-        }
 
-        // Award 50 XP to the reactor for giving a fire reaction
-        await XPService.awardXP(
-          userId,
-          50,
-          'other',
-          `Earned 50 XP for giving a fire reaction on clip #${clipId}`,
-          clipId
-        );
-        
-        // Get updated fire limits to return
-        const fireLimits = await storage.getFireLimits(userId);
-        
-        const reactions = await storage.getClipReactions(clipId);
-        const count = reactions.filter(r => r.emoji === emoji).length;
-        
-        return res.status(201).json({ 
-          ...reaction, 
-          reacted: true, 
+      if (emoji === '🔥') {
+        // fireLimits already fetched above; compute remaining without a second DB call
+        const firesRemaining = fireLimits.maxFiresPerDay - fireLimits.firesUsedToday - 1;
+        const reactionsList = await storage.getClipReactions(clipId);
+        const count = reactionsList.filter(r => r.emoji === emoji).length;
+
+        // Respond immediately
+        res.status(201).json({
+          ...reaction,
+          reacted: true,
           count,
           xpAwarded: 50,
-          firesRemaining: fireLimits.maxFiresPerDay - fireLimits.firesUsedToday,
+          firesRemaining,
           maxFires: fireLimits.maxFiresPerDay
         });
+
+        // Background: XP and leaderboard points
+        (async () => {
+          try {
+            const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'fire', 'clip', clipId);
+            if (!hasEarnedPoints) {
+              await LeaderboardService.awardPoints(userId, 'fire', `Fire reaction given to clip #${clipId}`);
+            }
+            await XPService.awardXP(userId, 50, 'other', `Earned 50 XP for giving a fire reaction on clip #${clipId}`, clipId);
+          } catch (bgErr) {
+            console.error('Error in fire reaction side-effects for clip', clipId, bgErr);
+          }
+        })();
+        return;
       }
-      
-      // Get updated reaction count for non-fire reactions
-      const reactions = await storage.getClipReactions(clipId);
-      const count = reactions.filter(r => r.emoji === emoji).length;
-      
-      res.status(201).json({ 
-        ...reaction, 
-        reacted: true, 
-        count 
-      });
+
+      // Non-fire reaction: get count then respond
+      const reactionsList = await storage.getClipReactions(clipId);
+      const count = reactionsList.filter(r => r.emoji === emoji).length;
+
+      res.status(201).json({ ...reaction, reacted: true, count });
     } catch (err) {
       return handleValidationError(err, res);
     }
@@ -9866,19 +9836,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/user/:userId/content-check", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
-      
-      // Check if user has any clips
-      const userClips = await storage.getClipsByUserId(userId);
-      const hasClips = userClips && userClips.length > 0;
-      
-      // Check if user has any screenshots
-      const userScreenshots = await storage.getScreenshotsByUserId(userId);
-      const hasScreenshots = userScreenshots && userScreenshots.length > 0;
-      
-      // Return true if user has any content (clips or screenshots)
-      const hasContent = hasClips || hasScreenshots;
-      
-      res.json({ hasContent });
+      const { hasClips, hasScreenshots } = await storage.hasContentByUserId(userId);
+      res.json({ hasContent: hasClips || hasScreenshots });
     } catch (err) {
       console.error("Error checking user content:", err);
       return res.status(500).json({ message: "Error checking user content" });
