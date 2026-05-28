@@ -788,7 +788,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <div ref={scrollContainerRef} className="flex flex-col md:hidden h-[100dvh] overflow-y-auto" style={{ scrollbarWidth: "none", backgroundColor: "#03080A" }}>
+              <div ref={scrollContainerRef} className="flex flex-col md:hidden h-[100dvh] overflow-y-auto overscroll-contain" style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch", backgroundColor: "#03080A" }}>
                 <div className="relative w-full flex-shrink-0" style={{ height: "56vh" }}>
                   <img
                     src={proHeroImage}
@@ -808,7 +808,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                   </button>
                 </div>
 
-                <div className="px-5 pb-5 relative z-10" style={{ marginTop: "-72px", backgroundColor: "transparent" }}>
+                <div className="px-5 relative z-10" style={{ marginTop: "-72px", backgroundColor: "transparent", paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}>
                   <div className="flex justify-center mb-2">
                     <div className="inline-flex items-center gap-1.5 bg-[#14532d4d] border border-[#B7FF1A33] rounded-full px-3 py-1">
                       <svg width="21" height="21" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
