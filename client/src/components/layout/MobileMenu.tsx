@@ -113,7 +113,7 @@ function LevelProgressBar({ level, totalXP }: { level: number; totalXP: number }
 const MobileMenu = () => {
   const { isOpen, close } = useMobileMenu();
   const { user, logoutMutation } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
 
   const { data: favoriteGames } = useQuery<Game[]>({
     queryKey: [`/api/users/${user?.id}/favorites`],
@@ -298,7 +298,7 @@ const MobileMenu = () => {
                     onClick={close}
                     className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline group"
                   >
-                    <GamefolioIcon glow={false} className="mr-3 h-5 w-5 scale-[1.8] flex-shrink-0" />
+                    <GamefolioIcon glow={location === `/${user?.username}` || location === `/@${user?.username}`} className="mr-3 h-5 w-5 scale-[1.8] flex-shrink-0" />
                     <span className="font-medium">My Gamefolio</span>
                   </Link>
                 </li>
