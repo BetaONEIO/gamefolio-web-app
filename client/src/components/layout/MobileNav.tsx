@@ -179,7 +179,7 @@ const MobileNav = () => {
                     <GamefolioIcon
                       glow={isActive}
                       className={cn(
-                        "w-8 h-8",
+                        "w-12 h-12",
                         !isActive && "opacity-60"
                       )}
                     />
