@@ -2266,67 +2266,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Track login time for session security
         req.session.loginTime = Date.now();
 
-        // Update user's last login time in database
-        try {
-          await storage.updateUserLoginTime(user.id, 0);
-          console.log(`✅ Updated lastLoginAt for user ${user.username} (ID: ${user.id})`);
-        } catch (error) {
-          console.error("Error updating user login time:", error);
-          // Don't fail the login if this update fails
+        // Run login-time update and streak update in parallel — no sequential waiting
+        const [, streakInfo] = await Promise.all([
+          storage.updateUserLoginTime(user.id, 0).catch((error: unknown) => {
+            console.error("Error updating user login time:", error);
+          }),
+          StreakService.updateLoginStreak(user.id).catch((error: unknown) => {
+            console.error("Error updating login streak:", error);
+            return null;
+          }),
+        ]);
+
+        if (streakInfo && streakInfo.bonusAwarded > 0) {
+          console.log(`🎉 Streak bonus for ${user.username}: ${streakInfo.message}`);
         }
 
-        // Update user's login streak and award bonus points if applicable
-        let streakInfo;
-        try {
-          streakInfo = await StreakService.updateLoginStreak(user.id);
-          if (streakInfo.bonusAwarded > 0) {
-            console.log(`🎉 Streak bonus for ${user.username}: ${streakInfo.message}`);
+        // Birthday check is fire-and-forget — never blocks the login response
+        void (async () => {
+          try {
+            const now = new Date();
+            const todayMMDD = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const currentYear = now.getFullYear();
+            if (user.birthday && user.birthday === todayMMDD && user.lastBirthdayNotificationYear !== currentYear) {
+              const notif = await storage.createNotification({
+                userId: user.id,
+                type: "birthday",
+                title: "🎂 Happy Birthday!",
+                message: `Happy Birthday, ${user.displayName}! 🎉 Wishing you an amazing day from the Gamefolio team!`,
+                fromUserId: null,
+                clipId: null,
+                screenshotId: null,
+                commentId: null,
+                metadata: null,
+                actionUrl: `/profile/${user.username}`,
+              });
+              void sendPushToUser(user.id, {
+                title: notif.title,
+                body: notif.message,
+                actionUrl: notif.actionUrl,
+                data: { notificationId: String(notif.id), type: notif.type },
+              }).catch((err: unknown) => console.warn('[routes] birthday push fan-out failed:', err));
+              await db.update(users).set({ lastBirthdayNotificationYear: currentYear }).where(eq(users.id, user.id));
+              console.log(`🎂 Birthday notification sent for ${user.username}`);
+            }
+          } catch (error) {
+            console.error("Error checking birthday:", error);
           }
-        } catch (error) {
-          console.error("Error updating login streak:", error);
-          // Don't fail the login if streak update fails
-        }
+        })();
 
-        // Check for birthday and send notification if applicable
-        try {
-          const now = new Date();
-          const todayMMDD = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-          const currentYear = now.getFullYear();
-          
-          if (user.birthday && user.birthday === todayMMDD && user.lastBirthdayNotificationYear !== currentYear) {
-            const notif = await storage.createNotification({
-              userId: user.id,
-              type: "birthday",
-              title: "🎂 Happy Birthday!",
-              message: `Happy Birthday, ${user.displayName}! 🎉 Wishing you an amazing day from the Gamefolio team!`,
-              fromUserId: null,
-              clipId: null,
-              screenshotId: null,
-              commentId: null,
-              metadata: null,
-              actionUrl: `/profile/${user.username}`,
-            });
-            void sendPushToUser(user.id, {
-              title: notif.title,
-              body: notif.message,
-              actionUrl: notif.actionUrl,
-              data: { notificationId: String(notif.id), type: notif.type },
-            }).catch(err => console.warn('[routes] birthday push fan-out failed:', err));
-            await db.update(users).set({ lastBirthdayNotificationYear: currentYear }).where(eq(users.id, user.id));
-            console.log(`🎂 Birthday notification sent for ${user.username}`);
-          }
-        } catch (error) {
-          console.error("Error checking birthday:", error);
-        }
+        // Use the already-loaded user object — no extra DB round-trip needed
+        const { password, twoFactorSecret, ...userWithoutSensitive } = user;
+        console.log("Login successful for user:", user.username);
 
-        // Fetch updated user data to get the latest streak information
-        const updatedUser = await storage.getUserById(user.id);
-        const userToReturn = updatedUser || user;
-
-        // Remove password and 2FA secret from response
-        const { password, twoFactorSecret, ...userWithoutSensitive } = userToReturn;
-        console.log("Login successful for user:", userToReturn.username);
-        
         // Include streak info in response if available
         const response = (streakInfo && !streakInfo.isFirstLogin) ? {
           ...userWithoutSensitive,
@@ -2334,13 +2325,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             currentStreak: streakInfo.currentStreak,
             bonusAwarded: streakInfo.bonusAwarded,
             dailyXP: streakInfo.dailyXP,
-            longestStreak: userToReturn.longestStreak || 0,
+            longestStreak: user.longestStreak || 0,
             nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
             message: streakInfo.message,
             isNewMilestone: streakInfo.isNewMilestone
           }
         } : userWithoutSensitive;
-        
+
         return res.json(response);
       });
     })(req, res, next);
