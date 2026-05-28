@@ -266,11 +266,9 @@ const Sidebar = () => {
                 <div
                   className={cn(
                     "flex items-center p-3 rounded-lg transition-all cursor-pointer group",
-                    isActive && isGamefolioItem
-                      ? "text-primary bg-primary/10"
-                      : isActive
-                        ? "text-[#071013] bg-primary"
-                        : "text-muted-foreground hover:bg-primary hover:text-[#071013]"
+                    isActive
+                      ? "text-[#071013] bg-primary"
+                      : "text-muted-foreground hover:bg-primary hover:text-[#071013]"
                   )}
                 >
                   {isGamefolioItem ? (
