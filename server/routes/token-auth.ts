@@ -428,7 +428,7 @@ router.post('/auth/mobile/apple', async (req: Request, res: Response) => {
         email: tokenEmail || null,
         displayName,
         password: '',
-        avatarUrl: '/attached_assets/gamefolio social logo 3d circle web.png',
+        avatarUrl: '/attached_assets/gamefolio-logo-green.png',
         bannerUrl: '/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg',
         emailVerified: true,
         authProvider: 'apple',
@@ -611,7 +611,7 @@ router.get('/auth/mobile/discord/callback', async (req: Request, res: Response) 
       const tempUsername = `temp_${id.substring(0, 8)}_${timestamp}`;
       const avatarUrl = avatar 
         ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`
-        : '/attached_assets/gamefolio social logo 3d circle web.png';
+        : '/attached_assets/gamefolio-logo-green.png';
 
       user = await storage.createUser({
         username: tempUsername.toLowerCase(),
@@ -805,7 +805,7 @@ router.get('/auth/mobile/xbox/callback', async (req: Request, res: Response) => 
       isNewUser = true;
       const timestamp = Date.now().toString().slice(-6);
       const tempUsername = `temp_xbox_${xuid.substring(0, 8)}_${timestamp}`;
-      const avatarUrl = gamerpic || '/attached_assets/gamefolio social logo 3d circle web.png';
+      const avatarUrl = gamerpic || '/attached_assets/gamefolio-logo-green.png';
 
       user = await storage.createUser({
         username: tempUsername.toLowerCase(),

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Gamepad2, Zap, Target, Trophy, Star, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
-import gamefolioLogo from '@assets/gamefolio social logo 3d circle web.png';
+import gamefolioLogo from '@assets/gamefolio-logo-green.png';
 
 interface GameLoaderProps {
   isLoading: boolean;

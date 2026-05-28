@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import logoSrc from "@assets/logo-white_1778587630337.png";
+import logoSrc from "@assets/gamefolio-logo-white.png";
 
 interface GamefolioIconProps {
   glow?: boolean;

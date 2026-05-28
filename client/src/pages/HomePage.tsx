@@ -680,7 +680,7 @@ const HomePage = () => {
                           <div className="absolute top-2 left-2 flex items-center gap-1.5">
                             <div className="w-6 h-6 rounded-full overflow-hidden border border-white/50">
                               <img
-                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio-logo-green.png'}
                                 alt={reel.user.displayName}
                                 className="w-full h-full object-cover"
                               />
@@ -756,7 +756,7 @@ const HomePage = () => {
                           <div className="flex items-center gap-2 mb-2">
                             <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/50">
                               <img
-                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio-logo-green.png'}
                                 alt={reel.user.displayName}
                                 className="w-full h-full object-cover"
                               />

@@ -31,7 +31,7 @@ import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord } from 'react-icon
 import { connectXboxAccount, isXboxConfigValid } from '@/lib/xbox';
 import { useTheme } from '@/hooks/use-theme';
 import { FaXTwitter } from 'react-icons/fa6';
-import gamefolioLogo from '@assets/gamefolio social logo 3d circle web.png';
+import gamefolioLogo from '@assets/gamefolio-logo-green.png';
 import { SiEpicgames, SiTwitch, SiKick } from 'react-icons/si';
 import Cropper from "react-easy-crop";
 import NftProfilePopup from "@/components/nft/NftProfilePopup";

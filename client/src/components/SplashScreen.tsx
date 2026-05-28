@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import logoPath from "../assets/gamefolio-logo.png";
+import logoPath from "@assets/gamefolio-logo-green.png";
 
 interface SplashScreenProps {
   onDone: () => void;

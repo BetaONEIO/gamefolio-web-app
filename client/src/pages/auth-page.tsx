@@ -106,7 +106,7 @@ export default function AuthPage() {
         <div className="mb-4 sm:mb-8 text-center">
           <div className="flex flex-col items-center">
             <img
-              src="/attached_assets/Gamefolio logo.png"
+              src="/attached_assets/gamefolio-logo-green.png"
               alt="Gamefolio"
               className="h-16 sm:h-36 w-auto drop-shadow-lg"
             />

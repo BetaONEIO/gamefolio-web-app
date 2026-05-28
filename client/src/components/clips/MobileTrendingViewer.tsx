@@ -61,11 +61,11 @@ function AuthorAvatar({ avatarUrl, displayName }: { avatarUrl?: string | null; d
   const { signedUrl } = useSignedUrl(avatarUrl ?? null);
   return (
     <img
-      src={signedUrl || avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+      src={signedUrl || avatarUrl || '/uploaded_assets/gamefolio-logo-green.png'}
       alt={displayName}
       className="w-full h-full object-cover"
       onError={(e) => {
-        (e.currentTarget as HTMLImageElement).src = '/uploaded_assets/gamefolio social logo 3d circle web.png';
+        (e.currentTarget as HTMLImageElement).src = '/uploaded_assets/gamefolio-logo-green.png';
       }}
     />
   );

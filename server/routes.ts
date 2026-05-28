@@ -959,7 +959,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: email.toLowerCase(),
           password: uid, // Use Firebase UID as password (they won't use traditional login)
           emailVerified: true, // Google accounts are pre-verified - no email verification needed
-          avatarUrl: photoURL || "/attached_assets/gamefolio social logo 3d circle web.png",
+          avatarUrl: photoURL || "/attached_assets/gamefolio-logo-green.png",
           bannerUrl: "/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg",
           authProvider: "google",
           externalId: uid,
@@ -1223,7 +1223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const avatarUrl = avatar 
           ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`
-          : "/attached_assets/gamefolio social logo 3d circle web.png";
+          : "/attached_assets/gamefolio-logo-green.png";
 
         user = await storage.createUser({
           username: tempUsername.toLowerCase(),
@@ -1489,7 +1489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // New user — create account from their Xbox profile
         const timestamp = Date.now().toString().slice(-6);
         const tempUsername = `temp_xbox_${xuid.substring(0, 8)}_${timestamp}`;
-        const avatarUrl = gamerpic || "/attached_assets/gamefolio social logo 3d circle web.png";
+        const avatarUrl = gamerpic || "/attached_assets/gamefolio-logo-green.png";
 
         user = await storage.createUser({
           username: tempUsername.toLowerCase(),
@@ -4652,7 +4652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.removeHeader('Content-Length');
       res.setHeader('Transfer-Encoding', 'chunked');
 
-      const logoPath = path.join(process.cwd(), 'client', 'public', 'attached_assets', 'logo-white_1778587630337.png');
+      const logoPath = path.join(process.cwd(), 'client', 'public', 'attached_assets', 'gamefolio-logo-white.png');
       const fs = await import('fs');
       const logoExists = fs.existsSync(logoPath);
 
