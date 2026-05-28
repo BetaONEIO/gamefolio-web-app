@@ -25,14 +25,14 @@ function XPIcon() {
   return (
     <span
       className="relative flex-shrink-0"
-      style={{ width: 26, height: 26 }}
+      style={{ width: 24, height: 24, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
     >
       {/* Rotating glow ring */}
       <span
         className="xp-glow-ring"
         style={{
           position: "absolute",
-          inset: -3,
+          inset: -2,
           borderRadius: "50%",
           zIndex: 0,
         }}
@@ -42,7 +42,8 @@ function XPIcon() {
         className="xp-pulse-bg"
         style={{
           position: "absolute",
-          inset: 0,
+          width: 16,
+          height: 16,
           borderRadius: "50%",
           background: "rgba(183,255,24,0.08)",
           zIndex: 1,
@@ -55,11 +56,11 @@ function XPIcon() {
         style={{
           position: "relative",
           zIndex: 2,
-          width: 26,
-          height: 26,
+          width: 12,
+          height: 12,
           objectFit: "contain",
           display: "block",
-          filter: "drop-shadow(0 0 4px rgba(183,255,24,0.7))",
+          filter: "drop-shadow(0 0 3px rgba(183,255,24,0.7))",
         }}
       />
     </span>
@@ -142,19 +143,18 @@ export function EcosystemActivityRail() {
       `}</style>
 
       <div
-        className="w-full overflow-hidden"
+        className="w-full"
         style={{
           background: "transparent",
           borderTop:    "1px solid rgba(183,255,24,0.07)",
           borderBottom: "1px solid rgba(183,255,24,0.07)",
-          paddingTop: 8,
-          paddingBottom: 8,
+          padding: "10px 0",
         }}
       >
         <div
           ref={railRef}
-          className="flex items-center gap-3 overflow-hidden"
-          style={{ scrollBehavior: "auto", userSelect: "none", whiteSpace: "nowrap" }}
+          className="flex items-center gap-3"
+          style={{ scrollBehavior: "auto", userSelect: "none", whiteSpace: "nowrap", overflow: "visible" }}
         >
           {doubled.map((item, i) => (
             <div
