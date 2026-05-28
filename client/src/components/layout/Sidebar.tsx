@@ -271,7 +271,7 @@ const Sidebar = () => {
                   )}
                 >
                   {'gamefolioIcon' in item && item.gamefolioIcon ? (
-                    <GamefolioIcon glow={isActive} className="w-7 h-7 transition-all duration-300 group-hover:[filter:drop-shadow(0_0_10px_rgba(183,255,26,0.45))]" />
+                    <GamefolioIcon glow={isActive} className="w-10 h-10 transition-all duration-300 group-hover:[filter:drop-shadow(0_0_10px_rgba(183,255,26,0.45))]" />
                   ) : item.themed ? (
                     <span
                       className={cn(
