@@ -554,6 +554,18 @@ video:focus {
   to { transform: translateX(-100%); }
 }
 
+@keyframes push-enter {
+  from { transform: translateX(calc(100% + 2rem)); opacity: 0; max-width: 0; }
+  20% { max-width: 600px; }
+  to { transform: translateX(0); opacity: 1; max-width: 600px; }
+}
+
+@keyframes push-leave {
+  from { transform: translateX(0); opacity: 1; max-width: 600px; }
+  80% { max-width: 0; }
+  to { transform: translateX(calc(-100% - 2rem)); opacity: 0; max-width: 0; }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
