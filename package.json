@@ -187,7 +187,7 @@
     "path-to-regexp": "0.1.13",
     "form-data": "^4.0.1",
     "minimatch": "^9.0.9",
-    "tar": "^7.4.0",
+    "tar": "^6.2.1",
     "preact": "^10.29.2",
     "glob": "^11.0.0",
     "socket.io-parser": "^4.2.6",
