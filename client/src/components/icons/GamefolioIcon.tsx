@@ -9,14 +9,25 @@ interface GamefolioIconProps {
 
 export function GamefolioIcon({ glow = false, className }: GamefolioIconProps) {
   return (
-    <img
-      src={glow ? logoGreen : logoWhite}
-      alt="Gamefolio"
-      draggable={false}
-      className={cn("block object-contain flex-shrink-0", className)}
-      style={{
-        filter: glow ? "drop-shadow(0 0 6px rgba(183,255,26,0.5))" : undefined,
-      }}
-    />
+    <span className={cn("relative block flex-shrink-0", className)}>
+      <img
+        src={logoWhite}
+        alt="Gamefolio"
+        draggable={false}
+        className="block object-contain w-full h-full transition-opacity duration-300"
+        style={{ opacity: glow ? 0 : 1 }}
+      />
+      <img
+        src={logoGreen}
+        alt=""
+        draggable={false}
+        aria-hidden
+        className="absolute inset-0 block object-contain w-full h-full transition-opacity duration-300"
+        style={{
+          opacity: glow ? 1 : 0,
+          filter: glow ? "drop-shadow(0 0 6px rgba(183,255,26,0.5))" : undefined,
+        }}
+      />
+    </span>
   );
 }
