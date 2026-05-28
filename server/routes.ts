@@ -5565,54 +5565,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get ecosystem activity feed (recent uploads + trending creators)
   app.get("/api/activity-feed", async (req, res) => {
     try {
-      const [clips, leaderboard] = await Promise.all([
-        storage.getAllClips(8, 0),
-        storage.getAllTimeLeaderboard(6),
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const currentYear = now.getFullYear();
+
+      // Fetch all real data sources in parallel
+      // Dates are expressed as SQL intervals (no JS Date binding) to avoid postgres.js serialisation issues
+      const [xpRows, streakRows, leaderboardRows, followRows] = await Promise.all([
+        // Recent meaningful XP gains (not "view" — too noisy), last 7 days
+        db.execute(sql`
+          SELECT xh.id, xh.user_id, xh.xp_amount, xh.source, xh.created_at,
+                 u.username, u.display_name
+          FROM user_xp_history xh
+          JOIN users u ON u.id = xh.user_id
+          WHERE xh.source IN ('upload','daily_login','like_received','fire_received','welcome_bonus','other')
+            AND xh.created_at >= NOW() - INTERVAL '7 days'
+            AND xh.xp_amount > 0
+            AND u.status = 'active'
+          ORDER BY xh.created_at DESC
+          LIMIT 20
+        `),
+
+        // Users with an active streak of 2+ days
+        db.execute(sql`
+          SELECT id, username, display_name, current_streak
+          FROM users
+          WHERE current_streak >= 2
+            AND status = 'active'
+            AND hide_from_leaderboard = false
+          ORDER BY current_streak DESC
+          LIMIT 10
+        `),
+
+        // Current month leaderboard top 8 (rank > 0, total_points > 0)
+        db.execute(sql`
+          SELECT ml.user_id, ml.rank, ml.total_points, ml.uploads_count,
+                 u.username, u.display_name
+          FROM monthly_leaderboard ml
+          JOIN users u ON u.id = ml.user_id
+          WHERE ml.month = ${currentMonth}
+            AND ml.year = ${currentYear}
+            AND ml.rank > 0
+            AND ml.total_points > 0
+            AND u.status = 'active'
+            AND u.hide_from_leaderboard = false
+          ORDER BY ml.rank ASC
+          LIMIT 8
+        `),
+
+        // Recent follows (last 7 days)
+        db.execute(sql`
+          SELECT f.id, f.created_at,
+                 follower.username AS follower_username, follower.display_name AS follower_display,
+                 following.username AS following_username, following.display_name AS following_display
+          FROM follows f
+          JOIN users follower ON follower.id = f.follower_id
+          JOIN users following ON following.id = f.following_id
+          WHERE f.created_at >= NOW() - INTERVAL '7 days'
+            AND follower.status = 'active'
+            AND following.status = 'active'
+          ORDER BY f.created_at DESC
+          LIMIT 12
+        `),
       ]);
 
-      const activities: Array<{
+      type FeedItem = {
         id: string;
-        type: string;
+        kind: 'xp' | 'streak' | 'trending' | 'follow' | 'levelup';
         username: string;
-        displayName: string;
-        avatarUrl: string | null;
         text: string;
-        subtext?: string;
-        href?: string;
         timestamp?: string | null;
-        rank?: number;
-        contentId?: number;
-      }> = [];
+      };
 
-      clips.filter(c => c.user && c.title).forEach(c => {
-        activities.push({
-          id: `${c.isReel ? 'reel' : 'clip'}-${c.id}`,
-          type: c.isReel ? 'reel' : 'clip',
-          username: c.user.username,
-          displayName: c.user.displayName || c.user.username,
-          avatarUrl: c.user.avatarUrl || null,
-          text: `${c.user.displayName || c.user.username} shared a ${c.isReel ? 'reel' : 'clip'}`,
-          subtext: c.title,
-          href: `/view/clip/${c.id}`,
-          timestamp: c.createdAt ? c.createdAt.toISOString() : null,
-          contentId: c.id,
-        });
-      });
+      const activities: FeedItem[] = [];
 
-      leaderboard.filter(e => e.user).forEach(e => {
+      // XP events
+      for (const row of (xpRows as any).rows ?? xpRows) {
+        const name = row.display_name || row.username;
+        const xp = Number(row.xp_amount);
+        const source: string = row.source;
+        let text = '';
+        if (source === 'upload')         text = `${name} earned +${xp} XP from uploading`;
+        else if (source === 'daily_login') text = `${name} earned +${xp} XP daily login bonus`;
+        else if (source === 'like_received') text = `${name} earned +${xp} XP from likes`;
+        else if (source === 'fire_received') text = `${name} earned +${xp} XP from fire reactions`;
+        else if (source === 'welcome_bonus') text = `${name} earned +${xp} XP welcome bonus`;
+        else text = `${name} earned +${xp} XP`;
         activities.push({
-          id: `trending-${e.userId}`,
-          type: 'trending',
-          username: e.user.username,
-          displayName: e.user.displayName || e.user.username,
-          avatarUrl: e.user.avatarUrl || null,
-          text: `${e.user.displayName || e.user.username} is trending`,
-          subtext: `${e.totalPoints.toLocaleString()} XP earned`,
-          href: `/profile/${e.user.username}`,
-          timestamp: null,
-          rank: e.rank,
+          id: `xp-${row.id}`,
+          kind: 'xp',
+          username: row.username,
+          text,
+          timestamp: row.created_at ? new Date(row.created_at).toISOString() : null,
         });
-      });
+      }
+
+      // Streak events
+      for (const row of (streakRows as any).rows ?? streakRows) {
+        const name = row.display_name || row.username;
+        const days = Number(row.current_streak);
+        activities.push({
+          id: `streak-${row.id}`,
+          kind: 'streak',
+          username: row.username,
+          text: `${name} is on a ${days}-day upload streak`,
+        });
+      }
+
+      // Leaderboard events
+      for (const row of (leaderboardRows as any).rows ?? leaderboardRows) {
+        const name = row.display_name || row.username;
+        const rank = Number(row.rank);
+        const pts = Math.round(Number(row.total_points)).toLocaleString();
+        activities.push({
+          id: `trending-${row.user_id}`,
+          kind: rank <= 3 ? 'levelup' : 'trending',
+          username: row.username,
+          text: `${name} is #${rank} this month · ${pts} XP`,
+        });
+      }
+
+      // Follow events
+      for (const row of (followRows as any).rows ?? followRows) {
+        const followerName = row.follower_display || row.follower_username;
+        const followingName = row.following_display || row.following_username;
+        activities.push({
+          id: `follow-${row.id}`,
+          kind: 'follow',
+          username: row.follower_username,
+          text: `${followerName} started following ${followingName}`,
+          timestamp: row.created_at ? new Date(row.created_at).toISOString() : null,
+        });
+      }
+
+      // Shuffle so different kinds are interleaved
+      for (let i = activities.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [activities[i], activities[j]] = [activities[j], activities[i]];
+      }
 
       res.json(activities);
     } catch (err) {
