@@ -175,13 +175,15 @@ const MobileNav = () => {
                   onClick={(e) => handleNavClick(item, e)}
                   className="flex flex-col items-center text-xs w-full no-underline"
                 >
-                  <GamefolioIcon
-                    glow={isActive}
-                    className={cn(
-                      "mb-1 w-6 h-6",
-                      !isActive && "opacity-60"
-                    )}
-                  />
+                  <span className="mb-1 flex items-center justify-center w-6 h-6 overflow-visible">
+                    <GamefolioIcon
+                      glow={isActive}
+                      className={cn(
+                        "w-8 h-8",
+                        !isActive && "opacity-60"
+                      )}
+                    />
+                  </span>
                   <span className={cn(
                     isActive ? 'text-white' : 'text-muted-foreground'
                   )}>{item.label}</span>
