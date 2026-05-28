@@ -125,6 +125,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
     : `/api/clips/${clipId}/track-share`;
   const [internalOpen, setInternalOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
   const { toast } = useToast();
 
   const isOpen = open !== undefined ? open : internalOpen;
@@ -189,6 +190,8 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
 
   const handleSocialShare = async (platform: string, url: string, platformKey: string) => {
     if (!url) return;
+    setSelectedPlatform(platformKey);
+    setTimeout(() => setSelectedPlatform(null), 1500);
     if (isNative && shareData?.clipUrl) {
       const handled = await nativeShare({
         title: shareData.title || `Gamefolio ${label}`,
@@ -223,7 +226,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
         </DialogTrigger>
       )}
       <DialogContent
-        className="p-0 border-[#1B2A33] bg-[#0B1218] w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh] flex flex-col"
+        className="p-0 border-[#1B2A33] bg-[#0B1218] w-[calc(100vw-2rem)] max-w-[384px] sm:max-w-[560px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh] flex flex-col"
         aria-describedby="clip-share-description"
       >
         {/* Header */}
@@ -271,8 +274,8 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                 <div
                   className={`relative bg-[#101923] rounded-xl overflow-hidden border border-[#1B2A33]/80 ${
                     contentType === 'reel' || shareData.videoType === 'reel'
-                      ? 'w-28 sm:w-36 aspect-[9/16]'
-                      : 'w-full max-h-[140px] sm:max-h-[180px] aspect-video'
+                      ? 'w-28 sm:w-48 aspect-[9/16]'
+                      : 'w-full max-h-[140px] sm:max-h-[260px] aspect-video'
                   }`}
                 >
                   <ClipThumbnail thumbnailUrl={shareData.thumbnailUrl} videoUrl={shareData.videoUrl} imageUrl={shareData.imageUrl} />
@@ -327,17 +330,22 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                   {SOCIAL_PLATFORMS.map((platform) => {
                     const Icon = platform.icon;
                     const shareUrl = shareData.socialMediaLinks?.[platform.key];
+                    const isSelected = selectedPlatform === platform.key;
                     return (
                       <button
                         key={platform.key}
                         onClick={() => shareUrl && handleSocialShare(platform.name, shareUrl, platform.key)}
                         disabled={!shareUrl}
-                        className="flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-white/5 active:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="flex flex-col items-center gap-1 py-2 rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                         title={platform.name}
                         aria-label={`Share on ${platform.name}`}
                       >
-                        <div className="w-9 h-9 rounded-full border border-[#B7FF1A]/30 bg-[#1B2A33] flex items-center justify-center">
-                          <Icon className="w-4 h-4 text-[#F5F7F2]" />
+                        <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full border flex items-center justify-center transition-colors ${
+                          isSelected
+                            ? 'border-[#B7FF1A] bg-[#B7FF1A]/20'
+                            : 'border-[#B7FF1A]/30 bg-[#1B2A33] hover:border-[#B7FF1A] hover:bg-[#B7FF1A]/10'
+                        }`}>
+                          <Icon className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${isSelected ? 'text-[#B7FF1A]' : 'text-[#F5F7F2] hover:text-[#B7FF1A]'}`} />
                         </div>
                       </button>
                     );
