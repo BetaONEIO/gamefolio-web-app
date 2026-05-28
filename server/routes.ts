@@ -7384,41 +7384,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ success: true, message: 'Demo clip views not tracked' });
       }
 
-      // Get the clip to find the owner
+      // Get the clip to find the owner, then increment — these are the minimum
+      // operations needed before we can respond.
       const clip = await storage.getClip(clipId);
       if (clip) {
-        // Increment the view count on the clip
         await storage.incrementClipViews(clipId);
-
-        // Award view XP to the content owner
-        await LeaderboardService.awardPoints(
-          clip.userId,
-          'view',
-          `Clip #${clipId} received a view`
-        );
-
-        // Get updated view count for milestone checks
-        const updatedClip = await storage.getClip(clipId);
-        const newViewCount = updatedClip?.views || 0;
-
-        // Check performance milestones (view count thresholds)
-        await PerformanceMilestoneService.checkAndAwardViewMilestones(clipId, clip.userId, newViewCount);
-
-        // Check creator milestones for first clips to reach 100 / 1,000 views
-        if (newViewCount >= 100) {
-          await CreatorMilestoneService.checkFirst100Views(clip.userId, clipId);
-        }
-        if (newViewCount >= 1000) {
-          await CreatorMilestoneService.checkFirst1000Views(clip.userId, clipId);
-        }
-
-        // Award watch XP to the viewer (if authenticated)
-        if (req.user?.id && req.user.id !== clip.userId) {
-          await BonusEventsService.awardWatchClipXP(req.user.id);
-        }
       }
 
+      // Respond immediately so the client isn't blocked.
       res.json({ success: true });
+
+      // Run all XP / milestone side-effects in the background (fire-and-forget).
+      if (clip) {
+        const viewerId: number | undefined = (req as any).user?.id;
+        (async () => {
+          try {
+            await LeaderboardService.awardPoints(
+              clip.userId,
+              'view',
+              `Clip #${clipId} received a view`
+            );
+
+            const updatedClip = await storage.getClip(clipId);
+            const newViewCount = updatedClip?.views || 0;
+
+            await PerformanceMilestoneService.checkAndAwardViewMilestones(clipId, clip.userId, newViewCount);
+
+            if (newViewCount >= 100) {
+              await CreatorMilestoneService.checkFirst100Views(clip.userId, clipId);
+            }
+            if (newViewCount >= 1000) {
+              await CreatorMilestoneService.checkFirst1000Views(clip.userId, clipId);
+            }
+
+            if (viewerId && viewerId !== clip.userId) {
+              await BonusEventsService.awardWatchClipXP(viewerId);
+            }
+          } catch (bgErr) {
+            console.error('Error in view side-effects for clip', clipId, bgErr);
+          }
+        })();
+      }
     } catch (error) {
       console.error('Error incrementing clip views:', error);
       res.status(500).json({
