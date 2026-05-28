@@ -1,18 +1,37 @@
+import { type ElementType } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { useEffect, useRef } from "react";
-import { Link } from "wouter";
-import { Upload } from "lucide-react";
+import { Upload, Video, Image, Film } from "lucide-react";
+import { useClipDialog } from "@/hooks/use-clip-dialog";
+import { useLocation } from "wouter";
 
 interface RecentUpload {
-  clipId: number;
+  id: number;
+  contentType: 'clip' | 'reel' | 'screenshot';
   username: string;
-  clipTitle: string;
-  uploadedAt: string;
+  displayName: string;
+  title: string;
+  uploadedAt: string | null;
+  thumbnailUrl?: string | null;
 }
+
+const CONTENT_LABELS: Record<string, string> = {
+  clip: 'just uploaded a clip',
+  reel: 'just posted a reel',
+  screenshot: 'just shared a screenshot',
+};
+
+const CONTENT_ICONS: Record<string, ElementType> = {
+  clip: Video,
+  reel: Film,
+  screenshot: Image,
+};
 
 export function ActivityScrollBanner() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { openClipDialog } = useClipDialog();
+  const [, setLocation] = useLocation();
 
   const { data: recentUploads = [] } = useQuery<RecentUpload[]>({
     queryKey: ["/api/recent-uploads"],
@@ -43,33 +62,41 @@ export function ActivityScrollBanner() {
   const duplicatedUploads = [...recentUploads, ...recentUploads];
 
   return (
-    // pointer-events: none on the empty banner bg so taps fall through to the
-    // header buttons above; each item re-enables pointer-events so the clip
-    // links stay tappable. Radix DropdownMenu opens on pointerdown, so if the
-    // banner captures pointerdown, the header dropdowns never open.
     <div className="bg-[#B7FF1A] border-b border-[#A2F000] overflow-hidden py-2 pointer-events-none">
       <div
         ref={scrollRef}
         className="flex gap-8 whitespace-nowrap overflow-hidden"
         style={{ scrollBehavior: "auto" }}
       >
-        {duplicatedUploads.map((upload, index) => (
-          <div
-            key={`${upload.clipId}-${index}`}
-            className="inline-flex items-center gap-2 text-sm font-medium pointer-events-auto"
-            data-testid={`activity-${index}`}
-            style={{ color: '#071013' }}
-          >
-            <Upload className="h-4 w-4" />
-            <span className="font-semibold">{upload.username}</span>
-            <span>has just uploaded a clip</span>
-            <Link href={`/clip/${upload.clipId}`}>
-              <span className="hover:underline cursor-pointer font-semibold">
-                "{upload.clipTitle}"
-              </span>
-            </Link>
-          </div>
-        ))}
+        {duplicatedUploads.map((upload, index) => {
+          const Icon = CONTENT_ICONS[upload.contentType] || Upload;
+          const label = CONTENT_LABELS[upload.contentType] || 'just uploaded content';
+
+          return (
+            <div
+              key={`${upload.id}-${upload.contentType}-${index}`}
+              className="inline-flex items-center gap-2 text-sm font-medium pointer-events-auto"
+              style={{ color: '#071013' }}
+            >
+              <Icon className="h-4 w-4" />
+              <span className="font-semibold">{upload.displayName || upload.username}</span>
+              <span>{label}</span>
+              <button
+                onClick={() => {
+                  if (upload.contentType === 'screenshot') {
+                    setLocation(`/view/screenshot/${upload.id}`);
+                  } else {
+                    openClipDialog(upload.id);
+                  }
+                }}
+                className="hover:underline cursor-pointer font-semibold bg-transparent border-none p-0"
+                style={{ color: '#071013' }}
+              >
+                "{upload.title}"
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -56,6 +56,30 @@ interface MobileTrendingViewerProps {
   onCommentsVisibilityChange?: (open: boolean) => void;
 }
 
+// ── Per-row author avatar — own signed-URL hook ──────────────────────────
+function AuthorAvatar({ avatarUrl, displayName }: { avatarUrl?: string | null; displayName: string }) {
+  const { signedUrl } = useSignedUrl(avatarUrl ?? null);
+  return (
+    <img
+      src={signedUrl || avatarUrl || '/uploaded_assets/gamefolio-logo-green.png'}
+      alt={displayName}
+      className="w-full h-full object-cover"
+      onError={(e) => {
+        (e.currentTarget as HTMLImageElement).src = '/uploaded_assets/gamefolio-logo-green.png';
+      }}
+    />
+  );
+}
+
+// ── Helper: slugify a game name to match explore-page navigateToGame ─────
+function gameNameToSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 // ── Per-screenshot scroll item — own signed-URL hook ─────────────────────
 function ScreenshotScrollItem({ item }: { item: ScreenshotWithUser }) {
   const { signedUrl } = useSignedUrl(item.imageUrl);
@@ -138,6 +162,10 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   // ── Signed URL for the current item's author avatar ────────────────────
   const { signedUrl: signedAvatarUrl } = useSignedUrl(currentItem?.user?.avatarUrl ?? null);
 
+  // ── Signed URL for current screenshot image (used by download in menu) ─
+  const currentScreenshotImageUrl = currentItem && !('videoUrl' in currentItem) ? (currentItem as ScreenshotWithUser).imageUrl : null;
+  const { signedUrl: signedCurrentImageUrl } = useSignedUrl(currentScreenshotImageUrl);
+
   // ── Follow state for current content item's author ─────────────────────
   const currentAuthorUsername = currentItem?.user?.username;
   const currentAuthorId = currentItem?.user?.id;
@@ -175,26 +203,9 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
     followMutation.mutate();
   };
 
-  // Early return if no content or invalid index
-  if (!currentItem || currentIndex < 0 || currentIndex >= content.length) {
-    return (
-      <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
-        <div className="text-white text-center">
-          <p className="text-lg">No content available</p>
-          <Button 
-            onClick={onClose} 
-            variant="outline" 
-            className="mt-4 text-white border-white hover:bg-white/20"
-          >
-            Close
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   // ── Scroll-snap navigation ──────────────────────────────────────────────
   // Debounced scroll handler: updates currentIndex after scroll settles
+  // NOTE: All hooks must be declared before any early return.
   const handleScrollEvent = useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -264,6 +275,24 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   const isVideoContent = (item: ContentItem): item is ClipWithUser => {
     return 'videoUrl' in item;
   };
+
+  // Early return if no content or invalid index — placed after all hooks.
+  if (!currentItem || currentIndex < 0 || currentIndex >= content.length) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
+        <div className="text-white text-center">
+          <p className="text-lg">No content available</p>
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="mt-4 text-white border-white hover:bg-white/20"
+          >
+            Close
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
@@ -349,11 +378,10 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                       className="flex-shrink-0 no-underline"
                       data-testid={`link-user-${item.user.username}`}
                     >
-                      <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '1.5px solid #fff' }}>
-                        <img
-                          src={item.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                          alt={item.user.displayName}
-                          className="w-full h-full object-cover"
+                      <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid #B7FF1A' }}>
+                        <AuthorAvatar
+                          avatarUrl={item.user.avatarUrl}
+                          displayName={item.user.displayName}
                         />
                       </div>
                     </Link>
@@ -411,12 +439,17 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                   })()}
 
                   {item.game?.name && (
-                    <div className="flex items-center gap-1 mb-2">
+                    <Link
+                      href={`/games/${gameNameToSlug(item.game.name)}`}
+                      className="inline-flex items-center gap-1 mb-2 no-underline"
+                      data-testid={`link-game-${item.game.id ?? item.game.name}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-                      <span className="text-[11px] font-semibold" style={{ color: '#B7FF1A' }}>
+                      <span className="text-[11px] font-semibold underline-offset-2 hover:underline" style={{ color: '#B7FF1A' }}>
                         {item.game.name}
                       </span>
-                    </div>
+                    </Link>
                   )}
                 </div>
               </div>
@@ -512,12 +545,14 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             />
           </div>
 
-          {/* 3-dot menu — only for clips/reels, not screenshots */}
-          {isVideoContent(currentItem) && (
-            <div style={{ pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()}>
-              <TrendingClipMenu clip={currentItem as ClipWithUser} />
-            </div>
-          )}
+          {/* 3-dot menu — clips, reels, and screenshots */}
+          <div style={{ pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <TrendingClipMenu
+              clip={currentItem as ClipWithUser}
+              contentType={isVideoContent(currentItem) ? 'clip' : 'screenshot'}
+              screenshotImageUrl={signedCurrentImageUrl}
+            />
+          </div>
         </div>
       )}
 
@@ -679,14 +714,13 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
       </AnimatePresence>
 
       {/* Share dialog */}
-      {isVideoContent(currentItem) && (
-        <ClipShareDialog
-          clipId={currentItem.id}
-          contentType="reel"
-          open={showShare}
-          onOpenChange={setShowShare}
-        />
-      )}
+      <ClipShareDialog
+        clipId={currentItem.id}
+        contentType={isVideoContent(currentItem) ? (currentItem.videoType === 'reel' ? 'reel' : 'clip') : 'screenshot'}
+        open={showShare}
+        onOpenChange={setShowShare}
+      />
+
 
     </div>
   );

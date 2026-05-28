@@ -8,6 +8,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Keyboard-aware layout ── */
+:root {
+  --keyboard-height: 0px;
+  --visual-viewport-height: 100dvh;
+}
+
+/* Give all inputs scroll-margin so they appear above the keyboard when scrolled into view */
+@media (max-width: 768px) {
+  input:not([type="hidden"]),
+  textarea,
+  select,
+  [contenteditable="true"] {
+    scroll-margin-bottom: 80px;
+  }
+}
+
+/* Smooth transitions for keyboard-driven layout shifts */
+.keyboard-aware-scroll {
+  transition: padding-bottom 0.18s ease-out;
+}
+
+/* Upload page: ensure the form content area is always scrollable with keyboard */
+.upload-form-content {
+  padding-bottom: var(--keyboard-height, 0px);
+  transition: padding-bottom 0.18s ease-out;
+}
+
 /* Text selection highlight */
 ::selection {
   background-color: #B7FF1A;
@@ -527,6 +554,18 @@ video:focus {
   to { transform: translateX(-100%); }
 }
 
+@keyframes push-enter {
+  from { transform: translateX(calc(100% + 2rem)); opacity: 0; max-width: 0; }
+  20% { max-width: 600px; }
+  to { transform: translateX(0); opacity: 1; max-width: 600px; }
+}
+
+@keyframes push-leave {
+  from { transform: translateX(0); opacity: 1; max-width: 600px; }
+  80% { max-width: 0; }
+  to { transform: translateX(calc(-100% - 2rem)); opacity: 0; max-width: 0; }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -927,4 +966,106 @@ h1, h2, h3 {
   0%,  12%  { transform: translate(0px, 0px); }
   30%, 52%  { transform: translate(2px, 2px); }
   68%, 100% { transform: translate(0px, 0px); }
+}
+
+@keyframes gf-splash-logo-in {
+  from { opacity: 0; transform: scale(0.82); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes gf-splash-glow-pulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.12); }
+}
+
+@keyframes gf-splash-dot {
+  0%, 100% { opacity: 0.25; transform: scale(0.75); }
+  50%       { opacity: 1;    transform: scale(1.15); }
+}
+
+@keyframes gf-splash-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; pointer-events: none; }
+}
+
+/* Stinger transition */
+.stinger-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #0B1319;
+  overflow: hidden;
+  pointer-events: none;
+  animation: stinger-fade-out 200ms ease 850ms forwards;
+}
+
+.stinger-panel {
+  position: absolute;
+  top: -20%;
+  left: -60%;
+  width: 70%;
+  height: 140%;
+  background: #B7FF18;
+  transform: skewX(-18deg) translateX(0);
+  box-shadow: 0 0 40px rgba(183, 255, 24, 0.45), 0 0 80px rgba(183, 255, 24, 0.25);
+  animation: stinger-swipe 850ms ease-in-out forwards;
+  will-change: transform;
+}
+
+.stinger-trail {
+  position: absolute;
+  inset: 0;
+  transform: translateX(-18%);
+  background: rgba(11, 19, 25, 0.75);
+  filter: blur(8px);
+  pointer-events: none;
+}
+
+@keyframes stinger-swipe {
+  0% {
+    transform: skewX(-18deg) translateX(0);
+  }
+  100% {
+    transform: skewX(-18deg) translateX(260vw);
+  }
+}
+
+@keyframes stinger-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.stinger-logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 140px;
+  height: auto;
+  filter: drop-shadow(0 0 20px rgba(183, 255, 24, 0.55));
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+  animation: stinger-logo-fade 850ms ease-in-out forwards;
+}
+
+@keyframes stinger-logo-fade {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+  20%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  70%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stinger-panel {
+    animation: none;
+  }
+  .stinger-overlay {
+    animation: none;
+    opacity: 0;
+  }
+  .stinger-logo {
+    animation: none;
+    opacity: 0;
+  }
 }

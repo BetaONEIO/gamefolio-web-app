@@ -290,6 +290,7 @@ export interface IStorage {
   markAllNotificationsAsRead(userId: number): Promise<boolean>;
   deleteNotification(id: number): Promise<boolean>;
   deleteAllNotifications(userId: number): Promise<boolean>;
+  hasContentByUserId(userId: number): Promise<{ hasClips: boolean; hasScreenshots: boolean }>;
 
   // Push notifications
   upsertPushToken(input: InsertPushToken): Promise<PushToken>;

@@ -22,7 +22,7 @@ interface ClipShareDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   isOwnContent?: boolean;
-  contentType?: 'clip' | 'reel';
+  contentType?: 'clip' | 'reel' | 'screenshot';
 }
 
 interface ShareData {
@@ -43,6 +43,7 @@ interface ShareData {
   description: string;
   thumbnailUrl?: string | null;
   videoUrl?: string | null;
+  imageUrl?: string | null;
   videoType?: string;
 }
 
@@ -56,9 +57,20 @@ const SOCIAL_PLATFORMS = [
   { name: "Email", icon: FaEnvelope, key: "email" },
 ];
 
-function ClipThumbnail({ thumbnailUrl, videoUrl }: { thumbnailUrl?: string | null; videoUrl?: string | null }) {
+function ClipThumbnail({ thumbnailUrl, videoUrl, imageUrl }: { thumbnailUrl?: string | null; videoUrl?: string | null; imageUrl?: string | null }) {
   const { signedUrl: signedThumbUrl } = useSignedUrl(thumbnailUrl);
   const { signedUrl: signedVideoUrl } = useSignedUrl(videoUrl);
+  const { signedUrl: signedImageUrl } = useSignedUrl(imageUrl);
+
+  if (signedImageUrl) {
+    return (
+      <img
+        src={signedImageUrl}
+        alt="Screenshot"
+        className="w-full h-full object-cover"
+      />
+    );
+  }
 
   if (signedThumbUrl) {
     return (
@@ -103,20 +115,36 @@ function ClipThumbnail({ thumbnailUrl, videoUrl }: { thumbnailUrl?: string | nul
 }
 
 export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnContent = false, contentType = 'clip' }: ClipShareDialogProps) {
-  const label = contentType === 'reel' ? 'reel' : 'clip';
+  const label = contentType === 'reel' ? 'reel' : contentType === 'screenshot' ? 'screenshot' : 'clip';
+  const isScreenshot = contentType === 'screenshot';
+  const shareEndpoint = isScreenshot
+    ? `/api/screenshots/${clipId}/share`
+    : `/api/clips/${clipId}/share`;
+  const trackEndpoint = isScreenshot
+    ? `/api/screenshots/${clipId}/track-share`
+    : `/api/clips/${clipId}/track-share`;
   const [internalOpen, setInternalOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
   const { toast } = useToast();
 
   const isOpen = open !== undefined ? open : internalOpen;
   const setIsOpen = onOpenChange || setInternalOpen;
 
   const { data: shareData, isLoading, error, refetch } = useQuery<ShareData>({
-    queryKey: [`/api/clips/${clipId}/share`],
+    queryKey: [shareEndpoint],
     queryFn: async () => {
-      const res = await fetch(`/api/clips/${clipId}/share`, { credentials: "include" });
+      const res = await fetch(shareEndpoint, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch share data");
-      return res.json();
+      const data = await res.json();
+      // Normalize screenshot response to share dialog's expected shape
+      if (isScreenshot) {
+        return {
+          ...data,
+          clipUrl: data.clipUrl || data.screenshotUrl,
+        };
+      }
+      return data;
     },
     enabled: isOpen,
     retry: 2,
@@ -125,7 +153,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
 
   const trackShare = async () => {
     try {
-      await fetch(`/api/clips/${clipId}/track-share`, { method: "POST", credentials: "include" });
+      await fetch(trackEndpoint, { method: "POST", credentials: "include" });
     } catch (_) {}
   };
 
@@ -162,6 +190,8 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
 
   const handleSocialShare = async (platform: string, url: string, platformKey: string) => {
     if (!url) return;
+    setSelectedPlatform(platformKey);
+    setTimeout(() => setSelectedPlatform(null), 1500);
     if (isNative && shareData?.clipUrl) {
       const handled = await nativeShare({
         title: shareData.title || `Gamefolio ${label}`,
@@ -196,7 +226,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
         </DialogTrigger>
       )}
       <DialogContent
-        className="p-0 border-[#1B2A33] bg-[#0B1218] w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh] flex flex-col"
+        className="p-0 border-[#1B2A33] bg-[#0B1218] w-[calc(100vw-2rem)] max-w-[384px] sm:max-w-[560px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh] flex flex-col"
         aria-describedby="clip-share-description"
       >
         {/* Header */}
@@ -244,16 +274,18 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                 <div
                   className={`relative bg-[#101923] rounded-xl overflow-hidden border border-[#1B2A33]/80 ${
                     contentType === 'reel' || shareData.videoType === 'reel'
-                      ? 'w-28 sm:w-36 aspect-[9/16]'
-                      : 'w-full max-h-[140px] sm:max-h-[180px] aspect-video'
+                      ? 'w-28 sm:w-48 aspect-[9/16]'
+                      : 'w-full max-h-[140px] sm:max-h-[260px] aspect-video'
                   }`}
                 >
-                  <ClipThumbnail thumbnailUrl={shareData.thumbnailUrl} videoUrl={shareData.videoUrl} />
-                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none">
-                    <div className="w-9 h-9 bg-white/90 rounded-full flex items-center justify-center">
-                      <div className="w-0 h-0 border-l-[6px] border-l-[#0B1218] border-y-[4px] border-y-transparent ml-0.5" />
+                  <ClipThumbnail thumbnailUrl={shareData.thumbnailUrl} videoUrl={shareData.videoUrl} imageUrl={shareData.imageUrl} />
+                  {!isScreenshot && (
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none">
+                      <div className="w-9 h-9 bg-white/90 rounded-full flex items-center justify-center">
+                        <div className="w-0 h-0 border-l-[6px] border-l-[#0B1218] border-y-[4px] border-y-transparent ml-0.5" />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -298,19 +330,23 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                   {SOCIAL_PLATFORMS.map((platform) => {
                     const Icon = platform.icon;
                     const shareUrl = shareData.socialMediaLinks?.[platform.key];
+                    const isSelected = selectedPlatform === platform.key;
                     return (
                       <button
                         key={platform.key}
                         onClick={() => shareUrl && handleSocialShare(platform.name, shareUrl, platform.key)}
                         disabled={!shareUrl}
-                        className="flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-white/5 active:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="flex flex-col items-center gap-1 py-2 rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                         title={platform.name}
                         aria-label={`Share on ${platform.name}`}
                       >
-                        <div className="w-9 h-9 rounded-full border border-[#B7FF1A]/30 bg-[#1B2A33] flex items-center justify-center">
-                          <Icon className="w-4 h-4 text-[#F5F7F2]" />
+                        <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full border flex items-center justify-center transition-colors ${
+                          isSelected
+                            ? 'border-[#B7FF1A] bg-[#B7FF1A]/20'
+                            : 'border-[#B7FF1A]/30 bg-[#1B2A33] hover:border-[#B7FF1A] hover:bg-[#B7FF1A]/10'
+                        }`}>
+                          <Icon className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${isSelected ? 'text-[#B7FF1A]' : 'text-[#F5F7F2] hover:text-[#B7FF1A]'}`} />
                         </div>
-                        <span className="text-[#64748b] text-[9px] leading-tight text-center">{platform.name}</span>
                       </button>
                     );
                   })}

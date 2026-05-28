@@ -8,6 +8,8 @@ import { ClipWithUser } from "@shared/schema";
 import { useEffect, useState } from "react";
 import { GameFilterSheet } from "@/components/filters/GameFilterSheet";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
+import { useMobile } from "@/hooks/use-mobile";
+import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 
 const LatestClipsPage = () => {
   const { user } = useAuth();
@@ -16,9 +18,13 @@ const LatestClipsPage = () => {
   const [selectedGameName, setSelectedGameName] = useState<string | null>(null);
   const [timePeriod, setTimePeriod] = useState<string>("recent");
   const { openClipDialog } = useClipDialog();
+  const isMobile = useMobile();
+
+  // Mobile viewer state
+  const [mobileViewerOpen, setMobileViewerOpen] = useState(false);
+  const [mobileViewerStartIndex, setMobileViewerStartIndex] = useState<number>(0);
 
   useEffect(() => {
-    window.scrollTo(0, 0);
     sessionStorage.setItem('clipNavContext', 'latest');
   }, []);
 
@@ -39,8 +45,26 @@ const LatestClipsPage = () => {
       : clipsData
     : [];
 
+  const handleCardClick = (clipId: number, clips: ClipWithUser[]) => {
+    if (isMobile) {
+      const idx = filteredClips.findIndex(c => c.id === clipId);
+      setMobileViewerStartIndex(idx >= 0 ? idx : 0);
+      setMobileViewerOpen(true);
+    } else {
+      openClipDialog(clipId, clips);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background px-3 py-4 sm:px-4 sm:py-6 md:container md:mx-auto md:px-4 md:py-6">
+      {mobileViewerOpen && filteredClips.length > 0 && (
+        <MobileTrendingViewer
+          content={filteredClips}
+          initialIndex={mobileViewerStartIndex}
+          onClose={() => setMobileViewerOpen(false)}
+        />
+      )}
+
       <div className="space-y-3 mb-5 sm:space-y-4 sm:mb-8">
         <div className="flex items-center gap-3">
           <Button
@@ -110,6 +134,7 @@ const LatestClipsPage = () => {
               userId={user?.id}
               compact={false}
               clipsList={filteredClips}
+              onCardClick={handleCardClick}
             />
           ))}
         </div>

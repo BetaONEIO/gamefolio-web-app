@@ -61,8 +61,14 @@ const ClipEditor = ({ clip, onSaved, onCancel }: ClipEditorProps) => {
   const [trimStart, setTrimStart] = useState(clip.trimStart || 0);
   const [trimEnd, setTrimEnd] = useState(clip.trimEnd || 0);
   const [trimRange, setTrimRange] = useState<[number, number]>([0, 100]);
+
+  const originalFilter = clip.filter || "none";
+  const [filterDirty, setFilterDirty] = useState(false);
+  const [trimDirty, setTrimDirty] = useState(false);
+  const isDirty = filterDirty || trimDirty;
   const { toast } = useToast();
   const { signedUrl: signedThumbnailUrl } = useSignedUrl(clip.thumbnailUrl);
+
 
   // Initialize video duration and trim values
   useEffect(() => {
@@ -126,6 +132,7 @@ const ClipEditor = ({ clip, onSaved, onCancel }: ClipEditorProps) => {
     setTrimRange(values as [number, number]);
     setTrimStart(start);
     setTrimEnd(end);
+    setTrimDirty(true);
     
     // Update video current time
     if (videoRef.current && videoRef.current.currentTime < start) {
@@ -176,10 +183,12 @@ const ClipEditor = ({ clip, onSaved, onCancel }: ClipEditorProps) => {
 
   // Reset to original settings
   const handleReset = () => {
-    setFilter("none");
+    setFilter(originalFilter);
+    setFilterDirty(false);
     setTrimRange([0, 100]);
     setTrimStart(0);
     setTrimEnd(duration);
+    setTrimDirty(false);
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
     }
@@ -212,6 +221,9 @@ const ClipEditor = ({ clip, onSaved, onCancel }: ClipEditorProps) => {
         description: "Your changes have been saved successfully.",
         duration: 3000,
       });
+      
+      setFilterDirty(false);
+      setTrimDirty(false);
       
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({
@@ -345,7 +357,7 @@ const ClipEditor = ({ clip, onSaved, onCancel }: ClipEditorProps) => {
                     cursor-pointer text-center rounded-md p-2 transition-all
                     ${filter === filterOption.id ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-secondary'}
                   `}
-                  onClick={() => setFilter(filterOption.id)}
+                  onClick={() => { setFilter(filterOption.id); setFilterDirty(filterOption.id !== originalFilter); }}
                 >
                   <div 
                     className={`mx-auto w-12 h-12 mb-1 rounded overflow-hidden ${filterOption.className}`}
@@ -379,7 +391,7 @@ const ClipEditor = ({ clip, onSaved, onCancel }: ClipEditorProps) => {
           <Button 
             onClick={handleSave}
             className="flex items-center"
-            disabled={updateClipMutation.isPending}
+            disabled={updateClipMutation.isPending || !isDirty}
           >
             {updateClipMutation.isPending ? (
               <div className="animate-spin h-4 w-4 mr-2 border-2 border-t-transparent rounded-full" />

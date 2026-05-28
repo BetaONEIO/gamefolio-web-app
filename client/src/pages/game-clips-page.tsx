@@ -8,6 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ClipWithUser } from "@shared/schema";
+import { useMobile } from "@/hooks/use-mobile";
+import { useClipDialog } from "@/hooks/use-clip-dialog";
+import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
+import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 
 interface Clip {
   id: number;
@@ -180,13 +185,13 @@ export default function GameClipsPage() {
   });
 
   // Fetch clips for this game
-  const { data: clips, isLoading: clipsLoading } = useQuery<Clip[]>({
+  const { data: clips, isLoading: clipsLoading } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/games/${gameId}/clips`],
     enabled: !!gameId,
   });
 
   // Fetch reels for this game (using clips API with filter)
-  const { data: allClips, isLoading: allClipsLoading } = useQuery<Clip[]>({
+  const { data: allClips, isLoading: allClipsLoading } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/games/${gameId}/clips-all`],
     enabled: !!gameId,
   });
@@ -201,8 +206,14 @@ export default function GameClipsPage() {
   const reels = allClips?.filter(clip => clip.videoType === 'reel') || [];
   const normalClips = allClips?.filter(clip => clip.videoType === 'clip' || !clip.videoType) || clips || [];
 
-  const handleClipClick = (clipId: number) => {
-    setLocation(`/clips/${clipId}`);
+  const isMobile = useMobile();
+  const [mobileViewerOpen, setMobileViewerOpen] = useState(false);
+  const [mobileViewerStartIndex, setMobileViewerStartIndex] = useState(0);
+
+  const handleClipClick = (clipId: number, _clips?: ClipWithUser[]) => {
+    const idx = normalClips.findIndex(c => c.id === clipId);
+    setMobileViewerStartIndex(idx >= 0 ? idx : 0);
+    setMobileViewerOpen(true);
   };
 
   const handleBackClick = () => {
@@ -371,6 +382,14 @@ export default function GameClipsPage() {
   }
 
   return (
+    <>
+    {mobileViewerOpen && normalClips.length > 0 && (
+      <MobileTrendingViewer
+        content={normalClips}
+        initialIndex={mobileViewerStartIndex}
+        onClose={() => setMobileViewerOpen(false)}
+      />
+    )}
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
@@ -475,9 +494,14 @@ export default function GameClipsPage() {
           {/* Clips Tab */}
           <TabsContent value="clips" className="mt-0">
             {normalClips && normalClips.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
                 {normalClips.map((clip) => (
-                  <ClipGridItem key={clip.id} clip={clip} onClipClick={handleClipClick} />
+                  <VideoClipGridItem
+                    key={clip.id}
+                    clip={clip}
+                    clipsList={normalClips}
+                    onCardClick={handleClipClick}
+                  />
                 ))}
               </div>
             ) : (
@@ -494,9 +518,14 @@ export default function GameClipsPage() {
           {/* Reels Tab */}
           <TabsContent value="reels" className="mt-0">
             {reels && reels.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
                 {reels.map((reel) => (
-                  <ReelGridItem key={reel.id} reel={reel} onReelClick={handleClipClick} />
+                  <VideoClipGridItem
+                    key={reel.id}
+                    clip={reel}
+                    clipsList={reels}
+                    onCardClick={handleClipClick}
+                  />
                 ))}
               </div>
             ) : (
@@ -531,5 +560,6 @@ export default function GameClipsPage() {
         </Tabs>
       </div>
     </div>
+    </>
   );
 }

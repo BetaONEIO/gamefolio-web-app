@@ -92,8 +92,8 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
   const checkUsernameAvailability = async (username: string) => {
     try {
-      // Check length (3-20 characters)
-      if (username.length < 3 || username.length > 20) {
+      // Check length (4-20 characters)
+      if (username.length < 4 || username.length > 20) {
         setUsernameStatus("invalid");
         return;
       }

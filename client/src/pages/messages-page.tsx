@@ -302,7 +302,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <KeyboardAvoidingWrapper className="h-screen bg-navy text-white">
+    <KeyboardAvoidingWrapper className="h-full bg-navy text-white">
       <div className="flex h-full">
         {/* Left Sidebar - Conversations */}
         <div className="w-80 border-r border-navy-light flex flex-col">
@@ -322,7 +322,7 @@ export default function MessagesPage() {
                     <DialogTitle className="flex items-center gap-2 text-white">
                       {newConversationUsername && (
                         <Avatar className="w-8 h-8">
-                          <AvatarImage src={`/api/static/gamefolio%20social%20logo%203d%20circle%20web.png`} />
+                          <AvatarImage src={`/api/static/gamefolio-logo-green.png`} />
                           <AvatarFallback>
                             {newConversationUsername[0]?.toUpperCase()}
                           </AvatarFallback>

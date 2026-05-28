@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { X, Mail } from 'lucide-react';
-import gamefolioLogo from '@assets/gamefolio social logo 3d circle web.png';
+import gamefolioLogo from '@assets/gamefolio-logo-green.png';
 import { GoogleAuthButton } from './GoogleAuthButton';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';

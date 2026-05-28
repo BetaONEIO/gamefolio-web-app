@@ -260,6 +260,7 @@ const Sidebar = () => {
         <nav className="px-4 pt-40 pb-4 space-y-1 flex-1 overflow-y-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {menuItems.map((item) => {
             const isActive = location === item.href;
+            const isGamefolioItem = 'gamefolioIcon' in item && item.gamefolioIcon;
             return (
               <Link key={item.href} href={item.href} onClick={() => { closeClipDialog(); if (item.href === '/' && location === '/') setLocation('/'); }}>
                 <div
@@ -270,8 +271,10 @@ const Sidebar = () => {
                       : "text-muted-foreground hover:bg-primary hover:text-[#071013]"
                   )}
                 >
-                  {'gamefolioIcon' in item && item.gamefolioIcon ? (
-                    <GamefolioIcon glow={isActive} className="w-6 h-6 transition-all duration-300 group-hover:[filter:drop-shadow(0_0_10px_rgba(183,255,26,0.45))]" />
+                  {isGamefolioItem ? (
+                    <span className="inline-flex items-center justify-center w-6 h-6 flex-shrink-0 overflow-visible">
+                      <GamefolioIcon glow={isActive} className="w-6 h-6 scale-[1.85] transition-all duration-300 group-hover:[filter:drop-shadow(0_0_10px_rgba(183,255,26,0.45))]" />
+                    </span>
                   ) : item.themed ? (
                     <span
                       className={cn(

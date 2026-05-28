@@ -21,21 +21,23 @@ export function ProBadge({ selectedVerificationBadgeId, size = "md", isModerator
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger>
-          <img 
-            src={greenBadgeIcon} 
-            alt="Verified" 
-            className={`${sizeClasses[size]} ml-1`}
-            loading="eager"
-            decoding="async"
-            style={{
-              userSelect: 'none',
-              WebkitUserDrag: 'none',
-              pointerEvents: 'none'
-            } as React.CSSProperties}
-            draggable="false"
-            onContextMenu={(e) => e.preventDefault()}
-          />
+        <TooltipTrigger asChild>
+          <span className="inline-flex items-center" style={{ lineHeight: 0 }}>
+            <img 
+              src={greenBadgeIcon} 
+              alt="Verified" 
+              className={`${sizeClasses[size]} ml-1`}
+              loading="eager"
+              decoding="async"
+              style={{
+                userSelect: 'none',
+                WebkitUserDrag: 'none',
+                pointerEvents: 'none'
+              } as React.CSSProperties}
+              draggable="false"
+              onContextMenu={(e) => e.preventDefault()}
+            />
+          </span>
         </TooltipTrigger>
         <TooltipContent>
           <p className="text-xs">Verified Gamefolio member</p>

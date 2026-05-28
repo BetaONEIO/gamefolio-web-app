@@ -465,6 +465,7 @@ const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesk
   );
 };
 
+
 // ── Mobile: full-screen clips viewer with top bar ─────────────────────────
 const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void; viewAllHref?: string }> = ({ clips, onBack }) => {
   useEffect(() => {
@@ -536,12 +537,12 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[]; onOpen
   };
 
   return (
-    <div 
-      onClick={handleReelClick}
-      className="group relative bg-black rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
-    >
-      {/* Thumbnail/Video */}
-      <div className="absolute inset-0">
+    <div className="group flex flex-col gap-2">
+      {/* Thumbnail */}
+      <div
+        onClick={handleReelClick}
+        className="relative bg-black rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
+      >
         <div className="absolute inset-0 bg-gray-800" />
         <LazyImage
           src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
@@ -558,9 +559,6 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[]; onOpen
           }
         />
 
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
-
         {/* Play button overlay */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <div className="bg-primary backdrop-blur-sm rounded-full p-3">
@@ -571,9 +569,9 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[]; onOpen
         </div>
 
         {/* Duration badge - top left */}
-        <div className="absolute top-3 left-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-semibold">
+        <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded-md font-semibold">
           {(() => {
-            const actualDuration = reel.trimEnd && reel.trimEnd > 0 
+            const actualDuration = reel.trimEnd && reel.trimEnd > 0
               ? reel.trimEnd - (reel.trimStart || 0)
               : reel.duration || 0;
             return formatDuration(actualDuration);
@@ -581,36 +579,33 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[]; onOpen
         </div>
 
         {/* View count - top right */}
-        <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-semibold flex items-center gap-1">
+        <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded-md font-semibold flex items-center gap-1">
           <BarChart2 className="h-3 w-3" />
           {formatNumber(reel.views || 0)}
         </div>
+      </div>
 
-        {/* Content overlay - left aligned bottom */}
-        <div className="absolute bottom-0 left-0 right-0 p-3" onClick={(e) => e.stopPropagation()}>
-          {/* Title */}
-          <h3 className="text-white font-bold text-sm mb-0.5 drop-shadow-lg line-clamp-2" onClick={handleReelClick}>
-            {reel.title}
-          </h3>
-
-          {/* Username */}
-          <ProfileHoverCard username={reel.user.username}>
-            <p className="text-white text-xs mb-1.5 drop-shadow-lg cursor-default">
-              @{reel.user.username}
-            </p>
-          </ProfileHoverCard>
-
-          {/* Game badge underneath username */}
-          {reel.game && (
-            <Link
-              href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-              onClick={(e) => e.stopPropagation()}
-              className="inline-block bg-primary text-[#071013] text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
-            >
-              {reel.game.name}
-            </Link>
-          )}
-        </div>
+      {/* Metadata below thumbnail */}
+      <div className="px-0.5 space-y-0.5">
+        <h3
+          onClick={handleReelClick}
+          className="text-sm font-semibold leading-tight line-clamp-2 cursor-pointer hover:text-primary transition-colors"
+        >
+          {reel.title}
+        </h3>
+        <ProfileHoverCard username={reel.user.username}>
+          <p className="text-xs text-muted-foreground cursor-default hover:text-foreground transition-colors">
+            @{reel.user.username}
+          </p>
+        </ProfileHoverCard>
+        {reel.game && (
+          <Link
+            href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+            className="inline-block bg-primary text-[#071013] text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
+          >
+            {reel.game.name}
+          </Link>
+        )}
       </div>
     </div>
   );
@@ -1368,7 +1363,7 @@ const TrendingPage: React.FC = () => {
   const { data: trendingReels, isLoading: isLoadingReels } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/reels/trending', timePeriod, selectedGameId],
     queryFn: async () => {
-      const params = new URLSearchParams({ period: timePeriod, limit: '20' });
+      const params = new URLSearchParams({ period: timePeriod, limit: '40' });
       if (selectedGameId) params.set('gameId', String(selectedGameId));
       const response = await fetch(`/api/reels/trending?${params}`);
       if (!response.ok) throw new Error('Failed to fetch trending reels');
@@ -1381,7 +1376,7 @@ const TrendingPage: React.FC = () => {
   const { data: trendingScreenshots, isLoading: isLoadingScreenshots } = useQuery<ScreenshotWithUser[]>({
     queryKey: ['/api/trending/screenshots', timePeriod, selectedGameId],
     queryFn: async () => {
-      const params = new URLSearchParams({ period: timePeriod, limit: '20' });
+      const params = new URLSearchParams({ period: timePeriod, limit: '40' });
       if (selectedGameId) params.set('gameId', String(selectedGameId));
       const response = await fetch(`/api/trending/screenshots?${params}`);
       if (!response.ok) throw new Error('Failed to fetch trending screenshots');
@@ -1486,61 +1481,18 @@ const TrendingPage: React.FC = () => {
       }
 
       return (
-        <div className="relative">
-          <button
-            onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft -= 480; } }}
-            className="absolute -left-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft += 480; } }}
-            className="absolute -right-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-          <div
-            ref={screenshotsScrollRef}
-            className={`flex gap-5 overflow-x-auto scrollbar-hide pb-4 select-none ${screenshotsDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-            style={{ scrollBehavior: screenshotsDragging ? 'auto' : 'smooth', touchAction: 'pan-x' }}
-            onMouseDown={(e) => {
-              if (!screenshotsScrollRef.current) return;
-              setScreenshotsDragging(true);
-              setScreenshotsDragStart(e.clientX);
-              setScreenshotsScrollStart(screenshotsScrollRef.current.scrollLeft);
-              e.preventDefault();
-            }}
-            onMouseMove={(e) => {
-              if (!screenshotsDragging || !screenshotsScrollRef.current) return;
-              e.preventDefault();
-              screenshotsScrollRef.current.scrollLeft = screenshotsScrollStart - (e.clientX - screenshotsDragStart);
-            }}
-            onMouseUp={() => setScreenshotsDragging(false)}
-            onMouseLeave={() => setScreenshotsDragging(false)}
-            onTouchStart={(e) => {
-              if (!screenshotsScrollRef.current) return;
-              setScreenshotsTouchStart(e.touches[0].clientX);
-              setScreenshotsTouchScrollStart(screenshotsScrollRef.current.scrollLeft);
-            }}
-            onTouchMove={(e) => {
-              if (!screenshotsScrollRef.current) return;
-              const delta = screenshotsTouchStart - e.touches[0].clientX;
-              screenshotsScrollRef.current.scrollLeft = screenshotsTouchScrollStart + delta;
-            }}
-          >
-            {trendingScreenshots.map((screenshot) => (
-              <div key={screenshot.id} className="flex-shrink-0 w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px]">
-                <ScreenshotCard
-                  screenshot={screenshot}
-                  isOwnProfile={user?.id === screenshot.userId}
-                  profile={screenshot.user}
-                  onDelete={(id) => deleteScreenshotMutation.mutate(id)}
-                  onSelect={setSelectedScreenshot}
-                  showUserInfo={true}
-                />
-              </div>
-            ))}
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-20">
+          {trendingScreenshots.map((screenshot) => (
+            <ScreenshotCard
+              key={screenshot.id}
+              screenshot={screenshot}
+              isOwnProfile={user?.id === screenshot.userId}
+              profile={screenshot.user}
+              onDelete={(id) => deleteScreenshotMutation.mutate(id)}
+              onSelect={setSelectedScreenshot}
+              showUserInfo={true}
+            />
+          ))}
         </div>
       );
     }
@@ -1635,10 +1587,10 @@ const TrendingPage: React.FC = () => {
         );
       }
 
-      // Desktop: 1 row with 4 columns filling the page — clicking opens the Shorts viewer
+      // Desktop: multi-row grid — clicking opens the Shorts viewer
       return (
-        <div className="grid grid-cols-4 gap-4 w-full">
-          {trendingReels.slice(0, 4).map((reel) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 w-full pb-20">
+          {trendingReels.map((reel) => (
             <ReelCard
               key={reel.id}
               reel={reel}

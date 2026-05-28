@@ -618,6 +618,7 @@ const AccountSettingsPage: React.FC = () => {
         }
       });
       
+      appearanceForm.reset(values);
       toast({
         title: "Appearance updated",
         description: "Your profile appearance has been updated successfully.",
@@ -978,7 +979,7 @@ const AccountSettingsPage: React.FC = () => {
                       </div>
 
                       <div className="flex justify-end pt-4">
-                        <Button type="submit" disabled={updateProfile.isPending}>
+                        <Button type="submit" disabled={!appearanceForm.formState.isDirty || updateProfile.isPending}>
                           {updateProfile.isPending ? (
                             <>
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />

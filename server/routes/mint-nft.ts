@@ -1378,13 +1378,29 @@ async function fetchAndAnnotateTokenMetadata(tokenId: number): Promise<CachedTok
   if (!tokenURI) return null;
 
   let metadata: any = null;
+  // Build candidate URLs: try without extension first (standard NFT metadata pattern),
+  // then with .json, then cycle through fallback gateways for each variant.
+  const candidateUrls: string[] = [];
   for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
+    const gatewayBase = ipfsToHttp(tokenURI, i);
+    candidateUrls.push(gatewayBase);          // no extension  (e.g. ipfs.io/ipfs/CID/2)
+    if (!gatewayBase.endsWith('.json')) {
+      candidateUrls.push(gatewayBase + '.json'); // with .json   (e.g. ipfs.io/ipfs/CID/2.json)
+    }
+  }
+  for (const url of candidateUrls) {
     try {
-      const url = ipfsToHttp(tokenURI, i) + '.json';
       const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
       if (response.ok) {
-        metadata = await response.json();
-        break;
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json') || contentType.includes('text/')) {
+          metadata = await response.json();
+        } else {
+          // Some gateways serve metadata without a content-type; try parsing anyway.
+          const text = await response.text();
+          try { metadata = JSON.parse(text); } catch { continue; }
+        }
+        if (metadata) break;
       }
     } catch {
       continue;

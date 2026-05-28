@@ -7,7 +7,7 @@ import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import CommentSection from "@/components/clips/CommentSection";
@@ -50,6 +50,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
   const isAcceptingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const isSwiping = useRef(false);
   const closeComments = (callback?: () => void) => {
     setIsClosingComments(true);
     setTimeout(() => {
@@ -66,6 +68,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
   const { isOpen: isJoinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
@@ -234,6 +237,28 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           ref={containerRef}
           className="absolute inset-0 overflow-y-scroll overflow-x-hidden snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
           style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain', pointerEvents: showComments ? 'none' : 'auto' }}
+          onTouchStart={(e) => {
+            touchStartYRef.current = e.touches[0].clientY;
+            isSwiping.current = false;
+          }}
+          onTouchMove={(e) => {
+            if (touchStartYRef.current === null) return;
+            const diff = touchStartYRef.current - e.touches[0].clientY;
+            if (Math.abs(diff) > 8) isSwiping.current = true;
+          }}
+          onTouchEnd={(e) => {
+            if (touchStartYRef.current === null) return;
+            const diff = touchStartYRef.current - e.changedTouches[0].clientY;
+            touchStartYRef.current = null;
+            const container = containerRef.current;
+            if (!container || !isSwiping.current) return;
+            const h = container.clientHeight;
+            if (diff > 40 && currentIndex < reels.length - 1) {
+              container.scrollTo({ top: (currentIndex + 1) * h, behavior: 'smooth' });
+            } else if (diff < -40 && currentIndex > 0) {
+              container.scrollTo({ top: (currentIndex - 1) * h, behavior: 'smooth' });
+            }
+          }}
         >
           {reels.map((reel, index) => (
             <div
@@ -307,8 +332,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             {/* Right side engagement buttons — hidden when comments open, hidden on desktop (moved to right panel) */}
             {!showComments && !isDesktop && (
               <div
-                className="absolute right-3 flex flex-col items-center gap-3 pointer-events-auto"
-                style={{ bottom: 24 }}
+                className="absolute right-3 flex flex-col items-center gap-3 pointer-events-auto z-[5]"
+                style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' }}
                 onClick={e => e.stopPropagation()}
               >
                 {/* Views */}
@@ -417,15 +442,19 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                   {currentReel.game?.name && (
                     <div className="flex items-center gap-1 mb-0.5">
                       <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-                      <Link
-                        href={`/games/${currentReel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-                        onClick={onClose}
+                      <button
                         className="pointer-events-auto"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const slug = currentReel.game!.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                          onClose();
+                          navigate(`/games/${slug}`);
+                        }}
                       >
                         <span className="text-[11px] font-semibold" style={{ color: '#B7FF1A' }}>
                           {currentReel.game.name}
                         </span>
-                      </Link>
+                      </button>
                     </div>
                   )}
 
@@ -506,14 +535,18 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             {currentReel.game?.name && (
               <div className="flex items-center gap-1.5">
                 <Gamepad2 className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-                <Link
-                  href={`/games/${currentReel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-                  onClick={onClose}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const slug = currentReel.game!.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    onClose();
+                    navigate(`/games/${slug}`);
+                  }}
                 >
                   <span className="text-sm font-semibold" style={{ color: '#B7FF1A' }}>
                     {currentReel.game.name}
                   </span>
-                </Link>
+                </button>
               </div>
             )}
 

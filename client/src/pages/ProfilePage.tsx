@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
-import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
+import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 import { useMobile } from "@/hooks/use-mobile";
 import { NameTagDetailDialog } from "@/components/store/NameTagDetailDialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -119,6 +119,26 @@ interface OwnedNft {
 interface OwnedNftsData {
   nfts: OwnedNft[];
   count: number;
+}
+
+function ExpandableBio({ bio, limit = 150, className, style }: { bio: string; limit?: number; className?: string; style?: React.CSSProperties }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = bio.length > limit;
+  const displayed = isLong && !expanded ? bio.slice(0, limit).trimEnd() + "…" : bio;
+  return (
+    <span className={className} style={style}>
+      {displayed}
+      {isLong && (
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="ml-1 font-semibold underline-offset-2 hover:underline focus:outline-none"
+          style={{ color: "#B7FF18", background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "inherit", lineHeight: "inherit" }}
+        >
+          {expanded ? "See less" : "See more"}
+        </button>
+      )}
+    </span>
+  );
 }
 
 const RARE_TRAITS: Record<string, string[]> = {
@@ -230,6 +250,11 @@ const ProfilePage = () => {
   const { lightboxData, openLightbox, closeLightbox } = useProfilePictureLightbox();
   const { lightboxData: bannerLightboxData, openLightbox: openBannerLightbox, closeLightbox: closeBannerLightbox } = useBannerLightbox();
   const isOwnProfile = currentUser?.username === username;
+
+  // Mac the cat easter egg: discovering /mac grants a one-time 5,000 XP bonus.
+  const isMacProfile = username?.toLowerCase() === "mac";
+  const [macBonusXp, setMacBonusXp] = useState<number | null>(null);
+  const macDiscoverFiredRef = useRef(false);
 
   // Handle highlighting content from share links
   const [highlightedContent, setHighlightedContent] = useState<{type: string, id: string} | null>(null);
@@ -380,6 +405,27 @@ const ProfilePage = () => {
       return failureCount < 3;
     },
   });
+
+  // Mac the cat easter egg: when a signed-in user lands on /mac, silently claim
+  // the one-time 5,000 XP bonus. The ref guards against React double-invoke /
+  // re-renders so we only fire once per mount; the server is idempotent too.
+  useEffect(() => {
+    if (!isMacProfile || !currentUser || macDiscoverFiredRef.current) return;
+    macDiscoverFiredRef.current = true;
+    (async () => {
+      try {
+        const res = await apiRequest("POST", "/api/mac/discover");
+        const data = await res.json();
+        if (data?.granted) {
+          setMacBonusXp(data.xp ?? 5000);
+          // Refresh the signed-in user so their XP / level updates everywhere.
+          queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        }
+      } catch (err) {
+        console.error("Mac bonus discover failed", err);
+      }
+    })();
+  }, [isMacProfile, currentUser]);
 
   // Get signed URL for profile avatar (private bucket)
   const { signedUrl: profileAvatarSignedUrl } = useSignedUrl(profile?.avatarUrl);
@@ -540,19 +586,24 @@ const ProfilePage = () => {
       const response = await apiRequest('DELETE', `/api/clips/${clipId}`);
       return response;
     },
-    onSuccess: () => {
-      // Invalidate clips data to refresh the UI
+    onSuccess: (_, clipId) => {
+      // Immediately remove the clip from all caches so the UI updates instantly
+      const removeClip = (old: any) => {
+        if (!old) return old;
+        if (Array.isArray(old)) return old.filter((c: any) => c.id !== clipId);
+        if (old?.clips && Array.isArray(old.clips)) return { ...old, clips: old.clips.filter((c: any) => c.id !== clipId) };
+        return old;
+      };
+      queryClient.setQueryData([`/api/users/${username}/clips`], removeClip);
+      queryClient.setQueryData(['/api/clips/latest'], removeClip);
+      queryClient.setQueryData(['/api/reels/latest'], removeClip);
+
+      // Then invalidate in the background for eventual consistency
       queryClient.invalidateQueries({ queryKey: [`/api/users/${username}/clips`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${username}`] });
-
-      // Invalidate trending content cache so deleted clips don't show up
       queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
       queryClient.invalidateQueries({ queryKey: ['/api/clips/reels/trending'] });
-
-      // Invalidate latest clips queries (home page + dedicated latest page)
       queryClient.invalidateQueries({ queryKey: ['/api/clips/latest'] });
-
-      // Invalidate reels queries (for home page, trending page, etc.)
       queryClient.invalidateQueries({ queryKey: ['/api/reels/latest'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reels/trending'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reels'] });
@@ -2870,7 +2921,9 @@ const ProfilePage = () => {
           {/* Bio — below the streamer badge, outside the card */}
           {profile.bio && (
             <div className="mx-4 mt-2 mb-1">
-              <p className={`text-sm pr-4 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>{profile.bio}</p>
+              <p className={`text-sm pr-4 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>
+                <ExpandableBio bio={profile.bio} style={{ color: isLightBackground ? '#1d293d' : undefined }} />
+              </p>
             </div>
           )}
 
@@ -3263,7 +3316,9 @@ const ProfilePage = () => {
 
             {/* Bio — below the streamer badge, outside the card */}
             {profile.bio && (
-              <p className={`text-sm max-w-md mt-2 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>{profile.bio}</p>
+              <p className={`text-sm max-w-md mt-2 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>
+                <ExpandableBio bio={profile.bio} style={{ color: isLightBackground ? '#1d293d' : undefined }} />
+              </p>
             )}
 
             {/* Profile Info Card — stats only, Collection button on top-right border */}
@@ -4976,7 +5031,9 @@ const ProfilePage = () => {
                 <div>
                   <h3 className="text-lg font-medium mb-2">About {profile.displayName}</h3>
                   <p className="text-muted-foreground">
-                    {profile.bio || `${profile.displayName} hasn't added a bio yet.`}
+                    {profile.bio
+                      ? <ExpandableBio bio={profile.bio} limit={200} className="text-muted-foreground" />
+                      : `${profile.displayName} hasn't added a bio yet.`}
                   </p>
                 </div>
 
@@ -5161,6 +5218,37 @@ const ProfilePage = () => {
         username={bannerLightboxData.username}
       />
 
+      {/* Mac the cat easter-egg reward celebration */}
+      <Dialog open={macBonusXp !== null} onOpenChange={(open) => { if (!open) setMacBonusXp(null); }}>
+        <DialogContent className="sm:max-w-md text-center border-amber-500/40 bg-[#0A0A0A]">
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl">You found Mac! 🐱</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-2">
+            <img
+              src="/attached_assets/mac-gamer.png"
+              alt="Mac the gaming cat"
+              className="w-40 h-40 rounded-2xl object-cover ring-2 ring-amber-500/60 shadow-[0_0_40px_-8px_rgba(245,166,35,0.6)]"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+            />
+            <p className="text-amber-400 text-3xl font-extrabold tracking-tight">
+              +{(macBonusXp ?? 0).toLocaleString()} XP
+            </p>
+            <p className="text-sm text-muted-foreground px-2">
+              Mac the gaming cat approves of your snooping. He's tossed you a
+              one-time stash of XP from his secret CAT FUEL™ reserves. Don't tell
+              the other cats. 🐾
+            </p>
+            <button
+              onClick={() => setMacBonusXp(null)}
+              className="mt-1 rounded-lg bg-amber-500 px-6 py-2 font-semibold text-black hover:bg-amber-400 transition-colors"
+            >
+              Purrfect
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <ProUpgradeDialog
         open={proUpgradeOpen}
         onOpenChange={setProUpgradeOpen}
@@ -5268,10 +5356,10 @@ const ProfilePage = () => {
       />
 
       {mobileViewer && (
-        <MobileClipsViewerOverlay
-          clips={mobileViewer.clips}
-          startClipId={mobileViewer.startId}
-          onBack={() => setMobileViewer(null)}
+        <MobileTrendingViewer
+          content={mobileViewer.clips}
+          initialIndex={Math.max(0, mobileViewer.clips.findIndex(c => c.id === mobileViewer.startId))}
+          onClose={() => setMobileViewer(null)}
         />
       )}
     </div>

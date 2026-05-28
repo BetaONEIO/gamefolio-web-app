@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -48,6 +48,12 @@ const ScreenshotUploadPage: React.FC = () => {
   const [cropQueue, setCropQueue] = useState<File[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const dragCounterRef = React.useRef(0);
+
+  // Signal to useVersionCheck that a reload must not happen mid-upload.
+  useEffect(() => {
+    window.__gf_uploading__ = isUploading;
+    return () => { window.__gf_uploading__ = false; };
+  }, [isUploading]);
 
   const addFileToState = (file: File) => {
     setSelectedFiles(prev => {

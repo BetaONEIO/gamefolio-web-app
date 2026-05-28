@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
-import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
 import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 import TrendingGameCard from "@/components/clips/TrendingGameCard";
 import GameClipsSection from "@/components/clips/GameClipsSection";
@@ -18,6 +17,9 @@ import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
 import { useLocation, Link } from "wouter";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
+import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
+import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
+import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
 import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
@@ -562,6 +564,9 @@ const HomePage = () => {
           )}
         </div>
       </section>
+
+      {/* Ecosystem Activity Rail */}
+      <EcosystemActivityRail />
       
       {/* Latest Clips Section */}
       <section className="px-0">
@@ -675,7 +680,7 @@ const HomePage = () => {
                           <div className="absolute top-2 left-2 flex items-center gap-1.5">
                             <div className="w-6 h-6 rounded-full overflow-hidden border border-white/50">
                               <img
-                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio-logo-green.png'}
                                 alt={reel.user.displayName}
                                 className="w-full h-full object-cover"
                               />
@@ -751,7 +756,7 @@ const HomePage = () => {
                           <div className="flex items-center gap-2 mb-2">
                             <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/50">
                               <img
-                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio-logo-green.png'}
                                 alt={reel.user.displayName}
                                 className="w-full h-full object-cover"
                               />
@@ -868,21 +873,17 @@ const HomePage = () => {
         </Tabs>
       </section>
 
+      {/* Daily XP Challenges */}
+      <DailyXPChallenges />
+
+      {/* Live Streams Section */}
+      <LiveStreamsSection />
+
       {/* Recommended for You Section - Only show for authenticated users */}
       {user && <RecommendedForYou userId={user.id} />}
       
-      {/* Featured Gamers Section */}
+      {/* Trending Gamefolios Section */}
       <section className="mt-16 px-0">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-medium text-foreground">Featured Gamers</h2>
-          <Link 
-            href="/explore" 
-            className="text-primary text-sm font-medium hover:underline flex items-center"
-          >
-            View all <ChevronRight className="h-4 w-4 ml-1" />
-          </Link>
-        </div>
-        
         <FeaturedUsersSection />
       </section>
 
@@ -1032,10 +1033,10 @@ const HomePage = () => {
     </div>
 
     {mobileViewer && (
-      <MobileClipsViewerOverlay
-        clips={mobileViewer.clips}
-        startClipId={mobileViewer.startId}
-        onBack={() => setMobileViewer(null)}
+      <MobileTrendingViewer
+        content={mobileViewer.clips}
+        initialIndex={Math.max(0, mobileViewer.clips.findIndex(c => c.id === mobileViewer.startId))}
+        onClose={() => setMobileViewer(null)}
       />
     )}
 

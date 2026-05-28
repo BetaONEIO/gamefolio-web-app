@@ -35,6 +35,7 @@ import {
 import { formatDistance } from "date-fns";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 
 const ClipPage = () => {
   const [, navigate] = useLocation();
@@ -295,6 +296,17 @@ const ClipPage = () => {
           <Button variant="outline" onClick={() => navigate("/")}>Go home</Button>
         </div>
       </div>
+    );
+  }
+
+  // ── Mobile clip: use MobileTrendingViewer (clips only, not reels) ──
+  if (isMobile && !isReel) {
+    return (
+      <MobileTrendingViewer
+        content={[clip]}
+        initialIndex={0}
+        onClose={goBack}
+      />
     );
   }
 

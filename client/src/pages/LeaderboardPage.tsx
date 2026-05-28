@@ -49,9 +49,17 @@ interface TopContributor {
 
 type TabType = "weekly" | "monthly" | "alltime";
 
+// Easter egg: the "mystery legend" hint toward Mac (/mac) only appears on a
+// fraction of leaderboard visits, so it stays elusive and intriguing rather
+// than a permanent fixture. Tune this to make Mac easier/harder to stumble on.
+const MYSTERY_LEGEND_CHANCE = 0.25; // ~1 in 4 visits
+
 const LeaderboardPage = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>("weekly");
+  // Rolled once per mount (lazy init) so it's stable for the whole visit and
+  // doesn't flicker on re-render as leaderboard data loads.
+  const [showMysteryLegend] = useState(() => Math.random() < MYSTERY_LEGEND_CHANCE);
 
   // Fetch all-time leaderboard data from API
   const { data: allTimeData, isLoading: allTimeLoading } = useQuery<PointsLeaderboardEntry[]>({
@@ -436,6 +444,25 @@ const LeaderboardPage = () => {
             ))
           )}
         </div>
+
+        {/* Hidden easter egg: a faint "mystery legend" nudging the curious toward
+            Mac's secret profile (/mac). Only shown on a fraction of visits (see
+            MYSTERY_LEGEND_CHANCE) so it feels elusive. Intentionally NOT a ranked
+            card so it can't be mistaken for a real entry — just a dim, clickable
+            footnote. The 999,999 XP matches Mac's profile total. */}
+        {showMysteryLegend && (
+          <Link href="/mac">
+            <div
+              className="group mb-8 -mt-2 flex items-center justify-center text-center cursor-pointer select-none opacity-40 hover:opacity-100 transition-opacity"
+              data-testid="leaderboard-mystery-legend"
+              title="???"
+            >
+              <span className="text-xs italic text-slate-500 group-hover:text-[#B7FF1A] transition-colors">
+                ✨ ??? — a mysterious cat sits beyond the board at 999,999 XP 🐾
+              </span>
+            </div>
+          </Link>
+        )}
 
         {/* Historic Winners Section */}
         <div className="mb-8">

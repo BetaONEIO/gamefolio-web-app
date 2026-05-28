@@ -294,7 +294,7 @@ export class DatabaseStorage implements IStorage {
 
       const userWithDefaults = {
         ...safeUserData,
-        avatarUrl: safeUserData.avatarUrl || "/attached_assets/gamefolio social logo 3d circle web.png",
+        avatarUrl: safeUserData.avatarUrl || "/attached_assets/gamefolio-logo-green.png",
         bannerUrl: safeUserData.bannerUrl || "/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg",
         selectedAvatarBorderId: safeUserData.selectedAvatarBorderId ?? (await db.select({ id: assetRewards.id }).from(assetRewards).where(eq(assetRewards.category, "avatar_border")).limit(1))[0]?.id,
         referralCode: await generateReferralCode(),
@@ -2626,6 +2626,14 @@ export class DatabaseStorage implements IStorage {
       console.error("Error deleting all notifications:", error);
       return false;
     }
+  }
+
+  async hasContentByUserId(userId: number): Promise<{ hasClips: boolean; hasScreenshots: boolean }> {
+    const [clipResult, screenshotResult] = await Promise.all([
+      db.select({ id: clips.id }).from(clips).where(eq(clips.userId, userId)).limit(1),
+      db.select({ id: screenshots.id }).from(screenshots).where(eq(screenshots.userId, userId)).limit(1),
+    ]);
+    return { hasClips: clipResult.length > 0, hasScreenshots: screenshotResult.length > 0 };
   }
 
   async getNotification(id: number): Promise<any> {

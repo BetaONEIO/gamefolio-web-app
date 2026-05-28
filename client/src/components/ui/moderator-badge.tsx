@@ -19,21 +19,23 @@ export function ModeratorBadge({ isModerator, size = "md" }: ModeratorBadgeProps
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger>
-          <img 
-            src={moderatorIcon} 
-            alt="Moderator" 
-            className={`${sizeClasses[size]} ml-1`}
-            loading="eager"
-            decoding="async"
-            style={{
-              userSelect: 'none',
-              WebkitUserDrag: 'none',
-              pointerEvents: 'none'
-            } as React.CSSProperties}
-            draggable="false"
-            onContextMenu={(e) => e.preventDefault()}
-          />
+        <TooltipTrigger asChild>
+          <span className="inline-flex items-center" style={{ lineHeight: 0 }}>
+            <img 
+              src={moderatorIcon} 
+              alt="Moderator" 
+              className={`${sizeClasses[size]} ml-1`}
+              loading="eager"
+              decoding="async"
+              style={{
+                userSelect: 'none',
+                WebkitUserDrag: 'none',
+                pointerEvents: 'none'
+              } as React.CSSProperties}
+              draggable="false"
+              onContextMenu={(e) => e.preventDefault()}
+            />
+          </span>
         </TooltipTrigger>
         <TooltipContent>
           <p className="text-xs">This user is a moderator</p>

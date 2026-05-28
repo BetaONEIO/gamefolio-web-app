@@ -9,7 +9,7 @@ export const getDemoUser = (): User => {
     emailVerified: true,
     displayName: "Demo User",
     bio: "This is a demo account for Gamefolio. Feel free to explore all features!",
-    avatarUrl: "/attached_assets/gamefolio social logo 3d circle web.png",
+    avatarUrl: "/attached_assets/gamefolio-logo-green.png",
     bannerUrl: "/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg",
     backgroundColor: "#0B2232",
     cardColor: "#1E3A5F",

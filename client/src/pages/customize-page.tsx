@@ -120,6 +120,16 @@ export default function CustomizePage() {
     cardColor: user?.cardColor || DEFAULT_COLORS.cardColor
   });
 
+  const savedColors = {
+    accentColor: user?.accentColor || DEFAULT_COLORS.accentColor,
+    backgroundColor: user?.backgroundColor || DEFAULT_COLORS.backgroundColor,
+    cardColor: user?.cardColor || DEFAULT_COLORS.cardColor,
+  };
+  const isColorsDirty =
+    colors.accentColor !== savedColors.accentColor ||
+    colors.backgroundColor !== savedColors.backgroundColor ||
+    colors.cardColor !== savedColors.cardColor;
+
   const [activeColorPicker, setActiveColorPicker] = useState<string | null>(null);
 
   const updateColorsMutation = useMutation({
@@ -253,9 +263,9 @@ export default function CustomizePage() {
                 <div className="flex gap-3">
                   <Button 
                     onClick={saveColors}
-                    disabled={updateColorsMutation.isPending}
+                    disabled={updateColorsMutation.isPending || !isColorsDirty}
                     className="flex-1"
-                    style={{ backgroundColor: colors.accentColor }}
+                    style={{ backgroundColor: isColorsDirty ? colors.accentColor : undefined }}
                   >
                     {updateColorsMutation.isPending ? "Saving..." : "Save Colors"}
                   </Button>

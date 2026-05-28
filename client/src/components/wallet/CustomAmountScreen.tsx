@@ -17,10 +17,6 @@ export default function CustomAmountScreen({
   const [showCursor, setShowCursor] = useState(true);
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  useEffect(() => {
     const interval = setInterval(() => {
       setShowCursor((prev) => !prev);
     }, 530);

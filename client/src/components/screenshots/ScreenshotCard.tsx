@@ -1,10 +1,8 @@
 import React from 'react';
 import { Flag, X, ImageOff, Heart, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ReportDialog } from '@/components/content/ReportDialog';
 import { LazyImage } from '@/components/ui/lazy-image';
-import { useSignedUrl } from '@/hooks/use-signed-url';
 import { Link } from 'wouter';
 import { ProfileHoverCard } from '@/components/ui/ProfileHoverCard';
 
@@ -28,7 +26,6 @@ export function ScreenshotCard({
   showUserInfo = false
 }: ScreenshotCardProps) {
   const screenshotUser = (screenshot as any).user;
-  const { signedUrl: signedAvatarUrl } = useSignedUrl(showUserInfo ? screenshotUser?.avatarUrl : null);
 
   return (
     <div 
@@ -45,7 +42,7 @@ export function ScreenshotCard({
         <LazyImage 
           src={screenshot.imageUrl || ''} 
           alt={screenshot.title}
-          className={`w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105 ${screenshot.ageRestricted ? 'blur-2xl' : ''}`}
+          className={`w-full h-full object-contain transition-transform duration-500 group-hover/card:scale-105 ${screenshot.ageRestricted ? 'blur-2xl' : ''}`}
           placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
           showLoadingSpinner={true}
           containerClassName="absolute inset-0"
@@ -136,27 +133,13 @@ export function ScreenshotCard({
       {/* Info Section */}
       <div className="pt-3 pb-1 space-y-1">
         {showUserInfo && screenshotUser && (
-          <div className="flex items-center mb-1.5">
-            <ProfileHoverCard username={screenshotUser.username}>
-              <Link href={`/profile/${screenshotUser.username}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                <div className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
-                  {screenshotUser.nftProfileTokenId && screenshotUser.nftProfileImageUrl && (screenshotUser as any).activeProfilePicType === 'nft' ? (
-                    <div className="h-7 w-7 rounded-lg overflow-hidden border border-[#B7FF1A]/40 flex-shrink-0">
-                      <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName} loading="lazy" className="w-full h-full object-cover" />
-                    </div>
-                  ) : (
-                    <Avatar className="h-7 w-7 flex-shrink-0">
-                      <AvatarImage src={signedAvatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'} />
-                      <AvatarFallback className="text-xs">{screenshotUser.displayName?.charAt(0) || '?'}</AvatarFallback>
-                    </Avatar>
-                  )}
-                  <span className="text-sm font-medium truncate max-w-[140px]" style={{ color: '#F5F7F2' }}>
-                    {screenshotUser.displayName || screenshotUser.username}
-                  </span>
-                </div>
-              </Link>
-            </ProfileHoverCard>
-          </div>
+          <ProfileHoverCard username={screenshotUser.username}>
+            <Link href={`/profile/${screenshotUser.username}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+              <span className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+                @{screenshotUser.username}
+              </span>
+            </Link>
+          </ProfileHoverCard>
         )}
 
         <h3 className="font-semibold text-sm line-clamp-1 leading-tight" style={{ color: '#F5F7F2' }}>

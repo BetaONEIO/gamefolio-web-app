@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
 import { useState, useCallback, useRef } from "react";
+import { useIsKeyboardOpen } from "@/hooks/use-keyboard-height";
 import AuthModal from "@/components/auth/auth-modal";
 import { ZapIconSvg, useZapFly, ZapFlyOverlay } from "@/components/ui/ZapReactionIcon";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
@@ -26,6 +27,17 @@ const MobileNav = () => {
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
   const trendingIconRef = useRef<HTMLSpanElement>(null);
   const { zapFlyState, triggerZapFly, dismissZapFly } = useZapFly();
+  const isKeyboardOpen = useIsKeyboardOpen();
+
+  // All hooks must be declared before any early return.
+  const handleUploadOptionClick = useCallback((type: string) => {
+    setUploadMenuOpen(false);
+    window.dispatchEvent(new CustomEvent("upload-type-change", { detail: type }));
+    setLocation(`/upload?type=${type}`);
+  }, [setLocation]);
+
+  // Hide navigation bar when keyboard is open so it doesn't overlap input fields.
+  if (isKeyboardOpen) return null;
 
   const navItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
@@ -53,12 +65,6 @@ const MobileNav = () => {
       setShowAuthModal(true);
     }
   };
-
-  const handleUploadOptionClick = useCallback((type: string) => {
-    setUploadMenuOpen(false);
-    window.dispatchEvent(new CustomEvent("upload-type-change", { detail: type }));
-    setLocation(`/upload?type=${type}`);
-  }, [setLocation]);
 
   return (
     <>
@@ -169,13 +175,15 @@ const MobileNav = () => {
                   onClick={(e) => handleNavClick(item, e)}
                   className="flex flex-col items-center text-xs w-full no-underline"
                 >
-                  <GamefolioIcon
-                    glow={isActive}
-                    className={cn(
-                      "mb-1 w-6 h-6",
-                      !isActive && "opacity-60"
-                    )}
-                  />
+                  <span className="mb-1 flex items-center justify-center w-6 h-6 overflow-visible">
+                    <GamefolioIcon
+                      glow={isActive}
+                      className={cn(
+                        "w-6 h-6 scale-[1.85]",
+                        !isActive && "opacity-60"
+                      )}
+                    />
+                  </span>
                   <span className={cn(
                     isActive ? 'text-white' : 'text-muted-foreground'
                   )}>{item.label}</span>

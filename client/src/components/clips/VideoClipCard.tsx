@@ -1,10 +1,11 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { formatDuration } from "@/lib/constants";
 import { Eye, Play } from "lucide-react";
-import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
+import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 
 interface VideoClipCardProps {
   clip: ClipWithUser;
@@ -14,11 +15,12 @@ interface VideoClipCardProps {
 }
 
 const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
-  const { openClipDialog } = useClipDialog();
+  const [mobileViewerOpen, setMobileViewerOpen] = useState(false);
+  const allClips = clipsList || [clip];
 
   const handleCardClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    openClipDialog(clip.id, clipsList || [clip]);
+    setMobileViewerOpen(true);
   };
 
   const isNew = clip.createdAt && Date.now() - new Date(clip.createdAt).getTime() < 86400000 * 3;
@@ -35,6 +37,14 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
       : viewCount;
 
   return (
+    <>
+    {mobileViewerOpen && (
+      <MobileTrendingViewer
+        content={allClips}
+        initialIndex={allClips.findIndex(c => c.id === clip.id)}
+        onClose={() => setMobileViewerOpen(false)}
+      />
+    )}
     <div
       onClick={handleCardClick}
       role="button"
@@ -158,6 +168,7 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

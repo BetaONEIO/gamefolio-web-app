@@ -35,7 +35,7 @@ export function addBlockedUsersRoute(app: Express, authMiddleware: any) {
             userId: 23,
             username: "goliath",
             displayName: "Goliath",
-            avatarUrl: "/attached_assets/gamefolio social logo 3d circle web.png",
+            avatarUrl: "/attached_assets/gamefolio-logo-green.png",
             email: "goliath@example.com",
             emailVerified: true
           }

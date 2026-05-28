@@ -51,6 +51,8 @@ import { Label } from "@/components/ui/label";
 interface TrendingClipMenuProps {
   clip: ClipWithUser;
   onHide?: () => void;
+  contentType?: 'clip' | 'screenshot';
+  screenshotImageUrl?: string | null;
 }
 
 function MenuItem({
@@ -86,7 +88,10 @@ function MenuDivider() {
   return <div className="my-1 mx-3 h-px bg-white/10" />;
 }
 
-export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
+export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screenshotImageUrl }: TrendingClipMenuProps) {
+  const isScreenshot = contentType === 'screenshot';
+  const noun = isScreenshot ? 'screenshot' : (clip.videoType === 'reel' ? 'reel' : 'clip');
+  const Noun = noun.charAt(0).toUpperCase() + noun.slice(1);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -130,14 +135,28 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => apiRequest("DELETE", `/api/clips/${clip.id}`),
+    mutationFn: () => apiRequest("DELETE", isScreenshot ? `/api/screenshots/${clip.id}` : `/api/clips/${clip.id}`),
     onSuccess: () => {
       toast({
-        title: clip.videoType === "reel" ? "Reel deleted" : "Clip deleted",
+        title: `${Noun} deleted`,
         variant: "gamefolioSuccess",
       });
+      // Immediately remove from all caches for instant UI update
+      const removeClip = (old: any) => {
+        if (!old) return old;
+        if (Array.isArray(old)) return old.filter((c: any) => c.id !== clip.id);
+        if (old?.clips && Array.isArray(old.clips)) return { ...old, clips: old.clips.filter((c: any) => c.id !== clip.id) };
+        return old;
+      };
+      queryClient.setQueryData([`/api/users/${clip.user.username}/clips`], removeClip);
+      queryClient.setQueryData(['/api/clips/latest'], removeClip);
+      queryClient.setQueryData(['/api/reels/latest'], removeClip);
+      // Background invalidations
       queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
       queryClient.invalidateQueries({ queryKey: ["/api/trending"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/clips`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clips/latest'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reels/latest'] });
       setShowDeleteConfirm(false);
       onHide?.();
     },
@@ -147,7 +166,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
   });
 
   const pinMutation = useMutation({
-    mutationFn: () => apiRequest("PATCH", `/api/clips/${clip.id}/pin`),
+    mutationFn: () => apiRequest("PATCH", isScreenshot ? `/api/screenshots/${clip.id}/pin` : `/api/clips/${clip.id}/pin`),
     onSuccess: (data: any) => {
       const isPinned = !!data?.pinnedAt;
       toast({
@@ -167,13 +186,13 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
 
   const editCaptionMutation = useMutation({
     mutationFn: () =>
-      apiRequest("PATCH", `/api/clips/${clip.id}`, {
+      apiRequest("PATCH", isScreenshot ? `/api/screenshots/${clip.id}` : `/api/clips/${clip.id}`, {
         title: editTitle.trim(),
         description: editDescription.trim(),
       }),
     onSuccess: () => {
       toast({
-        title: clip.videoType === "reel" ? "Reel updated" : "Clip updated",
+        title: `${Noun} updated`,
         description: "Your caption has been saved.",
         variant: "gamefolioSuccess",
       });
@@ -192,33 +211,92 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
     close();
     setIsDownloading(true);
     try {
-      toast({
-        title: "⚡ Preparing your clip…",
-        description: "Adding Gamefolio watermark. This may take a moment.",
-      });
-      const response = await fetch(`/api/clips/${clip.id}/download`, {
-        credentials: "include",
-        headers: { Accept: "video/mp4" },
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error((data as any).error || "Download failed");
-      }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
       const safeTitle = clip.title.replace(/[^a-z0-9]/gi, "_").slice(0, 60);
-      a.download = `${safeTitle}_gamefolio.mp4`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast({
-        title: "Download complete!",
-        description: "Saved with Gamefolio watermark. Share it anywhere!",
-        variant: "gamefolioSuccess",
-      });
+
+      if (isScreenshot) {
+        toast({
+          title: "⚡ Preparing your screenshot…",
+          description: "Fetching the image. This may take a moment.",
+        });
+        const sourceUrl = screenshotImageUrl || (clip as any).imageUrl || "";
+        if (!sourceUrl) throw new Error("Image URL unavailable");
+        const response = await fetch(sourceUrl, { credentials: "omit" });
+        if (!response.ok) throw new Error("Image fetch failed");
+        const blob = await response.blob();
+        const ext = (blob.type && blob.type.split("/")[1]) || "png";
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${safeTitle}_gamefolio.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast({
+          title: "Download complete!",
+          description: "Screenshot saved. Share it anywhere!",
+          variant: "gamefolioSuccess",
+        });
+      } else {
+        toast({
+          title: "⚡ Preparing your clip…",
+          description: "Adding Gamefolio watermark. This may take a moment.",
+        });
+
+        let downloadedViaWatermark = false;
+        try {
+          const response = await fetch(`/api/clips/${clip.id}/download`, {
+            credentials: "include",
+            headers: { Accept: "video/mp4" },
+          });
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error((data as any).error || "Download failed");
+          }
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${safeTitle}_gamefolio.mp4`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          downloadedViaWatermark = true;
+          toast({
+            title: "Download complete!",
+            description: "Saved with Gamefolio watermark. Share it anywhere!",
+            variant: "gamefolioSuccess",
+          });
+        } catch (watermarkErr: any) {
+          // Watermark/FFmpeg stream failed — fall back to direct signed URL download
+          console.warn("Watermark download failed, falling back to direct download:", watermarkErr?.message);
+        }
+
+        if (!downloadedViaWatermark) {
+          // Fallback: fetch a short-lived signed URL and trigger browser download directly
+          const fallback = await fetch(`/api/clips/${clip.id}/download-url`, {
+            credentials: "include",
+          });
+          if (!fallback.ok) {
+            const errData = await fallback.json().catch(() => ({}));
+            throw new Error((errData as any).error || "Download failed");
+          }
+          const { url: directUrl, filename } = await fallback.json();
+          const a = document.createElement("a");
+          a.href = directUrl;
+          a.download = filename || `${safeTitle}_gamefolio.mp4`;
+          a.target = "_blank";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          toast({
+            title: "Download started!",
+            description: "Your video is downloading.",
+            variant: "gamefolioSuccess",
+          });
+        }
+      }
     } catch (err: any) {
       toast({
         title: "Download failed",
@@ -252,7 +330,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
             <Download className="h-4 w-4" />
           )
         }
-        label={isDownloading ? "Downloading…" : "Download Clip"}
+        label={isDownloading ? "Downloading…" : `Download ${Noun}`}
         disabled={isDownloading}
         onClick={handleDownload}
       />
@@ -292,7 +370,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
       <MenuDivider />
       <MenuItem
         icon={<Trash2 className="h-4 w-4" />}
-        label={clip.videoType === "reel" ? "Delete Reel" : "Delete Clip"}
+        label={`Delete ${Noun}`}
         destructive
         onClick={() => {
           close();
@@ -306,7 +384,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
     <div className="py-1">{isOwn ? ownMenu : otherUserMenu}</div>
   );
 
-  const menuLabel = isOwn ? "Creator tools" : "Clip options";
+  const menuLabel = isOwn ? "Creator tools" : `${Noun} options`;
 
   // Mobile: manually toggles the Sheet (no SheetTrigger wrapper)
   const mobileTriggerBtn = (
@@ -386,7 +464,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
         >
           <DialogHeader>
             <DialogTitle>
-              Edit {clip.videoType === "reel" ? "reel" : "clip"} caption
+              Edit {noun} caption
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -453,7 +531,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Delete {clip.videoType === "reel" ? "reel" : "clip"}?
+              Delete {noun}?
             </AlertDialogTitle>
             <AlertDialogDescription>
               "{clip.title}" will be permanently deleted. This action cannot be undone.
@@ -478,7 +556,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Block @{clip.user.username}?</AlertDialogTitle>
             <AlertDialogDescription>
-              You won't see their clips, comments, or interactions anymore. You can unblock them
+              You won't see their content, comments, or interactions anymore. You can unblock them
               from your account settings at any time.
             </AlertDialogDescription>
           </AlertDialogHeader>

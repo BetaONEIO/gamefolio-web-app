@@ -9,21 +9,18 @@ import { ClipDialogProvider } from "@/hooks/use-clip-dialog";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { AuthModalProvider, useAuthModal } from "@/hooks/use-auth-modal";
 import { SequenceConnect } from "@0xsequence/connect";
-import { WagmiProvider } from "wagmi";
-import { sequenceConfig, fallbackWagmiConfig } from "@/lib/sequence-config";
-import { WalletProvider } from "@/hooks/use-wallet";
+import { sequenceConfig } from "@/lib/sequence-config";
+import { WalletProvider, NoWalletProvider } from "@/hooks/use-wallet";
 import { CrossmintProvider } from "@/hooks/use-crossmint";
 import { RevenueCatProvider } from "@/hooks/use-revenuecat";
 import { LevelTrackerProvider } from "@/hooks/use-level-tracker";
-import { WelcomePackProvider, useWelcomePack } from "@/hooks/use-welcome-pack";
 import { DailyStreakProvider } from "@/hooks/use-daily-streak";
 import { useVersionCheck } from "@/hooks/use-version-check";
 import { useAndroidBackButton } from "@/hooks/use-android-back-button";
+import { useKeyboardHeight } from "@/hooks/use-keyboard-height";
 import AuthModal from "@/components/auth/auth-modal";
-import { WelcomePackDialog } from "@/components/welcome-pack/WelcomePackDialog";
 import DailyXpBonus from "@/components/gamification/DailyXpBonus";
 import DailyStreakOverlay from "@/components/gamification/DailyStreak";
-import { WalletPointer } from "@/components/welcome-pack/WalletPointer";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AdminProtectedRoute } from "@/components/auth/admin-protected-route";
 import { OnboardingGuard } from "@/components/auth/onboarding-guard";
@@ -45,6 +42,7 @@ import { Button } from "@/components/ui/button";
 // Lazy-loaded page components for better performance
 import React, { Suspense } from 'react';
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { SplashScreen } from "@/components/SplashScreen";
 import { DiscordCallback } from "./components/auth/DiscordCallback";
 import { XboxCallback } from "./components/auth/XboxCallback";
 import { App as CapacitorApp } from "@capacitor/app";
@@ -56,74 +54,88 @@ async function bustViteDepCache() {
   await Promise.allSettled(depUrls.map(u => fetch(u, { cache: 'reload' })));
 }
 
+function isDynamicImportError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return (
+    msg.includes('Failed to fetch dynamically imported module') ||
+    msg.includes('error loading dynamically imported module') ||
+    msg.includes('Importing a module script failed') ||
+    /Loading chunk \S+ failed/i.test(msg)
+  );
+}
+
 function lazyWithRecovery<T extends React.ComponentType<object>>(
   factory: () => Promise<{ default: T }>
 ) {
   return React.lazy(() =>
     factory().catch(async (err: unknown) => {
-      const msg = err instanceof Error ? err.message : String(err);
-      const isChunkError = msg.includes('Failed to fetch dynamically imported module');
+      if (!isDynamicImportError(err)) {
+        throw err;
+      }
       const key = 'vite_chunk_reload_v1';
-      if (isChunkError && !sessionStorage.getItem(key)) {
-        sessionStorage.setItem(key, '1');
-        await bustViteDepCache();
+      const now = Date.now();
+      const RELOAD_TTL_MS = 30_000;
+      const last = Number(sessionStorage.getItem(key) || '0');
+      if (now - last > RELOAD_TTL_MS) {
+        sessionStorage.setItem(key, String(now));
+        try { await bustViteDepCache(); } catch {}
         window.location.reload();
         return new Promise<{ default: T }>(() => {});
       }
-      sessionStorage.removeItem(key);
       throw err;
     })
   );
 }
 
-const HomePage = React.lazy(() => import("./pages/HomePageSimple"));
-const ProfilePage = React.lazy(() => import("./pages/ProfilePage"));
-const ExplorePage = React.lazy(() => import("./pages/explore-page"));
-const TrendingPage = React.lazy(() => import("./pages/TrendingPage"));
-const GameClipsPage = React.lazy(() => import("./pages/game-clips-page"));
-const GamePage = React.lazy(() => import("./pages/game-page"));
-const HashtagPage = React.lazy(() => import("./pages/hashtag-page"));
-const ClipPage = React.lazy(() => import("./pages/ClipPage"));
-const UploadPage = React.lazy(() => import("./pages/UploadPage"));
-const ScreenshotUploadPage = React.lazy(() => import("./pages/ScreenshotUploadPage"));
-const AccountSettingsPage = React.lazy(() => import("./pages/AccountSettingsPage"));
-const GameCategoriesPage = React.lazy(() => import("./pages/GameCategoriesPage"));
-const LeaderboardPage = React.lazy(() => import("./pages/LeaderboardPage"));
-const CustomizePage = React.lazy(() => import("./pages/customize-page"));
-const SettingsPage = React.lazy(() => import("./pages/settings-page"));
-const AuthPage = React.lazy(() => import("./pages/auth-page"));
-const OnboardingPage = React.lazy(() => import("./pages/onboarding-page"));
-const MessagesPage = React.lazy(() => import("./pages/MessagesPage"));
-const LatestReelsPage = React.lazy(() => import("./pages/LatestReelsPage"));
-const LatestClipsPage = React.lazy(() => import("./pages/LatestClipsPage"));
-const LatestScreenshotsPage = React.lazy(() => import("@/pages/LatestScreenshotsPage"));
-const InvitePage = React.lazy(() => import("./pages/InvitePage"));
-const RegisterPage = React.lazy(() => import("./pages/RegisterPage"));
-const NotFound = React.lazy(() => import("@/pages/not-found"));
-const AdminPage = React.lazy(() => import("./pages/AdminPage"));
-const AdminContentFilter = React.lazy(() => import("./pages/AdminContentFilter"));
-const ContentFilterTest = React.lazy(() => import("./pages/ContentFilterTest"));
-const ViewContentPage = React.lazy(() => import("./pages/ViewContentPage"));
-const PostUploadSuccessPage = React.lazy(() => import("./pages/PostUploadSuccessPage"));
-const VerifyEmailPage = React.lazy(() => import("./pages/verify-email"));
-const VerifyCodePage = React.lazy(() => import("./pages/verify-code-page"));
-const TermsPage = React.lazy(() => import("./pages/terms-page"));
-const PrivacyPage = React.lazy(() => import("./pages/privacy-page"));
-const ContactPage = React.lazy(() => import("./pages/contact-page"));
-const HelpPage = React.lazy(() => import("./pages/HelpPage"));
-const LeaderboardEmbedPage = React.lazy(() => import("./pages/LeaderboardEmbedPage"));
+const HomePage = lazyWithRecovery(() => import("./pages/HomePageSimple"));
+const ProfilePage = lazyWithRecovery(() => import("./pages/ProfilePage"));
+const ExplorePage = lazyWithRecovery(() => import("./pages/explore-page"));
+const TrendingPage = lazyWithRecovery(() => import("./pages/TrendingPage"));
+const GameClipsPage = lazyWithRecovery(() => import("./pages/game-clips-page"));
+const GamePage = lazyWithRecovery(() => import("./pages/game-page"));
+const HashtagPage = lazyWithRecovery(() => import("./pages/hashtag-page"));
+const ClipPage = lazyWithRecovery(() => import("./pages/ClipPage"));
+const ClipRedirectPage = lazyWithRecovery(() => import("./pages/ClipRedirectPage"));
+const UploadPage = lazyWithRecovery(() => import("./pages/UploadPage"));
+const ScreenshotUploadPage = lazyWithRecovery(() => import("./pages/ScreenshotUploadPage"));
+const AccountSettingsPage = lazyWithRecovery(() => import("./pages/AccountSettingsPage"));
+const GameCategoriesPage = lazyWithRecovery(() => import("./pages/GameCategoriesPage"));
+const LeaderboardPage = lazyWithRecovery(() => import("./pages/LeaderboardPage"));
+const CustomizePage = lazyWithRecovery(() => import("./pages/customize-page"));
+const SettingsPage = lazyWithRecovery(() => import("./pages/settings-page"));
+const AuthPage = lazyWithRecovery(() => import("./pages/auth-page"));
+const OnboardingPage = lazyWithRecovery(() => import("./pages/onboarding-page"));
+const MessagesPage = lazyWithRecovery(() => import("./pages/MessagesPage"));
+const LatestReelsPage = lazyWithRecovery(() => import("./pages/LatestReelsPage"));
+const LatestClipsPage = lazyWithRecovery(() => import("./pages/LatestClipsPage"));
+const LatestScreenshotsPage = lazyWithRecovery(() => import("@/pages/LatestScreenshotsPage"));
+const InvitePage = lazyWithRecovery(() => import("./pages/InvitePage"));
+const RegisterPage = lazyWithRecovery(() => import("./pages/RegisterPage"));
+const NotFound = lazyWithRecovery(() => import("@/pages/not-found"));
+const AdminPage = lazyWithRecovery(() => import("./pages/AdminPage"));
+const AdminContentFilter = lazyWithRecovery(() => import("./pages/AdminContentFilter"));
+const ContentFilterTest = lazyWithRecovery(() => import("./pages/ContentFilterTest"));
+const ViewContentPage = lazyWithRecovery(() => import("./pages/ViewContentPage"));
+const PostUploadSuccessPage = lazyWithRecovery(() => import("./pages/PostUploadSuccessPage"));
+const VerifyEmailPage = lazyWithRecovery(() => import("./pages/verify-email"));
+const VerifyCodePage = lazyWithRecovery(() => import("./pages/verify-code-page"));
+const TermsPage = lazyWithRecovery(() => import("./pages/terms-page"));
+const PrivacyPage = lazyWithRecovery(() => import("./pages/privacy-page"));
+const ContactPage = lazyWithRecovery(() => import("./pages/contact-page"));
+const HelpPage = lazyWithRecovery(() => import("./pages/HelpPage"));
+const LeaderboardEmbedPage = lazyWithRecovery(() => import("./pages/LeaderboardEmbedPage"));
 const StorePage = lazyWithRecovery(() => import("./pages/StorePage"));
 const WalletPage = lazyWithRecovery(() => import("./pages/WalletPage"));
 const StakingPage = lazyWithRecovery(() => import("./pages/StakingPage"));
-const StoragePage = React.lazy(() => import("./pages/StoragePage"));
-const WatchlistPage = React.lazy(() => import("./pages/WatchlistPage"));
-const UserBattlesPage = React.lazy(() => import("./pages/UserBattlesPage"));
-const LevelTrackerPage = React.lazy(() => import("./pages/LevelTrackerPage"));
-const CollectionPage = React.lazy(() => import("./pages/CollectionPage"));
-const DebugWalletPage = React.lazy(() => import("./pages/DebugWalletPage"));
-const TwoFactorVerifyPage = React.lazy(() => import("./pages/TwoFactorVerifyPage"));
-const MintNFTPage = React.lazy(() => import("./pages/MintNFTPage"));
-const NFTDetailsPage = React.lazy(() => import("./pages/NFTDetailsPage"));
+const StoragePage = lazyWithRecovery(() => import("./pages/StoragePage"));
+const WatchlistPage = lazyWithRecovery(() => import("./pages/WatchlistPage"));
+const UserBattlesPage = lazyWithRecovery(() => import("./pages/UserBattlesPage"));
+const LevelTrackerPage = lazyWithRecovery(() => import("./pages/LevelTrackerPage"));
+const CollectionPage = lazyWithRecovery(() => import("./pages/CollectionPage"));
+const DebugWalletPage = lazyWithRecovery(() => import("./pages/DebugWalletPage"));
+const TwoFactorVerifyPage = lazyWithRecovery(() => import("./pages/TwoFactorVerifyPage"));
+const MintNFTPage = lazyWithRecovery(() => import("./pages/MintNFTPage"));
+const NFTDetailsPage = lazyWithRecovery(() => import("./pages/NFTDetailsPage"));
 
 // Loading component for lazy-loaded routes
 function RouteLoader() {
@@ -162,6 +174,48 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
   // Android hardware back button → go back in history, or exit at root
   useAndroidBackButton();
+
+  // Scroll to top on every route change — useLayoutEffect runs before paint
+  // so the user never sees the old position flashing before the reset.
+  React.useLayoutEffect(() => {
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTop = 0;
+    }
+  }, [location]);
+
+  // Global keyboard height detection — sets --keyboard-height CSS var and `keyboard-open` class on <html>
+  const keyboardHeight = useKeyboardHeight();
+
+  // Global focus handler: scroll any focused input/textarea into view above the keyboard
+  React.useEffect(() => {
+    const isMobileDevice = /iPad|iPhone|iPod|Android/.test(navigator.userAgent) || window.innerWidth < 768;
+    if (!isMobileDevice) return;
+
+    const scrollIntoViewSafe = (el: HTMLElement) => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
+    const onFocusIn = (e: FocusEvent) => {
+      const t = e.target as HTMLElement;
+      if (!(t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t.isContentEditable)) return;
+      // Wait for keyboard to fully open (~300ms) then scroll
+      setTimeout(() => scrollIntoViewSafe(t), 320);
+    };
+
+    const onViewportResize = () => {
+      const t = document.activeElement as HTMLElement | null;
+      if (t && (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t.isContentEditable)) {
+        setTimeout(() => scrollIntoViewSafe(t), 100);
+      }
+    };
+
+    document.addEventListener('focusin', onFocusIn);
+    window.visualViewport?.addEventListener('resize', onViewportResize, { passive: true });
+    return () => {
+      document.removeEventListener('focusin', onFocusIn);
+      window.visualViewport?.removeEventListener('resize', onViewportResize);
+    };
+  }, []);
 
   // Radix Dropdown/Dialog race condition (iOS WKWebView especially): opening
   // a Dialog from inside a DropdownMenu item can leave `body { pointer-events:
@@ -295,7 +349,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background relative overflow-hidden">
+    <div className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
       {/* Simple green gradient effect */}
       <div className="fixed top-0 right-0 w-full h-full bg-gradient-to-br from-transparent via-transparent to-primary/5 pointer-events-none"></div>
       <div className="fixed bottom-0 left-0 w-full h-full bg-gradient-to-tr from-transparent via-transparent to-primary/5 pointer-events-none"></div>
@@ -350,6 +404,10 @@ function MainLayout({ children }: { children: React.ReactNode }) {
         <main
           ref={mainScrollRef}
           className={`flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide ${!isMobile ? 'ml-64' : ''}`}
+          style={{
+            ...(isMobile && keyboardHeight > 0 ? { paddingBottom: `${keyboardHeight}px` } : {}),
+            overflowAnchor: 'none',
+          }}
         >
           <PullToRefresh
             containerRef={mainScrollRef}
@@ -384,18 +442,18 @@ function Router() {
           {/* Public routes accessible to guests */}
           <Route path="/" component={HomePage} />
           <Route path="/trending" component={TrendingPage} />
-          <Route path="/clip/:id" component={ClipPage} />
-          <Route path="/clips/:id" component={ClipPage} />
-          <Route path="/reel/:id" component={ClipPage} />
-          <Route path="/reels/:id" component={ClipPage} />
-          <Route path="/@:username/clip/:clipId" component={ClipPage} />
-          <Route path="/@:username/clips/:clipId" component={ClipPage} />
-          <Route path="/@:username/reel/:reelId" component={ClipPage} />
-          <Route path="/@:username/reels/:reelId" component={ClipPage} />
+          <Route path="/clip/:id" component={ClipRedirectPage} />
+          <Route path="/clips/:id" component={ClipRedirectPage} />
+          <Route path="/reel/:id" component={ClipRedirectPage} />
+          <Route path="/reels/:id" component={ClipRedirectPage} />
+          <Route path="/@:username/clip/:clipId" component={ClipRedirectPage} />
+          <Route path="/@:username/clips/:clipId" component={ClipRedirectPage} />
+          <Route path="/@:username/reel/:reelId" component={ClipRedirectPage} />
+          <Route path="/@:username/reels/:reelId" component={ClipRedirectPage} />
           
           {/* Test route without @ symbol as fallback */}
-          <Route path="/:username/clip/:clipId" component={ClipPage} />
-          <Route path="/:username/reel/:reelId" component={ClipPage} />
+          <Route path="/:username/clip/:clipId" component={ClipRedirectPage} />
+          <Route path="/:username/reel/:reelId" component={ClipRedirectPage} />
           <Route path="/screenshots/:id" component={ScreenshotUploadPage} />
           <Route path="/@:username/screenshot/:shareCode" component={ProfilePage} />
           <Route path="/@:username/screenshots/:screenshotId" component={ProfilePage} />
@@ -404,8 +462,8 @@ function Router() {
 
           {/* Protected routes requiring authentication */}
           <Route path="/explore" component={ExplorePage} />
-          <ProtectedRoute path="/games/:gameSlug" component={GamePage} />
-          <ProtectedRoute path="/games/:gameId/clips" component={GameClipsPage} />
+          <Route path="/games/:gameSlug" component={GamePage} />
+          <Route path="/games/:gameId/clips" component={GameClipsPage} />
           <ProtectedRoute path="/hashtag/:hashtag" component={HashtagPage} />
           <ProtectedRoute path="/upload" component={UploadPage} />
           <ProtectedRoute path="/upload/screenshots" component={ScreenshotUploadPage} />
@@ -414,8 +472,8 @@ function Router() {
           <ProtectedRoute path="/account/settings" component={AccountSettingsPage} />
           <ProtectedRoute path="/customize" component={CustomizePage} />
           <ProtectedRoute path="/settings/profile" component={SettingsPage} />
-          <ProtectedRoute path="/browse/games/:category" component={GameCategoriesPage} />
-          <ProtectedRoute path="/browse/games/categories" component={GameCategoriesPage} />
+          <Route path="/browse/games/:category" component={GameCategoriesPage} />
+          <Route path="/browse/games/categories" component={GameCategoriesPage} />
           <Route path="/leaderboard" component={LeaderboardPage} />
           <ProtectedRoute path="/messages" component={MessagesPage} />
           <Route path="/latest-reels" component={LatestReelsPage} />
@@ -471,56 +529,22 @@ function Router() {
   );
 }
 
-function WelcomePackComponents() {
-  const { showWelcomePack, showWalletPointer, closeWelcomePack, onClaimComplete, dismissWalletPointer } = useWelcomePack();
-  
+function App() {
+  const [splashDone, setSplashDone] = React.useState(false);
+
   return (
     <>
-      <WelcomePackDialog 
-        open={showWelcomePack} 
-        onOpenChange={closeWelcomePack}
-        onClaimComplete={onClaimComplete}
-      />
-      <WalletPointer 
-        show={showWalletPointer} 
-        onDismiss={dismissWalletPointer}
-      />
-    </>
-  );
-}
-
-function App() {
-  return (
-    <ErrorBoundary level="app">
-      <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <DailyStreakProvider>
-            <AuthProvider>
-              <RevenueCatProvider>
-                <LevelTrackerProvider>
-                  <WelcomePackProvider>
-                    {sequenceConfig ? (
-                    <SequenceConnect config={sequenceConfig}>
-                      <WalletProvider>
-                        <CrossmintProvider>
-                          <AuthModalProvider>
-                            <ClipDialogProvider>
-                              <MainLayout>
-                                <ErrorBoundary level="feature">
-                                  <Router />
-                                </ErrorBoundary>
-                              </MainLayout>
-                              <DailyXpBonus />
-                              <DailyStreakOverlay />
-                            </ClipDialogProvider>
-                            <Toaster />
-                          </AuthModalProvider>
-                        </CrossmintProvider>
-                      </WalletProvider>
-                    </SequenceConnect>
-                    ) : (
-                      <WagmiProvider config={fallbackWagmiConfig}>
+      {!splashDone && <SplashScreen onDone={() => setSplashDone(true)} />}
+      <ErrorBoundary level="app">
+        <ThemeProvider>
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+              <DailyStreakProvider>
+              <AuthProvider>
+                <RevenueCatProvider>
+                  <LevelTrackerProvider>
+                      {sequenceConfig ? (
+                      <SequenceConnect config={sequenceConfig}>
                         <WalletProvider>
                           <CrossmintProvider>
                             <AuthModalProvider>
@@ -537,17 +561,34 @@ function App() {
                             </AuthModalProvider>
                           </CrossmintProvider>
                         </WalletProvider>
-                      </WagmiProvider>
-                    )}
-                  </WelcomePackProvider>
-                </LevelTrackerProvider>
-              </RevenueCatProvider>
-            </AuthProvider>
-            </DailyStreakProvider>
-          </TooltipProvider>
-        </QueryClientProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
+                      </SequenceConnect>
+                      ) : (
+                        <NoWalletProvider>
+                          <CrossmintProvider>
+                            <AuthModalProvider>
+                              <ClipDialogProvider>
+                                <MainLayout>
+                                  <ErrorBoundary level="feature">
+                                    <Router />
+                                  </ErrorBoundary>
+                                </MainLayout>
+                                <DailyXpBonus />
+                                <DailyStreakOverlay />
+                              </ClipDialogProvider>
+                              <Toaster />
+                            </AuthModalProvider>
+                          </CrossmintProvider>
+                        </NoWalletProvider>
+                      )}
+                  </LevelTrackerProvider>
+                </RevenueCatProvider>
+              </AuthProvider>
+              </DailyStreakProvider>
+            </TooltipProvider>
+          </QueryClientProvider>
+        </ThemeProvider>
+      </ErrorBoundary>
+    </>
   );
 }
 
