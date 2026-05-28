@@ -242,28 +242,60 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
           title: "⚡ Preparing your clip…",
           description: "Adding Gamefolio watermark. This may take a moment.",
         });
-        const response = await fetch(`/api/clips/${clip.id}/download`, {
-          credentials: "include",
-          headers: { Accept: "video/mp4" },
-        });
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          throw new Error((data as any).error || "Download failed");
+
+        let downloadedViaWatermark = false;
+        try {
+          const response = await fetch(`/api/clips/${clip.id}/download`, {
+            credentials: "include",
+            headers: { Accept: "video/mp4" },
+          });
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error((data as any).error || "Download failed");
+          }
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${safeTitle}_gamefolio.mp4`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          downloadedViaWatermark = true;
+          toast({
+            title: "Download complete!",
+            description: "Saved with Gamefolio watermark. Share it anywhere!",
+            variant: "gamefolioSuccess",
+          });
+        } catch (watermarkErr: any) {
+          // Watermark/FFmpeg stream failed — fall back to direct signed URL download
+          console.warn("Watermark download failed, falling back to direct download:", watermarkErr?.message);
         }
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${safeTitle}_gamefolio.mp4`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        toast({
-          title: "Download complete!",
-          description: "Saved with Gamefolio watermark. Share it anywhere!",
-          variant: "gamefolioSuccess",
-        });
+
+        if (!downloadedViaWatermark) {
+          // Fallback: fetch a short-lived signed URL and trigger browser download directly
+          const fallback = await fetch(`/api/clips/${clip.id}/download-url`, {
+            credentials: "include",
+          });
+          if (!fallback.ok) {
+            const errData = await fallback.json().catch(() => ({}));
+            throw new Error((errData as any).error || "Download failed");
+          }
+          const { url: directUrl, filename } = await fallback.json();
+          const a = document.createElement("a");
+          a.href = directUrl;
+          a.download = filename || `${safeTitle}_gamefolio.mp4`;
+          a.target = "_blank";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          toast({
+            title: "Download started!",
+            description: "Your video is downloading.",
+            variant: "gamefolioSuccess",
+          });
+        }
       }
     } catch (err: any) {
       toast({

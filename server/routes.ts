@@ -4590,6 +4590,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Download clip with Gamefolio watermark — logo + username, TikTok-style
+  // Return a short-lived signed URL for direct download (fallback when FFmpeg watermark fails)
+  app.get('/api/clips/:id/download-url', optionalHybridAuth, async (req: Request, res: Response) => {
+    try {
+      const clipId = parseInt(req.params.id);
+      if (isNaN(clipId)) return res.status(400).json({ error: 'Invalid clip ID' });
+
+      const clip = await storage.getClipWithUser(clipId);
+      if (!clip || !clip.videoUrl) return res.status(404).json({ error: 'Clip not found' });
+
+      if (clip.userId && !(await checkMediaOwnerAccess(clip.userId, req, res))) return;
+
+      const freshUrl = await refreshSupabaseSignedUrl(clip.videoUrl, 60 * 60); // 1-hour signed URL
+      const safeTitle = (clip.title || 'video').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 60);
+      res.json({ url: freshUrl, filename: `${safeTitle}_gamefolio.mp4` });
+    } catch (error) {
+      console.error('Download URL error:', error);
+      res.status(500).json({ error: 'Failed to get download URL' });
+    }
+  });
+
   app.get('/api/clips/:id/download', optionalHybridAuth, async (req: Request, res: Response) => {
     try {
       const clipId = parseInt(req.params.id);
@@ -4602,6 +4622,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Re-sign the Supabase URL so it's fresh
       const freshUrl = await refreshSupabaseSignedUrl(clip.videoUrl);
+
+      // Validate the URL is accessible before starting FFmpeg (avoids mid-stream failures)
+      try {
+        const probe = await fetch(freshUrl, { method: 'HEAD' });
+        if (!probe.ok) {
+          return res.status(502).json({ error: 'Video source unavailable, please try again.' });
+        }
+      } catch {
+        return res.status(502).json({ error: 'Video source unreachable, please try again.' });
+      }
 
       // Sanitise text for ffmpeg drawtext filter
       const safe = (s: string) =>
@@ -4617,6 +4647,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Type', 'video/mp4');
       res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}_gamefolio.mp4"`);
       res.setHeader('Cache-Control', 'private, no-cache');
+      // Explicitly remove Content-Length — response is chunked/streaming; a stale
+      // Content-Length from any upstream proxy causes "Content-Length exceeds body" errors.
+      res.removeHeader('Content-Length');
+      res.setHeader('Transfer-Encoding', 'chunked');
 
       const logoPath = path.join(process.cwd(), 'client', 'public', 'attached_assets', 'logo-white_1778587630337.png');
       const fs = await import('fs');
