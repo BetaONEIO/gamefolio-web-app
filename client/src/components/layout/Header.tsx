@@ -20,6 +20,7 @@ import { useMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
 import { User, Game } from "@shared/schema";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
+import logoGreen from "@assets/gamefolio-logo-green.png";
 
 
 import { CustomAvatar } from "@/components/ui/custom-avatar";
@@ -301,7 +302,7 @@ const Header = () => {
           <Link href="/">
             <div className="flex items-center flex-shrink-0">
               <img
-                src="/attached_assets/Gamefolio logo copy.png"
+                src={logoGreen}
                 alt="Gamefolio"
                 className="h-8 sm:h-10 md:h-12 xl:h-16 w-auto object-contain flex-shrink-0"
               />
