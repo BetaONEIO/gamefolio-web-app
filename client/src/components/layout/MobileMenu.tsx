@@ -229,9 +229,9 @@ const MobileMenu = () => {
                 <Link 
                   href="/"
                   onClick={handleClose}
-                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                  className="flex items-center p-2 rounded-md hover:bg-primary hover:text-[#071013] transition-colors w-full text-left no-underline group"
                 >
-                  <GamefolioHomeIcon className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioHomeIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
                   <span className="font-medium">Home</span>
                 </Link>
               </li>
@@ -239,9 +239,9 @@ const MobileMenu = () => {
                 <Link 
                   href="/explore"
                   onClick={handleClose}
-                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                  className="flex items-center p-2 rounded-md hover:bg-primary hover:text-[#071013] transition-colors w-full text-left no-underline group"
                 >
-                  <GamefolioExploreIcon className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioExploreIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
                   <span className="font-medium">Explore</span>
                 </Link>
               </li>
@@ -249,7 +249,7 @@ const MobileMenu = () => {
                 <Link 
                   href="/trending"
                   onClick={handleClose}
-                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                  className="flex items-center p-2 rounded-md hover:bg-primary hover:text-[#071013] transition-colors w-full text-left no-underline group"
                 >
                   <ZapIconSvg className="mr-3 h-5 w-5" active={true} />
                   <span className="font-medium">Trending</span>
@@ -259,9 +259,9 @@ const MobileMenu = () => {
                 <Link 
                   href="/leaderboard"
                   onClick={handleClose}
-                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                  className="flex items-center p-2 rounded-md hover:bg-primary hover:text-[#071013] transition-colors w-full text-left no-underline group"
                 >
-                  <GamefolioLeaderboardIcon className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioLeaderboardIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
                   <span className="font-medium">Leaderboard</span>
                 </Link>
               </li>
@@ -269,9 +269,9 @@ const MobileMenu = () => {
                 <Link 
                   href="/store"
                   onClick={handleClose}
-                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                  className="flex items-center p-2 rounded-md hover:bg-primary hover:text-[#071013] transition-colors w-full text-left no-underline group"
                 >
-                  <GamefolioStoreIcon className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioStoreIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
                   <span className="font-medium">Store</span>
                 </Link>
               </li>
@@ -279,9 +279,9 @@ const MobileMenu = () => {
                 <Link 
                   href="/wallet"
                   onClick={handleClose}
-                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                  className="flex items-center p-2 rounded-md hover:bg-primary hover:text-[#071013] transition-colors w-full text-left no-underline group"
                 >
-                  <GamefolioWalletIcon className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioWalletIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
                   <span className="font-medium">Wallet</span>
                 </Link>
               </li>
@@ -289,9 +289,9 @@ const MobileMenu = () => {
                 <Link 
                   href="/collection"
                   onClick={handleClose}
-                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                  className="flex items-center p-2 rounded-md hover:bg-primary hover:text-[#071013] transition-colors w-full text-left no-underline group"
                 >
-                  <GamefolioCollectionIcon className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioCollectionIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
                   <span className="font-medium">Collection</span>
                 </Link>
               </li>
@@ -300,9 +300,9 @@ const MobileMenu = () => {
                   <Link 
                     href="/messages"
                     onClick={handleClose}
-                    className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                    className="flex items-center p-2 rounded-md hover:bg-primary hover:text-[#071013] transition-colors w-full text-left no-underline group"
                   >
-                    <GamefolioMessagesIcon className="mr-3 h-5 w-5 text-primary" />
+                    <GamefolioMessagesIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
                     <span className="font-medium">Messages</span>
                   </Link>
                 </li>
@@ -312,7 +312,7 @@ const MobileMenu = () => {
                   <Link 
                     href={`/profile/${user.username}`}
                     onClick={handleClose}
-                    className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline group"
+                    className="flex items-center p-2 rounded-md hover:bg-primary hover:text-[#071013] transition-colors w-full text-left no-underline group"
                   >
                     <GamefolioIcon glow={location === `/${user?.username}` || location === `/@${user?.username}`} className="mr-3 h-5 w-5 scale-[1.8] flex-shrink-0" />
                     <span className="font-medium">My Gamefolio</span>
@@ -332,9 +332,9 @@ const MobileMenu = () => {
                     <Link
                       href="/account/settings"
                       onClick={handleClose}
-                      className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                      className="flex items-center p-2 rounded-md hover:bg-primary hover:text-[#071013] transition-colors w-full text-left no-underline group"
                     >
-                      <GamefolioSettingsIcon className="mr-3 h-5 w-5 text-muted-foreground" />
+                      <GamefolioSettingsIcon className="mr-3 h-5 w-5 text-muted-foreground group-hover:text-[#071013]" />
                       <span>Account Settings</span>
                     </Link>
                   </li>
@@ -342,9 +342,9 @@ const MobileMenu = () => {
                     <Link
                       href="/settings/profile"
                       onClick={handleClose}
-                      className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                      className="flex items-center p-2 rounded-md hover:bg-primary hover:text-[#071013] transition-colors w-full text-left no-underline group"
                     >
-                      <GamefolioProfileSettingsIcon className="mr-3 h-5 w-5 opacity-70" />
+                      <GamefolioProfileSettingsIcon className="mr-3 h-5 w-5 opacity-70 group-hover:opacity-100 group-hover:text-[#071013]" />
                       <span>Profile Settings</span>
                     </Link>
                   </li>
