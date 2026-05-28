@@ -975,3 +975,60 @@ h1, h2, h3 {
   from { opacity: 1; }
   to   { opacity: 0; pointer-events: none; }
 }
+
+/* Stinger transition */
+.stinger-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #0B1319;
+  overflow: hidden;
+  pointer-events: none;
+  animation: stinger-fade-out 200ms ease 850ms forwards;
+}
+
+.stinger-panel {
+  position: absolute;
+  top: -20%;
+  left: -60%;
+  width: 70%;
+  height: 140%;
+  background: #B7FF18;
+  transform: skewX(-18deg) translateX(0);
+  box-shadow: 0 0 40px rgba(183, 255, 24, 0.45), 0 0 80px rgba(183, 255, 24, 0.25);
+  animation: stinger-swipe 850ms ease-in-out forwards;
+  will-change: transform;
+}
+
+.stinger-trail {
+  position: absolute;
+  inset: 0;
+  transform: translateX(-18%);
+  background: rgba(11, 19, 25, 0.75);
+  filter: blur(8px);
+  pointer-events: none;
+}
+
+@keyframes stinger-swipe {
+  0% {
+    transform: skewX(-18deg) translateX(0);
+  }
+  100% {
+    transform: skewX(-18deg) translateX(260vw);
+  }
+}
+
+@keyframes stinger-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stinger-panel {
+    animation: none;
+  }
+  .stinger-overlay {
+    animation: none;
+    opacity: 0;
+  }
+}
