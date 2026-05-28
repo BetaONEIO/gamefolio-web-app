@@ -12,126 +12,88 @@ export function GamefolioNotificationIcon({
   isOpen = false,
 }: GamefolioNotificationIconProps) {
   const isActive = hasUnread || isOpen;
+  const color = isActive ? "#B7FF18" : "#9CA3AF";
+  const glow = isActive ? "drop-shadow(0 0 5px rgba(183,255,26,0.55))" : "none";
 
   return (
-    <span
-      className={cn(
-        "relative inline-flex items-center justify-center",
-        className
-      )}
-    >
-      {/* Outer ring pulse when unread */}
-      {hasUnread && (
-        <span
-          className="absolute inset-0 rounded-full"
-          style={{
-            animation: "notifPulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-            background:
-              "radial-gradient(circle, rgba(183,255,26,0.35) 0%, transparent 70%)",
-          }}
-        />
-      )}
-
+    <span className={cn("relative inline-flex items-center justify-center", className)}>
       <svg
         viewBox="0 0 24 24"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className={cn(
-          "w-full h-full transition-all duration-300",
-          isActive
-            ? "text-[#B7FF18]"
-            : "text-gray-400 hover:text-[#B7FF18]"
-        )}
+        className="w-full h-full"
       >
-        {/* Base platform - angular */}
-        <path
-          d="M4 19L6 17H18L20 19"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M6 17V15"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        <path
-          d="M18 17V15"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-
-        {/* Main beacon tower - angular silhouette */}
-        <path
-          d="M9 15L10 8H14L15 15"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinejoin="round"
-        />
-
-        {/* Signal waves - top arc */}
-        <path
-          d="M7.5 4C7.5 4 9 2 12 2C15 2 16.5 4 16.5 4"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          fill="none"
-          opacity={isActive ? 1 : 0.7}
-          className="transition-opacity duration-300"
-        />
-        <path
-          d="M9.5 5.5C9.5 5.5 10.5 4 12 4C13.5 4 14.5 5.5 14.5 5.5"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          fill="none"
-          opacity={isActive ? 1 : 0.5}
-          className="transition-opacity duration-300"
-        />
-
-        {/* Top beacon dot */}
+        {/* Bold outer circle — thick 3px stroke, strong silhouette */}
         <circle
           cx="12"
-          cy="5.5"
-          r="1.5"
-          fill="currentColor"
-          className="transition-opacity duration-300"
-          opacity={isActive ? 1 : 0.8}
+          cy="12"
+          r="9"
+          stroke={color}
+          strokeWidth="3"
+          fill="none"
+          className="transition-all duration-300"
+          style={{ filter: glow }}
         />
 
-        {/* Glow glow effect on active */}
-        {isActive && (
+        {/* Bold inner ring — slightly offset at 12 o'clock gap */}
+        <path
+          d="M12 6 A6 6 0 1 1 11.9 6"
+          stroke={color}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          fill="none"
+          className="transition-all duration-300"
+          style={{ filter: glow }}
+        />
+
+        {/* Solid centre dot — bold, prominent */}
+        <circle
+          cx="12"
+          cy="12"
+          r="3"
+          fill={color}
+          className="transition-all duration-300"
+          style={{ filter: glow }}
+        />
+
+        {/* Unread dot — top-right, neon green */}
+        {hasUnread && (
           <>
             <circle
-              cx="12"
-              cy="5.5"
-              r="3"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1"
-              opacity={0.4}
-              style={{
-                animation: "notifPing 2s cubic-bezier(0, 0, 0.2, 1) infinite",
-                transformOrigin: "center",
-              }}
+              cx="19"
+              cy="5"
+              r="3.5"
+              fill="#B7FF18"
+              style={{ filter: "drop-shadow(0 0 6px rgba(183,255,26,0.8))" }}
             />
-            <path
-              d="M7.5 4C7.5 4 9 2 12 2C15 2 16.5 4 16.5 4"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
+            <circle
+              cx="19"
+              cy="5"
+              r="3.5"
               fill="none"
-              opacity={0.6}
+              stroke="#B7FF18"
+              strokeWidth="1"
+              opacity="0.5"
               style={{
                 animation: "notifPing 2s cubic-bezier(0, 0, 0.2, 1) infinite",
-                animationDelay: "0.3s",
                 transformOrigin: "center",
               }}
             />
           </>
+        )}
+
+        {/* Soft outer breathing ring when unread */}
+        {hasUnread && (
+          <circle
+            cx="12"
+            cy="12"
+            r="11"
+            fill="none"
+            stroke="#B7FF18"
+            strokeWidth="0.5"
+            opacity="0.12"
+            style={{ animation: "notifPulseRing 2.5s ease-in-out infinite" }}
+          />
         )}
       </svg>
     </span>
