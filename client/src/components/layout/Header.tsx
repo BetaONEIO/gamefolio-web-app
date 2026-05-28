@@ -596,7 +596,9 @@ const Header = () => {
                       className="cursor-pointer"
                       onClick={() => setLocation(`/profile/${user.username}`)}
                     >
-                      <GamefolioProfileIcon className="mr-2 h-4 w-4" />
+                      <span className="mr-2 inline-flex items-center justify-center h-4 w-4 overflow-visible flex-shrink-0">
+                        <GamefolioProfileIcon className="h-4 w-4 scale-[1.85]" />
+                      </span>
                       <span>View Gamefolio</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
