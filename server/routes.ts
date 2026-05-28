@@ -22,9 +22,9 @@ import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
-import { eq, sql, desc } from "drizzle-orm";
+import { eq, sql, desc, inArray, and } from "drizzle-orm";
 import { db } from "./db";
-import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes } from "@shared/schema";
+import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows } from "@shared/schema";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -3429,6 +3429,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching previous week leaderboard:", error);
       res.status(500).json({ message: "Error fetching previous week leaderboard" });
+    }
+  });
+
+  // Trending Gamefolios - enriched creator cards ordered by recent upload activity
+  app.get("/api/trending-gamefolios", async (req, res) => {
+    try {
+      const period = (req.query.period as string) || 'week';
+      const limit = Math.min(parseInt(req.query.limit as string) || 10, 20);
+
+      let leaderboardData: Array<{ userId: number; uploadsCount: number; totalPoints: number; rank?: number; user: any }>;
+      if (period === 'month') {
+        leaderboardData = await LeaderboardService.getCurrentMonthLeaderboard(limit);
+      } else if (period === 'week') {
+        leaderboardData = await LeaderboardService.getCurrentWeekLeaderboard(limit);
+      } else {
+        leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
+      }
+
+      if (!leaderboardData || leaderboardData.length === 0) {
+        return res.json([]);
+      }
+
+      const userIds = leaderboardData.map(e => e.userId);
+
+      // Batch: clips count per user (non-reel)
+      const clipRows = await db
+        .select({ userId: clips.userId, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+        .from(clips)
+        .where(and(inArray(clips.userId, userIds), eq(clips.videoType, 'clip')))
+        .groupBy(clips.userId);
+
+      // Batch: reels count per user
+      const reelRows = await db
+        .select({ userId: clips.userId, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+        .from(clips)
+        .where(and(inArray(clips.userId, userIds), eq(clips.videoType, 'reel')))
+        .groupBy(clips.userId);
+
+      // Batch: screenshots count per user
+      const ssRows = await db
+        .select({ userId: screenshots.userId, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+        .from(screenshots)
+        .where(inArray(screenshots.userId, userIds))
+        .groupBy(screenshots.userId);
+
+      // Batch: followers count per user
+      const followerRows = await db
+        .select({ userId: follows.followingId, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+        .from(follows)
+        .where(inArray(follows.followingId, userIds))
+        .groupBy(follows.followingId);
+
+      const clipsMap: Record<number, number> = Object.fromEntries(clipRows.map(r => [r.userId, r.count]));
+      const reelsMap: Record<number, number> = Object.fromEntries(reelRows.map(r => [r.userId, r.count]));
+      const ssMap: Record<number, number> = Object.fromEntries(ssRows.map(r => [r.userId, r.count]));
+      const followerMap: Record<number, number> = Object.fromEntries(followerRows.map(r => [r.userId, r.count]));
+
+      const enriched = await Promise.all(
+        leaderboardData.map(async (entry, index) => {
+          let userData = { ...entry.user };
+          for (const field of SENSITIVE_USER_FIELDS) {
+            delete (userData as Record<string, unknown>)[field];
+          }
+          if (userData.avatarUrl && userData.avatarUrl.includes('supabase.co/storage')) {
+            const signed = await supabaseStorage.convertToSignedUrl(userData.avatarUrl, 3600);
+            if (signed) userData.avatarUrl = signed;
+          }
+          if (userData.bannerUrl && userData.bannerUrl.includes('supabase.co/storage')) {
+            const signed = await supabaseStorage.convertToSignedUrl(userData.bannerUrl, 3600);
+            if (signed) userData.bannerUrl = signed;
+          }
+          return {
+            userId: entry.userId,
+            rank: (entry.rank ?? index + 1),
+            uploadsCount: entry.uploadsCount,
+            totalPoints: entry.totalPoints,
+            user: userData,
+            clipsCount: clipsMap[entry.userId] || 0,
+            reelsCount: reelsMap[entry.userId] || 0,
+            screenshotsCount: ssMap[entry.userId] || 0,
+            followersCount: followerMap[entry.userId] || 0,
+          };
+        })
+      );
+
+      res.json(enriched);
+    } catch (error) {
+      console.error("Error fetching trending gamefolios:", error);
+      res.status(500).json({ message: "Error fetching trending gamefolios" });
     }
   });
 

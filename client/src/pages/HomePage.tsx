@@ -884,16 +884,6 @@ const HomePage = () => {
       
       {/* Trending Gamefolios Section */}
       <section className="mt-16 px-0">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-foreground">Trending Gamefolios</h2>
-          <Link 
-            href="/explore" 
-            className="text-primary text-sm font-medium hover:underline flex items-center"
-          >
-            View all <ChevronRight className="h-4 w-4 ml-1" />
-          </Link>
-        </div>
-        
         <FeaturedUsersSection />
       </section>
 
