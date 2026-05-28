@@ -134,6 +134,14 @@ const FONT_EFFECTS = [
   { value: 'rainbow', label: 'Rainbow Glow', textShadow: '0 0 5px #ff0000, 0 0 10px #ff7700, 0 0 15px #ffff00, 0 0 20px #00ff00, 0 0 25px #0000ff, 0 0 30px #8b00ff' },
 ];
 
+// Streamer Partner perks shown in the Streamer settings panel.
+const STREAMER_PARTNER_PERKS = [
+  "Everything in Gamefolio Pro",
+  "Your live stream featured on your profile",
+  "Showcased across Gamefolio (Trending & more)",
+  "Official Streamer Partner badge",
+];
+
 // Component to fetch SVG and render it inline with color replacement
 const InlineSvgBorder: React.FC<{
   svgUrl: string;
@@ -4138,35 +4146,65 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
 
-                {/* Streamer Partner upsell / status */}
+                {/* Streamer Partner — informational panel + sign-up */}
                 {user?.isPartner ? (
-                  <div className="rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
-                      <Crown className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-semibold text-primary">You're a Streamer Partner</div>
-                      <div className="text-xs text-slate-400 mt-0.5">
-                        All Pro perks, your stream on your profile, plus a Gamefolio showcase.
+                  <div className="rounded-xl border border-primary/40 bg-primary/10 px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
+                        <Crown className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-primary">You're a Streamer Partner</div>
+                        <div className="text-xs text-slate-400 mt-0.5">
+                          Thanks for being an official Gamefolio Streamer Partner — your perks are active below.
+                        </div>
                       </div>
                     </div>
+                    <ul className="space-y-1.5 mt-3">
+                      {STREAMER_PARTNER_PERKS.map((perk) => (
+                        <li key={perk} className="flex items-start gap-2 text-xs text-slate-300">
+                          <Check className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
+                          <span>{perk}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 ) : (
                   <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-transparent px-4 py-4">
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
                         <Crown className="w-5 h-5 text-primary" />
                       </div>
                       <div className="flex-1">
                         <div className="text-sm font-semibold text-slate-100">Become a Streamer Partner</div>
                         <div className="text-xs text-slate-400 mt-0.5">
-                          Everything in Pro, plus your live stream featured on your profile and across Gamefolio.
+                          Our top tier for streamers — everything in Gamefolio Pro, plus your live stream front and centre across Gamefolio.
                         </div>
-                        <Button size="sm" className="mt-3" onClick={() => setShowPartnerDialog(true)}>
-                          {user?.isPro ? "Upgrade to Partner" : "Become a Streamer Partner"}
-                        </Button>
                       </div>
                     </div>
+
+                    <ul className="space-y-1.5 mt-3">
+                      {STREAMER_PARTNER_PERKS.map((perk) => (
+                        <li key={perk} className="flex items-start gap-2 text-xs text-slate-300">
+                          <Check className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
+                          <span>{perk}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-primary/15">
+                      <div className="text-xs text-slate-400">
+                        {user?.isPro ? "Upgrade from Pro · " : "From "}
+                        <span className="text-slate-200 font-semibold">£4.99</span>/mo or{" "}
+                        <span className="text-slate-200 font-semibold">£44.99</span>/yr
+                      </div>
+                      <Button size="sm" className="flex-shrink-0" onClick={() => setShowPartnerDialog(true)}>
+                        {user?.isPro ? "Upgrade to Partner" : "Become a Partner"}
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-2">
+                      Sign up here — pick a monthly or yearly plan and your partner status activates instantly.
+                    </p>
                   </div>
                 )}
 

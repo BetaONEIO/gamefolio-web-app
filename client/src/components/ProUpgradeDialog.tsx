@@ -273,7 +273,12 @@ function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentInt
 export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthRequired, tier = "pro" }: ProUpgradeDialogProps) {
   const { isInitialized, isLoading, isPro, isPartner, getCurrentOffering, getPartnerOffering, purchasePackage } = useRevenueCat();
   const { user } = useAuth();
-  const isPartnerTier = tier === "partner";
+  // The dialog can switch tiers in-place (e.g. cross-sell Streamer Partner from
+  // the Go-Pro screen). Start from the requested tier and reset on each open.
+  const [activeTier, setActiveTier] = useState<SubscriptionTier>(tier);
+  useEffect(() => { if (open) setActiveTier(tier); }, [open, tier]);
+  const isPartnerTier = activeTier === "partner";
+  const partnerOfferingAvailable = (getPartnerOffering()?.length ?? 0) > 0;
   const tierName = isPartnerTier ? "Streamer Partner" : "Gamefolio Pro";
   const ownsThisTier = isPartnerTier ? isPartner : isPro;
   const benefits = isPartnerTier ? partnerBenefits : premiumBenefits;
@@ -554,6 +559,30 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     );
   };
 
+  // Cross-sell between tiers in-place: offer Streamer Partner from the Pro
+  // screen, and a way back if the user switched over.
+  const tierSwitch = !partnerOfferingAvailable ? null : (
+    !isPartnerTier ? (
+      <button
+        type="button"
+        onClick={() => setActiveTier("partner")}
+        className="w-full text-center text-[12px] font-semibold text-[#B7FF1A] hover:text-[#A2F000] transition-colors"
+        data-testid="link-switch-partner"
+      >
+        Are you a streamer? Unlock Streamer Partner →
+      </button>
+    ) : tier === "pro" ? (
+      <button
+        type="button"
+        onClick={() => setActiveTier("pro")}
+        className="w-full text-center text-[12px] text-[#B8C0AE] hover:text-white transition-colors"
+        data-testid="link-switch-pro"
+      >
+        ← Back to Gamefolio Pro
+      </button>
+    ) : null
+  );
+
   const leftPanel = (
     <div className="relative w-full h-full min-h-0">
       <div className="absolute inset-0">
@@ -660,6 +689,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         {checkoutError && (
           <p className="text-red-400 text-xs text-center">{checkoutError}</p>
         )}
+
+        {tierSwitch && <div className="pt-1">{tierSwitch}</div>}
 
         <span className="text-[#B8C0AE] text-[11px] text-center">
           Cancel anytime. Terms and conditions apply.
@@ -849,6 +880,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                       </>
                     )}
                   </button>
+
+                  {tierSwitch && <div className="mt-3">{tierSwitch}</div>}
 
                   <span className="text-[#B8C0AE] text-[11px] text-center block mt-2">
                     Cancel anytime. Terms and conditions apply.
