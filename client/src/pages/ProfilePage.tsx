@@ -251,6 +251,11 @@ const ProfilePage = () => {
   const { lightboxData: bannerLightboxData, openLightbox: openBannerLightbox, closeLightbox: closeBannerLightbox } = useBannerLightbox();
   const isOwnProfile = currentUser?.username === username;
 
+  // Mac the cat easter egg: discovering /mac grants a one-time 5,000 XP bonus.
+  const isMacProfile = username?.toLowerCase() === "mac";
+  const [macBonusXp, setMacBonusXp] = useState<number | null>(null);
+  const macDiscoverFiredRef = useRef(false);
+
   // Handle highlighting content from share links
   const [highlightedContent, setHighlightedContent] = useState<{type: string, id: string} | null>(null);
 
@@ -400,6 +405,27 @@ const ProfilePage = () => {
       return failureCount < 3;
     },
   });
+
+  // Mac the cat easter egg: when a signed-in user lands on /mac, silently claim
+  // the one-time 5,000 XP bonus. The ref guards against React double-invoke /
+  // re-renders so we only fire once per mount; the server is idempotent too.
+  useEffect(() => {
+    if (!isMacProfile || !currentUser || macDiscoverFiredRef.current) return;
+    macDiscoverFiredRef.current = true;
+    (async () => {
+      try {
+        const res = await apiRequest("POST", "/api/mac/discover");
+        const data = await res.json();
+        if (data?.granted) {
+          setMacBonusXp(data.xp ?? 5000);
+          // Refresh the signed-in user so their XP / level updates everywhere.
+          queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        }
+      } catch (err) {
+        console.error("Mac bonus discover failed", err);
+      }
+    })();
+  }, [isMacProfile, currentUser]);
 
   // Get signed URL for profile avatar (private bucket)
   const { signedUrl: profileAvatarSignedUrl } = useSignedUrl(profile?.avatarUrl);
@@ -5191,6 +5217,37 @@ const ProfilePage = () => {
         displayName={bannerLightboxData.displayName}
         username={bannerLightboxData.username}
       />
+
+      {/* Mac the cat easter-egg reward celebration */}
+      <Dialog open={macBonusXp !== null} onOpenChange={(open) => { if (!open) setMacBonusXp(null); }}>
+        <DialogContent className="sm:max-w-md text-center border-amber-500/40 bg-[#0A0A0A]">
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl">You found Mac! 🐱</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-2">
+            <img
+              src="/attached_assets/mac-gamer.png"
+              alt="Mac the gaming cat"
+              className="w-40 h-40 rounded-2xl object-cover ring-2 ring-amber-500/60 shadow-[0_0_40px_-8px_rgba(245,166,35,0.6)]"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+            />
+            <p className="text-amber-400 text-3xl font-extrabold tracking-tight">
+              +{(macBonusXp ?? 0).toLocaleString()} XP
+            </p>
+            <p className="text-sm text-muted-foreground px-2">
+              Mac the gaming cat approves of your snooping. He's tossed you a
+              one-time stash of XP from his secret CAT FUEL™ reserves. Don't tell
+              the other cats. 🐾
+            </p>
+            <button
+              onClick={() => setMacBonusXp(null)}
+              className="mt-1 rounded-lg bg-amber-500 px-6 py-2 font-semibold text-black hover:bg-amber-400 transition-colors"
+            >
+              Purrfect
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ProUpgradeDialog
         open={proUpgradeOpen}

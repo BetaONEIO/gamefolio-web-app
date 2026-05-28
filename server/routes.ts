@@ -24,7 +24,7 @@ import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
 import { eq, sql, desc, inArray, and } from "drizzle-orm";
 import { db } from "./db";
-import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows } from "@shared/schema";
+import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory } from "@shared/schema";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -46,6 +46,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 import { getDemoUser, getDemoUserWithStats, getDemoClips, getDemoFavoriteGames } from "./demo-user";
+import { getMacUserWithStats, MAC_BONUS_XP } from "./mac-profile";
 import axios from "axios";
 import adminRouter from "./routes/admin";
 import adminContentFilterRouter from "./routes/admin-content-filter";
@@ -4189,6 +4190,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestedUsername = req.params.username.startsWith('@') ? req.params.username.slice(1) : req.params.username;
       if (requestedUsername.toLowerCase() === "gamefolio") {
         return res.status(403).json({ message: "ACCESS_RESTRICTED", redirect: "/" });
+      }
+
+      // Hidden "Mac the cat" easter-egg profile (synthetic, not a DB row).
+      // The one-time XP bonus is granted separately via POST /api/mac/discover.
+      if (requestedUsername.toLowerCase() === "mac") {
+        return res.json(getMacUserWithStats());
       }
 
       // Support demo user lookup
@@ -13020,6 +13027,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error claiming welcome pack:", error);
       res.status(500).json({ message: "Failed to claim welcome pack" });
+    }
+  });
+
+  // ==================== MAC THE CAT EASTER EGG ====================
+
+  // Grant the one-time 5,000 XP bonus the first time a signed-in user discovers
+  // Mac's hidden profile (/mac). The grant is recorded in user_xp_history with
+  // source "mac_bonus"; the existence of that row is the one-time guard, so no
+  // schema change is needed. The client calls this on mount when viewing /mac.
+  app.post("/api/mac/discover", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+
+      // Already claimed? (one row with source "mac_bonus" is enough)
+      const [already] = await db
+        .select({ id: userXPHistory.id })
+        .from(userXPHistory)
+        .where(and(eq(userXPHistory.userId, userId), eq(userXPHistory.source, "mac_bonus")))
+        .limit(1);
+
+      if (already) {
+        return res.json({ granted: false, alreadyClaimed: true });
+      }
+
+      await XPService.awardXP(
+        userId,
+        MAC_BONUS_XP,
+        "mac_bonus",
+        "Found Mac the gaming cat! 🐱"
+      );
+
+      return res.json({ granted: true, xp: MAC_BONUS_XP });
+    } catch (error) {
+      console.error("Error granting Mac bonus:", error);
+      return res.status(500).json({ message: "Failed to grant Mac bonus" });
     }
   });
 
