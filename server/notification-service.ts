@@ -209,12 +209,13 @@ export class NotificationService {
 
       const notification: InsertNotification = {
         userId: clip.userId,
-        type: "like", // Using 'like' type for reactions
+        type: "reaction",
         title: "New Reaction",
         message: `${reactedByUser.username} reacted with ${emoji} to your clip "${clip.title}"`,
         fromUserId: reactedByUserId,
         clipId: clipId,
-        actionUrl: `/clips/${clipId}`
+        actionUrl: `/clips/${clipId}`,
+        metadata: { emoji },
       };
 
       await createAndPush(notification);
