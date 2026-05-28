@@ -437,6 +437,22 @@ const LeaderboardPage = () => {
           )}
         </div>
 
+        {/* Hidden easter egg: a faint "mystery legend" nudging the curious toward
+            Mac's secret profile (/mac). Intentionally NOT a ranked card so it can't
+            be mistaken for a real entry — just a dim, clickable footnote. The
+            999,999 XP matches Mac's profile total. */}
+        <Link href="/mac">
+          <div
+            className="group mb-8 -mt-2 flex items-center justify-center text-center cursor-pointer select-none opacity-40 hover:opacity-100 transition-opacity"
+            data-testid="leaderboard-mystery-legend"
+            title="???"
+          >
+            <span className="text-xs italic text-slate-500 group-hover:text-[#B7FF1A] transition-colors">
+              ✨ ??? — a mysterious cat sits beyond the board at 999,999 XP 🐾
+            </span>
+          </div>
+        </Link>
+
         {/* Historic Winners Section */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-2">
