@@ -25,7 +25,7 @@ function XPIcon() {
   return (
     <span
       className="relative flex-shrink-0"
-      style={{ width: 6, height: 6, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+      style={{ width: 16, height: 16, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
     >
       {/* Rotating glow ring */}
       <span
@@ -42,8 +42,8 @@ function XPIcon() {
         className="xp-pulse-bg"
         style={{
           position: "absolute",
-          width: 3,
-          height: 3,
+          width: 8,
+          height: 8,
           borderRadius: "50%",
           background: "rgba(183,255,24,0.08)",
           zIndex: 1,
@@ -56,11 +56,11 @@ function XPIcon() {
         style={{
           position: "relative",
           zIndex: 2,
-          width: 4,
-          height: 4,
+          width: 14,
+          height: 14,
           objectFit: "contain",
           display: "block",
-          filter: "drop-shadow(0 0 0.5px rgba(183,255,24,0.7))",
+          filter: "drop-shadow(0 0 2px rgba(183,255,24,0.7))",
         }}
       />
     </span>
