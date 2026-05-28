@@ -20,6 +20,7 @@ import { useMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
 import { User, Game } from "@shared/schema";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
+import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import logoGreen from "@assets/gamefolio-logo-green.png";
 
 
@@ -597,9 +598,9 @@ const Header = () => {
                       onClick={() => setLocation(`/profile/${user.username}`)}
                     >
                       <span className="mr-2 inline-flex items-center justify-center h-4 w-4 overflow-visible flex-shrink-0">
-                        <GamefolioProfileIcon className="h-4 w-4 scale-[1.85]" />
+                        <GamefolioIcon glow={location === `/profile/${user.username}`} className="h-4 w-4 scale-[1.85]" />
                       </span>
-                      <span>View Gamefolio</span>
+                      <span>My Gamefolio</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="cursor-pointer"
