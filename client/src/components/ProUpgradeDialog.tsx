@@ -366,7 +366,19 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       return;
     }
 
-    if (!selectedPackage || purchasing) return;
+    if (purchasing) return;
+
+    // Surface a clear error instead of silently doing nothing when RevenueCat
+    // isn't ready (e.g. missing/empty VITE_REVENUECAT_API_KEY in the build, so
+    // offerings never load and selectedPackage stays null).
+    if (!selectedPackage) {
+      setCheckoutError(
+        !isInitialized
+          ? "Payments aren't available right now — please try again in a moment."
+          : "No subscription plans are available right now. Please try again later."
+      );
+      return;
+    }
 
     // On native (iOS/Android) Apple/Google require all digital subscription
     // purchases to flow through the platform's IAP. RevenueCat handles that;
@@ -439,7 +451,11 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     );
   }
 
-  const buttonDisabled = !onAuthRequired && (!isInitialized || isLoading || purchasing || !selectedPackage || checkoutLoading);
+  // Logged-out users with an auth handler keep an enabled button (tap triggers sign-in).
+  // Everyone else gets the real readiness check, so we never show a tappable-but-dead button.
+  const buttonDisabled = (!user && !!onAuthRequired)
+    ? false
+    : (!isInitialized || isLoading || purchasing || !selectedPackage || checkoutLoading);
 
   const planSelector = (compact: boolean = false) => {
     const yearlyPerMonth = yearlyPkg ? formatCurrency(getPriceAmount(yearlyPkg) / 12, getCurrency(yearlyPkg)) : null;
