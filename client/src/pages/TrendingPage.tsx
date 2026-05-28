@@ -586,28 +586,26 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[]; onOpen
       </div>
 
       {/* Metadata below thumbnail */}
-      <div className="px-0.5">
+      <div className="px-0.5 space-y-0.5">
         <h3
           onClick={handleReelClick}
-          className="text-sm font-semibold leading-tight line-clamp-2 cursor-pointer hover:text-primary transition-colors mb-1"
+          className="text-sm font-semibold leading-tight line-clamp-2 cursor-pointer hover:text-primary transition-colors"
         >
           {reel.title}
         </h3>
-        <div className="flex items-center gap-2 flex-wrap">
-          <ProfileHoverCard username={reel.user.username}>
-            <p className="text-xs text-muted-foreground cursor-default hover:text-foreground transition-colors">
-              @{reel.user.username}
-            </p>
-          </ProfileHoverCard>
-          {reel.game && (
-            <Link
-              href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-              className="inline-block bg-primary text-[#071013] text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
-            >
-              {reel.game.name}
-            </Link>
-          )}
-        </div>
+        <ProfileHoverCard username={reel.user.username}>
+          <p className="text-xs text-muted-foreground cursor-default hover:text-foreground transition-colors">
+            @{reel.user.username}
+          </p>
+        </ProfileHoverCard>
+        {reel.game && (
+          <Link
+            href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+            className="inline-block bg-primary text-[#071013] text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
+          >
+            {reel.game.name}
+          </Link>
+        )}
       </div>
     </div>
   );

@@ -3,7 +3,6 @@ import { Flag, X, ImageOff, Heart, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ReportDialog } from '@/components/content/ReportDialog';
 import { LazyImage } from '@/components/ui/lazy-image';
-import { CustomAvatar } from '@/components/ui/custom-avatar';
 import { Link } from 'wouter';
 import { ProfileHoverCard } from '@/components/ui/ProfileHoverCard';
 
@@ -134,18 +133,13 @@ export function ScreenshotCard({
       {/* Info Section */}
       <div className="pt-3 pb-1 space-y-1">
         {showUserInfo && screenshotUser && (
-          <div className="flex items-center mb-1.5">
-            <ProfileHoverCard username={screenshotUser.username}>
-              <Link href={`/profile/${screenshotUser.username}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                <div className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
-                  <CustomAvatar user={screenshotUser} size="sm" showBorder={false} />
-                  <span className="text-sm font-medium truncate max-w-[140px]" style={{ color: '#F5F7F2' }}>
-                    {screenshotUser.displayName || screenshotUser.username}
-                  </span>
-                </div>
-              </Link>
-            </ProfileHoverCard>
-          </div>
+          <ProfileHoverCard username={screenshotUser.username}>
+            <Link href={`/profile/${screenshotUser.username}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+              <span className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+                @{screenshotUser.username}
+              </span>
+            </Link>
+          </ProfileHoverCard>
         )}
 
         <h3 className="font-semibold text-sm line-clamp-1 leading-tight" style={{ color: '#F5F7F2' }}>
