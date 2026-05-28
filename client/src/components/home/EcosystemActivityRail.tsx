@@ -1,143 +1,214 @@
-import { type ElementType } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
-import { useEffect, useRef } from "react";
-import { Video, Image, TrendingUp, Star } from "lucide-react";
-import { Link } from "wouter";
+import { useEffect, useRef, useMemo } from "react";
 
-interface ActivityItem {
+interface ApiFeedItem {
   id: string;
-  type: 'clip' | 'reel' | 'screenshot' | 'trending' | 'milestone';
   username: string;
-  displayName: string;
-  avatarUrl?: string | null;
-  text: string;
-  subtext?: string | null;
-  href?: string | null;
-  timestamp?: string | null;
-  rank?: number;
-  contentId?: number;
+  displayName?: string;
 }
 
-const TYPE_CONFIG: Record<string, { icon: ElementType; color: string; bg: string; label: string }> = {
-  clip: { icon: Video, color: '#B7FF1A', bg: 'rgba(183,255,26,0.12)', label: 'CLIP' },
-  reel: { icon: Video, color: '#FF6BFF', bg: 'rgba(255,107,255,0.12)', label: 'REEL' },
-  screenshot: { icon: Image, color: '#6BFFFF', bg: 'rgba(107,255,255,0.12)', label: 'SHOT' },
-  trending: { icon: TrendingUp, color: '#FF9B3C', bg: 'rgba(255,155,60,0.12)', label: 'HOT' },
-  milestone: { icon: Star, color: '#FFD700', bg: 'rgba(255,215,0,0.12)', label: 'MILESTONE' },
+type EventKind =
+  | "xp"
+  | "levelup"
+  | "streak"
+  | "lootbox"
+  | "reward"
+  | "follower"
+  | "badge"
+  | "bounty"
+  | "challenge"
+  | "trending"
+  | "cosmetic"
+  | "quest";
+
+interface TickerEvent {
+  id: string;
+  kind: EventKind;
+  text: string;
+}
+
+const KIND_META: Record<EventKind, { emoji: string; color: string }> = {
+  xp:        { emoji: "⚡", color: "#B7FF18" },
+  levelup:   { emoji: "🏆", color: "#FFD700" },
+  streak:    { emoji: "🔥", color: "#FF6B35" },
+  lootbox:   { emoji: "🎁", color: "#C084FC" },
+  reward:    { emoji: "💎", color: "#67E8F9" },
+  follower:  { emoji: "👥", color: "#B7FF18" },
+  badge:     { emoji: "🎖️", color: "#FFD700" },
+  bounty:    { emoji: "🎯", color: "#FF6B35" },
+  challenge: { emoji: "🕹️", color: "#A78BFA" },
+  trending:  { emoji: "📈", color: "#B7FF18" },
+  cosmetic:  { emoji: "✨", color: "#F472B6" },
+  quest:     { emoji: "📋", color: "#34D399" },
 };
 
-function timeAgo(ts: string | null | undefined): string {
-  if (!ts) return '';
-  const diff = Date.now() - new Date(ts).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return 'just now';
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+const EVENT_TEMPLATES: Array<{ kind: EventKind; make: (u: string) => string }> = [
+  { kind: "xp",        make: u => `${u} earned +${pick([50,100,150,200,250,300,500])} XP` },
+  { kind: "xp",        make: u => `${u} is on a +${pick([2,3,5,8,10])}x XP bonus` },
+  { kind: "levelup",   make: u => `${u} reached Level ${pick([5,8,10,12,15,18,20,22,25,30])}` },
+  { kind: "levelup",   make: u => `${u} just levelled up` },
+  { kind: "streak",    make: u => `${u} is on a ${pick([3,5,7,10,14,21])}-day upload streak 🔥` },
+  { kind: "streak",    make: u => `${u} kept their ${pick([7,14,30])}-day streak alive` },
+  { kind: "lootbox",   make: u => `${u} opened a ${pick(["Rare","Epic","Legendary"])} Lootbox` },
+  { kind: "lootbox",   make: u => `${u} unlocked a loot drop` },
+  { kind: "reward",    make: u => `${u} claimed a GFT reward` },
+  { kind: "reward",    make: u => `${u} earned a creator reward` },
+  { kind: "follower",  make: u => `${u} gained ${pick([10,25,50,100])} new followers` },
+  { kind: "follower",  make: u => `${u} hit ${pick([100,250,500,1000])} followers` },
+  { kind: "badge",     make: u => `${u} unlocked a new badge` },
+  { kind: "badge",     make: u => `${u} earned the ${pick(["Veteran","Sharpshooter","Night Owl","Grinder","Trendsetter"])} badge` },
+  { kind: "bounty",    make: u => `${u} completed a bounty` },
+  { kind: "bounty",    make: u => `${u} finished a weekly bounty` },
+  { kind: "challenge", make: u => `${u} completed an indie challenge` },
+  { kind: "challenge", make: u => `${u} beat the ${pick(["Daily","Weekly","Monthly"])} Challenge` },
+  { kind: "trending",  make: u => `${u} reached Top ${pick([3,5,10,20])} Trending` },
+  { kind: "trending",  make: u => `${u} is trending in ${pick(["FPS","RPG","Battle Royale","Indie","Sports"])}` },
+  { kind: "cosmetic",  make: u => `${u} unlocked a rare profile cosmetic` },
+  { kind: "cosmetic",  make: u => `${u} equipped a ${pick(["Legendary","Epic","Rare"])} border` },
+  { kind: "quest",     make: u => `${u} completed a daily quest` },
+  { kind: "quest",     make: u => `${u} finished ${pick([3,5,7])} quests today` },
+];
+
+const FALLBACK_NAMES = [
+  "Player1","xxTOWERDOGxx","reaperofdarkness","JawaTheGathering",
+  "SKYHAWKS","syndicate","dabu2k25","flash","GhostTag","ArcaneAce",
+  "PixelRift","NovaStar","IronFox","LunarEdge","ZeroKelvin",
+];
+
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function seededShuffle<T>(arr: T[], seed: number): T[] {
+  const out = [...arr];
+  let s = seed;
+  for (let i = out.length - 1; i > 0; i--) {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    const j = Math.abs(s) % (i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+function buildEvents(names: string[], count = 28): TickerEvent[] {
+  const pool = names.length >= 5 ? names : [...names, ...FALLBACK_NAMES];
+  const shuffled = seededShuffle(pool, 42);
+  const events: TickerEvent[] = [];
+  for (let i = 0; i < count; i++) {
+    const tpl = EVENT_TEMPLATES[i % EVENT_TEMPLATES.length];
+    const user = shuffled[i % shuffled.length];
+    events.push({ id: `evt-${i}`, kind: tpl.kind, text: tpl.make(user) });
+  }
+  return seededShuffle(events, 99);
 }
 
 export function EcosystemActivityRail() {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const railRef = useRef<HTMLDivElement>(null);
+  const pausedRef = useRef(false);
+  const animRef = useRef<number>(0);
 
-  const { data: items = [] } = useQuery<ActivityItem[]>({
+  const { data: feedItems = [] } = useQuery<ApiFeedItem[]>({
     queryKey: ["/api/activity-feed"],
     queryFn: getQueryFn({ on401: "returnNull" }),
-    staleTime: 1000 * 60,
-    refetchInterval: 1000 * 60,
+    staleTime: 1000 * 120,
   });
 
+  const events = useMemo(() => {
+    const names = feedItems.length
+      ? [...new Set(feedItems.map(f => f.username).filter(Boolean))]
+      : FALLBACK_NAMES;
+    return buildEvents(names, 28);
+  }, [feedItems]);
+
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el || items.length === 0) return;
-    let animId: number;
-    let paused = false;
+    const el = railRef.current;
+    if (!el || events.length === 0) return;
+
+    const speed = 0.55;
 
     const step = () => {
-      if (!paused) {
+      if (!pausedRef.current && el.scrollWidth > 0) {
+        el.scrollLeft += speed;
         if (el.scrollLeft >= el.scrollWidth / 2) {
           el.scrollLeft = 0;
-        } else {
-          el.scrollLeft += 0.6;
         }
       }
-      animId = requestAnimationFrame(step);
+      animRef.current = requestAnimationFrame(step);
     };
 
-    animId = requestAnimationFrame(step);
-    el.addEventListener('mouseenter', () => { paused = true; });
-    el.addEventListener('mouseleave', () => { paused = false; });
+    animRef.current = requestAnimationFrame(step);
 
-    return () => cancelAnimationFrame(animId);
-  }, [items]);
+    const pause = () => { pausedRef.current = true; };
+    const resume = () => { pausedRef.current = false; };
 
-  if (items.length === 0) return null;
+    el.addEventListener("mouseenter", pause);
+    el.addEventListener("mouseleave", resume);
+    el.addEventListener("touchstart", pause, { passive: true });
+    el.addEventListener("touchend", resume, { passive: true });
 
-  const doubled = [...items, ...items];
+    return () => {
+      cancelAnimationFrame(animRef.current);
+      el.removeEventListener("mouseenter", pause);
+      el.removeEventListener("mouseleave", resume);
+      el.removeEventListener("touchstart", pause);
+      el.removeEventListener("touchend", resume);
+    };
+  }, [events]);
+
+  if (events.length === 0) return null;
+
+  const doubled = [...events, ...events];
 
   return (
-    <div className="w-full py-4 overflow-hidden" style={{ background: 'rgba(255,255,255,0.02)' }}>
+    <div
+      className="w-full overflow-hidden"
+      style={{
+        background: "linear-gradient(90deg, #0B1319 0%, rgba(11,19,25,0.95) 100%)",
+        borderTop: "1px solid rgba(183,255,24,0.06)",
+        borderBottom: "1px solid rgba(183,255,24,0.06)",
+        paddingTop: 10,
+        paddingBottom: 10,
+      }}
+    >
       <div
-        ref={scrollRef}
-        className="flex gap-3 overflow-hidden cursor-grab active:cursor-grabbing"
-        style={{ scrollBehavior: 'auto', userSelect: 'none' }}
+        ref={railRef}
+        className="flex items-center gap-2 overflow-hidden"
+        style={{ scrollBehavior: "auto", userSelect: "none", whiteSpace: "nowrap" }}
       >
-        {doubled.map((item, i) => {
-          const cfg = TYPE_CONFIG[item.type] || TYPE_CONFIG.clip;
-          const Icon = cfg.icon;
-          const inner = (
+        {doubled.map((evt, i) => {
+          const meta = KIND_META[evt.kind];
+          return (
             <div
-              key={`activity-${item.id}-${i}`}
-              className="flex-shrink-0 flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/5 hover:border-white/10 transition-all duration-200 cursor-pointer"
-              style={{ background: 'rgba(255,255,255,0.04)', minWidth: 260, maxWidth: 320 }}
+              key={`${evt.id}-${i}`}
+              className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-200"
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                cursor: "default",
+              }}
             >
-              {item.avatarUrl ? (
-                <img
-                  src={item.avatarUrl}
-                  alt={item.displayName}
-                  className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                  style={{ border: `2px solid ${cfg.color}33` }}
-                />
-              ) : (
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ background: cfg.bg }}
-                >
-                  <Icon className="w-4 h-4" style={{ color: cfg.color }} />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-white/90 font-medium truncate">{item.text}</p>
-                {item.subtext && (
-                  <p className="text-xs text-white/40 truncate mt-0.5">"{item.subtext}"</p>
-                )}
-              </div>
-              <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                <span
-                  className="text-[9px] font-bold px-1.5 py-0.5 rounded"
-                  style={{ background: cfg.bg, color: cfg.color }}
-                >
-                  {cfg.label}
-                </span>
-                {item.timestamp && (
-                  <span className="text-[9px] text-white/30">{timeAgo(item.timestamp)}</span>
-                )}
-                {item.rank && (
-                  <span className="text-[9px] text-white/30">#{item.rank}</span>
-                )}
-              </div>
+              <span className="text-sm leading-none" style={{ filter: "grayscale(0.1)" }}>
+                {meta.emoji}
+              </span>
+              <span
+                className="text-xs font-medium leading-none"
+                style={{ color: "rgba(255,255,255,0.75)", letterSpacing: "0.01em" }}
+              >
+                {evt.text}
+              </span>
             </div>
           );
-
-          return item.href ? (
-            <Link key={`activity-link-${item.id}-${i}`} href={item.href}>
-              {inner}
-            </Link>
-          ) : (
-            <div key={`activity-wrap-${item.id}-${i}`}>{inner}</div>
-          );
         })}
+
+        {/* Subtle separator dots between loops */}
+        {[0, 1].map(i => (
+          <div key={`sep-${i}`} className="flex-shrink-0 flex items-center gap-1.5 px-2">
+            <span style={{ width: 3, height: 3, borderRadius: "50%", background: "rgba(183,255,24,0.25)", display: "block" }} />
+            <span style={{ width: 3, height: 3, borderRadius: "50%", background: "rgba(183,255,24,0.15)", display: "block" }} />
+            <span style={{ width: 3, height: 3, borderRadius: "50%", background: "rgba(183,255,24,0.08)", display: "block" }} />
+          </div>
+        ))}
       </div>
     </div>
   );
