@@ -2,7 +2,7 @@ import { useAuthModal } from "@/hooks/use-auth-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { Link } from "wouter";
-import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, Filter, Heart, Loader2, CheckCircle, Trash2, Tag, Crown, Lock, Circle } from "lucide-react";
+import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, Filter, Heart, Loader2, CheckCircle, Trash2, Tag, Crown, Lock, Circle, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -125,12 +125,21 @@ function resolveStoreImage(imagePath: string | null): string {
 function MarketplaceNftImage({ tokenId }: { tokenId: number }) {
   // Coalesces parallel fetches across all listing tiles into one
   // POST /api/nft/metadata/batch instead of N separate GET requests.
-  const { data } = useNftMetadata(tokenId);
+  const { data, isLoading } = useNftMetadata(tokenId);
 
-  if (!data?.image) {
+  if (isLoading) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-800">
         <Loader2 className="h-8 w-8 text-gray-600 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!data?.image) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-gray-800 gap-2">
+        <ImageIcon className="h-10 w-10 text-gray-600" />
+        <span className="text-xs text-gray-500">Genesis #{tokenId}</span>
       </div>
     );
   }
