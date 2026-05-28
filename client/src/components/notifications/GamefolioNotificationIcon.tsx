@@ -30,45 +30,32 @@ export function GamefolioNotificationIcon({
         xmlns="http://www.w3.org/2000/svg"
         className="w-full h-full"
       >
-        {/* Bold squared bell body — thick 2.5px stroke, geometric */}
+        {/* Bold, chunky, filled bell body — unmistakable, thick 3px stroke */}
         <path
-          d="M5 16 L5 10 C5 6.1 8.1 3 12 3 C15.9 3 19 6.1 19 10 L19 16"
+          d="M4 16 L4 8 C4 4 7 2 12 2 C17 2 20 4 20 8 L20 16 L22 19 L2 19 L4 16 Z"
           stroke={color}
-          strokeWidth="2.5"
-          strokeLinecap="round"
+          strokeWidth="3"
           strokeLinejoin="round"
-          fill="none"
+          fill={isActive ? "rgba(183,255,26,0.12)" : "none"}
           className="transition-all duration-300"
           style={{ filter: glow }}
         />
 
-        {/* Flat bottom bar — squared, geometric */}
+        {/* Thick bottom bar */}
         <path
-          d="M3 16 L21 16"
+          d="M2 19 L22 19"
           stroke={color}
-          strokeWidth="2.5"
+          strokeWidth="3"
           strokeLinecap="round"
           className="transition-all duration-300"
           style={{ filter: glow }}
         />
 
-        {/* Angular clapper / bottom block — small square-ish nub */}
+        {/* Clapper — chunky, rounded */}
         <path
-          d="M10 16 L10 18 C10 19.1 10.9 20 12 20 C13.1 20 14 19.1 14 18 L14 16"
+          d="M10 19 L10 22 C10 23.5 11 25 12 25 C13 25 14 23.5 14 22 L14 19"
           stroke={color}
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-          className="transition-all duration-300"
-          style={{ filter: glow }}
-        />
-
-        {/* Top handle — angular, squared */}
-        <path
-          d="M10 3 L10 1.5 C10 1.2 10.2 1 10.5 1 L13.5 1 C13.8 1 14 1.2 14 1.5 L14 3"
-          stroke={color}
-          strokeWidth="2.5"
+          strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
           fill="none"
@@ -80,14 +67,14 @@ export function GamefolioNotificationIcon({
         {hasUnread && (
           <>
             <circle
-              cx="19"
+              cx="19.5"
               cy="5"
               r="3.5"
               fill="#B7FF18"
               style={{ filter: "drop-shadow(0 0 6px rgba(183,255,26,0.8))" }}
             />
             <circle
-              cx="19"
+              cx="19.5"
               cy="5"
               r="3.5"
               fill="none"
@@ -102,7 +89,7 @@ export function GamefolioNotificationIcon({
           </>
         )}
 
-        {/* Soft outer breathing ring when unread */}
+        {/* Soft breathing ring when unread */}
         {hasUnread && (
           <circle
             cx="12"
