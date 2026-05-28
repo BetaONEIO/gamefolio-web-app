@@ -1369,7 +1369,7 @@ const TrendingPage: React.FC = () => {
   const { data: trendingReels, isLoading: isLoadingReels } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/reels/trending', timePeriod, selectedGameId],
     queryFn: async () => {
-      const params = new URLSearchParams({ period: timePeriod, limit: '20' });
+      const params = new URLSearchParams({ period: timePeriod, limit: '40' });
       if (selectedGameId) params.set('gameId', String(selectedGameId));
       const response = await fetch(`/api/reels/trending?${params}`);
       if (!response.ok) throw new Error('Failed to fetch trending reels');
@@ -1382,7 +1382,7 @@ const TrendingPage: React.FC = () => {
   const { data: trendingScreenshots, isLoading: isLoadingScreenshots } = useQuery<ScreenshotWithUser[]>({
     queryKey: ['/api/trending/screenshots', timePeriod, selectedGameId],
     queryFn: async () => {
-      const params = new URLSearchParams({ period: timePeriod, limit: '20' });
+      const params = new URLSearchParams({ period: timePeriod, limit: '40' });
       if (selectedGameId) params.set('gameId', String(selectedGameId));
       const response = await fetch(`/api/trending/screenshots?${params}`);
       if (!response.ok) throw new Error('Failed to fetch trending screenshots');
@@ -1487,61 +1487,18 @@ const TrendingPage: React.FC = () => {
       }
 
       return (
-        <div className="relative">
-          <button
-            onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft -= 480; } }}
-            className="absolute -left-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft += 480; } }}
-            className="absolute -right-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-          <div
-            ref={screenshotsScrollRef}
-            className={`flex gap-5 overflow-x-auto scrollbar-hide pb-4 select-none ${screenshotsDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-            style={{ scrollBehavior: screenshotsDragging ? 'auto' : 'smooth', touchAction: 'pan-x' }}
-            onMouseDown={(e) => {
-              if (!screenshotsScrollRef.current) return;
-              setScreenshotsDragging(true);
-              setScreenshotsDragStart(e.clientX);
-              setScreenshotsScrollStart(screenshotsScrollRef.current.scrollLeft);
-              e.preventDefault();
-            }}
-            onMouseMove={(e) => {
-              if (!screenshotsDragging || !screenshotsScrollRef.current) return;
-              e.preventDefault();
-              screenshotsScrollRef.current.scrollLeft = screenshotsScrollStart - (e.clientX - screenshotsDragStart);
-            }}
-            onMouseUp={() => setScreenshotsDragging(false)}
-            onMouseLeave={() => setScreenshotsDragging(false)}
-            onTouchStart={(e) => {
-              if (!screenshotsScrollRef.current) return;
-              setScreenshotsTouchStart(e.touches[0].clientX);
-              setScreenshotsTouchScrollStart(screenshotsScrollRef.current.scrollLeft);
-            }}
-            onTouchMove={(e) => {
-              if (!screenshotsScrollRef.current) return;
-              const delta = screenshotsTouchStart - e.touches[0].clientX;
-              screenshotsScrollRef.current.scrollLeft = screenshotsTouchScrollStart + delta;
-            }}
-          >
-            {trendingScreenshots.map((screenshot) => (
-              <div key={screenshot.id} className="flex-shrink-0 w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px]">
-                <ScreenshotCard
-                  screenshot={screenshot}
-                  isOwnProfile={user?.id === screenshot.userId}
-                  profile={screenshot.user}
-                  onDelete={(id) => deleteScreenshotMutation.mutate(id)}
-                  onSelect={setSelectedScreenshot}
-                  showUserInfo={true}
-                />
-              </div>
-            ))}
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-20">
+          {trendingScreenshots.map((screenshot) => (
+            <ScreenshotCard
+              key={screenshot.id}
+              screenshot={screenshot}
+              isOwnProfile={user?.id === screenshot.userId}
+              profile={screenshot.user}
+              onDelete={(id) => deleteScreenshotMutation.mutate(id)}
+              onSelect={setSelectedScreenshot}
+              showUserInfo={true}
+            />
+          ))}
         </div>
       );
     }
@@ -1636,10 +1593,10 @@ const TrendingPage: React.FC = () => {
         );
       }
 
-      // Desktop: 1 row with 4 columns filling the page — clicking opens the Shorts viewer
+      // Desktop: multi-row grid — clicking opens the Shorts viewer
       return (
-        <div className="grid grid-cols-4 gap-4 w-full">
-          {trendingReels.slice(0, 4).map((reel) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 w-full pb-20">
+          {trendingReels.map((reel) => (
             <ReelCard
               key={reel.id}
               reel={reel}
