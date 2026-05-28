@@ -13,45 +13,65 @@ export function GamefolioNotificationIcon({
 }: GamefolioNotificationIconProps) {
   const isActive = hasUnread || isOpen;
   const color = isActive ? "#B7FF18" : "#9CA3AF";
-  const glow = isActive ? "drop-shadow(0 0 5px rgba(183,255,26,0.55))" : "none";
+  const glow = isActive
+    ? "drop-shadow(0 0 5px rgba(183,255,26,0.55))"
+    : "none";
 
   return (
-    <span className={cn("relative inline-flex items-center justify-center", className)}>
+    <span
+      className={cn(
+        "relative inline-flex items-center justify-center",
+        className
+      )}
+    >
       <svg
         viewBox="0 0 24 24"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className="w-full h-full"
       >
-        {/* Bold outer circle — thick 3px stroke, strong silhouette */}
-        <circle
-          cx="12"
-          cy="12"
-          r="9"
-          stroke={color}
-          strokeWidth="3"
-          fill="none"
-          className="transition-all duration-300"
-          style={{ filter: glow }}
-        />
-
-        {/* Bold inner ring — slightly offset at 12 o'clock gap */}
+        {/* Bold squared bell body — thick 2.5px stroke, geometric */}
         <path
-          d="M12 6 A6 6 0 1 1 11.9 6"
+          d="M5 16 L5 10 C5 6.1 8.1 3 12 3 C15.9 3 19 6.1 19 10 L19 16"
           stroke={color}
           strokeWidth="2.5"
           strokeLinecap="round"
+          strokeLinejoin="round"
           fill="none"
           className="transition-all duration-300"
           style={{ filter: glow }}
         />
 
-        {/* Solid centre dot — bold, prominent */}
-        <circle
-          cx="12"
-          cy="12"
-          r="3"
-          fill={color}
+        {/* Flat bottom bar — squared, geometric */}
+        <path
+          d="M3 16 L21 16"
+          stroke={color}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          className="transition-all duration-300"
+          style={{ filter: glow }}
+        />
+
+        {/* Angular clapper / bottom block — small square-ish nub */}
+        <path
+          d="M10 16 L10 18 C10 19.1 10.9 20 12 20 C13.1 20 14 19.1 14 18 L14 16"
+          stroke={color}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+          className="transition-all duration-300"
+          style={{ filter: glow }}
+        />
+
+        {/* Top handle — angular, squared */}
+        <path
+          d="M10 3 L10 1.5 C10 1.2 10.2 1 10.5 1 L13.5 1 C13.8 1 14 1.2 14 1.5 L14 3"
+          stroke={color}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
           className="transition-all duration-300"
           style={{ filter: glow }}
         />
