@@ -462,8 +462,8 @@ function Router() {
 
           {/* Protected routes requiring authentication */}
           <Route path="/explore" component={ExplorePage} />
-          <ProtectedRoute path="/games/:gameSlug" component={GamePage} />
-          <ProtectedRoute path="/games/:gameId/clips" component={GameClipsPage} />
+          <Route path="/games/:gameSlug" component={GamePage} />
+          <Route path="/games/:gameId/clips" component={GameClipsPage} />
           <ProtectedRoute path="/hashtag/:hashtag" component={HashtagPage} />
           <ProtectedRoute path="/upload" component={UploadPage} />
           <ProtectedRoute path="/upload/screenshots" component={ScreenshotUploadPage} />
@@ -472,8 +472,8 @@ function Router() {
           <ProtectedRoute path="/account/settings" component={AccountSettingsPage} />
           <ProtectedRoute path="/customize" component={CustomizePage} />
           <ProtectedRoute path="/settings/profile" component={SettingsPage} />
-          <ProtectedRoute path="/browse/games/:category" component={GameCategoriesPage} />
-          <ProtectedRoute path="/browse/games/categories" component={GameCategoriesPage} />
+          <Route path="/browse/games/:category" component={GameCategoriesPage} />
+          <Route path="/browse/games/categories" component={GameCategoriesPage} />
           <Route path="/leaderboard" component={LeaderboardPage} />
           <ProtectedRoute path="/messages" component={MessagesPage} />
           <Route path="/latest-reels" component={LatestReelsPage} />
