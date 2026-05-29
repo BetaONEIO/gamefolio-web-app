@@ -350,27 +350,25 @@ export const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => 
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: '#03080A' }}>
-      {/* Top bar — back button (mobile only) */}
-      {isMobile && (
-        <div
-          className="flex-shrink-0 flex items-center px-4 pb-3"
-          style={{
-            background: '#03080A',
-            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
-          }}
+    <div className="fixed inset-0 z-[100001] flex flex-col" style={{ background: '#03080A' }}>
+      {/* Top bar — back button */}
+      <div
+        className="flex-shrink-0 flex items-center px-4 pb-3"
+        style={{
+          background: '#03080A',
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 56px)',
+        }}
+      >
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-full transition-colors active:scale-95"
+          style={{ background: 'rgba(191,255,0,0.15)', border: '1px solid rgba(191,255,0,0.4)', color: '#BFFF00' }}
+          aria-label="Back"
         >
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 px-3 py-2 rounded-full transition-colors active:scale-95"
-            style={{ background: 'rgba(255,255,255,0.12)', color: '#F5F7F2' }}
-            aria-label="Back"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            <span className="text-sm font-semibold">Back</span>
-          </button>
-        </div>
-      )}
+          <ArrowLeft className="h-5 w-5" />
+          <span className="text-sm font-bold">Back</span>
+        </button>
+      </div>
 
       {/* Snap-scrolling feed */}
       <div
