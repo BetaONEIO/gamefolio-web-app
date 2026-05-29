@@ -303,6 +303,7 @@ const DesktopShortsViewer: React.FC<{
           onClick={onClose}
           className="group"
           aria-label="Back to Trending"
+          style={{ paddingTop: '72px' }}
         >
           <ChevronLeft className="h-8 w-8 text-white/80 group-hover:text-white transition-colors" strokeWidth={2} />
         </button>
