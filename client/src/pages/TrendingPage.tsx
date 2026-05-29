@@ -201,7 +201,8 @@ const DesktopShortsViewer: React.FC<{
       return res.json();
     },
     onSuccess: (_, { clipId }) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/clips', clipId, 'comments'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clips/${clipId}/comments`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
       setInlineComment('');
     },
   });
