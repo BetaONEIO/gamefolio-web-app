@@ -356,7 +356,7 @@ export const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => 
         className="flex-shrink-0 flex items-center px-4 pb-2"
         style={{
           background: '#03080A',
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 72px)',
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 140px)',
         }}
       >
         <button
