@@ -1268,6 +1268,7 @@ const TrendingPage: React.FC = () => {
               reel={reel}
               reelsList={trendingReels}
               onOpenViewer={(index) => {
+                setDesktopShortsLandscape(false);
                 setDesktopShortsClips(trendingReels);
                 setDesktopShortsIndex(index);
                 setDesktopShortsOpen(true);
