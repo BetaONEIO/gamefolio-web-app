@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Video, Film, ChevronLeft, ChevronRight } from "lucide-react";
+import { Video, Film, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { RecommendedIcon } from "@/components/icons/RecommendedIcon";
 import { Link } from "wouter";
 import { ClipWithUser } from "@shared/schema";
@@ -11,6 +11,14 @@ import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { LazyImage } from "@/components/ui/lazy-image";
+import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
+
+const formatNumber = (num: number) => {
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+  return num.toString();
+};
 
 interface RecommendedForYouProps {
   userId?: number;
@@ -302,17 +310,79 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
                 <div
                   key={`recommended-clip-${clip.id}`}
                   className={contentType === 'reels'
-                    ? "w-56 sm:w-64 lg:w-72 xl:w-80 flex-shrink-0"
+                    ? "w-40 sm:w-48 lg:w-56 xl:w-64 flex-shrink-0"
                     : "w-[280px] sm:w-[320px] md:w-[400px] lg:w-[480px] flex-shrink-0"
                   }
                 >
-                  <VideoClipGridItem
-                    clip={clip}
-                    userId={actualUserId}
-                    data-testid={`clip-recommended-${clip.id}`}
-                    compact={false}
-                    onCardClick={() => handleCardClick(clip)}
-                  />
+                  {contentType === 'reels' ? (
+                    <div
+                      onClick={() => handleCardClick(clip)}
+                      className="group relative bg-black rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
+                      data-testid={`clip-recommended-${clip.id}`}
+                    >
+                      <div className="relative w-full h-full">
+                        <LazyImage
+                          src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
+                          alt={clip.title}
+                          className="w-full h-full object-cover"
+                          showLoadingSpinner={true}
+                          rootMargin="100px"
+                          threshold={0.1}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <div className="bg-white/20 backdrop-blur-sm rounded-full p-4">
+                            <svg className="w-8 h-8 text-white fill-white" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z"/>
+                            </svg>
+                          </div>
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 p-3">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <div className="w-6 h-6 rounded-full overflow-hidden border-2 border-white/50 flex-shrink-0">
+                              <img
+                                src={clip.user.avatarUrl || '/uploaded_assets/gamefolio-logo-green.png'}
+                                alt={clip.user.displayName}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <ProfileHoverCard username={clip.user.username}>
+                              <span className="text-white text-xs font-medium cursor-default truncate">
+                                {clip.user.displayName || clip.user.username}
+                              </span>
+                            </ProfileHoverCard>
+                          </div>
+                          <h3 className="text-white font-semibold text-xs mb-1.5 line-clamp-2 leading-tight">
+                            {clip.title}
+                          </h3>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-white/80 text-xs">
+                              <span className="flex items-center gap-1">
+                                <Eye className="h-3 w-3" />
+                                {formatNumber(clip.views || 0)}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                ♥ {formatNumber(parseInt(clip._count?.likes?.toString() || '0'))}
+                              </span>
+                            </div>
+                            {clip.game && (
+                              <div className="bg-primary text-[#071013] text-[10px] px-1.5 py-0.5 rounded-full truncate max-w-[70px]">
+                                {clip.game.name}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <VideoClipGridItem
+                      clip={clip}
+                      userId={actualUserId}
+                      data-testid={`clip-recommended-${clip.id}`}
+                      compact={false}
+                      onCardClick={() => handleCardClick(clip)}
+                    />
+                  )}
                 </div>
               ))}
             </div>

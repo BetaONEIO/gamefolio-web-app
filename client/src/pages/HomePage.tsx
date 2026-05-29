@@ -566,7 +566,7 @@ const HomePage = () => {
       </section>
 
       {/* Ecosystem Activity Rail */}
-      <EcosystemActivityRail />
+      {/* <EcosystemActivityRail /> */}
       
       {/* Latest Clips Section */}
       <section className="px-0">
@@ -874,18 +874,18 @@ const HomePage = () => {
       </section>
 
       {/* Daily XP Challenges */}
-      <DailyXPChallenges />
+      {/* <DailyXPChallenges /> */}
 
       {/* Live Streams Section */}
-      <LiveStreamsSection />
+      {/* <LiveStreamsSection /> */}
 
       {/* Recommended for You Section - Only show for authenticated users */}
       {user && <RecommendedForYou userId={user.id} />}
       
       {/* Trending Gamefolios Section */}
-      <section className="mt-16 px-0">
+      {/* <section className="mt-16 px-0">
         <FeaturedUsersSection />
-      </section>
+      </section> */}
 
       {/* Trending Games Section */}
       <section className="mt-16 px-0">

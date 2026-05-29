@@ -662,7 +662,7 @@ const HomePage = () => {
       )}
 
       {/* Ecosystem Activity Rail */}
-      <EcosystemActivityRail />
+      {/* <EcosystemActivityRail /> */}
       
       <div className="space-y-4 sm:space-y-6 md:space-y-8 mt-4 sm:mt-6 md:mt-8">
       {/* Recommended for You Section - only for logged-in users */}
@@ -804,21 +804,21 @@ const HomePage = () => {
       </LazySection>
 
       {/* Daily XP Challenges */}
-      <LazySection minHeight="280px" rootMargin="200px">
+      {/* <LazySection minHeight="280px" rootMargin="200px">
         <div className="px-4 sm:px-6 md:px-8">
           <DailyXPChallenges />
         </div>
-      </LazySection>
+      </LazySection> */}
 
       {/* Live Streams Now */}
-      <LazySection minHeight="280px" rootMargin="200px">
+      {/* <LazySection minHeight="280px" rootMargin="200px">
         <div className="px-4 sm:px-6 md:px-8">
           <LiveStreamsSection />
         </div>
-      </LazySection>
+      </LazySection> */}
 
       {/* Trending Gamefolios */}
-      <LazySection minHeight="260px" rootMargin="200px">
+      {/* <LazySection minHeight="260px" rootMargin="200px">
         <section className="px-4 sm:px-6 md:px-8 pb-10">
           <div className="flex justify-between items-center mb-5">
             <div className="flex items-center gap-2">
@@ -831,7 +831,7 @@ const HomePage = () => {
           </div>
           <FeaturedUsersSection />
         </section>
-      </LazySection>
+      </LazySection> */}
 
       </div>
 
