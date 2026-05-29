@@ -1469,26 +1469,22 @@ const TrendingPage: React.FC = () => {
             }}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0"
             style={{
-              border: `2px solid ${(controlsVisible || !!selectedGameId) ? '#B7FF1A' : 'rgba(100,116,139,0.5)'}`,
-              background: (controlsVisible || !!selectedGameId) ? 'rgba(183,255,26,0.12)' : 'rgba(30,41,59,0.7)',
+              border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.5)'}`,
+              background: 'rgba(30,41,59,0.7)',
               order: orderEye,
             }}
           >
-            <Eye className="h-5 w-5" style={{ color: (controlsVisible || !!selectedGameId) ? '#B7FF1A' : 'rgba(100,116,139,0.7)' }} />
+            <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.7)' }} />
           </button>
 
-          {/* 2. Content-type pill (Clips ▼) */}
+          {/* 2. Content-type pill — always visible to show current selection */}
           <div
             className="relative flex items-center justify-end flex-shrink-0"
             style={{
-              opacity: controlsVisible ? 1 : 0,
-              transform: controlsVisible ? visibleTransform : hiddenTransform,
-              pointerEvents: controlsVisible ? 'auto' : 'none',
-              maxWidth: controlsVisible ? '200px' : '0',
-              overflow: controlsVisible ? 'visible' : 'hidden',
-              transition: controlsVisible && isClipsMode
-                ? `${itemTransition}, max-width 0.25s ease 60ms`
-                : `${itemTransition}, max-width 0.25s ease`,
+              opacity: 1,
+              pointerEvents: 'auto',
+              maxWidth: '200px',
+              overflow: 'visible',
               order: orderContentPill,
             }}
           >
