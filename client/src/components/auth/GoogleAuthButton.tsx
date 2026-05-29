@@ -60,10 +60,12 @@ export function GoogleAuthButton({ disabled = false }: GoogleAuthButtonProps) {
         return;
       }
 
-      // Web: signInWithRedirect — page navigates to Google and returns.
-      // The result is handled by getRedirectResult in use-auth.tsx after the
-      // redirect. Nothing to do here; loading stays true until navigation.
+      // Web: signInWithPopup — opens a Google sign-in popup. Firebase fires
+      // onAuthStateChanged in use-auth.tsx once the popup completes, which
+      // calls /api/auth/google and navigates. Loading ends here since the
+      // page does not navigate.
       await signInWithGoogle();
+      setIsLoading(false);
     } catch (error: any) {
       console.error('Google sign-in error details:', {
         message: error?.message,
@@ -86,6 +88,14 @@ export function GoogleAuthButton({ disabled = false }: GoogleAuthButtonProps) {
           description: "Google sign-in needs to be enabled. Please use username/password to log in.",
           variant: "gamefolioError",
         });
+      } else if (code === 'auth/popup-blocked') {
+        toast({
+          title: "Popup Blocked",
+          description: "Please allow popups for this site and try again.",
+          variant: "gamefolioError",
+        });
+      } else if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        // User closed the popup themselves — no toast needed
       } else if (code === 'auth/network-request-failed') {
         toast({
           title: "Network Error",
