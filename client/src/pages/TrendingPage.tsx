@@ -1854,24 +1854,45 @@ const TrendingPage: React.FC = () => {
         <div className="bg-card/50 dark:bg-card/30 backdrop-blur-sm border-b border-border mb-0 md:mb-6 md:rounded-xl md:border sticky top-0 z-30">
           <div className="px-4 py-3 md:py-4">
             <TabsList className="grid w-full grid-cols-3 bg-slate-800/90 dark:bg-slate-900/90 p-1 rounded-xl h-auto">
-              <TabsTrigger 
-                value="clips" 
+              <TabsTrigger
+                value="clips"
                 className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70 rounded-lg px-4 py-2.5 md:py-3 text-sm md:text-base font-medium transition-all"
                 data-testid="tab-clips"
+                onClick={() => {
+                  if (!isMobile && trendingClips?.length) {
+                    setDesktopShortsLandscape(true);
+                    setDesktopShortsClips(trendingClips);
+                    setDesktopShortsIndex(0);
+                    setDesktopShortsOpen(true);
+                  }
+                }}
               >
                 Clips
               </TabsTrigger>
-              <TabsTrigger 
-                value="reels" 
+              <TabsTrigger
+                value="reels"
                 className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70 rounded-lg px-4 py-2.5 md:py-3 text-sm md:text-base font-medium transition-all"
                 data-testid="tab-reels"
+                onClick={() => {
+                  if (!isMobile && trendingReels?.length) {
+                    setDesktopShortsLandscape(false);
+                    setDesktopShortsClips(trendingReels);
+                    setDesktopShortsIndex(0);
+                    setDesktopShortsOpen(true);
+                  }
+                }}
               >
                 Reels
               </TabsTrigger>
-              <TabsTrigger 
-                value="screenshots" 
+              <TabsTrigger
+                value="screenshots"
                 className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70 rounded-lg px-4 py-2.5 md:py-3 text-sm md:text-base font-medium transition-all"
                 data-testid="tab-screenshots"
+                onClick={() => {
+                  if (!isMobile && trendingScreenshots?.length) {
+                    setSelectedScreenshot(trendingScreenshots[0] as ScreenshotWithUser);
+                  }
+                }}
               >
                 Screenshots
               </TabsTrigger>
