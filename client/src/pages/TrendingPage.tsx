@@ -309,9 +309,6 @@ const DesktopShortsViewer: React.FC<{
         >
           <ChevronLeft className="h-8 w-8 text-white/80 group-hover:text-white transition-colors" strokeWidth={2} />
         </button>
-        <span className="text-white/35 text-sm font-mono select-none">
-          {currentIndex + 1} / {clips.length}
-        </span>
       </div>
 
       {/* Main area — fills remaining height */}
