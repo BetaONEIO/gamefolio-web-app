@@ -23,6 +23,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
 import { eq, sql, desc, inArray, and } from "drizzle-orm";
+import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
 import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory } from "@shared/schema";
 
@@ -929,7 +930,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Google authentication route
   app.post("/api/auth/google", async (req, res) => {
     try {
-      const { email, displayName, photoURL, uid } = req.body;
+      const { idToken } = req.body;
+
+      if (!idToken) {
+        return res.status(400).json({ message: "Missing required Google auth data" });
+      }
+
+      // Verify the Firebase ID token server-side — do not trust client-supplied fields
+      let claims: Awaited<ReturnType<typeof verifyFirebaseIdToken>>;
+      try {
+        claims = await verifyFirebaseIdToken(idToken);
+      } catch (err) {
+        console.error("Firebase token verification failed:", err);
+        return res.status(401).json({ message: "Invalid or expired Google token" });
+      }
+
+      const { uid, email, name: displayName, picture: photoURL } = claims;
 
       if (!email || !uid) {
         return res.status(400).json({ message: "Missing required Google auth data" });

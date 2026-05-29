@@ -117,11 +117,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       processedUid.current = firebaseUser.uid;
 
       try {
+        const idToken = await firebaseUser.getIdToken();
         const response = await apiRequest("POST", "/api/auth/google", {
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-          photoURL: firebaseUser.photoURL,
-          uid: firebaseUser.uid
+          idToken
         });
 
         if (!mounted) return;
