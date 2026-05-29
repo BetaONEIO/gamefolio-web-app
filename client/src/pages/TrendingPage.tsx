@@ -1491,9 +1491,9 @@ const TrendingPage: React.FC = () => {
             <button
               onClick={() => { setShowContentDropdown(!showContentDropdown); setShowTimeDropdown(false); setShowGameFilter(false); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:shadow-[0_0_12px_rgba(183,255,26,0.35)]"
-              style={isClipsMode
-                ? pillBaseStyle(showContentDropdown)
-                : { background: 'rgba(30,41,59,0.88)', border: '1px solid rgba(183, 255, 26,0.4)', color: '#fff' }}
+              style={showContentDropdown
+                ? pillBaseStyle(true)
+                : { background: 'rgba(11,18,24,0.82)', border: '1px solid rgba(183,255,26,0.4)', color: '#F5F7F2' }}
             >
               <ActiveIcon className="h-3.5 w-3.5" />
               {activeLabel}
