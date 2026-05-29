@@ -342,6 +342,8 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
 };
 
 export const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void; viewAllHref?: string }> = ({ clips, onBack }) => {
+  const isMobile = useMobile();
+
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
@@ -352,7 +354,12 @@ export const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => 
       {/* Top bar — back button */}
       <div
         className="flex-shrink-0 flex items-center px-4 pb-3"
-        style={{ background: '#03080A', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+        style={{
+          background: '#03080A',
+          paddingTop: isMobile
+            ? 'calc(env(safe-area-inset-top, 0px) + 12px)'
+            : '72px',
+        }}
       >
         <button
           onClick={onBack}
