@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
 import { ArrowLeft, Heart, MessageCircle, User, Play, Pause, Flag, BarChart2, Gamepad2, X, Send, MoreHorizontal } from "lucide-react";
+import { StyledMentionInput } from "@/components/ui/mention-input";
 import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
@@ -649,54 +650,51 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               )}
             </div>
 
-            {/* Sticky comment input — always visible at bottom of sheet */}
+            {/* Sticky comment form — always visible at bottom of sheet */}
             <div
-              className="flex-shrink-0 px-3 py-2"
+              className="flex-shrink-0 px-3 pt-3"
               style={{
                 borderTop: '1px solid rgba(255,255,255,0.07)',
                 background: '#0B1218',
-                paddingBottom: 'max(env(safe-area-inset-bottom, 8px), 8px)',
+                paddingBottom: 'max(env(safe-area-inset-bottom, 12px), 12px)',
               }}
             >
               {user ? (
-                <div className="flex items-center gap-2">
-                  <CustomAvatar user={user} size="sm" showBorder={false} />
-                  <div
-                    className="flex-1 flex items-center gap-2 rounded-full px-3 py-1.5"
-                    style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}
-                  >
-                    <input
-                      type="text"
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-1">
+                    <CustomAvatar user={user} size="sm" showBorder={false} />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <StyledMentionInput
                       value={inlineComment}
-                      onChange={(e) => setInlineComment(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey && inlineComment.trim() && isVideoContent(currentItem)) {
-                          e.preventDefault();
-                          createCommentMutation.mutate(
-                            { clipId: currentItem.id, text: inlineComment },
-                            { onSuccess: () => setInlineComment("") }
-                          );
-                        }
-                      }}
-                      placeholder="Add a comment…"
-                      className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/35 min-w-0"
-                      data-testid="input-comment-inline"
-                    />
-                    <button
-                      onClick={() => {
+                      onChange={setInlineComment}
+                      onSubmit={() => {
                         if (!inlineComment.trim() || !isVideoContent(currentItem)) return;
                         createCommentMutation.mutate(
                           { clipId: currentItem.id, text: inlineComment },
                           { onSuccess: () => setInlineComment("") }
                         );
                       }}
-                      disabled={!inlineComment.trim() || createCommentMutation.isPending}
-                      className="flex-shrink-0 transition-opacity disabled:opacity-30"
-                      style={{ color: '#B7FF1A' }}
-                      data-testid="button-post-comment-inline"
-                    >
-                      <Send className="h-4 w-4" />
-                    </button>
+                      placeholder="Add a comment... Use @username to mention other users!"
+                      className="min-h-[60px] text-sm resize-none rounded-xl"
+                      data-testid="input-comment-inline"
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        disabled={!inlineComment.trim() || createCommentMutation.isPending}
+                        onClick={() => {
+                          if (!inlineComment.trim() || !isVideoContent(currentItem)) return;
+                          createCommentMutation.mutate(
+                            { clipId: currentItem.id, text: inlineComment },
+                            { onSuccess: () => setInlineComment("") }
+                          );
+                        }}
+                        data-testid="button-post-comment-inline"
+                      >
+                        {createCommentMutation.isPending ? "Posting..." : "Post Comment"}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ) : (
