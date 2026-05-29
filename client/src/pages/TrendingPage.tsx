@@ -490,11 +490,13 @@ const DesktopShortsViewer: React.FC<{
             </ProfileHoverCard>
           </div>
 
-          {/* Horizontal engagement row */}
+          {/* Horizontal engagement row — icons centred, Eye absolutely pinned right */}
           <div
-            className="flex items-center gap-5 flex-shrink-0 px-4"
+            className="relative flex items-center justify-center w-full flex-shrink-0 px-4"
             style={{ paddingTop: '6px', paddingBottom: '14px' }}
           >
+            {/* Centred engagement icons */}
+            <div className="flex items-center gap-5">
             <LikeButton
               contentId={clip.id}
               contentType="clip"
@@ -561,8 +563,9 @@ const DesktopShortsViewer: React.FC<{
             <div onClick={(e) => e.stopPropagation()}>
               <TrendingClipMenu clip={clip} />
             </div>
-            {/* Eye filter — right side; mr-[220px] leaves room for flyout to open rightward */}
-            <div className="relative ml-auto mr-[220px]" onClick={e => e.stopPropagation()}>
+            </div>
+            {/* Eye filter — absolutely pinned; 220px from right leaves room for flyout */}
+            <div className="absolute right-[220px]" onClick={e => e.stopPropagation()}>
               <button
                 onClick={() => { setShowContentDropdown(false); setShowTimeDropdown(false); setControlsVisible(v => !v); }}
                 className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
