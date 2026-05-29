@@ -657,8 +657,10 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
 
             {/* Scrollable comment list with built-in form — same as clips viewer */}
             <div className="flex-1 overflow-y-auto px-4 py-3 pb-5" style={{ minHeight: 0 }}>
-              {isVideoContent(currentItem) && (
+              {isVideoContent(currentItem) ? (
                 <CommentSection clipId={currentItem.id} currentUserId={user?.id} />
+              ) : (
+                <CommentSection screenshotId={currentItem.id} currentUserId={user?.id} />
               )}
             </div>
           </motion.div>

@@ -5,6 +5,7 @@ import { ReportDialog } from '@/components/content/ReportDialog';
 import { LazyImage } from '@/components/ui/lazy-image';
 import { Link } from 'wouter';
 import { ProfileHoverCard } from '@/components/ui/ProfileHoverCard';
+import { useSignedUrl } from '@/hooks/use-signed-url';
 
 interface ScreenshotCardProps {
   screenshot: any;
@@ -14,6 +15,18 @@ interface ScreenshotCardProps {
   onDelete?: (id: number) => void;
   onSelect?: (screenshot: any) => void;
   showUserInfo?: boolean;
+}
+
+function ScreenshotAvatar({ avatarUrl, username }: { avatarUrl?: string | null; username: string }) {
+  const { signedUrl } = useSignedUrl(avatarUrl ?? null);
+  return (
+    <img
+      src={signedUrl || avatarUrl || '/uploaded_assets/gamefolio-logo-green.png'}
+      alt={username}
+      className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-white/10"
+      onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/uploaded_assets/gamefolio-logo-green.png'; }}
+    />
+  );
 }
 
 export function ScreenshotCard({ 
@@ -29,14 +42,14 @@ export function ScreenshotCard({
 
   return (
     <div 
-      className={`relative overflow-hidden group/card cursor-pointer ${
+      className={`group/card cursor-pointer ${
         isHighlighted ? 'ring-2 ring-primary ring-offset-2 ring-offset-background rounded-xl' : ''
       }`}
       id={isHighlighted ? `screenshot-${screenshot.id}` : undefined}
     >
-      {/* Image */}
+      {/* Thumbnail — dark card matching VideoClipCard style */}
       <div 
-        className="aspect-video overflow-hidden rounded-xl bg-black relative"
+        className="relative aspect-video overflow-hidden rounded-xl bg-[#0B1218] border border-[#1B2A33]"
         onClick={() => onSelect?.(screenshot)}
       >
         <LazyImage 
@@ -130,38 +143,45 @@ export function ScreenshotCard({
         )}
       </div>
 
-      {/* Info Section */}
-      <div className="pt-3 pb-1 space-y-1">
-        {showUserInfo && screenshotUser && (
+      {/* Info Section — matches VideoClipCard metadata layout */}
+      <div className="pt-2.5 pb-1 space-y-1.5">
+        {showUserInfo && screenshotUser ? (
           <ProfileHoverCard username={screenshotUser.username}>
-            <Link href={`/profile/${screenshotUser.username}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-              <span className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
-                @{screenshotUser.username}
-              </span>
+            <Link
+              href={`/profile/${screenshotUser.username}`}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+              className="flex items-center gap-2 group/author"
+            >
+              <ScreenshotAvatar avatarUrl={screenshotUser.avatarUrl} username={screenshotUser.username} />
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-medium leading-tight truncate" style={{ color: '#F5F7F2' }}>
+                  {screenshotUser.displayName || screenshotUser.username}
+                </span>
+                <span className="text-[10px] leading-tight" style={{ color: 'rgba(245,247,242,0.45)' }}>
+                  @{screenshotUser.username}
+                </span>
+              </div>
             </Link>
           </ProfileHoverCard>
-        )}
+        ) : null}
 
-        <h3 className="font-semibold text-sm line-clamp-1 leading-tight" style={{ color: '#F5F7F2' }}>
+        <h3 className="font-semibold text-sm line-clamp-2 leading-tight" style={{ color: '#F5F7F2' }}>
           {screenshot.title}
         </h3>
 
         {(screenshot as any).game && (
-          <div className="pt-0.5">
-            <Link
-              href={`/games/${(screenshot as any).game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          <Link
+            href={`/games/${(screenshot as any).game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          >
+            <span
+              className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded hover:opacity-90 transition-opacity mt-0.5"
+              style={{ background: '#B7FF1A', color: '#071013' }}
             >
-              <span
-                className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded hover:opacity-90 transition-opacity"
-                style={{ background: '#B7FF1A', color: '#071013' }}
-              >
-                {(screenshot as any).game.name}
-              </span>
-            </Link>
-          </div>
+              {(screenshot as any).game.name}
+            </span>
+          </Link>
         )}
-
       </div>
     </div>
   );

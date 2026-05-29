@@ -51,11 +51,12 @@ function CommentAvatar({ avatarUrl, username }: { avatarUrl: string | null | und
 }
 
 interface CommentSectionProps {
-  clipId: number;
+  clipId?: number;
+  screenshotId?: number;
   currentUserId?: number | null;
-  onUsernameClick?: () => void; // Function to close parent dialog
-  highlightCommentId?: number | null; // Comment ID to highlight
-  hideForm?: boolean; // When true, hides the comment input form (used in bottom-sheet mode)
+  onUsernameClick?: () => void;
+  highlightCommentId?: number | null;
+  hideForm?: boolean;
 }
 
 interface CommentLikeButtonProps {
@@ -114,7 +115,7 @@ function CommentLikeButton({ commentId, isLoggedIn, onNotLoggedIn }: CommentLike
   );
 }
 
-const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightCommentId, hideForm = false }: CommentSectionProps) => {
+const CommentSection = ({ clipId, screenshotId, currentUserId = 1, onUsernameClick, highlightCommentId, hideForm = false }: CommentSectionProps) => {
   const [newComment, setNewComment] = useState("");
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null);
   
@@ -122,18 +123,43 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
 
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const apiBase = screenshotId
+    ? `/api/screenshots/${screenshotId}/comments`
+    : `/api/clips/${clipId}/comments`;
   
   const { data: comments, isLoading } = useQuery<CommentWithUser[]>({
-    queryKey: [`/api/clips/${clipId}/comments`],
+    queryKey: [apiBase],
     queryFn: async () => {
-      const res = await fetch(`/api/clips/${clipId}/comments`, { credentials: "include" });
+      const res = await fetch(apiBase, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch comments");
       return res.json();
     },
+    enabled: !!(screenshotId || clipId),
   });
   
   const createCommentMutation = useCreateComment();
   const deleteCommentMutation = useDeleteComment();
+
+  const screenshotCreateMutation = useMutation({
+    mutationFn: async (data: { screenshotId: number; text: string }) => {
+      const res = await apiRequest("POST", `/api/screenshots/${data.screenshotId}/comments`, { content: data.text });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [apiBase] });
+    },
+  });
+
+  const screenshotDeleteMutation = useMutation({
+    mutationFn: async (data: { screenshotId: number; commentId: number }) => {
+      await apiRequest("DELETE", `/api/screenshots/${data.screenshotId}/comments/${data.commentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [apiBase] });
+    },
+  });
 
   // Use the authenticated user data
   const currentUser = user;
@@ -167,15 +193,18 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
       });
       return;
     }
-    
-    createCommentMutation.mutate({
-      clipId,
-      text: newComment
-    }, {
-      onSuccess: () => {
-        setNewComment("");
-      }
-    });
+
+    if (screenshotId) {
+      screenshotCreateMutation.mutate(
+        { screenshotId, text: newComment },
+        { onSuccess: () => setNewComment("") }
+      );
+    } else {
+      createCommentMutation.mutate(
+        { clipId: clipId!, text: newComment },
+        { onSuccess: () => setNewComment("") }
+      );
+    }
   };
 
   const handleSubmitComment = (e: React.FormEvent) => {
@@ -184,12 +213,17 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
   };
 
   const handleDeleteComment = (commentId: number) => {
-    deleteCommentMutation.mutate({
-      commentId,
-      clipId
-    });
+    if (screenshotId) {
+      screenshotDeleteMutation.mutate({ screenshotId, commentId });
+    } else {
+      deleteCommentMutation.mutate({ commentId, clipId: clipId! });
+    }
     setCommentToDelete(null);
   };
+
+  const isSubmitting = screenshotId
+    ? screenshotCreateMutation.isPending
+    : createCommentMutation.isPending;
 
   if (isLoading) {
     return (
@@ -337,10 +371,10 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                   type="submit" 
                   variant="default"
                   size="sm"
-                  disabled={!newComment.trim() || createCommentMutation.isPending}
+                  disabled={!newComment.trim() || isSubmitting}
                   data-testid="button-post-comment"
                 >
-                  {createCommentMutation.isPending ? "Posting..." : "Post Comment"}
+                  {isSubmitting ? "Posting..." : "Post Comment"}
                 </Button>
               </div>
             </div>
