@@ -992,7 +992,7 @@ h1, h2, h3 {
 .stinger-overlay {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 100000;
   background: #0B1319;
   overflow: hidden;
   pointer-events: none;
@@ -1045,7 +1045,7 @@ h1, h2, h3 {
   filter: drop-shadow(0 0 20px rgba(183, 255, 24, 0.55));
   pointer-events: none;
   user-select: none;
-  z-index: 10001;
+  z-index: 100002;
   animation: stinger-logo-fade 850ms ease-in-out forwards;
 }
 
