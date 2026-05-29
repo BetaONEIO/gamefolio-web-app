@@ -266,27 +266,27 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
 
         {filteredContent.length > 0 ? (
           <div className="relative">
-            {/* Navigation Arrows (all screen sizes) */}
+            {/* Navigation Arrows (desktop only) */}
             <button
               onClick={() => canScrollLeft && scroll('left')}
-              className={`absolute -left-3 top-1/2 -translate-y-1/2 z-10 text-white p-2 sm:p-2.5 rounded-full transition-colors flex items-center justify-center shadow-lg ${
+              className={`absolute -left-5 top-1/2 -translate-y-1/2 z-10 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg ${
                 canScrollLeft ? 'bg-black/70 hover:bg-black/90 cursor-pointer' : 'bg-black/20 cursor-not-allowed opacity-40'
               }`}
               disabled={!canScrollLeft}
               data-testid="button-recommended-scroll-left"
             >
-              <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+              <ChevronLeft className="h-5 w-5" />
             </button>
 
             <button
               onClick={() => canScrollRight && scroll('right')}
-              className={`absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-white p-2 sm:p-2.5 rounded-full transition-all flex items-center justify-center shadow-lg ${
+              className={`absolute -right-5 top-1/2 -translate-y-1/2 z-10 text-white p-2.5 rounded-full transition-all hidden sm:flex items-center justify-center shadow-lg ${
                 canScrollRight ? 'bg-black/70 hover:bg-black/90 cursor-pointer' : 'bg-black/20 cursor-not-allowed opacity-40'
               }`}
               disabled={!canScrollRight}
               data-testid="button-recommended-scroll-right"
             >
-              <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+              <ChevronRight className="h-5 w-5" />
             </button>
 
             {/* Carousel */}
