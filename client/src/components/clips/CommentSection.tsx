@@ -15,6 +15,7 @@ import { Link } from "wouter";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { Trash2 } from "lucide-react";
 import { PixelHeartReaction } from "@/components/ui/PixelHeartReaction";
+import { EmojiPickerButton } from "@/components/ui/EmojiPickerButton";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
 import { PartnerBadge } from "@/components/ui/partner-badge";
@@ -330,7 +331,8 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                 className="min-h-[60px] text-sm resize-none rounded-xl"
                 data-testid="input-comment"
               />
-              <div className="flex justify-end">
+              <div className="flex justify-end items-center gap-2">
+                <EmojiPickerButton onEmojiSelect={(emoji) => setNewComment((prev) => prev + emoji)} />
                 <Button 
                   type="submit" 
                   variant="default"
