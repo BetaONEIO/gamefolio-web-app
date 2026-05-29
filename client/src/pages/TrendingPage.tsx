@@ -320,7 +320,7 @@ const DesktopShortsViewer: React.FC<{
 
       {/* ── Comment panel — slides in from the left ── */}
       <div
-        className="absolute left-0 top-0 bottom-0 z-30 flex flex-col"
+        className="absolute left-0 top-0 bottom-0 z-[55] flex flex-col"
         style={{
           width: '360px',
           background: '#0B1218',
@@ -575,6 +575,62 @@ const DesktopShortsViewer: React.FC<{
                 {selectedGameId ? selectedGameName : 'Games'}
               </span>
             </button>
+
+            {/* Content / time-period switcher — Eye icon opens upward dropdown */}
+            <div className="relative ml-auto" onClick={e => e.stopPropagation()}>
+              <button
+                onClick={() => { setControlsVisible(v => !v); setShowContentDropdown(false); setShowTimeDropdown(false); }}
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-105"
+                aria-label="Filters"
+                style={controlsVisible
+                  ? { background: 'rgba(183,255,26,0.15)', border: '2px solid #B7FF1A' }
+                  : { background: '#0B1218', border: '1px solid #1B2A33' }
+                }
+              >
+                <Eye className="h-4 w-4" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+              </button>
+
+              {controlsVisible && (
+                <div
+                  className="absolute bottom-full mb-2 right-0 rounded-xl overflow-hidden z-50"
+                  style={{ minWidth: '160px', background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
+                >
+                  {/* Time period */}
+                  <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide"
+                    style={{ color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                    Time Period
+                  </p>
+                  {(Object.entries(timeMeta) as [TimePeriod, string][]).map(([period, label]) => (
+                    <button
+                      key={period}
+                      className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                      style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                      onClick={() => { onTimePeriodChange(period); setControlsVisible(false); }}
+                    >
+                      {label}
+                      {timePeriod === period && <Check className="h-3 w-3 ml-auto" />}
+                    </button>
+                  ))}
+                  {/* Content type */}
+                  <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide"
+                    style={{ color: 'rgba(255,255,255,0.35)', borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                    Content Type
+                  </p>
+                  {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
+                    <button
+                      key={type}
+                      className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                      style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                      onClick={() => { onTabChange(type); setControlsVisible(false); }}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {label}
+                      {activeTab === type && <Check className="h-3 w-3 ml-auto" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </>
       ) : (

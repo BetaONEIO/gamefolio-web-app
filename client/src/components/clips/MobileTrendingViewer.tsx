@@ -601,7 +601,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             animate={{ y: sheetY > 0 ? sheetY : 0 }}
             exit={{ y: "100%" }}
             transition={sheetY > 0 ? { duration: 0 } : { type: "tween", duration: 0.42, ease: [0.32, 0, 0.67, 0] }}
-            className="absolute left-0 right-0 z-30"
+            className="absolute left-0 right-0 z-[55]"
             style={{
               bottom: keyboardHeight,
               height: '70%',
