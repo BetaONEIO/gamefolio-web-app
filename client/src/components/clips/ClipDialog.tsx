@@ -246,6 +246,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
       setAgeRestrictionAccepted(false);
       setShowAgeRestrictionDialog(false);
       setIsPortraitClip(false);
+      setStickyComment("");
     }
   }, [clipId, previousClipId]);
 
@@ -551,8 +552,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogPortal>
-        {/* Custom overlay that leaves footer visible on mobile reels */}
-        <DialogOverlay className={cn(
+        {/* Custom overlay - no animation */}
+        <DialogPrimitive.Overlay className={cn(
+          "fixed inset-0 z-[9999] bg-black/80",
           isMobile && clip?.videoType === 'reel' && "h-[calc(100dvh-64px)] bottom-auto"
         )} />
         <DialogPrimitive.Content
@@ -645,7 +647,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           )}
           {/* Close button */}
           <DialogClose className={cn(
-            "rounded-full ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
+            "rounded-full ring-offset-background transition-opacity focus:outline-none disabled:pointer-events-none",
             isMobile 
               ? "p-3 bg-black/60 backdrop-blur-sm hover:bg-black/80 opacity-100"
               : "p-2 opacity-70 hover:opacity-100"
