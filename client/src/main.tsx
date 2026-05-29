@@ -47,7 +47,7 @@ if (adsenseClientId) {
 }
 
 // Set page title
-document.title = "Gamefolio - Share Your Gaming Moments";
+document.title = "Gamefolio";
 
 // Add meta description for SEO
 const metaDescription = document.createElement('meta');
