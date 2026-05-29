@@ -1,9 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
-import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
-import { useMobile } from "@/hooks/use-mobile";
-import { TrendingSection } from "@/components/trending/TrendingSection";
+import VideoClipCard from "@/components/clips/VideoClipCard";
 
 import { Button } from "@/components/ui/button";
 import { ClipWithUser, Game } from "@shared/schema";
@@ -41,9 +38,7 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState(0);
   const [scrollStart, setScrollStart] = useState(0);
-  const [mobileViewer, setMobileViewer] = useState<{ clips: ClipWithUser[]; startId: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const isMobile = useMobile();
 
   const scroll = useCallback((direction: 'left' | 'right') => {
     if (!scrollRef.current) return;
@@ -155,24 +150,14 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
             key={`trending-clip-${clip.id}`} 
             className="flex-shrink-0 w-[280px] sm:w-[320px] md:w-[400px] lg:w-[480px]"
           >
-            <VideoClipGridItem 
+            <VideoClipCard
               clip={clip}
               userId={userId}
-              compact={false}
               clipsList={clips}
-              onCardClick={isMobile ? (clipId, clipsArr) => setMobileViewer({ clips: clipsArr, startId: clipId }) : undefined}
-              viewAllHref="/latest-clips"
             />
           </div>
         ))}
       </div>
-      {mobileViewer && (
-        <MobileTrendingViewer
-          content={mobileViewer.clips}
-          initialIndex={Math.max(0, mobileViewer.clips.findIndex(c => c.id === mobileViewer.startId))}
-          onClose={() => setMobileViewer(null)}
-        />
-      )}
     </div>
   );
 };
