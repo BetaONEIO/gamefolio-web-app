@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { ArrowLeft, Heart, MessageCircle, User, Play, Pause, Flag, BarChart2, Gamepad2, X, Send, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, User, Play, Pause, Flag, BarChart2, Gamepad2, X, MoreHorizontal } from "lucide-react";
 import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/content/ReportDialog";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
-import { useCreateComment } from "@/hooks/use-clips";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 
@@ -110,11 +109,6 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   const [sheetY, setSheetY] = useState(0);
   const sheetDragStartY = useRef(0);
   const sheetIsDragging = useRef(false);
-
-  // Inline comment input state
-  const [inlineComment, setInlineComment] = useState("");
-  const createCommentMutation = useCreateComment();
-  const commentInputRef = useRef<HTMLTextAreaElement>(null);
 
   // Track software keyboard height via visualViewport
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -661,107 +655,10 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               </button>
             </div>
 
-            {/* Scrollable comment list — flex-1 so it fills remaining space above the form */}
-            <div
-              style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 16px' }}
-            >
+            {/* Scrollable comment list with built-in form — same as clips viewer */}
+            <div className="flex-1 overflow-y-auto px-4 py-3 pb-5" style={{ minHeight: 0 }}>
               {isVideoContent(currentItem) && (
-                <CommentSection clipId={currentItem.id} hideForm={true} />
-              )}
-            </div>
-
-            {/* Comment input — flex-shrink-0 so it always stays at the bottom */}
-            <div
-              style={{
-                flexShrink: 0,
-                borderTop: '1px solid rgba(255,255,255,0.07)',
-                background: '#0B1218',
-                padding: '10px 12px',
-                paddingBottom: keyboardHeight > 0 ? '10px' : 'max(env(safe-area-inset-bottom, 10px), 10px)',
-              }}
-            >
-              {user ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ flexShrink: 0 }}>
-                    <CustomAvatar user={user} size="sm" showBorder={false} />
-                  </div>
-                  <textarea
-                    ref={commentInputRef}
-                    value={inlineComment}
-                    onChange={e => setInlineComment(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        if (!inlineComment.trim() || !isVideoContent(currentItem)) return;
-                        createCommentMutation.mutate(
-                          { clipId: currentItem.id, text: inlineComment },
-                          { onSuccess: () => setInlineComment('') }
-                        );
-                      }
-                    }}
-                    placeholder="Add a comment..."
-                    rows={1}
-                    style={{
-                      flex: 1,
-                      resize: 'none',
-                      fontSize: 14,
-                      borderRadius: 999,
-                      padding: '9px 16px',
-                      outline: 'none',
-                      background: 'rgba(255,255,255,0.07)',
-                      color: '#F5F7F2',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      lineHeight: '1.4',
-                      maxHeight: 80,
-                      overflowY: 'auto',
-                      fontFamily: 'inherit',
-                    }}
-                    data-testid="input-comment-inline"
-                  />
-                  <button
-                    disabled={!inlineComment.trim() || createCommentMutation.isPending}
-                    onClick={() => {
-                      if (!inlineComment.trim() || !isVideoContent(currentItem)) return;
-                      createCommentMutation.mutate(
-                        { clipId: currentItem.id, text: inlineComment },
-                        { onSuccess: () => setInlineComment('') }
-                      );
-                    }}
-                    style={{
-                      flexShrink: 0,
-                      width: 36,
-                      height: 36,
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: inlineComment.trim() ? '#B7FF1A' : 'rgba(255,255,255,0.1)',
-                      color: inlineComment.trim() ? '#071013' : 'rgba(255,255,255,0.3)',
-                      border: 'none',
-                      cursor: inlineComment.trim() ? 'pointer' : 'default',
-                    }}
-                    data-testid="button-post-comment-inline"
-                  >
-                    <Send style={{ width: 16, height: 16 }} />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => openModal('login')}
-                  style={{
-                    width: '100%',
-                    textAlign: 'center',
-                    fontSize: 14,
-                    padding: '8px 0',
-                    borderRadius: 999,
-                    background: 'rgba(255,255,255,0.07)',
-                    color: 'rgba(255,255,255,0.5)',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <span style={{ color: '#B7FF1A' }}>Sign in</span> to comment
-                </button>
+                <CommentSection clipId={currentItem.id} currentUserId={user?.id} />
               )}
             </div>
           </motion.div>
