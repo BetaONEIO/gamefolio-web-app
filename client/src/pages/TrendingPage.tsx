@@ -492,7 +492,7 @@ const DesktopShortsViewer: React.FC<{
 
           {/* Horizontal engagement row */}
           <div
-            className="flex items-center gap-5 flex-shrink-0 px-4"
+            className="flex items-center gap-5 flex-shrink-0 pl-4 pr-[220px]"
             style={{ paddingTop: '6px', paddingBottom: '14px' }}
           >
             <LikeButton
@@ -576,7 +576,7 @@ const DesktopShortsViewer: React.FC<{
 
               {controlsVisible && (
                 <div
-                  className="absolute right-full mr-2 top-1/2 -translate-y-1/2 flex flex-row items-center gap-2"
+                  className="absolute left-full ml-2 top-1/2 -translate-y-1/2 flex flex-row items-center gap-2"
                   style={{ pointerEvents: 'auto' }}
                 >
                   {/* Gamepad */}
