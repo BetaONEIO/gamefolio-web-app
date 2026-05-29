@@ -988,86 +988,39 @@ h1, h2, h3 {
   to   { opacity: 0; pointer-events: none; }
 }
 
-/* Stinger transition */
-.stinger-overlay {
+/* Splash loading screen */
+.splash-screen {
   position: fixed;
   inset: 0;
   z-index: 100000;
   background: #0B1319;
-  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
-  animation: stinger-fade-out 200ms ease 850ms forwards;
+  animation: splash-fade-out 400ms ease 1400ms forwards;
 }
 
-.stinger-panel {
-  position: absolute;
-  top: -20%;
-  left: -60%;
-  width: 70%;
-  height: 140%;
-  background: #B7FF18;
-  transform: skewX(-18deg) translateX(0);
-  box-shadow: 0 0 40px rgba(183, 255, 24, 0.45), 0 0 80px rgba(183, 255, 24, 0.25);
-  animation: stinger-swipe 850ms ease-in-out forwards;
-  will-change: transform;
+.splash-logo {
+  width: 210px;
+  height: auto;
+  filter: drop-shadow(0 0 28px rgba(183, 255, 24, 0.7)) drop-shadow(0 0 60px rgba(183, 255, 24, 0.35));
+  animation: splash-logo-in 600ms ease forwards;
 }
 
-.stinger-trail {
-  position: absolute;
-  inset: 0;
-  transform: translateX(-18%);
-  background: rgba(11, 19, 25, 0.75);
-  filter: blur(8px);
-  pointer-events: none;
+@keyframes splash-logo-in {
+  0%   { opacity: 0; transform: scale(0.88); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
-@keyframes stinger-swipe {
-  0% {
-    transform: skewX(-18deg) translateX(0);
-  }
-  100% {
-    transform: skewX(-18deg) translateX(260vw);
-  }
-}
-
-@keyframes stinger-fade-out {
+@keyframes splash-fade-out {
   from { opacity: 1; }
   to   { opacity: 0; }
 }
 
-.stinger-logo {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 210px;
-  height: auto;
-  filter: drop-shadow(0 0 20px rgba(183, 255, 24, 0.55));
-  pointer-events: none;
-  user-select: none;
-  z-index: 100002;
-  animation: stinger-logo-fade 850ms ease-in-out forwards;
-}
-
-@keyframes stinger-logo-fade {
-  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
-  60%  { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
-  85%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .stinger-panel {
-    animation: none;
-  }
-  .stinger-overlay {
-    animation: none;
-    opacity: 0;
-  }
-  .stinger-logo {
-    animation: none;
-    opacity: 0;
-  }
+  .splash-screen { animation: none; opacity: 0; }
+  .splash-logo   { animation: none; }
 }
 
 /* ── DesktopShortsViewer slide animations ── */

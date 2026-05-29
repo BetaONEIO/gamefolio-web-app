@@ -1,65 +1,24 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import logoGreen from "@assets/gamefolio-logo-green.png";
 
-interface StingerTransitionProps {
+interface SplashScreenProps {
   onDone: () => void;
 }
 
-export function SplashScreen({ onDone }: StingerTransitionProps) {
-  const prefersReduced = useRef(
-    typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  ).current;
-
+export function SplashScreen({ onDone }: SplashScreenProps) {
   useEffect(() => {
-    if (prefersReduced) {
-      const t = setTimeout(() => onDone(), 400);
-      return () => clearTimeout(t);
-    }
-
-    // Total transition: ~1050ms (850ms swipe + 200ms fade-out)
-    const t = setTimeout(() => onDone(), 1050);
+    const t = setTimeout(() => onDone(), 1800);
     return () => clearTimeout(t);
-  }, [onDone, prefersReduced]);
-
-  if (prefersReduced) {
-    return (
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 9999,
-          background: "#0B1319",
-          opacity: 0,
-          pointerEvents: "none",
-        }}
-        aria-hidden="true"
-      />
-    );
-  }
+  }, [onDone]);
 
   return (
-    <>
-      <div
-        className="stinger-overlay"
-        aria-hidden="true"
-        onAnimationEnd={(e) => {
-          if (e.animationName === "stinger-fade-out") {
-            onDone();
-          }
-        }}
-      >
-        <div className="stinger-panel">
-          <div className="stinger-trail" />
-        </div>
-      </div>
+    <div className="splash-screen" aria-hidden="true">
       <img
         src={logoGreen}
         alt="Gamefolio"
-        className="stinger-logo"
+        className="splash-logo"
         draggable={false}
-        aria-hidden="true"
       />
-    </>
+    </div>
   );
 }
