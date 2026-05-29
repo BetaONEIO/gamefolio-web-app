@@ -26,6 +26,7 @@ import { LikeButton } from '@/components/engagement/LikeButton';
 import { FireButton } from '@/components/engagement/FireButton';
 import { ReportButton } from '@/components/reporting/ReportButton';
 import { MobileTrendingViewer } from '@/components/clips/MobileTrendingViewer';
+import { MobileScreenshotsViewer } from '@/components/screenshots/MobileScreenshotsViewer';
 import { CustomAvatar } from '@/components/ui/custom-avatar';
 import { ProfileHoverCard } from '@/components/ui/ProfileHoverCard';
 import { Dialog, DialogContent, DialogClose, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -1329,10 +1330,19 @@ const TrendingPage: React.FC = () => {
           </div>
         )}
 
-        {/* ── REELS / SCREENSHOTS: full-screen immersive viewer ─────────── */}
-        {activeTab !== 'clips' && activeContent.length > 0 && !isLoadingContent && (
+        {/* ── SCREENSHOTS: X/Twitter-style scrollable feed (mirrors clips) ── */}
+        {activeTab === 'screenshots' && activeContent.length > 0 && !isLoadingContent && (
+          <MobileScreenshotsViewer
+            key={`screenshots-${selectedGameId ?? 'all'}`}
+            screenshots={trendingScreenshots || []}
+            onBack={() => setLocation('/')}
+          />
+        )}
+
+        {/* ── REELS: full-screen immersive TikTok-style viewer ─────────── */}
+        {activeTab === 'reels' && activeContent.length > 0 && !isLoadingContent && (
           <MobileTrendingViewer
-            key={`${activeTab}-${selectedGameId ?? 'all'}`}
+            key={`reels-${selectedGameId ?? 'all'}`}
             content={activeContent}
             onClose={() => setLocation('/')}
             hideCloseButton={false}
