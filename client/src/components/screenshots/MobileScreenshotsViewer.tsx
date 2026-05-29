@@ -540,7 +540,7 @@ export const MobileScreenshotsViewer: React.FC<{
 
   return (
     <>
-      <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: '#03080A' }}>
+      <div className="fixed inset-0 z-[9999] flex flex-col" style={{ background: '#03080A' }}>
         {/* Top bar — back button */}
         <div
           className="flex-shrink-0 flex items-center px-4 pb-3"
