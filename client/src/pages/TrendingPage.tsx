@@ -189,6 +189,7 @@ const DesktopShortsViewer: React.FC<{
   const [showContentDropdown, setShowContentDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const [inlineComment, setInlineComment] = useState('');
   const wheelCooldown = useRef(false);
   const wheelAccum = useRef(0);
@@ -542,11 +543,24 @@ const DesktopShortsViewer: React.FC<{
               </div>
               <span className="text-sm font-medium text-white/50">{fmt(views)}</span>
             </div>
+            {/* Share */}
+            <button
+              className="flex items-center gap-2 group"
+              onClick={() => setShowShareDialog(true)}
+              aria-label="Share"
+            >
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+                style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              >
+                <ShareLaunchIcon className="h-4 w-4 text-white/70" />
+              </div>
+            </button>
             {/* 3-dot menu */}
             <div onClick={(e) => e.stopPropagation()}>
               <TrendingClipMenu clip={clip} />
             </div>
-            {/* Eye — vertical dropdown, anchored above-right */}
+            {/* Eye — horizontal flyout expanding LEFT */}
             <div className="relative ml-auto" onClick={e => e.stopPropagation()}>
               <button
                 onClick={() => { setShowContentDropdown(false); setShowTimeDropdown(false); setControlsVisible(v => !v); }}
@@ -561,55 +575,80 @@ const DesktopShortsViewer: React.FC<{
 
               {controlsVisible && (
                 <div
-                  className="absolute bottom-full mb-2 right-0 rounded-xl overflow-hidden z-50"
-                  style={{ minWidth: '180px', background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
+                  className="absolute right-full mr-2 top-1/2 -translate-y-1/2 flex flex-row-reverse items-center gap-2"
+                  style={{ pointerEvents: 'auto' }}
                 >
-                  {/* Game filter */}
+                  {/* Content type pill */}
+                  <div className="relative">
+                    <button
+                      onClick={() => { setShowContentDropdown(v => !v); setShowTimeDropdown(false); }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold transition-all hover:scale-105"
+                      style={pillBase(showContentDropdown)}
+                    >
+                      <ActiveIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                      {activeLabel}
+                      <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                    </button>
+                    {showContentDropdown && (
+                      <div
+                        className="absolute bottom-full mb-1.5 right-0 rounded-xl overflow-hidden min-w-[155px] z-50"
+                        style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
+                      >
+                        {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
+                          <button
+                            key={type}
+                            className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                            style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                            onClick={() => { onTabChange(type); setShowContentDropdown(false); setControlsVisible(false); }}
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                            {label}
+                            {activeTab === type && <Check className="h-3 w-3 ml-auto" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Clock */}
+                  <div className="relative">
+                    <button
+                      onClick={() => { setShowTimeDropdown(v => !v); setShowContentDropdown(false); }}
+                      className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
+                      style={pillBase(showTimeDropdown)}
+                    >
+                      <Clock className="h-5 w-5" />
+                    </button>
+                    {showTimeDropdown && (
+                      <div
+                        className="absolute bottom-full mb-1.5 right-0 rounded-xl overflow-hidden min-w-[148px] z-50"
+                        style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
+                      >
+                        <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>Time Period</p>
+                        {(Object.entries(timeMeta) as [TimePeriod, string][]).map(([period, label]) => (
+                          <button
+                            key={period}
+                            className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                            style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                            onClick={() => { onTimePeriodChange(period); setShowTimeDropdown(false); setControlsVisible(false); }}
+                          >
+                            {label}
+                            {timePeriod === period && <Check className="h-3 w-3 ml-auto" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Gamepad */}
                   <button
                     onClick={() => { setControlsVisible(false); onOpenGameFilter(); }}
-                    className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                    style={selectedGameId ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
+                    style={pillBase(!!selectedGameId)}
+                    title={selectedGameId ? selectedGameName || 'Game filter' : 'Filter by game'}
                   >
-                    <Gamepad2 className="h-3.5 w-3.5" />
-                    {selectedGameId ? selectedGameName : 'Game Filter'}
-                    {selectedGameId && <Check className="h-3 w-3 ml-auto" />}
+                    <Gamepad2 className="h-5 w-5" />
                   </button>
-
-                  {/* Time period */}
-                  <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide"
-                    style={{ color: 'rgba(255,255,255,0.35)', borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                    Time Period
-                  </p>
-                  {(Object.entries(timeMeta) as [TimePeriod, string][]).map(([period, label]) => (
-                    <button
-                      key={period}
-                      className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                      style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
-                      onClick={() => { onTimePeriodChange(period); setControlsVisible(false); }}
-                    >
-                      <Clock className="h-3.5 w-3.5" />
-                      {label}
-                      {timePeriod === period && <Check className="h-3 w-3 ml-auto" />}
-                    </button>
-                  ))}
-
-                  {/* Content type */}
-                  <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide"
-                    style={{ color: 'rgba(255,255,255,0.35)', borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                    Content Type
-                  </p>
-                  {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
-                    <button
-                      key={type}
-                      className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                      style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
-                      onClick={() => { onTabChange(type); setControlsVisible(false); }}
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                      {label}
-                      {activeTab === type && <Check className="h-3 w-3 ml-auto" />}
-                    </button>
-                  ))}
                 </div>
               )}
             </div>
@@ -791,6 +830,20 @@ const DesktopShortsViewer: React.FC<{
                 <span className="text-white/50 text-[11px] font-medium">{fmt(views)}</span>
               </div>
 
+              {/* Share */}
+              <button
+                className="flex flex-col items-center gap-1 group"
+                onClick={() => setShowShareDialog(true)}
+                aria-label="Share"
+              >
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+                  style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+                >
+                  <ShareLaunchIcon className="h-5 w-5 text-white/70" />
+                </div>
+              </button>
+
               {/* Creator info — fixed layout width (56px) so it doesn't widen the column; visual content overflows right */}
               <div
                 className="flex flex-row items-center gap-3"
@@ -863,6 +916,12 @@ const DesktopShortsViewer: React.FC<{
       )}
 
       </div>
+
+      <ClipShareDialog
+        clipId={clip.id}
+        open={showShareDialog}
+        onOpenChange={setShowShareDialog}
+      />
     </div>
   );
 };
