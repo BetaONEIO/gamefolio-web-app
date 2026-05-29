@@ -1485,7 +1485,7 @@ const TrendingPage: React.FC = () => {
               transform: controlsVisible ? visibleTransform : hiddenTransform,
               pointerEvents: controlsVisible ? 'auto' : 'none',
               maxWidth: controlsVisible ? '200px' : '0',
-              overflow: 'hidden',
+              overflow: controlsVisible ? 'visible' : 'hidden',
               transition: controlsVisible && isClipsMode
                 ? `${itemTransition}, max-width 0.25s ease 60ms`
                 : `${itemTransition}, max-width 0.25s ease`,
@@ -1556,7 +1556,7 @@ const TrendingPage: React.FC = () => {
               transform: controlsVisible ? visibleTransform : hiddenTransform,
               pointerEvents: controlsVisible ? 'auto' : 'none',
               maxWidth: controlsVisible ? '50px' : '0',
-              overflow: 'hidden',
+              overflow: controlsVisible ? 'visible' : 'hidden',
               transition: controlsVisible && isClipsMode
                 ? `${itemTransition}, max-width 0.25s ease 120ms`
                 : `${itemTransition}, max-width 0.25s ease`,
