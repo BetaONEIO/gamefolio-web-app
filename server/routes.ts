@@ -4796,10 +4796,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .input(freshUrl)
           .input(logoPath)
           .complexFilter([
-            // Scale logo to 44 px tall (preserving aspect ratio)
-            '[1:v]scale=-1:44[logo]',
+            // Scale logo to 66 px tall (preserving aspect ratio) — 50% bigger
+            '[1:v]scale=-1:66[logo]',
             // Overlay logo in bottom-right above the two text lines
-            '[0:v][logo]overlay=x=W-w-20:y=H-h-108[wl]',
+            '[0:v][logo]overlay=x=W-w-20:y=H-h-130[wl]',
             // Draw line 1 (username) just below the logo
             `[wl]${line1Filter}[wl2]`,
             // Draw line 2 (game / site) at the very bottom

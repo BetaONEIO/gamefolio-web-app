@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
@@ -572,6 +573,48 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Flashing download indicator — fixed bottom-right, visible on all screen sizes */}
+      {isDownloading && createPortal(
+        <div className="fixed bottom-6 right-6 z-[9999] flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-[#071013]/90 border border-[#BFFF00]/40 shadow-[0_0_24px_rgba(191,255,0,0.25)] backdrop-blur-sm animate-bounce-subtle">
+          <div className="relative flex-shrink-0">
+            <Download className="h-5 w-5 text-[#BFFF00]" style={{ animation: 'downloadFlash 0.8s ease-in-out infinite' }} />
+            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[#BFFF00]" style={{ animation: 'downloadPing 0.8s ease-in-out infinite' }} />
+          </div>
+          <div className="flex flex-col leading-tight">
+            <span className="text-xs font-bold text-[#BFFF00] tracking-wide uppercase">Downloading</span>
+            <span className="text-[10px] text-white/50">Adding watermark…</span>
+          </div>
+          <div className="flex gap-0.5 ml-1">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="block w-1 rounded-full bg-[#BFFF00]"
+                style={{
+                  height: '14px',
+                  animation: `downloadBar 1s ease-in-out ${i * 0.2}s infinite`,
+                  transformOrigin: 'bottom',
+                }}
+              />
+            ))}
+          </div>
+          <style>{`
+            @keyframes downloadFlash {
+              0%, 100% { opacity: 1; transform: translateY(0); }
+              50% { opacity: 0.3; transform: translateY(2px); }
+            }
+            @keyframes downloadPing {
+              0%, 100% { transform: scale(1); opacity: 1; }
+              50% { transform: scale(1.8); opacity: 0; }
+            }
+            @keyframes downloadBar {
+              0%, 100% { transform: scaleY(0.4); opacity: 0.5; }
+              50% { transform: scaleY(1); opacity: 1; }
+            }
+          `}</style>
+        </div>,
+        document.body
+      )}
     </>
   );
 }
