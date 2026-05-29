@@ -846,10 +846,10 @@ const DesktopShortsViewer: React.FC<{
                 </div>
               </button>
 
-              {/* Creator info — overflows visually to the right; avatar centered in column */}
+              {/* Creator info — fixed layout width (56px) so it doesn't widen the column; visual content overflows right */}
               <div
                 className="flex flex-row items-center gap-3"
-                style={{ overflow: 'visible', whiteSpace: 'nowrap' }}
+                style={{ alignSelf: 'flex-start', width: '56px', overflow: 'visible', whiteSpace: 'nowrap' }}
               >
                 {/* Avatar — anchored in column on the left */}
                 <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
@@ -1148,6 +1148,26 @@ const TrendingPage: React.FC = () => {
     }
     setActiveTabGameIds(ids);
   }, [activeTab, trendingClips, trendingReels, trendingScreenshots]);
+
+  const handleTabChange = useCallback((value: string) => {
+    const tab = value as ContentType;
+    setActiveTab(tab);
+    if (!isMobile) {
+      if (tab === 'reels' && trendingReels?.length) {
+        setDesktopShortsLandscape(false);
+        setDesktopShortsClips(trendingReels);
+        setDesktopShortsIndex(0);
+        setDesktopShortsOpen(true);
+      } else if (tab === 'clips' && trendingClips?.length) {
+        setDesktopShortsLandscape(true);
+        setDesktopShortsClips(trendingClips);
+        setDesktopShortsIndex(0);
+        setDesktopShortsOpen(true);
+      } else if (tab === 'screenshots' && trendingScreenshots?.length) {
+        setSelectedScreenshot(trendingScreenshots[0] as ScreenshotWithUser);
+      }
+    }
+  }, [isMobile, trendingReels, trendingClips, trendingScreenshots]);
 
   const getPeriodIcon = (period: TimePeriod) => {
     switch (period) {
@@ -1830,7 +1850,7 @@ const TrendingPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-4 md:px-6 md:py-6 max-w-7xl">
       {/* Tabs at the top - Mobile responsive */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ContentType)} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <div className="bg-card/50 dark:bg-card/30 backdrop-blur-sm border-b border-border mb-0 md:mb-6 md:rounded-xl md:border sticky top-0 z-30">
           <div className="px-4 py-3 md:py-4">
             <TabsList className="grid w-full grid-cols-3 bg-slate-800/90 dark:bg-slate-900/90 p-1 rounded-xl h-auto">
