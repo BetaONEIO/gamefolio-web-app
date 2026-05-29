@@ -1477,14 +1477,18 @@ const TrendingPage: React.FC = () => {
             <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.7)' }} />
           </button>
 
-          {/* 2. Content-type pill — always visible to show current selection */}
+          {/* 2. Content-type pill (Clips ▼) */}
           <div
             className="relative flex items-center justify-end flex-shrink-0"
             style={{
-              opacity: 1,
-              pointerEvents: 'auto',
-              maxWidth: '200px',
-              overflow: 'visible',
+              opacity: controlsVisible ? 1 : 0,
+              transform: controlsVisible ? visibleTransform : hiddenTransform,
+              pointerEvents: controlsVisible ? 'auto' : 'none',
+              maxWidth: controlsVisible ? '200px' : '0',
+              overflow: controlsVisible ? 'visible' : 'hidden',
+              transition: controlsVisible && isClipsMode
+                ? `${itemTransition}, max-width 0.25s ease 60ms`
+                : `${itemTransition}, max-width 0.25s ease`,
               order: orderContentPill,
             }}
           >
