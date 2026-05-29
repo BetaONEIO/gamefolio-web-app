@@ -353,20 +353,18 @@ export const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => 
     <div className="fixed inset-0 z-[100001] flex flex-col" style={{ background: '#03080A' }}>
       {/* Top bar — back button */}
       <div
-        className="flex-shrink-0 flex items-center px-4 pb-3"
+        className="flex-shrink-0 flex items-center px-4 pb-2"
         style={{
           background: '#03080A',
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 56px)',
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 72px)',
         }}
       >
         <button
           onClick={onBack}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-full transition-colors active:scale-95"
-          style={{ background: 'rgba(191,255,0,0.15)', border: '1px solid rgba(191,255,0,0.4)', color: '#BFFF00' }}
+          className="text-foreground hover:text-foreground/70 transition-colors"
           aria-label="Back"
         >
-          <ArrowLeft className="h-5 w-5" />
-          <span className="text-sm font-bold">Back</span>
+          <ArrowLeft className="h-6 w-6" />
         </button>
       </div>
 
