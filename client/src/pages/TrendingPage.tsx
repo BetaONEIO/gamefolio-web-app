@@ -301,12 +301,11 @@ const DesktopShortsViewer: React.FC<{
       style={{ background: '#03080A' }}
     >
       {/* Top bar — rendered above main content, below the sticky app header */}
-      <div className="flex items-center justify-between px-5 pb-3 flex-shrink-0" style={{ paddingTop: '80px' }}>
+      <div className="flex items-center justify-between px-5 pb-3 flex-shrink-0 pt-[128px] xl:pt-[152px]">
         <button
           onClick={onClose}
-          className="group fixed left-5 lg:left-[276px] z-[50]"
+          className="group fixed left-5 lg:left-[276px] z-[50] top-[128px] xl:top-[152px]"
           aria-label="Back to Trending"
-          style={{ top: '90px' }}
         >
           <ChevronLeft className="h-8 w-8 text-white/80 group-hover:text-white transition-colors" strokeWidth={2} />
         </button>
