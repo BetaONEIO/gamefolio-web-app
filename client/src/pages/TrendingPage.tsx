@@ -316,7 +316,7 @@ const DesktopShortsViewer: React.FC<{
       </div>
 
       {/* Main area — fills remaining height */}
-      <div className="flex-1 relative min-h-0 overflow-hidden">
+      <div className={`flex-1 relative min-h-0 overflow-hidden flex ${isLandscape ? 'flex-col items-center justify-center gap-0' : 'items-center justify-center'}`}>
 
       {/* ── Comment panel — slides in from the left ── */}
       <div
@@ -405,15 +405,9 @@ const DesktopShortsViewer: React.FC<{
         </div>
       </div>
 
-      {/* Animated content wrapper — re-mounts on each index change to replay the slide */}
-      <div
-        key={currentIndex}
-        className={`absolute inset-0 flex ${isLandscape ? 'flex-col items-center justify-center gap-0' : 'items-center justify-center'} ${slideDir === 'up' ? 'dsv-slide-up' : 'dsv-slide-down'}`}
-      >
-
       {isLandscape ? (
         /* ── LANDSCAPE layout: video stacked above engagement row ── */
-        <>
+        <div key={currentIndex} className={`flex flex-col w-full h-full items-center justify-center gap-0 ${slideDir === 'up' ? 'dsv-slide-up' : 'dsv-slide-down'}`}>
           {/* Up/Down nav arrows — right edge, vertically centred */}
           <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-3">
             <button
@@ -670,10 +664,10 @@ const DesktopShortsViewer: React.FC<{
               )}
             </div>
           </div>
-        </>
+        </div>
       ) : (
         /* ── PORTRAIT layout (Reels): video | right floating column ── */
-        <>
+        <div key={currentIndex} className={`flex w-full h-full items-center justify-center ${slideDir === 'up' ? 'dsv-slide-up' : 'dsv-slide-down'}`}>
           {/* Outer row — video left, right column no background */}
           <div className="flex items-end gap-5 px-6" style={{ height: '100%', paddingBottom: '28px' }}>
 
@@ -915,10 +909,8 @@ const DesktopShortsViewer: React.FC<{
               <ChevronDown className="h-6 w-6 text-white" />
             </button>
           </div>
-        </>
+        </div>
       )}
-
-      </div>{/* end animated wrapper */}
 
       </div>
     </div>
