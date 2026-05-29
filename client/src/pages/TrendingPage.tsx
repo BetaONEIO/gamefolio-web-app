@@ -494,6 +494,99 @@ const DesktopShortsViewer: React.FC<{
             className="flex items-center gap-5 flex-shrink-0 px-4"
             style={{ paddingTop: '6px', paddingBottom: '14px' }}
           >
+            {/* Eye — leftmost; horizontal flyout expanding RIGHT */}
+            <div className="relative" onClick={e => e.stopPropagation()}>
+              <button
+                onClick={() => { setShowContentDropdown(false); setShowTimeDropdown(false); setControlsVisible(v => !v); }}
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
+                style={{
+                  border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.5)'}`,
+                  background: controlsVisible ? 'rgba(183,255,26,0.12)' : 'rgba(30,41,59,0.5)',
+                }}
+              >
+                <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.7)' }} />
+              </button>
+
+              {controlsVisible && (
+                <div
+                  className="absolute left-full ml-2 top-1/2 -translate-y-1/2 flex flex-row items-center gap-2"
+                  style={{ pointerEvents: 'auto' }}
+                >
+                  {/* Gamepad */}
+                  <button
+                    onClick={() => { setControlsVisible(false); onOpenGameFilter(); }}
+                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
+                    style={pillBase(!!selectedGameId)}
+                    title={selectedGameId ? selectedGameName || 'Game filter' : 'Filter by game'}
+                  >
+                    <Gamepad2 className="h-5 w-5" />
+                  </button>
+
+                  {/* Clock */}
+                  <div className="relative">
+                    <button
+                      onClick={() => { setShowTimeDropdown(v => !v); setShowContentDropdown(false); }}
+                      className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
+                      style={pillBase(showTimeDropdown)}
+                    >
+                      <Clock className="h-5 w-5" />
+                    </button>
+                    {showTimeDropdown && (
+                      <div
+                        className="absolute bottom-full mb-1.5 left-0 rounded-xl overflow-hidden min-w-[148px] z-50"
+                        style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
+                      >
+                        <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>Time Period</p>
+                        {(Object.entries(timeMeta) as [TimePeriod, string][]).map(([period, label]) => (
+                          <button
+                            key={period}
+                            className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                            style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                            onClick={() => { onTimePeriodChange(period); setShowTimeDropdown(false); setControlsVisible(false); }}
+                          >
+                            {label}
+                            {timePeriod === period && <Check className="h-3 w-3 ml-auto" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content type pill */}
+                  <div className="relative">
+                    <button
+                      onClick={() => { setShowContentDropdown(v => !v); setShowTimeDropdown(false); }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold transition-all hover:scale-105"
+                      style={pillBase(showContentDropdown)}
+                    >
+                      <ActiveIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                      {activeLabel}
+                      <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                    </button>
+                    {showContentDropdown && (
+                      <div
+                        className="absolute bottom-full mb-1.5 left-0 rounded-xl overflow-hidden min-w-[155px] z-50"
+                        style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
+                      >
+                        {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
+                          <button
+                            key={type}
+                            className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                            style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                            onClick={() => { onTabChange(type); setShowContentDropdown(false); setControlsVisible(false); }}
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                            {label}
+                            {activeTab === type && <Check className="h-3 w-3 ml-auto" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <LikeButton
               contentId={clip.id}
               contentType="clip"
@@ -559,98 +652,6 @@ const DesktopShortsViewer: React.FC<{
             {/* 3-dot menu */}
             <div onClick={(e) => e.stopPropagation()}>
               <TrendingClipMenu clip={clip} />
-            </div>
-            {/* Eye — horizontal flyout expanding LEFT */}
-            <div className="relative ml-auto" onClick={e => e.stopPropagation()}>
-              <button
-                onClick={() => { setShowContentDropdown(false); setShowTimeDropdown(false); setControlsVisible(v => !v); }}
-                className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
-                style={{
-                  border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.5)'}`,
-                  background: controlsVisible ? 'rgba(183,255,26,0.12)' : 'rgba(30,41,59,0.5)',
-                }}
-              >
-                <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.7)' }} />
-              </button>
-
-              {controlsVisible && (
-                <div
-                  className="absolute right-full mr-2 top-1/2 -translate-y-1/2 flex flex-row-reverse items-center gap-2"
-                  style={{ pointerEvents: 'auto' }}
-                >
-                  {/* Content type pill */}
-                  <div className="relative">
-                    <button
-                      onClick={() => { setShowContentDropdown(v => !v); setShowTimeDropdown(false); }}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold transition-all hover:scale-105"
-                      style={pillBase(showContentDropdown)}
-                    >
-                      <ActiveIcon className="h-3.5 w-3.5 flex-shrink-0" />
-                      {activeLabel}
-                      <ChevronDown className="h-3 w-3 flex-shrink-0" />
-                    </button>
-                    {showContentDropdown && (
-                      <div
-                        className="absolute bottom-full mb-1.5 right-0 rounded-xl overflow-hidden min-w-[155px] z-50"
-                        style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
-                      >
-                        {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
-                          <button
-                            key={type}
-                            className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                            style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
-                            onClick={() => { onTabChange(type); setShowContentDropdown(false); setControlsVisible(false); }}
-                          >
-                            <Icon className="h-3.5 w-3.5" />
-                            {label}
-                            {activeTab === type && <Check className="h-3 w-3 ml-auto" />}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Clock */}
-                  <div className="relative">
-                    <button
-                      onClick={() => { setShowTimeDropdown(v => !v); setShowContentDropdown(false); }}
-                      className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
-                      style={pillBase(showTimeDropdown)}
-                    >
-                      <Clock className="h-5 w-5" />
-                    </button>
-                    {showTimeDropdown && (
-                      <div
-                        className="absolute bottom-full mb-1.5 right-0 rounded-xl overflow-hidden min-w-[148px] z-50"
-                        style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
-                      >
-                        <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>Time Period</p>
-                        {(Object.entries(timeMeta) as [TimePeriod, string][]).map(([period, label]) => (
-                          <button
-                            key={period}
-                            className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                            style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
-                            onClick={() => { onTimePeriodChange(period); setShowTimeDropdown(false); setControlsVisible(false); }}
-                          >
-                            {label}
-                            {timePeriod === period && <Check className="h-3 w-3 ml-auto" />}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Gamepad */}
-                  <button
-                    onClick={() => { setControlsVisible(false); onOpenGameFilter(); }}
-                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
-                    style={pillBase(!!selectedGameId)}
-                    title={selectedGameId ? selectedGameName || 'Game filter' : 'Filter by game'}
-                  >
-                    <Gamepad2 className="h-5 w-5" />
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -844,10 +845,10 @@ const DesktopShortsViewer: React.FC<{
                 </div>
               </button>
 
-              {/* Creator info — fixed layout width (56px) so it doesn't widen the column; visual content overflows right */}
+              {/* Creator info — overflows visually to the right; avatar centered in column */}
               <div
                 className="flex flex-row items-center gap-3"
-                style={{ alignSelf: 'flex-start', width: '56px', overflow: 'visible', whiteSpace: 'nowrap' }}
+                style={{ overflow: 'visible', whiteSpace: 'nowrap' }}
               >
                 {/* Avatar — anchored in column on the left */}
                 <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
