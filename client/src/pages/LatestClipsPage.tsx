@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { GameFilterSheet } from "@/components/filters/GameFilterSheet";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
-import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
+import { MobileClipsViewer } from "@/components/clips/MobileClipsViewer";
 
 const LatestClipsPage = () => {
   const { user } = useAuth();
@@ -58,10 +58,9 @@ const LatestClipsPage = () => {
   return (
     <div className="min-h-screen bg-background px-3 py-4 sm:px-4 sm:py-6 md:container md:mx-auto md:px-4 md:py-6">
       {mobileViewerOpen && filteredClips.length > 0 && (
-        <MobileTrendingViewer
-          content={filteredClips}
-          initialIndex={mobileViewerStartIndex}
-          onClose={() => setMobileViewerOpen(false)}
+        <MobileClipsViewer
+          clips={filteredClips}
+          onBack={() => setMobileViewerOpen(false)}
         />
       )}
 
