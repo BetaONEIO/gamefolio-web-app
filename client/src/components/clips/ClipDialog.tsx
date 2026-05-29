@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { ClipWithUser, CommentWithUser } from "@shared/schema";
+import { useCreateComment } from "@/hooks/use-clips";
+import { StyledMentionInput } from "@/components/ui/mention-input";
 import VideoPlayer from "@/components/shared/VideoPlayer";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
@@ -84,6 +86,17 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   const { toast } = useToast();
   const { user } = useAuth();
   const { isOpen: joinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
+  const [stickyComment, setStickyComment] = useState("");
+  const stickyCommentMutation = useCreateComment();
+  const stickyInputRef = useRef<HTMLTextAreaElement>(null);
+  const handleStickyStickyCommentSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!stickyComment.trim() || !clip?.id) return;
+    stickyCommentMutation.mutate(
+      { clipId: clip.id, text: stickyComment },
+      { onSuccess: () => setStickyComment("") }
+    );
+  };
   const [showComments, setShowComments] = useState(false);
   const [isClosingComments, setIsClosingComments] = useState(false);
   const [commentSheetDragY, setCommentSheetDragY] = useState(0);
@@ -545,7 +558,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         <DialogPrimitive.Content
           ref={dialogRef}
           className={cn(
-            "fixed left-[50%] top-[50%] z-[9999] grid w-full translate-x-[-50%] translate-y-[-50%] border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+            "fixed left-[50%] top-[50%] z-[9999] grid w-full translate-x-[-50%] translate-y-[-50%] border bg-background shadow-lg sm:rounded-lg",
             "p-0 bg-background text-foreground clip-dialog-content",
             isMobile && clip?.videoType === 'reel' 
               ? "w-screen h-[calc(100dvh-64px)] max-w-none max-h-none overflow-hidden top-0 translate-y-0" // Leave space for footer on mobile reels, use dvh for dynamic viewport
@@ -563,28 +576,25 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         <DialogDescription className="sr-only">
           {clip ? `Video by ${clip.user?.displayName || clip.user?.username || 'Unknown user'}` : 'Video content viewer'}
         </DialogDescription>
-        {/* Top left back arrow button */}
-        <div
-          className={cn("absolute z-[110]", !isMobile && "left-4 top-12")}
-          style={isMobile ? { top: 'max(12px, env(safe-area-inset-top, 12px))', left: '12px' } : undefined}
-        >
-          <button
-            onClick={onClose}
-            className={cn(
-              "rounded-full ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 flex items-center gap-1.5",
-              isMobile
-                ? "p-3 bg-black/60 backdrop-blur-sm hover:bg-black/80 opacity-100"
-                : "p-2 opacity-70 hover:opacity-100 bg-black/40 hover:bg-black/60"
-            )}
-            aria-label="Back"
+        {/* Top left back arrow button - mobile only */}
+        {isMobile && (
+          <div
+            className="absolute z-[110]"
+            style={{ top: 'max(12px, env(safe-area-inset-top, 12px))', left: '12px' }}
           >
-            <ChevronLeft className={cn("text-white", isMobile ? "h-6 w-6" : "h-5 w-5")} />
-          </button>
-        </div>
+            <button
+              onClick={onClose}
+              className="rounded-full ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 flex items-center gap-1.5 p-3 bg-black/60 backdrop-blur-sm hover:bg-black/80 opacity-100"
+              aria-label="Back"
+            >
+              <ChevronLeft className="text-white h-6 w-6" />
+            </button>
+          </div>
+        )}
 
         {/* Top right action buttons */}
         <div
-          className={cn("absolute z-[110] flex items-center gap-2", !isMobile && "right-4 top-12")}
+          className={cn("absolute z-[110] flex items-center gap-2", !isMobile && "right-4 top-4")}
           style={isMobile ? { top: 'max(12px, env(safe-area-inset-top, 12px))', right: '12px' } : undefined}
         >
           {/* View All link - only shown when context provides a viewAllHref */}
@@ -1205,7 +1215,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 </div>
               ) : (
                 /* ── Desktop / non-reel shared panel ── */
-                <>
+                <div className="flex flex-col h-full overflow-hidden">
                   {/* Header with username - FIXED */}
                   <div className={cn(
                     "border-b border-border flex items-center justify-between flex-shrink-0",
@@ -1339,17 +1349,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                                   if (!user) {
                                     openDialog('comment');
                                   } else {
-                                    const commentInput = document.querySelector('[data-testid="input-comment"]') as HTMLTextAreaElement;
-                                    const scrollContainer = document.querySelector('[data-scroll-container]');
-                                    if (commentInput && scrollContainer) {
-                                      const containerRect = scrollContainer.getBoundingClientRect();
-                                      const inputRect = commentInput.getBoundingClientRect();
-                                      const scrollTop = scrollContainer.scrollTop + (inputRect.top - containerRect.top) - 100;
-                                      scrollContainer.scrollTo({ top: scrollTop, behavior: 'smooth' });
-                                      setTimeout(() => commentInput.focus(), 300);
-                                    } else if (commentInput) {
-                                      commentInput.focus();
-                                    }
+                                    stickyInputRef.current?.focus();
                                   }
                                 }}
                                 className="p-0 h-auto transition-colors text-muted-foreground hover:text-white focus:outline-none"
@@ -1388,16 +1388,51 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       </div>
                     </div>
 
-                    {/* Comments section */}
-                    <div className="pt-2 pb-4">
+                    {/* Comments section - form hidden, sticky form below */}
+                    <div className="pt-2 pb-2">
                       <CommentSection 
                         clipId={clip.id}
                         currentUserId={user?.id || null} 
                         onUsernameClick={() => onClose()}
+                        hideForm={true}
                       />
                     </div>
                   </div>
-                </>
+
+                  {/* Sticky comment input - always visible at bottom */}
+                  <div className="flex-shrink-0 border-t border-border p-3 bg-background">
+                    {user ? (
+                      <form onSubmit={handleStickyStickyCommentSubmit} className="flex items-start gap-2">
+                        <div className="flex-shrink-0">
+                          <CustomAvatar user={user} size="sm" showBorder={false} />
+                        </div>
+                        <div className="flex-1 flex gap-2 items-end">
+                          <StyledMentionInput
+                            ref={stickyInputRef}
+                            value={stickyComment}
+                            onChange={setStickyComment}
+                            onSubmit={() => handleStickyStickyCommentSubmit()}
+                            placeholder="Add a comment..."
+                            className="min-h-[38px] max-h-[100px] text-sm resize-none rounded-xl flex-1"
+                            data-testid="input-comment"
+                          />
+                          <Button
+                            type="submit"
+                            size="sm"
+                            disabled={!stickyComment.trim() || stickyCommentMutation.isPending}
+                            className="flex-shrink-0"
+                          >
+                            {stickyCommentMutation.isPending ? "..." : "Post"}
+                          </Button>
+                        </div>
+                      </form>
+                    ) : (
+                      <Button variant="outline" onClick={() => openDialog('comment')} className="w-full text-sm">
+                        <span style={{ color: '#B7FF1A' }}>Sign in</span>&nbsp;to comment
+                      </Button>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </div>
