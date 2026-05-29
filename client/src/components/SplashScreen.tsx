@@ -39,24 +39,27 @@ export function SplashScreen({ onDone }: StingerTransitionProps) {
   }
 
   return (
-    <div
-      className="stinger-overlay"
-      aria-hidden="true"
-      onAnimationEnd={(e) => {
-        if (e.animationName === "stinger-fade-out") {
-          onDone();
-        }
-      }}
-    >
-      <div className="stinger-panel">
-        <div className="stinger-trail" />
+    <>
+      <div
+        className="stinger-overlay"
+        aria-hidden="true"
+        onAnimationEnd={(e) => {
+          if (e.animationName === "stinger-fade-out") {
+            onDone();
+          }
+        }}
+      >
+        <div className="stinger-panel">
+          <div className="stinger-trail" />
+        </div>
       </div>
       <img
         src={logoGreen}
         alt="Gamefolio"
         className="stinger-logo"
         draggable={false}
+        aria-hidden="true"
       />
-    </div>
+    </>
   );
 }
