@@ -104,16 +104,16 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
     <div className="relative">
       <button
         onClick={() => scroll('left')}
-        className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+        className="absolute -left-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
       >
-        <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+        <ChevronLeft className="h-5 w-5" />
       </button>
 
       <button
         onClick={() => scroll('right')}
-        className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+        className="absolute -right-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
       >
-        <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+        <ChevronRight className="h-5 w-5" />
       </button>
 
       <div
