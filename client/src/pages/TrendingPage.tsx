@@ -301,7 +301,7 @@ const DesktopShortsViewer: React.FC<{
       <div className="flex items-center justify-between px-5 pb-3 flex-shrink-0" style={{ paddingTop: '128px' }}>
         <button
           onClick={onClose}
-          className="group fixed left-5 lg:left-[276px]"
+          className="group fixed left-5 lg:left-[276px] z-[50]"
           aria-label="Back to Trending"
           style={{ top: '200px' }}
         >
@@ -676,7 +676,7 @@ const DesktopShortsViewer: React.FC<{
                               key={type}
                               className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
                               style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
-                              onClick={() => { onTabChange(type); setShowContentDropdown(false); setControlsVisible(false); onClose(); }}
+                              onClick={() => { onTabChange(type); setShowContentDropdown(false); setControlsVisible(false); }}
                             >
                               <Icon className="h-3.5 w-3.5" />
                               {label}
@@ -1816,7 +1816,16 @@ const TrendingPage: React.FC = () => {
           selectedGameName={selectedGameName}
           isLandscape={desktopShortsLandscape}
           activeTab={activeTab}
-          onTabChange={(tab) => { setActiveTab(tab); setDesktopShortsOpen(false); }}
+          onTabChange={(tab) => {
+            setActiveTab(tab);
+            if (tab === 'clips' && trendingClips?.length) {
+              setDesktopShortsLandscape(true);
+              setDesktopShortsClips(trendingClips);
+              setDesktopShortsIndex(0);
+            } else {
+              setDesktopShortsOpen(false);
+            }
+          }}
           timePeriod={timePeriod}
           onTimePeriodChange={setTimePeriod}
         />
