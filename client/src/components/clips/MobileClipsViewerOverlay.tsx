@@ -34,7 +34,7 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
   const content = (
     <div
       className="fixed inset-0 flex flex-col"
-      style={{ background: '#03080A', zIndex: 60 }}
+      style={{ background: '#03080A', zIndex: 9999 }}
     >
       {/* Top bar */}
       <div

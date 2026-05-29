@@ -208,7 +208,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
 
   return (
     <div
-      className="fixed inset-0 bg-black z-[60] flex flex-col lg:flex-row"
+      className="fixed inset-0 bg-black z-[9999] flex flex-col lg:flex-row"
       style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
     >
 

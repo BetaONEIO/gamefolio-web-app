@@ -321,7 +321,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   return (
     <div
       ref={containerRef}
-      className={embedded ? "relative w-full h-full overflow-hidden" : "fixed inset-0 z-[60] overflow-hidden"}
+      className={embedded ? "relative w-full h-full overflow-hidden" : "fixed inset-0 z-[9999] overflow-hidden"}
       style={{ background: '#0B1218' }}
       data-testid="mobile-trending-viewer"
     >
