@@ -566,7 +566,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         </DialogDescription>
         {/* Top left back arrow button */}
         <div
-          className={cn("absolute z-[110]", !isMobile && "left-4 top-4")}
+          className={cn("absolute z-[110]", !isMobile && "left-4 top-12")}
           style={isMobile ? { top: 'max(12px, env(safe-area-inset-top, 12px))', left: '12px' } : undefined}
         >
           <button
@@ -585,7 +585,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
 
         {/* Top right action buttons */}
         <div
-          className={cn("absolute z-[110] flex items-center gap-2", !isMobile && "right-4 top-4")}
+          className={cn("absolute z-[110] flex items-center gap-2", !isMobile && "right-4 top-12")}
           style={isMobile ? { top: 'max(12px, env(safe-area-inset-top, 12px))', right: '12px' } : undefined}
         >
           {/* View All link - only shown when context provides a viewAllHref */}
