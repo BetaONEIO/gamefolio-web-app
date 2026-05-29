@@ -433,7 +433,7 @@ const DesktopShortsViewer: React.FC<{
           {/* Video — 16:9, constrained by both width and height */}
           <div className="flex-1 flex items-center justify-center w-full min-h-0 px-16 pt-2">
             <div
-              className="relative rounded-2xl overflow-hidden bg-black shadow-2xl w-full"
+              className="relative rounded-2xl overflow-hidden bg-black w-full"
               style={{ aspectRatio: '16/9', maxHeight: '100%', isolation: 'isolate' }}
             >
               <VideoPlayer
@@ -627,7 +627,7 @@ const DesktopShortsViewer: React.FC<{
 
             {/* Video — 9:16, fills available height */}
             <div
-              className="relative rounded-2xl overflow-hidden bg-black shadow-2xl flex-shrink-0"
+              className="relative rounded-2xl overflow-hidden bg-black flex-shrink-0"
               style={{ height: '100%', aspectRatio: '9/16', isolation: 'isolate' }}
             >
               <VideoPlayer
