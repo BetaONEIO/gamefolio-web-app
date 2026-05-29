@@ -760,7 +760,7 @@ const HomePage = () => {
               </button>
               <div
                 ref={screenshotsScrollRef}
-                className={`flex gap-5 overflow-x-auto scrollbar-hide pb-4 select-none ${screenshotsDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                className={`flex gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-8 py-2 select-none ${screenshotsDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
                 style={{ scrollBehavior: screenshotsDragging ? 'auto' : 'smooth' }}
                 onMouseDown={(e) => {
                   if (!screenshotsScrollRef.current) return;

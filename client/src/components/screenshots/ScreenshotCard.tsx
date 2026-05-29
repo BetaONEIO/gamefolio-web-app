@@ -148,9 +148,17 @@ export function ScreenshotCard({
 
         {(screenshot as any).game && (
           <div className="pt-0.5">
-            <span className="inline-block bg-primary text-[#071013] text-xs px-2 py-0.5 rounded font-medium">
-              {(screenshot as any).game.name}
-            </span>
+            <Link
+              href={`/games/${(screenshot as any).game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            >
+              <span
+                className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded hover:opacity-90 transition-opacity"
+                style={{ background: '#B7FF1A', color: '#071013' }}
+              >
+                {(screenshot as any).game.name}
+              </span>
+            </Link>
           </div>
         )}
 
