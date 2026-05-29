@@ -119,16 +119,16 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
       {/* Navigation Arrows - hidden on mobile, visible on larger screens */}
       <button
         onClick={() => scroll('left')}
-        className="absolute -left-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
+        className="absolute -left-3 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2 sm:p-2.5 rounded-full transition-colors flex items-center justify-center shadow-lg"
       >
-        <ChevronLeft className="h-5 w-5" />
+        <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
       </button>
       
       <button
         onClick={() => scroll('right')}
-        className="absolute -right-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
+        className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2 sm:p-2.5 rounded-full transition-colors flex items-center justify-center shadow-lg"
       >
-        <ChevronRight className="h-5 w-5" />
+        <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
       </button>
 
       {/* Carousel Container */}
