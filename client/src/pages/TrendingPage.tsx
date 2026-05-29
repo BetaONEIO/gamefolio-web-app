@@ -197,7 +197,7 @@ const DesktopShortsViewer: React.FC<{
   const queryClient = useQueryClient();
   const createCommentMutation = useMutation({
     mutationFn: async ({ clipId, text }: { clipId: number; text: string }) => {
-      const res = await apiRequest('POST', `/api/clips/${clipId}/comments`, { text });
+      const res = await apiRequest('POST', `/api/clips/${clipId}/comments`, { content: text });
       return res.json();
     },
     onSuccess: (_, { clipId }) => {
