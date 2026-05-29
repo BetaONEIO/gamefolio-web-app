@@ -1404,18 +1404,18 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   {/* Sticky comment input - always visible at bottom */}
                   <div className="flex-shrink-0 border-t border-border p-3 bg-background">
                     {user ? (
-                      <form onSubmit={handleStickyStickyCommentSubmit} className="flex items-start gap-2">
+                      <form onSubmit={handleStickyStickyCommentSubmit} className="flex items-center gap-2">
                         <div className="flex-shrink-0">
                           <CustomAvatar user={user} size="sm" showBorder={false} />
                         </div>
-                        <div className="flex-1 flex gap-2 items-end">
+                        <div className="flex-1 flex gap-2 items-center">
                           <StyledMentionInput
                             ref={stickyInputRef}
                             value={stickyComment}
                             onChange={setStickyComment}
                             onSubmit={() => handleStickyStickyCommentSubmit()}
                             placeholder="Add a comment..."
-                            className="min-h-[38px] max-h-[100px] text-sm resize-none rounded-xl flex-1"
+                            className="min-h-[36px] max-h-[80px] text-sm resize-none rounded-xl flex-1"
                             data-testid="input-comment"
                           />
                           <Button
