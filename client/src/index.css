@@ -1069,3 +1069,19 @@ h1, h2, h3 {
     opacity: 0;
   }
 }
+
+/* ── DesktopShortsViewer slide animations ── */
+@keyframes dsvSlideInUp {
+  from { transform: translateY(40px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes dsvSlideInDown {
+  from { transform: translateY(-40px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+.dsv-slide-up   { animation: dsvSlideInUp   0.38s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+.dsv-slide-down { animation: dsvSlideInDown 0.38s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dsv-slide-up, .dsv-slide-down { animation: none; }
+}

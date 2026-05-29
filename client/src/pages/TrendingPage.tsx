@@ -184,6 +184,7 @@ const DesktopShortsViewer: React.FC<{
   onTimePeriodChange: (p: TimePeriod) => void;
 }> = ({ clips, initialIndex, onClose, onOpenGameFilter, selectedGameId, selectedGameName, isLandscape = false, activeTab, onTabChange, timePeriod, onTimePeriodChange }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [slideDir, setSlideDir] = useState<'up' | 'down'>('up');
   const [showComments, setShowComments] = useState(false);
   const [showContentDropdown, setShowContentDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
@@ -228,10 +229,12 @@ const DesktopShortsViewer: React.FC<{
   const clip = clips[currentIndex];
 
   const goNext = useCallback(() => {
+    setSlideDir('up');
     setCurrentIndex(i => Math.min(i + 1, clips.length - 1));
   }, [clips.length]);
 
   const goPrev = useCallback(() => {
+    setSlideDir('down');
     setCurrentIndex(i => Math.max(i - 1, 0));
   }, []);
 
@@ -313,7 +316,7 @@ const DesktopShortsViewer: React.FC<{
       </div>
 
       {/* Main area — fills remaining height */}
-      <div className={`flex-1 relative min-h-0 overflow-hidden flex ${isLandscape ? 'flex-col items-center justify-center gap-0' : 'items-center justify-center'}`}>
+      <div className="flex-1 relative min-h-0 overflow-hidden">
 
       {/* ── Comment panel — slides in from the left ── */}
       <div
@@ -401,6 +404,12 @@ const DesktopShortsViewer: React.FC<{
           )}
         </div>
       </div>
+
+      {/* Animated content wrapper — re-mounts on each index change to replay the slide */}
+      <div
+        key={currentIndex}
+        className={`absolute inset-0 flex ${isLandscape ? 'flex-col items-center justify-center gap-0' : 'items-center justify-center'} ${slideDir === 'up' ? 'dsv-slide-up' : 'dsv-slide-down'}`}
+      >
 
       {isLandscape ? (
         /* ── LANDSCAPE layout: video stacked above engagement row ── */
@@ -814,6 +823,8 @@ const DesktopShortsViewer: React.FC<{
           </div>
         </>
       )}
+
+      </div>{/* end animated wrapper */}
 
       </div>
     </div>
