@@ -6,6 +6,7 @@ import { ClipWithUser } from '@shared/schema';
 import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Heart, Play, MessageCircle, AlertTriangle, Film, Video, Camera, ChevronDown, ChevronUp, Check, Search, ArrowLeft, Bookmark, BarChart2, BadgeCheck, Repeat2 } from 'lucide-react';
 import { TrendingClipMenu } from '@/components/clips/TrendingClipMenu';
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
+import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { PartnerBadge } from '@/components/ui/partner-badge';
 import { formatDuration } from '@/lib/constants';
 import { formatDistance } from 'date-fns';
@@ -1861,7 +1862,7 @@ const TrendingPage: React.FC = () => {
         {/* Header - below tabs on mobile, visible on desktop */}
         <div className="px-4 mb-6 hidden md:flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-3">
-            <TrendingUp className="h-8 w-8 text-primary" />
+            <ZapIconSvg size={32} active={true} />
             <div>
               <h1 className="text-3xl font-bold">Trending</h1>
               <p className="text-muted-foreground">Discover the most popular gaming content</p>
