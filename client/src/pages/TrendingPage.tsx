@@ -576,58 +576,96 @@ const DesktopShortsViewer: React.FC<{
               </span>
             </button>
 
-            {/* Content / time-period switcher — Eye icon opens upward dropdown */}
+            {/* Eye — same control flyout as portrait/reels, expands upward-left */}
             <div className="relative ml-auto" onClick={e => e.stopPropagation()}>
               <button
-                onClick={() => { setControlsVisible(v => !v); setShowContentDropdown(false); setShowTimeDropdown(false); }}
-                className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-105"
-                aria-label="Filters"
-                style={controlsVisible
-                  ? { background: 'rgba(183,255,26,0.15)', border: '2px solid #B7FF1A' }
-                  : { background: '#0B1218', border: '1px solid #1B2A33' }
-                }
+                onClick={() => { setShowContentDropdown(false); setShowTimeDropdown(false); setControlsVisible(v => !v); }}
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
+                style={{
+                  border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.5)'}`,
+                  background: controlsVisible ? 'rgba(183,255,26,0.12)' : 'rgba(30,41,59,0.5)',
+                }}
               >
-                <Eye className="h-4 w-4" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+                <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.7)' }} />
               </button>
 
+              {/* Horizontal flyout — same as portrait, anchored to right, expands left */}
               {controlsVisible && (
                 <div
-                  className="absolute bottom-full mb-2 right-0 rounded-xl overflow-hidden z-50"
-                  style={{ minWidth: '160px', background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
+                  className="absolute bottom-full mb-2 right-0 flex flex-row items-center gap-2"
+                  style={{ pointerEvents: 'auto' }}
                 >
-                  {/* Time period */}
-                  <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide"
-                    style={{ color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                    Time Period
-                  </p>
-                  {(Object.entries(timeMeta) as [TimePeriod, string][]).map(([period, label]) => (
+                  {/* Gamepad */}
+                  <button
+                    onClick={() => { setControlsVisible(false); onOpenGameFilter(); }}
+                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
+                    style={pillBase(!!selectedGameId)}
+                    title={selectedGameId ? selectedGameName || 'Game filter' : 'Filter by game'}
+                  >
+                    <Gamepad2 className="h-5 w-5" />
+                  </button>
+
+                  {/* Clock */}
+                  <div className="relative">
                     <button
-                      key={period}
-                      className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                      style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
-                      onClick={() => { onTimePeriodChange(period); setControlsVisible(false); }}
+                      onClick={() => { setShowTimeDropdown(v => !v); setShowContentDropdown(false); }}
+                      className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
+                      style={pillBase(showTimeDropdown)}
                     >
-                      {label}
-                      {timePeriod === period && <Check className="h-3 w-3 ml-auto" />}
+                      <Clock className="h-5 w-5" />
                     </button>
-                  ))}
-                  {/* Content type */}
-                  <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide"
-                    style={{ color: 'rgba(255,255,255,0.35)', borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                    Content Type
-                  </p>
-                  {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
+                    {showTimeDropdown && (
+                      <div
+                        className="absolute bottom-full mb-1.5 right-0 rounded-xl overflow-hidden min-w-[148px] z-50"
+                        style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
+                      >
+                        <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>Time Period</p>
+                        {(Object.entries(timeMeta) as [TimePeriod, string][]).map(([period, label]) => (
+                          <button
+                            key={period}
+                            className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                            style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                            onClick={() => { onTimePeriodChange(period); setShowTimeDropdown(false); }}
+                          >
+                            {label}
+                            {timePeriod === period && <Check className="h-3 w-3 ml-auto" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content type pill */}
+                  <div className="relative">
                     <button
-                      key={type}
-                      className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                      style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
-                      onClick={() => { onTabChange(type); setControlsVisible(false); }}
+                      onClick={() => { setShowContentDropdown(v => !v); setShowTimeDropdown(false); }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold transition-all hover:scale-105"
+                      style={pillBase(showContentDropdown)}
                     >
-                      <Icon className="h-3.5 w-3.5" />
-                      {label}
-                      {activeTab === type && <Check className="h-3 w-3 ml-auto" />}
+                      <ActiveIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                      {activeLabel}
+                      <ChevronDown className="h-3 w-3 flex-shrink-0" />
                     </button>
-                  ))}
+                    {showContentDropdown && (
+                      <div
+                        className="absolute bottom-full mb-1.5 right-0 rounded-xl overflow-hidden min-w-[155px] z-50"
+                        style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
+                      >
+                        {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
+                          <button
+                            key={type}
+                            className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                            style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                            onClick={() => { onTabChange(type); setShowContentDropdown(false); setControlsVisible(false); }}
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                            {label}
+                            {activeTab === type && <Check className="h-3 w-3 ml-auto" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
