@@ -18,6 +18,7 @@ import VideoClipGridItem from '@/components/clips/VideoClipGridItem';
 import VideoPlayer from '@/components/shared/VideoPlayer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
+import { useAuthModal } from '@/hooks/use-auth-modal';
 import { useMobile } from '@/hooks/use-mobile';
 import { useSignedUrl } from '@/hooks/use-signed-url';
 import { LazyImage } from '@/components/ui/lazy-image';
@@ -29,7 +30,7 @@ import { CustomAvatar } from '@/components/ui/custom-avatar';
 import { ProfileHoverCard } from '@/components/ui/ProfileHoverCard';
 import { Dialog, DialogContent, DialogClose, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import CommentSection from '@/components/clips/CommentSection';
-import { UserIcon, X, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { UserIcon, X, Trash2, ChevronLeft, ChevronRight, Send } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { AgeRestrictionDialog } from '@/components/content/AgeRestrictionDialog';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -630,10 +631,23 @@ const DesktopShortsViewer: React.FC<{
   const [showContentDropdown, setShowContentDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(false);
+  const [inlineComment, setInlineComment] = useState('');
   const wheelCooldown = useRef(false);
   const wheelAccum = useRef(0);
   const wheelIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { user } = useAuth();
+  const { openModal } = useAuthModal();
+  const queryClient = useQueryClient();
+  const createCommentMutation = useMutation({
+    mutationFn: async ({ clipId, text }: { clipId: number; text: string }) => {
+      const res = await apiRequest('POST', `/api/clips/${clipId}/comments`, { text });
+      return res.json();
+    },
+    onSuccess: (_, { clipId }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clips', clipId, 'comments'] });
+      setInlineComment('');
+    },
+  });
 
   const contentMeta: Record<ContentType, { label: string; Icon: React.ElementType }> = {
     reels:       { label: 'Reels',       Icon: Film   },
@@ -754,6 +768,7 @@ const DesktopShortsViewer: React.FC<{
           boxShadow: showComments ? '4px 0 24px rgba(0,0,0,0.5)' : 'none',
         }}
       >
+        {/* Header */}
         <div
           className="flex items-center justify-between px-4 pb-3 flex-shrink-0"
           style={{ paddingTop: '16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
@@ -770,9 +785,60 @@ const DesktopShortsViewer: React.FC<{
             <X className="h-4 w-4 text-white/60" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4">
+
+        {/* Scrollable comment list — form lives below, always visible */}
+        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 min-h-0">
           {showComments && (
-            <CommentSection clipId={clip.id} currentUserId={user?.id ?? null} />
+            <CommentSection clipId={clip.id} currentUserId={user?.id ?? null} hideForm={true} />
+          )}
+        </div>
+
+        {/* Pinned comment input — always visible at the bottom of the panel */}
+        <div
+          className="flex-shrink-0 px-3 py-3"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.07)', background: '#0B1218' }}
+        >
+          {user ? (
+            <div className="flex items-center gap-2">
+              <CustomAvatar user={user} size="sm" showBorder={false} />
+              <div
+                className="flex-1 flex items-center gap-2 rounded-full px-3 py-1.5"
+                style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}
+              >
+                <input
+                  type="text"
+                  value={inlineComment}
+                  onChange={(e) => setInlineComment(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && inlineComment.trim()) {
+                      e.preventDefault();
+                      createCommentMutation.mutate({ clipId: clip.id, text: inlineComment });
+                    }
+                  }}
+                  placeholder="Add a comment…"
+                  className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/35 min-w-0"
+                />
+                <button
+                  onClick={() => {
+                    if (!inlineComment.trim()) return;
+                    createCommentMutation.mutate({ clipId: clip.id, text: inlineComment });
+                  }}
+                  disabled={!inlineComment.trim() || createCommentMutation.isPending}
+                  className="flex-shrink-0 transition-opacity disabled:opacity-30"
+                  style={{ color: '#B7FF1A' }}
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => openModal('login')}
+              className="w-full text-center text-sm py-2 rounded-full"
+              style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)' }}
+            >
+              <span style={{ color: '#B7FF1A' }}>Sign in</span> to comment
+            </button>
           )}
         </div>
       </div>
