@@ -52,7 +52,6 @@ const HomePage = () => {
   const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [selectedGameFilter, setSelectedGameFilter] = useState<string | null>(null);
   const [activeContentTab, setActiveContentTab] = useState<'clips' | 'reels' | 'screenshots'>('clips');
-  const [mobileViewer, setMobileViewer] = useState<{ clips: ClipWithUser[]; startId: number } | null>(null);
   const [reelsViewer, setReelsViewer] = useState<number | null>(null);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -617,7 +616,6 @@ const HomePage = () => {
                     userId={userId}
                     compact={true}
                     clipsList={latestClips ?? undefined}
-                    onCardClick={isMobile ? (clipId, clips) => setMobileViewer({ clips, startId: clipId }) : undefined}
                   />
                 ))
               )}
@@ -1031,14 +1029,6 @@ const HomePage = () => {
 
 
     </div>
-
-    {mobileViewer && (
-      <MobileTrendingViewer
-        content={mobileViewer.clips}
-        initialIndex={Math.max(0, mobileViewer.clips.findIndex(c => c.id === mobileViewer.startId))}
-        onClose={() => setMobileViewer(null)}
-      />
-    )}
 
     {reelsViewer !== null && latestReels.length > 0 && (
       <MobileTrendingViewer
