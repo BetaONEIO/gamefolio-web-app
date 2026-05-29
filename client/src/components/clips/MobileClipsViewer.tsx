@@ -351,25 +351,25 @@ export const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => 
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: '#03080A' }}>
-      {/* Top bar — back button */}
-      <div
-        className="flex-shrink-0 flex items-center px-4 pb-3"
-        style={{
-          background: '#03080A',
-          paddingTop: isMobile
-            ? 'calc(env(safe-area-inset-top, 0px) + 12px)'
-            : '72px',
-        }}
-      >
-        <button
-          onClick={onBack}
-          className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
-          style={{ color: '#F5F7F2' }}
-          aria-label="Back"
+      {/* Top bar — back button (mobile only) */}
+      {isMobile && (
+        <div
+          className="flex-shrink-0 flex items-center px-4 pb-3"
+          style={{
+            background: '#03080A',
+            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+          }}
         >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-      </div>
+          <button
+            onClick={onBack}
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
+            style={{ color: '#F5F7F2' }}
+            aria-label="Back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+        </div>
+      )}
 
       {/* Snap-scrolling feed */}
       <div
