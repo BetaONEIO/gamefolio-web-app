@@ -1524,28 +1524,29 @@ const TrendingPage: React.FC = () => {
             )}
           </div>
 
-          {/* 3. Gamepad — always visible standalone filter button */}
-          <button
-            onClick={() => { setShowGameFilter(true); setShowContentDropdown(false); setShowTimeDropdown(false); }}
-            className="flex items-center gap-1.5 rounded-full transition-all hover:shadow-[0_0_12px_rgba(183,255,26,0.35)] flex-shrink-0"
+          {/* 3. Gamepad circle — hidden behind Eye toggle */}
+          <div
+            className="flex items-center justify-end flex-shrink-0"
             style={{
-              ...pillBaseStyle(!!selectedGameId),
-              opacity: 1,
-              pointerEvents: 'auto',
+              opacity: controlsVisible ? 1 : 0,
+              transform: controlsVisible ? visibleTransform : hiddenTransform,
+              pointerEvents: controlsVisible ? 'auto' : 'none',
+              maxWidth: controlsVisible ? '50px' : '0',
+              overflow: 'hidden',
+              transition: controlsVisible && isClipsMode
+                ? `${itemTransition}, max-width 0.25s ease 180ms`
+                : `${itemTransition}, max-width 0.25s ease`,
               order: orderGamepad,
-              padding: selectedGameId ? '6px 12px 6px 8px' : '0',
-              width: selectedGameId ? 'auto' : '40px',
-              height: '40px',
-              justifyContent: 'center',
             }}
           >
-            <Gamepad2 className="h-5 w-5 flex-shrink-0" style={{ color: selectedGameId ? '#B7FF1A' : '#F5F7F2' }} />
-            {selectedGameId && (
-              <span className="text-xs font-semibold whitespace-nowrap" style={{ color: '#B7FF1A', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {selectedGameName}
-              </span>
-            )}
-          </button>
+            <button
+              onClick={() => { setShowGameFilter(true); setShowContentDropdown(false); setShowTimeDropdown(false); }}
+              className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:shadow-[0_0_12px_rgba(183,255,26,0.35)] flex-shrink-0"
+              style={pillBaseStyle(!!selectedGameId)}
+            >
+              <Gamepad2 className="h-5 w-5" style={{ color: selectedGameId ? '#B7FF1A' : '#F5F7F2' }} />
+            </button>
+          </div>
 
           {/* 4. Clock circle */}
           <div
