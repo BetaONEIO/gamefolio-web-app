@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
 import { ArrowLeft, Heart, MessageCircle, User, Play, Pause, Flag, BarChart2, Gamepad2, X, Send, MoreHorizontal } from "lucide-react";
-import { StyledMentionInput } from "@/components/ui/mention-input";
 import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
@@ -115,6 +114,21 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   // Inline comment input state
   const [inlineComment, setInlineComment] = useState("");
   const createCommentMutation = useCreateComment();
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Track software keyboard height via visualViewport
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const kh = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKeyboardHeight(kh);
+    };
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => { vv.removeEventListener('resize', update); vv.removeEventListener('scroll', update); };
+  }, []);
 
   useEffect(() => {
     onCommentsVisibilityChange?.(showComments);
@@ -593,9 +607,10 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             animate={{ y: sheetY > 0 ? sheetY : 0 }}
             exit={{ y: "100%" }}
             transition={sheetY > 0 ? { duration: 0 } : { type: "tween", duration: 0.42, ease: [0.32, 0, 0.67, 0] }}
-            className="absolute bottom-0 left-0 right-0 z-30 flex flex-col overflow-hidden"
+            className="absolute left-0 right-0 z-30 flex flex-col overflow-hidden"
             style={{
-              height: '70%',
+              bottom: keyboardHeight,
+              height: keyboardHeight > 0 ? `calc(70% - ${keyboardHeight}px)` : '70%',
               background: '#0B1218',
               borderRadius: '20px 20px 0 0',
             }}
@@ -652,50 +667,63 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
 
             {/* Sticky comment form — always visible at bottom of sheet */}
             <div
-              className="flex-shrink-0 px-3 pt-3"
+              className="flex-shrink-0 px-3 py-3"
               style={{
                 borderTop: '1px solid rgba(255,255,255,0.07)',
                 background: '#0B1218',
-                paddingBottom: 'max(env(safe-area-inset-bottom, 12px), 12px)',
+                paddingBottom: keyboardHeight > 0 ? '12px' : 'max(env(safe-area-inset-bottom, 12px), 12px)',
               }}
             >
               {user ? (
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 mt-1">
+                <div className="flex items-center gap-2">
+                  <div className="flex-shrink-0">
                     <CustomAvatar user={user} size="sm" showBorder={false} />
                   </div>
-                  <div className="flex-1 space-y-2">
-                    <StyledMentionInput
-                      value={inlineComment}
-                      onChange={setInlineComment}
-                      onSubmit={() => {
+                  <textarea
+                    ref={commentInputRef}
+                    value={inlineComment}
+                    onChange={e => setInlineComment(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
                         if (!inlineComment.trim() || !isVideoContent(currentItem)) return;
                         createCommentMutation.mutate(
                           { clipId: currentItem.id, text: inlineComment },
                           { onSuccess: () => setInlineComment("") }
                         );
-                      }}
-                      placeholder="Add a comment... Use @username to mention other users!"
-                      className="min-h-[60px] text-sm resize-none rounded-xl"
-                      data-testid="input-comment-inline"
-                    />
-                    <div className="flex justify-end">
-                      <Button
-                        size="sm"
-                        disabled={!inlineComment.trim() || createCommentMutation.isPending}
-                        onClick={() => {
-                          if (!inlineComment.trim() || !isVideoContent(currentItem)) return;
-                          createCommentMutation.mutate(
-                            { clipId: currentItem.id, text: inlineComment },
-                            { onSuccess: () => setInlineComment("") }
-                          );
-                        }}
-                        data-testid="button-post-comment-inline"
-                      >
-                        {createCommentMutation.isPending ? "Posting..." : "Post Comment"}
-                      </Button>
-                    </div>
-                  </div>
+                      }
+                    }}
+                    placeholder="Add a comment..."
+                    rows={1}
+                    className="flex-1 resize-none text-sm rounded-full px-4 py-2.5 outline-none"
+                    style={{
+                      background: 'rgba(255,255,255,0.07)',
+                      color: '#F5F7F2',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      lineHeight: '1.4',
+                      maxHeight: '80px',
+                      overflowY: 'auto',
+                    }}
+                    data-testid="input-comment-inline"
+                  />
+                  <button
+                    disabled={!inlineComment.trim() || createCommentMutation.isPending}
+                    onClick={() => {
+                      if (!inlineComment.trim() || !isVideoContent(currentItem)) return;
+                      createCommentMutation.mutate(
+                        { clipId: currentItem.id, text: inlineComment },
+                        { onSuccess: () => setInlineComment("") }
+                      );
+                    }}
+                    className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full transition-all"
+                    style={{
+                      background: inlineComment.trim() ? '#B7FF1A' : 'rgba(255,255,255,0.1)',
+                      color: inlineComment.trim() ? '#071013' : 'rgba(255,255,255,0.3)',
+                    }}
+                    data-testid="button-post-comment-inline"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
                 </div>
               ) : (
                 <button
