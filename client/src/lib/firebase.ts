@@ -58,6 +58,7 @@ export type NativeGoogleAuthResult = {
   displayName: string;
   photoURL: string | null;
   uid: string;
+  idToken: string | null;
 };
 
 /**
@@ -84,6 +85,7 @@ export async function signInWithGoogleNative(): Promise<NativeGoogleAuthResult> 
     displayName: user.displayName || user.email.split('@')[0],
     photoURL: user.photoUrl ?? null,
     uid: user.uid,
+    idToken: result.credential?.idToken ?? null,
   };
 }
 

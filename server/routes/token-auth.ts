@@ -298,14 +298,140 @@ router.get('/health', (req, res) => {
 const RORK_APP_SCHEME = schemePrefix(DEFAULT_MOBILE_SCHEME);
 
 /**
- * Mobile Google OAuth endpoint — REMOVED
- * This endpoint previously trusted unverified client-supplied identity claims
- * (email, uid) without verifying a Firebase ID token, allowing account
- * takeover by supplying any victim email address. Use the Apple-style verified
- * token flow or the server-side OAuth callback flow instead.
+ * Mobile Google Sign-In endpoint.
+ *
+ * The native Capacitor client uses @capacitor-firebase/authentication to open
+ * the system Google account chooser. The plugin returns a Firebase ID token
+ * (JWT signed by Google/Firebase). We verify that token server-side with the
+ * Firebase Admin SDK before trusting any identity claims — this prevents
+ * account-takeover via forged request bodies.
+ *
+ * Flow:
+ *  1. Client calls FirebaseAuthentication.signInWithGoogle() → gets idToken
+ *  2. Client POSTs { idToken } here
+ *  3. Server verifies the token, extracts uid / email / name / picture
+ *  4. Find-or-create the Gamefolio user, issue a JWT pair, return it
  */
-router.post('/auth/mobile/google', (_req: Request, res: Response) => {
-  return res.status(410).json({ success: false, message: 'This endpoint has been removed. Use the standard Google OAuth login flow.' });
+router.post('/auth/mobile/google', async (req: Request, res: Response) => {
+  let verifyFirebaseIdToken: (token: string) => Promise<import('../services/firebase-admin').FirebaseTokenClaims>;
+  try {
+    ({ verifyFirebaseIdToken } = await import('../services/firebase-admin'));
+  } catch {
+    return res.status(503).json({ success: false, message: 'Google sign-in is not configured on this server.' });
+  }
+
+  try {
+    const { idToken } = req.body as { idToken?: string };
+
+    if (!idToken || typeof idToken !== 'string') {
+      return res.status(400).json({ success: false, message: 'Missing Firebase ID token' });
+    }
+
+    let claims;
+    try {
+      claims = await verifyFirebaseIdToken(idToken);
+    } catch (err) {
+      console.error('Firebase ID token verification failed:', err);
+      return res.status(401).json({ success: false, message: 'Invalid or expired Google credential' });
+    }
+
+    const { uid, email, email_verified, name, picture } = claims;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Google account did not provide an email address' });
+    }
+
+    const normalizedEmail = email.toLowerCase();
+
+    // 1. Try to find existing user by Firebase UID (authProvider='google', externalId=uid)
+    let user: any = null;
+    if (typeof storage.getUserByExternalId === 'function') {
+      user = await storage.getUserByExternalId(uid, 'google');
+    }
+
+    let isNewUser = false;
+
+    // 2. Fall back to email lookup — only link if the account has no external provider
+    if (!user && email_verified && typeof storage.getUserByEmail === 'function') {
+      const byEmail = await storage.getUserByEmail(normalizedEmail);
+      if (byEmail) {
+        const existingProvider = byEmail.authProvider || 'local';
+        if (existingProvider === 'local' || existingProvider === 'google') {
+          user = (await storage.updateUser(byEmail.id, {
+            authProvider: 'google',
+            externalId: uid,
+            emailVerified: true,
+            ...(picture && !byEmail.avatarUrl ? { avatarUrl: picture } : {}),
+          })) || byEmail;
+        } else {
+          return res.status(409).json({
+            success: false,
+            message: `An account with this email is already linked to ${existingProvider}. Please sign in with ${existingProvider} instead.`,
+          });
+        }
+      }
+    }
+
+    // 3. Create a new user if no match found
+    if (!user) {
+      isNewUser = true;
+      const timestamp = Date.now().toString().slice(-6);
+      const tempUsername = `temp_${uid.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8)}_${timestamp}`.toLowerCase();
+      const displayName = name || normalizedEmail.split('@')[0];
+
+      user = await storage.createUser({
+        username: tempUsername,
+        email: normalizedEmail,
+        displayName,
+        password: '',
+        avatarUrl: picture || '/attached_assets/gamefolio-logo-green.png',
+        bannerUrl: '/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg',
+        emailVerified: true,
+        authProvider: 'google',
+        externalId: uid,
+        userType: null,
+        ageRange: null,
+      });
+    }
+
+    const needsOnboarding = !user.userType || user.username.startsWith('temp_');
+
+    let streakInfo;
+    try {
+      await storage.updateUserLoginTime(user.id, 0);
+      streakInfo = await StreakService.updateLoginStreak(user.id);
+    } catch (error) {
+      console.error('Error updating login time or streak:', error);
+    }
+
+    const tokens = JWTService.generateTokenPair(user);
+    const { password: _pw, ...userWithoutPassword } = user;
+
+    return res.status(200).json({
+      success: true,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: {
+        ...userWithoutPassword,
+        needsOnboarding,
+        isNewGoogleUser: isNewUser,
+        ...(streakInfo && !streakInfo.isFirstLogin && {
+          streakInfo: {
+            currentStreak: streakInfo.currentStreak,
+            bonusAwarded: streakInfo.bonusAwarded,
+            dailyXP: streakInfo.dailyXP,
+            longestStreak: user.longestStreak || 0,
+            nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
+            message: streakInfo.message,
+            isNewMilestone: streakInfo.isNewMilestone,
+          },
+        }),
+      },
+    });
+  } catch (error) {
+    console.error('Mobile Google auth error:', error);
+    return res.status(500).json({ success: false, message: 'Google authentication failed' });
+  }
 });
 
 /**
