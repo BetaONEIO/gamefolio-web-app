@@ -346,38 +346,34 @@ const CommentSection = ({ clipId, screenshotId, currentUserId = 1, onUsernameCli
       
       {/* Comment form - only show to authenticated users, hidden in bottom-sheet mode */}
       {!hideForm && (user ? (
-        <form 
-          onSubmit={handleSubmitComment} 
-          className="mt-4 space-y-3 flex-shrink-0"
+        <form
+          onSubmit={handleSubmitComment}
+          className="mt-4 flex items-center gap-2 flex-shrink-0"
         >
-          <div className="flex items-start gap-3">
-            {currentUser && (
-              <div className="flex flex-shrink-0">
-                <CustomAvatar user={currentUser} size="sm" showBorder={false} />
-              </div>
-            )}
-            <div className="flex-1 space-y-2">
-              <StyledMentionInput
-                value={newComment}
-                onChange={setNewComment}
-                onSubmit={submitComment}
-                placeholder="Add a comment... Use @username to mention other users!"
-                className="min-h-[60px] text-sm resize-none rounded-xl"
-                data-testid="input-comment"
-              />
-              <div className="flex justify-end items-center gap-2">
-                <EmojiPickerButton onEmojiSelect={(emoji) => setNewComment((prev) => prev + emoji)} />
-                <Button 
-                  type="submit" 
-                  variant="default"
-                  size="sm"
-                  disabled={!newComment.trim() || isSubmitting}
-                  data-testid="button-post-comment"
-                >
-                  {isSubmitting ? "Posting..." : "Post Comment"}
-                </Button>
-              </div>
+          {currentUser && (
+            <div className="flex-shrink-0">
+              <CustomAvatar user={currentUser} size="sm" showBorder={false} />
             </div>
+          )}
+          <div className="flex-1 flex items-center gap-2">
+            <StyledMentionInput
+              value={newComment}
+              onChange={setNewComment}
+              onSubmit={submitComment}
+              placeholder="Add a comment..."
+              className="min-h-[36px] max-h-[80px] text-sm resize-none rounded-xl flex-1"
+              data-testid="input-comment"
+            />
+            <Button
+              type="submit"
+              variant="default"
+              size="sm"
+              disabled={!newComment.trim() || isSubmitting}
+              className="flex-shrink-0"
+              data-testid="button-post-comment"
+            >
+              {isSubmitting ? "..." : "Post"}
+            </Button>
           </div>
         </form>
       ) : (
