@@ -301,9 +301,9 @@ const DesktopShortsViewer: React.FC<{
       <div className="flex items-center justify-between px-5 pb-3 flex-shrink-0" style={{ paddingTop: '128px' }}>
         <button
           onClick={onClose}
-          className="group"
+          className="group fixed left-5 lg:left-[276px]"
           aria-label="Back to Trending"
-          style={{ paddingTop: '72px' }}
+          style={{ top: '200px' }}
         >
           <ChevronLeft className="h-8 w-8 text-white/80 group-hover:text-white transition-colors" strokeWidth={2} />
         </button>
