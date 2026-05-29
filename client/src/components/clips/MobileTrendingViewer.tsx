@@ -607,12 +607,15 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             animate={{ y: sheetY > 0 ? sheetY : 0 }}
             exit={{ y: "100%" }}
             transition={sheetY > 0 ? { duration: 0 } : { type: "tween", duration: 0.42, ease: [0.32, 0, 0.67, 0] }}
-            className="absolute left-0 right-0 z-30 flex flex-col overflow-hidden"
+            className="absolute left-0 right-0 z-30"
             style={{
               bottom: keyboardHeight,
-              height: keyboardHeight > 0 ? `calc(70% - ${keyboardHeight}px)` : '70%',
+              height: '70%',
               background: '#0B1218',
               borderRadius: '20px 20px 0 0',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
             }}
             onClick={e => e.stopPropagation()}
           >
@@ -658,20 +661,25 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               </button>
             </div>
 
-            {/* Scrollable comment list only — form is below */}
-            <div className="flex-1 overflow-y-auto px-4 py-2 min-h-0">
+            {/* Scrollable comment list — pad bottom so form never overlaps content */}
+            <div
+              className="flex-1 overflow-y-auto px-4 py-2"
+              style={{ paddingBottom: '72px', minHeight: 0 }}
+            >
               {isVideoContent(currentItem) && (
                 <CommentSection clipId={currentItem.id} hideForm={true} />
               )}
             </div>
 
-            {/* Sticky comment form — always visible at bottom of sheet */}
+            {/* Sticky comment form — pinned absolutely to the bottom of the sheet */}
             <div
-              className="flex-shrink-0 px-3 py-3"
+              className="absolute left-0 right-0 px-3 py-3"
               style={{
+                bottom: 0,
                 borderTop: '1px solid rgba(255,255,255,0.07)',
                 background: '#0B1218',
-                paddingBottom: keyboardHeight > 0 ? '12px' : 'max(env(safe-area-inset-bottom, 12px), 12px)',
+                paddingBottom: keyboardHeight > 0 ? '12px' : 'env(safe-area-inset-bottom, 12px)',
+                zIndex: 1,
               }}
             >
               {user ? (
