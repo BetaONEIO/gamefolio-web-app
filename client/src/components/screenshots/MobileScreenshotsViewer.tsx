@@ -196,15 +196,20 @@ function FeedImage({
   ageRestricted?: boolean;
   onExpand: () => void;
 }) {
-  const { signedUrl } = useSignedUrl(imageUrl);
+  const { signedUrl, isLoading } = useSignedUrl(imageUrl);
   const [failed, setFailed] = useState(false);
+
+  useEffect(() => { setFailed(false); }, [signedUrl]);
+
   return (
     <div className="relative w-full aspect-video bg-[#0B1218] flex items-center justify-center overflow-hidden">
       {failed ? (
         <ImageOff className="h-10 w-10 text-white/20" />
+      ) : isLoading || !signedUrl ? (
+        <div className="w-full h-full animate-pulse" style={{ background: '#111' }} />
       ) : (
         <img
-          src={signedUrl || imageUrl}
+          src={signedUrl}
           alt={title}
           className={`w-full h-full object-contain${ageRestricted ? ' blur-2xl' : ''}`}
           loading="lazy"
