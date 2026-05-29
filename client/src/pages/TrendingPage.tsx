@@ -1484,8 +1484,11 @@ const TrendingPage: React.FC = () => {
               opacity: controlsVisible ? 1 : 0,
               transform: controlsVisible ? visibleTransform : hiddenTransform,
               pointerEvents: controlsVisible ? 'auto' : 'none',
-              transition: itemTransition,
-              transitionDelay: controlsVisible && isClipsMode ? '60ms' : '0ms',
+              maxWidth: controlsVisible ? '200px' : '0',
+              overflow: 'hidden',
+              transition: controlsVisible && isClipsMode
+                ? `${itemTransition}, max-width 0.25s ease 60ms`
+                : `${itemTransition}, max-width 0.25s ease`,
               order: orderContentPill,
             }}
           >
@@ -1551,8 +1554,11 @@ const TrendingPage: React.FC = () => {
               opacity: controlsVisible ? 1 : 0,
               transform: controlsVisible ? visibleTransform : hiddenTransform,
               pointerEvents: controlsVisible ? 'auto' : 'none',
-              transition: itemTransition,
-              transitionDelay: controlsVisible && isClipsMode ? '120ms' : '0ms',
+              maxWidth: controlsVisible ? '50px' : '0',
+              overflow: 'hidden',
+              transition: controlsVisible && isClipsMode
+                ? `${itemTransition}, max-width 0.25s ease 120ms`
+                : `${itemTransition}, max-width 0.25s ease`,
               order: orderClock,
             }}
           >
