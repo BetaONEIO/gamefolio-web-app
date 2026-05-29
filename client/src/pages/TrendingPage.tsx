@@ -297,8 +297,8 @@ const DesktopShortsViewer: React.FC<{
       className="fixed top-0 right-0 bottom-0 z-[45] flex flex-col lg:left-64 left-0"
       style={{ background: 'rgba(3, 8, 10, 0.98)' }}
     >
-      {/* Top bar — back button + counter, positioned below the sticky app header */}
-      <div className="flex items-center justify-between px-5 pb-3 flex-shrink-0" style={{ paddingTop: '76px' }}>
+      {/* Top bar — rendered above main content, below the sticky app header */}
+      <div className="flex items-center justify-between px-5 pb-3 flex-shrink-0" style={{ paddingTop: '128px' }}>
         <button
           onClick={onClose}
           className="group"
