@@ -661,30 +661,28 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               </button>
             </div>
 
-            {/* Scrollable comment list — pad bottom so form never overlaps content */}
+            {/* Scrollable comment list — flex-1 so it fills remaining space above the form */}
             <div
-              className="flex-1 overflow-y-auto px-4 py-2"
-              style={{ paddingBottom: '72px', minHeight: 0 }}
+              style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 16px' }}
             >
               {isVideoContent(currentItem) && (
                 <CommentSection clipId={currentItem.id} hideForm={true} />
               )}
             </div>
 
-            {/* Sticky comment form — pinned absolutely to the bottom of the sheet */}
+            {/* Comment input — flex-shrink-0 so it always stays at the bottom */}
             <div
-              className="absolute left-0 right-0 px-3 py-3"
               style={{
-                bottom: 0,
+                flexShrink: 0,
                 borderTop: '1px solid rgba(255,255,255,0.07)',
                 background: '#0B1218',
-                paddingBottom: keyboardHeight > 0 ? '12px' : 'env(safe-area-inset-bottom, 12px)',
-                zIndex: 1,
+                padding: '10px 12px',
+                paddingBottom: keyboardHeight > 0 ? '10px' : 'max(env(safe-area-inset-bottom, 10px), 10px)',
               }}
             >
               {user ? (
-                <div className="flex items-center gap-2">
-                  <div className="flex-shrink-0">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ flexShrink: 0 }}>
                     <CustomAvatar user={user} size="sm" showBorder={false} />
                   </div>
                   <textarea
@@ -697,20 +695,26 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                         if (!inlineComment.trim() || !isVideoContent(currentItem)) return;
                         createCommentMutation.mutate(
                           { clipId: currentItem.id, text: inlineComment },
-                          { onSuccess: () => setInlineComment("") }
+                          { onSuccess: () => setInlineComment('') }
                         );
                       }
                     }}
                     placeholder="Add a comment..."
                     rows={1}
-                    className="flex-1 resize-none text-sm rounded-full px-4 py-2.5 outline-none"
                     style={{
+                      flex: 1,
+                      resize: 'none',
+                      fontSize: 14,
+                      borderRadius: 999,
+                      padding: '9px 16px',
+                      outline: 'none',
                       background: 'rgba(255,255,255,0.07)',
                       color: '#F5F7F2',
                       border: '1px solid rgba(255,255,255,0.1)',
                       lineHeight: '1.4',
-                      maxHeight: '80px',
+                      maxHeight: 80,
                       overflowY: 'auto',
+                      fontFamily: 'inherit',
                     }}
                     data-testid="input-comment-inline"
                   />
@@ -720,24 +724,41 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                       if (!inlineComment.trim() || !isVideoContent(currentItem)) return;
                       createCommentMutation.mutate(
                         { clipId: currentItem.id, text: inlineComment },
-                        { onSuccess: () => setInlineComment("") }
+                        { onSuccess: () => setInlineComment('') }
                       );
                     }}
-                    className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full transition-all"
                     style={{
+                      flexShrink: 0,
+                      width: 36,
+                      height: 36,
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       background: inlineComment.trim() ? '#B7FF1A' : 'rgba(255,255,255,0.1)',
                       color: inlineComment.trim() ? '#071013' : 'rgba(255,255,255,0.3)',
+                      border: 'none',
+                      cursor: inlineComment.trim() ? 'pointer' : 'default',
                     }}
                     data-testid="button-post-comment-inline"
                   >
-                    <Send className="h-4 w-4" />
+                    <Send style={{ width: 16, height: 16 }} />
                   </button>
                 </div>
               ) : (
                 <button
                   onClick={() => openModal('login')}
-                  className="w-full text-center text-sm py-2 rounded-full"
-                  style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)' }}
+                  style={{
+                    width: '100%',
+                    textAlign: 'center',
+                    fontSize: 14,
+                    padding: '8px 0',
+                    borderRadius: 999,
+                    background: 'rgba(255,255,255,0.07)',
+                    color: 'rgba(255,255,255,0.5)',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
                 >
                   <span style={{ color: '#B7FF1A' }}>Sign in</span> to comment
                 </button>
