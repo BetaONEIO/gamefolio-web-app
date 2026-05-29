@@ -3319,6 +3319,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return `${route}:${periodStr}:${parsedLimit}:${parsedGameId}:${currentUserId ?? 'guest'}`;
   }
 
+  // Evict all trending cache entries whose key starts with a given route prefix.
+  function invalidateTrendingByRoute(routePrefix: string) {
+    for (const k of trendingCache.keys()) {
+      if (k.startsWith(routePrefix + ':') || k === routePrefix) {
+        trendingCache.delete(k);
+      }
+    }
+  }
+
   // Periodic eviction so the cache doesn't grow without bound
   setInterval(() => {
     const now = Date.now();
@@ -7095,6 +7104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const comment = await storage.createComment(commentData);
+      invalidateTrendingByRoute('clips');
 
       // Award points to the commenter
       await LeaderboardService.awardPoints(
@@ -7157,6 +7167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to delete comment" });
       }
 
+      invalidateTrendingByRoute('clips');
       res.status(200).json({ message: "Comment deleted successfully" });
     } catch (err) {
       console.error("Error deleting comment:", err);
