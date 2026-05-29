@@ -6,6 +6,7 @@ import { Eye, Play } from "lucide-react";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 import { MobileClipsViewer } from "@/components/clips/MobileClipsViewer";
+import { useClipDialog } from "@/hooks/use-clip-dialog";
 
 interface VideoClipCardProps {
   clip: ClipWithUser;
@@ -16,11 +17,17 @@ interface VideoClipCardProps {
 
 const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
   const [mobileViewerOpen, setMobileViewerOpen] = useState(false);
+  const { openClipDialog } = useClipDialog();
   const allClips = clipsList || [clip];
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
 
   const handleCardClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    setMobileViewerOpen(true);
+    if (isMobile) {
+      setMobileViewerOpen(true);
+    } else {
+      openClipDialog(clip.id, allClips, undefined, 'clip');
+    }
   };
 
   const isNew = clip.createdAt && Date.now() - new Date(clip.createdAt).getTime() < 86400000 * 3;
