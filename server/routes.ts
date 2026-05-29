@@ -7576,10 +7576,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingReaction = await storage.getUserClipReaction(userId, clipId, emoji);
       
       if (existingReaction) {
-        // Fire reactions cannot be removed
+        // Zaps cannot be removed
         if (emoji === '🔥') {
           return res.status(400).json({ 
-            message: "Fire reactions are permanent and cannot be removed",
+            message: "Zaps are permanent and cannot be removed",
             reacted: true
           });
         }
@@ -11698,10 +11698,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingReaction = await storage.getUserScreenshotReaction(userId, screenshotId, emoji);
 
       if (existingReaction) {
-        // Fire reactions cannot be removed
+        // Zaps cannot be removed
         if (emoji === '🔥') {
           return res.status(400).json({ 
-            message: "Fire reactions are permanent and cannot be removed",
+            message: "Zaps are permanent and cannot be removed",
             reacted: true
           });
         }
