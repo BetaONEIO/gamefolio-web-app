@@ -7599,8 +7599,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // For fire reactions, check daily limit
+      let fireLimits: Awaited<ReturnType<typeof storage.getFireLimits>> | null = null;
       if (emoji === '🔥') {
-        const fireLimits = await storage.getFireLimits(userId);
+        fireLimits = await storage.getFireLimits(userId);
         
         if (!fireLimits.canFire) {
           return res.status(400).json({ 
@@ -7627,8 +7628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const reaction = await storage.createClipReaction(reactionData);
 
-      if (emoji === '🔥') {
-        // fireLimits already fetched above; compute remaining without a second DB call
+      if (emoji === '🔥' && fireLimits) {
         const firesRemaining = fireLimits.maxFiresPerDay - fireLimits.firesUsedToday - 1;
         const reactionsList = await storage.getClipReactions(clipId);
         const count = reactionsList.filter(r => r.emoji === emoji).length;
