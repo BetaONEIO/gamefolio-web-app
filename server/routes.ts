@@ -4748,7 +4748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.removeHeader('Content-Length');
       res.setHeader('Transfer-Encoding', 'chunked');
 
-      const logoPath = path.join(process.cwd(), 'client', 'public', 'attached_assets', 'gamefolio-logo-white.png');
+      const logoPath = path.join(process.cwd(), 'client', 'public', 'attached_assets', 'gamefolio-logo-green.png');
       const fs = await import('fs');
       const logoExists = fs.existsSync(logoPath);
 
