@@ -551,7 +551,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               ? "w-screen h-[calc(100dvh-64px)] max-w-none max-h-none overflow-hidden top-0 translate-y-0" // Leave space for footer on mobile reels, use dvh for dynamic viewport
               : isMobile 
                 ? "w-screen h-[100dvh] max-w-none max-h-none overflow-hidden top-0 translate-y-0 border-0 rounded-none" // Full screen, no border/radius on mobile clips
-                : "max-w-5xl w-[90%] max-h-[90vh] h-[88vh] overflow-hidden grid-rows-[1fr]" // Desktop size
+                : "w-screen h-[100dvh] max-w-none max-h-none overflow-hidden top-0 left-0 translate-x-0 translate-y-0 border-0 rounded-none" // Desktop: full screen
           )}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
