@@ -492,7 +492,7 @@ const DesktopShortsViewer: React.FC<{
 
           {/* Horizontal engagement row */}
           <div
-            className="flex items-center gap-5 flex-shrink-0 pl-4 pr-[220px]"
+            className="flex items-center gap-5 flex-shrink-0 px-4"
             style={{ paddingTop: '6px', paddingBottom: '14px' }}
           >
             <LikeButton
@@ -561,8 +561,8 @@ const DesktopShortsViewer: React.FC<{
             <div onClick={(e) => e.stopPropagation()}>
               <TrendingClipMenu clip={clip} />
             </div>
-            {/* Eye filter — far right; flyout opens to the left */}
-            <div className="relative ml-auto" onClick={e => e.stopPropagation()}>
+            {/* Eye filter — right side; mr-[220px] leaves room for flyout to open rightward */}
+            <div className="relative ml-auto mr-[220px]" onClick={e => e.stopPropagation()}>
               <button
                 onClick={() => { setShowContentDropdown(false); setShowTimeDropdown(false); setControlsVisible(v => !v); }}
                 className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
