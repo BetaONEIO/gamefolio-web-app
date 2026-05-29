@@ -1394,7 +1394,7 @@ const TrendingPage: React.FC = () => {
             key={`reels-${selectedGameId ?? 'all'}`}
             content={activeContent}
             onClose={() => setLocation('/')}
-            hideCloseButton={false}
+            hideCloseButton={true}
             onCommentsVisibilityChange={setCommentsOpen}
           />
         )}
@@ -1445,7 +1445,7 @@ const TrendingPage: React.FC = () => {
 
           return (
         <div
-          className={`fixed z-[70] flex gap-2 ${
+          className={`fixed z-[10000] flex gap-2 ${
             isClipsMode
               ? 'flex-row items-center flex-wrap-reverse justify-end max-w-[calc(100vw-24px)]'
               : 'flex-col items-end'
@@ -1595,7 +1595,7 @@ const TrendingPage: React.FC = () => {
         {/* Game filter bottom-sheet modal */}
         {showGameFilter && (
           <div
-            className="fixed inset-0 z-[80] flex items-end"
+            className="fixed inset-0 z-[10001] flex items-end"
             style={{ background: 'rgba(0,0,0,0.65)' }}
             onClick={() => { setShowGameFilter(false); setGameSearchQuery(''); }}
           >
