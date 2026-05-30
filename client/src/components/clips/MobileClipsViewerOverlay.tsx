@@ -86,6 +86,7 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
               scrollSnapAlign: 'start',
               scrollSnapStop: 'always',
               minHeight: '100%',
+              paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
             }}
           >
             <ClipFeedCard clip={clip} clips={clips} />

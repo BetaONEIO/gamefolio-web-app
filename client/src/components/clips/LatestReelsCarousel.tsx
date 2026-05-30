@@ -135,7 +135,7 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
           return (
             <div
               key={`latest-reel-${reel.id}`}
-              onClick={() => openClipDialog(reel.id, reelsArray)}
+              onClick={() => openClipDialog(reel.id, reelsArray, undefined, 'reel')}
               className="w-44 sm:w-52 lg:w-56 xl:w-60 flex-shrink-0 cursor-pointer group"
               data-testid={`reel-card-${reel.id}`}
             >
