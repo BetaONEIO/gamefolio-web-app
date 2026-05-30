@@ -10,8 +10,6 @@ import { getQueryFn } from "@/lib/queryClient";
 
 function isTouchPrimary() {
   if (typeof window === "undefined") return false;
-  // maxTouchPoints catches Samsung Browser and other touch devices that
-  // may report pointer:fine; the media queries are belt-and-suspenders.
   return (
     navigator.maxTouchPoints > 0 ||
     window.matchMedia("(pointer: coarse)").matches ||
@@ -29,24 +27,19 @@ function getThemeTokens(accentColor: string) {
   const a = accentColor.toLowerCase();
   const isCyberpunk = a === "#00d3f2";
   const isNeo       = a === "#00ff41";
-  const isZombie    = a === "#9ae600";
 
   return {
     isCyberpunk,
     labelFont:    isCyberpunk ? "'Orbitron', sans-serif" : isNeo ? "'JetBrains Mono', monospace" : undefined,
-    labelSize:    isCyberpunk || isNeo ? "6px" : "7px",
-    labelSpacing: isCyberpunk ? "1.2px" : isNeo ? "0.8px" : "0.8px",
-    borderRadius: isCyberpunk || isNeo ? 4 : 16,
+    labelSize:    isCyberpunk || isNeo ? "5.5px" : "6px",
+    labelSpacing: isCyberpunk ? "1.2px" : "0.8px",
+    borderRadius: isCyberpunk || isNeo ? 4 : 14,
     cardBorder:   isCyberpunk ? "1px solid #00b8db55"
                 : isNeo       ? "1px solid #00ff4144"
-                : isZombie    ? "1px solid #9ae60044"
                 : `1px solid ${accentColor}22`,
-    cardShadow:   isCyberpunk ? "0 16px 56px rgba(0,0,0,0.92), 0 0 24px #00d3f244, 0 0 0 1px #00b8db22"
-                : isNeo       ? "0 16px 56px rgba(0,0,0,0.92), 0 0 20px #00ff4133"
-                : `0 16px 56px rgba(0,0,0,0.72), 0 0 0 1px ${accentColor}10`,
-    buttonRadius: isCyberpunk || isNeo ? 4 : 8,
-    buttonFont:   isCyberpunk ? "'Orbitron', sans-serif" : undefined,
-    buttonColor:  isCyberpunk ? "#071013" : "#071013",
+    cardShadow:   isCyberpunk ? "0 12px 40px rgba(0,0,0,0.92), 0 0 20px #00d3f244, 0 0 0 1px #00b8db22"
+                : isNeo       ? "0 12px 40px rgba(0,0,0,0.92), 0 0 16px #00ff4133"
+                : `0 12px 40px rgba(0,0,0,0.72), 0 0 0 1px ${accentColor}10`,
   };
 }
 
@@ -55,29 +48,29 @@ function LoadingSkeleton() {
     <>
       <Skeleton
         style={{
-          height: 72,
-          margin: "-16px -16px 12px -16px",
-          width: "calc(100% + 32px)",
-          borderRadius: "16px 16px 0 0",
+          height: 48,
+          margin: "-12px -12px 10px -12px",
+          width: "calc(100% + 24px)",
+          borderRadius: "14px 14px 0 0",
           display: "block",
         }}
       />
-      <div className="flex items-center gap-3 mb-3">
-        <Skeleton className="h-11 w-11 rounded-full flex-shrink-0" />
-        <div className="space-y-1.5 flex-1">
-          <Skeleton className="h-4 w-28" />
+      <div className="flex items-center gap-2 mb-2 pl-1">
+        <Skeleton className="h-9 w-9 rounded-full flex-shrink-0" />
+        <div className="space-y-1 flex-1">
           <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-2.5 w-14" />
         </div>
       </div>
-      <div className="flex gap-5 mb-3">
+      <div className="flex gap-3 mb-2 pl-1">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="flex flex-col gap-1">
-            <Skeleton className="h-5 w-8" />
-            <Skeleton className="h-2 w-12" />
+          <div key={i} className="flex flex-col gap-0.5">
+            <Skeleton className="h-4 w-6" />
+            <Skeleton className="h-1.5 w-10" />
           </div>
         ))}
       </div>
-      <Skeleton className="h-8 w-full rounded-lg" />
+      <Skeleton className="h-7 w-full rounded-lg" />
     </>
   );
 }
@@ -109,7 +102,7 @@ function ProfilePreview({ username, profile, badgeData, signedBannerUrl, accent,
   return (
     <>
       {/* Banner */}
-      <div className="relative" style={{ height: 72, margin: "-16px -16px 0 -16px" }}>
+      <div className="relative" style={{ height: 48, margin: "-12px -12px 0 -12px" }}>
         {bannerSrc ? (
           <img
             src={bannerSrc}
@@ -134,7 +127,6 @@ function ProfilePreview({ username, profile, badgeData, signedBannerUrl, accent,
             borderRadius: `${theme.borderRadius}px ${theme.borderRadius}px 0 0`,
           }}
         />
-        {/* Cyberpunk scan-line overlay */}
         {theme.isCyberpunk && (
           <div
             className="absolute inset-0 pointer-events-none"
@@ -146,20 +138,20 @@ function ProfilePreview({ username, profile, badgeData, signedBannerUrl, accent,
         )}
       </div>
 
-      {/* Avatar — overlaps banner */}
-      <div className="flex items-end gap-3 mb-2" style={{ marginTop: -22 }}>
-        <div className="ring-2 rounded-full flex-shrink-0" style={{ ringColor: bgFrom }}>
-          <CustomAvatar user={profile} size="md" showBorder />
+      {/* Avatar + name row — pl-1 keeps content off the left edge */}
+      <div className="flex items-end gap-2 mb-1.5 pl-1" style={{ marginTop: -14 }}>
+        <div className="ring-2 ring-[#0B1218] rounded-full flex-shrink-0">
+          <CustomAvatar user={profile} size="sm" showBorder />
         </div>
         <div className="min-w-0 pb-0.5">
           <div className="flex items-center gap-1 min-w-0">
             <p
-              className="font-bold text-sm leading-tight truncate"
+              className="font-bold leading-tight truncate"
               style={{
+                fontSize: "0.7rem",
                 color: theme.isCyberpunk ? accent : "white",
                 fontFamily: theme.isCyberpunk ? "'Orbitron', sans-serif" : undefined,
-                fontSize: theme.isCyberpunk ? "0.7rem" : undefined,
-                letterSpacing: theme.isCyberpunk ? "1px" : undefined,
+                letterSpacing: theme.isCyberpunk ? "0.8px" : undefined,
               }}
             >
               {profile.displayName || profile.username}
@@ -173,7 +165,7 @@ function ProfilePreview({ username, profile, badgeData, signedBannerUrl, accent,
               />
             )}
           </div>
-          <p className="text-xs leading-tight" style={{ color: "#7E887A" }}>
+          <p className="leading-tight" style={{ fontSize: "0.6rem", color: "#7E887A" }}>
             @{profile.username}
           </p>
           {profile.level && (
@@ -181,9 +173,9 @@ function ProfilePreview({ username, profile, badgeData, signedBannerUrl, accent,
               className="font-semibold leading-tight mt-0.5"
               style={{
                 color: accent,
-                fontSize: theme.isCyberpunk ? "0.55rem" : "10px",
+                fontSize: theme.isCyberpunk ? "0.5rem" : "9px",
                 fontFamily: theme.labelFont,
-                letterSpacing: theme.isCyberpunk ? "1.5px" : undefined,
+                letterSpacing: theme.isCyberpunk ? "1.2px" : undefined,
                 textTransform: theme.isCyberpunk ? "uppercase" : undefined,
               }}
             >
@@ -196,8 +188,8 @@ function ProfilePreview({ username, profile, badgeData, signedBannerUrl, accent,
       {/* Bio */}
       {profile.bio && (
         <p
-          className="text-xs line-clamp-2 mb-3 leading-relaxed"
-          style={{ color: "#8C9A87" }}
+          className="line-clamp-1 mb-2 leading-relaxed pl-1"
+          style={{ fontSize: "0.6rem", color: "#8C9A87" }}
         >
           {profile.bio}
         </p>
@@ -205,15 +197,15 @@ function ProfilePreview({ username, profile, badgeData, signedBannerUrl, accent,
 
       {/* Stats */}
       <div
-        className="flex mb-3 pb-3"
+        className="flex mb-2.5 pb-2.5 pl-1"
         style={{
-          gap: "1.5rem",
+          gap: "1rem",
           borderBottom: `1px solid ${accent}22`,
         }}
       >
         {stats.map(({ label, value }) => (
           <div key={label} className="flex flex-col gap-0.5">
-            <span className="font-black text-base leading-tight text-white">
+            <span className="font-black leading-tight text-white" style={{ fontSize: "0.75rem" }}>
               {formatCount(value)}
             </span>
             <span
@@ -231,21 +223,17 @@ function ProfilePreview({ username, profile, badgeData, signedBannerUrl, accent,
         ))}
       </div>
 
-      {/* View profile button */}
+      {/* View profile button — always neon green, never theme-overridden */}
       <Link href={`/profile/${username}`}>
         <button
-          className="w-full text-xs font-bold py-2 transition-opacity hover:opacity-90"
+          className="w-full font-bold py-1.5 rounded-lg transition-opacity hover:opacity-90"
           style={{
-            background: accent,
-            color: theme.buttonColor,
-            borderRadius: theme.buttonRadius,
-            fontFamily: theme.buttonFont,
-            letterSpacing: theme.isCyberpunk ? "1.5px" : undefined,
-            textTransform: theme.isCyberpunk ? "uppercase" : undefined,
-            fontSize: theme.isCyberpunk ? "0.6rem" : undefined,
+            background: "#B7FF1A",
+            color: "#071013",
+            fontSize: "0.65rem",
           }}
         >
-          {theme.isCyberpunk ? "VIEW GAMEFOLIO" : "View Gamefolio"}
+          View Gamefolio
         </button>
       </Link>
     </>
@@ -285,14 +273,10 @@ export function ProfileHoverCard({ username, children }: ProfileHoverCardProps) 
     isSupabaseBanner ? profile!.bannerUrl : null
   );
 
-  const accent  = profile?.accentColor  || "#B7FF1A";
-  // Use the page background color (not cardColor) — cardColor defaults to navy
-  const cardBg  = profile?.primaryColor || profile?.backgroundColor || "#101923";
-  const theme   = getThemeTokens(accent);
+  const accent = profile?.accentColor  || "#B7FF1A";
+  const cardBg = profile?.primaryColor || profile?.backgroundColor || "#101923";
+  const theme  = getThemeTokens(accent);
 
-  // On touch-primary devices there are no hover events — tapping the trigger
-  // would immediately open the card. navigator.maxTouchPoints catches
-  // Samsung Browser which can report pointer:fine despite being touch-only.
   if (isTouchPrimary()) return <>{children}</>;
 
   return (
@@ -305,9 +289,9 @@ export function ProfileHoverCard({ username, children }: ProfileHoverCardProps) 
     >
       <HoverCardTrigger asChild>{children}</HoverCardTrigger>
       <HoverCardContent
-        className="p-4 overflow-hidden"
+        className="p-3 overflow-hidden"
         style={{
-          width: 292,
+          width: 200,
           background: cardBg,
           borderRadius: theme.borderRadius,
           border: theme.cardBorder,
