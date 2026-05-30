@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { API_BASE, isNative, openExternal } from "@/lib/platform";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface NotificationData {
@@ -292,11 +292,16 @@ export function NotificationPanel({
                         <div className="flex-shrink-0 mt-0.5 relative">
                           {notification.fromUser ? (
                             <div className="relative">
-                              <CustomAvatar 
-                                user={notification.fromUser as any}
-                                size="sm"
-                                borderIntensity="subtle"
-                              />
+                              <Link
+                                href={`/profile/${(notification.fromUser as any).username}`}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <CustomAvatar 
+                                  user={notification.fromUser as any}
+                                  size="sm"
+                                  borderIntensity="subtle"
+                                />
+                              </Link>
                               <div className="absolute -bottom-1 -right-1">
                                 {getNotificationIcon(notification.type)}
                               </div>

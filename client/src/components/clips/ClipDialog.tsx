@@ -1226,11 +1226,13 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="flex-shrink-0">
                         {clip?.user && (
-                          <CustomAvatar 
-                            user={clip.user} 
-                            size="md" 
-                            showBorder={true}
-                          />
+                          <Link href={`/profile/${clip.user?.username}`} onClick={(e: React.MouseEvent) => { e.stopPropagation(); onClose(); }}>
+                            <CustomAvatar 
+                              user={clip.user} 
+                              size="md" 
+                              showBorder={true}
+                            />
+                          </Link>
                         )}
                       </div>
                       <div className="flex items-center gap-2 flex-wrap min-w-0">

@@ -346,12 +346,13 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
                           {clip.title}
                         </h3>
                         <ProfileHoverCard username={clip.user.username}>
-                          <p
-                            className="text-white/60 text-xs mt-0.5 cursor-default"
+                          <Link
+                            href={`/profile/${clip.user.username}`}
+                            className="text-white/60 text-xs mt-0.5 hover:text-white/90 transition-colors block"
                             onClick={(e) => e.stopPropagation()}
                           >
                             @{clip.user.username}
-                          </p>
+                          </Link>
                         </ProfileHoverCard>
                         {clip.game?.name && (
                           <Link

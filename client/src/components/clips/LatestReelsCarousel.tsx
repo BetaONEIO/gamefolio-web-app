@@ -175,12 +175,13 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
                   {reel.title}
                 </h3>
                 <ProfileHoverCard username={reel.user.username}>
-                  <p
-                    className="text-white/60 text-xs mt-0.5 cursor-default"
+                  <Link
+                    href={`/profile/${reel.user.username}`}
+                    className="text-white/60 text-xs mt-0.5 hover:text-white/90 transition-colors block"
                     onClick={(e) => e.stopPropagation()}
                   >
                     @{reel.user.username}
-                  </p>
+                  </Link>
                 </ProfileHoverCard>
                 {reel.game?.name && (
                   <Link
