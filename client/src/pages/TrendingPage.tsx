@@ -85,7 +85,7 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[]; onOpen
       const index = reelsList.findIndex(r => r.id === reel.id);
       onOpenViewer(index >= 0 ? index : 0);
     } else {
-      openClipDialog(reel.id, reelsList);
+      openClipDialog(reel.id, reelsList, undefined, 'reel');
     }
   };
 
@@ -1275,7 +1275,7 @@ const TrendingPage: React.FC = () => {
                 return (
                   <div
                     key={reel.id}
-                    onClick={() => openClipDialog(reel.id, trendingReels)}
+                    onClick={() => openClipDialog(reel.id, trendingReels, undefined, 'reel')}
                     className="w-full"
                   >
                     <div className="relative aspect-[9/16] w-full rounded-sm overflow-hidden cursor-pointer group">

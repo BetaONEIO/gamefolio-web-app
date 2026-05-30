@@ -22,7 +22,7 @@ const ReelCard: React.FC<{ reel: any; reelsList?: any[] }> = ({ reel, reelsList 
 
   const handleReelClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    openClipDialog(reel.id, reelsList);
+    openClipDialog(reel.id, reelsList, undefined, 'reel');
   };
 
   const formatNumber = (num: number) => {

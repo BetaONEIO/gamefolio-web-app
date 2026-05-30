@@ -80,9 +80,12 @@ interface ClipDialogProps {
   onPrevious?: () => void;
   showNavigation?: boolean;
   viewAllHref?: string;
+  /** Hint from the caller so the dialog renders the correct layout immediately,
+   *  before the async clip fetch resolves. Prevents the clip→reel layout flash. */
+  initialVideoType?: 'clip' | 'reel';
 }
 
-const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigation = false, viewAllHref }: ClipDialogProps) => {
+const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigation = false, viewAllHref, initialVideoType }: ClipDialogProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { isOpen: joinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
@@ -158,6 +161,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     },
     enabled: isOpen && clipId !== null,
   });
+
+  // Use the caller's hint until the fetch resolves — prevents the clip→reel layout flash.
+  const effectiveType = clip?.videoType ?? initialVideoType ?? 'clip';
 
   // Get signed URLs for private bucket assets
   const { signedUrl: signedThumbnailUrl } = useSignedUrl(clip?.thumbnailUrl);
@@ -555,15 +561,15 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         {/* Custom overlay - no animation */}
         <DialogPrimitive.Overlay className={cn(
           "fixed inset-0 z-[9999] bg-black/80",
-          isMobile && clip?.videoType === 'reel' && "h-[calc(100dvh-64px)] bottom-auto"
+          isMobile && effectiveType === 'reel' && "h-[calc(100dvh-64px)] bottom-auto"
         )} />
         <DialogPrimitive.Content
           ref={dialogRef}
           className={cn(
             "fixed left-[50%] top-[50%] z-[9999] grid w-full translate-x-[-50%] translate-y-[-50%] border shadow-lg sm:rounded-lg",
             "p-0 text-foreground clip-dialog-content",
-            !isMobile && clip?.videoType === 'reel' ? "bg-black" : "bg-background",
-            isMobile && clip?.videoType === 'reel' 
+            !isMobile && effectiveType === 'reel' ? "bg-black" : "bg-background",
+            isMobile && effectiveType === 'reel'
               ? "w-screen h-[calc(100dvh-64px)] max-w-none max-h-none overflow-hidden top-0 translate-y-0" // Leave space for footer on mobile reels, use dvh for dynamic viewport
               : isMobile 
                 ? "w-screen h-[100dvh] max-w-none max-h-none overflow-hidden top-0 translate-y-0 border-0 rounded-none" // Full screen, no border/radius on mobile clips

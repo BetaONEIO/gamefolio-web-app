@@ -159,6 +159,7 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
           onPrevious={hasNavigation ? handlePrevious : undefined}
           showNavigation={hasNavigation || false}
           viewAllHref={viewAllHref}
+          initialVideoType={effectiveVideoType as 'clip' | 'reel' | undefined}
         />
       )}
     </ClipDialogContext.Provider>
