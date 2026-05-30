@@ -244,16 +244,16 @@ export function createOGMetaMiddleware(storage: IStorage) {
     <meta property="og:video:width" content="1280" />
     <meta property="og:video:height" content="720" />` : ''}
     
-    <!-- Twitter -->
+    <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@gamefolio" />
     <meta name="twitter:url" content="${escapeHtml(ogTags.url)}" />
     <meta name="twitter:title" content="${escapeHtml(ogTags.title)}" />
     <meta name="twitter:description" content="${escapeHtml(ogTags.description)}" />
     <meta name="twitter:image" content="${escapeHtml(ogTags.image)}" />
     <meta name="twitter:image:alt" content="${escapeHtml(ogTags.title)}" />
-    ${ogTags.videoUrl ? `<meta name="twitter:player" content="${escapeHtml(ogTags.videoUrl)}" />
-    <meta name="twitter:player:width" content="1280" />
-    <meta name="twitter:player:height" content="720" />` : ''}
+    <meta name="twitter:image:width" content="1200" />
+    <meta name="twitter:image:height" content="630" />
 `;
 
         // Inject meta tags after the viewport meta tag

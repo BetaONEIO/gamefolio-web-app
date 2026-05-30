@@ -4651,12 +4651,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.setHeader('Cache-Control', 'public, max-age=300'); // short cache on fallback
           return res.redirect(302, fresh);
         }
-        // Untrusted/invalid target — serve a transparent placeholder (200) instead
-        // of redirecting, so og:image is still a valid response.
-        return res.status(200)
-          .setHeader('Content-Type', 'image/svg+xml')
-          .setHeader('Cache-Control', 'public, max-age=60')
-          .send('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><rect width="1200" height="630" fill="#0a0a0a"/></svg>');
+        // Untrusted/invalid target — serve a solid-black JPEG placeholder (200)
+        // instead of redirecting. X/Twitter rejects SVG og:image responses, so
+        // we must return a proper JPEG here.
+        try {
+          const placeholderJpeg = await sharp({
+            create: { width: 1200, height: 630, channels: 3, background: { r: 10, g: 10, b: 10 } }
+          }).jpeg({ quality: 80 }).toBuffer();
+          return res.status(200)
+            .setHeader('Content-Type', 'image/jpeg')
+            .setHeader('Cache-Control', 'public, max-age=60')
+            .send(placeholderJpeg);
+        } catch {
+          // If sharp also fails, 404 is safer than serving unsupported SVG to X
+          return res.status(404).json({ error: 'Thumbnail not available' });
+        }
       }
     } catch (error) {
       console.error('Error generating OG thumbnail with play button:', error);
