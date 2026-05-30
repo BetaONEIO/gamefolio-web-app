@@ -7,7 +7,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { Link } from "wouter";
 import { getQueryFn } from "@/lib/queryClient";
-import { useMobile } from "@/hooks/use-mobile";
+
+function isTouchPrimary() {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(pointer: coarse)").matches;
+}
 
 function formatCount(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -187,7 +191,6 @@ interface ProfileHoverCardProps {
 
 export function ProfileHoverCard({ username, children }: ProfileHoverCardProps) {
   const [prefetch, setPrefetch] = useState(false);
-  const isMobile = useMobile();
 
   const { data: profile, isLoading } = useQuery({
     queryKey: [`/api/users/${username}`],
@@ -217,9 +220,9 @@ export function ProfileHoverCard({ username, children }: ProfileHoverCardProps) 
   const accent = profile?.accentColor || "#B7FF1A";
   const cardBg = profile?.cardColor || "#101923";
 
-  // On mobile there are no hover events — tapping the trigger would
-  // immediately pop the card open covering the screen. Render children as-is.
-  if (isMobile) return <>{children}</>;
+  // On touch-primary devices there are no hover events — tapping the trigger
+  // would immediately pop the card open. Render children as-is.
+  if (isTouchPrimary()) return <>{children}</>;
 
   return (
     <HoverCard
