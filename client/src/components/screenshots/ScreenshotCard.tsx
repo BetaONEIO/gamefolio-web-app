@@ -49,7 +49,7 @@ export function ScreenshotCard({
     >
       {/* Thumbnail — dark card matching VideoClipCard style */}
       <div 
-        className="relative aspect-video overflow-hidden rounded-xl bg-[#0B1218] border border-[#1B2A33]"
+        className="relative aspect-video overflow-hidden rounded-xl bg-[#0B1218]"
         onClick={() => onSelect?.(screenshot)}
       >
         <LazyImage 

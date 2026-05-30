@@ -821,8 +821,7 @@ const HomePage = () => {
               {latestScreenshots?.slice(0, 12).map((screenshot) => (
                 <div 
                   key={`screenshot-${screenshot.id}`} 
-                  className="relative overflow-hidden rounded-xl cursor-pointer group shadow-lg transition-all duration-500 border aspect-video"
-                  style={{ borderColor: 'rgba(255,255,255,0.05)' }}
+                  className="relative overflow-hidden rounded-xl cursor-pointer group shadow-lg transition-all duration-500 aspect-video"
                   onClick={() => setLocation(`/view/screenshot/${screenshot.id}`)}
                 >
                   <img 
