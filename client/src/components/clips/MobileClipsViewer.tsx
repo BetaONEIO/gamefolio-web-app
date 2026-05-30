@@ -350,28 +350,32 @@ export const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => 
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[100001] flex flex-col" style={{ background: '#03080A' }}>
-      {/* Top bar — back button */}
+    <div className="fixed inset-0 z-[100001]" style={{ background: '#03080A' }}>
+      {/* Top bar — floats over the feed as absolute overlay */}
       <div
-        className="flex-shrink-0 flex items-center px-4 pb-2"
-        style={{
-          background: '#03080A',
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 140px)',
-        }}
+        className="absolute left-0 right-0 z-10 flex items-center px-4 pb-3 bg-gradient-to-b from-black/60 to-transparent pointer-events-none"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
       >
         <button
           onClick={onBack}
-          className="text-foreground hover:text-foreground/70 transition-colors"
+          className="w-9 h-9 flex items-center justify-center rounded-full transition-colors pointer-events-auto"
+          style={{ color: '#F5F7F2' }}
           aria-label="Back"
         >
           <ArrowLeft className="h-6 w-6" />
         </button>
       </div>
 
-      {/* Snap-scrolling feed */}
+      {/* Snap-scrolling feed — fills the full container */}
       <div
-        className="flex-1 overflow-y-auto"
-        style={{ scrollSnapType: 'y mandatory', WebkitOverflowScrolling: 'touch' }}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          overflowY: 'auto',
+          scrollSnapType: 'y mandatory',
+          WebkitOverflowScrolling: 'touch',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)',
+        }}
       >
         {clips.map((clip) => (
           <div
