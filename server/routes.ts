@@ -7681,7 +7681,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           maxFires: fireLimits.maxFiresPerDay
         });
 
-        // Background: XP and leaderboard points
+        // Background: XP, leaderboard points, and notification
         (async () => {
           try {
             const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'fire', 'clip', clipId);
@@ -7689,6 +7689,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               await LeaderboardService.awardPoints(userId, 'fire', `Fire reaction given to clip #${clipId}`);
             }
             await XPService.awardXP(userId, 50, 'other', `Earned 50 XP for giving a fire reaction on clip #${clipId}`, clipId);
+            await NotificationService.createReactionNotification(clipId, userId, emoji);
           } catch (bgErr) {
             console.error('Error in fire reaction side-effects for clip', clipId, bgErr);
           }
@@ -7701,6 +7702,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const count = reactionsList.filter(r => r.emoji === emoji).length;
 
       res.status(201).json({ ...reaction, reacted: true, count });
+      // Notify the clip owner (fire-and-forget)
+      NotificationService.createReactionNotification(clipId, userId, emoji).catch(() => {});
     } catch (err) {
       return handleValidationError(err, res);
     }
@@ -11796,7 +11799,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Get updated fire limits to return
           const fireLimits = await storage.getFireLimits(userId);
-          
+
+          // Notify screenshot owner (fire-and-forget)
+          NotificationService.createScreenshotReactionNotification(screenshotId, userId, emoji).catch(() => {});
+
           return res.status(201).json({ 
             message: "Reaction added", 
             reacted: true, 
@@ -11806,7 +11812,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             maxFires: fireLimits.maxFiresPerDay
           });
         }
-        
+
+        // Notify screenshot owner (fire-and-forget)
+        NotificationService.createScreenshotReactionNotification(screenshotId, userId, emoji).catch(() => {});
+
         res.status(201).json({ message: "Reaction added", reacted: true, reaction });
       }
     } catch (err) {

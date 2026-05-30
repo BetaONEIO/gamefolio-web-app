@@ -224,6 +224,32 @@ export class NotificationService {
     }
   }
 
+  // Create notification for emoji reaction on a screenshot
+  static async createScreenshotReactionNotification(screenshotId: number, reactedByUserId: number, emoji: string) {
+    try {
+      const screenshot = await storage.getScreenshot(screenshotId);
+      if (!screenshot) return;
+      if (screenshot.userId === reactedByUserId) return;
+
+      const reactedByUser = await storage.getUser(reactedByUserId);
+      if (!reactedByUser) return;
+
+      const notification: InsertNotification = {
+        userId: screenshot.userId,
+        type: "reaction",
+        title: "New Reaction",
+        message: `${reactedByUser.username} reacted with ${emoji} to your screenshot "${screenshot.title}"`,
+        fromUserId: reactedByUserId,
+        actionUrl: `/screenshots/${screenshotId}`,
+        metadata: { emoji },
+      };
+
+      await createAndPush(notification);
+    } catch (error) {
+      console.error("Error creating screenshot reaction notification:", error);
+    }
+  }
+
   // Create notification for new message
   static async createMessageNotification(senderId: number, receiverId: number, messageContent: string) {
     try {
