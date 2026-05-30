@@ -4640,14 +4640,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const thumbnailWithPlayButton = await addPlayButtonOverlay(fullClip.thumbnailUrl);
         res.setHeader('Content-Type', 'image/jpeg');
         res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day (signed URLs)
-        console.log(`✅ OG thumbnail with play button generated for ${shareCode}`);
+        console.log(`✅ OG thumbnail with play button generated for ${identifier}`);
         return res.send(thumbnailWithPlayButton);
       } catch (overlayErr) {
         // Sharp/fetch failed — gracefully redirect to a freshly-signed thumbnail
         // so social crawlers still get a valid image instead of a 500.
         // Only redirect if target is on the trusted Supabase storage host to
         // prevent this endpoint from becoming an open-redirect sink.
-        console.warn(`⚠️ Play button overlay failed for ${shareCode}, falling back to raw thumbnail`);
+        console.warn(`⚠️ Play button overlay failed for ${identifier}, falling back to raw thumbnail`);
         const fresh = await refreshSupabaseSignedUrl(fullClip.thumbnailUrl);
         const supabaseHost = (() => {
           try { return new URL(process.env.SUPABASE_URL || '').host; } catch { return ''; }
