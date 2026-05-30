@@ -1526,7 +1526,7 @@ const TrendingPage: React.FC = () => {
 
           return (
         <div
-          className={`fixed z-[10000] flex gap-2 ${
+          className={`fixed z-[100002] flex gap-2 ${
             isClipsMode
               ? 'flex-row items-center flex-wrap-reverse justify-end max-w-[calc(100vw-24px)]'
               : 'flex-col items-end'
@@ -1681,7 +1681,7 @@ const TrendingPage: React.FC = () => {
         {/* Game filter bottom-sheet modal */}
         {showGameFilter && (
           <div
-            className="fixed inset-0 z-[10001] flex items-end"
+            className="fixed inset-0 z-[100003] flex items-end"
             style={{ background: 'rgba(0,0,0,0.65)' }}
             onClick={() => { setShowGameFilter(false); setGameSearchQuery(''); }}
           >
