@@ -33,8 +33,8 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
 
   const content = (
     <div
-      className="fixed inset-0"
-      style={{ background: '#03080A', zIndex: 9999 }}
+      className="fixed top-0 left-0 right-0"
+      style={{ background: '#03080A', zIndex: 9999, bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))' }}
     >
       {/* Top bar — floats over the feed, no layout height consumed */}
       <div
@@ -75,7 +75,7 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
           overflowY: 'auto',
           scrollSnapType: 'y mandatory',
           WebkitOverflowScrolling: 'touch',
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)',
+          paddingBottom: '8px',
         }}
       >
         {clips.map((clip) => (
@@ -86,7 +86,6 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
               scrollSnapAlign: 'start',
               scrollSnapStop: 'always',
               minHeight: '100%',
-              paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
             }}
           >
             <ClipFeedCard clip={clip} clips={clips} />
