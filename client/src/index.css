@@ -304,6 +304,12 @@ video:focus {
   color: #F5F7F2 !important;
 }
 
+/* Desktop reel dialog — full black background to letterbox portrait video */
+.reel-dialog-desktop[role="dialog"],
+.reel-dialog-desktop {
+  background-color: #000000 !important;
+}
+
 /* Comment backgrounds - transparent to show theme-aware background */
 .clip-dialog-content .space-y-3 > div,
 [role="dialog"] .space-y-3 > div {

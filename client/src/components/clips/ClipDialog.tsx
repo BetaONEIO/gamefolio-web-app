@@ -562,7 +562,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           className={cn(
             "fixed left-[50%] top-[50%] z-[9999] grid w-full translate-x-[-50%] translate-y-[-50%] border shadow-lg sm:rounded-lg",
             "p-0 text-foreground clip-dialog-content",
-            !isMobile && clip?.videoType === 'reel' ? "bg-black" : "bg-background",
+            !isMobile && clip?.videoType === 'reel' ? "reel-dialog-desktop" : "bg-background",
             isMobile && clip?.videoType === 'reel' 
               ? "w-screen h-[calc(100dvh-64px)] max-w-none max-h-none overflow-hidden top-0 translate-y-0" // Leave space for footer on mobile reels, use dvh for dynamic viewport
               : isMobile 
@@ -686,6 +686,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           <div
             className={cn(
               "flex flex-col lg:flex-row h-full min-h-0 max-h-full transition-opacity duration-300",
+              !isMobile && clip.videoType === 'reel' ? "bg-black" : "",
               isTransitioning ? "opacity-60" : "opacity-100"
             )}
           >
@@ -698,7 +699,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 : isMobile && clip.videoType !== 'reel'
                   ? "w-full h-full" // Full height on mobile for clip fullscreen layout
                   : clip.videoType === 'reel'
-                    ? "w-full lg:w-[450px] h-full flex-shrink-0 mx-auto"
+                    ? "w-full lg:w-[450px] h-full flex-shrink-0"
                     : "w-full lg:w-[65%] h-full flex-shrink-0",
               isTransitioning ? "scale-95" : "scale-100"
             )}
@@ -1166,7 +1167,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   : clip.videoType === 'reel' && isMobile && showComments
                     ? "flex-1 min-h-0 flex flex-col overflow-hidden" // Flex child below the video — no overlay
                     : clip.videoType === 'reel'
-                      ? "w-full lg:w-[35%] h-full overflow-hidden" // Reels: fixed 35% width for comments
+                      ? "flex-1 min-w-0 h-full overflow-hidden" // Reels: take remaining space after video area
                       : "w-full lg:flex-1 lg:min-w-0 min-h-0 h-full overflow-hidden" // Clips: take remaining space, allow internal scroll
             )}>
               {clip.videoType === 'reel' && isMobile && (showComments || isClosingComments) ? (
