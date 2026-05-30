@@ -71,6 +71,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
+import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreenshotsViewer";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { ModeratorIcon } from "@/components/ui/moderator-icon";
@@ -5153,14 +5154,22 @@ const ProfilePage = () => {
           </React.Suspense>
         )}
 
-        {/* Screenshot Lightbox */}
-        <ScreenshotLightbox
-          screenshot={selectedScreenshot}
-          onClose={() => setSelectedScreenshot(null)}
-          currentUserId={currentUser?.id}
-          screenshots={screenshots as any[]}
-          onNavigate={(s: any) => setSelectedScreenshot({ ...s, user: s.user || { id: profile?.id, username: profile?.username, displayName: profile?.displayName, avatarUrl: profile?.avatarUrl } })}
-        />
+        {/* Screenshot viewer — mobile snap-scroll or desktop lightbox */}
+        {selectedScreenshot && isMobile ? (
+          <MobileScreenshotsViewer
+            screenshots={(screenshots as any[]) || [selectedScreenshot]}
+            startId={selectedScreenshot.id}
+            onBack={() => setSelectedScreenshot(null)}
+          />
+        ) : (
+          <ScreenshotLightbox
+            screenshot={selectedScreenshot}
+            onClose={() => setSelectedScreenshot(null)}
+            currentUserId={currentUser?.id}
+            screenshots={screenshots as any[]}
+            onNavigate={(s: any) => setSelectedScreenshot({ ...s, user: s.user || { id: profile?.id, username: profile?.username, displayName: profile?.displayName, avatarUrl: profile?.avatarUrl } })}
+          />
+        )}
 
       {/* Share Dialogs for newly uploaded content */}
       <React.Suspense fallback={null}>

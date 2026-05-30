@@ -546,13 +546,25 @@ export const ScreenshotFeedCard: React.FC<{
 export const MobileScreenshotsViewer: React.FC<{
   screenshots: ScreenshotWithUser[];
   onBack: () => void;
-}> = ({ screenshots, onBack }) => {
+  startId?: number;
+}> = ({ screenshots, onBack, startId }) => {
   const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
+
+  // Scroll to the starting screenshot
+  useEffect(() => {
+    if (!scrollRef.current || !startId) return;
+    const idx = screenshots.findIndex(s => s.id === startId);
+    if (idx > 0) {
+      const el = scrollRef.current.children[idx] as HTMLElement | undefined;
+      el?.scrollIntoView({ behavior: 'instant' as ScrollBehavior });
+    }
+  }, [startId, screenshots]);
 
   return (
     <>
@@ -574,6 +586,7 @@ export const MobileScreenshotsViewer: React.FC<{
 
         {/* Snap-scrolling feed */}
         <div
+          ref={scrollRef}
           style={{
             position: 'absolute',
             inset: 0,

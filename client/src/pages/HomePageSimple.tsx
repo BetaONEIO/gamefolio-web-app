@@ -15,6 +15,8 @@ import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBann
 import { LatestReelsCarousel } from "@/components/clips/LatestReelsCarousel";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
+import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreenshotsViewer";
+import { useMobile } from "@/hooks/use-mobile";
 import { Camera } from "lucide-react";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
 import { ProUpgradeDialog } from "@/components/ProUpgradeDialog";
@@ -482,6 +484,7 @@ const HomePage = () => {
   const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [selectedGameFilter, setSelectedGameFilter] = useState<string | null>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
+  const isMobile = useMobile();
   const [, setLocation] = useLocation();
   const screenshotsScrollRef = useRef<HTMLDivElement>(null);
   const [screenshotsDragging, setScreenshotsDragging] = useState(false);
@@ -820,13 +823,21 @@ const HomePage = () => {
 
       </div>
 
-      <ScreenshotLightbox
-        screenshot={selectedScreenshot}
-        onClose={() => setSelectedScreenshot(null)}
-        currentUserId={user?.id}
-        screenshots={latestScreenshots || []}
-        onNavigate={(s: any) => setSelectedScreenshot(s)}
-      />
+      {selectedScreenshot && isMobile ? (
+        <MobileScreenshotsViewer
+          screenshots={latestScreenshots || []}
+          startId={selectedScreenshot.id}
+          onBack={() => setSelectedScreenshot(null)}
+        />
+      ) : (
+        <ScreenshotLightbox
+          screenshot={selectedScreenshot}
+          onClose={() => setSelectedScreenshot(null)}
+          currentUserId={user?.id}
+          screenshots={latestScreenshots || []}
+          onNavigate={(s: any) => setSelectedScreenshot(s)}
+        />
+      )}
     </div>
   );
 };
