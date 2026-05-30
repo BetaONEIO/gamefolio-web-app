@@ -213,7 +213,7 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
       {/* Caption — scrollable, takes up remaining flex space */}
       <div
         className="flex-1 min-h-0 overflow-y-auto px-4"
-        style={{ background: '#081017' }}
+        style={{ background: '#081017', overscrollBehaviorY: 'contain' }}
       >
         {caption && (
           <div className="pb-3">
@@ -383,6 +383,7 @@ export const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => 
           overflowY: 'auto',
           scrollSnapType: 'y mandatory',
           WebkitOverflowScrolling: 'touch',
+          overscrollBehaviorY: 'none',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)',
         }}
       >
@@ -391,7 +392,7 @@ export const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => 
             key={clip.id}
             style={{
               scrollSnapAlign: 'start',
-              scrollSnapStop: 'always',
+              scrollSnapStop: 'normal',
               height: '100dvh',
               display: 'flex',
               flexDirection: 'column',
