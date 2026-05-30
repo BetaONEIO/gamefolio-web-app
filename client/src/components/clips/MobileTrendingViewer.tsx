@@ -322,7 +322,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
     <div
       ref={containerRef}
       className={embedded ? "relative w-full h-full overflow-hidden" : "fixed top-0 left-0 right-0 z-[9999] overflow-hidden"}
-      style={{ background: '#0B1218', bottom: embedded ? undefined : 'var(--mobile-nav-height, 3.5rem)' }}
+      style={{ background: '#0B1218', bottom: embedded ? undefined : 'var(--mobile-nav-height, 4rem)' }}
       data-testid="mobile-trending-viewer"
     >
       {/* ── Scroll-snap content stack ─────────────────────────────────────── */}
@@ -362,7 +362,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                     hideControls={true}
                     className="w-full h-full"
                     clipId={item.id}
-                    objectFit="contain"
+                    objectFit={item.videoType === 'reel' ? 'cover' : 'contain'}
                     data-testid={`video-player-${item.id}`}
                   />
                 </div>
@@ -375,7 +375,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                 className="absolute left-0 right-0 z-10 px-4 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent"
                 style={{
                   bottom: '0',
-                  paddingBottom: '10px',
+                  paddingBottom: '20px',
                   pointerEvents: 'none',
                 }}
                 onClick={e => e.stopPropagation()}
@@ -493,7 +493,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         <div
           className="absolute right-3 z-20 flex flex-col items-center gap-3"
           style={{
-            bottom: '32px',
+            bottom: '44px',
             pointerEvents: 'none',
           }}
         >
