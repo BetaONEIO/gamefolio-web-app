@@ -122,12 +122,12 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
   return (
     <div
       ref={cardRef}
-      className={commentsOverlay ? "fixed inset-0 z-[75] flex flex-col overflow-hidden" : "w-full"}
+      className={commentsOverlay ? "fixed inset-0 z-[75] flex flex-col overflow-hidden" : "flex flex-col h-full overflow-hidden"}
       style={{ background: commentsOverlay ? '#000' : '#081017' }}
     >
       {/* ── Video — shrinks to top 42% when mobile comments open ── */}
       <div
-        className={commentsOverlay ? "flex-shrink-0 overflow-hidden" : ""}
+        className={commentsOverlay ? "flex-shrink-0 overflow-hidden" : "flex-shrink-0"}
         style={commentsOverlay ? {
           height: '42%',
           transform: sheetMounted ? 'scale(0.97) translateY(-6px)' : 'scale(1) translateY(0)',
@@ -158,7 +158,8 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
 
       {/* ── Header, caption, social — hidden when mobile comments overlay is open ── */}
       {!commentsOverlay && (<>
-      <div className="px-4 pt-6 pb-2">
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      <div className="px-4 pt-6 pb-2 flex-shrink-0">
         <div className="flex items-start gap-3">
           <Link href={`/profile/${clip.user.username}`} className="flex-shrink-0">
             <CustomAvatar user={clip.user as any} size="sm" showBorder={true} />
@@ -209,12 +210,13 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
         </div>
       </div>
 
-      <div className="px-4" style={{ background: '#081017' }}>
+      {/* Caption — scrollable, takes up remaining flex space */}
+      <div
+        className="flex-1 min-h-0 overflow-y-auto px-4"
+        style={{ background: '#081017' }}
+      >
         {caption && (
-          <div
-            className="pb-3"
-            style={showFullDesc ? { maxHeight: '9rem', overflowY: 'auto' } : undefined}
-          >
+          <div className="pb-3">
             <p className="text-[14px] leading-relaxed" style={{ color: '#B8C0AE' }}>
               {captionTrimmed ? caption.slice(0, 120) : caption}
               {captionTrimmed && (
@@ -230,7 +232,10 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
             </p>
           </div>
         )}
+      </div>
 
+      {/* Engagement bar — always pinned at bottom */}
+      <div className="flex-shrink-0 px-4" style={{ background: '#081017' }}>
         <div className="flex items-center py-2.5" style={{ borderTop: '1px solid #1B2A33' }}>
           <button
             onClick={(e) => { e.stopPropagation(); setCommentsOpen(true); }}
@@ -279,6 +284,7 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
           </button>
         </div>
       </div>
+      </div>{/* close flex flex-col flex-1 min-h-0 wrapper */}
       </>)}
 
       {/* Mobile: comments bottom sheet */}
@@ -389,13 +395,23 @@ export const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => 
               height: '100dvh',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'center',
-              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 155px)',
-              paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
+              overflow: 'hidden',
               boxSizing: 'border-box',
             }}
           >
-            <ClipFeedCard clip={clip} clips={clips} />
+            {/* Margin wrapper — positions the card in the viewport, gives it a definite height */}
+            <div
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                marginTop: 'calc(env(safe-area-inset-top, 0px) + 155px)',
+                marginBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
+              }}
+            >
+              <ClipFeedCard clip={clip} clips={clips} />
+            </div>
           </div>
         ))}
       </div>
