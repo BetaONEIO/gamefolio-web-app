@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { ClipWithUser } from "@shared/schema";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
-import ClipFeedCard from "@/components/clips/ClipFeedCard";
+import { ClipFeedCard } from "@/components/clips/MobileClipsViewer";
 
 interface MobileClipsViewerOverlayProps {
   clips: ClipWithUser[];
@@ -36,7 +36,7 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
       className="fixed top-0 left-0 right-0"
       style={{ background: '#081017', zIndex: 9999, bottom: 'var(--mobile-nav-height, 3.5rem)' }}
     >
-      {/* Top bar — floats over the feed, no layout height consumed */}
+      {/* Top bar — floats over the feed */}
       <div
         className="absolute left-0 right-0 z-10 flex items-center justify-between px-4 pb-3 bg-gradient-to-b from-black/60 to-transparent pointer-events-none"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
@@ -66,7 +66,7 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
         )}
       </div>
 
-      {/* Snap-scrolling feed — fills the full container height */}
+      {/* Snap-scrolling feed */}
       <div
         ref={scrollRef}
         style={{
@@ -75,20 +75,35 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
           overflowY: 'auto',
           scrollSnapType: 'y mandatory',
           WebkitOverflowScrolling: 'touch',
-          paddingBottom: '8px',
+          overscrollBehaviorY: 'none',
         }}
       >
         {clips.map((clip) => (
           <div
             key={clip.id}
-            className="flex flex-col justify-center"
             style={{
               scrollSnapAlign: 'start',
-              scrollSnapStop: 'always',
-              minHeight: '100%',
+              scrollSnapStop: 'normal',
+              height: 'calc(100dvh - var(--mobile-nav-height, 3.5rem))',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              boxSizing: 'border-box',
             }}
           >
-            <ClipFeedCard clip={clip} clips={clips} />
+            {/* Margin wrapper — positions content below header, above bottom edge */}
+            <div
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                marginTop: 'calc(env(safe-area-inset-top, 0px) + 155px)',
+                marginBottom: '16px',
+              }}
+            >
+              <ClipFeedCard clip={clip} clips={clips} />
+            </div>
           </div>
         ))}
       </div>
