@@ -387,7 +387,7 @@ export const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => 
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',
-              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 110px)',
+              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 155px)',
               paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
               boxSizing: 'border-box',
             }}
