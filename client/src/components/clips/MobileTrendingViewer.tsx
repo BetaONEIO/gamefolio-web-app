@@ -322,7 +322,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
     <div
       ref={containerRef}
       className={embedded ? "relative w-full h-full overflow-hidden" : "fixed top-0 left-0 right-0 z-[9999] overflow-hidden"}
-      style={{ background: '#0B1218', bottom: embedded ? undefined : 'calc(4.25rem + env(safe-area-inset-bottom, 0px))' }}
+      style={{ background: '#0B1218', bottom: embedded ? undefined : 'var(--mobile-nav-height, 3.5rem)' }}
       data-testid="mobile-trending-viewer"
     >
       {/* ── Scroll-snap content stack ─────────────────────────────────────── */}
