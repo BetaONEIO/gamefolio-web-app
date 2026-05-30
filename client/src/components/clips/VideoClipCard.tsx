@@ -73,7 +73,7 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
         <LazyImage
           src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
           alt={clip.title}
-          className={`w-full h-full transition-transform duration-300 group-hover:scale-105 object-contain ${clip.ageRestricted ? "blur-2xl" : ""}`}
+          className="w-full h-full transition-transform duration-300 group-hover:scale-105 object-contain"
           placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%230B1218'/%3e%3c/svg%3e"
           showLoadingSpinner={false}
           rootMargin="400px"
@@ -92,22 +92,8 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
           </div>
         </div>
 
-        {/* Age restricted overlay */}
-        {clip.ageRestricted && (
-          <div className="absolute inset-0 z-20 bg-black/80 flex flex-col items-center justify-center pointer-events-none">
-            <div className="text-red-500 text-3xl mb-2">⚠️</div>
-            <div className="text-white font-bold text-sm mb-1">Age Restricted</div>
-            <div className="text-white/70 text-xs">18+ Content</div>
-          </div>
-        )}
-
-        {/* Top-left: 18+ + NEW badges */}
+        {/* Top-left: NEW badge */}
         <div className="absolute top-2 left-2 z-30 flex items-center gap-1">
-          {clip.ageRestricted && (
-            <div className="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded font-bold shadow-md">
-              18+
-            </div>
-          )}
           {isNew && (
             <div className="bg-gray-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-md">
               NEW

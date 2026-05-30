@@ -55,7 +55,7 @@ export function ScreenshotCard({
         <LazyImage 
           src={screenshot.imageUrl || ''} 
           alt={screenshot.title}
-          className={`w-full h-full object-contain transition-transform duration-500 group-hover/card:scale-105 ${screenshot.ageRestricted ? 'blur-2xl' : ''}`}
+          className="w-full h-full object-contain transition-transform duration-500 group-hover/card:scale-105"
           placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
           showLoadingSpinner={true}
           containerClassName="absolute inset-0"
@@ -66,41 +66,23 @@ export function ScreenshotCard({
           }
         />
 
-        {/* Age Restriction badge */}
-        {screenshot.ageRestricted && (
-          <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-bold shadow-lg z-20">
-            18+
-          </div>
-        )}
-
-        {/* Age Restricted Overlay */}
-        {screenshot.ageRestricted && (
-          <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-10">
-            <div className="text-red-500 text-4xl mb-2">⚠️</div>
-            <div className="text-white font-bold text-sm mb-1">Age Restricted</div>
-            <div className="text-white/70 text-xs">18+ Content</div>
-          </div>
-        )}
-
-        {/* Stats overlay — likes + views, matches h-2.5 w-2.5 icon size of Latest Clips module */}
-        {!screenshot.ageRestricted && (
-          <div className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 z-20 scale-90 sm:scale-100 origin-bottom-right">
-            {((screenshot as any)._count?.likes ?? (screenshot as any).likesCount ?? 0) > 0 && (
-              <div className="bg-black/70 backdrop-blur-sm text-white px-1 py-0.5 text-[8px] sm:text-[9px] rounded font-semibold flex items-center gap-0.5 leading-none">
-                <Heart className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
-                {((screenshot as any)._count?.likes ?? (screenshot as any).likesCount ?? 0) >= 1000
-                  ? `${(((screenshot as any)._count?.likes ?? (screenshot as any).likesCount ?? 0) / 1000).toFixed(1)}K`
-                  : (screenshot as any)._count?.likes ?? (screenshot as any).likesCount ?? 0}
-              </div>
-            )}
+        {/* Stats overlay — likes + views */}
+        <div className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 z-20 scale-90 sm:scale-100 origin-bottom-right">
+          {((screenshot as any)._count?.likes ?? (screenshot as any).likesCount ?? 0) > 0 && (
             <div className="bg-black/70 backdrop-blur-sm text-white px-1 py-0.5 text-[8px] sm:text-[9px] rounded font-semibold flex items-center gap-0.5 leading-none">
-              <Eye className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
-              {(screenshot.views ?? 0) >= 1000
-                ? `${((screenshot.views ?? 0) / 1000).toFixed(1)}K`
-                : (screenshot.views ?? 0)}
+              <Heart className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
+              {((screenshot as any)._count?.likes ?? (screenshot as any).likesCount ?? 0) >= 1000
+                ? `${(((screenshot as any)._count?.likes ?? (screenshot as any).likesCount ?? 0) / 1000).toFixed(1)}K`
+                : (screenshot as any)._count?.likes ?? (screenshot as any).likesCount ?? 0}
             </div>
+          )}
+          <div className="bg-black/70 backdrop-blur-sm text-white px-1 py-0.5 text-[8px] sm:text-[9px] rounded font-semibold flex items-center gap-0.5 leading-none">
+            <Eye className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
+            {(screenshot.views ?? 0) >= 1000
+              ? `${((screenshot.views ?? 0) / 1000).toFixed(1)}K`
+              : (screenshot.views ?? 0)}
           </div>
-        )}
+        </div>
 
         {/* Action buttons */}
         {isOwnProfile ? (
