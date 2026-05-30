@@ -211,7 +211,10 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
 
       <div className="px-4" style={{ background: '#081017' }}>
         {caption && (
-          <div className="pb-3">
+          <div
+            className="pb-3"
+            style={showFullDesc ? { maxHeight: '9rem', overflowY: 'auto' } : undefined}
+          >
             <p className="text-[14px] leading-relaxed" style={{ color: '#B8C0AE' }}>
               {captionTrimmed ? caption.slice(0, 120) : caption}
               {captionTrimmed && (
