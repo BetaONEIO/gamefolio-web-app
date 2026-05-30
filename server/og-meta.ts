@@ -80,20 +80,13 @@ export function createOGMetaMiddleware(storage: IStorage) {
 
         if (clip && clip.user) {
           const contentType = type === 'reel' ? 'Reel' : 'Clip';
-          
-          // Use OG thumbnail endpoint with play button overlay for clips/reels
-          // Fallback to original thumbnail, then game image or user avatar
-          const baseHost = `https://${req.get('host')}`;
-          let imageUrl: string;
 
-          if (clip.shareCode && clip.thumbnailUrl) {
-            // Use the OG thumbnail endpoint (it re-signs internally) — no need to pre-sign here
-            imageUrl = `${baseHost}/api/og-thumbnail/${clip.shareCode}`;
-          } else {
-            // Fall back to the raw thumbnail/game/avatar URL, re-signed
-            const raw = clip.thumbnailUrl || clip.gameImageUrl || clip.user.avatarUrl || '';
-            imageUrl = await refreshSupabaseSignedUrl(raw);
-          }
+          // Always route through the stable server-side proxy so og:image never
+          // contains an expiring Supabase signed URL.  The endpoint accepts both
+          // share codes and numeric clip IDs, so every clip is covered.
+          const baseHost = `https://${req.get('host')}`;
+          const identifier = clip.shareCode || clip.id;
+          const imageUrl = `${baseHost}/api/og-thumbnail/${identifier}`;
           const freshVideoUrl = clip.videoUrl ? await refreshSupabaseSignedUrl(clip.videoUrl) : undefined;
 
           ogTags = {
@@ -167,13 +160,8 @@ export function createOGMetaMiddleware(storage: IStorage) {
         if (clip && clip.user) {
           const contentType = type.startsWith('reel') ? 'Reel' : 'Clip';
           const baseHost = `https://${req.get('host')}`;
-          let imageUrl: string;
-          if (clip.shareCode && clip.thumbnailUrl) {
-            imageUrl = `${baseHost}/api/og-thumbnail/${clip.shareCode}`;
-          } else {
-            const raw = clip.thumbnailUrl || (clip as any).gameImageUrl || clip.user.avatarUrl || '';
-            imageUrl = await refreshSupabaseSignedUrl(raw);
-          }
+          const identifier = clip.shareCode || clip.id;
+          const imageUrl = `${baseHost}/api/og-thumbnail/${identifier}`;
           const freshVideoUrl = clip.videoUrl ? await refreshSupabaseSignedUrl(clip.videoUrl) : undefined;
 
           ogTags = {

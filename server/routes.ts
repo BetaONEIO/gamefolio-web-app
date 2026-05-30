@@ -4611,13 +4611,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // OG thumbnail with play button overlay for clips/reels
-  app.get('/api/og-thumbnail/:shareCode', async (req: Request, res: Response) => {
+  app.get('/api/og-thumbnail/:identifier', async (req: Request, res: Response) => {
     try {
-      const { shareCode } = req.params;
-      console.log(`🎬 Generating OG thumbnail with play button for shareCode: ${shareCode}`);
-      
-      // Try to find the clip by share code
-      const clip = await storage.getClipByShareCode(shareCode);
+      const { identifier } = req.params;
+      console.log(`🎬 Generating OG thumbnail with play button for: ${identifier}`);
+
+      // Accept both share codes and numeric clip IDs so every clip has a
+      // stable, non-expiring og:image URL regardless of whether it has a shareCode.
+      let clip = await storage.getClipByShareCode(identifier);
+      if (!clip) {
+        const numericId = parseInt(identifier, 10);
+        if (!isNaN(numericId)) {
+          clip = await storage.getClip(numericId);
+        }
+      }
       if (!clip) {
         return res.status(404).json({ error: 'Clip not found' });
       }
