@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { Link } from "wouter";
 import { getQueryFn } from "@/lib/queryClient";
+import { useMobile } from "@/hooks/use-mobile";
 
 function formatCount(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -206,6 +207,11 @@ interface ProfileHoverCardProps {
 
 export function ProfileHoverCard({ username, children }: ProfileHoverCardProps) {
   const [prefetch, setPrefetch] = useState(false);
+  const isMobile = useMobile();
+
+  // On mobile there are no hover events — tapping the trigger would
+  // immediately pop the card open covering the screen. Render children as-is.
+  if (isMobile) return <>{children}</>;
 
   return (
     <HoverCard
