@@ -263,8 +263,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           {reels.map((reel, index) => (
             <div
               key={reel.id}
-              className="snap-start snap-always h-full w-full relative"
-              style={{ scrollSnapStop: 'always' }}
+              className="snap-start snap-always w-full relative flex-shrink-0"
+              style={{ scrollSnapStop: 'always', height: 'calc(100dvh - 64px - env(safe-area-inset-bottom, 0px))' }}
             >
               {/* Video */}
               <div className="absolute inset-0 pointer-events-none">
