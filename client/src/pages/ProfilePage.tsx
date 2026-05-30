@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
-import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 import { useMobile } from "@/hooks/use-mobile";
 import { NameTagDetailDialog } from "@/components/store/NameTagDetailDialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -282,7 +281,6 @@ const ProfilePage = () => {
   // Clip dialog for opening clips/reels
   const { openClipDialog } = useClipDialog();
   const isMobile = useMobile();
-  const [mobileViewer, setMobileViewer] = useState<{ clips: ClipWithUser[]; startId: number } | null>(null);
 
   // Profile picture action dialog state  
   const [profileActionDialogOpen, setProfileActionDialogOpen] = useState(false);
@@ -4278,7 +4276,6 @@ const ProfilePage = () => {
                         canDelete={isOwnProfile}
                         onDelete={() => deleteClipMutation.mutate(clip.id)}
                         clipsList={clips?.filter(c => c.videoType !== 'reel')}
-                        onCardClick={isMobile ? (clipId, clipsList) => setMobileViewer({ clips: clipsList, startId: clipId }) : undefined}
                       />
                     </div>
                   );
@@ -4429,6 +4426,7 @@ const ProfilePage = () => {
                         canDelete={isOwnProfile}
                         onDelete={() => deleteClipMutation.mutate(reel.id)}
                         reelsList={clips?.filter(c => c.videoType === 'reel')}
+                        onCardClick={isMobile ? (reelId, reelsList) => openClipDialog(reelId, reelsList, undefined, 'reel') : undefined}
                       />
                     </div>
                   );
@@ -5355,13 +5353,6 @@ const ProfilePage = () => {
         ownerAvatarUrl={profileAvatarSignedUrl || profile?.avatarUrl || undefined}
       />
 
-      {mobileViewer && (
-        <MobileTrendingViewer
-          content={mobileViewer.clips}
-          initialIndex={Math.max(0, mobileViewer.clips.findIndex(c => c.id === mobileViewer.startId))}
-          onClose={() => setMobileViewer(null)}
-        />
-      )}
     </div>
     </>
   );
