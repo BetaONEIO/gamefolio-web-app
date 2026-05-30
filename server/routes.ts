@@ -6343,6 +6343,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )}`
       };
 
+      const signedThumbnailUrl = clip.thumbnailUrl
+        ? (await supabaseStorage.convertToSignedUrl(clip.thumbnailUrl, 3600)) || clip.thumbnailUrl
+        : null;
+
       res.json({
         clipId,
         qrCode: qrCodeDataUrl,
@@ -6351,7 +6355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clipUrl,
         title: clip.title,
         description: clip.description,
-        thumbnailUrl: clip.thumbnailUrl || null,
+        thumbnailUrl: signedThumbnailUrl,
         videoUrl: clip.videoUrl || null,
         videoType: clip.videoType || 'clip'
       });
@@ -7375,12 +7379,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )}`
       };
 
+      const signedImageUrl = screenshot.imageUrl
+        ? (await supabaseStorage.convertToSignedUrl(screenshot.imageUrl, 3600)) || screenshot.imageUrl
+        : null;
+
       res.json({
         screenshotId,
         qrCode: qrCodeDataUrl,
         socialMediaLinks,
         screenshotUrl,
-        imageUrl: screenshot.imageUrl, // Add the actual image URL for preview
+        imageUrl: signedImageUrl,
         title: screenshot.title,
         description: screenshot.description || ""
       });

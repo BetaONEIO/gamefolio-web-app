@@ -61,6 +61,7 @@ function ClipThumbnail({ thumbnailUrl, videoUrl, imageUrl }: { thumbnailUrl?: st
   const { signedUrl: signedThumbUrl } = useSignedUrl(thumbnailUrl);
   const { signedUrl: signedVideoUrl } = useSignedUrl(videoUrl);
   const { signedUrl: signedImageUrl } = useSignedUrl(imageUrl);
+  const [thumbError, setThumbError] = useState(false);
 
   if (signedImageUrl) {
     return (
@@ -72,18 +73,13 @@ function ClipThumbnail({ thumbnailUrl, videoUrl, imageUrl }: { thumbnailUrl?: st
     );
   }
 
-  if (signedThumbUrl) {
+  if (signedThumbUrl && !thumbError) {
     return (
       <img
         src={signedThumbUrl}
         alt="Video thumbnail"
         className="w-full h-full object-cover"
-        onError={(e) => {
-          const target = e.target as HTMLImageElement;
-          target.style.display = 'none';
-          const videoElement = target.nextElementSibling as HTMLVideoElement;
-          if (videoElement) videoElement.style.display = 'block';
-        }}
+        onError={() => setThumbError(true)}
       />
     );
   }
@@ -99,7 +95,7 @@ function ClipThumbnail({ thumbnailUrl, videoUrl, imageUrl }: { thumbnailUrl?: st
     );
   }
 
-  if (thumbnailUrl || videoUrl) {
+  if (thumbnailUrl || videoUrl || imageUrl) {
     return (
       <div className="w-full h-full bg-gray-700 flex items-center justify-center">
         <div className="animate-spin w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full" />
