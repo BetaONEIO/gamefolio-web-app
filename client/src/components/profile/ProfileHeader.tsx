@@ -545,8 +545,36 @@ const ProfileHeader = ({
             ) : (
               <GamefolioShareDialog
                 username={profile.username}
+                userId={profile.id}
                 open={shareDialogOpen}
                 onOpenChange={setShareDialogOpen}
+                userProfile={{
+                  displayName: profile.displayName,
+                  bio: profile.bio,
+                  avatarUrl: profile.avatarUrl,
+                  bannerUrl: profile.bannerUrl,
+                  hideBanner: profile.hideBanner,
+                  selectedAvatarBorderId: profile.selectedAvatarBorderId,
+                  avatarBorderColor: profile.avatarBorderColor,
+                  nftProfileTokenId: profile.nftProfileTokenId,
+                  nftProfileImageUrl: profile.nftProfileImageUrl,
+                  activeProfilePicType: profile.activeProfilePicType,
+                  emailVerified: profile.emailVerified,
+                  role: profile.role,
+                  isPro: profile.isPro,
+                  selectedVerificationBadgeId: profile.selectedVerificationBadgeId,
+                  userType: profile.userType,
+                  showUserType: profile.showUserType,
+                  accentColor: profile.accentColor,
+                  backgroundColor: profile.backgroundColor,
+                  cardColor: profile.cardColor,
+                  primaryColor: profile.primaryColor,
+                }}
+                userStats={{
+                  clips: (profile._count?.clips || 0) + (profile._count?.screenshots || 0),
+                  followers: profile._count?.followers || 0,
+                  following: profile._count?.following || 0,
+                }}
                 trigger={
                   <Button variant="outline" size="sm" className="h-8 px-4">
                     <ShareLaunchIcon size={16} className="mr-1" /> Share

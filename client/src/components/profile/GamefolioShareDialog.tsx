@@ -78,6 +78,7 @@ interface GamefolioShareDialogProps {
     backgroundColor?: string | null;
     cardColor?: string | null;
     primaryColor?: string | null;
+    activeProfilePicType?: string | null;
   };
   userStats?: {
     clips?: number;

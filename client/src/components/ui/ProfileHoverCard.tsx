@@ -15,69 +15,51 @@ function formatCount(n: number): string {
   return String(n);
 }
 
-function ProfilePreview({ username }: { username: string }) {
+function LoadingSkeleton() {
+  return (
+    <>
+      <Skeleton
+        style={{
+          height: 72,
+          margin: "-16px -16px 12px -16px",
+          width: "calc(100% + 32px)",
+          borderRadius: "16px 16px 0 0",
+          display: "block",
+        }}
+      />
+      <div className="flex items-center gap-3 mb-3">
+        <Skeleton className="h-11 w-11 rounded-full flex-shrink-0" />
+        <div className="space-y-1.5 flex-1">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+      </div>
+      <div className="flex gap-5 mb-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex flex-col gap-1">
+            <Skeleton className="h-5 w-8" />
+            <Skeleton className="h-2 w-12" />
+          </div>
+        ))}
+      </div>
+      <Skeleton className="h-8 w-full rounded-lg" />
+    </>
+  );
+}
+
+interface ProfilePreviewProps {
+  username: string;
+  profile: any;
+  badgeData?: { verificationBadge: { id: number; name: string; imageUrl: string } | null } | null;
+  signedBannerUrl?: string | null;
+  accent: string;
+}
+
+function ProfilePreview({ username, profile, badgeData, signedBannerUrl, accent }: ProfilePreviewProps) {
   const [bannerImgError, setBannerImgError] = useState(false);
 
-  const { data: profile, isLoading } = useQuery({
-    queryKey: [`/api/users/${username}`],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const { data: badgeData } = useQuery<{
-    verificationBadge: { id: number; name: string; imageUrl: string } | null;
-  }>({
-    queryKey: [`/api/user/${profile?.id}/verification-badge`],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-    enabled: !!profile?.id,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const isSupabaseBanner =
-    !!profile?.bannerUrl &&
-    (profile.bannerUrl.includes("gamefolio-media") ||
-      profile.bannerUrl.includes("gamefolio-assets") ||
-      profile.bannerUrl.includes("gamefolio-name-tags"));
-  const { signedUrl: signedBannerUrl } = useSignedUrl(
-    isSupabaseBanner ? profile!.bannerUrl : null
-  );
-  const bannerSrc = bannerImgError ? null : signedBannerUrl;
-
-  if (isLoading) {
-    return (
-      <>
-        <Skeleton
-          style={{
-            height: 72,
-            margin: "-16px -16px 12px -16px",
-            width: "calc(100% + 32px)",
-            borderRadius: "16px 16px 0 0",
-            display: "block",
-          }}
-        />
-        <div className="flex items-center gap-3 mb-3">
-          <Skeleton className="h-11 w-11 rounded-full flex-shrink-0" />
-          <div className="space-y-1.5 flex-1">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-3 w-20" />
-          </div>
-        </div>
-        <div className="flex gap-5 mb-3">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="flex flex-col gap-1">
-              <Skeleton className="h-5 w-8" />
-              <Skeleton className="h-2 w-12" />
-            </div>
-          ))}
-        </div>
-        <Skeleton className="h-8 w-full rounded-lg" />
-      </>
-    );
-  }
-
-  if (!profile) return null;
-
   const verificationBadge = badgeData?.verificationBadge ?? null;
+  const bannerSrc = bannerImgError ? null : signedBannerUrl;
 
   const stats = [
     { label: "CLIPS", value: profile._count?.clips ?? 0 },
@@ -104,7 +86,7 @@ function ProfilePreview({ username }: { username: string }) {
           <div
             className="w-full h-full"
             style={{
-              background: "linear-gradient(135deg, #0B1218 0%, #1B2A33 100%)",
+              background: `linear-gradient(135deg, ${profile.backgroundColor || '#0B1218'} 0%, ${profile.cardColor || '#1B2A33'} 100%)`,
               borderRadius: "16px 16px 0 0",
             }}
           />
@@ -144,7 +126,7 @@ function ProfilePreview({ username }: { username: string }) {
           {profile.level && (
             <p
               className="text-[10px] font-semibold leading-tight mt-0.5"
-              style={{ color: "#B7FF1A" }}
+              style={{ color: accent }}
             >
               Level {profile.level}
             </p>
@@ -162,24 +144,22 @@ function ProfilePreview({ username }: { username: string }) {
         </p>
       )}
 
-      {/* Stats — matching profile page style */}
+      {/* Stats */}
       <div
         className="flex mb-3 pb-3"
         style={{
           gap: "1.5rem",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          borderBottom: `1px solid ${accent}18`,
         }}
       >
         {stats.map(({ label, value }) => (
           <div key={label} className="flex flex-col gap-0.5">
-            <span
-              className="font-black text-base leading-tight text-white"
-            >
+            <span className="font-black text-base leading-tight text-white">
               {formatCount(value)}
             </span>
             <span
               className="font-black uppercase leading-tight"
-              style={{ fontSize: "7px", color: "#B7FF1A", letterSpacing: "0.8px" }}
+              style={{ fontSize: "7px", color: accent, letterSpacing: "0.8px" }}
             >
               {label}
             </span>
@@ -191,7 +171,7 @@ function ProfilePreview({ username }: { username: string }) {
       <Link href={`/profile/${username}`}>
         <button
           className="w-full text-xs font-bold py-2 rounded-lg transition-opacity hover:opacity-90"
-          style={{ background: "#B7FF1A", color: "#071013" }}
+          style={{ background: accent, color: "#071013" }}
         >
           View Gamefolio
         </button>
@@ -208,6 +188,34 @@ interface ProfileHoverCardProps {
 export function ProfileHoverCard({ username, children }: ProfileHoverCardProps) {
   const [prefetch, setPrefetch] = useState(false);
   const isMobile = useMobile();
+
+  const { data: profile, isLoading } = useQuery({
+    queryKey: [`/api/users/${username}`],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    staleTime: 5 * 60 * 1000,
+    enabled: prefetch,
+  });
+
+  const { data: badgeData } = useQuery<{
+    verificationBadge: { id: number; name: string; imageUrl: string } | null;
+  }>({
+    queryKey: [`/api/user/${profile?.id}/verification-badge`],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: !!profile?.id,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const isSupabaseBanner =
+    !!profile?.bannerUrl &&
+    (profile.bannerUrl.includes("gamefolio-media") ||
+      profile.bannerUrl.includes("gamefolio-assets") ||
+      profile.bannerUrl.includes("gamefolio-name-tags"));
+  const { signedUrl: signedBannerUrl } = useSignedUrl(
+    isSupabaseBanner ? profile!.bannerUrl : null
+  );
+
+  const accent = profile?.accentColor || "#B7FF1A";
+  const cardBg = profile?.cardColor || "#101923";
 
   // On mobile there are no hover events — tapping the trigger would
   // immediately pop the card open covering the screen. Render children as-is.
@@ -226,14 +234,25 @@ export function ProfileHoverCard({ username, children }: ProfileHoverCardProps) 
         className="p-4 overflow-hidden"
         style={{
           width: 292,
-          background: "#101923",
+          background: cardBg,
           borderRadius: 16,
-          border: "1px solid rgba(27,42,51,0.9)",
-          boxShadow:
-            "0 16px 56px rgba(0,0,0,0.72), 0 0 0 1px rgba(183,255,26,0.06)",
+          border: `1px solid ${accent}22`,
+          boxShadow: `0 16px 56px rgba(0,0,0,0.72), 0 0 0 1px ${accent}10`,
         }}
       >
-        {prefetch && <ProfilePreview username={username} />}
+        {prefetch && (
+          isLoading ? (
+            <LoadingSkeleton />
+          ) : profile ? (
+            <ProfilePreview
+              username={username}
+              profile={profile}
+              badgeData={badgeData}
+              signedBannerUrl={signedBannerUrl}
+              accent={accent}
+            />
+          ) : null
+        )}
       </HoverCardContent>
     </HoverCard>
   );
