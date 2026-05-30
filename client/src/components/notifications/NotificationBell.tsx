@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Bell, Heart, MessageCircle, Upload, UserPlus, X, UserCheck, UserX, Flame, Video } from "lucide-react";
+import { Bell, MessageCircle, Upload, UserPlus, X, UserCheck, UserX, Flame, Video } from "lucide-react";
 import { ZapIconFire } from "@/components/ui/ZapReactionIcon";
+import { PixelHeartReaction } from "@/components/ui/PixelHeartReaction";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -201,7 +202,7 @@ export function NotificationBell() {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'like':
-        return <Heart className="h-4 w-4 fill-red-500 text-red-500" />;
+        return <PixelHeartReaction size={16} active={true} />;
       case 'reaction':
         return <ZapIconFire className="h-4 w-4" style={{ width: 14, height: 14 }} />;
       case 'comment':
