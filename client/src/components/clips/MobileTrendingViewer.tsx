@@ -343,7 +343,8 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             ref={el => { itemRefs.current[index] = el; }}
             className="relative w-full bg-black"
             style={{
-              height: '100%',
+              height: embedded ? '100%' : 'calc(100dvh - var(--mobile-nav-height, 4rem))',
+              flexShrink: 0,
               scrollSnapAlign: 'start',
               scrollSnapStop: 'always',
             }}
