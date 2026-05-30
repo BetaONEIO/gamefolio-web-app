@@ -353,7 +353,10 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             {/* Only render video/image for current + adjacent items (performance) */}
             {Math.abs(index - currentIndex) <= 1 && (
               isVideoContent(item) ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-black">
+                <div
+                  className="absolute inset-0 flex items-center justify-center bg-black"
+                  style={item.videoType !== 'reel' ? { paddingTop: 'calc(env(safe-area-inset-top, 0px) + 52px)' } : undefined}
+                >
                   <VideoPlayer
                     key={item.id}
                     videoUrl={item.videoUrl || ''}
