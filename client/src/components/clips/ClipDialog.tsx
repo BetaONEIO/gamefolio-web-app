@@ -562,7 +562,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           className={cn(
             "fixed left-[50%] top-[50%] z-[9999] grid w-full translate-x-[-50%] translate-y-[-50%] border shadow-lg sm:rounded-lg",
             "p-0 text-foreground clip-dialog-content",
-            !isMobile && clip?.videoType === 'reel' ? "reel-dialog-desktop" : "bg-background",
+            "bg-background",
             isMobile && clip?.videoType === 'reel' 
               ? "w-screen h-[calc(100dvh-64px)] max-w-none max-h-none overflow-hidden top-0 translate-y-0" // Leave space for footer on mobile reels, use dvh for dynamic viewport
               : isMobile 
