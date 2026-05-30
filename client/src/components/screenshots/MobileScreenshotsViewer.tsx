@@ -392,10 +392,10 @@ export const ScreenshotFeedCard: React.FC<{
       </div>
       )}
 
-      {/* ── Caption — scrollable, takes remaining flex space ── */}
+      {/* ── Caption — expands to fill space only when "see more" is open ── */}
       {!commentsOverlay && (
       <div
-        className="flex-1 min-h-0 overflow-y-auto px-4"
+        className={showFullDesc ? "flex-1 min-h-0 overflow-y-auto px-4" : "flex-shrink-0 px-4"}
         style={{ background: '#081017', overscrollBehaviorY: 'contain' }}
       >
         {caption && (
@@ -603,7 +603,7 @@ export const MobileScreenshotsViewer: React.FC<{
                   display: 'flex',
                   flexDirection: 'column',
                   overflow: 'hidden',
-                  marginTop: 'calc(env(safe-area-inset-top, 0px) + 56px)',
+                  marginTop: 'calc(env(safe-area-inset-top, 0px) + 155px)',
                   marginBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
                 }}
               >

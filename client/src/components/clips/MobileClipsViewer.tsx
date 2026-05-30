@@ -210,9 +210,9 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
         </div>
       </div>
 
-      {/* Caption — scrollable, takes up remaining flex space */}
+      {/* Caption — expands to fill space only when "see more" is open */}
       <div
-        className="flex-1 min-h-0 overflow-y-auto px-4"
+        className={showFullDesc ? "flex-1 min-h-0 overflow-y-auto px-4" : "flex-shrink-0 px-4"}
         style={{ background: '#081017', overscrollBehaviorY: 'contain' }}
       >
         {caption && (
