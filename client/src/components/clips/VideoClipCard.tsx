@@ -1,11 +1,9 @@
-import { useState } from "react";
 import { Link } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { formatDuration } from "@/lib/constants";
 import { Eye, Play } from "lucide-react";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
-import { MobileClipsViewer } from "@/components/clips/MobileClipsViewer";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 
 interface VideoClipCardProps {
@@ -16,18 +14,12 @@ interface VideoClipCardProps {
 }
 
 const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
-  const [mobileViewerOpen, setMobileViewerOpen] = useState(false);
   const { openClipDialog } = useClipDialog();
   const allClips = clipsList || [clip];
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
 
   const handleCardClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (isMobile) {
-      setMobileViewerOpen(true);
-    } else {
-      openClipDialog(clip.id, allClips, undefined, 'clip');
-    }
+    openClipDialog(clip.id, allClips, undefined, 'clip');
   };
 
   const isNew = clip.createdAt && Date.now() - new Date(clip.createdAt).getTime() < 86400000 * 3;
@@ -45,12 +37,6 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
 
   return (
     <>
-    {mobileViewerOpen && (
-      <MobileClipsViewer
-        clips={allClips}
-        onBack={() => setMobileViewerOpen(false)}
-      />
-    )}
     <div
       onClick={handleCardClick}
       role="button"
@@ -90,6 +76,7 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
           className={`w-full h-full transition-transform duration-300 group-hover:scale-105 object-contain ${clip.ageRestricted ? "blur-2xl" : ""}`}
           placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%230B1218'/%3e%3c/svg%3e"
           showLoadingSpinner={false}
+          rootMargin="400px"
           containerClassName="absolute inset-0 z-10"
           fallback={
             <div className="w-full h-full flex items-center justify-center bg-[#0B1218]">

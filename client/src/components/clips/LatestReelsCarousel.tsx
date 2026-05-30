@@ -147,7 +147,7 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
                     alt={reel.title || 'Reel thumbnail'}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     showLoadingSpinner={true}
-                    rootMargin="100px"
+                    rootMargin="400px"
                     threshold={0.1}
                   />
                 ) : (

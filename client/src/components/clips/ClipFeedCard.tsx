@@ -142,16 +142,18 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
         } : {}}
       >
         {isNear ? (
-          <VideoPlayer
-            videoUrl={clip.videoUrl || ''}
-            thumbnailUrl={clip.thumbnailUrl || undefined}
-            autoPlay={isInView}
-            clipId={clip.id}
-            objectFit="contain"
-            autoHideControls
-            externalPaused={!isInView}
-            className={commentsOverlay ? "w-full h-full" : "w-full"}
-          />
+          <div className={commentsOverlay ? "w-full h-full" : "w-full aspect-video overflow-hidden bg-black"}>
+            <VideoPlayer
+              videoUrl={clip.videoUrl || ''}
+              thumbnailUrl={clip.thumbnailUrl || undefined}
+              autoPlay={isInView}
+              clipId={clip.id}
+              objectFit="contain"
+              autoHideControls
+              externalPaused={!isInView}
+              className="w-full h-full"
+            />
+          </div>
         ) : (
           <div className={commentsOverlay ? "w-full h-full bg-black flex items-center justify-center" : "w-full aspect-video bg-black flex items-center justify-center relative overflow-hidden"}>
             {clip.thumbnailUrl ? (
