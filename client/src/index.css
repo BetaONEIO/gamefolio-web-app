@@ -434,7 +434,6 @@ video:focus {
     @apply font-sans antialiased bg-background text-foreground;
     font-family: 'Space Grotesk', sans-serif;
     background-color: #081017 !important;
-    background-image: radial-gradient(circle at top, rgba(255,255,255,0.02), transparent 60%) !important;
   }
 
   /* Prevent iOS auto-zoom on input focus (triggers when font-size < 16px) */
