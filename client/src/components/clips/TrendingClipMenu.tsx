@@ -22,11 +22,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Drawer as DrawerPrimitive } from "vaul";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -426,23 +422,26 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
       {isMobile ? (
         <>
           {mobileTriggerBtn}
-          <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetContent
-              side="bottom"
-              className="p-0 bg-[#0B1218] border-t border-white/10 rounded-t-2xl [&>button]:hidden"
-            >
-              <SheetTitle className="sr-only">{menuLabel}</SheetTitle>
-              <div className="flex justify-center pt-3 pb-2">
-                <div className="w-10 h-1 rounded-full bg-white/20" />
-              </div>
-              <div className="px-4 py-2 border-b border-white/10 mb-1">
-                <p className="text-xs text-muted-foreground truncate font-medium">{clip.title}</p>
-                <p className="text-xs text-muted-foreground/60 truncate">@{clip.user.username}</p>
-              </div>
-              {menuContent}
-              <div className="pb-20" />
-            </SheetContent>
-          </Sheet>
+          <DrawerPrimitive.Root open={isOpen} onOpenChange={setIsOpen} shouldScaleBackground={false}>
+            <DrawerPrimitive.Portal>
+              <DrawerPrimitive.Overlay className="fixed inset-0 z-[9999] bg-black/60" />
+              <DrawerPrimitive.Content
+                className="fixed inset-x-0 bottom-0 z-[9999] flex flex-col rounded-t-2xl bg-[#0B1218] border-t border-white/10 outline-none"
+              >
+                <DrawerPrimitive.Title className="sr-only">{menuLabel}</DrawerPrimitive.Title>
+                {/* Drag handle */}
+                <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing">
+                  <div className="w-10 h-1 rounded-full bg-white/30" />
+                </div>
+                <div className="px-4 py-2 border-b border-white/10 mb-1">
+                  <p className="text-xs text-muted-foreground truncate font-medium">{clip.title}</p>
+                  <p className="text-xs text-muted-foreground/60 truncate">@{clip.user.username}</p>
+                </div>
+                {menuContent}
+                <div className="pb-6" />
+              </DrawerPrimitive.Content>
+            </DrawerPrimitive.Portal>
+          </DrawerPrimitive.Root>
         </>
       ) : (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
