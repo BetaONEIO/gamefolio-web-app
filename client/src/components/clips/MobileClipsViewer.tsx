@@ -380,12 +380,16 @@ export const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => 
         {clips.map((clip) => (
           <div
             key={clip.id}
-            className="flex flex-col justify-center"
             style={{
               scrollSnapAlign: 'start',
               scrollSnapStop: 'always',
-              minHeight: '100%',
-              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 64px)',
+              height: '100dvh',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 110px)',
+              paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
+              boxSizing: 'border-box',
             }}
           >
             <ClipFeedCard clip={clip} clips={clips} />
