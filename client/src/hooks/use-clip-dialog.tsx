@@ -84,13 +84,19 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
     enabled: !!clipId && isOpen,
   });
 
+  // Resolve the video type without waiting for the async fetch to complete.
+  // The clip is almost always already present in clipsList; using that data
+  // immediately prevents the reel→clip layout flash on first open.
+  const localClipData = clipsList?.find(c => c.id === clipId);
+  const effectiveVideoType = currentClip?.videoType ?? localClipData?.videoType;
+
   // Respect forceViewerType when provided; otherwise fall back to the clip's own videoType.
   // This ensures clips appearing in a "clips" context always open in the clip viewer,
   // even if their videoType field in the DB is set to 'reel'.
   const isReel =
     forcedViewerType === 'clip' ? false :
     forcedViewerType === 'reel' ? true :
-    currentClip?.videoType === 'reel';
+    effectiveVideoType === 'reel';
 
   const currentIndex = clipsList ? clipsList.findIndex(clip => clip.id === clipId) : -1;
   // Enable navigation for any clip list with more than 1 clip
