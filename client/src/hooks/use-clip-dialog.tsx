@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { ClipDialog } from '@/components/clips/ClipDialog';
-import { FullscreenReelsViewer } from '@/components/clips/FullscreenReelsViewer';
+import { MobileTrendingViewer } from '@/components/clips/MobileTrendingViewer';
 import MobileClipsViewerOverlay from '@/components/clips/MobileClipsViewerOverlay';
 import { useQuery } from '@tanstack/react-query';
 import { ClipWithUser } from '@shared/schema';
@@ -104,7 +104,7 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
     silentReplaceState(buildClipUrl(currentClip));
   }, [isOpen, clipId, currentClip?.shareCode, currentClip?.videoType]);
 
-  const showFullscreenReelsViewer = isReel && isMobile && isOpen && clipsList && clipsList.length > 0;
+  const showMobileReelsViewer = isReel && isMobile && isOpen && clipsList && clipsList.length > 0;
 
   // For mobile clips: use MobileClipsViewerOverlay. Fall back to [currentClip] if no list was provided.
   const effectiveClipsList: ClipWithUser[] | null =
@@ -138,9 +138,9 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
           onBack={closeClipDialog}
           viewAllHref={viewAllHref}
         />
-      ) : showFullscreenReelsViewer ? (
-        <FullscreenReelsViewer
-          reels={clipsList || []}
+      ) : showMobileReelsViewer ? (
+        <MobileTrendingViewer
+          content={clipsList || []}
           initialIndex={currentIndex >= 0 ? currentIndex : 0}
           onClose={closeClipDialog}
         />

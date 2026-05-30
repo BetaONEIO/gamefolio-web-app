@@ -33,17 +33,17 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
 
   const content = (
     <div
-      className="fixed inset-0 flex flex-col"
+      className="fixed inset-0"
       style={{ background: '#03080A', zIndex: 9999 }}
     >
-      {/* Top bar */}
+      {/* Top bar — floats over the feed, no layout height consumed */}
       <div
-        className="flex-shrink-0 flex items-center justify-between px-4 pb-3"
-        style={{ background: '#03080A', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+        className="absolute left-0 right-0 z-10 flex items-center justify-between px-4 pb-3 bg-gradient-to-b from-black/60 to-transparent pointer-events-none"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
       >
         <button
           onClick={onBack}
-          className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
+          className="w-9 h-9 flex items-center justify-center rounded-full transition-colors pointer-events-auto"
           style={{ color: '#F5F7F2' }}
           aria-label="Back"
         >
@@ -54,7 +54,7 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
           <Link
             href={viewAllHref}
             onClick={onBack}
-            className="text-sm font-semibold px-3 py-1.5 rounded-full transition-colors"
+            className="text-sm font-semibold px-3 py-1.5 rounded-full transition-colors pointer-events-auto"
             style={{
               color: '#B7FF1A',
               border: '1px solid rgba(183, 255, 26, 0.5)',
@@ -66,11 +66,12 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
         )}
       </div>
 
-      {/* Snap-scrolling feed */}
+      {/* Snap-scrolling feed — fills the full container height */}
       <div
         ref={scrollRef}
         style={{
-          flex: 1,
+          position: 'absolute',
+          inset: 0,
           overflowY: 'auto',
           scrollSnapType: 'y mandatory',
           WebkitOverflowScrolling: 'touch',

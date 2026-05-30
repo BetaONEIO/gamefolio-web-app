@@ -65,7 +65,7 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
       className="cursor-pointer group"
     >
       {/* 16:9 Thumbnail */}
-      <div className="relative aspect-video overflow-hidden rounded-xl bg-[#0B1218] border border-[#1B2A33]">
+      <div className="relative aspect-video overflow-hidden rounded-xl bg-[#0B1218]">
         <div className="absolute inset-0 flex items-center justify-center bg-[#0B1218] z-0">
           <Play className="h-10 w-10 text-gray-600" />
         </div>
