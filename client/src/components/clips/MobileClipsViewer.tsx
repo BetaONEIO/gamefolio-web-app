@@ -381,7 +381,12 @@ export const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => 
           <div
             key={clip.id}
             className="flex flex-col justify-center"
-            style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always', minHeight: '100%' }}
+            style={{
+              scrollSnapAlign: 'start',
+              scrollSnapStop: 'always',
+              minHeight: '100%',
+              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 64px)',
+            }}
           >
             <ClipFeedCard clip={clip} clips={clips} />
           </div>
