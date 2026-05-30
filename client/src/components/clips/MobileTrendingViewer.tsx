@@ -350,6 +350,16 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             }}
             onClick={handleVideoTap}
           >
+            {/* Inner content block — shifted down to create breathing room below the header controls */}
+            <div
+              style={{
+                position: 'absolute',
+                top: embedded ? 0 : 'calc(env(safe-area-inset-top, 0px) + 56px)',
+                left: 0,
+                right: 0,
+                bottom: 0,
+              }}
+            >
             {/* Only render video/image for current + adjacent items (performance) */}
             {Math.abs(index - currentIndex) <= 1 && (
               isVideoContent(item) ? (
@@ -464,6 +474,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                 </div>
               </div>
             )}
+            </div>{/* end inner content block */}
           </div>
         ))}
       </div>
