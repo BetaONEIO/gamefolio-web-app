@@ -314,12 +314,12 @@ export const ScreenshotFeedCard: React.FC<{
   return (
     <div
       ref={cardRef}
-      className={commentsOverlay ? "fixed inset-0 z-[75] flex flex-col overflow-hidden" : "w-full"}
+      className={commentsOverlay ? "fixed inset-0 z-[75] flex flex-col overflow-hidden" : "flex flex-col h-full overflow-hidden"}
       style={{ background: commentsOverlay ? '#000' : '#081017' }}
     >
       {/* ── Image ── */}
       <div
-        className={commentsOverlay ? "flex-shrink-0 overflow-hidden" : ""}
+        className={commentsOverlay ? "flex-shrink-0 overflow-hidden" : "flex-shrink-0"}
         style={commentsOverlay ? {
           height: '42%',
           transform: sheetMounted ? 'scale(0.97) translateY(-6px)' : 'scale(1) translateY(0)',
@@ -334,9 +334,9 @@ export const ScreenshotFeedCard: React.FC<{
         />
       </div>
 
-      {/* ── Header, caption, social ── */}
-      {!commentsOverlay && (<>
-      <div className="px-4 pt-6 pb-2">
+      {/* ── Header ── */}
+      {!commentsOverlay && (
+      <div className="flex-shrink-0 px-4 pt-4 pb-2">
         <div className="flex items-start gap-3">
           <Link href={`/profile/${screenshot.user.username}`} className="flex-shrink-0">
             <CustomAvatar user={screenshot.user as any} size="sm" showBorder={true} />
@@ -390,8 +390,14 @@ export const ScreenshotFeedCard: React.FC<{
           </div>
         </div>
       </div>
+      )}
 
-      <div className="px-4" style={{ background: '#081017' }}>
+      {/* ── Caption — scrollable, takes remaining flex space ── */}
+      {!commentsOverlay && (
+      <div
+        className="flex-1 min-h-0 overflow-y-auto px-4"
+        style={{ background: '#081017', overscrollBehaviorY: 'contain' }}
+      >
         {caption && (
           <div className="pb-3">
             <p className="text-[14px] leading-relaxed" style={{ color: '#B8C0AE' }}>
@@ -409,7 +415,12 @@ export const ScreenshotFeedCard: React.FC<{
             </p>
           </div>
         )}
+      </div>
+      )}
 
+      {/* ── Engagement bar — always pinned at bottom ── */}
+      {!commentsOverlay && (
+      <div className="flex-shrink-0 px-4" style={{ background: '#081017' }}>
         <div className="flex items-center py-2.5" style={{ borderTop: '1px solid #1B2A33' }}>
           <button
             onClick={(e) => { e.stopPropagation(); setCommentsOpen(true); }}
@@ -466,7 +477,7 @@ export const ScreenshotFeedCard: React.FC<{
           </button>
         </div>
       </div>
-      </>)}
+      )}
 
       {/* Mobile: comments bottom sheet */}
       {commentsOverlay && (
@@ -545,15 +556,15 @@ export const MobileScreenshotsViewer: React.FC<{
 
   return (
     <>
-      <div className="fixed inset-0 z-[9999] flex flex-col" style={{ background: '#081017' }}>
-        {/* Top bar — back button */}
+      <div className="fixed inset-0 z-[9999]" style={{ background: '#081017' }}>
+        {/* Back button — floats over the feed, no layout height consumed */}
         <div
-          className="flex-shrink-0 flex items-center px-4 pb-3"
-          style={{ background: '#081017', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+          className="absolute left-0 right-0 z-10 flex items-center px-4 pb-3 bg-gradient-to-b from-black/60 to-transparent pointer-events-none"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
         >
           <button
             onClick={onBack}
-            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors pointer-events-auto"
             style={{ color: '#F5F7F2' }}
             aria-label="Back"
           >
@@ -563,19 +574,44 @@ export const MobileScreenshotsViewer: React.FC<{
 
         {/* Snap-scrolling feed */}
         <div
-          className="flex-1 overflow-y-auto"
-          style={{ scrollSnapType: 'y mandatory', WebkitOverflowScrolling: 'touch' }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            overflowY: 'auto',
+            scrollSnapType: 'y mandatory',
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehaviorY: 'none',
+          }}
         >
           {screenshots.map((screenshot, idx) => (
             <div
               key={screenshot.id}
-              className="flex flex-col justify-center"
-              style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always', minHeight: '100%' }}
+              style={{
+                scrollSnapAlign: 'start',
+                scrollSnapStop: 'normal',
+                height: '100dvh',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                boxSizing: 'border-box',
+              }}
             >
-              <ScreenshotFeedCard
-                screenshot={screenshot}
-                onFullscreen={() => setFullscreenIndex(idx)}
-              />
+              {/* Margin wrapper — clears back button at top, nav at bottom */}
+              <div
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  marginTop: 'calc(env(safe-area-inset-top, 0px) + 56px)',
+                  marginBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
+                }}
+              >
+                <ScreenshotFeedCard
+                  screenshot={screenshot}
+                  onFullscreen={() => setFullscreenIndex(idx)}
+                />
+              </div>
             </div>
           ))}
         </div>
