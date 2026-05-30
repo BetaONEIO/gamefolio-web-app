@@ -374,8 +374,8 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               <div
                 className="absolute left-0 right-0 z-10 px-4 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent"
                 style={{
-                  bottom: '8px',
-                  paddingBottom: '8px',
+                  bottom: '0',
+                  paddingBottom: '10px',
                   pointerEvents: 'none',
                 }}
                 onClick={e => e.stopPropagation()}
