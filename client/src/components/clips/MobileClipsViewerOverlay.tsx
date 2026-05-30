@@ -34,7 +34,7 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
   const content = (
     <div
       className="fixed top-0 left-0 right-0"
-      style={{ background: '#03080A', zIndex: 9999, bottom: 'var(--mobile-nav-height, 3.5rem)' }}
+      style={{ background: '#081017', zIndex: 9999, bottom: 'var(--mobile-nav-height, 3.5rem)' }}
     >
       {/* Top bar — floats over the feed, no layout height consumed */}
       <div

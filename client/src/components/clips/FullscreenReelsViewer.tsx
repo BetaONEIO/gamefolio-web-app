@@ -476,7 +476,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       {currentReel && isDesktop && (
         <div
           className="flex flex-col justify-between w-[340px] flex-shrink-0 h-full border-l border-white/10"
-          style={{ background: '#03080A', paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+          style={{ background: '#081017', paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
           onClick={e => e.stopPropagation()}
         >
           {/* Profile + info */}

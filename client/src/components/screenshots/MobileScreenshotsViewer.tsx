@@ -315,7 +315,7 @@ export const ScreenshotFeedCard: React.FC<{
     <div
       ref={cardRef}
       className={commentsOverlay ? "fixed inset-0 z-[75] flex flex-col overflow-hidden" : "w-full"}
-      style={{ background: commentsOverlay ? '#000' : '#03080A' }}
+      style={{ background: commentsOverlay ? '#000' : '#081017' }}
     >
       {/* ── Image ── */}
       <div
@@ -391,7 +391,7 @@ export const ScreenshotFeedCard: React.FC<{
         </div>
       </div>
 
-      <div className="px-4" style={{ background: '#03080A' }}>
+      <div className="px-4" style={{ background: '#081017' }}>
         {caption && (
           <div className="pb-3">
             <p className="text-[14px] leading-relaxed" style={{ color: '#B8C0AE' }}>
@@ -545,11 +545,11 @@ export const MobileScreenshotsViewer: React.FC<{
 
   return (
     <>
-      <div className="fixed inset-0 z-[9999] flex flex-col" style={{ background: '#03080A' }}>
+      <div className="fixed inset-0 z-[9999] flex flex-col" style={{ background: '#081017' }}>
         {/* Top bar — back button */}
         <div
           className="flex-shrink-0 flex items-center px-4 pb-3"
-          style={{ background: '#03080A', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+          style={{ background: '#081017', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
         >
           <button
             onClick={onBack}

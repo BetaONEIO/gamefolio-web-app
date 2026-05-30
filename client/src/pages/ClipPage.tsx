@@ -245,7 +245,7 @@ const ClipPage = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#071013]">
-        <div className="flex items-center px-4 py-2 border-b border-white/10 bg-[#03080A]">
+        <div className="flex items-center px-4 py-2 border-b border-white/10 bg-[#081017]">
           <button onClick={goBack} className="flex items-center gap-2 group">
             <div className="w-9 h-9 rounded-full flex items-center justify-center transition-transform group-hover:scale-105" style={{ background: "rgba(183,255,26,0.18)", border: "1.5px solid rgba(183,255,26,0.65)" }}>
               <ChevronLeft className="h-4 w-4 text-[#B7FF1A]" />
@@ -400,7 +400,7 @@ const ClipPage = () => {
   return (
     <div className="min-h-screen bg-[#071013]" data-testid="clip-page-container">
       {/* ── Top nav bar ── */}
-      <div className="flex items-center px-4 py-2 border-b border-white/10 bg-[#03080A]">
+      <div className="flex items-center px-4 py-2 border-b border-white/10 bg-[#081017]">
         <button onClick={goBack} className="flex items-center gap-2 group" aria-label="Back">
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center transition-transform group-hover:scale-105"

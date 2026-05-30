@@ -130,7 +130,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
     <div
       ref={cardRef}
       className={commentsOverlay ? "fixed inset-0 z-[75] flex flex-col overflow-hidden" : "w-full"}
-      style={{ background: commentsOverlay ? '#000' : '#03080A' }}
+      style={{ background: commentsOverlay ? '#000' : '#081017' }}
     >
       {/* Video */}
       <div
@@ -230,7 +230,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
         </div>
 
         {/* Caption + social */}
-        <div className="px-4" style={{ background: '#03080A' }}>
+        <div className="px-4" style={{ background: '#081017' }}>
           {caption && (
             <div className="pb-3">
               <p className="text-[14px] leading-relaxed" style={{ color: '#B8C0AE' }}>

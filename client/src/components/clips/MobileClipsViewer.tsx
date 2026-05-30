@@ -123,7 +123,7 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
     <div
       ref={cardRef}
       className={commentsOverlay ? "fixed inset-0 z-[75] flex flex-col overflow-hidden" : "w-full"}
-      style={{ background: commentsOverlay ? '#000' : '#03080A' }}
+      style={{ background: commentsOverlay ? '#000' : '#081017' }}
     >
       {/* ── Video — shrinks to top 42% when mobile comments open ── */}
       <div
@@ -209,7 +209,7 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
         </div>
       </div>
 
-      <div className="px-4" style={{ background: '#03080A' }}>
+      <div className="px-4" style={{ background: '#081017' }}>
         {caption && (
           <div className="pb-3">
             <p className="text-[14px] leading-relaxed" style={{ color: '#B8C0AE' }}>
@@ -350,7 +350,7 @@ export const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => 
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[100001]" style={{ background: '#03080A' }}>
+    <div className="fixed inset-0 z-[100001]" style={{ background: '#081017' }}>
       {/* Top bar — floats over the feed as absolute overlay */}
       <div
         className="absolute left-0 right-0 z-10 flex items-center px-4 pb-3 bg-gradient-to-b from-black/60 to-transparent pointer-events-none"

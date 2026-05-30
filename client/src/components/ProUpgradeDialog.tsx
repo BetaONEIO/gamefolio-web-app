@@ -503,9 +503,9 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
           style={{ objectPosition: "center 70%" }}
         />
         {/* Top vignette for depth */}
-        <div className="absolute inset-x-0 top-0 h-1/4" style={{ background: 'linear-gradient(to bottom, rgba(3,8,10,0.5) 0%, transparent 100%)' }} />
+        <div className="absolute inset-x-0 top-0 h-1/4" style={{ background: 'linear-gradient(to bottom, rgba(8,16,23,0.5) 0%, transparent 100%)' }} />
         {/* Bottom fade into page background */}
-        <div className="absolute inset-x-0 bottom-0 h-[75%]" style={{ background: 'linear-gradient(to top, #03080A 0%, #03080A 8%, rgba(3,8,10,0.85) 35%, rgba(3,8,10,0.4) 65%, transparent 100%)' }} />
+        <div className="absolute inset-x-0 bottom-0 h-[75%]" style={{ background: 'linear-gradient(to top, #081017 0%, #081017 8%, rgba(8,16,23,0.85) 35%, rgba(8,16,23,0.4) 65%, transparent 100%)' }} />
       </div>
 
       <button
@@ -694,7 +694,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <div ref={scrollContainerRef} className="flex flex-col md:hidden h-[100dvh] overflow-y-auto" style={{ scrollbarWidth: "none", backgroundColor: "#03080A" }}>
+              <div ref={scrollContainerRef} className="flex flex-col md:hidden h-[100dvh] overflow-y-auto" style={{ scrollbarWidth: "none", backgroundColor: "#081017" }}>
                 <div className="relative w-full flex-shrink-0" style={{ height: "56vh" }}>
                   <img
                     src={proHeroImage}
@@ -703,9 +703,9 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                     style={{ objectPosition: "center 70%" }}
                   />
                   {/* Top vignette for depth */}
-                  <div className="absolute inset-x-0 top-0 h-1/4" style={{ background: "linear-gradient(to bottom, rgba(3,8,10,0.55) 0%, transparent 100%)" }} />
+                  <div className="absolute inset-x-0 top-0 h-1/4" style={{ background: "linear-gradient(to bottom, rgba(8,16,23,0.55) 0%, transparent 100%)" }} />
                   {/* Bottom fade — tall, strong, bleeds past image boundary */}
-                  <div className="absolute inset-x-0 bottom-0" style={{ height: "240px", background: "linear-gradient(to bottom, rgba(3,8,10,0) 0%, rgba(3,8,10,0.45) 45%, rgba(3,8,10,0.85) 75%, #03080A 100%)" }} />
+                  <div className="absolute inset-x-0 bottom-0" style={{ height: "240px", background: "linear-gradient(to bottom, rgba(8,16,23,0) 0%, rgba(8,16,23,0.45) 45%, rgba(8,16,23,0.85) 75%, #081017 100%)" }} />
                   <button
                     onClick={() => onOpenChange(false)}
                     className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center transition-colors hover:bg-black/60 z-10"
