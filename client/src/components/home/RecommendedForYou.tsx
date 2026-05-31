@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
 import { useEffect, useRef, useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
@@ -222,14 +223,15 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
         />
       )}
 
-      {/* Mobile reels viewer — same as Trending reels tab */}
-      {mobileReelsViewer && (
+      {/* Mobile reels viewer — portal to body so fixed positioning isn't clipped by ancestor stacking contexts */}
+      {mobileReelsViewer && createPortal(
         <MobileTrendingViewer
           content={mobileReelsViewer.reels}
           initialIndex={mobileReelsViewer.startIndex}
           onClose={() => setMobileReelsViewer(null)}
           hideCloseButton={false}
-        />
+        />,
+        document.body
       )}
 
       <section className="px-4 sm:px-6 md:px-8 mb-6 sm:mb-8" data-testid="recommended-for-you-section">
