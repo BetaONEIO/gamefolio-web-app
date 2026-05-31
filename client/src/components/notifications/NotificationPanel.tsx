@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, User, MessageCircle, Video, X, Flame } from "lucide-react";
+import { Bell, User, MessageCircle, Video, X, Flame, Download, Share2, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface NotificationData {
   id: number;
-  type: 'clip_mention' | 'comment_mention' | 'like' | 'follow' | 'comment';
+  type: 'clip_mention' | 'comment_mention' | 'like' | 'follow' | 'comment' | 'download' | 'share' | 'milestone';
   title: string;
   message: string;
   isRead: boolean;
@@ -177,6 +177,12 @@ export function NotificationPanel({
         return <MessageCircle className="h-4 w-4 text-gray-500" />;
       case 'streak':
         return <Flame className="h-4 w-4 text-orange-500" />;
+      case 'download':
+        return <Download className="h-4 w-4 text-[#B7FF1A]" />;
+      case 'share':
+        return <Share2 className="h-4 w-4 text-[#B7FF1A]" />;
+      case 'milestone':
+        return <Trophy className="h-4 w-4 text-[#B7FF1A]" />;
       default:
         return <Bell className="h-4 w-4 text-gray-500" />;
     }

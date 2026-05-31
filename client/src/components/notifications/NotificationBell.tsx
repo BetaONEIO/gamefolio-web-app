@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, MessageCircle, Upload, UserPlus, X, UserCheck, UserX, Flame, Video } from "lucide-react";
+import { Bell, MessageCircle, Upload, UserPlus, X, UserCheck, UserX, Flame, Video, Download, Share2, Trophy } from "lucide-react";
 import { ZapIconFire } from "@/components/ui/ZapReactionIcon";
 import { PixelHeartReaction } from "@/components/ui/PixelHeartReaction";
 import { Button } from "@/components/ui/button";
@@ -224,6 +224,12 @@ export function NotificationBell() {
         return <MessageCircle className="h-4 w-4 text-sky-400" />;
       case 'streak':
         return <Flame className="h-4 w-4 text-orange-500" />;
+      case 'download':
+        return <Download className="h-4 w-4 text-[#B7FF1A]" />;
+      case 'share':
+        return <Share2 className="h-4 w-4 text-[#B7FF1A]" />;
+      case 'milestone':
+        return <Trophy className="h-4 w-4 text-[#B7FF1A]" />;
       default:
         return <Bell className="h-4 w-4 text-gray-500" />;
     }

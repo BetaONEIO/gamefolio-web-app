@@ -4740,6 +4740,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const freshUrl = await refreshSupabaseSignedUrl(clip.videoUrl, 60 * 60); // 1-hour signed URL
       const safeTitle = (clip.title || 'video').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 60);
+
+      // Notify the clip owner (fire-and-forget)
+      const downloaderId = (req as any).user?.id;
+      NotificationService.createDownloadNotification(clipId, downloaderId).catch(() => {});
+
       res.json({ url: freshUrl, filename: `${safeTitle}_gamefolio.mp4` });
     } catch (error) {
       console.error('Download URL error:', error);
@@ -4780,6 +4785,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const watermarkLine2 = gameText || safe('gamefolio.gg');
 
       const safeTitle = (clip.title || 'clip').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 60);
+
+      // Notify the clip owner (fire-and-forget)
+      const downloaderId = (req as any).user?.id;
+      NotificationService.createDownloadNotification(clipId, downloaderId).catch(() => {});
 
       res.setHeader('Content-Type', 'video/mp4');
       res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}_gamefolio.mp4"`);
@@ -6419,6 +6428,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
+      // Notify the clip owner (fire-and-forget)
+      NotificationService.createShareNotification(clipId, sharerId).catch(() => {});
+
       res.json({ awarded: !sharedToday });
     } catch (err) {
       console.error("Error tracking clip share:", err);
@@ -6461,6 +6473,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `Screenshot #${screenshotId} was shared`
         );
       }
+
+      // Notify the screenshot owner (fire-and-forget)
+      NotificationService.createScreenshotShareNotification(screenshotId, sharerId).catch(() => {});
 
       res.json({ awarded: !sharedToday });
     } catch (err) {

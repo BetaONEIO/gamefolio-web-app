@@ -1,5 +1,6 @@
 import { storage } from "./storage";
 import { LeaderboardService } from "./leaderboard-service";
+import { NotificationService } from "./notification-service";
 
 // Per-clip view milestone thresholds and their XP rewards
 const VIEW_MILESTONES: { views: number; xp: number }[] = [
@@ -52,6 +53,13 @@ export class PerformanceMilestoneService {
                 source,
                 milestone.xp,
                 `Clip #${clipId} reached ${milestone.views.toLocaleString()} views`,
+              );
+              // Notify the clip owner
+              await NotificationService.createViewMilestoneNotification(
+                clipId,
+                ownerId,
+                newViewCount,
+                milestone.views
               );
             } finally {
               inFlightMilestones.delete(lockKey);

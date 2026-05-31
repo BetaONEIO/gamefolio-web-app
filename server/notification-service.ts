@@ -343,4 +343,114 @@ export class NotificationService {
       console.error("Error creating screenshot comment notification:", error);
     }
   }
+
+  // Create notification when someone downloads your clip
+  static async createDownloadNotification(clipId: number, downloadedByUserId: number | undefined) {
+    try {
+      const clip = await storage.getClipWithUser(clipId);
+      if (!clip) return;
+      // Don't notify if user downloads their own clip
+      if (downloadedByUserId && clip.userId === downloadedByUserId) return;
+
+      const downloader = downloadedByUserId ? await storage.getUser(downloadedByUserId) : null;
+      const message = downloader
+        ? `${downloader.username} downloaded your clip "${clip.title}"`
+        : `Your clip "${clip.title}" was downloaded`;
+
+      const notification: InsertNotification = {
+        userId: clip.userId,
+        type: "download",
+        title: "New Download",
+        message,
+        fromUserId: downloadedByUserId,
+        clipId: clipId,
+        actionUrl: `/clips/${clipId}`,
+      };
+      await createAndPush(notification);
+    } catch (error) {
+      console.error("Error creating download notification:", error);
+    }
+  }
+
+  // Create notification when someone shares your clip
+  static async createShareNotification(clipId: number, sharedByUserId: number | undefined) {
+    try {
+      const clip = await storage.getClipWithUser(clipId);
+      if (!clip) return;
+      // Don't notify if user shares their own clip
+      if (sharedByUserId && clip.userId === sharedByUserId) return;
+
+      const sharer = sharedByUserId ? await storage.getUser(sharedByUserId) : null;
+      const message = sharer
+        ? `${sharer.username} shared your clip "${clip.title}"`
+        : `Your clip "${clip.title}" was shared`;
+
+      const notification: InsertNotification = {
+        userId: clip.userId,
+        type: "share",
+        title: "New Share",
+        message,
+        fromUserId: sharedByUserId,
+        clipId: clipId,
+        actionUrl: `/clips/${clipId}`,
+      };
+      await createAndPush(notification);
+    } catch (error) {
+      console.error("Error creating share notification:", error);
+    }
+  }
+
+  // Create notification when someone shares your screenshot
+  static async createScreenshotShareNotification(screenshotId: number, sharedByUserId: number | undefined) {
+    try {
+      const screenshot = await storage.getScreenshot(screenshotId);
+      if (!screenshot) return;
+      // Don't notify if user shares their own screenshot
+      if (sharedByUserId && screenshot.userId === sharedByUserId) return;
+
+      const sharer = sharedByUserId ? await storage.getUser(sharedByUserId) : null;
+      const message = sharer
+        ? `${sharer.username} shared your screenshot "${screenshot.title}"`
+        : `Your screenshot "${screenshot.title}" was shared`;
+
+      const notification: InsertNotification = {
+        userId: screenshot.userId,
+        type: "share",
+        title: "New Share",
+        message,
+        fromUserId: sharedByUserId,
+        screenshotId: screenshotId,
+        actionUrl: `/screenshots/${screenshotId}`,
+      };
+      await createAndPush(notification);
+    } catch (error) {
+      console.error("Error creating screenshot share notification:", error);
+    }
+  }
+
+  // Create notification when a clip reaches a view milestone
+  static async createViewMilestoneNotification(
+    clipId: number,
+    ownerId: number,
+    viewCount: number,
+    milestone: number
+  ) {
+    try {
+      const clip = await storage.getClip(clipId);
+      if (!clip) return;
+
+      const notification: InsertNotification = {
+        userId: ownerId,
+        type: "milestone",
+        title: "View Milestone",
+        message: `Your clip "${clip.title}" hit ${milestone.toLocaleString()} views!`,
+        clipId: clipId,
+        actionUrl: `/clips/${clipId}`,
+        metadata: { viewCount, milestone },
+      };
+      await createAndPush(notification);
+    } catch (error) {
+      console.error("Error creating view milestone notification:", error);
+    }
+  }
 }
