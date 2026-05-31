@@ -83,7 +83,7 @@ const VideoClipGridItem = ({
           <video
             ref={lazyVideo.ref}
             src={lazyVideo.visible ? (clip.videoUrl ?? undefined) : undefined}
-            className="w-full h-full object-cover"
+            className={`w-full h-full ${isReel ? "object-contain" : "object-cover"}`}
             preload="none"
             muted
             playsInline
@@ -105,7 +105,7 @@ const VideoClipGridItem = ({
               src={thumbnailUrl}
               alt={clip.title || "Video clip thumbnail"}
               className={`w-full h-full transition-transform duration-300 group-hover:scale-105 relative z-[2] ${
-                showBlur ? "object-contain" : "object-cover"
+                isReel ? "object-contain" : showBlur ? "object-contain" : "object-cover"
               }`}
               placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%230B1218'/%3e%3c/svg%3e"
               showLoadingSpinner={true}

@@ -113,7 +113,7 @@ export default function LatestReelsPage() {
                   <LazyImage
                     src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
                     alt={reel.title}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                     placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
                     showLoadingSpinner={true}
                     rootMargin="50px"

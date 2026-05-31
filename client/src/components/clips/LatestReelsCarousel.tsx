@@ -145,7 +145,7 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
                   <LazyImage
                     src={reel.thumbnailUrl}
                     alt={reel.title || 'Reel thumbnail'}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
                     showLoadingSpinner={true}
                     rootMargin="400px"
                     threshold={0.1}
@@ -153,7 +153,7 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
                 ) : (
                   <LazyReelVideoThumbnail
                     src={reel.videoUrl ?? undefined}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                 )}
 
