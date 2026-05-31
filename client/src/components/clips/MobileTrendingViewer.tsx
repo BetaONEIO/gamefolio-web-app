@@ -142,6 +142,13 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   // Track index without re-renders during scroll
   const committedIndexRef = useRef(initialIndex);
 
+  // Scroll to initialIndex on mount so the clicked reel is shown first
+  useEffect(() => {
+    if (!scrollContainerRef.current || initialIndex <= 0) return;
+    scrollContainerRef.current.scrollTop =
+      initialIndex * scrollContainerRef.current.clientHeight;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Reset overlay states when switching between content items
   useEffect(() => {
     setShowComments(false);
@@ -366,7 +373,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                     hideControls={true}
                     className="w-full h-full"
                     clipId={item.id}
-                    objectFit={item.videoType === 'reel' ? 'cover' : 'contain'}
+                    objectFit="contain"
                     data-testid={`video-player-${item.id}`}
                   />
                 </div>
