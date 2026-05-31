@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useSignedUrl } from "@/hooks/use-signed-url";
@@ -277,7 +277,9 @@ export function ProfileHoverCard({ username, children }: ProfileHoverCardProps) 
   const cardBg = profile?.primaryColor || profile?.backgroundColor || "#101923";
   const theme  = getThemeTokens(accent);
 
-  if (isTouchPrimary()) return <>{children}</>;
+  if (isTouchPrimary()) {
+    return <MobileProfilePreview username={username}>{children}</MobileProfilePreview>;
+  }
 
   return (
     <HoverCard
@@ -289,6 +291,10 @@ export function ProfileHoverCard({ username, children }: ProfileHoverCardProps) 
     >
       <HoverCardTrigger asChild>{children}</HoverCardTrigger>
       <HoverCardContent
+        side="top"
+        align="start"
+        sideOffset={8}
+        avoidCollisions={true}
         className="p-3 overflow-hidden"
         style={{
           width: 200,
@@ -314,5 +320,121 @@ export function ProfileHoverCard({ username, children }: ProfileHoverCardProps) 
         )}
       </HoverCardContent>
     </HoverCard>
+  );
+}
+
+// ── Mobile long-press profile preview ───────────────────────────────────
+
+interface MobileProfilePreviewProps {
+  username: string;
+  children: React.ReactNode;
+}
+
+export function MobileProfilePreview({ username, children }: MobileProfilePreviewProps) {
+  const [showPreview, setShowPreview] = useState(false);
+  const [prefetch, setPrefetch] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+
+  const { data: profile, isLoading } = useQuery({
+    queryKey: [`/api/users/${username}`],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    staleTime: 5 * 60 * 1000,
+    enabled: prefetch,
+  });
+
+  const { data: badgeData } = useQuery<{
+    verificationBadge: { id: number; name: string; imageUrl: string } | null;
+  }>({
+    queryKey: [`/api/user/${profile?.id}/verification-badge`],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: !!profile?.id,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const isSupabaseBanner =
+    !!profile?.bannerUrl &&
+    (profile.bannerUrl.includes("gamefolio-media") ||
+      profile.bannerUrl.includes("gamefolio-assets") ||
+      profile.bannerUrl.includes("gamefolio-name-tags"));
+  const { signedUrl: signedBannerUrl } = useSignedUrl(
+    isSupabaseBanner ? profile!.bannerUrl : null
+  );
+
+  const accent = profile?.accentColor || "#B7FF1A";
+  const cardBg = profile?.primaryColor || profile?.backgroundColor || "#101923";
+  const theme = getThemeTokens(accent);
+
+  const startLongPress = useCallback(() => {
+    setPrefetch(true);
+    timerRef.current = setTimeout(() => {
+      setShowPreview(true);
+    }, 500);
+  }, []);
+
+  const cancelLongPress = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setShowPreview(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={triggerRef}
+      className="relative inline-block"
+      onTouchStart={startLongPress}
+      onTouchEnd={cancelLongPress}
+      onTouchMove={cancelLongPress}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      {children}
+      {showPreview && (
+        <div
+          className="absolute z-[9999]"
+          style={{
+            left: 0,
+            right: 0,
+            bottom: "calc(100% + 8px)",
+            width: "max-content",
+            minWidth: 200,
+            maxWidth: 280,
+          }}
+          onClick={() => setShowPreview(false)}
+        >
+          <div
+            className="p-3 overflow-hidden"
+            style={{
+              width: "100%",
+              background: cardBg,
+              borderRadius: theme.borderRadius,
+              border: theme.cardBorder,
+              boxShadow: theme.cardShadow,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {isLoading ? (
+              <LoadingSkeleton />
+            ) : profile ? (
+              <ProfilePreview
+                username={username}
+                profile={profile}
+                badgeData={badgeData}
+                signedBannerUrl={signedBannerUrl}
+                accent={accent}
+                theme={theme}
+              />
+            ) : null}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
