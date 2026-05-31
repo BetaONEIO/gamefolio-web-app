@@ -331,7 +331,9 @@ const Sidebar = () => {
                   key={`sidebar-${game.id}`}
                   className="relative flex items-center px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary group cursor-pointer"
                   onClick={() => {
-                    setLocation(`/profile/${user?.username}`);
+                    const gameSlug = game.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    closeClipDialog();
+                    setLocation(`/games/${gameSlug}`);
                   }}
                   onMouseEnter={() => setHoveredGameId(game.id)}
                   onMouseLeave={() => setHoveredGameId(null)}
