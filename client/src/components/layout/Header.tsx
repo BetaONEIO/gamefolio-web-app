@@ -305,7 +305,7 @@ const Header = () => {
               <img
                 src={logoGreen}
                 alt="Gamefolio"
-                className="h-9 sm:h-[60px] md:h-[72px] xl:h-24 w-auto object-contain flex-shrink-0"
+                className="h-[45px] sm:h-[60px] md:h-[72px] xl:h-24 w-auto object-contain flex-shrink-0"
               />
             </div>
           </Link>
