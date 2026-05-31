@@ -5,6 +5,7 @@ import { Link } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import VideoClipCard from "@/components/clips/VideoClipCard";
 import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
+import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
@@ -344,9 +345,14 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
                       </div>
                       {/* Meta below thumbnail */}
                       <div className="pt-2 px-0.5">
-                        <h3 className="text-white font-bold text-sm line-clamp-1">
-                          {clip.title}
-                        </h3>
+                        <div className="flex items-start justify-between gap-1">
+                          <h3 className="text-white font-bold text-sm line-clamp-1 flex-1 min-w-0">
+                            {clip.title}
+                          </h3>
+                          <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} className="flex-shrink-0 -mt-0.5">
+                            <TrendingClipMenu clip={clip} />
+                          </div>
+                        </div>
                         <ProfileHoverCard username={clip.user.username}>
                           <Link
                             href={`/profile/${clip.user.username}`}

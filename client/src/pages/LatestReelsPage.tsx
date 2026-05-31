@@ -8,6 +8,7 @@ import { formatDuration } from "@/lib/constants";
 import { useState, useEffect } from "react";
 import { GameFilterSheet } from "@/components/filters/GameFilterSheet";
 import { LazyImage } from "@/components/ui/lazy-image";
+import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 
 export default function LatestReelsPage() {
   const [timePeriod, setTimePeriod] = useState<string>("recent");
@@ -152,12 +153,17 @@ export default function LatestReelsPage() {
 
                 {/* Info below card */}
                 <div className="px-0.5" onClick={(e) => e.stopPropagation()}>
-                  <h3
-                    className="text-white font-semibold text-xs sm:text-sm leading-tight line-clamp-2 cursor-pointer hover:text-primary transition-colors"
-                    onClick={() => openClipDialog(reel.id, filteredReels)}
-                  >
-                    {reel.title}
-                  </h3>
+                  <div className="flex items-start justify-between gap-1">
+                    <h3
+                      className="text-white font-semibold text-xs sm:text-sm leading-tight line-clamp-2 cursor-pointer hover:text-primary transition-colors flex-1 min-w-0"
+                      onClick={() => openClipDialog(reel.id, filteredReels)}
+                    >
+                      {reel.title}
+                    </h3>
+                    <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} className="flex-shrink-0 -mt-0.5">
+                      <TrendingClipMenu clip={reel} />
+                    </div>
+                  </div>
                   <p className="text-muted-foreground text-[10px] sm:text-xs mt-0.5">
                     @{reel.user.username}
                   </p>

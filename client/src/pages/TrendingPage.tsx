@@ -146,12 +146,17 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[]; onOpen
 
       {/* Metadata below thumbnail */}
       <div className="px-0.5 space-y-0.5">
-        <h3
-          onClick={handleReelClick}
-          className="text-sm font-semibold leading-tight line-clamp-2 cursor-pointer hover:text-primary transition-colors"
-        >
-          {reel.title}
-        </h3>
+        <div className="flex items-start justify-between gap-1">
+          <h3
+            onClick={handleReelClick}
+            className="text-sm font-semibold leading-tight line-clamp-2 cursor-pointer hover:text-primary transition-colors flex-1 min-w-0"
+          >
+            {reel.title}
+          </h3>
+          <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} className="flex-shrink-0 -mt-0.5">
+            <TrendingClipMenu clip={reel} />
+          </div>
+        </div>
         <ProfileHoverCard username={reel.user.username}>
           <p className="text-xs text-muted-foreground cursor-default hover:text-foreground transition-colors">
             @{reel.user.username}

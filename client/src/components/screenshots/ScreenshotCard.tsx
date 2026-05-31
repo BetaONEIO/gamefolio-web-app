@@ -1,11 +1,12 @@
 import React from 'react';
-import { Flag, X, ImageOff, Heart, Eye } from 'lucide-react';
+import { X, ImageOff, Heart, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ReportDialog } from '@/components/content/ReportDialog';
 import { LazyImage } from '@/components/ui/lazy-image';
 import { Link } from 'wouter';
 import { ProfileHoverCard } from '@/components/ui/ProfileHoverCard';
 import { useSignedUrl } from '@/hooks/use-signed-url';
+import { TrendingClipMenu } from '@/components/clips/TrendingClipMenu';
+import { ClipWithUser } from '@shared/schema';
 
 interface ScreenshotCardProps {
   screenshot: any;
@@ -84,8 +85,8 @@ export function ScreenshotCard({
           </div>
         </div>
 
-        {/* Action buttons */}
-        {isOwnProfile ? (
+        {/* Quick-delete button — own profile only, hover overlay */}
+        {isOwnProfile && (
           <Button
             size="sm"
             variant="destructive"
@@ -102,26 +103,6 @@ export function ScreenshotCard({
           >
             <X className="h-4 w-4 md:h-3 md:w-3" />
           </Button>
-        ) : (
-          <div className="absolute top-2 right-2 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300">
-            <ReportDialog
-              contentType="screenshot"
-              contentId={screenshot.id}
-              contentTitle={screenshot.title}
-              contentAuthor={profile.username}
-              trigger={
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="bg-black/50 hover:bg-black/70 text-white border-red-500 hover:border-red-400 p-1 h-7 w-7"
-                  onClick={(e) => e.stopPropagation()}
-                  title="Report screenshot"
-                >
-                  <Flag size={12} />
-                </Button>
-              }
-            />
-          </div>
         )}
       </div>
 
@@ -147,9 +128,18 @@ export function ScreenshotCard({
           </ProfileHoverCard>
         ) : null}
 
-        <h3 className="font-semibold text-sm line-clamp-2 leading-tight" style={{ color: '#F5F7F2' }}>
-          {screenshot.title}
-        </h3>
+        <div className="flex items-start justify-between gap-1">
+          <h3 className="font-semibold text-sm line-clamp-2 leading-tight flex-1 min-w-0" style={{ color: '#F5F7F2' }}>
+            {screenshot.title}
+          </h3>
+          <div onClick={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); }} className="flex-shrink-0 -mt-0.5">
+            <TrendingClipMenu
+              clip={{ ...screenshot, user: screenshotUser || { username: profile?.username || '', id: screenshot.userId } } as unknown as ClipWithUser}
+              contentType="screenshot"
+              screenshotImageUrl={screenshot.imageUrl}
+            />
+          </div>
+        </div>
 
         {(screenshot as any).game && (
           <Link
