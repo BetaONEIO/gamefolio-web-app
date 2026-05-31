@@ -374,6 +374,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                     className="w-full h-full"
                     clipId={item.id}
                     objectFit="contain"
+                    disableAspectRatio={true}
                     data-testid={`video-player-${item.id}`}
                   />
                 </div>
