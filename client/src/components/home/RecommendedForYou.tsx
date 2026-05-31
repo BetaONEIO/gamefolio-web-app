@@ -321,7 +321,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
                         <LazyImage
                           src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
                           alt={clip.title || 'Reel thumbnail'}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
                           showLoadingSpinner={true}
                           rootMargin="100px"
                           threshold={0.1}
