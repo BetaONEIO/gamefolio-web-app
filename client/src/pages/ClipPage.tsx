@@ -513,9 +513,6 @@ const ClipPage = () => {
                 objectFit="contain"
                 clipId={clip.id}
               />
-              <div className="absolute top-4 left-4 z-50">
-                <span className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-bold">Reel</span>
-              </div>
             </div>
 
           /* ── Mobile clip (flex-col so comments push video up) ── */
