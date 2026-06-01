@@ -542,7 +542,7 @@ export class VideoProcessor {
 
     const outputPath = path.join(this.TEMP_DIR, `outro_${userId}_${Date.now()}.mp4`);
     const logoPath = path.join(process.cwd(), 'client', 'public', 'attached_assets', 'gamefolio-logo-green.png');
-    const fontPath = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
+    const fontPath = path.join(process.cwd(), 'server', 'assets', 'fonts', 'SpaceGrotesk-Bold.ttf');
 
     // Strip any characters that could break the drawtext filter
     const safeUser = `@${username}`.replace(/[^a-zA-Z0-9_@.-]/g, '');

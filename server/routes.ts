@@ -4828,11 +4828,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // ── Build watermark filters ──────────────────────────────────────────
+      const sgFont = path.join(process.cwd(), 'server', 'assets', 'fonts', 'SpaceGrotesk-Bold.ttf');
       const line1Filter =
-        `drawtext=text='${watermarkLine1}':fontsize=38:fontcolor=white@0.95:` +
+        `drawtext=text='${watermarkLine1}':fontfile='${sgFont}':fontsize=38:fontcolor=white@0.95:` +
         `x=W-tw-20:y=H-th-56:shadowcolor=black@0.75:shadowx=2:shadowy=2`;
       const line2Filter =
-        `drawtext=text='${watermarkLine2}':fontsize=26:fontcolor=white@0.80:` +
+        `drawtext=text='${watermarkLine2}':fontfile='${sgFont}':fontsize=26:fontcolor=white@0.80:` +
         `x=W-tw-20:y=H-th-20:shadowcolor=black@0.55:shadowx=1:shadowy=1`;
 
       const sharedOutputOptions = [
