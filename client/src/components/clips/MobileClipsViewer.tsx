@@ -115,8 +115,8 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
   });
 
   const caption = [clip.title, clip.description].filter(Boolean).join(' — ');
-  const captionTrimmed = caption.length > 120 && !showFullDesc;
-  const canCollapse = caption.length > 120;
+  const captionTrimmed = caption.length > 60 && !showFullDesc;
+  const canCollapse = caption.length > 60;
   const commentsOverlay = commentsOpen && isMobile;
 
   return (
@@ -210,26 +210,29 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
         </div>
       </div>
 
-      {/* Caption — expands to fill space only when "see more" is open */}
+      {/* Caption — line-clamped to 3 lines when collapsed so icons are never hidden */}
       <div
         className={showFullDesc ? "flex-1 min-h-0 overflow-y-auto px-4" : "flex-shrink-0 px-4"}
         style={{ background: '#081017', overscrollBehaviorY: 'contain' }}
       >
         {caption && (
-          <div className="pb-3">
-            <p className="text-[14px] leading-relaxed" style={{ color: '#B8C0AE' }}>
-              {captionTrimmed ? caption.slice(0, 120) : caption}
-              {captionTrimmed && (
-                <button onClick={() => setShowFullDesc(true)} className="font-semibold ml-0.5" style={{ color: '#B7FF1A' }}>
-                  … more
-                </button>
-              )}
-              {!captionTrimmed && canCollapse && (
-                <button onClick={() => setShowFullDesc(false)} className="font-semibold ml-1" style={{ color: '#B7FF1A' }}>
-                  See less
-                </button>
-              )}
+          <div className="pb-2">
+            <p
+              className={`text-[14px] leading-relaxed${!showFullDesc ? ' line-clamp-3' : ''}`}
+              style={{ color: '#B8C0AE' }}
+            >
+              {caption}
             </p>
+            {captionTrimmed && (
+              <button onClick={() => setShowFullDesc(true)} className="font-semibold text-[13px] mt-0.5" style={{ color: '#B7FF1A' }}>
+                … more
+              </button>
+            )}
+            {showFullDesc && canCollapse && (
+              <button onClick={() => setShowFullDesc(false)} className="font-semibold text-[13px] mt-0.5" style={{ color: '#B7FF1A' }}>
+                See less
+              </button>
+            )}
           </div>
         )}
       </div>
