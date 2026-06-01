@@ -4933,7 +4933,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .input(logoPath)
           .input(outroSignedUrl)
           .complexFilter([
-            '[1:v]scale=-1:48[logo]',
+            '[1:v]scale=-1:72[logo]',
             '[0:v][logo]overlay=x=W-w-20:y=H-h-102[wl]',
             `[wl]${line1Filter}[wl2]`,
             `[wl2]${line2Filter}[clip_wm]`,
@@ -4954,7 +4954,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .input(freshUrl)
           .input(logoPath)
           .complexFilter([
-            '[1:v]scale=-1:48[logo]',
+            '[1:v]scale=-1:72[logo]',
             '[0:v][logo]overlay=x=W-w-20:y=H-h-102[wl]',
             `[wl]${line1Filter}[wl2]`,
             `[wl2]${line2Filter}[out]`,
