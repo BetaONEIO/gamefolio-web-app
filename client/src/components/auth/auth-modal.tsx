@@ -123,7 +123,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex flex-col justify-end md:items-center"
+      className="fixed inset-0 z-[200000] flex flex-col justify-end md:items-center"
       style={{ pointerEvents: slideIn ? 'auto' : 'none' }}
     >
       {/* Backdrop */}
