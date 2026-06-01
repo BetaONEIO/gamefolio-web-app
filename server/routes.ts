@@ -12004,18 +12004,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let socialMediaLinks;
 
       // Get content based on type
+      const BASE_URL = 'https://app.gamefolio.com';
       if (contentType === 'clip' || contentType === 'reel') {
-        content = await storage.getClip(contentId);
-        if (!content) {
+        const clipWithUser = await storage.getClipWithUser(contentId);
+        if (!clipWithUser) {
           return res.status(404).json({ message: "Clip not found" });
         }
-        shareUrl = `${req.protocol}://${req.get('host')}/view/${contentId}`;
+        content = clipWithUser;
+        const username = clipWithUser.user?.username || 'unknown';
+        let sc = clipWithUser.shareCode;
+        if (!sc) {
+          sc = nanoid(8);
+          await storage.updateClip(contentId, { shareCode: sc });
+        }
+        shareUrl = `${BASE_URL}/@${username}/clip/${sc}`;
       } else if (contentType === 'screenshot') {
         content = await storage.getScreenshot(contentId);
         if (!content) {
           return res.status(404).json({ message: "Screenshot not found" });
         }
-        shareUrl = `${req.protocol}://${req.get('host')}/screenshot/${contentId}`;
+        const screenshotOwner = await storage.getUser(content.userId);
+        const username = screenshotOwner?.username || 'unknown';
+        shareUrl = `${BASE_URL}/@${username}/screenshots/${contentId}`;
       } else {
         return res.status(400).json({ message: "Invalid content type" });
       }
