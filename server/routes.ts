@@ -4853,8 +4853,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .input(logoPath)
           .input(outroSignedUrl)
           .complexFilter([
-            '[1:v]scale=-1:66[logo]',
-            '[0:v][logo]overlay=x=W-w-20:y=H-h-130[wl]',
+            '[1:v]scale=-1:132[logo]',
+            '[0:v][logo]overlay=x=W-w-20:y=H-h-160[wl]',
             `[wl]${line1Filter}[wl2]`,
             `[wl2]${line2Filter}[clip_wm]`,
             // Scale outro to match clip dimensions then concat
@@ -4876,8 +4876,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .input(freshUrl)
           .input(logoPath)
           .complexFilter([
-            '[1:v]scale=-1:66[logo]',
-            '[0:v][logo]overlay=x=W-w-20:y=H-h-130[wl]',
+            '[1:v]scale=-1:132[logo]',
+            '[0:v][logo]overlay=x=W-w-20:y=H-h-160[wl]',
             `[wl]${line1Filter}[wl2]`,
             `[wl2]${line2Filter}[out]`,
           ])
