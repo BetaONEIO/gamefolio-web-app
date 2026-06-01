@@ -558,8 +558,8 @@ export class VideoProcessor {
 
     return new Promise<Buffer>((resolve, reject) => {
       const cmd = (ffmpeg as any)()
-        // Input 0: 4-second solid dark background (1920×1080)
-        .input('color=c=0x0B1319:size=1920x1080:rate=30:d=4')
+        // Input 0: 4-second solid dark background (1080×1920, portrait 9:16)
+        .input('color=c=0x0B1319:size=1080x1920:rate=30:d=4')
         .inputOptions(['-f', 'lavfi']);
 
       if (logoExists) {
