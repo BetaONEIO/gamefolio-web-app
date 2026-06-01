@@ -579,13 +579,7 @@ export class VideoProcessor {
         ? [`[${audioIdx}:a]adelay=400:all=1,atrim=duration=3.6,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[aout]`]
         : [];
 
-      // Green glow gradient rising from the bottom (matches reference image)
-      const gradFilter = `color=c=black:s=${canvasSize}:r=30:d=4,format=rgba,geq=r='65*pow(max(0\\,(Y/H-0.4)/0.6)\\,1.3)':g='120*pow(max(0\\,(Y/H-0.4)/0.6)\\,1.3)':b='30*pow(max(0\\,(Y/H-0.4)/0.6)\\,1.3)':a='220*pow(max(0\\,(Y/H-0.4)/0.6)\\,1.3)'[green_grad]`;
-
       const filters: string[] = logoExists ? [
-        // Green gradient overlay from bottom
-        gradFilter,
-        '[0:v][green_grad]overlay=0:0[bg_green]',
         // Scale logo to 320 px wide, force RGBA
         '[1:v]scale=320:-1,format=rgba[logo_raw]',
         // Split into glow copy and main copy
@@ -595,17 +589,15 @@ export class VideoProcessor {
         // Fade both in: logo starts at 0.4 s, takes 1.2 s
         '[logo1]fade=t=in:st=0.4:d=1.2:alpha=1[logo_faded]',
         '[glow_blur]fade=t=in:st=0.4:d=1.2:alpha=1[glow_faded]',
-        // Composite: glow behind logo, both centred on green-gradient background
-        '[bg_green][glow_faded]overlay=(W-w)/2:(H-h)/2-90[bg_glow]',
+        // Composite: glow behind logo, both centred
+        '[0:v][glow_faded]overlay=(W-w)/2:(H-h)/2-90[bg_glow]',
         '[bg_glow][logo_faded]overlay=(W-w)/2:(H-h)/2-90[with_logo]',
         // Username text: same fade timing as logo (0.4 s start, 1.2 s duration)
         `[with_logo]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+120:alpha='if(lt(t\\,0.4)\\,0\\,if(lt(t\\,1.6)\\,(t-0.4)/1.2\\,1))'[out]`,
         ...audioFilter,
       ] : [
-        // Fallback: no logo — green gradient + text together
-        gradFilter,
-        '[0:v][green_grad]overlay=0:0[bg_green]',
-        `[bg_green]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+10:alpha='if(lt(t\\,0.4)\\,0\\,if(lt(t\\,1.6)\\,(t-0.4)/1.2\\,1))'[out]`,
+        // Fallback: no logo — just text
+        `[0:v]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+10:alpha='if(lt(t\\,0.4)\\,0\\,if(lt(t\\,1.6)\\,(t-0.4)/1.2\\,1))'[out]`,
         ...audioFilter,
       ];
 
