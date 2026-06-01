@@ -39,11 +39,10 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   const closeTimestampRef = useRef<number>(0);
 
   const buildClipUrl = (clip: ClipWithUser) => {
-    const username = clip.user?.username;
-    const shareCode = clip.shareCode;
+    const username = clip.user?.username || 'unknown';
+    const shareCode = clip.shareCode || '';
     const type = clip.videoType === 'reel' ? 'reel' : 'clip';
-    if (username && shareCode) return `/@${username}/${type}/${shareCode}`;
-    return `/${type}/${clip.id}`;
+    return `/@${username}/${type}/${shareCode}`;
   };
 
   const openClipDialog = (id: number, providedClipsList?: ClipWithUser[], href?: string, forceViewerType?: 'clip' | 'reel') => {

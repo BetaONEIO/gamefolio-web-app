@@ -7352,10 +7352,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use production domain for share URLs
       const baseUrl = 'https://app.gamefolio.com';
 
-      // Generate proper share URL with username and share code
-      const screenshotUrl = screenshot.shareCode
-        ? `${baseUrl}/@${username}/screenshot/${screenshot.shareCode}`
-        : `${baseUrl}/screenshots/${screenshotId}`;
+      // Ensure screenshot has a share code - generate one if missing
+      let shareCode = screenshot.shareCode;
+      if (!shareCode) {
+        shareCode = generateShareCode();
+        await storage.updateScreenshot(screenshotId, { shareCode });
+      }
+
+      // Always use username-based URL format with alphanumeric share code
+      const screenshotUrl = `${baseUrl}/@${username}/screenshot/${shareCode}`;
 
       const qrCodeDataUrl = await QRCode.toDataURL(screenshotUrl);
 

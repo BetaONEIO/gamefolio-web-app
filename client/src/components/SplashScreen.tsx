@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import logoGreen from "@assets/gamefolio-logo-green.png";
 
 interface SplashScreenProps {
@@ -6,10 +6,13 @@ interface SplashScreenProps {
 }
 
 export function SplashScreen({ onDone }: SplashScreenProps) {
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
+
   useEffect(() => {
-    const t = setTimeout(() => onDone(), 1800);
+    const t = setTimeout(() => onDoneRef.current(), 1800);
     return () => clearTimeout(t);
-  }, [onDone]);
+  }, []);
 
   return (
     <div className="splash-screen" aria-hidden="true">
