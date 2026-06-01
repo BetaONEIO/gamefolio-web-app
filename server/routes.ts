@@ -4809,18 +4809,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (clipOwner) {
           if (clipOwner.outroVideoPath) {
             outroSignedUrl = await supabaseStorage.getSignedUrl(clipOwner.outroVideoPath, 3600);
+            console.log(`[outro] Using cached outro for user ${clip.userId}`);
           } else {
-            // Auto-generate + cache — subsequent downloads use the cached file instantly
+            console.log(`[outro] Generating outro for user ${clip.userId} (@${clipOwner.username})…`);
             const { VideoProcessor } = await import('./video-processor');
             const buffer = await VideoProcessor.generateOutroVideo(clipOwner.username, clip.userId!);
             const storagePath = `outros/${clip.userId}.mp4`;
             await supabaseStorage.uploadBufferToFixedPath(buffer, storagePath, 'video/mp4');
-            await storage.updateUser(clip.userId!, { outroVideoPath: storagePath });
+            await db.update(users).set({ outroVideoPath: storagePath }).where(eq(users.id, clip.userId!));
             outroSignedUrl = await supabaseStorage.getSignedUrl(storagePath, 3600);
+            console.log(`[outro] Generated and cached outro for user ${clip.userId}`);
           }
+        } else {
+          console.warn(`[outro] Could not find clip owner (userId=${clip.userId})`);
         }
-      } catch {
-        // non-fatal — continue without outro
+      } catch (outroErr: any) {
+        console.error('[outro] Failed to resolve outro (non-fatal):', outroErr?.message ?? outroErr);
       }
 
       // ── Build watermark filters ──────────────────────────────────────────
@@ -4977,7 +4981,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const storagePath = `outros/${userId}.mp4`;
       await supabaseStorage.uploadBufferToFixedPath(buffer, storagePath, 'video/mp4');
 
-      await storage.updateUser(userId, { outroVideoPath: storagePath });
+      await db.update(users).set({ outroVideoPath: storagePath }).where(eq(users.id, userId));
 
       const signedUrl = await supabaseStorage.getSignedUrl(storagePath, 60 * 60 * 2);
       console.log(`✅ Outro generated and stored for user ${userId}`);
