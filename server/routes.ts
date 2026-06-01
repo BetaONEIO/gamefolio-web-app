@@ -2818,6 +2818,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   })();
 
+  // Run migration to ensure portrait outro column exists
+  (async () => {
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS outro_video_path_portrait TEXT`);
+    } catch (err) {
+      // Column already exists or other harmless error
+    }
+  })();
+
   app.get("/api/user/referral-stats", authMiddleware, async (req, res) => {
     try {
       const userId = (req.user as any).id;
@@ -4803,32 +4812,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fs = await import('fs');
       const logoExists = fs.existsSync(logoPath);
 
-      // Always append the clip creator's outro to every download
-      let outroSignedUrl: string | null = null;
-      try {
-        const clipOwner = await storage.getUser(clip.userId!);
-        if (clipOwner) {
-          if (clipOwner.outroVideoPath) {
-            outroSignedUrl = await supabaseStorage.getSignedUrl(clipOwner.outroVideoPath, 3600);
-            console.log(`[outro] Using cached outro for user ${clip.userId}`);
-          } else {
-            console.log(`[outro] Generating outro for user ${clip.userId} (@${clipOwner.username})…`);
-            const { VideoProcessor } = await import('./video-processor');
-            const buffer = await VideoProcessor.generateOutroVideo(clipOwner.username, clip.userId!);
-            const storagePath = `outros/${clip.userId}.mp4`;
-            await supabaseStorage.uploadBufferToFixedPath(buffer, storagePath, 'video/mp4');
-            await db.update(users).set({ outroVideoPath: storagePath }).where(eq(users.id, clip.userId!));
-            outroSignedUrl = await supabaseStorage.getSignedUrl(storagePath, 3600);
-            console.log(`[outro] Generated and cached outro for user ${clip.userId}`);
-          }
-        } else {
-          console.warn(`[outro] Could not find clip owner (userId=${clip.userId})`);
-        }
-      } catch (outroErr: any) {
-        console.error('[outro] Failed to resolve outro (non-fatal):', outroErr?.message ?? outroErr);
-      }
-
-      // Probe clip for audio stream + dimensions (both needed for outro concat)
+      // ── Step 1: Probe clip for dimensions + audio (needed before outro selection) ──
       let clipHasAudio = false;
       let clipW = 1280;
       let clipH = 720;
@@ -4841,6 +4825,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const vs = probeData.streams.find((s: any) => s.codec_type === 'video');
           if (vs?.width && vs?.height) { clipW = vs.width; clipH = vs.height; }
         }
+      }
+
+      // Determine clip orientation — portrait (9:16) or landscape (16:9)
+      const clipIsPortrait = clipH > clipW;
+      const outroFormat: 'portrait' | 'landscape' = clipIsPortrait ? 'portrait' : 'landscape';
+
+      // ── Step 2: Resolve (or generate) the format-matched outro ──────────────
+      let outroSignedUrl: string | null = null;
+      try {
+        const clipOwner = await storage.getUser(clip.userId!);
+        if (clipOwner) {
+          // Pick the cached path for the right format
+          const cachedPath = clipIsPortrait
+            ? clipOwner.outroVideoPathPortrait
+            : clipOwner.outroVideoPath;
+
+          if (cachedPath) {
+            outroSignedUrl = await supabaseStorage.getSignedUrl(cachedPath, 3600);
+            console.log(`[outro] Using cached ${outroFormat} outro for user ${clip.userId}`);
+          } else {
+            console.log(`[outro] Generating ${outroFormat} outro for user ${clip.userId} (@${clipOwner.username})…`);
+            const { VideoProcessor } = await import('./video-processor');
+            const buffer = await VideoProcessor.generateOutroVideo(clipOwner.username, clip.userId!, outroFormat);
+            const storagePath = clipIsPortrait
+              ? `outros/${clip.userId}_portrait.mp4`
+              : `outros/${clip.userId}.mp4`;
+            await supabaseStorage.uploadBufferToFixedPath(buffer, storagePath, 'video/mp4');
+            if (clipIsPortrait) {
+              await db.update(users).set({ outroVideoPathPortrait: storagePath }).where(eq(users.id, clip.userId!));
+            } else {
+              await db.update(users).set({ outroVideoPath: storagePath }).where(eq(users.id, clip.userId!));
+            }
+            outroSignedUrl = await supabaseStorage.getSignedUrl(storagePath, 3600);
+            console.log(`[outro] Generated and cached ${outroFormat} outro for user ${clip.userId}`);
+          }
+        } else {
+          console.warn(`[outro] Could not find clip owner (userId=${clip.userId})`);
+        }
+      } catch (outroErr: any) {
+        console.error('[outro] Failed to resolve outro (non-fatal):', outroErr?.message ?? outroErr);
       }
 
       // Probe outro for audio stream — cached outros generated before audio support may lack it

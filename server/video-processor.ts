@@ -535,12 +535,13 @@ export class VideoProcessor {
 
   /**
    * Generate a personalised outro video: dark background → logo fade+glow → @username fade-in.
+   * format: 'portrait' = 1080×1920 (9:16 for reels), 'landscape' = 1920×1080 (16:9 for clips).
    * Returns the raw MP4 buffer (caller uploads to storage).
    */
-  static async generateOutroVideo(username: string, userId: number): Promise<Buffer> {
+  static async generateOutroVideo(username: string, userId: number, format: 'portrait' | 'landscape' = 'landscape'): Promise<Buffer> {
     await this.ensureDirectories();
 
-    const outputPath = path.join(this.TEMP_DIR, `outro_${userId}_${Date.now()}.mp4`);
+    const outputPath = path.join(this.TEMP_DIR, `outro_${userId}_${format}_${Date.now()}.mp4`);
     const logoPath = path.join(process.cwd(), 'client', 'public', 'attached_assets', 'gamefolio-logo-green.png');
     const fontPath = path.join(process.cwd(), 'server', 'assets', 'fonts', 'SpaceGrotesk-Bold.ttf');
 
@@ -556,10 +557,12 @@ export class VideoProcessor {
       try { accessSync(audioPath); return true; } catch { return false; }
     })();
 
+    const canvasSize = format === 'portrait' ? '1080x1920' : '1920x1080';
+
     return new Promise<Buffer>((resolve, reject) => {
       const cmd = (ffmpeg as any)()
-        // Input 0: 4-second solid dark background (1080×1920, portrait 9:16)
-        .input('color=c=0x0B1319:size=1080x1920:rate=30:d=4')
+        // Input 0: 4-second solid dark background
+        .input(`color=c=0x0B1319:size=${canvasSize}:rate=30:d=4`)
         .inputOptions(['-f', 'lavfi']);
 
       if (logoExists) {
