@@ -4803,31 +4803,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fs = await import('fs');
       const logoExists = fs.existsSync(logoPath);
 
-      // Append outro only for the clip owner's own downloads
+      // Always append the clip creator's outro to every download
       let outroSignedUrl: string | null = null;
-      if (isOwner) {
-        try {
-          const clipOwner = await storage.getUser(clip.userId!);
-          if (clipOwner) {
-            if (clipOwner.outroVideoPath) {
-              outroSignedUrl = await supabaseStorage.getSignedUrl(clipOwner.outroVideoPath, 3600);
-              console.log(`[outro] Using cached outro for user ${clip.userId}`);
-            } else {
-              console.log(`[outro] Generating outro for user ${clip.userId} (@${clipOwner.username})…`);
-              const { VideoProcessor } = await import('./video-processor');
-              const buffer = await VideoProcessor.generateOutroVideo(clipOwner.username, clip.userId!);
-              const storagePath = `outros/${clip.userId}.mp4`;
-              await supabaseStorage.uploadBufferToFixedPath(buffer, storagePath, 'video/mp4');
-              await db.update(users).set({ outroVideoPath: storagePath }).where(eq(users.id, clip.userId!));
-              outroSignedUrl = await supabaseStorage.getSignedUrl(storagePath, 3600);
-              console.log(`[outro] Generated and cached outro for user ${clip.userId}`);
-            }
+      try {
+        const clipOwner = await storage.getUser(clip.userId!);
+        if (clipOwner) {
+          if (clipOwner.outroVideoPath) {
+            outroSignedUrl = await supabaseStorage.getSignedUrl(clipOwner.outroVideoPath, 3600);
+            console.log(`[outro] Using cached outro for user ${clip.userId}`);
           } else {
-            console.warn(`[outro] Could not find clip owner (userId=${clip.userId})`);
+            console.log(`[outro] Generating outro for user ${clip.userId} (@${clipOwner.username})…`);
+            const { VideoProcessor } = await import('./video-processor');
+            const buffer = await VideoProcessor.generateOutroVideo(clipOwner.username, clip.userId!);
+            const storagePath = `outros/${clip.userId}.mp4`;
+            await supabaseStorage.uploadBufferToFixedPath(buffer, storagePath, 'video/mp4');
+            await db.update(users).set({ outroVideoPath: storagePath }).where(eq(users.id, clip.userId!));
+            outroSignedUrl = await supabaseStorage.getSignedUrl(storagePath, 3600);
+            console.log(`[outro] Generated and cached outro for user ${clip.userId}`);
           }
-        } catch (outroErr: any) {
-          console.error('[outro] Failed to resolve outro (non-fatal):', outroErr?.message ?? outroErr);
+        } else {
+          console.warn(`[outro] Could not find clip owner (userId=${clip.userId})`);
         }
+      } catch (outroErr: any) {
+        console.error('[outro] Failed to resolve outro (non-fatal):', outroErr?.message ?? outroErr);
       }
 
       // Probe whether the clip has an audio stream (determines concat strategy)
