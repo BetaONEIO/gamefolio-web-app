@@ -533,6 +533,83 @@ export class VideoProcessor {
     }
   }
 
+  /**
+   * Generate a personalised outro video: dark background → logo fade+glow → @username fade-in.
+   * Returns the raw MP4 buffer (caller uploads to storage).
+   */
+  static async generateOutroVideo(username: string, userId: number): Promise<Buffer> {
+    await this.ensureDirectories();
+
+    const outputPath = path.join(this.TEMP_DIR, `outro_${userId}_${Date.now()}.mp4`);
+    const logoPath = path.join(process.cwd(), 'client', 'public', 'attached_assets', 'gamefolio-logo-green.png');
+    const fontPath = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
+
+    // Strip any characters that could break the drawtext filter
+    const safeUser = `@${username}`.replace(/[^a-zA-Z0-9_@.-]/g, '');
+
+    const logoExists = (() => {
+      try { accessSync(logoPath); return true; } catch { return false; }
+    })();
+
+    return new Promise<Buffer>((resolve, reject) => {
+      const cmd = (ffmpeg as any)()
+        // Input 0: 4-second solid dark background (1920×1080)
+        .input('color=c=0x0B1319:size=1920x1080:rate=30:d=4')
+        .inputOptions(['-f', 'lavfi']);
+
+      if (logoExists) {
+        cmd.input(logoPath).inputOptions(['-loop', '1']);
+      }
+
+      const filters: string[] = logoExists ? [
+        // Scale logo to 320 px wide, force RGBA
+        '[1:v]scale=320:-1,format=rgba[logo_raw]',
+        // Split into glow copy and main copy
+        '[logo_raw]split=2[logo1][logo2]',
+        // Blur second copy to create the glow halo
+        '[logo2]gblur=sigma=22[glow_blur]',
+        // Fade both in: logo starts at 0.4 s, takes 1.2 s
+        '[logo1]fade=t=in:st=0.4:d=1.2:alpha=1[logo_faded]',
+        '[glow_blur]fade=t=in:st=0.4:d=1.2:alpha=1[glow_faded]',
+        // Composite: glow behind logo, both centred (shifted 90 px above mid)
+        '[0:v][glow_faded]overlay=(W-w)/2:(H-h)/2-90[bg_glow]',
+        '[bg_glow][logo_faded]overlay=(W-w)/2:(H-h)/2-90[with_logo]',
+        // Username text fades in at 1.3 s over 1 second
+        `[with_logo]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+120:alpha='if(lt(t,1.3),0,if(lt(t,2.3),(t-1.3)/1.0,1))'[out]`,
+      ] : [
+        // Fallback: no logo, just text
+        `[0:v]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+10:alpha='if(lt(t,0.5),0,if(lt(t,1.5),(t-0.5)/1.0,1))'[out]`,
+      ];
+
+      cmd
+        .complexFilter(filters)
+        .outputOptions([
+          '-map', '[out]',
+          '-c:v', 'libx264',
+          '-t', '4',
+          '-preset', 'slow',
+          '-crf', '18',
+          '-pix_fmt', 'yuv420p',
+          '-an',
+        ])
+        .format('mp4')
+        .on('error', (err: Error) => {
+          console.error('❌ Outro generation failed:', err.message);
+          reject(err);
+        })
+        .on('end', async () => {
+          try {
+            const buffer = await fs.readFile(outputPath);
+            await fs.unlink(outputPath).catch(() => {});
+            resolve(buffer);
+          } catch (e) {
+            reject(e);
+          }
+        })
+        .save(outputPath);
+    });
+  }
+
   static async getVideoInfo(videoPath: string): Promise<{ duration: number; width: number; height: number }> {
     return new Promise((resolve, reject) => {
       ffmpeg.ffprobe(videoPath, (error: any, metadata: any) => {

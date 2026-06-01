@@ -152,6 +152,8 @@ export const users = pgTable("users", {
   referralCode: text("referral_code").unique(), // User's unique referral code
   referredBy: text("referred_by"), // The referral code used when this user signed up
   referralCodeCustomized: boolean("referral_code_customized").default(false).notNull(), // Whether the user has already customised their referral code
+  // Outro video — auto-appended to the user's own clip/reel downloads
+  outroVideoPath: text("outro_video_path"), // Supabase storage path e.g. "outros/42.mp4"
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

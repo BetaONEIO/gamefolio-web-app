@@ -4802,43 +4802,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fs = await import('fs');
       const logoExists = fs.existsSync(logoPath);
 
-      if (logoExists) {
-        // Two-line text + logo overlay (TikTok style) — complex filtergraph
-        // Layout (bottom-right): logo (44 px tall) → line1 (38 px) → line2 (28 px)
-        // Each layer is stacked with a fixed gap; the box behind both text lines is shared.
-        const line1Filter =
-          `drawtext=text='${watermarkLine1}':fontsize=38:fontcolor=white@0.95:` +
-          `x=W-tw-20:y=H-th-56:` +
-          `shadowcolor=black@0.75:shadowx=2:shadowy=2`;
-        const line2Filter =
-          `drawtext=text='${watermarkLine2}':fontsize=26:fontcolor=white@0.80:` +
-          `x=W-tw-20:y=H-th-20:` +
-          `shadowcolor=black@0.55:shadowx=1:shadowy=1`;
+      // Resolve outro URL when the downloader is the clip owner
+      let outroSignedUrl: string | null = null;
+      const isOwnerDownload = downloaderId && downloaderId === clip.userId;
+      if (isOwnerDownload) {
+        try {
+          const clipOwner = await storage.getUser(clip.userId!);
+          if (clipOwner?.outroVideoPath) {
+            outroSignedUrl = await supabaseStorage.getSignedUrl(clipOwner.outroVideoPath, 3600);
+          }
+        } catch {
+          // non-fatal — continue without outro
+        }
+      }
 
+      // ── Build watermark filters ──────────────────────────────────────────
+      const line1Filter =
+        `drawtext=text='${watermarkLine1}':fontsize=38:fontcolor=white@0.95:` +
+        `x=W-tw-20:y=H-th-56:shadowcolor=black@0.75:shadowx=2:shadowy=2`;
+      const line2Filter =
+        `drawtext=text='${watermarkLine2}':fontsize=26:fontcolor=white@0.80:` +
+        `x=W-tw-20:y=H-th-20:shadowcolor=black@0.55:shadowx=1:shadowy=1`;
+
+      const sharedOutputOptions = [
+        '-c:v', 'libx264',
+        '-c:a', 'copy',
+        '-preset', 'ultrafast',
+        '-crf', '24',
+        '-pix_fmt', 'yuv420p',
+        '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
+        '-threads', '0',
+      ];
+
+      if (logoExists && outroSignedUrl) {
+        // Watermark + outro concat
+        // Outro index = 2 (inputs: 0=clip, 1=logo, 2=outro)
+        const command = (ffmpeg as any)()
+          .input(freshUrl)
+          .input(logoPath)
+          .input(outroSignedUrl)
+          .complexFilter([
+            '[1:v]scale=-1:66[logo]',
+            '[0:v][logo]overlay=x=W-w-20:y=H-h-130[wl]',
+            `[wl]${line1Filter}[wl2]`,
+            `[wl2]${line2Filter}[clip_wm]`,
+            // Scale outro to match clip dimensions then concat
+            '[2:v][clip_wm]scale2ref=flags=bicubic[outro_scaled][clip_ref]',
+            '[clip_ref][outro_scaled]concat=n=2:v=1:a=0[outv]',
+          ])
+          .outputOptions(['-map', '[outv]', '-map', '0:a?', ...sharedOutputOptions])
+          .format('mp4');
+
+        command.on('error', (err: Error) => {
+          console.error('FFmpeg watermark+outro error:', err.message);
+          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
+        });
+        command.pipe(res, { end: true });
+
+      } else if (logoExists) {
+        // Watermark only (existing behaviour)
         const command = (ffmpeg as any)()
           .input(freshUrl)
           .input(logoPath)
           .complexFilter([
-            // Scale logo to 66 px tall (preserving aspect ratio) — 50% bigger
             '[1:v]scale=-1:66[logo]',
-            // Overlay logo in bottom-right above the two text lines
             '[0:v][logo]overlay=x=W-w-20:y=H-h-130[wl]',
-            // Draw line 1 (username) just below the logo
             `[wl]${line1Filter}[wl2]`,
-            // Draw line 2 (game / site) at the very bottom
             `[wl2]${line2Filter}[out]`,
           ])
-          .outputOptions([
-            '-map', '[out]',
-            '-map', '0:a?',
-            '-c:v', 'libx264',
-            '-c:a', 'copy',
-            '-preset', 'ultrafast',
-            '-crf', '24',
-            '-pix_fmt', 'yuv420p',
-            '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
-            '-threads', '0',
-          ])
+          .outputOptions(['-map', '[out]', '-map', '0:a?', ...sharedOutputOptions])
           .format('mp4');
 
         command.on('error', (err: Error) => {
@@ -4846,8 +4878,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
         });
         command.pipe(res, { end: true });
+
+      } else if (outroSignedUrl) {
+        // Text watermark + outro concat (no logo)
+        const command = (ffmpeg as any)()
+          .input(freshUrl)
+          .input(outroSignedUrl)
+          .complexFilter([
+            `[0:v]${line1Filter}[wl]`,
+            `[wl]${line2Filter}[clip_wm]`,
+            '[1:v][clip_wm]scale2ref=flags=bicubic[outro_scaled][clip_ref]',
+            '[clip_ref][outro_scaled]concat=n=2:v=1:a=0[outv]',
+          ])
+          .outputOptions(['-map', '[outv]', '-map', '0:a?', ...sharedOutputOptions])
+          .format('mp4');
+
+        command.on('error', (err: Error) => {
+          console.error('FFmpeg text-watermark+outro error:', err.message);
+          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
+        });
+        command.pipe(res, { end: true });
+
       } else {
-        // Fallback: text-only watermark (no logo)
+        // Fallback: text-only watermark (no logo, no outro)
         const drawtextFilter =
           `drawtext=text='${watermarkLine1}':fontsize=38:fontcolor=white@0.92:` +
           `x=w-tw-20:y=h-th-56:shadowcolor=black@0.75:shadowx=2:shadowy=2:` +
@@ -4878,6 +4931,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Download clip error:', error);
       if (!res.headersSent) res.status(500).json({ error: 'Failed to download clip' });
+    }
+  });
+
+  // ── Outro video endpoints ─────────────────────────────────────────────────
+
+  // GET /api/users/me/outro — return a signed URL for the current user's outro
+  app.get('/api/users/me/outro', hybridAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+
+      const user = await storage.getUser(userId);
+      if (!user?.outroVideoPath) return res.json({ url: null });
+
+      const signedUrl = await supabaseStorage.getSignedUrl(user.outroVideoPath, 60 * 60 * 2);
+      res.json({ url: signedUrl });
+    } catch (err) {
+      console.error('GET outro error:', err);
+      res.status(500).json({ error: 'Failed to get outro' });
+    }
+  });
+
+  // POST /api/users/me/outro — generate (or regenerate) the user's outro video
+  app.post('/api/users/me/outro', hybridAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+
+      console.log(`🎬 Generating outro for user ${user.username} (${userId})`);
+
+      const { VideoProcessor } = await import('./video-processor');
+      const buffer = await VideoProcessor.generateOutroVideo(user.username, userId);
+
+      const storagePath = `outros/${userId}.mp4`;
+      await supabaseStorage.uploadBufferToFixedPath(buffer, storagePath, 'video/mp4');
+
+      await storage.updateUser(userId, { outroVideoPath: storagePath });
+
+      const signedUrl = await supabaseStorage.getSignedUrl(storagePath, 60 * 60 * 2);
+      console.log(`✅ Outro generated and stored for user ${userId}`);
+      res.json({ url: signedUrl });
+    } catch (err) {
+      console.error('POST outro error:', err);
+      res.status(500).json({ error: 'Failed to generate outro' });
     }
   });
 
