@@ -4843,6 +4843,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Probe outro for audio stream — cached outros generated before audio support may lack it
+      let outroHasAudio = false;
+      if (outroSignedUrl) {
+        const outroProbe = await new Promise<any>((resolve) => {
+          (ffmpeg as any).ffprobe(outroSignedUrl, (err: any, data: any) => resolve(err ? null : data));
+        });
+        if (outroProbe?.streams) {
+          outroHasAudio = outroProbe.streams.some((s: any) => s.codec_type === 'audio');
+        }
+      }
+
+      // Audio concat is only safe when BOTH the clip AND the outro have audio streams
+      const concatWithAudio = clipHasAudio && outroHasAudio;
+
       // ── Build watermark filters ──────────────────────────────────────────
       const sgFont = path.join(process.cwd(), 'server', 'assets', 'fonts', 'SpaceGrotesk-Bold.ttf');
       const line1Filter =
@@ -4876,7 +4890,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (logoExists && outroSignedUrl) {
         // Watermark + outro concat
         // Inputs: 0=clip, 1=logo, 2=outro (outro has audio baked in)
-        const audioFilters = clipHasAudio ? [
+        const audioFilters = concatWithAudio ? [
           '[clip_wm]setsar=1,fps=fps=30[clip_n]',
           `[2:v]${outroScaleFilter}[outro_n]`,
           '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
@@ -4887,7 +4901,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `[2:v]${outroScaleFilter}[outro_n]`,
           '[clip_n][outro_n]concat=n=2:v=1:a=0[outv]',
         ];
-        const outroMapOpts = clipHasAudio
+        const outroMapOpts = concatWithAudio
           ? ['-map', '[outv]', '-map', '[outa]', '-c:v', 'libx264', '-c:a', 'aac', '-ar', '44100', ...outroBaseOpts]
           : ['-map', '[outv]', '-c:v', 'libx264', '-an', ...outroBaseOpts];
         const command = (ffmpeg as any)()
@@ -4933,7 +4947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (outroSignedUrl) {
         // Text watermark + outro concat (no logo)
         // Inputs: 0=clip, 1=outro (outro has audio baked in)
-        const audioFilters2 = clipHasAudio ? [
+        const audioFilters2 = concatWithAudio ? [
           '[clip_wm]setsar=1,fps=fps=30[clip_n]',
           `[1:v]${outroScaleFilter}[outro_n]`,
           '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
@@ -4944,7 +4958,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `[1:v]${outroScaleFilter}[outro_n]`,
           '[clip_n][outro_n]concat=n=2:v=1:a=0[outv]',
         ];
-        const outroMapOpts2 = clipHasAudio
+        const outroMapOpts2 = concatWithAudio
           ? ['-map', '[outv]', '-map', '[outa]', '-c:v', 'libx264', '-c:a', 'aac', '-ar', '44100', ...outroBaseOpts]
           : ['-map', '[outv]', '-c:v', 'libx264', '-an', ...outroBaseOpts];
         const command = (ffmpeg as any)()
