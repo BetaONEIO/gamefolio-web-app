@@ -4689,6 +4689,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stable OG video proxy — lets Telegram (and other messengers) stream the clip
+  // in-app without an expiring Supabase signed URL in the og:video tag.
+  app.get('/api/og-video/:identifier', async (req: Request, res: Response) => {
+    try {
+      const { identifier } = req.params;
+
+      let clip = await storage.getClipByShareCode(identifier);
+      if (!clip) {
+        const numericId = parseInt(identifier, 10);
+        if (!isNaN(numericId)) clip = await storage.getClip(numericId);
+      }
+      if (!clip || !clip.videoUrl) return res.status(404).json({ error: 'Clip not found' });
+
+      const { refreshSupabaseSignedUrl } = await import('./og-thumbnail');
+      const freshUrl = await refreshSupabaseSignedUrl(clip.videoUrl, 60 * 60 * 4);
+
+      // Forward Range header so seekable/partial-content playback works in Telegram
+      const fetchHeaders: Record<string, string> = {};
+      if (req.headers['range']) fetchHeaders['Range'] = req.headers['range'] as string;
+
+      const videoResponse = await fetch(freshUrl, { headers: fetchHeaders });
+      if (!videoResponse.ok && videoResponse.status !== 206) {
+        return res.status(502).json({ error: 'Video source unavailable' });
+      }
+
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+
+      const contentLength = videoResponse.headers.get('content-length');
+      const contentRange = videoResponse.headers.get('content-range');
+      if (contentLength) res.setHeader('Content-Length', contentLength);
+      if (contentRange) res.setHeader('Content-Range', contentRange);
+
+      res.status(videoResponse.status === 206 ? 206 : 200);
+
+      const { Readable } = await import('stream');
+      const nodeStream = Readable.fromWeb(videoResponse.body as any);
+      nodeStream.pipe(res);
+    } catch (error) {
+      console.error('OG video proxy error:', error);
+      if (!res.headersSent) res.status(500).json({ error: 'Failed to proxy video' });
+    }
+  });
+
   // OG image proxy for screenshots — re-signs Supabase URL on every request so
   // social crawlers always get a valid, non-expiring image URL
   app.get('/api/og-screenshot/:idOrShareCode', async (req: Request, res: Response) => {

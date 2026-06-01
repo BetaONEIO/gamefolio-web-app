@@ -87,7 +87,7 @@ export function createOGMetaMiddleware(storage: IStorage) {
           const baseHost = `https://${req.get('host')}`;
           const identifier = clip.shareCode || clip.id;
           const imageUrl = `${baseHost}/api/og-thumbnail/${identifier}`;
-          const freshVideoUrl = clip.videoUrl ? await refreshSupabaseSignedUrl(clip.videoUrl) : undefined;
+          const stableVideoUrl = clip.videoUrl ? `${baseHost}/api/og-video/${identifier}` : undefined;
 
           ogTags = {
             title: `${clip.title} - ${clip.user.displayName || clip.user.username} | Gamefolio`,
@@ -95,7 +95,7 @@ export function createOGMetaMiddleware(storage: IStorage) {
             image: imageUrl,
             url: `https://${req.get('host')}${url}`,
             type: 'video.other',
-            videoUrl: freshVideoUrl,
+            videoUrl: stableVideoUrl,
           };
         }
       }
@@ -162,7 +162,7 @@ export function createOGMetaMiddleware(storage: IStorage) {
           const baseHost = `https://${req.get('host')}`;
           const identifier = clip.shareCode || clip.id;
           const imageUrl = `${baseHost}/api/og-thumbnail/${identifier}`;
-          const freshVideoUrl = clip.videoUrl ? await refreshSupabaseSignedUrl(clip.videoUrl) : undefined;
+          const stableVideoUrl = clip.videoUrl ? `${baseHost}/api/og-video/${identifier}` : undefined;
 
           ogTags = {
             title: `${clip.title} - ${clip.user.displayName || clip.user.username} | Gamefolio`,
@@ -170,7 +170,7 @@ export function createOGMetaMiddleware(storage: IStorage) {
             image: imageUrl,
             url: `${baseHost}${url}`,
             type: 'video.other',
-            videoUrl: freshVideoUrl,
+            videoUrl: stableVideoUrl,
           };
         }
       }
