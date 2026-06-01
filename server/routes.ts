@@ -4788,6 +4788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Notify the clip owner (fire-and-forget)
       const downloaderId = (req as any).user?.id;
+      const isOwner = Number(downloaderId) === Number(clip.userId);
       NotificationService.createDownloadNotification(clipId, downloaderId).catch(() => {});
 
       res.setHeader('Content-Type', 'video/mp4');
@@ -4802,29 +4803,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fs = await import('fs');
       const logoExists = fs.existsSync(logoPath);
 
-      // Always append the clip owner's outro (auto-generate + cache on first download)
+      // Append outro only for the clip owner's own downloads
       let outroSignedUrl: string | null = null;
-      try {
-        const clipOwner = await storage.getUser(clip.userId!);
-        if (clipOwner) {
-          if (clipOwner.outroVideoPath) {
-            outroSignedUrl = await supabaseStorage.getSignedUrl(clipOwner.outroVideoPath, 3600);
-            console.log(`[outro] Using cached outro for user ${clip.userId}`);
+      if (isOwner) {
+        try {
+          const clipOwner = await storage.getUser(clip.userId!);
+          if (clipOwner) {
+            if (clipOwner.outroVideoPath) {
+              outroSignedUrl = await supabaseStorage.getSignedUrl(clipOwner.outroVideoPath, 3600);
+              console.log(`[outro] Using cached outro for user ${clip.userId}`);
+            } else {
+              console.log(`[outro] Generating outro for user ${clip.userId} (@${clipOwner.username})…`);
+              const { VideoProcessor } = await import('./video-processor');
+              const buffer = await VideoProcessor.generateOutroVideo(clipOwner.username, clip.userId!);
+              const storagePath = `outros/${clip.userId}.mp4`;
+              await supabaseStorage.uploadBufferToFixedPath(buffer, storagePath, 'video/mp4');
+              await db.update(users).set({ outroVideoPath: storagePath }).where(eq(users.id, clip.userId!));
+              outroSignedUrl = await supabaseStorage.getSignedUrl(storagePath, 3600);
+              console.log(`[outro] Generated and cached outro for user ${clip.userId}`);
+            }
           } else {
-            console.log(`[outro] Generating outro for user ${clip.userId} (@${clipOwner.username})…`);
-            const { VideoProcessor } = await import('./video-processor');
-            const buffer = await VideoProcessor.generateOutroVideo(clipOwner.username, clip.userId!);
-            const storagePath = `outros/${clip.userId}.mp4`;
-            await supabaseStorage.uploadBufferToFixedPath(buffer, storagePath, 'video/mp4');
-            await db.update(users).set({ outroVideoPath: storagePath }).where(eq(users.id, clip.userId!));
-            outroSignedUrl = await supabaseStorage.getSignedUrl(storagePath, 3600);
-            console.log(`[outro] Generated and cached outro for user ${clip.userId}`);
+            console.warn(`[outro] Could not find clip owner (userId=${clip.userId})`);
           }
-        } else {
-          console.warn(`[outro] Could not find clip owner (userId=${clip.userId})`);
+        } catch (outroErr: any) {
+          console.error('[outro] Failed to resolve outro (non-fatal):', outroErr?.message ?? outroErr);
         }
-      } catch (outroErr: any) {
-        console.error('[outro] Failed to resolve outro (non-fatal):', outroErr?.message ?? outroErr);
+      }
+
+      // Probe whether the clip has an audio stream (determines concat strategy)
+      let clipHasAudio = false;
+      if (outroSignedUrl) {
+        clipHasAudio = await new Promise<boolean>((resolve) => {
+          (ffmpeg as any).ffprobe(freshUrl, (err: any, data: any) => {
+            if (err) { resolve(false); return; }
+            resolve(!!data?.streams?.some((s: any) => s.codec_type === 'audio'));
+          });
+        });
       }
 
       // ── Build watermark filters ──────────────────────────────────────────
@@ -4846,21 +4860,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         '-threads', '0',
       ];
 
-      // Output options for outro branches — need aac re-encode to mix clip + outro audio
-      const outroOutputOptions = [
-        '-c:v', 'libx264',
-        '-c:a', 'aac',
-        '-ar', '44100',
-        '-preset', 'ultrafast',
-        '-crf', '24',
-        '-pix_fmt', 'yuv420p',
-        '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
-        '-threads', '0',
+      // Shared output options for outro branches (codec + container settings)
+      const outroBaseOpts = [
+        '-preset', 'ultrafast', '-crf', '24', '-pix_fmt', 'yuv420p',
+        '-movflags', 'frag_keyframe+empty_moov+default_base_moof', '-threads', '0',
       ];
 
       if (logoExists && outroSignedUrl) {
         // Watermark + outro concat
-        // Inputs: 0=clip, 1=logo, 2=outro (outro now has audio baked in)
+        // Inputs: 0=clip, 1=logo, 2=outro (outro has audio baked in)
+        const audioFilters = clipHasAudio ? [
+          '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
+          '[2:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
+          '[clip_ref][ca][outro_scaled][oa]concat=n=2:v=1:a=1[outv][outa]',
+        ] : ['[clip_ref][outro_scaled]concat=n=2:v=1:a=0[outv]'];
+        const outroMapOpts = clipHasAudio
+          ? ['-map', '[outv]', '-map', '[outa]', '-c:v', 'libx264', '-c:a', 'aac', '-ar', '44100', ...outroBaseOpts]
+          : ['-map', '[outv]', '-c:v', 'libx264', '-an', ...outroBaseOpts];
         const command = (ffmpeg as any)()
           .input(freshUrl)
           .input(logoPath)
@@ -4870,12 +4886,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             '[0:v][logo]overlay=x=W-w-20:y=H-h-160[wl]',
             `[wl]${line1Filter}[wl2]`,
             `[wl2]${line2Filter}[clip_wm]`,
-            // Scale outro to match clip dimensions
             '[2:v][clip_wm]scale2ref=flags=bicubic[outro_scaled][clip_ref]',
-            // Single concat for video + audio together
-            '[clip_ref][0:a][outro_scaled][2:a]concat=n=2:v=1:a=1[outv][outa]',
+            ...audioFilters,
           ])
-          .outputOptions(['-map', '[outv]', '-map', '[outa]', ...outroOutputOptions])
+          .outputOptions(outroMapOpts)
           .format('mp4');
 
         command.on('error', (err: Error) => {
@@ -4906,7 +4920,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       } else if (outroSignedUrl) {
         // Text watermark + outro concat (no logo)
-        // Inputs: 0=clip, 1=outro
+        // Inputs: 0=clip, 1=outro (outro has audio baked in)
+        const audioFilters2 = clipHasAudio ? [
+          '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
+          '[1:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
+          '[clip_ref][ca][outro_scaled][oa]concat=n=2:v=1:a=1[outv][outa]',
+        ] : ['[clip_ref][outro_scaled]concat=n=2:v=1:a=0[outv]'];
+        const outroMapOpts2 = clipHasAudio
+          ? ['-map', '[outv]', '-map', '[outa]', '-c:v', 'libx264', '-c:a', 'aac', '-ar', '44100', ...outroBaseOpts]
+          : ['-map', '[outv]', '-c:v', 'libx264', '-an', ...outroBaseOpts];
         const command = (ffmpeg as any)()
           .input(freshUrl)
           .input(outroSignedUrl)
@@ -4914,10 +4936,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             `[0:v]${line1Filter}[wl]`,
             `[wl]${line2Filter}[clip_wm]`,
             '[1:v][clip_wm]scale2ref=flags=bicubic[outro_scaled][clip_ref]',
-            // Single concat for video + audio together
-            '[clip_ref][0:a][outro_scaled][1:a]concat=n=2:v=1:a=1[outv][outa]',
+            ...audioFilters2,
           ])
-          .outputOptions(['-map', '[outv]', '-map', '[outa]', ...outroOutputOptions])
+          .outputOptions(outroMapOpts2)
           .format('mp4');
 
         command.on('error', (err: Error) => {
