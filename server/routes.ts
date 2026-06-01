@@ -4846,9 +4846,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         '-threads', '0',
       ];
 
+      // Output options for outro branches — need aac re-encode to mix clip + outro audio
+      const outroOutputOptions = [
+        '-c:v', 'libx264',
+        '-c:a', 'aac',
+        '-ar', '44100',
+        '-preset', 'ultrafast',
+        '-crf', '24',
+        '-pix_fmt', 'yuv420p',
+        '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
+        '-threads', '0',
+      ];
+
       if (logoExists && outroSignedUrl) {
         // Watermark + outro concat
-        // Outro index = 2 (inputs: 0=clip, 1=logo, 2=outro)
+        // Inputs: 0=clip, 1=logo, 2=outro (outro now has audio baked in)
         const command = (ffmpeg as any)()
           .input(freshUrl)
           .input(logoPath)
@@ -4858,11 +4870,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             '[0:v][logo]overlay=x=W-w-20:y=H-h-160[wl]',
             `[wl]${line1Filter}[wl2]`,
             `[wl2]${line2Filter}[clip_wm]`,
-            // Scale outro to match clip dimensions then concat
+            // Scale outro to match clip dimensions
             '[2:v][clip_wm]scale2ref=flags=bicubic[outro_scaled][clip_ref]',
-            '[clip_ref][outro_scaled]concat=n=2:v=1:a=0[outv]',
+            // Single concat for video + audio together
+            '[clip_ref][0:a][outro_scaled][2:a]concat=n=2:v=1:a=1[outv][outa]',
           ])
-          .outputOptions(['-map', '[outv]', '-map', '0:a?', ...sharedOutputOptions])
+          .outputOptions(['-map', '[outv]', '-map', '[outa]', ...outroOutputOptions])
           .format('mp4');
 
         command.on('error', (err: Error) => {
@@ -4893,6 +4906,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       } else if (outroSignedUrl) {
         // Text watermark + outro concat (no logo)
+        // Inputs: 0=clip, 1=outro
         const command = (ffmpeg as any)()
           .input(freshUrl)
           .input(outroSignedUrl)
@@ -4900,9 +4914,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             `[0:v]${line1Filter}[wl]`,
             `[wl]${line2Filter}[clip_wm]`,
             '[1:v][clip_wm]scale2ref=flags=bicubic[outro_scaled][clip_ref]',
-            '[clip_ref][outro_scaled]concat=n=2:v=1:a=0[outv]',
+            // Single concat for video + audio together
+            '[clip_ref][0:a][outro_scaled][1:a]concat=n=2:v=1:a=1[outv][outa]',
           ])
-          .outputOptions(['-map', '[outv]', '-map', '0:a?', ...sharedOutputOptions])
+          .outputOptions(['-map', '[outv]', '-map', '[outa]', ...outroOutputOptions])
           .format('mp4');
 
         command.on('error', (err: Error) => {

@@ -551,6 +551,11 @@ export class VideoProcessor {
       try { accessSync(logoPath); return true; } catch { return false; }
     })();
 
+    const audioPath = path.join(process.cwd(), 'server', 'assets', 'audio', 'outro-sting.mp3');
+    const audioExists = (() => {
+      try { accessSync(audioPath); return true; } catch { return false; }
+    })();
+
     return new Promise<Buffer>((resolve, reject) => {
       const cmd = (ffmpeg as any)()
         // Input 0: 4-second solid dark background (1920×1080)
@@ -560,6 +565,16 @@ export class VideoProcessor {
       if (logoExists) {
         cmd.input(logoPath).inputOptions(['-loop', '1']);
       }
+
+      // Audio input index: 2 if logo present, 1 otherwise
+      const audioIdx = logoExists ? 2 : 1;
+      if (audioExists) {
+        cmd.input(audioPath);
+      }
+
+      const audioFilter = audioExists
+        ? [`[${audioIdx}:a]adelay=400:all=1,atrim=duration=3.6,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[aout]`]
+        : [];
 
       const filters: string[] = logoExists ? [
         // Scale logo to 320 px wide, force RGBA
@@ -576,21 +591,23 @@ export class VideoProcessor {
         '[bg_glow][logo_faded]overlay=(W-w)/2:(H-h)/2-90[with_logo]',
         // Username text fades in at 1.3 s over 1 second
         `[with_logo]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+120:alpha='if(lt(t,1.3),0,if(lt(t,2.3),(t-1.3)/1.0,1))'[out]`,
+        ...audioFilter,
       ] : [
         // Fallback: no logo, just text
         `[0:v]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+10:alpha='if(lt(t,0.5),0,if(lt(t,1.5),(t-0.5)/1.0,1))'[out]`,
+        ...audioFilter,
       ];
 
       cmd
         .complexFilter(filters)
         .outputOptions([
           '-map', '[out]',
+          ...(audioExists ? ['-map', '[aout]', '-c:a', 'aac', '-ar', '44100'] : ['-an']),
           '-c:v', 'libx264',
           '-t', '4',
           '-preset', 'slow',
           '-crf', '18',
           '-pix_fmt', 'yuv420p',
-          '-an',
         ])
         .format('mp4')
         .on('error', (err: Error) => {
