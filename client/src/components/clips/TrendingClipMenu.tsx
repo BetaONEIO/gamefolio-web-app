@@ -237,7 +237,7 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
       } else {
         toast({
           title: "⚡ Preparing your clip…",
-          description: "Adding Gamefolio watermark. This may take a moment.",
+          description: "Adding watermark & outro. First download may take ~30 s.",
         });
 
         let downloadedViaWatermark = false;

@@ -4802,14 +4802,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fs = await import('fs');
       const logoExists = fs.existsSync(logoPath);
 
-      // Resolve outro URL when the downloader is the clip owner
+      // Resolve (or auto-generate) outro when the downloader is the clip owner
       let outroSignedUrl: string | null = null;
       const isOwnerDownload = downloaderId && downloaderId === clip.userId;
       if (isOwnerDownload) {
         try {
           const clipOwner = await storage.getUser(clip.userId!);
-          if (clipOwner?.outroVideoPath) {
-            outroSignedUrl = await supabaseStorage.getSignedUrl(clipOwner.outroVideoPath, 3600);
+          if (clipOwner) {
+            if (clipOwner.outroVideoPath) {
+              outroSignedUrl = await supabaseStorage.getSignedUrl(clipOwner.outroVideoPath, 3600);
+            } else {
+              // Auto-generate + cache on first download — subsequent downloads use the cached file
+              const { VideoProcessor } = await import('./video-processor');
+              const buffer = await VideoProcessor.generateOutroVideo(clipOwner.username, clip.userId!);
+              const storagePath = `outros/${clip.userId}.mp4`;
+              await supabaseStorage.uploadBufferToFixedPath(buffer, storagePath, 'video/mp4');
+              await storage.updateUser(clip.userId!, { outroVideoPath: storagePath });
+              outroSignedUrl = await supabaseStorage.getSignedUrl(storagePath, 3600);
+            }
           }
         } catch {
           // non-fatal — continue without outro
