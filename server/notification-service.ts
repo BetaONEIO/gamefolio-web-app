@@ -227,17 +227,12 @@ export class NotificationService {
   // Create notification for emoji reaction on a screenshot
   static async createScreenshotReactionNotification(screenshotId: number, reactedByUserId: number, emoji: string) {
     try {
-      const screenshot = await (storage as any).getScreenshotWithUser(screenshotId);
-      if (!screenshot) return;
+      const screenshot = await storage.getScreenshotWithUser(screenshotId);
+      if (!screenshot || !screenshot.user) return;
       if (screenshot.userId === reactedByUserId) return;
 
       const reactedByUser = await storage.getUser(reactedByUserId);
       if (!reactedByUser) return;
-
-      const username = screenshot.user?.username;
-      const actionUrl = username
-        ? `/@${username}/screenshots/${screenshotId}`
-        : `/screenshots/${screenshotId}`;
 
       const notification: InsertNotification = {
         userId: screenshot.userId,
@@ -245,7 +240,7 @@ export class NotificationService {
         title: "New Reaction",
         message: `${reactedByUser.username} reacted with ${emoji} to your screenshot "${screenshot.title}"`,
         fromUserId: reactedByUserId,
-        actionUrl,
+        actionUrl: `/@${screenshot.user.username}/screenshots/${screenshotId}`,
         metadata: { emoji },
       };
 
@@ -402,19 +397,14 @@ export class NotificationService {
   // Create notification when someone shares your screenshot
   static async createScreenshotShareNotification(screenshotId: number, sharedByUserId: number | undefined) {
     try {
-      const screenshot = await (storage as any).getScreenshotWithUser(screenshotId);
-      if (!screenshot) return;
+      const screenshot = await storage.getScreenshotWithUser(screenshotId);
+      if (!screenshot || !screenshot.user) return;
       if (sharedByUserId && screenshot.userId === sharedByUserId) return;
 
       const sharer = sharedByUserId ? await storage.getUser(sharedByUserId) : null;
       const message = sharer
         ? `${sharer.username} shared your screenshot "${screenshot.title}"`
         : `Your screenshot "${screenshot.title}" was shared`;
-
-      const username = screenshot.user?.username;
-      const actionUrl = username
-        ? `/@${username}/screenshots/${screenshotId}`
-        : `/screenshots/${screenshotId}`;
 
       const notification: InsertNotification = {
         userId: screenshot.userId,
@@ -423,7 +413,7 @@ export class NotificationService {
         message,
         fromUserId: sharedByUserId,
         screenshotId: screenshotId,
-        actionUrl,
+        actionUrl: `/@${screenshot.user.username}/screenshots/${screenshotId}`,
       };
       await createAndPush(notification);
     } catch (error) {

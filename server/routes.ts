@@ -12019,13 +12019,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         shareUrl = `${BASE_URL}/@${username}/clip/${sc}`;
       } else if (contentType === 'screenshot') {
-        content = await storage.getScreenshot(contentId);
-        if (!content) {
+        const screenshotWithUser = await storage.getScreenshotWithUser(contentId);
+        if (!screenshotWithUser) {
           return res.status(404).json({ message: "Screenshot not found" });
         }
-        const screenshotOwner = await storage.getUser(content.userId);
-        const username = screenshotOwner?.username || 'unknown';
-        shareUrl = `${BASE_URL}/@${username}/screenshots/${contentId}`;
+        content = screenshotWithUser;
+        const username = screenshotWithUser.user?.username || 'unknown';
+        let sc = screenshotWithUser.shareCode;
+        if (!sc) {
+          sc = nanoid(8);
+          await storage.updateScreenshot(contentId, { shareCode: sc });
+        }
+        shareUrl = `${BASE_URL}/@${username}/screenshots/${sc}`;
       } else {
         return res.status(400).json({ message: "Invalid content type" });
       }

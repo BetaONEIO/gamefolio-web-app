@@ -357,6 +357,8 @@ export interface IStorage {
 
   // Screenshot operations
   getScreenshot(id: number): Promise<Screenshot | null>;
+  getScreenshotWithUser(id: number): Promise<(Screenshot & { user: User; game?: any }) | undefined>;
+  updateScreenshot(id: number, data: Partial<Screenshot>): Promise<Screenshot | null>;
   getScreenshotByShareCode(shareCode: string): Promise<Screenshot | null>;
   getAllScreenshots(limit?: number, offset?: number, includeAllUsers?: boolean): Promise<Array<{
     id: number;
