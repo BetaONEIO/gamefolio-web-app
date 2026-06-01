@@ -4828,15 +4828,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('[outro] Failed to resolve outro (non-fatal):', outroErr?.message ?? outroErr);
       }
 
-      // Probe whether the clip has an audio stream (determines concat strategy)
+      // Probe clip for audio stream + dimensions (both needed for outro concat)
       let clipHasAudio = false;
-      if (outroSignedUrl) {
-        clipHasAudio = await new Promise<boolean>((resolve) => {
-          (ffmpeg as any).ffprobe(freshUrl, (err: any, data: any) => {
-            if (err) { resolve(false); return; }
-            resolve(!!data?.streams?.some((s: any) => s.codec_type === 'audio'));
-          });
+      let clipW = 1280;
+      let clipH = 720;
+      {
+        const probeData = await new Promise<any>((resolve) => {
+          (ffmpeg as any).ffprobe(freshUrl, (err: any, data: any) => resolve(err ? null : data));
         });
+        if (probeData?.streams) {
+          clipHasAudio = probeData.streams.some((s: any) => s.codec_type === 'audio');
+          const vs = probeData.streams.find((s: any) => s.codec_type === 'video');
+          if (vs?.width && vs?.height) { clipW = vs.width; clipH = vs.height; }
+        }
       }
 
       // ── Build watermark filters ──────────────────────────────────────────
@@ -4864,14 +4868,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         '-movflags', 'frag_keyframe+empty_moov+default_base_moof', '-threads', '0',
       ];
 
+      // Scale outro to clip's exact dimensions, letter/pillarbox to preserve aspect ratio
+      const outroScaleFilter =
+        `scale=${clipW}:${clipH}:force_original_aspect_ratio=decrease,` +
+        `pad=${clipW}:${clipH}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=fps=30`;
+
       if (logoExists && outroSignedUrl) {
         // Watermark + outro concat
         // Inputs: 0=clip, 1=logo, 2=outro (outro has audio baked in)
         const audioFilters = clipHasAudio ? [
+          '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+          `[2:v]${outroScaleFilter}[outro_n]`,
           '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
           '[2:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
-          '[clip_ref][ca][outro_scaled][oa]concat=n=2:v=1:a=1[outv][outa]',
-        ] : ['[clip_ref][outro_scaled]concat=n=2:v=1:a=0[outv]'];
+          '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
+        ] : [
+          '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+          `[2:v]${outroScaleFilter}[outro_n]`,
+          '[clip_n][outro_n]concat=n=2:v=1:a=0[outv]',
+        ];
         const outroMapOpts = clipHasAudio
           ? ['-map', '[outv]', '-map', '[outa]', '-c:v', 'libx264', '-c:a', 'aac', '-ar', '44100', ...outroBaseOpts]
           : ['-map', '[outv]', '-c:v', 'libx264', '-an', ...outroBaseOpts];
@@ -4884,7 +4899,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             '[0:v][logo]overlay=x=W-w-20:y=H-h-160[wl]',
             `[wl]${line1Filter}[wl2]`,
             `[wl2]${line2Filter}[clip_wm]`,
-            '[2:v][clip_wm]scale2ref=flags=bicubic[outro_scaled][clip_ref]',
             ...audioFilters,
           ])
           .outputOptions(outroMapOpts)
@@ -4920,10 +4934,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Text watermark + outro concat (no logo)
         // Inputs: 0=clip, 1=outro (outro has audio baked in)
         const audioFilters2 = clipHasAudio ? [
+          '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+          `[1:v]${outroScaleFilter}[outro_n]`,
           '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
           '[1:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
-          '[clip_ref][ca][outro_scaled][oa]concat=n=2:v=1:a=1[outv][outa]',
-        ] : ['[clip_ref][outro_scaled]concat=n=2:v=1:a=0[outv]'];
+          '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
+        ] : [
+          '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+          `[1:v]${outroScaleFilter}[outro_n]`,
+          '[clip_n][outro_n]concat=n=2:v=1:a=0[outv]',
+        ];
         const outroMapOpts2 = clipHasAudio
           ? ['-map', '[outv]', '-map', '[outa]', '-c:v', 'libx264', '-c:a', 'aac', '-ar', '44100', ...outroBaseOpts]
           : ['-map', '[outv]', '-c:v', 'libx264', '-an', ...outroBaseOpts];
@@ -4933,7 +4953,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .complexFilter([
             `[0:v]${line1Filter}[wl]`,
             `[wl]${line2Filter}[clip_wm]`,
-            '[1:v][clip_wm]scale2ref=flags=bicubic[outro_scaled][clip_ref]',
             ...audioFilters2,
           ])
           .outputOptions(outroMapOpts2)
