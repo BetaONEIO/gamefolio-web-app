@@ -24,7 +24,7 @@ export const getDemoUser = (): User => {
     discordUsername: "gamefolio_demo",
     epicUsername: "gamefolio_demo",
     nintendoUsername: "gamefolio_demo",
-    userType: "Streamer,Content Creator,Professional Gamer",
+    userType: null,
     ageRange: "25-34",
     authProvider: "local",
     externalId: null,
