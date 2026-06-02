@@ -535,7 +535,8 @@ export class VideoProcessor {
 
   /**
    * Generate a personalised outro video: dark background → logo fade+glow → @username fade-in.
-   * format: 'portrait' = 1080×1920 (9:16 for reels), 'landscape' = 1920×1080 (16:9 for clips).
+   * Always outputs 1080×1080 at 4 seconds; the download route scales it to match the clip.
+   * format parameter is kept for API compatibility but no longer affects canvas dimensions.
    * Returns the raw MP4 buffer (caller uploads to storage).
    */
   static async generateOutroVideo(username: string, userId: number, format: 'portrait' | 'landscape' = 'landscape'): Promise<Buffer> {
@@ -557,12 +558,20 @@ export class VideoProcessor {
       try { accessSync(audioPath); return true; } catch { return false; }
     })();
 
-    const canvasSize = format === 'portrait' ? '1080x1920' : '1920x1080';
+    // Square canvas — download route scales to clip dimensions via letter/pillarbox
+    const canvasSize = '1080x1080';
+    // Timing: logo fades in at 0.3 s over 0.8 s (fully visible at 1.1 s)
+    //         username fades in at 1.1 s (0.8 s after logo starts) over 0.8 s
+    const logoFadeStart = 0.3;
+    const logoFadeDur   = 0.8;
+    const userFadeStart = logoFadeStart + logoFadeDur; // 1.1 s
+    const userFadeDur   = 0.8;
+    const totalDur      = 4;
 
     return new Promise<Buffer>((resolve, reject) => {
       const cmd = (ffmpeg as any)()
-        // Input 0: 2.5-second solid dark background
-        .input(`color=c=0x0B1319:size=${canvasSize}:rate=30:d=2.5`)
+        // Input 0: 4-second solid dark background
+        .input(`color=c=0x0B1319:size=${canvasSize}:rate=30:d=${totalDur}`)
         .inputOptions(['-f', 'lavfi']);
 
       if (logoExists) {
@@ -576,7 +585,7 @@ export class VideoProcessor {
       }
 
       const audioFilter = audioExists
-        ? [`[${audioIdx}:a]adelay=400:all=1,atrim=duration=2.1,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[aout]`]
+        ? [`[${audioIdx}:a]adelay=400:all=1,atrim=duration=3.5,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[aout]`]
         : [];
 
       const filters: string[] = logoExists ? [
@@ -586,18 +595,18 @@ export class VideoProcessor {
         '[logo_raw]split=2[logo1][logo2]',
         // Blur second copy to create the glow halo
         '[logo2]gblur=sigma=22[glow_blur]',
-        // Fade both in: logo starts at 0.3 s, takes 0.8 s (fully visible by 1.1 s)
-        '[logo1]fade=t=in:st=0.3:d=0.8:alpha=1[logo_faded]',
-        '[glow_blur]fade=t=in:st=0.3:d=0.8:alpha=1[glow_faded]',
+        // Logo fades in at logoFadeStart s over logoFadeDur s
+        `[logo1]fade=t=in:st=${logoFadeStart}:d=${logoFadeDur}:alpha=1[logo_faded]`,
+        `[glow_blur]fade=t=in:st=${logoFadeStart}:d=${logoFadeDur}:alpha=1[glow_faded]`,
         // Composite: glow behind logo, both centred
         '[0:v][glow_faded]overlay=(W-w)/2:(H-h)/2-90[bg_glow]',
         '[bg_glow][logo_faded]overlay=(W-w)/2:(H-h)/2-90[with_logo]',
-        // Username text: same fade timing as logo (0.3 s start, 0.8 s duration)
-        `[with_logo]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+120:alpha='if(lt(t\\,0.3)\\,0\\,if(lt(t\\,1.1)\\,(t-0.3)/0.8\\,1))'[out]`,
+        // Username text fades in 0.8 s AFTER logo starts (i.e. once logo is fully visible)
+        `[with_logo]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+120:alpha='if(lt(t\\,${userFadeStart})\\,0\\,if(lt(t\\,${userFadeStart + userFadeDur})\\,(t-${userFadeStart})/${userFadeDur}\\,1))'[out]`,
         ...audioFilter,
       ] : [
-        // Fallback: no logo — just text
-        `[0:v]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+10:alpha='if(lt(t\\,0.3)\\,0\\,if(lt(t\\,1.1)\\,(t-0.3)/0.8\\,1))'[out]`,
+        // Fallback: no logo — just text fading in at userFadeStart
+        `[0:v]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+10:alpha='if(lt(t\\,${userFadeStart})\\,0\\,if(lt(t\\,${userFadeStart + userFadeDur})\\,(t-${userFadeStart})/${userFadeDur}\\,1))'[out]`,
         ...audioFilter,
       ];
 
@@ -607,7 +616,7 @@ export class VideoProcessor {
           '-map', '[out]',
           ...(audioExists ? ['-map', '[aout]', '-c:a', 'aac', '-ar', '44100'] : ['-an']),
           '-c:v', 'libx264',
-          '-t', '2.5',
+          '-t', `${totalDur}`,
           '-preset', 'slow',
           '-crf', '18',
           '-pix_fmt', 'yuv420p',
