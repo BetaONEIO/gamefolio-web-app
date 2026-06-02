@@ -398,13 +398,15 @@ async function checkMediaOwnerAccess(
 
   if (owner.isPrivate) {
     const requesterId = req.user?.id;
-    const isOwner = requesterId === ownerId;
+    // Use Number() on both sides — JWT auth returns id as a string while session
+    // auth returns a number; strict === would wrongly block the owner in JWT sessions.
+    const isOwner = requesterId != null && Number(requesterId) === Number(ownerId);
     if (!isOwner) {
       if (!requesterId) {
         res.status(403).json({ message: "This profile is private. Please log in and follow the user to see their content." });
         return false;
       }
-      const isFollowing = await storage.isFollowing(requesterId, ownerId);
+      const isFollowing = await storage.isFollowing(Number(requesterId), ownerId);
       if (!isFollowing) {
         res.status(403).json({ message: "This profile is private. Follow the user to see their content." });
         return false;
