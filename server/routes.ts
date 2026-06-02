@@ -4881,18 +4881,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // ── Step 2: Resolve the owner's pre-generated outro (owner downloads only) ──
       // Non-owners receive the watermarked clip with no outro appended.
       // If the owner has not yet generated an outro, skip silently (fail-open).
+      // The outro generator now outputs 1080×1080 (square) regardless of orientation;
+      // the scaler below handles letterbox/pillarbox to match the clip dimensions.
+      // We always use outroVideoPath as the canonical path, falling back to
+      // outroVideoPathPortrait only for users who stored an older portrait-specific outro.
       let outroSignedUrl: string | null = null;
       if (isOwner) {
         try {
           const clipOwner = await storage.getUser(clip.userId!);
           if (clipOwner) {
-            const cachedPath = clipIsPortrait
-              ? clipOwner.outroVideoPathPortrait
-              : clipOwner.outroVideoPath;
+            const cachedPath = clipOwner.outroVideoPath ?? clipOwner.outroVideoPathPortrait ?? null;
 
             if (cachedPath) {
               outroSignedUrl = await supabaseStorage.getSignedUrl(cachedPath, 3600);
-              console.log(`[outro] Using cached ${outroFormat} outro for user ${clip.userId}`);
+              console.log(`[outro] Using outro for user ${clip.userId}`);
             } else {
               console.log(`[outro] No outro found for user ${clip.userId} — downloading clip without outro`);
             }
