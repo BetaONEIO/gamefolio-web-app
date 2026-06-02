@@ -274,7 +274,7 @@ const ScreenshotUploadPage: React.FC = () => {
   };
 
   return (
-    <div className="container max-w-4xl mx-auto px-4 py-8">
+    <div className="container max-w-4xl mx-auto px-4 py-8 pb-28 md:pb-8">
       <h1 className="text-3xl font-bold mb-8">Upload Screenshots</h1>
       
       <Card>
