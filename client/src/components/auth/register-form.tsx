@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +38,8 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   });
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [usernameTimer, setUsernameTimer] = useState<NodeJS.Timeout | null>(null);
+  const usernameAbortRef = useRef<AbortController | null>(null);
+  const checkedUsernameRef = useRef<string>("");
   const [emailValid, setEmailValid] = useState<boolean | null>(null);
   const [passwordRequirements, setPasswordRequirements] = useState({
     length: false,
@@ -91,62 +93,53 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   };
 
   const checkUsernameAvailability = async (username: string) => {
+    // Local format validation — immediate, no network needed
+    if (username.length < 4 || username.length > 20) {
+      setUsernameStatus("invalid");
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      setUsernameStatus("invalid");
+      return;
+    }
+
+    // Cancel any in-flight check so a stale response can't overwrite a newer one
+    if (usernameAbortRef.current) {
+      usernameAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    usernameAbortRef.current = controller;
+    checkedUsernameRef.current = username;
+
     try {
-      // Check length (4-20 characters)
-      if (username.length < 4 || username.length > 20) {
-        setUsernameStatus("invalid");
-        return;
-      }
+      const response = await fetch(
+        `/api/auth/check-username?username=${encodeURIComponent(username)}`,
+        { signal: controller.signal }
+      );
 
-      // Check valid characters (letters, numbers, underscores only)
-      if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-        setUsernameStatus("invalid");
-        return;
-      }
-
-      // Check for profanity locally first for immediate feedback
-      const profaneWords = [
-        "fuck", "shit", "damn", "hell", "bitch", "ass", "bastard", "crap", 
-        "piss", "cock", "dick", "pussy", "tits", "whore", "slut", "fag",
-        "nigger", "nigga", "retard", "gay", "lesbian", "nazi", "hitler",
-        "kill", "die", "death", "murder", "rape", "sex", "porn", "nude"
-      ];
-
-      const lowerUsername = username.toLowerCase();
-      const containsProfanity = profaneWords.some(word => lowerUsername.includes(word));
-
-      if (containsProfanity) {
-        setUsernameStatus("invalid");
-        return;
-      }
-
-      // Make API call to check availability against actual database
-      const response = await fetch(`/api/auth/check-username?username=${encodeURIComponent(username)}`);
+      // Ignore if the input changed while this fetch was in flight
+      if (checkedUsernameRef.current !== username) return;
 
       if (response.ok) {
         const data = await response.json();
-        if (data.available) {
-          setUsernameStatus("available");
-        } else {
-          setUsernameStatus("taken");
-        }
+        setUsernameStatus(data.available ? "available" : "taken");
       } else {
-        const errorData = await response.json();
-        const errorMessage = errorData.message || '';
+        const errorData = await response.json().catch(() => ({ message: '' }));
+        const msg = (errorData.message || '').toLowerCase();
 
-        // Check if it's a format/validation error or username taken
-        if (errorMessage.includes('already taken') || errorMessage.includes('taken')) {
+        if (msg.includes('taken')) {
           setUsernameStatus("taken");
-        } else if (errorMessage.includes('characters') || errorMessage.includes('format') || errorMessage.includes('contain')) {
+        } else if (msg.includes('character') || msg.includes('format') || msg.includes('inappropriate') || msg.includes('invalid')) {
           setUsernameStatus("invalid");
         } else {
-          // Default to taken for any other 400 error
-          setUsernameStatus("taken");
+          // Unknown server error — let the server decide at submit time
+          setUsernameStatus("idle");
         }
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === 'AbortError') return; // intentionally cancelled
       console.error("Error checking username availability:", error);
-      // On error, allow the form to be submitted and let the server handle validation
+      // Network failure — fall back to idle so the server can validate at submit
       setUsernameStatus("idle");
     }
   };
@@ -193,14 +186,13 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
         clearTimeout(usernameTimer);
       }
 
-      if (value.length >= 3) {
+      if (value.length >= 4) {
         setUsernameStatus("checking");
         const timer = setTimeout(() => {
           checkUsernameAvailability(value);
-        }, 300); // Faster response time for better UX
+        }, 400);
         setUsernameTimer(timer);
       } else if (value.length > 0) {
-        // Show invalid immediately if too short
         setUsernameStatus("invalid");
       }
     }
@@ -221,21 +213,33 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
     if (usernameStatus === "taken") {
       toast({
-        title: "Error",
-        description: "Username is already taken. Please choose a different one.",
+        title: "Username taken",
+        description: "That username is already in use. Please choose a different one.",
         variant: "gamefolioError",
       });
       return;
     }
 
-    if (usernameStatus !== "available") {
+    if (usernameStatus === "invalid") {
       toast({
-        title: "Error",
-        description: "Please wait for username availability check to complete",
+        title: "Invalid username",
+        description: "Username must be 4–20 characters and contain only letters, numbers, and underscores.",
         variant: "gamefolioError",
       });
       return;
     }
+
+    if (usernameStatus === "checking") {
+      toast({
+        title: "Please wait",
+        description: "Still checking username availability — try again in a moment.",
+        variant: "gamefolioError",
+      });
+      return;
+    }
+
+    // "idle" means the availability check failed (network error) — the server will
+    // re-validate at registration time, so we allow submission to proceed.
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
