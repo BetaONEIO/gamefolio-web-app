@@ -561,8 +561,8 @@ export class VideoProcessor {
 
     return new Promise<Buffer>((resolve, reject) => {
       const cmd = (ffmpeg as any)()
-        // Input 0: 4-second solid dark background
-        .input(`color=c=0x0B1319:size=${canvasSize}:rate=30:d=4`)
+        // Input 0: 2.5-second solid dark background
+        .input(`color=c=0x0B1319:size=${canvasSize}:rate=30:d=2.5`)
         .inputOptions(['-f', 'lavfi']);
 
       if (logoExists) {
@@ -576,7 +576,7 @@ export class VideoProcessor {
       }
 
       const audioFilter = audioExists
-        ? [`[${audioIdx}:a]adelay=400:all=1,atrim=duration=3.6,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[aout]`]
+        ? [`[${audioIdx}:a]adelay=400:all=1,atrim=duration=2.1,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[aout]`]
         : [];
 
       const filters: string[] = logoExists ? [
@@ -586,18 +586,18 @@ export class VideoProcessor {
         '[logo_raw]split=2[logo1][logo2]',
         // Blur second copy to create the glow halo
         '[logo2]gblur=sigma=22[glow_blur]',
-        // Fade both in: logo starts at 0.4 s, takes 1.2 s
-        '[logo1]fade=t=in:st=0.4:d=1.2:alpha=1[logo_faded]',
-        '[glow_blur]fade=t=in:st=0.4:d=1.2:alpha=1[glow_faded]',
+        // Fade both in: logo starts at 0.3 s, takes 0.8 s (fully visible by 1.1 s)
+        '[logo1]fade=t=in:st=0.3:d=0.8:alpha=1[logo_faded]',
+        '[glow_blur]fade=t=in:st=0.3:d=0.8:alpha=1[glow_faded]',
         // Composite: glow behind logo, both centred
         '[0:v][glow_faded]overlay=(W-w)/2:(H-h)/2-90[bg_glow]',
         '[bg_glow][logo_faded]overlay=(W-w)/2:(H-h)/2-90[with_logo]',
-        // Username text: same fade timing as logo (0.4 s start, 1.2 s duration)
-        `[with_logo]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+120:alpha='if(lt(t\\,0.4)\\,0\\,if(lt(t\\,1.6)\\,(t-0.4)/1.2\\,1))'[out]`,
+        // Username text: same fade timing as logo (0.3 s start, 0.8 s duration)
+        `[with_logo]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+120:alpha='if(lt(t\\,0.3)\\,0\\,if(lt(t\\,1.1)\\,(t-0.3)/0.8\\,1))'[out]`,
         ...audioFilter,
       ] : [
         // Fallback: no logo — just text
-        `[0:v]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+10:alpha='if(lt(t\\,0.4)\\,0\\,if(lt(t\\,1.6)\\,(t-0.4)/1.2\\,1))'[out]`,
+        `[0:v]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+10:alpha='if(lt(t\\,0.3)\\,0\\,if(lt(t\\,1.1)\\,(t-0.3)/0.8\\,1))'[out]`,
         ...audioFilter,
       ];
 
@@ -607,7 +607,7 @@ export class VideoProcessor {
           '-map', '[out]',
           ...(audioExists ? ['-map', '[aout]', '-c:a', 'aac', '-ar', '44100'] : ['-an']),
           '-c:v', 'libx264',
-          '-t', '4',
+          '-t', '2.5',
           '-preset', 'slow',
           '-crf', '18',
           '-pix_fmt', 'yuv420p',
