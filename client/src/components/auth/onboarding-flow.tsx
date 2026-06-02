@@ -759,7 +759,7 @@ export default function OnboardingFlow({
                 <div className="hidden md:block">
                   <div className="rounded-2xl overflow-hidden border border-primary/30 relative h-full min-h-[420px] bg-gradient-to-b from-primary/10 to-[#071013]">
                     <img 
-                      src="/attached_assets/Gamefolio logo.png" 
+                      src="/attached_assets/gamefolio-logo-green.png" 
                       alt="Gamefolio" 
                       className="w-full h-full object-cover absolute inset-0"
                     />
