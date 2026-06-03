@@ -64,9 +64,12 @@ function XPIcon() {
   );
 }
 
+const seedRailItems: RailItem[] = SEED_ITEMS.map(u => ({ ...u, uid: u.id, status: 'visible' as ItemStatus }));
+const seedKeySet = new Set<string>(SEED_ITEMS.map(u => u.id));
+
 export function EcosystemActivityRail() {
-  const [items, setItems] = useState<RailItem[]>([]);
-  const knownKeys = useRef(new Set<string>());
+  const [items, setItems] = useState<RailItem[]>(seedRailItems);
+  const knownKeys = useRef(seedKeySet);
   const queue = useRef<FeedItem[]>([]);
   const animating = useRef(false);
 
@@ -102,28 +105,8 @@ export function EcosystemActivityRail() {
     }, ANIM_DURATION + 50);
   }, []);
 
-  // Seed with placeholder items immediately so the rail always renders
-  useEffect(() => {
-    if (knownKeys.current.size === 0) {
-      const initial = SEED_ITEMS.map(u => ({ ...u, uid: u.id, status: 'visible' as ItemStatus }));
-      setItems(initial);
-      SEED_ITEMS.forEach(u => knownKeys.current.add(u.id));
-    }
-  }, []);
-
   useEffect(() => {
     if (!feedItems.length) return;
-
-    if (knownKeys.current.size === 0) {
-      const initial = feedItems.slice(0, MAX_ITEMS).map(u => ({
-        ...u,
-        uid: u.id,
-        status: 'visible' as ItemStatus,
-      }));
-      setItems(initial);
-      feedItems.forEach(u => knownKeys.current.add(u.id));
-      return;
-    }
 
     const newItems = feedItems.filter(u => !knownKeys.current.has(u.id));
     newItems.forEach(u => knownKeys.current.add(u.id));
