@@ -38,6 +38,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   const [usernameTimer, setUsernameTimer] = useState<NodeJS.Timeout | null>(null);
   const usernameAbortRef = useRef<AbortController | null>(null);
   const checkedUsernameRef = useRef<string>("");
+  const dateInputRef = useRef<HTMLInputElement | null>(null);
   const [emailValid, setEmailValid] = useState<boolean | null>(null);
   const [passwordRequirements, setPasswordRequirements] = useState({
     length: false,
@@ -417,37 +418,54 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <div className="space-y-2">
         <Label className="text-foreground">Date of Birth</Label>
-        <div className="relative">
-          <input
-            type="date"
-            value={formData.dateOfBirth}
-            onChange={(e) => {
-              const date = e.target.value;
-              setFormData((prev) => ({ ...prev, dateOfBirth: date }));
-              setFieldErrors((prev) => ({ ...prev, dateOfBirth: undefined }));
-            }}
-            max={(() => {
-              const today = new Date();
-              const yyyy = today.getFullYear();
-              const mm = String(today.getMonth() + 1).padStart(2, "0");
-              const dd = String(today.getDate()).padStart(2, "0");
-              return `${yyyy}-${mm}-${dd}`;
-            })()}
-            min="1900-01-01"
-            disabled={isLoading}
-            className={cn(
-              "w-full h-10 px-4 py-2 text-sm rounded-md border border-input bg-background font-normal justify-start text-left cursor-pointer hover:bg-accent/50",
-              !formData.dateOfBirth && "text-muted-foreground"
-            )}
-            style={{ colorScheme: 'dark' }}
-          />
-          <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none opacity-50" />
-          {!formData.dateOfBirth && (
-            <span className="absolute left-10 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">
-              Select your date of birth
-            </span>
+        <input
+          type="date"
+          ref={dateInputRef}
+          value={formData.dateOfBirth}
+          onChange={(e) => {
+            const date = e.target.value;
+            setFormData((prev) => ({ ...prev, dateOfBirth: date }));
+            setFieldErrors((prev) => ({ ...prev, dateOfBirth: undefined }));
+          }}
+          max={(() => {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, "0");
+            const dd = String(today.getDate()).padStart(2, "0");
+            return `${yyyy}-${mm}-${dd}`;
+          })()}
+          min="1900-01-01"
+          disabled={isLoading}
+          className="absolute opacity-0 w-0 h-0 overflow-hidden pointer-events-none"
+          aria-hidden="true"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isLoading}
+          onClick={() => {
+            const input = dateInputRef.current;
+            if (!input) return;
+            try {
+              if (typeof input.showPicker === 'function') {
+                input.showPicker();
+              } else {
+                input.focus();
+              }
+            } catch {
+              input.focus();
+            }
+          }}
+          className={cn(
+            "w-full justify-start text-left font-normal bg-background border-input hover:bg-accent/50",
+            !formData.dateOfBirth && "text-muted-foreground"
           )}
-        </div>
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {formData.dateOfBirth
+            ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
+            : "Select your date of birth"}
+        </Button>
         <p className="text-xs text-muted-foreground">You must be at least 13 years old to sign up</p>
         <FieldError error={fieldErrors.dateOfBirth} />
       </div>
