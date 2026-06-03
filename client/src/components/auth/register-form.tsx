@@ -450,7 +450,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
             })()}
             min="1900-01-01"
             disabled={isLoading}
-            className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm cursor-pointer hover:border-[#B7FF1A]/50 hover:bg-[#B7FF1A]/5 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF1A]/50 focus-visible:border-[#B7FF1A]/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ color: "transparent", caretColor: "transparent" }}
           />
         </div>
