@@ -436,7 +436,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
             : "Select your date of birth"}
         </Button>
         {datePickerOpen && (
-          <div className="mt-1 rounded-md border border-input bg-background shadow-lg">
+          <div className="mt-1 rounded-md border border-input bg-background shadow-lg w-full">
             <Calendar
               mode="single"
               selected={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : undefined}
@@ -453,6 +453,17 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
               disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
               defaultMonth={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : new Date(2000, 0)}
               initialFocus
+              className="w-full"
+              classNames={{
+                months: "w-full",
+                month: "w-full space-y-3",
+                table: "w-full border-collapse",
+                head_row: "flex w-full",
+                head_cell: "text-muted-foreground font-normal text-[0.8rem] flex-1 text-center",
+                row: "flex w-full mt-2",
+                cell: "flex-1 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                day: "w-full h-9 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors",
+              }}
             />
           </div>
         )}
