@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { GoogleAuthButton } from "./GoogleAuthButton";
@@ -38,7 +40,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   const [usernameTimer, setUsernameTimer] = useState<NodeJS.Timeout | null>(null);
   const usernameAbortRef = useRef<AbortController | null>(null);
   const checkedUsernameRef = useRef<string>("");
-  const dateInputRef = useRef<HTMLInputElement | null>(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [emailValid, setEmailValid] = useState<boolean | null>(null);
   const [passwordRequirements, setPasswordRequirements] = useState({
     length: false,
@@ -418,42 +420,43 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <div className="space-y-2">
         <Label className="text-foreground">Date of Birth</Label>
-        <div className="relative w-full">
-          {/* Non-interactive overlay showing custom label — always on top visually */}
-          <div
-            className="pointer-events-none absolute inset-0 z-10 flex items-center px-3"
-            aria-hidden="true"
-          >
-            <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-foreground" />
-            <span className={cn("text-sm", !formData.dateOfBirth && "text-muted-foreground")}>
+        <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isLoading}
+              className={cn(
+                "w-full justify-start text-left font-normal bg-background border-input hover:bg-accent/50",
+                !formData.dateOfBirth && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
               {formData.dateOfBirth
                 ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
                 : "Select your date of birth"}
-            </span>
-          </div>
-          {/* Native date input styled to match app theme — interactive on all platforms */}
-          <input
-            type="date"
-            ref={dateInputRef}
-            value={formData.dateOfBirth}
-            onChange={(e) => {
-              const date = e.target.value;
-              setFormData((prev) => ({ ...prev, dateOfBirth: date }));
-              setFieldErrors((prev) => ({ ...prev, dateOfBirth: undefined }));
-            }}
-            max={(() => {
-              const today = new Date();
-              const yyyy = today.getFullYear();
-              const mm = String(today.getMonth() + 1).padStart(2, "0");
-              const dd = String(today.getDate()).padStart(2, "0");
-              return `${yyyy}-${mm}-${dd}`;
-            })()}
-            min="1900-01-01"
-            disabled={isLoading}
-            className="date-picker-field w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm cursor-pointer relative focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ WebkitAppearance: "none", appearance: "none" }}
-          />
-        </div>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0 bg-background border border-input" align="start">
+            <Calendar
+              mode="single"
+              selected={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : undefined}
+              onSelect={(date) => {
+                if (date) {
+                  const yyyy = date.getFullYear();
+                  const mm = String(date.getMonth() + 1).padStart(2, "0");
+                  const dd = String(date.getDate()).padStart(2, "0");
+                  setFormData((prev) => ({ ...prev, dateOfBirth: `${yyyy}-${mm}-${dd}` }));
+                  setFieldErrors((prev) => ({ ...prev, dateOfBirth: undefined }));
+                }
+                setDatePickerOpen(false);
+              }}
+              disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+              defaultMonth={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : new Date(2000, 0)}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
         <p className="text-xs text-muted-foreground">You must be at least 13 years old to sign up</p>
         <FieldError error={fieldErrors.dateOfBirth} />
       </div>
