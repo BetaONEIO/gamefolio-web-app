@@ -565,7 +565,7 @@ const HomePage = () => {
       </section>
 
       {/* Ecosystem Activity Rail */}
-      {/* <EcosystemActivityRail /> */}
+      <EcosystemActivityRail />
       
       {/* Latest Clips Section */}
       <section className="px-0">
