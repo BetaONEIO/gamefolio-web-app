@@ -9,8 +9,6 @@ import { GoogleAuthButton } from "./GoogleAuthButton";
 import { DiscordAuthButton } from "./DiscordAuthButton";
 import { PasswordRequirementsDisplay } from "@/components/ui/password-requirements";
 import { FieldError, FieldStatus } from "@/components/ui/field-error";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -419,66 +417,37 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <div className="space-y-2">
         <Label className="text-foreground">Date of Birth</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isLoading}
-              className={cn(
-                "w-full justify-start text-left font-normal bg-background border-input hover:bg-accent/50",
-                !formData.dateOfBirth && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {formData.dateOfBirth
-                ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
-                : "Select your date of birth"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 bg-gray-900 border-gray-700 z-[200001]" align="center" sideOffset={4}>
-            <Calendar
-              mode="single"
-              selected={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : undefined}
-              onSelect={(date) => {
-                if (date) {
-                  const yyyy = date.getFullYear();
-                  const mm = String(date.getMonth() + 1).padStart(2, "0");
-                  const dd = String(date.getDate()).padStart(2, "0");
-                  setFormData((prev) => ({ ...prev, dateOfBirth: `${yyyy}-${mm}-${dd}` }));
-                  setFieldErrors((prev) => ({ ...prev, dateOfBirth: undefined }));
-                }
-              }}
-              onMonthChange={(newMonth) => {
-                if (formData.dateOfBirth) {
-                  const currentDate = new Date(formData.dateOfBirth + "T00:00:00");
-                  const day = currentDate.getDate();
-                  const daysInNewMonth = new Date(newMonth.getFullYear(), newMonth.getMonth() + 1, 0).getDate();
-                  const clampedDay = Math.min(day, daysInNewMonth);
-                  const yyyy = newMonth.getFullYear();
-                  const mm = String(newMonth.getMonth() + 1).padStart(2, "0");
-                  const dd = String(clampedDay).padStart(2, "0");
-                  setFormData((prev) => ({ ...prev, dateOfBirth: `${yyyy}-${mm}-${dd}` }));
-                }
-              }}
-              disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-              month={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : undefined}
-              defaultMonth={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : new Date(new Date().getFullYear() - 18, 0, 1)}
-              captionLayout="dropdown-buttons"
-              fromYear={1900}
-              toYear={new Date().getFullYear()}
-              className="rounded-md"
-              classNames={{
-                caption_label: "hidden",
-                caption_dropdowns: "flex gap-2 justify-center",
-                dropdown: "bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary",
-                dropdown_month: "",
-                dropdown_year: "",
-                vhidden: "sr-only",
-              }}
-            />
-          </PopoverContent>
-        </Popover>
+        <div className="relative">
+          <input
+            type="date"
+            value={formData.dateOfBirth}
+            onChange={(e) => {
+              const date = e.target.value;
+              setFormData((prev) => ({ ...prev, dateOfBirth: date }));
+              setFieldErrors((prev) => ({ ...prev, dateOfBirth: undefined }));
+            }}
+            max={(() => {
+              const today = new Date();
+              const yyyy = today.getFullYear();
+              const mm = String(today.getMonth() + 1).padStart(2, "0");
+              const dd = String(today.getDate()).padStart(2, "0");
+              return `${yyyy}-${mm}-${dd}`;
+            })()}
+            min="1900-01-01"
+            disabled={isLoading}
+            className={cn(
+              "w-full h-10 px-4 py-2 text-sm rounded-md border border-input bg-background font-normal justify-start text-left cursor-pointer hover:bg-accent/50",
+              !formData.dateOfBirth && "text-muted-foreground"
+            )}
+            style={{ colorScheme: 'dark' }}
+          />
+          <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none opacity-50" />
+          {!formData.dateOfBirth && (
+            <span className="absolute left-10 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">
+              Select your date of birth
+            </span>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground">You must be at least 13 years old to sign up</p>
         <FieldError error={fieldErrors.dateOfBirth} />
       </div>
