@@ -418,23 +418,20 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <div className="space-y-2">
         <Label className="text-foreground">Date of Birth</Label>
-        <div className="relative">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isLoading}
-            className={cn(
-              "w-full justify-start text-left font-normal bg-background border-input hover:bg-accent/50 pointer-events-none",
-              !formData.dateOfBirth && "text-muted-foreground"
-            )}
-            tabIndex={-1}
+        <div className="relative w-full">
+          {/* Non-interactive custom label overlay */}
+          <div
+            className="pointer-events-none absolute inset-0 flex items-center px-3 z-10"
             aria-hidden="true"
           >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {formData.dateOfBirth
-              ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
-              : "Select your date of birth"}
-          </Button>
+            <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-foreground" />
+            <span className={cn("text-sm", !formData.dateOfBirth && "text-muted-foreground")}>
+              {formData.dateOfBirth
+                ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
+                : "Select your date of birth"}
+            </span>
+          </div>
+          {/* Native date input — text hidden so overlay shows, but fully interactive */}
           <input
             type="date"
             ref={dateInputRef}
@@ -453,8 +450,8 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
             })()}
             min="1900-01-01"
             disabled={isLoading}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            style={{ WebkitAppearance: "none" }}
+            className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ color: "transparent", caretColor: "transparent" }}
           />
         </div>
         <p className="text-xs text-muted-foreground">You must be at least 13 years old to sign up</p>
