@@ -453,8 +453,16 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
             })()}
             min="1900-01-01"
             disabled={isLoading}
-            className="absolute inset-0 w-full h-full cursor-pointer"
-            style={{ color: "transparent", caretColor: "transparent", background: "transparent", border: "none", WebkitAppearance: "none" }}
+            className="absolute inset-0 w-full h-full cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+            style={{
+              color: "transparent",
+              caretColor: "transparent",
+              background: "transparent",
+              border: "none",
+              outline: "none",
+              WebkitAppearance: "none",
+              WebkitTapHighlightColor: "transparent",
+            }}
           />
         </div>
         <p className="text-xs text-muted-foreground">You must be at least 13 years old to sign up</p>
