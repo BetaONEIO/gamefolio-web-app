@@ -418,23 +418,20 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <div className="space-y-2">
         <Label className="text-foreground">Date of Birth</Label>
-        <div className="relative">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isLoading}
-            className={cn(
-              "w-full justify-start text-left font-normal bg-background border-input hover:bg-accent/50 pointer-events-none",
-              !formData.dateOfBirth && "text-muted-foreground"
-            )}
-            tabIndex={-1}
+        <div className="relative w-full">
+          {/* Non-interactive overlay showing custom label — always on top visually */}
+          <div
+            className="pointer-events-none absolute inset-0 z-10 flex items-center px-3"
             aria-hidden="true"
           >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {formData.dateOfBirth
-              ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
-              : "Select your date of birth"}
-          </Button>
+            <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-foreground" />
+            <span className={cn("text-sm", !formData.dateOfBirth && "text-muted-foreground")}>
+              {formData.dateOfBirth
+                ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
+                : "Select your date of birth"}
+            </span>
+          </div>
+          {/* Native date input styled to match app theme — interactive on all platforms */}
           <input
             type="date"
             ref={dateInputRef}
@@ -453,16 +450,8 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
             })()}
             min="1900-01-01"
             disabled={isLoading}
-            className="absolute inset-0 w-full h-full cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-            style={{
-              color: "transparent",
-              caretColor: "transparent",
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              WebkitAppearance: "none",
-              WebkitTapHighlightColor: "transparent",
-            }}
+            className="date-picker-field w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm cursor-pointer relative focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ WebkitAppearance: "none", appearance: "none" }}
           />
         </div>
         <p className="text-xs text-muted-foreground">You must be at least 13 years old to sign up</p>

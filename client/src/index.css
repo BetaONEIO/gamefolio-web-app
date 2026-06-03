@@ -213,6 +213,37 @@
   color: #B7FF1A;
 }
 
+/* Date picker field — keeps color transparent at all times so the
+   custom overlay label is always visible instead of the native date text */
+.date-picker-field,
+.date-picker-field:focus,
+.date-picker-field:focus-visible,
+.date-picker-field:active {
+  color: transparent !important;
+  caret-color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  animation: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Expand the native calendar icon to cover the entire input area on desktop */
+.date-picker-field::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Suppress iOS inner shadow on inputs */
+.date-picker-field::-webkit-inner-spin-button,
+.date-picker-field::-webkit-clear-button {
+  display: none;
+}
+
 .auth-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: rgba(183, 255, 26, 0.4) transparent;
