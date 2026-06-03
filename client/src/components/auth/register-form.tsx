@@ -420,24 +420,23 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <div className="space-y-2">
         <Label className="text-foreground">Date of Birth</Label>
-        <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isLoading}
-              className={cn(
-                "w-full justify-start text-left font-normal bg-background border-input hover:bg-accent/50",
-                !formData.dateOfBirth && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {formData.dateOfBirth
-                ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
-                : "Select your date of birth"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 bg-background border border-input z-[9999]" align="start">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isLoading}
+          onClick={() => setDatePickerOpen((o) => !o)}
+          className={cn(
+            "w-full justify-start text-left font-normal bg-background border-input hover:bg-accent/50",
+            !formData.dateOfBirth && "text-muted-foreground"
+          )}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {formData.dateOfBirth
+            ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
+            : "Select your date of birth"}
+        </Button>
+        {datePickerOpen && (
+          <div className="mt-1 rounded-md border border-input bg-background shadow-lg">
             <Calendar
               mode="single"
               selected={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : undefined}
@@ -455,8 +454,8 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
               defaultMonth={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : new Date(2000, 0)}
               initialFocus
             />
-          </PopoverContent>
-        </Popover>
+          </div>
+        )}
         <p className="text-xs text-muted-foreground">You must be at least 13 years old to sign up</p>
         <FieldError error={fieldErrors.dateOfBirth} />
       </div>
