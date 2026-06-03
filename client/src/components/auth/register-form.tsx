@@ -435,7 +435,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                 : "Select your date of birth"}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 bg-gray-900 border-gray-700" align="center" sideOffset={4}>
+          <PopoverContent className="w-auto p-0 bg-gray-900 border-gray-700 z-[200001]" align="center" sideOffset={4}>
             <Calendar
               mode="single"
               selected={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : undefined}
