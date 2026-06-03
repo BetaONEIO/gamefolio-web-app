@@ -419,6 +419,22 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       <div className="space-y-2">
         <Label className="text-foreground">Date of Birth</Label>
         <div className="relative">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isLoading}
+            className={cn(
+              "w-full justify-start text-left font-normal bg-background border-input hover:bg-accent/50 pointer-events-none",
+              !formData.dateOfBirth && "text-muted-foreground"
+            )}
+            tabIndex={-1}
+            aria-hidden="true"
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {formData.dateOfBirth
+              ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
+              : "Select your date of birth"}
+          </Button>
           <input
             type="date"
             ref={dateInputRef}
@@ -437,37 +453,9 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
             })()}
             min="1900-01-01"
             disabled={isLoading}
-            tabIndex={-1}
-            className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
-            aria-hidden="true"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            style={{ WebkitAppearance: "none" }}
           />
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isLoading}
-            onClick={() => {
-              const input = dateInputRef.current;
-              if (!input) return;
-              try {
-                if (typeof input.showPicker === 'function') {
-                  input.showPicker();
-                } else {
-                  input.focus();
-                }
-              } catch {
-                input.focus();
-              }
-            }}
-            className={cn(
-              "w-full justify-start text-left font-normal bg-background border-input hover:bg-accent/50",
-              !formData.dateOfBirth && "text-muted-foreground"
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {formData.dateOfBirth
-              ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
-              : "Select your date of birth"}
-          </Button>
         </div>
         <p className="text-xs text-muted-foreground">You must be at least 13 years old to sign up</p>
         <FieldError error={fieldErrors.dateOfBirth} />
