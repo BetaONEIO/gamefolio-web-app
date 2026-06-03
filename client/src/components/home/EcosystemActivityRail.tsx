@@ -32,6 +32,15 @@ const KIND_EMOJI: Record<EventKind, string> = {
 const MAX_ITEMS = 8;
 const ANIM_DURATION = 450;
 
+const SEED_ITEMS: FeedItem[] = [
+  { id: 'seed-1', kind: 'xp',      username: 'gamer',   text: 'Someone earned +200 XP from uploading' },
+  { id: 'seed-2', kind: 'streak',  username: 'player',  text: 'A player is on a 7-day upload streak 🔥' },
+  { id: 'seed-3', kind: 'levelup', username: 'pro',     text: 'A pro is #1 this month · 4,200 XP' },
+  { id: 'seed-4', kind: 'xp',      username: 'clip',    text: 'Someone earned +25 XP daily login bonus' },
+  { id: 'seed-5', kind: 'follow',  username: 'fan',     text: 'New players are joining the community' },
+  { id: 'seed-6', kind: 'trending',username: 'rising',  text: 'Gamefolio is growing — join today!' },
+];
+
 function XPIcon() {
   return (
     <span
@@ -93,6 +102,15 @@ export function EcosystemActivityRail() {
     }, ANIM_DURATION + 50);
   }, []);
 
+  // Seed with placeholder items immediately so the rail always renders
+  useEffect(() => {
+    if (knownKeys.current.size === 0) {
+      const initial = SEED_ITEMS.map(u => ({ ...u, uid: u.id, status: 'visible' as ItemStatus }));
+      setItems(initial);
+      SEED_ITEMS.forEach(u => knownKeys.current.add(u.id));
+    }
+  }, []);
+
   useEffect(() => {
     if (!feedItems.length) return;
 
@@ -115,8 +133,6 @@ export function EcosystemActivityRail() {
       processQueue();
     }
   }, [feedItems, processQueue]);
-
-  if (items.length === 0) return null;
 
   return (
     <>
