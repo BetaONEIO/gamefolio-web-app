@@ -3,14 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { GoogleAuthButton } from "./GoogleAuthButton";
 import { DiscordAuthButton } from "./DiscordAuthButton";
 import { PasswordRequirementsDisplay } from "@/components/ui/password-requirements";
 import { FieldError, FieldStatus } from "@/components/ui/field-error";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -40,6 +40,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   const [usernameTimer, setUsernameTimer] = useState<NodeJS.Timeout | null>(null);
   const usernameAbortRef = useRef<AbortController | null>(null);
   const checkedUsernameRef = useRef<string>("");
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [emailValid, setEmailValid] = useState<boolean | null>(null);
   const [passwordRequirements, setPasswordRequirements] = useState({
     length: false,
@@ -419,23 +420,23 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <div className="space-y-2">
         <Label className="text-foreground">Date of Birth</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              disabled={isLoading}
-              className={cn(
-                "w-full justify-start text-left font-normal bg-background border-input hover:bg-accent/50",
-                !formData.dateOfBirth && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {formData.dateOfBirth
-                ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
-                : "Select your date of birth"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 bg-gray-900 border-gray-700" align="center" sideOffset={4}>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isLoading}
+          onClick={() => setDatePickerOpen((o) => !o)}
+          className={cn(
+            "w-full justify-start text-left font-normal bg-background border-input hover:bg-accent/50",
+            !formData.dateOfBirth && "text-muted-foreground"
+          )}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {formData.dateOfBirth
+            ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
+            : "Select your date of birth"}
+        </Button>
+        {datePickerOpen && (
+          <div className="mt-1 rounded-md border border-input bg-background shadow-lg w-full">
             <Calendar
               mode="single"
               selected={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : undefined}
@@ -447,37 +448,25 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                   setFormData((prev) => ({ ...prev, dateOfBirth: `${yyyy}-${mm}-${dd}` }));
                   setFieldErrors((prev) => ({ ...prev, dateOfBirth: undefined }));
                 }
-              }}
-              onMonthChange={(newMonth) => {
-                if (formData.dateOfBirth) {
-                  const currentDate = new Date(formData.dateOfBirth + "T00:00:00");
-                  const day = currentDate.getDate();
-                  const daysInNewMonth = new Date(newMonth.getFullYear(), newMonth.getMonth() + 1, 0).getDate();
-                  const clampedDay = Math.min(day, daysInNewMonth);
-                  const yyyy = newMonth.getFullYear();
-                  const mm = String(newMonth.getMonth() + 1).padStart(2, "0");
-                  const dd = String(clampedDay).padStart(2, "0");
-                  setFormData((prev) => ({ ...prev, dateOfBirth: `${yyyy}-${mm}-${dd}` }));
-                }
+                setDatePickerOpen(false);
               }}
               disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-              month={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : undefined}
-              defaultMonth={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : new Date(new Date().getFullYear() - 18, 0, 1)}
-              captionLayout="dropdown-buttons"
-              fromYear={1900}
-              toYear={new Date().getFullYear()}
-              className="rounded-md"
+              defaultMonth={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : new Date(2000, 0)}
+              initialFocus
+              className="w-full"
               classNames={{
-                caption_label: "hidden",
-                caption_dropdowns: "flex gap-2 justify-center",
-                dropdown: "bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary",
-                dropdown_month: "",
-                dropdown_year: "",
-                vhidden: "sr-only",
+                months: "w-full",
+                month: "w-full space-y-3",
+                table: "w-full border-collapse",
+                head_row: "flex w-full",
+                head_cell: "text-muted-foreground font-normal text-[0.8rem] flex-1 text-center",
+                row: "flex w-full mt-2",
+                cell: "flex-1 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                day: "w-full h-9 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors",
               }}
             />
-          </PopoverContent>
-        </Popover>
+          </div>
+        )}
         <p className="text-xs text-muted-foreground">You must be at least 13 years old to sign up</p>
         <FieldError error={fieldErrors.dateOfBirth} />
       </div>
