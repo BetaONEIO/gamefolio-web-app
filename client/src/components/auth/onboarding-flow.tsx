@@ -179,7 +179,7 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser }: OnboardingStepIn
   const steps = isGoogleUser ? allSteps : allSteps.filter(step => step.id !== OnboardingStep.Username);
 
   return (
-    <div className="mb-8">
+    <div className="mb-8 ob-step-indicator">
       <div className="flex items-center">
         {steps.map((step, index) => (
           <div key={step.id} className={`flex items-center ${index < steps.length - 1 ? 'flex-1' : ''}`}>
@@ -188,7 +188,7 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser }: OnboardingStepIn
                 currentStep > step.id
                   ? "bg-primary/20 border-primary text-primary"
                   : currentStep === step.id
-                  ? "bg-primary border-primary text-white"
+                  ? "bg-primary border-primary text-white ob-step-active-glow"
                   : "bg-[#0B1218] border-primary/20 text-gray-400"
               }`}
             >
@@ -756,8 +756,8 @@ export default function OnboardingFlow({
           <div className="flex flex-col flex-1 min-h-0">
             <div className="flex-1 overflow-y-auto">
               <div className="flex flex-col md:grid md:grid-cols-2 md:gap-8">
-                {/* Left side - Full-height image card with overlay text */}
-                <div className="hidden md:block">
+                {/* Left side - Full-height image card with overlay text (desktop only) */}
+                <div className="hidden md:block ob-fade-up" style={{ animationDelay: '0ms' }}>
                   <div className="rounded-2xl overflow-hidden border border-primary/30 relative h-full min-h-[420px] bg-gradient-to-b from-primary/10 to-[#071013]">
                     <img 
                       src="/attached_assets/gamefolio-logo-green.png" 
@@ -784,15 +784,20 @@ export default function OnboardingFlow({
                 <div className="flex flex-col">
                   {/* Mobile-only header */}
                   <div className="md:hidden mb-6">
-                    <div className="flex justify-center mb-5">
+                    <div className="flex justify-center mb-5 ob-logo">
                       <GamefolioIcon glow={true} className="w-28 h-28" />
                     </div>
-                    <h2 className="text-2xl font-bold text-white mb-2">Welcome to <span className="text-primary">Gamefolio</span></h2>
-                    <p className="text-gray-300">Your personal gaming portfolio, all in one place.</p>
+                    <h2 className="text-2xl font-bold text-white mb-2 ob-fade-up" style={{ animationDelay: '600ms' }}>Welcome to <span className="text-primary">Gamefolio</span></h2>
+                    <p className="text-gray-300 ob-fade-up-slow" style={{ animationDelay: '1000ms' }}>Your personal gaming portfolio, all in one place.</p>
                   </div>
 
+                  {/* Desktop heading (right column) */}
+                  <h2 className="hidden md:block text-2xl font-bold text-white mb-1 ob-fade-up" style={{ animationDelay: '200ms' }}>
+                    Everything you need
+                  </h2>
+
                   <div className="space-y-5">
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-4 ob-fade-up" style={{ animationDelay: '1300ms' }}>
                       <div className="w-[60px] h-[60px] rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
                         <GamefolioProfileIcon className="h-7 w-7 text-primary" />
                       </div>
@@ -802,7 +807,7 @@ export default function OnboardingFlow({
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-4 ob-fade-up" style={{ animationDelay: '1450ms' }}>
                       <div className="w-[60px] h-[60px] rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
                         <GamefolioLeaderboardIcon className="h-7 w-7 text-primary" />
                       </div>
@@ -812,7 +817,7 @@ export default function OnboardingFlow({
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-4 ob-fade-up" style={{ animationDelay: '1600ms' }}>
                       <div className="w-[60px] h-[60px] rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
                         <GamefolioExploreIcon className="h-7 w-7 text-primary" />
                       </div>
@@ -822,7 +827,7 @@ export default function OnboardingFlow({
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-4 ob-fade-up" style={{ animationDelay: '1750ms' }}>
                       <div className="w-[60px] h-[60px] rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
                         <GamefolioWalletIcon className="h-7 w-7 text-primary" />
                       </div>
@@ -836,9 +841,11 @@ export default function OnboardingFlow({
               </div>
             </div>
 
-            <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-white text-base font-semibold py-6 mt-auto rounded-xl shadow-[0_0_20px_rgba(183, 255, 26,0.3)] justify-center">
-              Get Started <ArrowRight className="h-5 w-5 ml-2" />
-            </Button>
+            <div className="ob-cta mt-auto" style={{ animationDelay: '1900ms' }}>
+              <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-white text-base font-semibold py-6 rounded-xl justify-center">
+                Get Started <ArrowRight className="h-5 w-5 ml-2" />
+              </Button>
+            </div>
           </div>
         );
 
