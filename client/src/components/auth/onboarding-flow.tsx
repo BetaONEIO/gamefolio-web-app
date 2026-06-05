@@ -789,8 +789,8 @@ export default function OnboardingFlow({
 
                   <div className="space-y-5">
                     <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                        <GamefolioProfileIcon className="h-5 w-5 text-primary" />
+                      <div className="w-[60px] h-[60px] rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
+                        <GamefolioProfileIcon className="h-7 w-7 text-primary" />
                       </div>
                       <div>
                         <h3 className="font-bold text-white text-[15px]">Build your gaming portfolio</h3>
@@ -799,8 +799,8 @@ export default function OnboardingFlow({
                     </div>
 
                     <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                        <GamefolioLeaderboardIcon className="h-5 w-5 text-primary" />
+                      <div className="w-[60px] h-[60px] rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
+                        <GamefolioLeaderboardIcon className="h-7 w-7 text-primary" />
                       </div>
                       <div>
                         <h3 className="font-bold text-white text-[15px]">Earn XP and level up</h3>
@@ -809,8 +809,8 @@ export default function OnboardingFlow({
                     </div>
 
                     <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                        <GamefolioExploreIcon className="h-5 w-5 text-primary" />
+                      <div className="w-[60px] h-[60px] rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
+                        <GamefolioExploreIcon className="h-7 w-7 text-primary" />
                       </div>
                       <div>
                         <h3 className="font-bold text-white text-[15px]">Connect and share</h3>
@@ -819,8 +819,8 @@ export default function OnboardingFlow({
                     </div>
 
                     <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                        <GamefolioWalletIcon className="h-5 w-5 text-primary" />
+                      <div className="w-[60px] h-[60px] rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center flex-shrink-0">
+                        <GamefolioWalletIcon className="h-7 w-7 text-primary" />
                       </div>
                       <div>
                         <h3 className="font-bold text-white text-[15px]">Collect NFTs & GF Tokens</h3>
@@ -832,7 +832,7 @@ export default function OnboardingFlow({
               </div>
             </div>
 
-            <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-white text-base font-semibold py-6 mt-auto pt-8 rounded-xl shadow-[0_0_20px_rgba(183, 255, 26,0.3)]">
+            <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-white text-base font-semibold py-6 mt-auto rounded-xl shadow-[0_0_20px_rgba(183, 255, 26,0.3)] justify-center">
               Get Started <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
           </div>
