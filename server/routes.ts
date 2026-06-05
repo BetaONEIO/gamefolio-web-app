@@ -12391,18 +12391,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Credit 100 GFT welcome reward to new wallet (on-chain transfer)
+      let gftReward: { success: boolean; txHash?: string; error?: string } | undefined;
+      if (!result.sweepTxHash && !user.welcomePackClaimed) {
+        const { transferGfTokens } = await import('./gf-token-service');
+        gftReward = await transferGfTokens(walletAddress, 100);
+        if (gftReward.success) {
+          console.log(`[Onboarding] 100 GFT welcome reward sent to ${walletAddress} (tx: ${gftReward.txHash})`);
+        } else {
+          console.error(`[Onboarding] Failed to send 100 GFT welcome reward: ${gftReward.error}`);
+        }
+      }
+
       console.log(`Wallet created for user ${userId}: ${walletAddress}`);
 
       res.json({
         address: walletAddress,
         chain: 'skale-nebula-testnet',
-        message: result.sweepTxHash
-          ? `Wallet created. ${result.sweepAmount} GFT moved from your previous wallet.`
-          : "Wallet created successfully",
+        message: gftReward?.success
+          ? "Wallet created and 100 GFT welcome reward sent!"
+          : result.sweepTxHash
+            ? `Wallet created. ${result.sweepAmount} GFT moved from your previous wallet.`
+            : "Wallet created successfully",
         isExisting: false,
-        sweepTxHash: result.sweepTxHash,
-        sweepAmount: result.sweepAmount,
+        sweepTxHash: result.sweepTxHash || gftReward?.txHash,
+        sweepAmount: result.sweepAmount || (gftReward?.success ? '100' : undefined),
         previousWalletAddress: result.oldWalletAddress,
+        gftRewardSent: gftReward?.success || false,
       });
     } catch (error) {
       console.error("Error creating wallet:", error);

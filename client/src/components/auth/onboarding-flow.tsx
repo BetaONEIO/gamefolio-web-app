@@ -1323,21 +1323,17 @@ export default function OnboardingFlow({
 
       case OnboardingStep.Wallet:
         const isCreatingAnyWallet = isCreatingAutoWallet || isCreatingWallet;
-        
+
         return (
           <div className="flex flex-col flex-1">
             <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-2xl font-bold text-white">Your Wallet</h2>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-5 w-5 text-gray-400 cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Your secure blockchain wallet for NFTs and rewards</p>
-                </TooltipContent>
-              </Tooltip>
+              <h2 className="text-2xl font-bold text-white">🎁 Claim Your 100 GFT Welcome Reward</h2>
             </div>
-            
+
+            <p className="text-gray-300 mb-5">
+              Create your free Gamefolio Wallet during onboarding and receive a one-time bonus of 100 GFT.
+            </p>
+
             {walletAddress ? (
               <>
                 <Card className="bg-primary/10 border-primary/50 mb-6">
@@ -1347,8 +1343,8 @@ export default function OnboardingFlow({
                         <Check className="h-6 w-6" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-white mb-1">Wallet Created!</h3>
-                        <p className="text-sm text-gray-300">Your blockchain wallet is ready</p>
+                        <h3 className="font-semibold text-white mb-1">Reward Claimed!</h3>
+                        <p className="text-sm text-gray-300">100 GFT has been added to your Gamefolio Wallet</p>
                       </div>
                     </div>
                     <div className="bg-gray-900/50 rounded-lg p-3">
@@ -1357,7 +1353,7 @@ export default function OnboardingFlow({
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <div className="flex gap-3 mt-auto">
                   <Button variant="outline" onClick={goToPrevStep}>
                     Back
@@ -1392,7 +1388,7 @@ export default function OnboardingFlow({
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <div className="flex gap-3 mt-auto">
                   <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">
                     Back
@@ -1403,7 +1399,7 @@ export default function OnboardingFlow({
                     className="flex-1 text-gray-400 hover:text-white"
                     data-testid="button-skip-wallet"
                   >
-                    Skip for now
+                    Skip
                   </Button>
                 </div>
               </>
@@ -1413,14 +1409,14 @@ export default function OnboardingFlow({
                   <CardContent className="p-6">
                     <div className="flex flex-col items-center text-center py-4">
                       <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
-                      <h3 className="font-semibold text-white mb-2">Creating Your Wallet</h3>
+                      <h3 className="font-semibold text-white mb-2">Creating Your Gamefolio Wallet</h3>
                       <p className="text-sm text-gray-400">
-                        Setting up your secure blockchain wallet...
+                        Setting up your wallet and claiming your 100 GFT reward...
                       </p>
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <div className="flex gap-3 mt-auto">
                   <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">
                     Back
@@ -1429,33 +1425,57 @@ export default function OnboardingFlow({
               </>
             ) : (
               <>
-                <p className="text-gray-300 mb-4">
-                  Get a blockchain wallet to store GF Tokens, collect NFTs, and unlock exclusive features.
-                </p>
+                <Card className="bg-primary/5 border-primary/20 mb-5">
+                  <CardContent className="p-5">
+                    <h3 className="font-semibold text-white mb-3 text-sm">What you get:</h3>
+                    <ul className="space-y-2.5">
+                      <li className="flex items-start gap-3">
+                        <div className="p-1 rounded-full bg-primary/20 text-primary mt-0.5">
+                          <Check className="h-3 w-3" />
+                        </div>
+                        <span className="text-sm text-gray-300">Receive 100 GFT instantly</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <div className="p-1 rounded-full bg-primary/20 text-primary mt-0.5">
+                          <Check className="h-3 w-3" />
+                        </div>
+                        <span className="text-sm text-gray-300">Access future creator rewards</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <div className="p-1 rounded-full bg-primary/20 text-primary mt-0.5">
+                          <Check className="h-3 w-3" />
+                        </div>
+                        <span className="text-sm text-gray-300">Participate in bounties and campaigns</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <div className="p-1 rounded-full bg-primary/20 text-primary mt-0.5">
+                          <Check className="h-3 w-3" />
+                        </div>
+                        <span className="text-sm text-gray-300">Store future Gamefolio rewards</span>
+                      </li>
+                    </ul>
+                  </CardContent>
+                </Card>
 
-                <div className="flex items-center gap-2 mb-6 px-3 py-2.5 rounded-lg bg-primary/10 border border-primary/30">
+                <div className="flex items-center gap-2 mb-5 px-3 py-2.5 rounded-lg bg-primary/10 border border-primary/30">
                   <span className="text-xl">🎁</span>
                   <p className="text-sm text-primary font-medium">
-                    Create a wallet now and receive <span className="font-bold">100 GFT tokens free!</span>
+                    One-time offer: <span className="font-bold">100 GFT welcome bonus</span>
                   </p>
                 </div>
-                
+
                 <button
                   onClick={handleCreateWalletClick}
                   disabled={isCreatingAnyWallet}
-                  className="w-full py-4 px-5 bg-[#0B1218] border border-primary/30 hover:bg-[#1B2A33] hover:border-primary/50 active:scale-[0.99] rounded-xl transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-4 px-5 bg-primary hover:bg-primary/90 active:scale-[0.99] rounded-xl transition-all text-center font-semibold text-white shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="button-create-wallet"
                 >
-                  <div className="flex items-start gap-3">
-                    <GamefolioWalletIcon className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
-                    <div className="min-w-0">
-                      <div className="font-semibold text-white mb-1">Create Wallet</div>
-                      <div className="text-sm text-gray-400 font-normal break-words">
-                        Get a secure blockchain wallet for NFTs and rewards
-                      </div>
-                    </div>
-                  </div>
+                  Create Wallet & Claim 100 GFT
                 </button>
+
+                <p className="text-xs text-gray-500 text-center mt-4 mb-5">
+                  100 GFT welcome bonus is only available during account setup.
+                </p>
 
                 <div className="flex gap-3 mt-auto">
                   <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">
@@ -1463,10 +1483,11 @@ export default function OnboardingFlow({
                   </Button>
                   <Button
                     onClick={goToNextStep}
-                    className="flex-1 bg-primary hover:bg-primary/90 text-white"
+                    variant="ghost"
+                    className="flex-1 text-gray-400 hover:text-white"
                     data-testid="button-skip-wallet"
                   >
-                    <span>Skip for now</span>
+                    Skip
                   </Button>
                 </div>
               </>
