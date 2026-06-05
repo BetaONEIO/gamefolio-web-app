@@ -7,6 +7,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop } from "lucide-react";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
+import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
@@ -783,6 +784,9 @@ export default function OnboardingFlow({
                 <div className="flex flex-col">
                   {/* Mobile-only header */}
                   <div className="md:hidden mb-6">
+                    <div className="flex justify-center mb-5">
+                      <GamefolioIcon glow={true} className="w-28 h-28" />
+                    </div>
                     <h2 className="text-2xl font-bold text-white mb-2">Welcome to <span className="text-primary">Gamefolio</span></h2>
                     <p className="text-gray-300">Your personal gaming portfolio, all in one place.</p>
                   </div>
