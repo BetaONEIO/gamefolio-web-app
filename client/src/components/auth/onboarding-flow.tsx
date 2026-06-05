@@ -753,8 +753,8 @@ export default function OnboardingFlow({
     switch (currentStep) {
       case OnboardingStep.Welcome:
         return (
-          <div className="flex flex-col flex-1">
-            <div className="flex-1">
+          <div className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto">
               <div className="flex flex-col md:grid md:grid-cols-2 md:gap-8">
                 {/* Left side - Full-height image card with overlay text */}
                 <div className="hidden md:block">
@@ -1530,7 +1530,7 @@ export default function OnboardingFlow({
 
   return (
     <div
-      className="w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 min-h-screen sm:min-h-0 bg-[#071013] sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col"
+      className="w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 h-dvh sm:h-auto sm:min-h-0 bg-[#071013] sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col"
       style={{ paddingBottom: 'calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)' }}
     >
       <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} />
