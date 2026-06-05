@@ -1134,6 +1134,9 @@ export default function OnboardingFlow({
               <Button variant="ghost" onClick={goToNextStep} className="w-full text-gray-400 hover:text-white py-3">
                 Continue Free <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
+              <Button variant="outline" onClick={goToPrevStep} className="w-full">
+                Back
+              </Button>
             </div>
           </div>
         );
