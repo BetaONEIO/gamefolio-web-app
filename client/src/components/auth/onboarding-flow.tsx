@@ -674,8 +674,9 @@ export default function OnboardingFlow({
                 Upload clips, reels and screenshots from your favourite games — all in one place.
               </p>
             </div>
-            <div className="ob-cta mt-4" style={{ animationDelay: '900ms' }}>
-              <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-[#071013] text-base font-bold py-6 rounded-xl justify-center">
+            <div className="ob-cta mt-4 flex gap-3" style={{ animationDelay: '900ms' }}>
+              <Button variant="outline" onClick={goToPrevStep}>Back</Button>
+              <Button onClick={goToNextStep} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] text-base font-bold py-6 rounded-xl justify-center">
                 Continue <ArrowRight className="h-5 w-5 ml-2" />
               </Button>
             </div>
@@ -741,8 +742,9 @@ export default function OnboardingFlow({
                 Complete challenges, earn XP and climb the leaderboards as you engage with the community.
               </p>
             </div>
-            <div className="ob-cta mt-4" style={{ animationDelay: '900ms' }}>
-              <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-[#071013] text-base font-bold py-6 rounded-xl justify-center">
+            <div className="ob-cta mt-4 flex gap-3" style={{ animationDelay: '900ms' }}>
+              <Button variant="outline" onClick={goToPrevStep}>Back</Button>
+              <Button onClick={goToNextStep} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] text-base font-bold py-6 rounded-xl justify-center">
                 Continue <ArrowRight className="h-5 w-5 ml-2" />
               </Button>
             </div>
@@ -783,8 +785,9 @@ export default function OnboardingFlow({
                 Take part in creator campaigns, challenges and reward programmes.
               </p>
             </div>
-            <div className="ob-cta mt-4" style={{ animationDelay: '900ms' }}>
-              <Button onClick={goToNextStep} className="w-full bg-primary hover:bg-primary/90 text-[#071013] text-base font-bold py-6 rounded-xl justify-center">
+            <div className="ob-cta mt-4 flex gap-3" style={{ animationDelay: '900ms' }}>
+              <Button variant="outline" onClick={goToPrevStep}>Back</Button>
+              <Button onClick={goToNextStep} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] text-base font-bold py-6 rounded-xl justify-center">
                 Continue <ArrowRight className="h-5 w-5 ml-2" />
               </Button>
             </div>
