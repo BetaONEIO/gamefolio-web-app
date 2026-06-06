@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
 import { EmailService } from '../email-service';
 import { storage } from '../storage';
+import { notifyProPurchase } from '../telegram-notify';
 
 const router = Router();
 
@@ -266,6 +267,10 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
         updatedUser.username || updatedUser.displayName || 'Gamer',
         plan as 'monthly' | 'yearly'
       ).catch(err => console.error('Failed to send Pro welcome email:', err));
+    }
+
+    if (updatedUser) {
+      notifyProPurchase(updatedUser, { kind: 'new', plan, source: 'Stripe' });
     }
 
     let lootboxReward = null;
