@@ -1648,17 +1648,28 @@ export default function OnboardingFlow({
     }
   };
 
+  const isIntroStep = currentStep <= OnboardingStep.Intro3;
+
   return (
     <div
-      className="w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 h-dvh sm:h-auto sm:min-h-0 bg-[#071013] sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col"
+      className={`w-full mx-auto px-5 sm:p-6 md:p-8 h-dvh sm:h-auto sm:min-h-0 bg-[#071013] sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col${isIntroStep ? ' pt-0' : ' pt-8'}`}
       style={{ paddingBottom: 'calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)' }}
     >
-      {currentStep >= OnboardingStep.Username && (
-        <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
+      {isIntroStep ? (
+        <div className="relative flex-1 flex flex-col min-h-0">
+          {renderStepContent()}
+          <div className="absolute top-4 left-5 right-5 z-20 pointer-events-none">
+            <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
+          </div>
+        </div>
+      ) : (
+        <>
+          <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
+          <div className="flex-1 flex flex-col min-h-0">
+            {renderStepContent()}
+          </div>
+        </>
       )}
-      <div className="flex-1 flex flex-col min-h-0">
-        {renderStepContent()}
-      </div>
     </div>
   );
 }
