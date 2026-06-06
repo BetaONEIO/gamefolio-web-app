@@ -27,9 +27,9 @@ import imgHeartPng from "@assets/heart-png_1780747173615.png";
 import imgUnityLogo from "@assets/unity-logo_1780747173618.png";
 import imgIndieShirt from "@assets/gamefolio-shirt_1780747534126.png";
 import imgGamefolioCard from "@assets/image_1780751936689.png";
-import imgBountyBg from "@assets/image_1780752103152.png";
 import imgGFBag from "@assets/image_1780752169383.png";
 import imgProgression from "@assets/image_1780755222420.png";
+import imgBountyFullBg from "@assets/image_1780761395199.png";
 import Cropper from "react-easy-crop";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -757,38 +757,29 @@ export default function OnboardingFlow({
           </div>
         );
 
-      // ── STEP 3: REWARDS FOR EVERY BOUNTY ──────────────────────────────────
+      // ── STEP 3: EARN REWARDS ────────────────────────────────────────────────
       case OnboardingStep.Intro3:
         return (
           <div
-            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden"
+            className="relative flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 overflow-hidden"
             style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
           >
-            {/* ── Visual area ── */}
-            <div className="flex-none relative flex items-center justify-center overflow-hidden" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)' }}>
-              {/* Background scene image */}
-              <img
-                src={imgBountyBg}
-                alt=""
-                aria-hidden
-                draggable={false}
-                className="absolute inset-0 w-full h-full object-cover select-none"
-                style={{ opacity: 0.55 }}
-              />
-              {/* Gradient fade to match bottom chrome */}
-              <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
-              {/* GF bag logo — centred foreground */}
-              <img
-                src={imgGFBag}
-                alt="GF Token bag"
-                draggable={false}
-                className="ob-float relative z-10 select-none"
-                style={{ height: '65%', width: 'auto', objectFit: 'contain', animationDuration: '4s', filter: 'drop-shadow(0 0 40px rgba(193,255,0,0.35))' }}
-              />
-            </div>
+            {/* ── Full-page background image ── */}
+            <img
+              src={imgBountyFullBg}
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
+            />
+            {/* Gradient scrim — bottom two-thirds so text stays readable */}
+            <div
+              className="absolute inset-x-0 bottom-0 pointer-events-none"
+              style={{ height: '65%', background: 'linear-gradient(to top, #071013 55%, transparent)' }}
+            />
 
-            {/* ── Static bottom chrome ── */}
-            <div className="flex-shrink-0 px-6 pt-5 pb-6">
+            {/* ── Bottom chrome — sits above background ── */}
+            <div className="relative z-10 mt-auto flex-shrink-0 px-6 pt-5 pb-6">
               {/* Step dots */}
               <div className="flex items-center gap-2 justify-center mb-5">
                 {[0, 1, 2].map(i => (
