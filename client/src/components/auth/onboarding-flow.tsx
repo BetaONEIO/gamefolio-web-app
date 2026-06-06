@@ -645,7 +645,7 @@ export default function OnboardingFlow({
       case OnboardingStep.Intro1:
         return (
           <div
-            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#0a0f1c] overflow-hidden"
+            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden"
             style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
           >
             {/* ── Visual area ── */}
@@ -655,10 +655,10 @@ export default function OnboardingFlow({
                 alt="Gamefolio profile card"
                 draggable={false}
                 className="select-none w-full h-full"
-                style={{ objectFit: 'cover', objectPosition: 'top center' }}
+                style={{ objectFit: 'contain', objectPosition: 'top center' }}
               />
               {/* Fade into bottom chrome */}
-              <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, #0a0f1c, transparent)' }} />
+              <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
             </div>
 
             {/* ── Static bottom chrome ── */}
@@ -703,7 +703,7 @@ export default function OnboardingFlow({
       case OnboardingStep.Intro2:
         return (
           <div
-            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#0a0f1c] overflow-hidden"
+            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden"
             style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
           >
             {/* ── Visual area ── */}
@@ -713,10 +713,10 @@ export default function OnboardingFlow({
                 alt="Track your progression"
                 draggable={false}
                 className="select-none w-full h-full"
-                style={{ objectFit: 'cover', objectPosition: 'top center' }}
+                style={{ objectFit: 'contain', objectPosition: 'top center' }}
               />
               {/* Fade into bottom chrome */}
-              <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, #0a0f1c, transparent)' }} />
+              <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
             </div>
 
             {/* ── Static bottom chrome ── */}
@@ -761,7 +761,7 @@ export default function OnboardingFlow({
       case OnboardingStep.Intro3:
         return (
           <div
-            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#0a0f1c] overflow-hidden"
+            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden"
             style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
           >
             {/* ── Visual area ── */}
@@ -776,7 +776,7 @@ export default function OnboardingFlow({
                 style={{ opacity: 0.55 }}
               />
               {/* Gradient fade to match bottom chrome */}
-              <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to top, #0a0f1c, transparent)' }} />
+              <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
               {/* GF bag logo — centred foreground */}
               <img
                 src={imgGFBag}
@@ -1652,7 +1652,7 @@ export default function OnboardingFlow({
 
   return (
     <div
-      className={`w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 h-dvh sm:h-auto sm:min-h-0 sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col${isIntroStep ? ' bg-[#0a0f1c]' : ' bg-[#071013]'}`}
+      className={`w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 h-dvh sm:h-auto sm:min-h-0 sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col bg-[#071013]`}
       style={{ paddingBottom: 'calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)' }}
     >
       <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
