@@ -1652,7 +1652,7 @@ export default function OnboardingFlow({
 
   return (
     <div
-      className={`w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 h-dvh sm:h-auto sm:min-h-0 sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col${isIntroStep ? ' bg-transparent' : ' bg-[#071013]'}`}
+      className={`w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 h-dvh sm:h-auto sm:min-h-0 sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col${isIntroStep ? ' bg-[#0a0f1c]' : ' bg-[#071013]'}`}
       style={{ paddingBottom: 'calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)' }}
     >
       <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
