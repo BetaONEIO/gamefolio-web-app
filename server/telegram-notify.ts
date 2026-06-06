@@ -56,21 +56,66 @@ async function postToTelegram(text: string): Promise<void> {
   }
 }
 
-export function notifyNewSignup(user: User): void {
-  if (!BOT_TOKEN || !SIGNUP_CHAT_ID) return;
-
+function userLine(user: User): string {
   const username = escapeHtml(user.username || `user-${user.id}`);
   const displayName = user.displayName && user.displayName !== user.username
     ? ` (${escapeHtml(user.displayName)})`
     : '';
+  return `<b>${username}</b>${displayName}`;
+}
+
+function planLabel(plan: string | null | undefined): string {
+  switch (plan) {
+    case 'yearly': return 'Yearly';
+    case 'monthly': return 'Monthly';
+    case null:
+    case undefined:
+    case '':
+      return 'Pro';
+    default:
+      return plan;
+  }
+}
+
+export function notifyNewSignup(user: User): void {
+  if (!BOT_TOKEN || !SIGNUP_CHAT_ID) return;
+
   const provider = escapeHtml(providerLabel(user.authProvider));
 
   const text =
     `🎮 <b>New Gamefolio signup</b>\n` +
-    `<b>${username}</b>${displayName}\n` +
+    `${userLine(user)}\n` +
     `via ${provider} · ID ${user.id}`;
 
   void postToTelegram(text).catch((err) => {
     console.error('[Telegram] notifyNewSignup error:', err);
+  });
+}
+
+export interface ProPurchaseInfo {
+  /** 'new' for a first-time subscription, 'renewal' for a billing-cycle renewal. */
+  kind: 'new' | 'renewal';
+  /** 'monthly' | 'yearly' — best-effort, falls back to "Pro". */
+  plan?: string | null;
+  /** Where the payment came from, e.g. 'Stripe' or 'RevenueCat'. */
+  source: string;
+}
+
+export function notifyProPurchase(user: User, info: ProPurchaseInfo): void {
+  if (!BOT_TOKEN || !SIGNUP_CHAT_ID) return;
+
+  const heading = info.kind === 'renewal'
+    ? '🔁 <b>Pro renewal</b>'
+    : '💎 <b>New Pro subscription</b>';
+  const plan = escapeHtml(planLabel(info.plan));
+  const source = escapeHtml(info.source);
+
+  const text =
+    `${heading}\n` +
+    `${userLine(user)}\n` +
+    `${plan} · via ${source} · ID ${user.id}`;
+
+  void postToTelegram(text).catch((err) => {
+    console.error('[Telegram] notifyProPurchase error:', err);
   });
 }
