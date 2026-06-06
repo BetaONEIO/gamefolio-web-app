@@ -29,6 +29,7 @@ import imgIndieShirt from "@assets/gamefolio-shirt_1780747534126.png";
 import imgGamefolioCard from "@assets/image_1780751936689.png";
 import imgBountyBg from "@assets/image_1780752103152.png";
 import imgGFBag from "@assets/image_1780752169383.png";
+import imgProgression from "@assets/image_1780755222420.png";
 import Cropper from "react-easy-crop";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -703,42 +704,16 @@ export default function OnboardingFlow({
             style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
           >
             {/* ── Visual area ── */}
-            <div className="flex-1 relative flex flex-col items-center justify-center gap-4 px-6" style={{ overflowX: 'clip' }}>
-              {/* Ambient glow */}
-              <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] rounded-full pointer-events-none" style={{ background: 'rgba(193,255,0,0.10)', filter: 'blur(60px)' }} />
-
-              {/* Streak badge */}
-              <div className="relative z-10 flex items-center gap-2 px-5 py-2.5 rounded-full" style={{ border: '1.111px solid rgba(255,105,0,0.20)', background: 'linear-gradient(270deg, rgba(255,105,0,0.10) 0%, rgba(245,73,0,0.05) 100%)', boxShadow: '0 10px 30px rgba(249,115,22,0.15)' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" opacity="0.8"><path d="M12.8292 21.6712C15.9542 21.0454 19.9951 18.797 19.9951 12.9837C19.9951 7.69425 16.1232 4.17127 13.339 2.55273C12.7202 2.19284 11.9974 2.6657 11.9974 3.38049V5.20797C11.9974 6.64955 11.3916 9.28079 9.70806 10.3755C8.84831 10.9343 7.91858 10.0975 7.81461 9.07785L7.72863 8.24009C7.62866 7.26637 6.63695 6.67554 5.85917 7.26937C4.46058 8.33406 3 10.2035 3 12.9827C3 20.0917 8.28747 21.8701 10.9307 21.8701C11.0853 21.8701 11.2466 21.8651 11.4146 21.8551C10.0001 21.1283 9.00011 19.7238 9.00011 18.0844C9.00011 16.1268 10.2938 14.3633 11.3917 13.1055C11.7542 12.685 12.4167 12.9352 12.4167 13.4866V14.4585C12.4167 15.5561 13.1042 16.4997 14.1667 16.8747C14.9792 17.1664 15.7291 16.9455 16.1668 16.4747C16.6043 16.0039 16.7918 15.3123 16.5001 14.6664C16.3126 14.2497 16.0835 13.7789 15.9585 13.3539C15.7085 12.5289 16.4585 11.787 17.2168 12.162C18.6251 12.8454 19.9951 14.3381 19.9951 16.8789" fill="#FF6900"/></svg>
-                <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '13px', letterSpacing: '1.4px', color: '#FF6900', textTransform: 'uppercase' }}>7 DAY STREAK</span>
-              </div>
-
-              {/* Level circle */}
-              <div className="relative z-10 flex-shrink-0" style={{ width: 'clamp(200px, 55vw, 240px)', height: 'clamp(200px, 55vw, 240px)' }}>
-                {/* SVG ring */}
-                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 320" fill="none">
-                  <path opacity="0.2" d="M20 160C20 82.6801 82.6801 20 160 20C237.32 20 300 82.6801 300 160C300 237.32 237.32 300 160 300C82.6801 300 20 237.32 20 160Z" stroke="black" strokeWidth="12"/>
-                  <path d="M20 160C20 82.6801 82.6801 20 160 20C237.32 20 300 82.6801 300 160C300 237.32 237.32 300 160 300C82.6801 300 20 237.32 20 160Z" stroke="white" strokeWidth="10"/>
-                  <path opacity="0.1" d="M27 160C27 86.5461 86.5461 27 160 27C233.454 27 293 86.5461 293 160C293 233.454 233.454 293 160 293C86.5461 293 27 233.454 27 160Z" stroke="white"/>
-                </svg>
-                {/* Inner glass circle */}
-                <div className="absolute inset-[16%] rounded-full flex flex-col items-center justify-center" style={{ border: '1.111px solid rgba(255,255,255,0.20)', background: 'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.00) 100%)', boxShadow: '0 0 40px rgba(255,255,255,0.10) inset, 0 20px 50px rgba(0,0,0,0.50)', backdropFilter: 'blur(32px)' }}>
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '11px', letterSpacing: '5px', color: '#c1ff00', textTransform: 'uppercase' }}>LEVEL</span>
-                  <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(56px, 14vw, 80px)', color: '#fff', lineHeight: '1' }}>23</span>
-                </div>
-              </div>
-
-              {/* XP gained card */}
-              <div className="relative z-10 w-full flex items-center justify-between gap-3 px-5 py-4 rounded-[17px]" style={{ border: '1.111px solid rgba(255,255,255,0.10)', background: 'rgba(27,37,55,0.90)', boxShadow: '0 20px 40px rgba(0,0,0,0.40)', backdropFilter: 'blur(12px)' }}>
-                <div className="flex flex-col gap-0.5">
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '10px', letterSpacing: '1.04px', color: '#94A3B8', textTransform: 'uppercase' }}>GAINED</span>
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '16px', color: '#c1ff00', lineHeight: '1.2' }}>+1,250 XP</span>
-                </div>
-                <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
-                  <path d="M8.5522 13.7193C8.55645 13.6257 8.71043 13.5883 8.75637 13.6699C8.97245 14.0527 9.33996 14.6151 9.75681 14.8711C10.1737 15.1272 10.8423 15.1995 11.2813 15.2182C11.3749 15.2225 11.4114 15.3764 11.3298 15.4224C10.947 15.6385 10.3855 16.006 10.1294 16.4228C9.87336 16.8397 9.80104 17.5083 9.78233 17.9473C9.77808 18.0409 9.62325 18.0775 9.57816 17.9958C9.36208 17.613 8.99457 17.0515 8.57687 16.7954C8.16002 16.5394 7.49136 16.4671 7.05325 16.4483C6.95967 16.4441 6.92224 16.2893 7.00391 16.2442C7.38673 16.0281 7.94905 15.6606 8.20511 15.2429C8.46032 14.826 8.53349 14.1574 8.5522 13.7193Z" fill="#C1FF00"/>
-                  <path d="M12.2899 3.34037L12.0868 3.0835C11.3002 2.09043 10.9074 1.59347 10.4498 1.6665C9.99319 1.74038 9.77409 2.33471 9.33673 3.52421L9.22341 3.83145C9.09917 4.16975 9.03705 4.33848 8.91785 4.46272C8.79865 4.58696 8.63579 4.6516 8.31008 4.78171L8.01376 4.90008L7.80641 4.98402C6.79907 5.38696 6.29204 5.61613 6.22656 6.06104C6.15773 6.53533 6.63789 6.94162 7.59823 7.75338L7.84671 7.96324C8.12037 8.19409 8.25636 8.30993 8.33443 8.46691C8.41334 8.62389 8.42425 8.80521 8.44608 9.16785L8.46622 9.49776C8.54513 10.7737 8.58375 11.4117 8.99927 11.6316C9.41396 11.8516 9.92939 11.5082 10.9602 10.8207L11.2272 10.6428C11.5202 10.4472 11.6662 10.349 11.8341 10.3229C12.002 10.2969 12.1707 10.3431 12.5107 10.4371L12.8188 10.5227C14.0133 10.8535 14.6102 11.0188 14.935 10.6805C15.2608 10.3422 15.0987 9.72357 14.7755 8.48706L14.6916 8.16723C14.6001 7.81549 14.5539 7.64005 14.5791 7.46628C14.6043 7.29252 14.6983 7.13974 14.8864 6.83501L15.0568 6.55799C15.7157 5.48685 16.0456 4.95128 15.8324 4.52148C15.6184 4.09336 15.003 4.05391 13.7724 3.97752L13.4534 3.95737C13.1042 3.93554 12.9296 3.92463 12.7777 3.84404C12.6257 3.76346 12.5132 3.62243 12.2899 3.34037Z" fill="#C1FF00"/>
-                </svg>
-              </div>
+            <div className="flex-none relative overflow-hidden" style={{ maxHeight: 'clamp(300px, calc(100dvh - 340px), 500px)' }}>
+              <img
+                src={imgProgression}
+                alt="Track your progression"
+                draggable={false}
+                className="select-none w-full"
+                style={{ display: 'block', height: 'auto' }}
+              />
+              {/* Fade into bottom chrome */}
+              <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, #0a0f1c, transparent)' }} />
             </div>
 
             {/* ── Static bottom chrome ── */}
