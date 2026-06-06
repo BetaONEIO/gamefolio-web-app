@@ -648,7 +648,7 @@ export default function OnboardingFlow({
             style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
           >
             {/* ── Visual area ── */}
-            <div className="flex-none relative flex items-start justify-center overflow-hidden" style={{ height: 'clamp(240px, 50dvh, 360px)' }}>
+            <div className="flex-none relative flex items-start justify-center overflow-hidden" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)' }}>
               <img
                 src={imgGamefolioCard}
                 alt="Gamefolio profile card"
