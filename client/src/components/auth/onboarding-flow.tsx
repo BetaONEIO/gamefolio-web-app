@@ -29,10 +29,6 @@ import imgIndieShirt from "@assets/gamefolio-shirt_1780747534126.png";
 import imgGamefolioCard from "@assets/image_1780751936689.png";
 import imgBountyBg from "@assets/image_1780752103152.png";
 import imgGFBag from "@assets/image_1780752169383.png";
-import imgCollageProfile from "@assets/image_1780754039426.png";
-import imgCollageSniper from "@assets/image_1780754056887.png";
-import imgCollageStats from "@assets/image_1780754028120.png";
-import imgCollageVideo from "@assets/image_1780754010471.png";
 import Cropper from "react-easy-crop";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -652,52 +648,16 @@ export default function OnboardingFlow({
             style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
           >
             {/* ── Visual area ── */}
-            <div className="flex-none relative overflow-hidden" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)' }}>
-              <div className="w-full h-full flex flex-col px-3 gap-1" style={{ paddingTop: '6px' }}>
-
-                {/* Row 1: profile card (left) + THE SNIPER badge (right overlay) */}
-                <div className="relative" style={{ flex: '4.5 0 0', minHeight: 0 }}>
-                  <img
-                    src={imgCollageProfile}
-                    alt="Player profile"
-                    draggable={false}
-                    className="select-none h-full w-auto"
-                    style={{ objectFit: 'contain', objectPosition: 'top left', maxWidth: '74%' }}
-                  />
-                  <img
-                    src={imgCollageSniper}
-                    alt="The Sniper"
-                    draggable={false}
-                    className="select-none absolute"
-                    style={{ width: '56%', right: 0, top: '42%', transform: 'translateY(-50%)' }}
-                  />
-                </div>
-
-                {/* Row 2: stats card */}
-                <div style={{ flex: '2 0 0', minHeight: 0 }}>
-                  <img
-                    src={imgCollageStats}
-                    alt="Stats"
-                    draggable={false}
-                    className="select-none w-full h-full"
-                    style={{ objectFit: 'contain', objectPosition: 'top center' }}
-                  />
-                </div>
-
-                {/* Row 3: video clip card */}
-                <div style={{ flex: '2.5 0 0', minHeight: 0 }}>
-                  <img
-                    src={imgCollageVideo}
-                    alt="Game clip"
-                    draggable={false}
-                    className="select-none w-full h-full"
-                    style={{ objectFit: 'contain', objectPosition: 'top center' }}
-                  />
-                </div>
-
-              </div>
+            <div className="flex-none relative flex items-start justify-center overflow-hidden" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)' }}>
+              <img
+                src={imgGamefolioCard}
+                alt="Gamefolio profile card"
+                draggable={false}
+                className="select-none w-full h-full"
+                style={{ objectFit: 'contain', objectPosition: 'top center' }}
+              />
               {/* Fade into bottom chrome */}
-              <div className="absolute inset-x-0 bottom-0 h-10 pointer-events-none" style={{ background: 'linear-gradient(to top, #0a0f1c, transparent)' }} />
+              <div className="absolute inset-x-0 bottom-0 h-12 pointer-events-none" style={{ background: 'linear-gradient(to top, #0a0f1c, transparent)' }} />
             </div>
 
             {/* ── Static bottom chrome ── */}
