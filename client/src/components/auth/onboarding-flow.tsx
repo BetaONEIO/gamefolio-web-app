@@ -1008,7 +1008,7 @@ export default function OnboardingFlow({
             ctaLabel: 'CONTINUE AS GAMER',
             visual: (
               <div className="relative flex items-end justify-center flex-shrink-0 w-full"
-                style={{ height: 'clamp(240px, calc(100dvh - 440px), 375px)' }}>
+                style={{ height: 'clamp(300px, calc(100dvh - 380px), 460px)' }}>
                 <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '-5%', left: '-10%' }} />
                 <div className="absolute w-56 h-56 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '15%', right: '-10%' }} />
                 <div className="absolute w-48 h-48 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', bottom: '-5%', left: '15%' }} />
@@ -1017,7 +1017,7 @@ export default function OnboardingFlow({
                   alt="Gaming cat"
                   draggable={false}
                   className="ob-float relative z-10 select-none"
-                  style={{ height: '100%', maxHeight: '375px', width: 'auto', objectFit: 'contain', objectPosition: 'bottom', animationDuration: '4.5s' }}
+                  style={{ height: '100%', maxHeight: '460px', width: 'auto', objectFit: 'contain', objectPosition: 'bottom', animationDuration: '4.5s' }}
                 />
               </div>
             ),
@@ -1028,14 +1028,14 @@ export default function OnboardingFlow({
             ctaLabel: 'CONTINUE AS STREAMER',
             visual: (
               <div className="relative flex items-center justify-center flex-shrink-0 w-full"
-                style={{ height: 'clamp(180px, calc(100dvh - 520px), 250px)' }}>
+                style={{ height: 'clamp(240px, calc(100dvh - 440px), 340px)' }}>
                 <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.4)' }} />
                 <img
                   src={imgStreamer}
                   alt="Streamer"
                   draggable={false}
                   className="ob-float relative z-10 select-none"
-                  style={{ width: 'min(85%, 280px)', height: 'auto', objectFit: 'contain', animationDuration: '4s', animationDelay: '0.3s' }}
+                  style={{ width: 'min(95%, 360px)', height: 'auto', objectFit: 'contain', animationDuration: '4s', animationDelay: '0.3s' }}
                 />
               </div>
             ),
@@ -1046,28 +1046,28 @@ export default function OnboardingFlow({
             ctaLabel: 'CONTINUE AS INDIE',
             visual: (
               <div className="relative flex items-center justify-center flex-shrink-0 w-full"
-                style={{ height: 'clamp(180px, calc(100dvh - 520px), 250px)' }}>
+                style={{ height: 'clamp(240px, calc(100dvh - 440px), 340px)' }}>
                 <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)' }} />
-                <div className="relative z-10" style={{ width: '210px', height: '210px' }}>
+                <div className="relative z-10" style={{ width: '280px', height: '280px' }}>
                   {/* Shirt — floats centre */}
                   <div className="ob-float" style={{ position: 'absolute', top: '50%', left: '50%', animationDuration: '4s' }}>
-                    <img src={imgIndieShirt} alt="" draggable={false} style={{ transform: 'translate(-50%,-50%)', width: '160px', height: '160px', objectFit: 'contain' }} />
+                    <img src={imgIndieShirt} alt="" draggable={false} style={{ transform: 'translate(-50%,-50%)', width: '210px', height: '210px', objectFit: 'contain' }} />
                   </div>
                   {/* Gold Star — top-left */}
                   <div className="ob-float-sm" style={{ position: 'absolute', top: '-4px', left: '-4px', animationDuration: '3.5s', animationDelay: '0.4s' }}>
-                    <img src={imgGoldStar} alt="" draggable={false} style={{ transform: 'rotate(90.49deg)', width: '50px', height: '36px', objectFit: 'contain' }} />
+                    <img src={imgGoldStar} alt="" draggable={false} style={{ transform: 'rotate(90.49deg)', width: '65px', height: '48px', objectFit: 'contain' }} />
                   </div>
                   {/* Purple Potion — top-right */}
                   <div className="ob-float" style={{ position: 'absolute', top: '-4px', right: '-4px', animationDuration: '4.5s', animationDelay: '0.8s' }}>
-                    <img src={imgPurplePotion} alt="" draggable={false} style={{ transform: 'rotate(-5.158deg)', width: '54px', height: '54px', objectFit: 'contain' }} />
+                    <img src={imgPurplePotion} alt="" draggable={false} style={{ transform: 'rotate(-5.158deg)', width: '70px', height: '70px', objectFit: 'contain' }} />
                   </div>
                   {/* Heart — bottom-right */}
                   <div className="ob-float-sm" style={{ position: 'absolute', bottom: '-8px', right: '-8px', animationDuration: '4s', animationDelay: '0.2s' }}>
-                    <img src={imgHeartPng} alt="" draggable={false} style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
+                    <img src={imgHeartPng} alt="" draggable={false} style={{ width: '76px', height: '76px', objectFit: 'contain' }} />
                   </div>
                   {/* Unity Logo — bottom-left */}
                   <div className="ob-float" style={{ position: 'absolute', bottom: '-4px', left: '-8px', animationDuration: '3.8s', animationDelay: '1s' }}>
-                    <img src={imgUnityLogo} alt="" draggable={false} style={{ width: '54px', height: '42px', objectFit: 'contain' }} />
+                    <img src={imgUnityLogo} alt="" draggable={false} style={{ width: '70px', height: '54px', objectFit: 'contain' }} />
                   </div>
                 </div>
               </div>
