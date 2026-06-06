@@ -671,11 +671,11 @@ export default function OnboardingFlow({
               </div>
               {/* Title */}
               <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(24px, 6vw, 30px)', letterSpacing: '-0.9px', color: '#fff' }}>
-                BUILD YOUR <span style={{ color: '#c1ff00' }}>GAMEFOLIO</span>
+                BUILD YOUR <span style={{ color: '#c1ff00' }}>PRESENCE</span>
               </h2>
               {/* Subtitle */}
               <p className="text-center mb-5" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 400, fontSize: '14px', lineHeight: '20px', color: '#94A3B8' }}>
-                Your gaming legacy, all in one place. Connect accounts and showcase your best moments.
+                Showcase clips, streams, games and achievements in one place.
               </p>
               {/* CTA row */}
               <div className="flex items-center gap-3">
@@ -728,12 +728,12 @@ export default function OnboardingFlow({
                 ))}
               </div>
               {/* Title */}
-              <h2 className="text-center mb-2 leading-none uppercase whitespace-nowrap" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(22px, 5.5vw, 30px)', letterSpacing: '-0.9px', color: '#fff' }}>
-                TRACK YOUR <span style={{ color: '#c1ff00' }}>PROGRESSION</span>
+              <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(24px, 6vw, 30px)', letterSpacing: '-0.9px', color: '#fff' }}>
+                GROW & <span style={{ color: '#c1ff00' }}>EARN</span>
               </h2>
               {/* Subtitle */}
               <p className="text-center mb-5" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 400, fontSize: '14px', lineHeight: '20px', color: '#94A3B8' }}>
-                Watch your skills grow. Every action earns XP and builds your legendary status.
+                Earn XP, unlock rewards, discover opportunities and grow your presence.
               </p>
               {/* CTA row */}
               <div className="flex items-center gap-3">
@@ -797,13 +797,11 @@ export default function OnboardingFlow({
               </div>
               {/* Title */}
               <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(24px, 6vw, 30px)', letterSpacing: '-0.9px', color: '#fff' }}>
-                EARN <span style={{ color: '#c1ff00' }}>REWARDS</span>
+                CHOOSE YOUR <span style={{ color: '#c1ff00' }}>PATH</span>
               </h2>
               {/* Subtitle */}
               <p className="text-center mb-5" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 400, fontSize: '14px', lineHeight: '20px', color: '#94A3B8' }}>
-                Complete daily bounties, join creator challenges, and earn{' '}
-                <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: '#fff' }}>GFT</span>{' '}
-                to unlock exclusive legendary gear.
+                Gamer, Streamer or Indie Developer — your journey starts here.
               </p>
               {/* CTA row */}
               <div className="flex items-center gap-3">
