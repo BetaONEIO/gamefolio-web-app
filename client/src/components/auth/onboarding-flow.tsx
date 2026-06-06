@@ -1089,8 +1089,8 @@ export default function OnboardingFlow({
                         ))}
                       </div>
 
-                      {/* Desktop prev/next arrows */}
-                      <div className="hidden sm:flex items-center gap-1">
+                      {/* Prev/next arrows — always visible */}
+                      <div className="flex items-center gap-1">
                         <button
                           onClick={handlePathBack}
                           disabled={pathCardIndex === 0}
@@ -1106,8 +1106,6 @@ export default function OnboardingFlow({
                           <ChevronRight className="h-4 w-4" />
                         </button>
                       </div>
-                      {/* Mobile spacer to balance back button */}
-                      <div className="w-16 sm:hidden" />
                     </div>
 
                     {/* Title block */}
