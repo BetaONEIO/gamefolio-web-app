@@ -273,6 +273,10 @@ export default function OnboardingFlow({
   const [selectedPath, setSelectedPath] = useState<UserPath>(null);
   const [pathCardIndex, setPathCardIndex] = useState(0);
   const pathTouchStartX = useRef<number | null>(null);
+  // Reset carousel to Indie (first card) every time the user enters ChoosePath
+  useEffect(() => {
+    if (currentStep === OnboardingStep.ChoosePath) setPathCardIndex(0);
+  }, [currentStep]);
   const [gamerInterests, setGamerInterests] = useState<string[]>([]);
   const [streamerData, setStreamerData] = useState({
     kickUsername: '',
@@ -988,11 +992,26 @@ export default function OnboardingFlow({
                 style={{ height: 'clamp(180px, calc(100dvh - 520px), 250px)' }}>
                 <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)' }} />
                 <div className="relative z-10" style={{ width: '210px', height: '210px' }}>
-                  <img src={imgIndieShirt} alt="" draggable={false} style={{ position: 'absolute', width: '160px', height: '160px', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', objectFit: 'contain' }} />
-                  <img src={imgGoldStar} alt="" draggable={false} style={{ position: 'absolute', width: '50px', height: '36px', top: '-4px', left: '-4px', transform: 'rotate(90.49deg)', objectFit: 'contain' }} />
-                  <img src={imgPurplePotion} alt="" draggable={false} style={{ position: 'absolute', width: '54px', height: '54px', top: '-4px', right: '-4px', transform: 'rotate(-5.158deg)', objectFit: 'contain' }} />
-                  <img src={imgHeartPng} alt="" draggable={false} style={{ position: 'absolute', width: '60px', height: '60px', bottom: '-8px', right: '-8px', objectFit: 'contain' }} />
-                  <img src={imgUnityLogo} alt="" draggable={false} style={{ position: 'absolute', width: '54px', height: '42px', bottom: '-4px', left: '-8px', objectFit: 'contain' }} />
+                  {/* Shirt — floats centre */}
+                  <div className="ob-float" style={{ position: 'absolute', top: '50%', left: '50%', animationDuration: '4s' }}>
+                    <img src={imgIndieShirt} alt="" draggable={false} style={{ transform: 'translate(-50%,-50%)', width: '160px', height: '160px', objectFit: 'contain' }} />
+                  </div>
+                  {/* Gold Star — top-left */}
+                  <div className="ob-float-sm" style={{ position: 'absolute', top: '-4px', left: '-4px', animationDuration: '3.5s', animationDelay: '0.4s' }}>
+                    <img src={imgGoldStar} alt="" draggable={false} style={{ transform: 'rotate(90.49deg)', width: '50px', height: '36px', objectFit: 'contain' }} />
+                  </div>
+                  {/* Purple Potion — top-right */}
+                  <div className="ob-float" style={{ position: 'absolute', top: '-4px', right: '-4px', animationDuration: '4.5s', animationDelay: '0.8s' }}>
+                    <img src={imgPurplePotion} alt="" draggable={false} style={{ transform: 'rotate(-5.158deg)', width: '54px', height: '54px', objectFit: 'contain' }} />
+                  </div>
+                  {/* Heart — bottom-right */}
+                  <div className="ob-float-sm" style={{ position: 'absolute', bottom: '-8px', right: '-8px', animationDuration: '4s', animationDelay: '0.2s' }}>
+                    <img src={imgHeartPng} alt="" draggable={false} style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
+                  </div>
+                  {/* Unity Logo — bottom-left */}
+                  <div className="ob-float" style={{ position: 'absolute', bottom: '-4px', left: '-8px', animationDuration: '3.8s', animationDelay: '1s' }}>
+                    <img src={imgUnityLogo} alt="" draggable={false} style={{ width: '54px', height: '42px', objectFit: 'contain' }} />
+                  </div>
                 </div>
               </div>
             ),
@@ -1003,7 +1022,7 @@ export default function OnboardingFlow({
             ctaLabel: 'CONTINUE AS GAMER',
             visual: (
               <div className="relative flex items-end justify-center flex-shrink-0 w-full"
-                style={{ height: 'clamp(180px, calc(100dvh - 520px), 250px)' }}>
+                style={{ height: 'clamp(240px, calc(100dvh - 440px), 375px)' }}>
                 <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '-5%', left: '-10%' }} />
                 <div className="absolute w-56 h-56 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '15%', right: '-10%' }} />
                 <div className="absolute w-48 h-48 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', bottom: '-5%', left: '15%' }} />
@@ -1011,8 +1030,8 @@ export default function OnboardingFlow({
                   src={imgMacCat}
                   alt="Gaming cat"
                   draggable={false}
-                  className="relative z-10 select-none"
-                  style={{ height: '100%', maxHeight: '250px', width: 'auto', objectFit: 'contain', objectPosition: 'bottom' }}
+                  className="ob-float relative z-10 select-none"
+                  style={{ height: '100%', maxHeight: '375px', width: 'auto', objectFit: 'contain', objectPosition: 'bottom', animationDuration: '4.5s' }}
                 />
               </div>
             ),
@@ -1029,8 +1048,8 @@ export default function OnboardingFlow({
                   src={imgStreamer}
                   alt="Streamer"
                   draggable={false}
-                  className="relative z-10 select-none"
-                  style={{ width: 'min(85%, 280px)', height: 'auto', objectFit: 'contain' }}
+                  className="ob-float relative z-10 select-none"
+                  style={{ width: 'min(85%, 280px)', height: 'auto', objectFit: 'contain', animationDuration: '4s', animationDelay: '0.3s' }}
                 />
               </div>
             ),
@@ -1094,7 +1113,7 @@ export default function OnboardingFlow({
             </div>
 
             {/* ── SLIDING: only title + visual move ── */}
-            <div className="flex-1 min-h-0 overflow-hidden relative">
+            <div className="flex-1 min-h-0 relative" style={{ overflowX: 'clip' }}>
               <div
                 className="flex h-full"
                 style={{ transform: `translateX(-${pathCardIndex * 100}%)`, transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1)' }}

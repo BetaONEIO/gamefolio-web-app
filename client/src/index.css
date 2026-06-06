@@ -1124,8 +1124,20 @@ h1, h2, h3 {
     ob-cta-glow 0.9s ease-out forwards;
 }
 
+@keyframes ob-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-14px); }
+}
+@keyframes ob-float-sm {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+.ob-float      { animation: ob-float    4s ease-in-out infinite; }
+.ob-float-sm   { animation: ob-float-sm 3.5s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
-  .ob-logo, .ob-fade-up, .ob-fade-up-slow, .ob-cta, .ob-step-indicator, .ob-step-active-glow {
+  .ob-logo, .ob-fade-up, .ob-fade-up-slow, .ob-cta, .ob-step-indicator, .ob-step-active-glow,
+  .ob-float, .ob-float-sm {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
