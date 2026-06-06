@@ -677,21 +677,24 @@ export default function OnboardingFlow({
               <p className="text-center mb-5" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 400, fontSize: '14px', lineHeight: '20px', color: '#94A3B8' }}>
                 Your gaming legacy, all in one place. Connect accounts and showcase your best moments.
               </p>
-              {/* CTA */}
-              <button
-                onClick={goToNextStep}
-                className="w-full rounded-[18px] py-4 uppercase font-black tracking-widest"
-                style={{ background: '#c1ff00', boxShadow: '0 15px 35px rgba(193,255,0,0.4)', color: '#0a0f1c', fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '14px', letterSpacing: '2.8px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
-              >
-                CONTINUE
-              </button>
-              <button
-                onClick={goToPrevStep}
-                className="w-full py-3 text-center uppercase"
-                style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '10px', letterSpacing: '3px', color: '#94A3B8' }}
-              >
-                GO BACK
-              </button>
+              {/* CTA row */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={goToPrevStep}
+                  className="flex-none flex items-center justify-center rounded-[18px]"
+                  style={{ width: '56px', height: '56px', border: '1.5px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}
+                  aria-label="Go back"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+                <button
+                  onClick={goToNextStep}
+                  className="flex-1 rounded-[18px] py-4 uppercase font-black tracking-widest"
+                  style={{ background: '#c1ff00', boxShadow: '0 15px 35px rgba(193,255,0,0.4)', color: '#0a0f1c', fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '14px', letterSpacing: '2.8px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
+                >
+                  CONTINUE
+                </button>
+              </div>
             </div>
           </div>
         );
@@ -732,21 +735,24 @@ export default function OnboardingFlow({
               <p className="text-center mb-5" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 400, fontSize: '14px', lineHeight: '20px', color: '#94A3B8' }}>
                 Watch your skills grow. Every action earns XP and builds your legendary status.
               </p>
-              {/* CTA */}
-              <button
-                onClick={goToNextStep}
-                className="w-full rounded-[18px] py-4 uppercase font-black tracking-widest"
-                style={{ background: '#c1ff00', boxShadow: '0 20px 40px rgba(193,255,0,0.30)', color: '#0a0f1c', fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '14px', letterSpacing: '2.8px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
-              >
-                CONTINUE
-              </button>
-              <button
-                onClick={goToPrevStep}
-                className="w-full py-3 text-center uppercase"
-                style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '10px', letterSpacing: '3px', color: '#94A3B8' }}
-              >
-                GO BACK
-              </button>
+              {/* CTA row */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={goToPrevStep}
+                  className="flex-none flex items-center justify-center rounded-[18px]"
+                  style={{ width: '56px', height: '56px', border: '1.5px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}
+                  aria-label="Go back"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+                <button
+                  onClick={goToNextStep}
+                  className="flex-1 rounded-[18px] py-4 uppercase font-black tracking-widest"
+                  style={{ background: '#c1ff00', boxShadow: '0 20px 40px rgba(193,255,0,0.30)', color: '#0a0f1c', fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '14px', letterSpacing: '2.8px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
+                >
+                  CONTINUE
+                </button>
+              </div>
             </div>
           </div>
         );
@@ -799,21 +805,24 @@ export default function OnboardingFlow({
                 <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: '#fff' }}>GFT</span>{' '}
                 to unlock exclusive legendary gear.
               </p>
-              {/* CTA */}
-              <button
-                onClick={goToNextStep}
-                className="w-full rounded-[18px] py-4 uppercase font-black tracking-widest"
-                style={{ background: '#c1ff00', boxShadow: '0 15px 35px rgba(193,255,0,0.4)', color: '#0a0f1c', fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '14px', letterSpacing: '2.8px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
-              >
-                CONTINUE
-              </button>
-              <button
-                onClick={goToPrevStep}
-                className="w-full py-3 text-center uppercase"
-                style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '10px', letterSpacing: '3px', color: '#94A3B8' }}
-              >
-                GO BACK
-              </button>
+              {/* CTA row */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={goToPrevStep}
+                  className="flex-none flex items-center justify-center rounded-[18px]"
+                  style={{ width: '56px', height: '56px', border: '1.5px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}
+                  aria-label="Go back"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+                <button
+                  onClick={goToNextStep}
+                  className="flex-1 rounded-[18px] py-4 uppercase font-black tracking-widest"
+                  style={{ background: '#c1ff00', boxShadow: '0 15px 35px rgba(193,255,0,0.4)', color: '#0a0f1c', fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '14px', letterSpacing: '2.8px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
+                >
+                  CONTINUE
+                </button>
+              </div>
             </div>
           </div>
         );
