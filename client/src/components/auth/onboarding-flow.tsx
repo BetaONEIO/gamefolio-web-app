@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop, Zap, Star, Target, Gift, Tv, Globe, Swords, Users, Flame } from "lucide-react";
+import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop, Zap, Star, Target, Gift, Tv, Globe, Swords, Users, Flame, ChevronLeft, ChevronRight } from "lucide-react";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
@@ -263,6 +263,8 @@ export default function OnboardingFlow({
 
   // Path selection state
   const [selectedPath, setSelectedPath] = useState<UserPath>(null);
+  const [pathCardIndex, setPathCardIndex] = useState(0);
+  const pathTouchStartX = useRef<number | null>(null);
   const [gamerInterests, setGamerInterests] = useState<string[]>([]);
   const [streamerData, setStreamerData] = useState({
     kickUsername: '',
@@ -966,92 +968,202 @@ export default function OnboardingFlow({
         );
 
       // ── STEP 7: CHOOSE YOUR PATH ───────────────────────────────────────────
-      case OnboardingStep.ChoosePath:
-        const paths = [
+      case OnboardingStep.ChoosePath: {
+        // Order: Indie Game → Gamer → Streamer
+        const pathCards = [
           {
-            id: "gamer" as UserPath,
-            icon: Gamepad2,
-            emoji: "🎮",
-            title: "Gamer",
-            description: "Showcase your gaming moments, earn XP and build your Gamefolio.",
-            gradient: "from-emerald-900/50 to-[#071013]",
-            border: "border-emerald-500/30",
-            activeBorder: "border-primary",
-            activeGlow: "shadow-primary/30",
+            id: 'indie' as UserPath,
+            title: 'INDIE GAME',
+            ctaLabel: 'CONTINUE AS INDIE',
+            visual: (
+              <div className="flex-1 relative overflow-hidden flex items-center justify-center">
+                <div className="absolute w-[330px] h-[330px] rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.13)' }} />
+                <div className="relative z-10 flex flex-col items-center gap-3">
+                  <div className="relative w-48 h-48 sm:w-56 sm:h-56">
+                    <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[90px] sm:text-[110px] leading-none select-none" style={{ filter: 'drop-shadow(0 0 24px rgba(193,255,0,0.5))', transform: 'translate(-50%,-50%) rotate(-7deg)' }}>⚔️</span>
+                    <span className="absolute -top-2 -left-2 text-5xl select-none" style={{ filter: 'drop-shadow(0 0 14px rgba(255,215,0,0.7))', transform: 'rotate(90deg)' }}>⭐</span>
+                    <span className="absolute -top-2 -right-2 text-5xl select-none" style={{ filter: 'drop-shadow(0 0 14px rgba(180,0,255,0.7))', transform: 'rotate(-5deg)' }}>🧪</span>
+                    <span className="absolute -bottom-2 -right-4 text-5xl select-none" style={{ filter: 'drop-shadow(0 0 14px rgba(255,80,80,0.7))' }}>❤️</span>
+                    <span className="absolute -bottom-2 -left-4 text-4xl select-none" style={{ filter: 'drop-shadow(0 0 12px rgba(255,255,255,0.5))' }}>💎</span>
+                  </div>
+                </div>
+              </div>
+            ),
           },
           {
-            id: "streamer" as UserPath,
-            icon: Tv,
-            emoji: "🎙️",
-            title: "Streamer",
-            description: "Grow your audience, share stream clips and unlock creator opportunities.",
-            gradient: "from-purple-900/50 to-[#071013]",
-            border: "border-purple-500/30",
-            activeBorder: "border-primary",
-            activeGlow: "shadow-primary/30",
+            id: 'gamer' as UserPath,
+            title: 'GAMER',
+            ctaLabel: 'CONTINUE AS GAMER',
+            visual: (
+              <div className="flex-1 relative overflow-hidden flex items-end justify-center pb-2">
+                <div className="absolute w-72 h-72 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.13)', top: '0%', left: '-20%' }} />
+                <div className="absolute w-56 h-56 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.13)', top: '15%', right: '-15%' }} />
+                <div className="absolute w-44 h-44 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.13)', bottom: '5%', left: '25%' }} />
+                <div className="relative z-10 text-center select-none">
+                  <div className="text-[110px] sm:text-[130px] leading-none" style={{ filter: 'drop-shadow(0 0 30px rgba(193,255,0,0.45))' }}>🐱</div>
+                  <div className="text-[60px] leading-none -mt-4" style={{ filter: 'drop-shadow(0 0 20px rgba(193,255,0,0.5))' }}>🎮</div>
+                </div>
+              </div>
+            ),
           },
           {
-            id: "indie" as UserPath,
-            icon: Code,
-            emoji: "🕹️",
-            title: "Indie Game",
-            description: "Promote your game, connect with creators and launch campaigns.",
-            gradient: "from-blue-900/50 to-[#071013]",
-            border: "border-blue-500/30",
-            activeBorder: "border-primary",
-            activeGlow: "shadow-primary/30",
+            id: 'streamer' as UserPath,
+            title: 'STREAMER',
+            ctaLabel: 'CONTINUE AS STREAMER',
+            visual: (
+              <div className="flex-1 relative overflow-hidden flex items-center justify-center">
+                <div className="absolute w-72 h-72 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.25)' }} />
+                <div className="relative z-10 text-center select-none">
+                  <div className="text-[100px] sm:text-[120px] leading-none" style={{ filter: 'drop-shadow(0 0 30px rgba(193,255,0,0.5))' }}>🎙️</div>
+                  <div className="mt-4 inline-flex items-center gap-2 px-5 py-2 rounded-full text-white font-black tracking-widest text-sm" style={{ background: '#ef4444' }}>
+                    <span className="w-2 h-2 rounded-full bg-white" style={{ animation: 'pulse 1.5s infinite' }} />
+                    LIVE
+                  </div>
+                </div>
+              </div>
+            ),
           },
         ];
 
+        const totalCards = pathCards.length;
+        const currentCard = pathCards[pathCardIndex];
+
+        const handlePathBack = () => {
+          if (pathCardIndex > 0) setPathCardIndex(pathCardIndex - 1);
+          else goToPrevStep();
+        };
+        const handlePathNext = () => {
+          if (pathCardIndex < totalCards - 1) setPathCardIndex(pathCardIndex + 1);
+        };
+        const selectAndContinue = (pathId: UserPath) => {
+          setSelectedPath(pathId);
+          setCurrentStep(getNextStep(OnboardingStep.ChoosePath));
+        };
+
         return (
-          <div className="flex flex-col flex-1 min-h-0">
-            <div className="flex-1 overflow-y-auto">
-              <h2 className="text-2xl font-black text-white mb-1 ob-fade-up" style={{ animationDelay: '0ms' }}>Choose Your Path</h2>
-              <p className="text-gray-400 mb-5 ob-fade-up-slow" style={{ animationDelay: '150ms' }}>How do you want to use Gamefolio? Select one.</p>
+          <div
+            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8"
+            style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
+            onTouchStart={(e) => { pathTouchStartX.current = e.touches[0].clientX; }}
+            onTouchEnd={(e) => {
+              if (pathTouchStartX.current === null) return;
+              const delta = e.changedTouches[0].clientX - pathTouchStartX.current;
+              if (delta > 50 && pathCardIndex > 0) setPathCardIndex(pathCardIndex - 1);
+              else if (delta < -50 && pathCardIndex < totalCards - 1) setPathCardIndex(pathCardIndex + 1);
+              pathTouchStartX.current = null;
+            }}
+          >
+            {/* Slide rail — all 3 cards in a flex row, slide via translateX */}
+            <div className="flex-1 overflow-hidden relative bg-[#0a0f1c]">
+              <div
+                className="flex h-full"
+                style={{ transform: `translateX(-${pathCardIndex * 100}%)`, transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1)' }}
+              >
+                {pathCards.map((card, idx) => (
+                  <div key={card.id} className="w-full h-full flex-shrink-0 flex flex-col relative overflow-hidden">
 
-              <div className="space-y-3">
-                {paths.map((path, i) => {
-                  const isSelected = selectedPath === path.id;
-                  const Icon = path.icon;
-                  return (
-                    <button
-                      key={path.id}
-                      onClick={() => setSelectedPath(path.id)}
-                      className={`w-full text-left rounded-2xl border-2 bg-gradient-to-br ${path.gradient} p-4 transition-all duration-200 ob-fade-up hover:scale-[1.01] active:scale-[0.99] ${
-                        isSelected
-                          ? `${path.activeBorder} shadow-lg ${path.activeGlow}`
-                          : `${path.border} hover:border-primary/40`
-                      }`}
-                      style={{ animationDelay: `${300 + i * 150}ms` }}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl transition-all ${
-                          isSelected ? 'bg-primary/20 border border-primary/40' : 'bg-white/5 border border-white/10'
-                        }`}>
-                          {path.emoji}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <h3 className={`font-bold text-base ${isSelected ? 'text-primary' : 'text-white'}`}>{path.title}</h3>
-                            {isSelected && <Check className="h-4 w-4 text-primary" />}
-                          </div>
-                          <p className="text-sm text-gray-400 leading-snug">{path.description}</p>
-                        </div>
+                    {/* Top chrome: back + dots + spacer */}
+                    <div className="relative z-20 flex items-center justify-between px-5 sm:px-6 pt-5 pb-2">
+                      <button
+                        onClick={handlePathBack}
+                        className="flex items-center gap-1 text-white/60 hover:text-white transition-colors text-sm font-medium"
+                      >
+                        <ChevronLeft className="h-5 w-5" />
+                        Back
+                      </button>
+
+                      {/* Dot indicators */}
+                      <div className="flex items-center gap-2">
+                        {pathCards.map((_, dotIdx) => (
+                          <button
+                            key={dotIdx}
+                            onClick={() => setPathCardIndex(dotIdx)}
+                            className="rounded-full transition-all duration-300"
+                            style={{
+                              width: dotIdx === pathCardIndex ? '20px' : '6px',
+                              height: '6px',
+                              background: dotIdx === pathCardIndex ? '#c1ff00' : 'rgba(255,255,255,0.25)',
+                              boxShadow: dotIdx === pathCardIndex ? '0 0 8px rgba(193,255,0,0.7)' : 'none',
+                            }}
+                          />
+                        ))}
                       </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
 
-            <div className="flex gap-3 mt-4">
-              <Button variant="outline" onClick={goToPrevStep}>Back</Button>
-              <Button onClick={goToNextStep} disabled={!selectedPath} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-bold">
-                Continue <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
+                      {/* Desktop prev/next arrows */}
+                      <div className="hidden sm:flex items-center gap-1">
+                        <button
+                          onClick={handlePathBack}
+                          disabled={pathCardIndex === 0}
+                          className="p-1.5 rounded-full border border-white/10 text-white/40 hover:text-white hover:border-white/30 disabled:opacity-20 transition-all"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={handlePathNext}
+                          disabled={pathCardIndex === totalCards - 1}
+                          className="p-1.5 rounded-full border border-white/10 text-white/40 hover:text-white hover:border-white/30 disabled:opacity-20 transition-all"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </div>
+                      {/* Mobile spacer to balance back button */}
+                      <div className="w-16 sm:hidden" />
+                    </div>
+
+                    {/* Title block */}
+                    <div className="relative z-20 text-center px-5 sm:px-6 mt-1 sm:mt-2">
+                      <p
+                        className="text-[10px] uppercase tracking-[4px] mb-2"
+                        style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, color: 'rgba(148,163,184,0.6)' }}
+                      >
+                        CHOOSE YOUR PATH
+                      </p>
+                      <h2
+                        className="leading-none uppercase"
+                        style={{
+                          fontFamily: "'Space Grotesk', sans-serif",
+                          fontWeight: 700,
+                          fontSize: 'clamp(52px, 13vw, 72px)',
+                          letterSpacing: '-3.6px',
+                          color: '#c1ff00',
+                          textShadow: '0 0 40px rgba(193,255,0,0.3)',
+                        }}
+                      >
+                        {card.title}
+                      </h2>
+                    </div>
+
+                    {/* Visual artwork — fills remaining vertical space */}
+                    {card.visual}
+
+                    {/* CTA button */}
+                    <div
+                      className="relative z-20 px-5 sm:px-6"
+                      style={{ paddingBottom: 'calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 1.5rem)' }}
+                    >
+                      <button
+                        onClick={() => selectAndContinue(card.id)}
+                        className="w-full py-4 sm:py-5 rounded-2xl font-black uppercase transition-transform active:scale-[0.98] hover:brightness-105"
+                        style={{
+                          fontFamily: "'Outfit', sans-serif",
+                          fontSize: '14px',
+                          letterSpacing: '2.8px',
+                          background: '#c1ff00',
+                          color: '#0a0f1c',
+                          boxShadow: '0 20px 40px rgba(193,255,0,0.3)',
+                        }}
+                      >
+                        {card.ctaLabel}
+                      </button>
+                    </div>
+
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         );
+      }
 
       // ── STEP 8: PRO UPSELL (varies by path) ───────────────────────────────
       case OnboardingStep.ProUpsell:
