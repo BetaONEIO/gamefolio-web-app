@@ -49,6 +49,7 @@ const __dirname = dirname(__filename);
 import { getDemoUser, getDemoUserWithStats, getDemoClips, getDemoFavoriteGames } from "./demo-user";
 import { getMacUserWithStats, MAC_BONUS_XP } from "./mac-profile";
 import axios from "axios";
+import { syncXboxForUser, syncPsnForUser, PlatformSyncError } from "./platform-sync";
 import adminRouter from "./routes/admin";
 import adminContentFilterRouter from "./routes/admin-content-filter";
 import twitchGamesRouter from "./routes/twitch-games";
@@ -1822,53 +1823,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Xbox Achievements — sync from xbl.io
+  // Xbox Achievements — sync from xbl.io. The per-user sync logic lives in
+  // server/platform-sync.ts so the daily background scheduler can reuse it.
   app.post("/api/xbox/achievements/sync", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const user = await storage.getUserById((req.user as any).id);
       if (!user) return res.status(404).json({ message: "User not found" });
-      if (!user.xboxXuid) return res.status(400).json({ message: "No Xbox account linked. Please connect your Xbox account first." });
 
-      const xblApiKey = process.env.XBL_API_KEY;
-      if (!xblApiKey) return res.status(500).json({ message: "Xbox integration is not configured" });
-
-      const axiosResponse = await axios.get(`https://xbl.io/api/v2/achievements/player/${user.xboxXuid}`, {
-        headers: {
-          'x-authorization': xblApiKey,
-          'Accept': 'application/json',
-          'Accept-Language': 'en-US',
-        },
-        validateStatus: null,
+      const result = await syncXboxForUser(user);
+      res.json({
+        achievements: result.achievements,
+        syncedAt: new Date().toISOString(),
+        gamerscore: result.gamerscore,
+        totalAchievements: result.totalAchievements,
       });
-
-      if (axiosResponse.status < 200 || axiosResponse.status >= 300) {
-        console.error("xbl.io achievements error:", axiosResponse.status, JSON.stringify(axiosResponse.data));
-        return res.status(502).json({ message: "Failed to fetch achievements from Xbox Live" });
-      }
-
-      const data = axiosResponse.data as any;
-      const allTitles = data.titles || data.achievements || data.data || [];
-      const achievements = allTitles.slice(0, 100);
-
-      // Tally true totals across ALL games before slicing
-      const totalAchievementsEarned = allTitles.reduce((sum: number, t: any) => {
-        return sum + (t.achievement?.currentAchievements ?? t.earnedAchievements ?? t.currentAchievements ?? 0);
-      }, 0);
-
-      const totalGamerscoreEarned = allTitles.reduce((sum: number, t: any) => {
-        return sum + (t.achievement?.currentGamerscore ?? t.currentGamerscore ?? 0);
-      }, 0);
-
-      await storage.updateUser(user.id, {
-        xboxAchievements: achievements,
-        xboxAchievementsLastSync: new Date(),
-        xboxTotalAchievements: totalAchievementsEarned,
-        xboxGamerscore: totalGamerscoreEarned > 0 ? totalGamerscoreEarned : null,
-      });
-
-      res.json({ achievements, syncedAt: new Date().toISOString(), gamerscore: totalGamerscoreEarned, totalAchievements: totalAchievementsEarned });
     } catch (error) {
+      if (error instanceof PlatformSyncError) {
+        return res.status(error.httpStatus).json({ message: error.message });
+      }
       console.error("Xbox achievements sync error:", error);
       res.status(500).json({ message: "Failed to sync achievements" });
     }
@@ -1890,151 +1863,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PSN helpers — store/retrieve refresh token from server_settings
-  async function getPsnRefreshToken(): Promise<string | null> {
-    try {
-      const rows = await db.select().from(serverSettings).where(eq(serverSettings.key, "psn_refresh_token"));
-      return rows[0]?.value ?? null;
-    } catch { return null; }
-  }
-
-  async function setPsnRefreshToken(token: string): Promise<void> {
-    try {
-      await db.insert(serverSettings).values({ key: "psn_refresh_token", value: token, updatedAt: new Date() })
-        .onConflictDoUpdate({ target: serverSettings.key, set: { value: token, updatedAt: new Date() } });
-    } catch (e) {
-      console.error("Failed to save PSN refresh token:", e);
-    }
-  }
-
-  // PSN Trophy Sync
+  // PSN Trophy Sync. Per-user logic + the self-renewing refresh-token handling
+  // live in server/platform-sync.ts so the daily background scheduler reuses it.
   app.post("/api/psn/trophies/sync", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const user = await storage.getUserById((req.user as any).id);
       if (!user) return res.status(404).json({ message: "User not found" });
-      if (!user.playstationUsername) return res.status(400).json({ message: "No PlayStation ID saved. Please add your PSN ID first." });
 
-      // psn-api is ESM-formatted but lacks "type":"module", so dynamic import()
-      // fails in production. Instead we load the CJS build via require (dev) or
-      // createRequire (production ESM build).
-      const psnMod: any = await (async () => {
-        const cjsRequire: NodeRequire | undefined = (globalThis as any).require;
-        if (cjsRequire) {
-          return cjsRequire('psn-api');
-        }
-        const { createRequire } = await import('node:module');
-        return createRequire(process.cwd() + '/index.js')('psn-api');
-      })();
-      const {
-        exchangeNpssoForCode,
-        exchangeCodeForAccessToken,
-        exchangeRefreshTokenForAuthTokens,
-        getProfileFromUserName,
-        getUserPlayedGames,
-      } = psnMod;
-
-      let accessToken: string;
-
-      // Try refresh token first (self-renewing — no manual rotation needed)
-      const storedRefreshToken = await getPsnRefreshToken();
-      if (storedRefreshToken) {
-        try {
-          const tokens = await exchangeRefreshTokenForAuthTokens(storedRefreshToken);
-          accessToken = tokens.accessToken;
-          // Save the new refresh token — keeps the chain alive indefinitely
-          if (tokens.refreshToken) await setPsnRefreshToken(tokens.refreshToken);
-        } catch (refreshErr: any) {
-          console.warn("PSN refresh token expired, falling back to NPSSO:", refreshErr?.message);
-          // Fall through to NPSSO below
-          accessToken = "";
-        }
-      } else {
-        accessToken = "";
-      }
-
-      // Fall back to NPSSO (one-time bootstrap)
-      if (!accessToken) {
-        const npsso = process.env.PSN_NPSSO_TOKEN;
-        if (!npsso) {
-          return res.status(503).json({
-            message: "PSN is not configured. Please add a PSN_NPSSO_TOKEN secret to get started. After the first sync, it will self-renew automatically.",
-          });
-        }
-        try {
-          const code = await exchangeNpssoForCode(npsso);
-          const tokens = await exchangeCodeForAccessToken(code);
-          accessToken = tokens.accessToken;
-          if (tokens.refreshToken) await setPsnRefreshToken(tokens.refreshToken);
-        } catch (authErr: any) {
-          console.error("PSN NPSSO auth error:", authErr?.message || authErr);
-          return res.status(503).json({ message: "Failed to authenticate with PSN. The NPSSO token may be expired — please update it in your secrets." });
-        }
-      }
-
-      let profile: any;
-      try {
-        profile = await getProfileFromUserName({ accessToken }, user.playstationUsername);
-      } catch (lookupErr: any) {
-        const msg = lookupErr?.message || "";
-        if (msg.includes("not found") || msg.includes("404") || msg.includes("2105023")) {
-          return res.status(404).json({ message: `Could not find PSN user "${user.playstationUsername}". Check the PSN ID is correct and the profile is public.` });
-        }
-        throw lookupErr;
-      }
-
-      const accountId: string = profile?.profile?.accountId;
-      if (!accountId) {
-        return res.status(404).json({ message: `Could not find PSN user "${user.playstationUsername}". Check the PSN ID is correct and the profile is public.` });
-      }
-
-      const trophySummaryData = profile?.profile?.trophySummary ?? null;
-      const trophyLevel: number | null = trophySummaryData?.level ?? null;
-      const earnedTrophies = trophySummaryData?.earnedTrophies ?? {};
-      const totalTrophies = (
-        (earnedTrophies.platinum ?? 0) +
-        (earnedTrophies.gold ?? 0) +
-        (earnedTrophies.silver ?? 0) +
-        (earnedTrophies.bronze ?? 0)
-      ) || null;
-
-      let recentGames: any[] = [];
-      try {
-        const gamesResult = await getUserPlayedGames({ accessToken }, accountId, { limit: 12, categories: "ps4_game,ps5_native_game" });
-        recentGames = gamesResult?.titles ?? [];
-      } catch (gamesErr: any) {
-        console.warn("PSN recent games unavailable:", gamesErr?.message || gamesErr);
-      }
-
-      const trophyData = {
-        earnedTrophies,
-        trophyLevel,
-        recentGames: recentGames.slice(0, 10).map((g: any) => ({
-          titleId: g.titleId,
-          name: g.name,
-          imageUrl: g.imageUrl,
-          category: g.category,
-          playCount: g.playCount,
-          lastPlayedDateTime: g.lastPlayedDateTime,
-        })),
-      };
-
-      await storage.updateUser(user.id, {
-        psnTrophyData: [trophyData],
-        psnTrophiesLastSync: new Date(),
-        psnTrophyLevel: trophyLevel,
-        psnTotalTrophies: totalTrophies,
-      });
-
+      const result = await syncPsnForUser(user);
       res.json({
         success: true,
-        trophyLevel,
-        totalTrophies,
-        earnedTrophies,
-        recentGames: trophyData.recentGames,
+        trophyLevel: result.trophyLevel,
+        totalTrophies: result.totalTrophies,
+        earnedTrophies: result.earnedTrophies,
+        recentGames: result.recentGames,
         syncedAt: new Date().toISOString(),
       });
     } catch (error: any) {
+      if (error instanceof PlatformSyncError) {
+        return res.status(error.httpStatus).json({ message: error.message });
+      }
       console.error("PSN sync error:", error?.message || error);
       res.status(500).json({ message: "Failed to fetch PSN data. Please try again later." });
     }

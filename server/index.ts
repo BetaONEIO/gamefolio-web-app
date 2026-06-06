@@ -366,6 +366,22 @@ app.use((req, res, next) => {
         setTimeout(tick, 90 * 1000);
         setInterval(tick, RECONCILE_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule gamefolio reconciler:', err));
+
+      // Auto-refresh connected Xbox/PSN profiles. The runner only touches
+      // profiles whose last sync is stale (~23h), so a 6h interval keeps every
+      // connected profile fresh roughly daily while spreading API load across
+      // runs rather than one big nightly batch. Set PLATFORM_AUTOSYNC_DISABLED
+      // to "true" to turn it off.
+      import('./platform-sync').then(({ runScheduledPlatformSync }) => {
+        const SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000;
+        const tick = () => {
+          runScheduledPlatformSync()
+            .catch((err) => console.error('platform-sync failed:', err));
+        };
+        // Delay first run so the app is fully warm.
+        setTimeout(tick, 2 * 60 * 1000);
+        setInterval(tick, SYNC_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule platform sync:', err));
     });
   } catch (error) {
     console.error("Fatal server error:", error);
