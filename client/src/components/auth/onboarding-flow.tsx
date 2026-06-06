@@ -759,7 +759,7 @@ export default function OnboardingFlow({
             style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
           >
             {/* ── Visual area ── */}
-            <div className="flex-1 relative flex items-center justify-center overflow-hidden">
+            <div className="flex-none relative flex items-center justify-center overflow-hidden" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)' }}>
               {/* Background scene image */}
               <img
                 src={imgBountyBg}
@@ -777,7 +777,7 @@ export default function OnboardingFlow({
                 alt="GF Token bag"
                 draggable={false}
                 className="ob-float relative z-10 select-none"
-                style={{ height: 'clamp(180px, calc(100dvh - 460px), 280px)', width: 'auto', objectFit: 'contain', animationDuration: '4s', filter: 'drop-shadow(0 0 40px rgba(193,255,0,0.35))' }}
+                style={{ height: '65%', width: 'auto', objectFit: 'contain', animationDuration: '4s', filter: 'drop-shadow(0 0 40px rgba(193,255,0,0.35))' }}
               />
             </div>
 
@@ -802,8 +802,8 @@ export default function OnboardingFlow({
               {/* CTA */}
               <button
                 onClick={goToNextStep}
-                className="w-full rounded-[17px] py-4 uppercase font-black"
-                style={{ background: '#c1ff00', boxShadow: '0 15px 35px rgba(193,255,0,0.40)', color: '#0a0f1c', fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '14px', letterSpacing: '2.8px' }}
+                className="w-full rounded-[18px] py-4 uppercase font-black tracking-widest"
+                style={{ background: '#c1ff00', boxShadow: '0 15px 35px rgba(193,255,0,0.4)', color: '#0a0f1c', fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '14px', letterSpacing: '2.8px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
               >
                 CONTINUE
               </button>
