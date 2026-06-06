@@ -1051,9 +1051,11 @@ export default function OnboardingFlow({
           setCurrentStep(getNextStep(OnboardingStep.ChoosePath));
         };
 
+        const currentCard = pathCards[pathCardIndex];
+
         return (
           <div
-            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8"
+            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#0a0f1c]"
             style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
             onTouchStart={(e) => { pathTouchStartX.current = e.touches[0].clientX; }}
             onTouchEnd={(e) => {
@@ -1064,44 +1066,44 @@ export default function OnboardingFlow({
               pathTouchStartX.current = null;
             }}
           >
-            <div className="flex-1 overflow-hidden relative bg-[#0a0f1c]">
+            {/* ── STATIC: back + dots — never move ── */}
+            <div className="flex-shrink-0 flex items-center justify-between px-5 sm:px-6 pt-4 pb-1 relative z-20">
+              <button
+                onClick={handlePathBack}
+                className="flex items-center gap-1 text-white/50 hover:text-white transition-colors text-sm font-medium"
+              >
+                <ChevronLeft className="h-5 w-5" />
+                Back
+              </button>
+              <div className="flex items-center gap-2">
+                {pathCards.map((_, dotIdx) => (
+                  <button
+                    key={dotIdx}
+                    onClick={() => setPathCardIndex(dotIdx)}
+                    className="rounded-full transition-all duration-300"
+                    style={{
+                      width: dotIdx === pathCardIndex ? '20px' : '6px',
+                      height: '6px',
+                      background: dotIdx === pathCardIndex ? '#c1ff00' : 'rgba(255,255,255,0.25)',
+                      boxShadow: dotIdx === pathCardIndex ? '0 0 8px rgba(193,255,0,0.7)' : 'none',
+                    }}
+                  />
+                ))}
+              </div>
+              <div className="w-16" />
+            </div>
+
+            {/* ── SLIDING: only title + visual move ── */}
+            <div className="flex-1 min-h-0 overflow-hidden relative">
               <div
                 className="flex h-full"
                 style={{ transform: `translateX(-${pathCardIndex * 100}%)`, transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1)' }}
               >
                 {pathCards.map((card) => (
-                  <div key={card.id} className="w-full h-full flex-shrink-0 flex flex-col relative overflow-hidden">
+                  <div key={card.id} className="w-full h-full flex-shrink-0 flex flex-col">
 
-                    {/* Top chrome: back + dots only */}
-                    <div className="relative z-20 flex items-center justify-between px-5 sm:px-6 pt-4 pb-1">
-                      <button
-                        onClick={handlePathBack}
-                        className="flex items-center gap-1 text-white/50 hover:text-white transition-colors text-sm font-medium"
-                      >
-                        <ChevronLeft className="h-5 w-5" />
-                        Back
-                      </button>
-                      <div className="flex items-center gap-2">
-                        {pathCards.map((_, dotIdx) => (
-                          <button
-                            key={dotIdx}
-                            onClick={() => setPathCardIndex(dotIdx)}
-                            className="rounded-full transition-all duration-300"
-                            style={{
-                              width: dotIdx === pathCardIndex ? '20px' : '6px',
-                              height: '6px',
-                              background: dotIdx === pathCardIndex ? '#c1ff00' : 'rgba(255,255,255,0.25)',
-                              boxShadow: dotIdx === pathCardIndex ? '0 0 8px rgba(193,255,0,0.7)' : 'none',
-                            }}
-                          />
-                        ))}
-                      </div>
-                      {/* Spacer to balance back button */}
-                      <div className="w-16" />
-                    </div>
-
-                    {/* Title block — compact */}
-                    <div className="relative z-20 text-center px-5 sm:px-6 mt-1">
+                    {/* Title */}
+                    <div className="flex-shrink-0 text-center px-5 sm:px-6 mt-2">
                       <p
                         className="text-[9px] uppercase tracking-[4px] mb-1"
                         style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, color: 'rgba(148,163,184,0.55)' }}
@@ -1123,58 +1125,56 @@ export default function OnboardingFlow({
                       </h2>
                     </div>
 
-                    {/* Spacer — pushes visual down from title */}
+                    {/* Spacer above visual */}
                     <div className="flex-1 min-h-0" />
-
-                    {/* Visual artwork — fixed height, centred */}
+                    {/* Visual — fixed height */}
                     {card.visual}
-
-                    {/* Spacer — pushes arrows + button to bottom */}
+                    {/* Spacer below visual */}
                     <div className="flex-1 min-h-0" />
-
-                    {/* Arrow nav row — above the CTA button, bright white */}
-                    <div className="relative z-20 flex items-center justify-center gap-6 pb-3">
-                      <button
-                        onClick={handlePathBack}
-                        disabled={pathCardIndex === 0}
-                        className="text-white disabled:opacity-20 transition-opacity active:scale-90"
-                      >
-                        <ChevronLeft className="h-8 w-8" strokeWidth={2.5} />
-                      </button>
-                      <button
-                        onClick={handlePathNext}
-                        disabled={pathCardIndex === totalCards - 1}
-                        className="text-white disabled:opacity-20 transition-opacity active:scale-90"
-                      >
-                        <ChevronRight className="h-8 w-8" strokeWidth={2.5} />
-                      </button>
-                    </div>
-
-                    {/* CTA button */}
-                    <div
-                      className="relative z-20 px-5 sm:px-6"
-                      style={{ paddingBottom: 'calc(max(2rem, env(safe-area-inset-bottom, 0px)) + 1rem)' }}
-                    >
-                      <button
-                        onClick={() => selectAndContinue(card.id)}
-                        className="w-full py-4 rounded-2xl font-black uppercase transition-transform active:scale-[0.98] hover:brightness-105"
-                        style={{
-                          fontFamily: "'Outfit', sans-serif",
-                          fontSize: '14px',
-                          letterSpacing: '2.8px',
-                          background: '#c1ff00',
-                          color: '#0a0f1c',
-                          boxShadow: '0 20px 40px rgba(193,255,0,0.3)',
-                        }}
-                      >
-                        {card.ctaLabel}
-                      </button>
-                    </div>
 
                   </div>
                 ))}
               </div>
             </div>
+
+            {/* ── STATIC: arrows + button — never move ── */}
+            <div className="flex-shrink-0 relative z-20 flex items-center justify-center gap-6 pb-3">
+              <button
+                onClick={handlePathBack}
+                disabled={pathCardIndex === 0}
+                className="text-white disabled:opacity-20 transition-opacity active:scale-90"
+              >
+                <ChevronLeft className="h-8 w-8" strokeWidth={2.5} />
+              </button>
+              <button
+                onClick={handlePathNext}
+                disabled={pathCardIndex === totalCards - 1}
+                className="text-white disabled:opacity-20 transition-opacity active:scale-90"
+              >
+                <ChevronRight className="h-8 w-8" strokeWidth={2.5} />
+              </button>
+            </div>
+
+            <div
+              className="flex-shrink-0 relative z-20 px-5 sm:px-6"
+              style={{ paddingBottom: 'calc(max(2rem, env(safe-area-inset-bottom, 0px)) + 1rem)' }}
+            >
+              <button
+                onClick={() => selectAndContinue(currentCard.id)}
+                className="w-full py-4 rounded-2xl font-black uppercase transition-all active:scale-[0.98] hover:brightness-105"
+                style={{
+                  fontFamily: "'Outfit', sans-serif",
+                  fontSize: '14px',
+                  letterSpacing: '2.8px',
+                  background: '#c1ff00',
+                  color: '#0a0f1c',
+                  boxShadow: '0 20px 40px rgba(193,255,0,0.3)',
+                }}
+              >
+                {currentCard.ctaLabel}
+              </button>
+            </div>
+
           </div>
         );
       }
