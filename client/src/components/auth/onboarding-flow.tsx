@@ -640,170 +640,252 @@ export default function OnboardingFlow({
       // ── STEP 1: BUILD YOUR GAMEFOLIO ───────────────────────────────────────
       case OnboardingStep.Intro1:
         return (
-          <div className="flex flex-col flex-1 min-h-0">
-            <div className="flex-1 overflow-y-auto">
-              {/* Placeholder visual card */}
-              <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-[#0d1f26] to-[#071013] p-5 mb-5 ob-fade-up" style={{ animationDelay: '0ms' }}>
-                {/* Mock profile row */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary/40 to-primary/10 border-2 border-primary/30 flex items-center justify-center flex-shrink-0">
-                    <User className="h-6 w-6 text-primary" />
+          <div
+            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#0a0f1c]"
+            style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
+          >
+            {/* ── Visual area ── */}
+            <div className="flex-1 relative" style={{ overflowX: 'clip' }}>
+              {/* Ambient glow */}
+              <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[360px] h-[360px] rounded-full pointer-events-none" style={{ background: 'rgba(193,255,0,0.06)', filter: 'blur(70px)' }} />
+
+              {/* Cards stack */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6">
+                {/* Game video thumbnail card */}
+                <div className="relative w-full rounded-[22px] overflow-hidden flex-shrink-0" style={{ height: 'clamp(130px, 22dvh, 175px)', border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(27,37,55,0.55)', backdropFilter: 'blur(12px)' }}>
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-950/60 via-slate-900/40 to-indigo-950/60" />
+                  {/* Fake scan-lines texture */}
+                  <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.04) 3px, rgba(255,255,255,0.04) 4px)' }} />
+                  {/* Play button */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.35)', border: '1.5px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}>
+                      <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M14.2625 5.97434C14.9146 6.32109 15.3221 6.99934 15.3221 7.73786C15.3221 8.47638 14.9146 9.15463 14.2625 9.50138L5.72673 14.143C4.3523 14.8912 2.66406 13.9185 2.66406 12.3802V3.09622C2.66406 1.55722 4.3523 0.585185 5.72673 1.33203L14.2625 5.97434Z" fill="#C1FF00"/></svg>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-bold text-white text-sm">GamerPro99</span>
-                      <span className="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[10px] font-bold">LVL 8</span>
-                    </div>
-                    <div className="h-1.5 w-28 rounded-full bg-gray-800 overflow-hidden">
-                      <div className="h-full w-3/5 bg-primary rounded-full" style={{ boxShadow: '0 0 8px rgba(183,255,26,0.5)' }} />
-                    </div>
-                    <div className="flex gap-3 mt-1.5">
-                      <span className="text-xs text-gray-500">312 clips</span>
-                      <span className="text-xs text-gray-500">5.1K followers</span>
-                    </div>
+                  {/* Gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                  {/* Views badge */}
+                  <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(6px)' }}>
+                    <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M14.2625 5.97434C14.9146 6.32109 15.3221 6.99934 15.3221 7.73786C15.3221 8.47638 14.9146 9.15463 14.2625 9.50138L5.72673 14.143C4.3523 14.8912 2.66406 13.9185 2.66406 12.3802V3.09622C2.66406 1.55722 4.3523 0.585185 5.72673 1.33203L14.2625 5.97434Z" fill="#C1FF00"/></svg>
+                    <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '10px', letterSpacing: '1.1px', color: '#fff', textTransform: 'uppercase' }}>4.2K VIEWS</span>
                   </div>
                 </div>
-                {/* Mock media grid */}
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: 'CLIP', color: 'from-blue-900/40 to-slate-900/60' },
-                    { label: 'REEL', color: 'from-purple-900/40 to-slate-900/60' },
-                    { label: 'SHOT', color: 'from-emerald-900/40 to-slate-900/60' },
-                  ].map((item, i) => (
-                    <div key={i} className={`aspect-video rounded-lg bg-gradient-to-br ${item.color} border border-white/5 flex flex-col items-center justify-center relative overflow-hidden`}>
-                      <Video className="h-5 w-5 text-gray-400 mb-1" />
-                      <span className="text-[9px] text-gray-500 font-semibold tracking-wider">{item.label}</span>
+
+                {/* Profile stats card */}
+                <div className="w-full rounded-[28px] overflow-hidden" style={{ border: '1.111px solid rgba(255,255,255,0.1)', background: 'rgba(27,37,55,0.60)', backdropFilter: 'blur(20px)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                  {/* Stats row */}
+                  <div className="flex" style={{ borderBottom: '1.111px solid rgba(255,255,255,0.1)' }}>
+                    {[{ num: '36', label: 'UPLOADS' }, { num: '12', label: 'FOLLOWERS' }, { num: '18', label: 'FOLLOWING' }].map((stat, i, arr) => (
+                      <div key={stat.label} className="flex-1 flex flex-col items-center py-3" style={{ borderRight: i < arr.length - 1 ? '1.111px solid rgba(255,255,255,0.1)' : 'none' }}>
+                        <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '22px', color: '#fff', lineHeight: '30px' }}>{stat.num}</span>
+                        <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '9px', color: '#c1ff00', letterSpacing: '0.9px', textTransform: 'uppercase' }}>{stat.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Collection button */}
+                  <div className="flex justify-end px-5 py-3">
+                    <div className="px-4 py-1.5 rounded-full" style={{ background: '#c1ff00', boxShadow: '0 0 20px rgba(193,255,0,0.5)' }}>
+                      <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '10px', letterSpacing: '0.5px', color: '#0a0f1c', textTransform: 'uppercase' }}>COLLECTION</span>
                     </div>
-                  ))}
+                  </div>
                 </div>
               </div>
-
-              <h2 className="text-2xl font-black text-white mb-2 ob-fade-up" style={{ animationDelay: '300ms' }}>
-                Build Your <span className="text-primary">Gamefolio</span>
-              </h2>
-              <p className="text-gray-400 text-base mb-2 ob-fade-up-slow" style={{ animationDelay: '500ms' }}>
-                Showcase your best gaming moments.
-              </p>
-              <p className="text-gray-500 text-sm ob-fade-up-slow" style={{ animationDelay: '700ms' }}>
-                Upload clips, reels and screenshots from your favourite games — all in one place.
-              </p>
             </div>
-            <div className="ob-cta mt-4 flex gap-3" style={{ animationDelay: '900ms' }}>
-              <Button variant="outline" onClick={goToPrevStep}>Back</Button>
-              <Button onClick={goToNextStep} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] text-base font-bold py-6 rounded-xl justify-center">
-                Continue <ArrowRight className="h-5 w-5 ml-2" />
-              </Button>
+
+            {/* ── Static bottom chrome ── */}
+            <div className="flex-shrink-0 px-6 pt-5 pb-6">
+              {/* Step dots */}
+              <div className="flex items-center gap-2 justify-center mb-5">
+                {[0, 1, 2].map(i => (
+                  <div key={i} className="rounded-full transition-all duration-300" style={{ width: i === 0 ? '20px' : '6px', height: '6px', background: i === 0 ? '#c1ff00' : 'rgba(255,255,255,0.2)', boxShadow: i === 0 ? '0 0 8px rgba(193,255,0,0.7)' : 'none' }} />
+                ))}
+              </div>
+              {/* Title */}
+              <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(30px, 8vw, 38px)', letterSpacing: '-0.75px', color: '#fff' }}>
+                BUILD YOUR <span style={{ color: '#c1ff00' }}>GAMEFOLIO</span>
+              </h2>
+              {/* Subtitle */}
+              <p className="text-center mb-5" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 400, fontSize: '14px', lineHeight: '20px', color: '#94A3B8' }}>
+                Your gaming legacy, all in one place. Connect accounts and showcase your best moments.
+              </p>
+              {/* CTA */}
+              <button
+                onClick={goToNextStep}
+                className="w-full rounded-[18px] py-4 uppercase font-black tracking-widest"
+                style={{ background: '#c1ff00', boxShadow: '0 15px 35px rgba(193,255,0,0.4)', color: '#0a0f1c', fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '14px', letterSpacing: '2.8px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
+              >
+                CONTINUE
+              </button>
+              <button
+                onClick={goToPrevStep}
+                className="w-full py-3 text-center uppercase"
+                style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '10px', letterSpacing: '3px', color: '#94A3B8' }}
+              >
+                GO BACK
+              </button>
             </div>
           </div>
         );
 
-      // ── STEP 2: LEVEL UP ───────────────────────────────────────────────────
+      // ── STEP 2: TRACK YOUR PROGRESSION ────────────────────────────────────
       case OnboardingStep.Intro2:
         return (
-          <div className="flex flex-col flex-1 min-h-0">
-            <div className="flex-1 overflow-y-auto">
-              {/* Placeholder visual card */}
-              <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-[#0d1f26] to-[#071013] p-6 mb-5 ob-fade-up" style={{ animationDelay: '0ms' }}>
-                {/* Level display */}
-                <div className="text-center mb-5">
-                  <div className="inline-flex items-center gap-2 mb-1">
-                    <span className="text-gray-400 text-xs uppercase tracking-widest font-semibold">Current Level</span>
-                  </div>
-                  <div className="text-7xl font-black text-primary leading-none" style={{ textShadow: '0 0 30px rgba(183,255,26,0.4)' }}>
-                    12
-                  </div>
-                </div>
-                {/* XP bar */}
-                <div className="mb-4">
-                  <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-                    <span>8,450 XP</span>
-                    <span>10,000 XP</span>
-                  </div>
-                  <div className="h-3 rounded-full bg-gray-800/80 overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-primary to-primary/60" style={{ width: '84.5%', boxShadow: '0 0 12px rgba(183,255,26,0.5)' }} />
-                  </div>
-                </div>
-                {/* Achievement notifications */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3 bg-primary/10 border border-primary/20 rounded-xl px-3 py-2.5">
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                      <Trophy className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold text-white">Achievement Unlocked!</div>
-                      <div className="text-xs text-gray-400">First Upload — +500 XP</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5">
-                    <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                      <Star className="h-4 w-4 text-amber-400" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold text-white">#14 on Leaderboard</div>
-                      <div className="text-xs text-gray-400">This Week</div>
-                    </div>
-                  </div>
+          <div
+            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#0a0f1c]"
+            style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
+          >
+            {/* ── Visual area ── */}
+            <div className="flex-1 relative flex flex-col items-center justify-center gap-4 px-6" style={{ overflowX: 'clip' }}>
+              {/* Ambient glow */}
+              <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] rounded-full pointer-events-none" style={{ background: 'rgba(193,255,0,0.10)', filter: 'blur(60px)' }} />
+
+              {/* Streak badge */}
+              <div className="relative z-10 flex items-center gap-2 px-5 py-2.5 rounded-full" style={{ border: '1.111px solid rgba(255,105,0,0.20)', background: 'linear-gradient(270deg, rgba(255,105,0,0.10) 0%, rgba(245,73,0,0.05) 100%)', boxShadow: '0 10px 30px rgba(249,115,22,0.15)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" opacity="0.8"><path d="M12.8292 21.6712C15.9542 21.0454 19.9951 18.797 19.9951 12.9837C19.9951 7.69425 16.1232 4.17127 13.339 2.55273C12.7202 2.19284 11.9974 2.6657 11.9974 3.38049V5.20797C11.9974 6.64955 11.3916 9.28079 9.70806 10.3755C8.84831 10.9343 7.91858 10.0975 7.81461 9.07785L7.72863 8.24009C7.62866 7.26637 6.63695 6.67554 5.85917 7.26937C4.46058 8.33406 3 10.2035 3 12.9827C3 20.0917 8.28747 21.8701 10.9307 21.8701C11.0853 21.8701 11.2466 21.8651 11.4146 21.8551C10.0001 21.1283 9.00011 19.7238 9.00011 18.0844C9.00011 16.1268 10.2938 14.3633 11.3917 13.1055C11.7542 12.685 12.4167 12.9352 12.4167 13.4866V14.4585C12.4167 15.5561 13.1042 16.4997 14.1667 16.8747C14.9792 17.1664 15.7291 16.9455 16.1668 16.4747C16.6043 16.0039 16.7918 15.3123 16.5001 14.6664C16.3126 14.2497 16.0835 13.7789 15.9585 13.3539C15.7085 12.5289 16.4585 11.787 17.2168 12.162C18.6251 12.8454 19.9951 14.3381 19.9951 16.8789" fill="#FF6900"/></svg>
+                <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '13px', letterSpacing: '1.4px', color: '#FF6900', textTransform: 'uppercase' }}>7 DAY STREAK</span>
+              </div>
+
+              {/* Level circle */}
+              <div className="relative z-10 flex-shrink-0" style={{ width: 'clamp(200px, 55vw, 240px)', height: 'clamp(200px, 55vw, 240px)' }}>
+                {/* SVG ring */}
+                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 320" fill="none">
+                  <path opacity="0.2" d="M20 160C20 82.6801 82.6801 20 160 20C237.32 20 300 82.6801 300 160C300 237.32 237.32 300 160 300C82.6801 300 20 237.32 20 160Z" stroke="black" strokeWidth="12"/>
+                  <path d="M20 160C20 82.6801 82.6801 20 160 20C237.32 20 300 82.6801 300 160C300 237.32 237.32 300 160 300C82.6801 300 20 237.32 20 160Z" stroke="white" strokeWidth="10"/>
+                  <path opacity="0.1" d="M27 160C27 86.5461 86.5461 27 160 27C233.454 27 293 86.5461 293 160C293 233.454 233.454 293 160 293C86.5461 293 27 233.454 27 160Z" stroke="white"/>
+                </svg>
+                {/* Inner glass circle */}
+                <div className="absolute inset-[16%] rounded-full flex flex-col items-center justify-center" style={{ border: '1.111px solid rgba(255,255,255,0.20)', background: 'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.00) 100%)', boxShadow: '0 0 40px rgba(255,255,255,0.10) inset, 0 20px 50px rgba(0,0,0,0.50)', backdropFilter: 'blur(32px)' }}>
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '11px', letterSpacing: '5px', color: '#c1ff00', textTransform: 'uppercase' }}>LEVEL</span>
+                  <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(56px, 14vw, 80px)', color: '#fff', lineHeight: '1' }}>23</span>
                 </div>
               </div>
 
-              <h2 className="text-2xl font-black text-white mb-2 ob-fade-up" style={{ animationDelay: '300ms' }}>
-                Level Up As You <span className="text-primary">Create</span>
-              </h2>
-              <p className="text-gray-400 text-base mb-2 ob-fade-up-slow" style={{ animationDelay: '500ms' }}>
-                Earn XP and unlock rewards.
-              </p>
-              <p className="text-gray-500 text-sm ob-fade-up-slow" style={{ animationDelay: '700ms' }}>
-                Complete challenges, earn XP and climb the leaderboards as you engage with the community.
-              </p>
+              {/* XP gained card */}
+              <div className="relative z-10 w-full flex items-center justify-between gap-3 px-5 py-4 rounded-[17px]" style={{ border: '1.111px solid rgba(255,255,255,0.10)', background: 'rgba(27,37,55,0.90)', boxShadow: '0 20px 40px rgba(0,0,0,0.40)', backdropFilter: 'blur(12px)' }}>
+                <div className="flex flex-col gap-0.5">
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '10px', letterSpacing: '1.04px', color: '#94A3B8', textTransform: 'uppercase' }}>GAINED</span>
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '16px', color: '#c1ff00', lineHeight: '1.2' }}>+1,250 XP</span>
+                </div>
+                <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
+                  <path d="M8.5522 13.7193C8.55645 13.6257 8.71043 13.5883 8.75637 13.6699C8.97245 14.0527 9.33996 14.6151 9.75681 14.8711C10.1737 15.1272 10.8423 15.1995 11.2813 15.2182C11.3749 15.2225 11.4114 15.3764 11.3298 15.4224C10.947 15.6385 10.3855 16.006 10.1294 16.4228C9.87336 16.8397 9.80104 17.5083 9.78233 17.9473C9.77808 18.0409 9.62325 18.0775 9.57816 17.9958C9.36208 17.613 8.99457 17.0515 8.57687 16.7954C8.16002 16.5394 7.49136 16.4671 7.05325 16.4483C6.95967 16.4441 6.92224 16.2893 7.00391 16.2442C7.38673 16.0281 7.94905 15.6606 8.20511 15.2429C8.46032 14.826 8.53349 14.1574 8.5522 13.7193Z" fill="#C1FF00"/>
+                  <path d="M12.2899 3.34037L12.0868 3.0835C11.3002 2.09043 10.9074 1.59347 10.4498 1.6665C9.99319 1.74038 9.77409 2.33471 9.33673 3.52421L9.22341 3.83145C9.09917 4.16975 9.03705 4.33848 8.91785 4.46272C8.79865 4.58696 8.63579 4.6516 8.31008 4.78171L8.01376 4.90008L7.80641 4.98402C6.79907 5.38696 6.29204 5.61613 6.22656 6.06104C6.15773 6.53533 6.63789 6.94162 7.59823 7.75338L7.84671 7.96324C8.12037 8.19409 8.25636 8.30993 8.33443 8.46691C8.41334 8.62389 8.42425 8.80521 8.44608 9.16785L8.46622 9.49776C8.54513 10.7737 8.58375 11.4117 8.99927 11.6316C9.41396 11.8516 9.92939 11.5082 10.9602 10.8207L11.2272 10.6428C11.5202 10.4472 11.6662 10.349 11.8341 10.3229C12.002 10.2969 12.1707 10.3431 12.5107 10.4371L12.8188 10.5227C14.0133 10.8535 14.6102 11.0188 14.935 10.6805C15.2608 10.3422 15.0987 9.72357 14.7755 8.48706L14.6916 8.16723C14.6001 7.81549 14.5539 7.64005 14.5791 7.46628C14.6043 7.29252 14.6983 7.13974 14.8864 6.83501L15.0568 6.55799C15.7157 5.48685 16.0456 4.95128 15.8324 4.52148C15.6184 4.09336 15.003 4.05391 13.7724 3.97752L13.4534 3.95737C13.1042 3.93554 12.9296 3.92463 12.7777 3.84404C12.6257 3.76346 12.5132 3.62243 12.2899 3.34037Z" fill="#C1FF00"/>
+                </svg>
+              </div>
             </div>
-            <div className="ob-cta mt-4 flex gap-3" style={{ animationDelay: '900ms' }}>
-              <Button variant="outline" onClick={goToPrevStep}>Back</Button>
-              <Button onClick={goToNextStep} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] text-base font-bold py-6 rounded-xl justify-center">
-                Continue <ArrowRight className="h-5 w-5 ml-2" />
-              </Button>
+
+            {/* ── Static bottom chrome ── */}
+            <div className="flex-shrink-0 px-6 pt-5 pb-6">
+              {/* Step dots */}
+              <div className="flex items-center gap-2 justify-center mb-5">
+                {[0, 1, 2].map(i => (
+                  <div key={i} className="rounded-full transition-all duration-300" style={{ width: i === 1 ? '20px' : '6px', height: '6px', background: i === 1 ? '#c1ff00' : 'rgba(255,255,255,0.2)', boxShadow: i === 1 ? '0 0 8px rgba(193,255,0,0.7)' : 'none' }} />
+                ))}
+              </div>
+              {/* Title */}
+              <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(30px, 8vw, 38px)', letterSpacing: '-0.9px', color: '#fff' }}>
+                TRACK YOUR <span style={{ color: '#c1ff00' }}>PROGRESSION</span>
+              </h2>
+              {/* Subtitle */}
+              <p className="text-center mb-5" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 400, fontSize: '14px', lineHeight: '20px', color: '#94A3B8' }}>
+                Watch your skills grow. Every action earns XP and builds your legendary status.
+              </p>
+              {/* CTA */}
+              <button
+                onClick={goToNextStep}
+                className="w-full rounded-[18px] py-4 uppercase font-black tracking-widest"
+                style={{ background: '#c1ff00', boxShadow: '0 20px 40px rgba(193,255,0,0.30)', color: '#0a0f1c', fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '14px', letterSpacing: '2.8px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
+              >
+                CONTINUE
+              </button>
+              <button
+                onClick={goToPrevStep}
+                className="w-full py-3 text-center uppercase"
+                style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '10px', letterSpacing: '3px', color: '#94A3B8' }}
+              >
+                GO BACK
+              </button>
             </div>
           </div>
         );
 
-      // ── STEP 3: BOUNTIES ───────────────────────────────────────────────────
+      // ── STEP 3: REWARDS FOR EVERY BOUNTY ──────────────────────────────────
       case OnboardingStep.Intro3:
         return (
-          <div className="flex flex-col flex-1 min-h-0">
-            <div className="flex-1 overflow-y-auto">
-              {/* Placeholder visual card */}
-              <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-[#0d1f26] to-[#071013] p-5 mb-5 ob-fade-up" style={{ animationDelay: '0ms' }}>
-                <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-3">Active Bounties</p>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {[
-                    { emoji: '🎯', label: 'Creator Challenge', reward: '+200 GFT', color: 'from-purple-900/40', border: 'border-purple-500/20', rewardColor: 'text-primary' },
-                    { emoji: '📦', label: 'Loot Drop', reward: 'Open Now', color: 'from-amber-900/40', border: 'border-amber-500/20', rewardColor: 'text-amber-400' },
-                    { emoji: '🏆', label: 'Weekly Top 10', reward: '+500 GFT', color: 'from-blue-900/40', border: 'border-blue-500/20', rewardColor: 'text-blue-400' },
-                    { emoji: '⚡', label: 'Daily Quest', reward: '+50 GFT', color: 'from-primary/5', border: 'border-primary/20', rewardColor: 'text-primary' },
-                  ].map((item, i) => (
-                    <div key={i} className={`rounded-xl bg-gradient-to-br ${item.color} to-[#071013] border ${item.border} p-3 transition-all hover:scale-[1.02] active:scale-[0.98]`}>
-                      <div className="text-xl mb-1.5">{item.emoji}</div>
-                      <div className="text-white text-xs font-semibold mb-0.5 leading-tight">{item.label}</div>
-                      <div className={`${item.rewardColor} text-sm font-black`}>{item.reward}</div>
-                    </div>
-                  ))}
+          <div
+            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#0a0f1c]"
+            style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
+          >
+            {/* ── Visual area ── */}
+            <div className="flex-1 relative flex items-center justify-center" style={{ overflowX: 'clip' }}>
+              {/* Large ambient glow */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full pointer-events-none" style={{ background: 'rgba(193,255,0,0.18)', filter: 'blur(70px)' }} />
+
+              {/* Bounty visual — stylised trophy + GFT token composition */}
+              <div className="relative z-10 flex flex-col items-center">
+                {/* Outer glow ring */}
+                <div className="absolute inset-[-30px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(193,255,0,0.12) 0%, transparent 70%)' }} />
+
+                {/* Main bounty icon */}
+                <div className="relative flex items-center justify-center" style={{ width: 'clamp(160px, 42vw, 200px)', height: 'clamp(160px, 42vw, 200px)' }}>
+                  {/* Outer ring */}
+                  <div className="absolute inset-0 rounded-full" style={{ border: '1.5px solid rgba(193,255,0,0.25)', background: 'radial-gradient(circle at 50% 30%, rgba(193,255,0,0.1) 0%, transparent 60%)' }} />
+                  {/* Inner glass */}
+                  <div className="absolute inset-4 rounded-full flex flex-col items-center justify-center" style={{ background: 'rgba(27,37,55,0.80)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(16px)', boxShadow: '0 0 40px rgba(193,255,0,0.12) inset' }}>
+                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#C1FF00" stroke="#C1FF00" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Floating bounty pills */}
+                <div className="ob-float flex items-center gap-2 mt-4 px-4 py-2 rounded-full" style={{ background: 'rgba(27,37,55,0.85)', border: '1px solid rgba(193,255,0,0.25)', backdropFilter: 'blur(12px)', animationDuration: '3.5s' }}>
+                  <div className="w-2 h-2 rounded-full" style={{ background: '#c1ff00', boxShadow: '0 0 6px rgba(193,255,0,0.8)' }} />
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '12px', letterSpacing: '1px', color: '#c1ff00', textTransform: 'uppercase' }}>+200 GFT</span>
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '11px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>CREATOR CHALLENGE</span>
+                </div>
+
+                {/* Second floating pill */}
+                <div className="ob-float-sm flex items-center gap-2 mt-2 px-4 py-2 rounded-full" style={{ background: 'rgba(27,37,55,0.85)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', animationDuration: '4.2s', animationDelay: '0.7s' }}>
+                  <div className="w-2 h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.4)' }} />
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '12px', letterSpacing: '1px', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' }}>+500 GFT</span>
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '11px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>WEEKLY TOP 10</span>
                 </div>
               </div>
-
-              <h2 className="text-2xl font-black text-white mb-2 ob-fade-up" style={{ animationDelay: '300ms' }}>
-                Complete <span className="text-primary">Bounties</span>
-              </h2>
-              <p className="text-gray-400 text-base mb-2 ob-fade-up-slow" style={{ animationDelay: '500ms' }}>
-                Get rewarded for playing games.
-              </p>
-              <p className="text-gray-500 text-sm ob-fade-up-slow" style={{ animationDelay: '700ms' }}>
-                Take part in creator campaigns, challenges and reward programmes.
-              </p>
             </div>
-            <div className="ob-cta mt-4 flex gap-3" style={{ animationDelay: '900ms' }}>
-              <Button variant="outline" onClick={goToPrevStep}>Back</Button>
-              <Button onClick={goToNextStep} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] text-base font-bold py-6 rounded-xl justify-center">
-                Continue <ArrowRight className="h-5 w-5 ml-2" />
-              </Button>
+
+            {/* ── Static bottom chrome ── */}
+            <div className="flex-shrink-0 px-6 pt-5 pb-6">
+              {/* Step dots */}
+              <div className="flex items-center gap-2 justify-center mb-5">
+                {[0, 1, 2].map(i => (
+                  <div key={i} className="rounded-full transition-all duration-300" style={{ width: i === 2 ? '20px' : '6px', height: '6px', background: i === 2 ? '#c1ff00' : 'rgba(255,255,255,0.2)', boxShadow: i === 2 ? '0 0 8px rgba(193,255,0,0.7)' : 'none' }} />
+                ))}
+              </div>
+              {/* Title */}
+              <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(30px, 8vw, 38px)', letterSpacing: '-0.9px', color: '#fff' }}>
+                REWARDS FOR <span style={{ color: '#c1ff00' }}>EVERY BOUNTY</span>
+              </h2>
+              {/* Subtitle */}
+              <p className="text-center mb-5" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 400, fontSize: '14px', lineHeight: '20px', color: '#94A3B8' }}>
+                Complete daily bounties, join creator challenges, and earn{' '}
+                <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: '#fff' }}>GFT</span>{' '}
+                to unlock exclusive legendary gear.
+              </p>
+              {/* CTA */}
+              <button
+                onClick={goToNextStep}
+                className="w-full rounded-[17px] py-4 uppercase font-black"
+                style={{ background: '#c1ff00', boxShadow: '0 15px 35px rgba(193,255,0,0.40)', color: '#0a0f1c', fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '14px', letterSpacing: '2.8px' }}
+              >
+                CONTINUE
+              </button>
+              <button
+                onClick={goToPrevStep}
+                className="w-full py-3 text-center uppercase"
+                style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '10px', letterSpacing: '3px', color: '#94A3B8' }}
+              >
+                GO BACK
+              </button>
             </div>
           </div>
         );
