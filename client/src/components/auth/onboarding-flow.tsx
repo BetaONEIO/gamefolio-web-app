@@ -1035,7 +1035,7 @@ export default function OnboardingFlow({
                   alt="Streamer"
                   draggable={false}
                   className="ob-float relative z-10 select-none"
-                  style={{ width: 'min(95%, 360px)', height: 'auto', objectFit: 'contain', animationDuration: '4s', animationDelay: '0.3s' }}
+                  style={{ width: 'min(95%, 280px)', height: 'auto', objectFit: 'contain', animationDuration: '4s', animationDelay: '0.3s' }}
                 />
               </div>
             ),
@@ -1051,7 +1051,7 @@ export default function OnboardingFlow({
                 <div className="relative z-10" style={{ width: '280px', height: '280px' }}>
                   {/* Shirt — floats centre */}
                   <div className="ob-float" style={{ position: 'absolute', top: '50%', left: '50%', animationDuration: '4s' }}>
-                    <img src={imgIndieShirt} alt="" draggable={false} style={{ transform: 'translate(-50%,-50%)', width: '210px', height: '210px', objectFit: 'contain' }} />
+                    <img src={imgIndieShirt} alt="" draggable={false} style={{ transform: 'translate(-50%,-50%)', width: '315px', height: '315px', objectFit: 'contain' }} />
                   </div>
                   {/* Gold Star — top-left */}
                   <div className="ob-float-sm" style={{ position: 'absolute', top: '-4px', left: '-4px', animationDuration: '3.5s', animationDelay: '0.4s' }}>
