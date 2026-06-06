@@ -16,7 +16,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import TwitchGameSearch, { TwitchGame } from "@/components/games/TwitchGameSearch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import imgMacCat from "@assets/Mac-cat_1780747173609.png";
@@ -131,16 +130,16 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
 // Onboarding steps
 enum OnboardingStep {
   Welcome = 0,
-  Intro1 = 1,      // Build Your Gamefolio
-  Intro2 = 2,      // Level Up
-  Intro3 = 3,      // Bounties & Challenges
-  Username = 4,    // Google users only
-  Games = 5,       // Choose Favourite Games
-  Avatar = 6,      // Profile picture
-  ChoosePath = 7,  // Gamer / Streamer / Indie Game
-  ProUpsell = 8,   // Path-specific pro upsell
-  PathSetup = 9,   // Path-specific setup
-  Wallet = 10,     // Claim 100 GFT
+  ChoosePath = 1,  // Choose path (Gamer / Streamer / Indie) — happens right after Welcome
+  Intro1 = 2,      // Path-specific intro screen 1
+  Intro2 = 3,      // Path-specific intro screen 2
+  Intro3 = 4,      // Path-specific intro screen 3
+  Username = 5,    // Google users only
+  Games = 6,       // Choose Favourite Games (gamer path only)
+  Avatar = 7,      // Profile picture
+  PathSetup = 8,   // Path-specific setup
+  Wallet = 9,      // Claim 100 GFT
+  ProUpsell = 10,  // Path-specific pro upsell (end of flow)
   Complete = 11,
 }
 
@@ -189,12 +188,12 @@ interface OnboardingStepIndicatorProps {
 
 function OnboardingStepIndicator({ currentStep, isGoogleUser, selectedPath }: OnboardingStepIndicatorProps) {
   const phases = [
-    { label: "Intro",    from: OnboardingStep.Welcome,     to: OnboardingStep.Intro3 },
-    { label: "Profile",  from: OnboardingStep.Username,    to: OnboardingStep.Avatar },
-    { label: "Games",    from: OnboardingStep.Games,       to: OnboardingStep.Games },
-    { label: "Path",     from: OnboardingStep.ChoosePath,  to: OnboardingStep.PathSetup },
-    { label: "Wallet",   from: OnboardingStep.Wallet,      to: OnboardingStep.Wallet },
-    { label: "Done",     from: OnboardingStep.Complete,    to: OnboardingStep.Complete },
+    { label: "Path",    from: OnboardingStep.Welcome,    to: OnboardingStep.ChoosePath },
+    { label: "Intro",   from: OnboardingStep.Intro1,     to: OnboardingStep.Intro3 },
+    { label: "Profile", from: OnboardingStep.Username,   to: OnboardingStep.Avatar },
+    { label: "Setup",   from: OnboardingStep.PathSetup,  to: OnboardingStep.PathSetup },
+    { label: "Wallet",  from: OnboardingStep.Wallet,     to: OnboardingStep.Wallet },
+    { label: "Done",    from: OnboardingStep.ProUpsell,  to: OnboardingStep.Complete },
   ];
 
   const currentPhaseIndex = phases.findIndex(p => currentStep >= p.from && currentStep <= p.to);
@@ -277,7 +276,6 @@ export default function OnboardingFlow({
   // Path selection state
   const [selectedPath, setSelectedPath] = useState<UserPath>(null);
   const [pathCardIndex, setPathCardIndex] = useState(0);
-  const [showProDialog, setShowProDialog] = useState(false);
   const pathTouchStartX = useRef<number | null>(null);
   // Reset carousel to Indie (first card) every time the user enters ChoosePath
   useEffect(() => {
@@ -317,32 +315,34 @@ export default function OnboardingFlow({
   // Navigation helpers
   const getNextStep = (step: OnboardingStep): OnboardingStep => {
     switch (step) {
-      case OnboardingStep.Welcome:   return OnboardingStep.Intro1;
-      case OnboardingStep.Intro1:    return OnboardingStep.Intro2;
-      case OnboardingStep.Intro2:    return OnboardingStep.Intro3;
-      case OnboardingStep.Intro3:    return isGoogleUser ? OnboardingStep.Username : OnboardingStep.Games;
-      case OnboardingStep.Username:  return OnboardingStep.Games;
-      case OnboardingStep.Games:     return OnboardingStep.Avatar;
-      case OnboardingStep.Avatar:    return OnboardingStep.ChoosePath;
-      case OnboardingStep.ChoosePath: return OnboardingStep.PathSetup;
-      case OnboardingStep.PathSetup: return OnboardingStep.Wallet;
-      case OnboardingStep.Wallet:    return OnboardingStep.Complete;
+      case OnboardingStep.Welcome:    return OnboardingStep.ChoosePath;
+      case OnboardingStep.ChoosePath: return OnboardingStep.Intro1;
+      case OnboardingStep.Intro1:     return OnboardingStep.Intro2;
+      case OnboardingStep.Intro2:     return OnboardingStep.Intro3;
+      case OnboardingStep.Intro3:     return isGoogleUser ? OnboardingStep.Username : (selectedPath === 'gamer' ? OnboardingStep.Games : OnboardingStep.Avatar);
+      case OnboardingStep.Username:   return selectedPath === 'gamer' ? OnboardingStep.Games : OnboardingStep.Avatar;
+      case OnboardingStep.Games:      return OnboardingStep.Avatar;
+      case OnboardingStep.Avatar:     return OnboardingStep.PathSetup;
+      case OnboardingStep.PathSetup:  return OnboardingStep.Wallet;
+      case OnboardingStep.Wallet:     return OnboardingStep.ProUpsell;
+      case OnboardingStep.ProUpsell:  return OnboardingStep.Complete;
       default: return step;
     }
   };
 
   const getPrevStep = (step: OnboardingStep): OnboardingStep => {
     switch (step) {
-      case OnboardingStep.Intro1:    return OnboardingStep.Welcome;
-      case OnboardingStep.Intro2:    return OnboardingStep.Intro1;
-      case OnboardingStep.Intro3:    return OnboardingStep.Intro2;
-      case OnboardingStep.Username:  return OnboardingStep.Intro3;
-      case OnboardingStep.Games:     return isGoogleUser ? OnboardingStep.Username : OnboardingStep.Intro3;
-      case OnboardingStep.Avatar:    return OnboardingStep.Games;
-      case OnboardingStep.ChoosePath: return OnboardingStep.Avatar;
-      case OnboardingStep.PathSetup: return OnboardingStep.ChoosePath;
-      case OnboardingStep.Wallet:    return OnboardingStep.PathSetup;
-      case OnboardingStep.Complete:  return OnboardingStep.Wallet;
+      case OnboardingStep.ChoosePath: return OnboardingStep.Welcome;
+      case OnboardingStep.Intro1:     return OnboardingStep.ChoosePath;
+      case OnboardingStep.Intro2:     return OnboardingStep.Intro1;
+      case OnboardingStep.Intro3:     return OnboardingStep.Intro2;
+      case OnboardingStep.Username:   return OnboardingStep.Intro3;
+      case OnboardingStep.Games:      return isGoogleUser ? OnboardingStep.Username : OnboardingStep.Intro3;
+      case OnboardingStep.Avatar:     return selectedPath === 'gamer' ? OnboardingStep.Games : (isGoogleUser ? OnboardingStep.Username : OnboardingStep.Intro3);
+      case OnboardingStep.PathSetup:  return OnboardingStep.Avatar;
+      case OnboardingStep.Wallet:     return OnboardingStep.PathSetup;
+      case OnboardingStep.ProUpsell:  return OnboardingStep.Wallet;
+      case OnboardingStep.Complete:   return OnboardingStep.ProUpsell;
       default: return OnboardingStep.Welcome;
     }
   };
@@ -350,9 +350,16 @@ export default function OnboardingFlow({
   // Auto-skip username for non-Google users
   useEffect(() => {
     if (currentStep === OnboardingStep.Username && !isGoogleUser) {
-      setCurrentStep(OnboardingStep.Games);
+      setCurrentStep(selectedPath === 'gamer' ? OnboardingStep.Games : OnboardingStep.Avatar);
     }
-  }, [currentStep, isGoogleUser]);
+  }, [currentStep, isGoogleUser, selectedPath]);
+
+  // Auto-skip Games for non-gamer paths
+  useEffect(() => {
+    if (currentStep === OnboardingStep.Games && selectedPath !== 'gamer') {
+      setCurrentStep(OnboardingStep.Avatar);
+    }
+  }, [currentStep, selectedPath]);
 
   // Sync wallet states
   useEffect(() => {
@@ -641,189 +648,108 @@ export default function OnboardingFlow({
           </div>
         );
 
-      // ── STEP 1: BUILD YOUR GAMEFOLIO ───────────────────────────────────────
-      case OnboardingStep.Intro1:
+      // ── STEP 2: PATH-SPECIFIC INTRO 1 ─────────────────────────────────────
+      case OnboardingStep.Intro1: {
+        const i1 = selectedPath === 'streamer'
+          ? { titleA: 'GROW YOUR', titleB: 'AUDIENCE', sub: 'Connect your platforms, share clips, and build your creator profile in one place.', img: imgStreamer, imgAlt: 'Streamer profile', imgStyle: { objectFit: 'contain' as const, objectPosition: 'top center' }, imgWrap: false }
+          : selectedPath === 'indie'
+          ? { titleA: 'PROMOTE YOUR', titleB: 'GAME', sub: 'Create a game profile and showcase your indie title to the Gamefolio community.', img: imgIndieShirt, imgAlt: 'Indie game', imgStyle: { objectFit: 'contain' as const, objectPosition: 'top center' }, imgWrap: false }
+          : { titleA: 'BUILD YOUR', titleB: 'GAMEFOLIO', sub: 'Your gaming legacy, all in one place. Connect accounts and showcase your best moments.', img: imgGamefolioCard, imgAlt: 'Gamefolio profile card', imgStyle: { objectFit: 'contain' as const, objectPosition: 'top center' }, imgWrap: false };
         return (
-          <div
-            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden"
-            style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
-          >
-            {/* ── Visual area ── */}
+          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
             <div className="flex-none relative overflow-hidden" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)', width: '130%', marginLeft: '-15%' }}>
-              <img
-                src={imgGamefolioCard}
-                alt="Gamefolio profile card"
-                draggable={false}
-                className="select-none w-full h-full"
-                style={{ objectFit: 'contain', objectPosition: 'top center' }}
-              />
-              {/* Fade into bottom chrome */}
+              <img src={i1.img} alt={i1.imgAlt} draggable={false} className="select-none w-full h-full" style={i1.imgStyle} />
               <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
             </div>
-
-            {/* ── Static bottom chrome ── */}
             <div className="flex-shrink-0 px-6 pt-5 pb-6">
-              {/* Step dots */}
               <div className="flex items-center gap-2 justify-center mb-5">
-                {[0, 1, 2].map(i => (
-                  <div key={i} className="rounded-full transition-all duration-300" style={{ width: i === 0 ? '20px' : '6px', height: '6px', background: i === 0 ? '#c1ff00' : 'rgba(255,255,255,0.2)', boxShadow: i === 0 ? '0 0 8px rgba(193,255,0,0.7)' : 'none' }} />
-                ))}
+                {[0,1,2].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===0?'20px':'6px', height:'6px', background: i===0?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===0?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
               </div>
-              {/* Title */}
-              <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(24px, 6vw, 30px)', letterSpacing: '-0.9px', color: '#fff' }}>
-                BUILD YOUR <span style={{ color: '#c1ff00' }}>PRESENCE</span>
+              <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:'clamp(24px,6vw,30px)', letterSpacing:'-0.9px', color:'#fff' }}>
+                {i1.titleA} <span style={{ color:'#c1ff00' }}>{i1.titleB}</span>
               </h2>
-              {/* Subtitle */}
-              <p className="text-center mb-5" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 400, fontSize: '14px', lineHeight: '20px', color: '#94A3B8' }}>
-                Showcase clips, streams, games and achievements in one place.
-              </p>
-              {/* CTA row */}
+              <p className="text-center mb-5" style={{ fontFamily:"'Outfit',sans-serif", fontWeight:400, fontSize:'14px', lineHeight:'20px', color:'#94A3B8' }}>{i1.sub}</p>
               <div className="flex items-center gap-3">
-                <button
-                  onClick={goToPrevStep}
-                  className="flex-none flex items-center justify-center rounded-[18px]"
-                  style={{ width: '56px', height: '56px', border: '1.5px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}
-                  aria-label="Go back"
-                >
+                <button onClick={goToPrevStep} className="flex-none flex items-center justify-center rounded-[18px]" style={{ width:'56px', height:'56px', border:'1.5px solid rgba(255,255,255,0.15)', background:'rgba(255,255,255,0.06)', backdropFilter:'blur(8px)' }} aria-label="Go back">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
-                <button
-                  onClick={goToNextStep}
-                  className="flex-1 rounded-[18px] py-4 uppercase font-black tracking-widest"
-                  style={{ background: '#c1ff00', boxShadow: '0 15px 35px rgba(193,255,0,0.4)', color: '#0a0f1c', fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '14px', letterSpacing: '2.8px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
-                >
+                <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 uppercase font-black tracking-widest" style={{ background:'#c1ff00', boxShadow:'0 15px 35px rgba(193,255,0,0.4)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:900, fontSize:'14px', letterSpacing:'2.8px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
                   CONTINUE
                 </button>
               </div>
             </div>
           </div>
         );
+      }
 
-      // ── STEP 2: TRACK YOUR PROGRESSION ────────────────────────────────────
-      case OnboardingStep.Intro2:
+      // ── STEP 3: PATH-SPECIFIC INTRO 2 ─────────────────────────────────────
+      case OnboardingStep.Intro2: {
+        const i2 = selectedPath === 'streamer'
+          ? { titleA: 'TURN STREAMS', titleB: 'INTO CLIPS', sub: 'Upload highlights, clips, and reels from your streams to grow your content library.', img: imgProgression, imgAlt: 'Stream clips' }
+          : selectedPath === 'indie'
+          ? { titleA: 'CONNECT WITH', titleB: 'CREATORS', sub: 'Creators upload clips, reels, and screenshots to build community around your game.', img: imgGamefolioCard, imgAlt: 'Creator content' }
+          : { titleA: 'TRACK YOUR', titleB: 'PROGRESS', sub: 'Watch your skills grow. Every action earns XP and builds your legendary status.', img: imgProgression, imgAlt: 'Track progression' };
         return (
-          <div
-            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden"
-            style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
-          >
-            {/* ── Visual area ── */}
+          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
             <div className="flex-none relative overflow-hidden" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)', width: '130%', marginLeft: '-15%' }}>
-              <img
-                src={imgProgression}
-                alt="Track your progression"
-                draggable={false}
-                className="select-none w-full h-full"
-                style={{ objectFit: 'contain', objectPosition: 'top center' }}
-              />
-              {/* Fade into bottom chrome */}
+              <img src={i2.img} alt={i2.imgAlt} draggable={false} className="select-none w-full h-full" style={{ objectFit:'contain', objectPosition:'top center' }} />
               <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
             </div>
-
-            {/* ── Static bottom chrome ── */}
             <div className="flex-shrink-0 px-6 pt-5 pb-6">
-              {/* Step dots */}
               <div className="flex items-center gap-2 justify-center mb-5">
-                {[0, 1, 2].map(i => (
-                  <div key={i} className="rounded-full transition-all duration-300" style={{ width: i === 1 ? '20px' : '6px', height: '6px', background: i === 1 ? '#c1ff00' : 'rgba(255,255,255,0.2)', boxShadow: i === 1 ? '0 0 8px rgba(193,255,0,0.7)' : 'none' }} />
-                ))}
+                {[0,1,2].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===1?'20px':'6px', height:'6px', background: i===1?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===1?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
               </div>
-              {/* Title */}
-              <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(24px, 6vw, 30px)', letterSpacing: '-0.9px', color: '#fff' }}>
-                GROW & <span style={{ color: '#c1ff00' }}>EARN</span>
+              <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:'clamp(24px,6vw,30px)', letterSpacing:'-0.9px', color:'#fff' }}>
+                {i2.titleA} <span style={{ color:'#c1ff00' }}>{i2.titleB}</span>
               </h2>
-              {/* Subtitle */}
-              <p className="text-center mb-5" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 400, fontSize: '14px', lineHeight: '20px', color: '#94A3B8' }}>
-                Earn XP, unlock rewards, discover opportunities and grow your presence.
-              </p>
-              {/* CTA row */}
+              <p className="text-center mb-5" style={{ fontFamily:"'Outfit',sans-serif", fontWeight:400, fontSize:'14px', lineHeight:'20px', color:'#94A3B8' }}>{i2.sub}</p>
               <div className="flex items-center gap-3">
-                <button
-                  onClick={goToPrevStep}
-                  className="flex-none flex items-center justify-center rounded-[18px]"
-                  style={{ width: '56px', height: '56px', border: '1.5px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}
-                  aria-label="Go back"
-                >
+                <button onClick={goToPrevStep} className="flex-none flex items-center justify-center rounded-[18px]" style={{ width:'56px', height:'56px', border:'1.5px solid rgba(255,255,255,0.15)', background:'rgba(255,255,255,0.06)', backdropFilter:'blur(8px)' }} aria-label="Go back">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
-                <button
-                  onClick={goToNextStep}
-                  className="flex-1 rounded-[18px] py-4 uppercase font-black tracking-widest"
-                  style={{ background: '#c1ff00', boxShadow: '0 20px 40px rgba(193,255,0,0.30)', color: '#0a0f1c', fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '14px', letterSpacing: '2.8px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
-                >
+                <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 uppercase font-black tracking-widest" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:900, fontSize:'14px', letterSpacing:'2.8px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
                   CONTINUE
                 </button>
               </div>
             </div>
           </div>
         );
+      }
 
-      // ── STEP 3: REWARDS FOR EVERY BOUNTY ──────────────────────────────────
-      case OnboardingStep.Intro3:
+      // ── STEP 4: PATH-SPECIFIC INTRO 3 ─────────────────────────────────────
+      case OnboardingStep.Intro3: {
+        const i3 = selectedPath === 'streamer'
+          ? { titleA: 'UNLOCK CREATOR', titleB: 'OPPORTUNITIES', sub: 'Earn rewards, join creator campaigns, get homepage promotion, and unlock Kick, Twitch and YouTube integrations.' }
+          : selectedPath === 'indie'
+          ? { titleA: 'LAUNCH', titleB: 'BOUNTIES', sub: 'Run creator campaigns, offer game keys, and reward players with bounty challenges.' }
+          : { titleA: 'EARN', titleB: 'REWARDS', sub: 'Complete daily bounties, join creator challenges, and earn GFT to unlock exclusive legendary gear.' };
         return (
-          <div
-            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden"
-            style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
-          >
-            {/* ── Visual area ── */}
+          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
             <div className="flex-none relative flex items-center justify-center overflow-hidden" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)' }}>
-              {/* Background scene image */}
-              <img
-                src={imgBountyBg}
-                alt=""
-                aria-hidden
-                draggable={false}
-                className="absolute inset-0 w-full h-full object-cover select-none"
-                style={{ opacity: 0.55 }}
-              />
-              {/* Gradient fade to match bottom chrome */}
+              <img src={imgBountyBg} alt="" aria-hidden draggable={false} className="absolute inset-0 w-full h-full object-cover select-none" style={{ opacity: 0.55 }} />
               <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
-              {/* GF bag logo — centred foreground */}
-              <img
-                src={imgGFBag}
-                alt="GF Token bag"
-                draggable={false}
-                className="ob-float relative z-10 select-none"
-                style={{ height: '65%', width: 'auto', objectFit: 'contain', animationDuration: '4s', filter: 'drop-shadow(0 0 40px rgba(193,255,0,0.35))' }}
-              />
+              <img src={imgGFBag} alt="GF Token bag" draggable={false} className="ob-float relative z-10 select-none" style={{ height:'65%', width:'auto', objectFit:'contain', animationDuration:'4s', filter:'drop-shadow(0 0 40px rgba(193,255,0,0.35))' }} />
             </div>
-
-            {/* ── Static bottom chrome ── */}
             <div className="flex-shrink-0 px-6 pt-5 pb-6">
-              {/* Step dots */}
               <div className="flex items-center gap-2 justify-center mb-5">
-                {[0, 1, 2].map(i => (
-                  <div key={i} className="rounded-full transition-all duration-300" style={{ width: i === 2 ? '20px' : '6px', height: '6px', background: i === 2 ? '#c1ff00' : 'rgba(255,255,255,0.2)', boxShadow: i === 2 ? '0 0 8px rgba(193,255,0,0.7)' : 'none' }} />
-                ))}
+                {[0,1,2].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===2?'20px':'6px', height:'6px', background: i===2?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===2?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
               </div>
-              {/* Title */}
-              <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(24px, 6vw, 30px)', letterSpacing: '-0.9px', color: '#fff' }}>
-                CHOOSE YOUR <span style={{ color: '#c1ff00' }}>PATH</span>
+              <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:'clamp(24px,6vw,30px)', letterSpacing:'-0.9px', color:'#fff' }}>
+                {i3.titleA} <span style={{ color:'#c1ff00' }}>{i3.titleB}</span>
               </h2>
-              {/* Subtitle */}
-              <p className="text-center mb-5" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 400, fontSize: '14px', lineHeight: '20px', color: '#94A3B8' }}>
-                Gamer, Streamer or Indie Developer — your journey starts here.
-              </p>
-              {/* CTA row */}
+              <p className="text-center mb-5" style={{ fontFamily:"'Outfit',sans-serif", fontWeight:400, fontSize:'14px', lineHeight:'20px', color:'#94A3B8' }}>{i3.sub}</p>
               <div className="flex items-center gap-3">
-                <button
-                  onClick={goToPrevStep}
-                  className="flex-none flex items-center justify-center rounded-[18px]"
-                  style={{ width: '56px', height: '56px', border: '1.5px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}
-                  aria-label="Go back"
-                >
+                <button onClick={goToPrevStep} className="flex-none flex items-center justify-center rounded-[18px]" style={{ width:'56px', height:'56px', border:'1.5px solid rgba(255,255,255,0.15)', background:'rgba(255,255,255,0.06)', backdropFilter:'blur(8px)' }} aria-label="Go back">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
-                <button
-                  onClick={goToNextStep}
-                  className="flex-1 rounded-[18px] py-4 uppercase font-black tracking-widest"
-                  style={{ background: '#c1ff00', boxShadow: '0 15px 35px rgba(193,255,0,0.4)', color: '#0a0f1c', fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '14px', letterSpacing: '2.8px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
-                >
+                <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 uppercase font-black tracking-widest" style={{ background:'#c1ff00', boxShadow:'0 15px 35px rgba(193,255,0,0.4)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:900, fontSize:'14px', letterSpacing:'2.8px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
                   CONTINUE
                 </button>
               </div>
             </div>
           </div>
         );
+      }
 
       // ── STEP 4: USERNAME (Google users only) ────────────────────────────────
       case OnboardingStep.Username:
@@ -1084,7 +1010,7 @@ export default function OnboardingFlow({
         };
         const selectAndContinue = (pathId: UserPath) => {
           setSelectedPath(pathId);
-          setShowProDialog(true);
+          setCurrentStep(OnboardingStep.Intro1);
         };
 
         const currentCard = pathCards[pathCardIndex];
@@ -1524,6 +1450,73 @@ export default function OnboardingFlow({
           </div>
         );
 
+      // ── STEP 10: PRO UPSELL (path-specific, at end of flow) ───────────────
+      case OnboardingStep.ProUpsell: {
+        const upsellConfig = {
+          gamer: {
+            titleA: 'GAMEFOLIO',  titleB: 'PRO',
+            sub: 'Unlock more ways to grow, customise and earn.',
+            emoji: '⚡',
+            benefits: ['Access exclusive bounties', 'Earn GFT rewards', 'XP boosts', 'Premium profile customisation', 'Early feature access'],
+            proLabel: 'View Gamefolio Pro',
+          },
+          streamer: {
+            titleA: 'STREAMER',  titleB: 'PRO',
+            sub: 'Grow your audience and turn streams into content.',
+            emoji: '🎙️',
+            benefits: ['Livestream featured on homepage', 'Access creator bounties', 'Stream challenges & rewards', 'Social media promotion', 'Kick/Twitch/YouTube integrations', 'Creator growth opportunities'],
+            proLabel: 'View Streamer Pro',
+          },
+          indie: {
+            titleA: 'INDIE',  titleB: 'PRO',
+            sub: 'Reach players, creators and gaming communities.',
+            emoji: '🕹️',
+            benefits: ['Create an indie game profile', 'Add store links', 'Showcase clips, reels and screenshots', 'Launch creator bounties', 'Get featured on Gamefolio', 'Blog & content opportunities'],
+            proLabel: 'View Indie Pro',
+          },
+        };
+        const upsell = upsellConfig[selectedPath || 'gamer'];
+        return (
+          <div className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto">
+              <div className="text-center mb-6">
+                <div className="text-4xl mb-3">{upsell.emoji}</div>
+                <h2 className="text-2xl font-black text-white mb-1 uppercase">
+                  {upsell.titleA} <span className="text-primary">{upsell.titleB}</span>
+                </h2>
+                <p className="text-gray-400 text-sm">{upsell.sub}</p>
+              </div>
+              <Card className="bg-primary/5 border-primary/20 mb-5">
+                <CardContent className="p-5">
+                  <h3 className="font-semibold text-white mb-3 text-sm">What you get with Pro:</h3>
+                  <ul className="space-y-2.5">
+                    {upsell.benefits.map((benefit, i) => (
+                      <li key={i} className="flex items-center gap-3">
+                        <div className="p-1 rounded-full bg-primary/20 text-primary flex-shrink-0">
+                          <Check className="h-3 w-3" />
+                        </div>
+                        <span className="text-sm text-gray-300">{benefit}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="space-y-3 mt-auto">
+              <Button className="w-full bg-primary hover:bg-primary/90 text-[#071013] font-bold py-5 rounded-xl">
+                {upsell.proLabel}
+              </Button>
+              <Button variant="ghost" onClick={goToNextStep} className="w-full text-gray-400 hover:text-white py-3">
+                Continue Free <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+              <Button variant="outline" onClick={goToPrevStep} className="w-full">
+                Back
+              </Button>
+            </div>
+          </div>
+        );
+      }
+
       // ── STEP 11: COMPLETE ──────────────────────────────────────────────────
       case OnboardingStep.Complete:
         const pathMessage = selectedPath === 'streamer'
@@ -1566,13 +1559,6 @@ export default function OnboardingFlow({
       <div className="flex-1 flex flex-col min-h-0">
         {renderStepContent()}
       </div>
-      <ProUpgradeDialog
-        open={showProDialog}
-        onOpenChange={(open) => {
-          setShowProDialog(open);
-          if (!open) setCurrentStep(getNextStep(OnboardingStep.ChoosePath));
-        }}
-      />
     </div>
   );
 }
