@@ -981,41 +981,8 @@ export default function OnboardingFlow({
 
       // ── STEP 7: CHOOSE YOUR PATH ───────────────────────────────────────────
       case OnboardingStep.ChoosePath: {
-        // Order: Indie Game → Gamer → Streamer
+        // Order: Gamer → Streamer → Indie Game
         const pathCards = [
-          {
-            id: 'indie' as UserPath,
-            title: 'INDIE GAME',
-            ctaLabel: 'CONTINUE AS INDIE',
-            visual: (
-              <div className="relative flex items-center justify-center flex-shrink-0 w-full"
-                style={{ height: 'clamp(180px, calc(100dvh - 520px), 250px)' }}>
-                <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)' }} />
-                <div className="relative z-10" style={{ width: '210px', height: '210px' }}>
-                  {/* Shirt — floats centre */}
-                  <div className="ob-float" style={{ position: 'absolute', top: '50%', left: '50%', animationDuration: '4s' }}>
-                    <img src={imgIndieShirt} alt="" draggable={false} style={{ transform: 'translate(-50%,-50%)', width: '160px', height: '160px', objectFit: 'contain' }} />
-                  </div>
-                  {/* Gold Star — top-left */}
-                  <div className="ob-float-sm" style={{ position: 'absolute', top: '-4px', left: '-4px', animationDuration: '3.5s', animationDelay: '0.4s' }}>
-                    <img src={imgGoldStar} alt="" draggable={false} style={{ transform: 'rotate(90.49deg)', width: '50px', height: '36px', objectFit: 'contain' }} />
-                  </div>
-                  {/* Purple Potion — top-right */}
-                  <div className="ob-float" style={{ position: 'absolute', top: '-4px', right: '-4px', animationDuration: '4.5s', animationDelay: '0.8s' }}>
-                    <img src={imgPurplePotion} alt="" draggable={false} style={{ transform: 'rotate(-5.158deg)', width: '54px', height: '54px', objectFit: 'contain' }} />
-                  </div>
-                  {/* Heart — bottom-right */}
-                  <div className="ob-float-sm" style={{ position: 'absolute', bottom: '-8px', right: '-8px', animationDuration: '4s', animationDelay: '0.2s' }}>
-                    <img src={imgHeartPng} alt="" draggable={false} style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
-                  </div>
-                  {/* Unity Logo — bottom-left */}
-                  <div className="ob-float" style={{ position: 'absolute', bottom: '-4px', left: '-8px', animationDuration: '3.8s', animationDelay: '1s' }}>
-                    <img src={imgUnityLogo} alt="" draggable={false} style={{ width: '54px', height: '42px', objectFit: 'contain' }} />
-                  </div>
-                </div>
-              </div>
-            ),
-          },
           {
             id: 'gamer' as UserPath,
             title: 'GAMER',
@@ -1051,6 +1018,39 @@ export default function OnboardingFlow({
                   className="ob-float relative z-10 select-none"
                   style={{ width: 'min(85%, 280px)', height: 'auto', objectFit: 'contain', animationDuration: '4s', animationDelay: '0.3s' }}
                 />
+              </div>
+            ),
+          },
+          {
+            id: 'indie' as UserPath,
+            title: 'INDIE GAME',
+            ctaLabel: 'CONTINUE AS INDIE',
+            visual: (
+              <div className="relative flex items-center justify-center flex-shrink-0 w-full"
+                style={{ height: 'clamp(180px, calc(100dvh - 520px), 250px)' }}>
+                <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)' }} />
+                <div className="relative z-10" style={{ width: '210px', height: '210px' }}>
+                  {/* Shirt — floats centre */}
+                  <div className="ob-float" style={{ position: 'absolute', top: '50%', left: '50%', animationDuration: '4s' }}>
+                    <img src={imgIndieShirt} alt="" draggable={false} style={{ transform: 'translate(-50%,-50%)', width: '160px', height: '160px', objectFit: 'contain' }} />
+                  </div>
+                  {/* Gold Star — top-left */}
+                  <div className="ob-float-sm" style={{ position: 'absolute', top: '-4px', left: '-4px', animationDuration: '3.5s', animationDelay: '0.4s' }}>
+                    <img src={imgGoldStar} alt="" draggable={false} style={{ transform: 'rotate(90.49deg)', width: '50px', height: '36px', objectFit: 'contain' }} />
+                  </div>
+                  {/* Purple Potion — top-right */}
+                  <div className="ob-float" style={{ position: 'absolute', top: '-4px', right: '-4px', animationDuration: '4.5s', animationDelay: '0.8s' }}>
+                    <img src={imgPurplePotion} alt="" draggable={false} style={{ transform: 'rotate(-5.158deg)', width: '54px', height: '54px', objectFit: 'contain' }} />
+                  </div>
+                  {/* Heart — bottom-right */}
+                  <div className="ob-float-sm" style={{ position: 'absolute', bottom: '-8px', right: '-8px', animationDuration: '4s', animationDelay: '0.2s' }}>
+                    <img src={imgHeartPng} alt="" draggable={false} style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
+                  </div>
+                  {/* Unity Logo — bottom-left */}
+                  <div className="ob-float" style={{ position: 'absolute', bottom: '-4px', left: '-8px', animationDuration: '3.8s', animationDelay: '1s' }}>
+                    <img src={imgUnityLogo} alt="" draggable={false} style={{ width: '54px', height: '42px', objectFit: 'contain' }} />
+                  </div>
+                </div>
               </div>
             ),
           },
