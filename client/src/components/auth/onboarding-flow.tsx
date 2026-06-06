@@ -651,15 +651,72 @@ export default function OnboardingFlow({
       // ── STEP 2: PATH-SPECIFIC INTRO 1 ─────────────────────────────────────
       case OnboardingStep.Intro1: {
         const i1 = selectedPath === 'streamer'
-          ? { titleA: 'GROW YOUR', titleB: 'AUDIENCE', sub: 'Connect your platforms, share clips, and build your creator profile in one place.', img: imgStreamer, imgAlt: 'Streamer profile', imgStyle: { objectFit: 'contain' as const, objectPosition: 'top center' }, imgWrap: false }
+          ? { titleA: 'CONNECT YOUR', titleB: 'STREAMS', sub: 'Connect your streaming platforms and build a creator profile that showcases your best content.' }
           : selectedPath === 'indie'
-          ? { titleA: 'PROMOTE YOUR', titleB: 'GAME', sub: 'Create a game profile and showcase your indie title to the Gamefolio community.', img: imgIndieShirt, imgAlt: 'Indie game', imgStyle: { objectFit: 'contain' as const, objectPosition: 'top center' }, imgWrap: false }
-          : { titleA: 'BUILD YOUR', titleB: 'GAMEFOLIO', sub: 'Your gaming legacy, all in one place. Connect accounts and showcase your best moments.', img: imgGamefolioCard, imgAlt: 'Gamefolio profile card', imgStyle: { objectFit: 'contain' as const, objectPosition: 'top center' }, imgWrap: false };
+          ? { titleA: 'PROMOTE YOUR', titleB: 'GAME', sub: 'Create a game profile and showcase your indie title to the Gamefolio community.', img: imgIndieShirt, imgAlt: 'Indie game' }
+          : { titleA: 'BUILD YOUR', titleB: 'GAMEFOLIO', sub: 'Your gaming legacy, all in one place. Connect accounts and showcase your best moments.', img: imgGamefolioCard, imgAlt: 'Gamefolio profile card' };
         return (
           <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
-            <div className="flex-none relative overflow-hidden" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)', width: '130%', marginLeft: '-15%' }}>
-              <img src={i1.img} alt={i1.imgAlt} draggable={false} className="select-none w-full h-full" style={i1.imgStyle} />
-              <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+            {/* Visual area */}
+            <div className="flex-none relative overflow-hidden flex items-center justify-center" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)' }}>
+              {selectedPath === 'streamer' ? (
+                /* Streamer Screen 1: Platform icons flowing into Gamefolio */
+                <>
+                  <img src={imgStreamer} alt="" aria-hidden draggable={false} className="absolute inset-0 w-full h-full select-none" style={{ objectFit:'cover', objectPosition:'top center', opacity: 0.18 }} />
+                  <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  <div className="relative z-10 flex flex-col items-center gap-5 px-6">
+                    {/* Platform row */}
+                    <div className="flex items-center gap-3">
+                      {/* Twitch */}
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background:'rgba(145,71,255,0.15)', border:'1.5px solid rgba(145,71,255,0.35)' }}>
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="#9147ff"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+                        </div>
+                        <span style={{ fontSize:'10px', color:'#9147ff', fontFamily:"'Outfit',sans-serif", fontWeight:600, letterSpacing:'0.5px' }}>TWITCH</span>
+                      </div>
+                      {/* YouTube */}
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background:'rgba(255,0,0,0.12)', border:'1.5px solid rgba(255,0,0,0.3)' }}>
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>
+                        </div>
+                        <span style={{ fontSize:'10px', color:'#ff4444', fontFamily:"'Outfit',sans-serif", fontWeight:600, letterSpacing:'0.5px' }}>YOUTUBE</span>
+                      </div>
+                      {/* Arrow */}
+                      <div className="flex items-center justify-center" style={{ paddingBottom:'20px' }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#c1ff00" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </div>
+                      {/* Gamefolio G */}
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background:'rgba(193,255,0,0.12)', border:'1.5px solid rgba(193,255,0,0.4)', boxShadow:'0 0 20px rgba(193,255,0,0.2)' }}>
+                          <GamefolioIcon className="w-8 h-8" glow={false} />
+                        </div>
+                        <span style={{ fontSize:'10px', color:'#c1ff00', fontFamily:"'Outfit',sans-serif", fontWeight:600, letterSpacing:'0.5px' }}>GAMEFOLIO</span>
+                      </div>
+                    </div>
+                    {/* Kick + Rumble row */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background:'rgba(83,252,26,0.1)', border:'1.5px solid rgba(83,252,26,0.25)' }}>
+                          <span style={{ fontSize:'14px', fontWeight:900, color:'#53fc1a', fontFamily:"'Space Grotesk',sans-serif" }}>K</span>
+                        </div>
+                        <span style={{ fontSize:'9px', color:'#53fc1a', fontFamily:"'Outfit',sans-serif", fontWeight:600, letterSpacing:'0.5px' }}>KICK</span>
+                      </div>
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background:'rgba(133,199,255,0.1)', border:'1.5px solid rgba(133,199,255,0.2)' }}>
+                          <span style={{ fontSize:'12px', fontWeight:900, color:'#85c7ff', fontFamily:"'Space Grotesk',sans-serif" }}>R</span>
+                        </div>
+                        <span style={{ fontSize:'9px', color:'#85c7ff', fontFamily:"'Outfit',sans-serif", fontWeight:600, letterSpacing:'0.5px' }}>RUMBLE</span>
+                      </div>
+                      <span style={{ fontSize:'11px', color:'rgba(255,255,255,0.35)', fontFamily:"'Outfit',sans-serif" }}>& more coming soon</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <img src={(i1 as any).img} alt={(i1 as any).imgAlt} draggable={false} className="select-none absolute inset-0 w-full h-full" style={{ objectFit:'contain', objectPosition:'top center' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                </>
+              )}
             </div>
             <div className="flex-shrink-0 px-6 pt-5 pb-6">
               <div className="flex items-center gap-2 justify-center mb-5">
@@ -685,15 +742,79 @@ export default function OnboardingFlow({
       // ── STEP 3: PATH-SPECIFIC INTRO 2 ─────────────────────────────────────
       case OnboardingStep.Intro2: {
         const i2 = selectedPath === 'streamer'
-          ? { titleA: 'TURN STREAMS', titleB: 'INTO CLIPS', sub: 'Upload highlights, clips, and reels from your streams to grow your content library.', img: imgProgression, imgAlt: 'Stream clips' }
+          ? { titleA: 'UPLOAD YOUR', titleB: 'STREAM CLIPS', sub: 'Turn your best moments into clips, highlights and reels that continue growing your audience long after your stream ends.' }
           : selectedPath === 'indie'
           ? { titleA: 'CONNECT WITH', titleB: 'CREATORS', sub: 'Creators upload clips, reels, and screenshots to build community around your game.', img: imgGamefolioCard, imgAlt: 'Creator content' }
           : { titleA: 'TRACK YOUR', titleB: 'PROGRESS', sub: 'Watch your skills grow. Every action earns XP and builds your legendary status.', img: imgProgression, imgAlt: 'Track progression' };
         return (
           <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
-            <div className="flex-none relative overflow-hidden" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)', width: '130%', marginLeft: '-15%' }}>
-              <img src={i2.img} alt={i2.imgAlt} draggable={false} className="select-none w-full h-full" style={{ objectFit:'contain', objectPosition:'top center' }} />
-              <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+            {/* Visual area */}
+            <div className="flex-none relative flex items-center justify-center overflow-hidden" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)' }}>
+              {selectedPath === 'streamer' ? (
+                /* Streamer Screen 2: Clip card mockup */
+                <>
+                  <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(145,71,255,0.12) 0%, transparent 70%)' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  <div className="relative z-10 w-full max-w-xs mx-auto px-4 flex flex-col gap-3">
+                    {/* Main clip card */}
+                    <div className="rounded-2xl overflow-hidden" style={{ background:'rgba(255,255,255,0.06)', border:'1.5px solid rgba(255,255,255,0.12)', boxShadow:'0 20px 60px rgba(0,0,0,0.5)' }}>
+                      {/* Thumbnail area */}
+                      <div className="relative flex items-center justify-center" style={{ height:'140px', background:'linear-gradient(135deg, rgba(145,71,255,0.2) 0%, rgba(0,0,0,0.6) 100%)' }}>
+                        {/* Play button */}
+                        <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background:'rgba(193,255,0,0.15)', border:'2px solid rgba(193,255,0,0.5)', backdropFilter:'blur(8px)' }}>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="#c1ff00"><path d="M8 5v14l11-7z"/></svg>
+                        </div>
+                        {/* LIVE badge */}
+                        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-md" style={{ background:'rgba(239,68,68,0.9)' }}>
+                          <div className="w-1.5 h-1.5 rounded-full bg-white" style={{ animation:'pulse 1.5s infinite' }} />
+                          <span style={{ fontSize:'9px', color:'#fff', fontWeight:700, letterSpacing:'1px' }}>CLIP</span>
+                        </div>
+                        {/* Duration */}
+                        <div className="absolute bottom-3 right-3 px-1.5 py-0.5 rounded" style={{ background:'rgba(0,0,0,0.7)' }}>
+                          <span style={{ fontSize:'10px', color:'#fff', fontWeight:600 }}>2:47</span>
+                        </div>
+                      </div>
+                      {/* Card info */}
+                      <div className="px-3 py-2.5">
+                        <p style={{ fontSize:'12px', color:'#fff', fontWeight:600, fontFamily:"'Outfit',sans-serif", lineHeight:'16px' }}>My Best Stream Moments 🎮</p>
+                        <div className="flex items-center gap-3 mt-2">
+                          <span className="flex items-center gap-1" style={{ fontSize:'11px', color:'#64748b' }}>
+                            <Eye className="w-3 h-3" /><span>12.4K</span>
+                          </span>
+                          <span className="flex items-center gap-1" style={{ fontSize:'11px', color:'#64748b' }}>
+                            <Star className="w-3 h-3" /><span>892</span>
+                          </span>
+                          <span className="flex items-center gap-1" style={{ fontSize:'11px', color:'#64748b' }}>
+                            <Users className="w-3 h-3" /><span>47</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Secondary smaller cards row */}
+                    <div className="flex gap-2">
+                      {[{ label:'Highlight', dur:'0:45', views:'3.1K' }, { label:'Reel', dur:'0:30', views:'8.7K' }].map(c => (
+                        <div key={c.label} className="flex-1 rounded-xl overflow-hidden" style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)' }}>
+                          <div className="relative flex items-center justify-center" style={{ height:'56px', background:'linear-gradient(135deg, rgba(193,255,0,0.08), rgba(0,0,0,0.4))' }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(193,255,0,0.6)"><path d="M8 5v14l11-7z"/></svg>
+                            <div className="absolute bottom-1 right-1.5 px-1 rounded" style={{ background:'rgba(0,0,0,0.6)' }}>
+                              <span style={{ fontSize:'8px', color:'#fff' }}>{c.dur}</span>
+                            </div>
+                          </div>
+                          <div className="px-2 py-1.5">
+                            <p style={{ fontSize:'9px', color:'#94a3b8', fontWeight:600 }}>{c.label}</p>
+                            <p style={{ fontSize:'9px', color:'#64748b' }}>{c.views} views</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <img src={(i2 as any).img} alt={(i2 as any).imgAlt} draggable={false} className="select-none absolute inset-0 w-full h-full" style={{ objectFit:'contain', objectPosition:'top center' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                </>
+              )}
             </div>
             <div className="flex-shrink-0 px-6 pt-5 pb-6">
               <div className="flex items-center gap-2 justify-center mb-5">
@@ -719,7 +840,7 @@ export default function OnboardingFlow({
       // ── STEP 4: PATH-SPECIFIC INTRO 3 ─────────────────────────────────────
       case OnboardingStep.Intro3: {
         const i3 = selectedPath === 'streamer'
-          ? { titleA: 'UNLOCK CREATOR', titleB: 'OPPORTUNITIES', sub: 'Earn rewards, join creator campaigns, get homepage promotion, and unlock Kick, Twitch and YouTube integrations.' }
+          ? { titleA: 'UNLOCK CREATOR', titleB: 'OPPORTUNITIES', sub: 'Earn rewards, join creator campaigns, get featured on the homepage and unlock future Twitch, Kick and YouTube integrations.' }
           : selectedPath === 'indie'
           ? { titleA: 'LAUNCH', titleB: 'BOUNTIES', sub: 'Run creator campaigns, offer game keys, and reward players with bounty challenges.' }
           : { titleA: 'EARN', titleB: 'REWARDS', sub: 'Complete daily bounties, join creator challenges, and earn GFT to unlock exclusive legendary gear.' };
