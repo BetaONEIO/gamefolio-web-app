@@ -984,7 +984,7 @@ export default function OnboardingFlow({
             title: 'INDIE GAME',
             ctaLabel: 'CONTINUE AS INDIE',
             visual: (
-              <div className="relative overflow-hidden flex items-center justify-center flex-shrink-0 w-full"
+              <div className="relative flex items-center justify-center flex-shrink-0 w-full"
                 style={{ height: 'clamp(180px, calc(100dvh - 520px), 250px)' }}>
                 <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)' }} />
                 <div className="relative z-10" style={{ width: '210px', height: '210px' }}>
@@ -1002,7 +1002,7 @@ export default function OnboardingFlow({
             title: 'GAMER',
             ctaLabel: 'CONTINUE AS GAMER',
             visual: (
-              <div className="relative overflow-hidden flex items-end justify-center flex-shrink-0 w-full"
+              <div className="relative flex items-end justify-center flex-shrink-0 w-full"
                 style={{ height: 'clamp(180px, calc(100dvh - 520px), 250px)' }}>
                 <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '-5%', left: '-10%' }} />
                 <div className="absolute w-56 h-56 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '15%', right: '-10%' }} />
@@ -1022,7 +1022,7 @@ export default function OnboardingFlow({
             title: 'STREAMER',
             ctaLabel: 'CONTINUE AS STREAMER',
             visual: (
-              <div className="relative overflow-hidden flex items-center justify-center flex-shrink-0 w-full"
+              <div className="relative flex items-center justify-center flex-shrink-0 w-full"
                 style={{ height: 'clamp(180px, calc(100dvh - 520px), 250px)' }}>
                 <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.4)' }} />
                 <img
