@@ -26,6 +26,9 @@ import imgPurplePotion from "@assets/purple-potion_1780747173612.png";
 import imgHeartPng from "@assets/heart-png_1780747173615.png";
 import imgUnityLogo from "@assets/unity-logo_1780747173618.png";
 import imgIndieShirt from "@assets/gamefolio-shirt_1780747534126.png";
+import imgGamefolioCard from "@assets/image_1780751936689.png";
+import imgBountyBg from "@assets/image_1780752103152.png";
+import imgGFBag from "@assets/image_1780752169383.png";
 import Cropper from "react-easy-crop";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -645,51 +648,14 @@ export default function OnboardingFlow({
             style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
           >
             {/* ── Visual area ── */}
-            <div className="flex-1 relative" style={{ overflowX: 'clip' }}>
-              {/* Ambient glow */}
-              <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[360px] h-[360px] rounded-full pointer-events-none" style={{ background: 'rgba(193,255,0,0.06)', filter: 'blur(70px)' }} />
-
-              {/* Cards stack */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6">
-                {/* Game video thumbnail card */}
-                <div className="relative w-full rounded-[22px] overflow-hidden flex-shrink-0" style={{ height: 'clamp(130px, 22dvh, 175px)', border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(27,37,55,0.55)', backdropFilter: 'blur(12px)' }}>
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-950/60 via-slate-900/40 to-indigo-950/60" />
-                  {/* Fake scan-lines texture */}
-                  <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.04) 3px, rgba(255,255,255,0.04) 4px)' }} />
-                  {/* Play button */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.35)', border: '1.5px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}>
-                      <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M14.2625 5.97434C14.9146 6.32109 15.3221 6.99934 15.3221 7.73786C15.3221 8.47638 14.9146 9.15463 14.2625 9.50138L5.72673 14.143C4.3523 14.8912 2.66406 13.9185 2.66406 12.3802V3.09622C2.66406 1.55722 4.3523 0.585185 5.72673 1.33203L14.2625 5.97434Z" fill="#C1FF00"/></svg>
-                    </div>
-                  </div>
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  {/* Views badge */}
-                  <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(6px)' }}>
-                    <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M14.2625 5.97434C14.9146 6.32109 15.3221 6.99934 15.3221 7.73786C15.3221 8.47638 14.9146 9.15463 14.2625 9.50138L5.72673 14.143C4.3523 14.8912 2.66406 13.9185 2.66406 12.3802V3.09622C2.66406 1.55722 4.3523 0.585185 5.72673 1.33203L14.2625 5.97434Z" fill="#C1FF00"/></svg>
-                    <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '10px', letterSpacing: '1.1px', color: '#fff', textTransform: 'uppercase' }}>4.2K VIEWS</span>
-                  </div>
-                </div>
-
-                {/* Profile stats card */}
-                <div className="w-full rounded-[28px] overflow-hidden" style={{ border: '1.111px solid rgba(255,255,255,0.1)', background: 'rgba(27,37,55,0.60)', backdropFilter: 'blur(20px)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
-                  {/* Stats row */}
-                  <div className="flex" style={{ borderBottom: '1.111px solid rgba(255,255,255,0.1)' }}>
-                    {[{ num: '36', label: 'UPLOADS' }, { num: '12', label: 'FOLLOWERS' }, { num: '18', label: 'FOLLOWING' }].map((stat, i, arr) => (
-                      <div key={stat.label} className="flex-1 flex flex-col items-center py-3" style={{ borderRight: i < arr.length - 1 ? '1.111px solid rgba(255,255,255,0.1)' : 'none' }}>
-                        <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '22px', color: '#fff', lineHeight: '30px' }}>{stat.num}</span>
-                        <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '9px', color: '#c1ff00', letterSpacing: '0.9px', textTransform: 'uppercase' }}>{stat.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {/* Collection button */}
-                  <div className="flex justify-end px-5 py-3">
-                    <div className="px-4 py-1.5 rounded-full" style={{ background: '#c1ff00', boxShadow: '0 0 20px rgba(193,255,0,0.5)' }}>
-                      <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '10px', letterSpacing: '0.5px', color: '#0a0f1c', textTransform: 'uppercase' }}>COLLECTION</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="flex-1 relative flex items-center justify-center" style={{ overflowX: 'clip' }}>
+              <img
+                src={imgGamefolioCard}
+                alt="Gamefolio profile card"
+                draggable={false}
+                className="ob-float select-none"
+                style={{ height: 'clamp(300px, calc(100dvh - 360px), 480px)', width: 'auto', objectFit: 'contain', animationDuration: '5s' }}
+              />
             </div>
 
             {/* ── Static bottom chrome ── */}
@@ -816,41 +782,26 @@ export default function OnboardingFlow({
             style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
           >
             {/* ── Visual area ── */}
-            <div className="flex-1 relative flex items-center justify-center" style={{ overflowX: 'clip' }}>
-              {/* Large ambient glow */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full pointer-events-none" style={{ background: 'rgba(193,255,0,0.18)', filter: 'blur(70px)' }} />
-
-              {/* Bounty visual — stylised trophy + GFT token composition */}
-              <div className="relative z-10 flex flex-col items-center">
-                {/* Outer glow ring */}
-                <div className="absolute inset-[-30px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(193,255,0,0.12) 0%, transparent 70%)' }} />
-
-                {/* Main bounty icon */}
-                <div className="relative flex items-center justify-center" style={{ width: 'clamp(160px, 42vw, 200px)', height: 'clamp(160px, 42vw, 200px)' }}>
-                  {/* Outer ring */}
-                  <div className="absolute inset-0 rounded-full" style={{ border: '1.5px solid rgba(193,255,0,0.25)', background: 'radial-gradient(circle at 50% 30%, rgba(193,255,0,0.1) 0%, transparent 60%)' }} />
-                  {/* Inner glass */}
-                  <div className="absolute inset-4 rounded-full flex flex-col items-center justify-center" style={{ background: 'rgba(27,37,55,0.80)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(16px)', boxShadow: '0 0 40px rgba(193,255,0,0.12) inset' }}>
-                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#C1FF00" stroke="#C1FF00" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                </div>
-
-                {/* Floating bounty pills */}
-                <div className="ob-float flex items-center gap-2 mt-4 px-4 py-2 rounded-full" style={{ background: 'rgba(27,37,55,0.85)', border: '1px solid rgba(193,255,0,0.25)', backdropFilter: 'blur(12px)', animationDuration: '3.5s' }}>
-                  <div className="w-2 h-2 rounded-full" style={{ background: '#c1ff00', boxShadow: '0 0 6px rgba(193,255,0,0.8)' }} />
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '12px', letterSpacing: '1px', color: '#c1ff00', textTransform: 'uppercase' }}>+200 GFT</span>
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '11px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>CREATOR CHALLENGE</span>
-                </div>
-
-                {/* Second floating pill */}
-                <div className="ob-float-sm flex items-center gap-2 mt-2 px-4 py-2 rounded-full" style={{ background: 'rgba(27,37,55,0.85)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', animationDuration: '4.2s', animationDelay: '0.7s' }}>
-                  <div className="w-2 h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.4)' }} />
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '12px', letterSpacing: '1px', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' }}>+500 GFT</span>
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '11px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>WEEKLY TOP 10</span>
-                </div>
-              </div>
+            <div className="flex-1 relative flex items-center justify-center overflow-hidden">
+              {/* Background scene image */}
+              <img
+                src={imgBountyBg}
+                alt=""
+                aria-hidden
+                draggable={false}
+                className="absolute inset-0 w-full h-full object-cover select-none"
+                style={{ opacity: 0.55 }}
+              />
+              {/* Gradient fade to match bottom chrome */}
+              <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to top, #0a0f1c, transparent)' }} />
+              {/* GF bag logo — centred foreground */}
+              <img
+                src={imgGFBag}
+                alt="GF Token bag"
+                draggable={false}
+                className="ob-float relative z-10 select-none"
+                style={{ height: 'clamp(180px, calc(100dvh - 460px), 280px)', width: 'auto', objectFit: 'contain', animationDuration: '4s', filter: 'drop-shadow(0 0 40px rgba(193,255,0,0.35))' }}
+              />
             </div>
 
             {/* ── Static bottom chrome ── */}
