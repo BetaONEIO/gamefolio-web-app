@@ -16,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import TwitchGameSearch, { TwitchGame } from "@/components/games/TwitchGameSearch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import imgMacCat from "@assets/Mac-cat_1780747173609.png";
@@ -276,6 +277,7 @@ export default function OnboardingFlow({
   // Path selection state
   const [selectedPath, setSelectedPath] = useState<UserPath>(null);
   const [pathCardIndex, setPathCardIndex] = useState(0);
+  const [showProDialog, setShowProDialog] = useState(false);
   const pathTouchStartX = useRef<number | null>(null);
   // Reset carousel to Indie (first card) every time the user enters ChoosePath
   useEffect(() => {
@@ -322,8 +324,7 @@ export default function OnboardingFlow({
       case OnboardingStep.Username:  return OnboardingStep.Games;
       case OnboardingStep.Games:     return OnboardingStep.Avatar;
       case OnboardingStep.Avatar:    return OnboardingStep.ChoosePath;
-      case OnboardingStep.ChoosePath: return OnboardingStep.ProUpsell;
-      case OnboardingStep.ProUpsell: return OnboardingStep.PathSetup;
+      case OnboardingStep.ChoosePath: return OnboardingStep.PathSetup;
       case OnboardingStep.PathSetup: return OnboardingStep.Wallet;
       case OnboardingStep.Wallet:    return OnboardingStep.Complete;
       default: return step;
@@ -339,8 +340,7 @@ export default function OnboardingFlow({
       case OnboardingStep.Games:     return isGoogleUser ? OnboardingStep.Username : OnboardingStep.Intro3;
       case OnboardingStep.Avatar:    return OnboardingStep.Games;
       case OnboardingStep.ChoosePath: return OnboardingStep.Avatar;
-      case OnboardingStep.ProUpsell: return OnboardingStep.ChoosePath;
-      case OnboardingStep.PathSetup: return OnboardingStep.ProUpsell;
+      case OnboardingStep.PathSetup: return OnboardingStep.ChoosePath;
       case OnboardingStep.Wallet:    return OnboardingStep.PathSetup;
       case OnboardingStep.Complete:  return OnboardingStep.Wallet;
       default: return OnboardingStep.Welcome;
@@ -1084,7 +1084,7 @@ export default function OnboardingFlow({
         };
         const selectAndContinue = (pathId: UserPath) => {
           setSelectedPath(pathId);
-          setCurrentStep(getNextStep(OnboardingStep.ChoosePath));
+          setShowProDialog(true);
         };
 
         const currentCard = pathCards[pathCardIndex];
@@ -1214,97 +1214,6 @@ export default function OnboardingFlow({
           </div>
         );
       }
-
-      // ── STEP 8: PRO UPSELL (varies by path) ───────────────────────────────
-      case OnboardingStep.ProUpsell:
-        const upsellConfig = {
-          gamer: {
-            title: "Upgrade Your Gamefolio",
-            subtitle: "Unlock more ways to grow, customise and earn.",
-            emoji: "⚡",
-            accentColor: "text-primary",
-            benefits: [
-              "Access exclusive bounties",
-              "Earn GFT rewards",
-              "XP boosts",
-              "Premium profile customisation",
-              "Early feature access",
-            ],
-            proLabel: "View Gamefolio Pro",
-          },
-          streamer: {
-            title: "Built For Streamers",
-            subtitle: "Grow your audience and turn streams into content.",
-            emoji: "🎙️",
-            accentColor: "text-purple-400",
-            benefits: [
-              "Livestream featured on homepage",
-              "Access creator bounties",
-              "Stream challenges & rewards",
-              "Social media promotion",
-              "Kick/Twitch/YouTube integrations",
-              "Creator growth opportunities",
-            ],
-            proLabel: "View Stream Pro",
-          },
-          indie: {
-            title: "Grow Your Indie Game",
-            subtitle: "Reach players, creators and gaming communities.",
-            emoji: "🕹️",
-            accentColor: "text-blue-400",
-            benefits: [
-              "Create an indie game profile",
-              "Add store links",
-              "Showcase clips, reels and screenshots",
-              "Launch creator bounties",
-              "Get featured on Gamefolio",
-              "Blog & content opportunities",
-            ],
-            proLabel: "View Indie Pro",
-          },
-        };
-
-        const upsell = upsellConfig[selectedPath || 'gamer'];
-
-        return (
-          <div className="flex flex-col flex-1 min-h-0">
-            <div className="flex-1 overflow-y-auto">
-              <div className="text-center mb-6">
-                <div className="text-4xl mb-3">{upsell.emoji}</div>
-                <h2 className="text-2xl font-black text-white mb-1">{upsell.title}</h2>
-                <p className="text-gray-400">{upsell.subtitle}</p>
-              </div>
-
-              <Card className="bg-primary/5 border-primary/20 mb-5">
-                <CardContent className="p-5">
-                  <h3 className="font-semibold text-white mb-3 text-sm">What you get with Pro:</h3>
-                  <ul className="space-y-2.5">
-                    {upsell.benefits.map((benefit, i) => (
-                      <li key={i} className="flex items-center gap-3">
-                        <div className="p-1 rounded-full bg-primary/20 text-primary flex-shrink-0">
-                          <Check className="h-3 w-3" />
-                        </div>
-                        <span className="text-sm text-gray-300">{benefit}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="space-y-3 mt-auto">
-              <Button className="w-full bg-primary hover:bg-primary/90 text-[#071013] font-bold py-5 rounded-xl">
-                {upsell.proLabel}
-              </Button>
-              <Button variant="ghost" onClick={goToNextStep} className="w-full text-gray-400 hover:text-white py-3">
-                Continue Free <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-              <Button variant="outline" onClick={goToPrevStep} className="w-full">
-                Back
-              </Button>
-            </div>
-          </div>
-        );
 
       // ── STEP 9: PATH SETUP (varies by path) ────────────────────────────────
       case OnboardingStep.PathSetup:
@@ -1657,6 +1566,13 @@ export default function OnboardingFlow({
       <div className="flex-1 flex flex-col min-h-0">
         {renderStepContent()}
       </div>
+      <ProUpgradeDialog
+        open={showProDialog}
+        onOpenChange={(open) => {
+          setShowProDialog(open);
+          if (!open) setCurrentStep(getNextStep(OnboardingStep.ChoosePath));
+        }}
+      />
     </div>
   );
 }
