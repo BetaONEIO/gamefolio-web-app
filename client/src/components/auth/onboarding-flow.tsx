@@ -1653,7 +1653,9 @@ export default function OnboardingFlow({
       className="w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 h-dvh sm:h-auto sm:min-h-0 bg-[#071013] sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col"
       style={{ paddingBottom: 'calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)' }}
     >
-      <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
+      {currentStep >= OnboardingStep.Username && (
+        <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
+      )}
       <div className="flex-1 flex flex-col min-h-0">
         {renderStepContent()}
       </div>
