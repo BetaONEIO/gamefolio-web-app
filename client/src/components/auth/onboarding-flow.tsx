@@ -654,7 +654,7 @@ export default function OnboardingFlow({
                 alt="Gamefolio profile card"
                 draggable={false}
                 className="select-none w-full h-full"
-                style={{ objectFit: 'contain', objectPosition: 'top center' }}
+                style={{ objectFit: 'cover', objectPosition: 'top center' }}
               />
               {/* Fade into bottom chrome */}
               <div className="absolute inset-x-0 bottom-0 h-12 pointer-events-none" style={{ background: 'linear-gradient(to top, #0a0f1c, transparent)' }} />
