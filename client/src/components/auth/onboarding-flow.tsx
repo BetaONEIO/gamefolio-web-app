@@ -984,18 +984,14 @@ export default function OnboardingFlow({
             title: 'INDIE GAME',
             ctaLabel: 'CONTINUE AS INDIE',
             visual: (
-              <div className="flex-1 min-h-0 relative overflow-hidden flex items-center justify-center">
+              <div className="relative overflow-hidden flex items-center justify-center flex-shrink-0 w-full"
+                style={{ height: 'clamp(180px, calc(100dvh - 520px), 250px)' }}>
                 <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)' }} />
                 <div className="relative z-10" style={{ width: '210px', height: '210px' }}>
-                  {/* Shirt — large center */}
                   <img src={imgIndieShirt} alt="" draggable={false} style={{ position: 'absolute', width: '160px', height: '160px', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', objectFit: 'contain' }} />
-                  {/* Gold Star — top-left, rotate 90deg */}
                   <img src={imgGoldStar} alt="" draggable={false} style={{ position: 'absolute', width: '50px', height: '36px', top: '-4px', left: '-4px', transform: 'rotate(90.49deg)', objectFit: 'contain' }} />
-                  {/* Purple Potion — top-right, rotate -5deg */}
                   <img src={imgPurplePotion} alt="" draggable={false} style={{ position: 'absolute', width: '54px', height: '54px', top: '-4px', right: '-4px', transform: 'rotate(-5.158deg)', objectFit: 'contain' }} />
-                  {/* Heart — bottom-right */}
                   <img src={imgHeartPng} alt="" draggable={false} style={{ position: 'absolute', width: '60px', height: '60px', bottom: '-8px', right: '-8px', objectFit: 'contain' }} />
-                  {/* Unity Logo — bottom-left */}
                   <img src={imgUnityLogo} alt="" draggable={false} style={{ position: 'absolute', width: '54px', height: '42px', bottom: '-4px', left: '-8px', objectFit: 'contain' }} />
                 </div>
               </div>
@@ -1006,7 +1002,8 @@ export default function OnboardingFlow({
             title: 'GAMER',
             ctaLabel: 'CONTINUE AS GAMER',
             visual: (
-              <div className="flex-1 min-h-0 relative overflow-hidden flex items-end justify-center">
+              <div className="relative overflow-hidden flex items-end justify-center flex-shrink-0 w-full"
+                style={{ height: 'clamp(180px, calc(100dvh - 520px), 250px)' }}>
                 <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '-5%', left: '-10%' }} />
                 <div className="absolute w-56 h-56 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '15%', right: '-10%' }} />
                 <div className="absolute w-48 h-48 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', bottom: '-5%', left: '15%' }} />
@@ -1015,7 +1012,7 @@ export default function OnboardingFlow({
                   alt="Gaming cat"
                   draggable={false}
                   className="relative z-10 select-none"
-                  style={{ height: '72%', maxHeight: '280px', width: 'auto', objectFit: 'contain', objectPosition: 'bottom' }}
+                  style={{ height: '100%', maxHeight: '250px', width: 'auto', objectFit: 'contain', objectPosition: 'bottom' }}
                 />
               </div>
             ),
@@ -1025,14 +1022,15 @@ export default function OnboardingFlow({
             title: 'STREAMER',
             ctaLabel: 'CONTINUE AS STREAMER',
             visual: (
-              <div className="flex-1 min-h-0 relative overflow-hidden flex items-center justify-center">
+              <div className="relative overflow-hidden flex items-center justify-center flex-shrink-0 w-full"
+                style={{ height: 'clamp(180px, calc(100dvh - 520px), 250px)' }}>
                 <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.4)' }} />
                 <img
                   src={imgStreamer}
                   alt="Streamer"
                   draggable={false}
                   className="relative z-10 select-none"
-                  style={{ width: 'min(85%, 300px)', height: 'auto', objectFit: 'contain' }}
+                  style={{ width: 'min(85%, 280px)', height: 'auto', objectFit: 'contain' }}
                 />
               </div>
             ),
@@ -1125,8 +1123,14 @@ export default function OnboardingFlow({
                       </h2>
                     </div>
 
-                    {/* Visual artwork — fills remaining space */}
+                    {/* Spacer — pushes visual down from title */}
+                    <div className="flex-1 min-h-0" />
+
+                    {/* Visual artwork — fixed height, centred */}
                     {card.visual}
+
+                    {/* Spacer — pushes arrows + button to bottom */}
+                    <div className="flex-1 min-h-0" />
 
                     {/* Arrow nav row — above the CTA button, bright white */}
                     <div className="relative z-20 flex items-center justify-center gap-6 pb-3">
