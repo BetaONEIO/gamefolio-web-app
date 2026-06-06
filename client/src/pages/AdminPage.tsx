@@ -2201,6 +2201,15 @@ const AdminPage = () => {
   });
   const [slideIntervalSeconds, setSlideIntervalSeconds] = useState<number>(6);
 
+  // Twitch homepage-takeover settings (channel + enabled)
+  const { data: homepageLiveSettings, refetch: refetchHomepageLive } = useQuery<{ channel: string; enabled: boolean }>({
+    queryKey: ["/api/admin/homepage-live"],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+  const [twitchTakeoverEnabled, setTwitchTakeoverEnabled] = useState<boolean>(true);
+  const [twitchTakeoverChannel, setTwitchTakeoverChannel] = useState<string>("gamefolio");
+  const [savingTwitchTakeover, setSavingTwitchTakeover] = useState<boolean>(false);
+
   const { data: assetBucketList, isLoading: assetBucketsLoading } = useQuery<{ id: string; name: string; public: boolean; createdAt: string }[]>({
     queryKey: ["/api/admin/storage/buckets"],
     queryFn: getQueryFn({ on401: "throw" }),
@@ -2332,6 +2341,13 @@ const AdminPage = () => {
       setSlideIntervalSeconds(heroSlideSettings.intervalSeconds || 6);
     }
   }, [heroSlideSettings]);
+
+  React.useEffect(() => {
+    if (homepageLiveSettings) {
+      setTwitchTakeoverEnabled(homepageLiveSettings.enabled);
+      setTwitchTakeoverChannel(homepageLiveSettings.channel || "");
+    }
+  }, [homepageLiveSettings]);
 
   // Handle user search
   const handleUserSearch = (e: React.FormEvent) => {
@@ -2772,6 +2788,23 @@ const AdminPage = () => {
       refetchHeroSlideSettings();
     } catch (err: any) {
       toast({ title: "Error", description: err.message || "Failed to update interval", variant: "destructive" });
+    }
+  };
+
+  // Twitch homepage-takeover handler
+  const handleSaveTwitchTakeover = async () => {
+    setSavingTwitchTakeover(true);
+    try {
+      await apiRequest("PATCH", "/api/admin/homepage-live", {
+        enabled: twitchTakeoverEnabled,
+        channel: twitchTakeoverChannel.trim(),
+      });
+      toast({ title: "Saved", description: "Twitch homepage takeover settings updated. Changes apply within ~30s." });
+      refetchHomepageLive();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to update settings", variant: "destructive" });
+    } finally {
+      setSavingTwitchTakeover(false);
     }
   };
 
@@ -5035,6 +5068,44 @@ const AdminPage = () => {
                         {slideIntervalSeconds !== (heroSlideSettings?.intervalSeconds || 6) && (
                           <span className="text-xs text-orange-500">Unsaved change</span>
                         )}
+                      </div>
+                    </div>
+
+                    <div className="border rounded-lg p-4 bg-muted/30 space-y-3">
+                      <h4 className="text-sm font-medium flex items-center gap-2">Twitch Live Takeover</h4>
+                      <p className="text-xs text-muted-foreground">
+                        When this Twitch channel is live, the homepage hero banner is replaced with an embedded player. Web only — the mobile app shows a "Watch on Twitch" button instead (Twitch embeds are blocked in the app's webview).
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <Switch
+                          id="twitch-takeover-enabled"
+                          checked={twitchTakeoverEnabled}
+                          onCheckedChange={setTwitchTakeoverEnabled}
+                        />
+                        <Label htmlFor="twitch-takeover-enabled" className="text-sm">Enabled</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">twitch.tv/</span>
+                        <Input
+                          value={twitchTakeoverChannel}
+                          onChange={(e) => setTwitchTakeoverChannel(e.target.value)}
+                          placeholder="gamefolio"
+                          className="w-[220px]"
+                        />
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Button
+                          size="sm"
+                          onClick={handleSaveTwitchTakeover}
+                          disabled={
+                            savingTwitchTakeover ||
+                            (twitchTakeoverEnabled === (homepageLiveSettings?.enabled ?? true) &&
+                              twitchTakeoverChannel.trim() === (homepageLiveSettings?.channel ?? ""))
+                          }
+                        >
+                          {savingTwitchTakeover ? "Saving…" : "Save"}
+                        </Button>
+                        <span className="text-xs text-muted-foreground">Changes apply within ~30s.</span>
                       </div>
                     </div>
                     {!heroSlides?.length ? (

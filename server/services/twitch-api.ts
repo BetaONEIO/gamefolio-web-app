@@ -320,6 +320,46 @@ class TwitchApiService {
   }
 
   /**
+   * Look up a channel's current live stream by its login name (e.g. "gamefolio").
+   * Returns the stream object if the channel is live, or null if offline /
+   * the API isn't configured. Unlike checkUserLive (which needs a user ID),
+   * this resolves directly from the channel login in a single call.
+   */
+  async getStreamByLogin(login: string): Promise<TwitchStream | null> {
+    if (!this.isConfigured() || !login) return null;
+    try {
+      const token = await this.getAccessToken();
+      const response = await axios.get('https://api.twitch.tv/helix/streams', {
+        headers: {
+          'Client-ID': this.clientId,
+          'Authorization': `Bearer ${token}`
+        },
+        params: { user_login: login }
+      });
+      const stream = response.data?.data?.[0];
+      if (!stream) return null;
+      return {
+        id: stream.id,
+        user_id: stream.user_id,
+        user_login: stream.user_login,
+        user_name: stream.user_name,
+        game_id: stream.game_id,
+        game_name: stream.game_name,
+        title: stream.title,
+        viewer_count: stream.viewer_count,
+        started_at: stream.started_at,
+        thumbnail_url: stream.thumbnail_url
+          ? stream.thumbnail_url.replace('{width}', '440').replace('{height}', '248')
+          : null,
+        is_mature: stream.is_mature,
+      };
+    } catch (error) {
+      console.error('Error fetching Twitch stream by login:', error);
+      return null;
+    }
+  }
+
+  /**
    * Check if a user is currently live streaming
    */
   async checkUserLive(userId: string): Promise<boolean> {

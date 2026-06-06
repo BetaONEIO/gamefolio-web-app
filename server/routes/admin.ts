@@ -2082,6 +2082,53 @@ adminRouter.patch("/hero-slides/settings", async (req: Request, res: Response) =
   }
 });
 
+// GET /api/admin/homepage-live - Twitch homepage-takeover config (channel + enabled)
+adminRouter.get("/homepage-live", async (_req: Request, res: Response) => {
+  try {
+    const { db } = await import('../db');
+    const { inArray } = await import('drizzle-orm');
+    const { serverSettings } = await import('@shared/schema');
+    const rows = await db.select().from(serverSettings)
+      .where(inArray(serverSettings.key, ["homepage_twitch_channel", "homepage_twitch_enabled"]));
+    const channel = rows.find((r) => r.key === "homepage_twitch_channel")?.value ?? "gamefolio";
+    const enabledRaw = rows.find((r) => r.key === "homepage_twitch_enabled")?.value;
+    res.json({ channel, enabled: enabledRaw == null ? true : enabledRaw === "true" });
+  } catch (err) {
+    console.error("Error fetching homepage live settings:", err);
+    res.status(500).json({ message: "Error fetching homepage live settings" });
+  }
+});
+
+// PATCH /api/admin/homepage-live - Update channel name and/or enabled flag.
+// Takes up to ~30s to reflect on the homepage (the public endpoint caches).
+adminRouter.patch("/homepage-live", async (req: Request, res: Response) => {
+  try {
+    const { channel, enabled } = req.body ?? {};
+    if (channel !== undefined && typeof channel !== 'string') {
+      return res.status(400).json({ message: "channel must be a string" });
+    }
+    if (enabled !== undefined && typeof enabled !== 'boolean') {
+      return res.status(400).json({ message: "enabled must be a boolean" });
+    }
+
+    const { db } = await import('../db');
+    const { serverSettings } = await import('@shared/schema');
+
+    const upsert = async (key: string, value: string) => {
+      await db.insert(serverSettings).values({ key, value, updatedAt: new Date() })
+        .onConflictDoUpdate({ target: serverSettings.key, set: { value, updatedAt: new Date() } });
+    };
+
+    if (channel !== undefined) await upsert("homepage_twitch_channel", channel.trim().replace(/^@/, ""));
+    if (enabled !== undefined) await upsert("homepage_twitch_enabled", enabled ? "true" : "false");
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error updating homepage live settings:", err);
+    res.status(500).json({ message: "Error updating homepage live settings" });
+  }
+});
+
 const convertToPublicUrl = (url: string): string => {
   if (!url) return url;
   const signedMatch = url.match(/(.+\/storage\/v1\/object\/)sign\/(.+?)(\?.*)?$/);

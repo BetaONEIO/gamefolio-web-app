@@ -25,6 +25,7 @@ import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient as globalQueryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { isNative, openExternal } from "@/lib/platform";
 
 // Popular games for filtering by name instead of using IDs
 const POPULAR_GAMES = [
@@ -83,6 +84,27 @@ const HomePage = () => {
   });
 
   const slideIntervalMs = (heroSettings?.intervalSeconds || 6) * 1000;
+
+  // Twitch homepage takeover: when the configured channel is live, replace the
+  // hero banner with an embedded player (web only — Twitch embeds are blocked
+  // in the Capacitor webview, so native shows a "Watch on Twitch" link instead).
+  const { data: liveStatus } = useQuery<{
+    isLive: boolean;
+    channel: string | null;
+    title?: string;
+    gameName?: string;
+    viewerCount?: number;
+  }>({
+    queryKey: ["/api/homepage/live"],
+    staleTime: 30000,
+    refetchInterval: 60000,
+    refetchOnWindowFocus: true,
+  });
+
+  const liveChannel = liveStatus?.channel || null;
+  const isChannelLive = !!liveStatus?.isLive && !!liveChannel;
+  const showTwitchEmbed = isChannelLive && !isNative;
+  const twitchWatchUrl = liveChannel ? `https://www.twitch.tv/${liveChannel}` : null;
 
   const activeSlides = useMemo(() => {
     if (!heroSlides || heroSlides.length === 0) return null;
@@ -458,7 +480,41 @@ const HomePage = () => {
     <div className="space-y-16 max-w-none px-4 md:px-6 py-4 md:py-6">
       {/* Hero Banner Carousel - Full width with negative margin to compensate for parent padding */}
       <section className="mb-10 -mx-4 md:-mx-6 -mt-4 md:-mt-6">
-        <div className="relative overflow-hidden">
+        {showTwitchEmbed ? (
+          <div className="relative overflow-hidden">
+            <div className="w-full bg-black relative min-h-[350px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px] border-b-2 border-primary">
+              <iframe
+                key={`hp-twitch-${liveChannel}`}
+                src={`https://player.twitch.tv/?channel=${liveChannel}&parent=${window.location.hostname}&autoplay=true&muted=true`}
+                className="absolute inset-0 w-full h-full"
+                allow="autoplay; fullscreen"
+                allowFullScreen
+                title={`${liveChannel} live on Twitch`}
+              />
+              <div className="absolute top-4 left-4 z-10 flex items-center gap-2 pointer-events-none">
+                <span className="flex items-center gap-1.5 text-xs font-bold bg-red-600 text-white px-2 py-1 rounded-full shadow-lg">
+                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                  LIVE
+                </span>
+                {liveStatus?.title && (
+                  <span className="max-w-[60vw] truncate text-xs md:text-sm font-medium text-white bg-black/60 px-2 py-1 rounded-md">
+                    {liveStatus.title}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="relative overflow-hidden">
+            {isChannelLive && isNative && twitchWatchUrl && (
+              <button
+                onClick={() => { void openExternal(twitchWatchUrl); }}
+                className="absolute top-3 right-3 z-20 flex items-center gap-1.5 text-xs font-bold bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-full shadow-lg transition-colors"
+              >
+                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                LIVE — Watch on Twitch
+              </button>
+            )}
           <div className="w-full bg-black relative min-h-[350px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px] border-b-2 border-primary">
             {activeSlides && activeSlides.length > 0 ? (
               <div className="relative w-full h-full min-h-[350px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px]">
@@ -562,6 +618,7 @@ const HomePage = () => {
             </div>
           )}
         </div>
+        )}
       </section>
 
       {/* Ecosystem Activity Rail */}

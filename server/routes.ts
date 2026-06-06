@@ -3285,6 +3285,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/homepage/live - Public: is the configured Twitch channel live now?
+  // When live (and the takeover is enabled), the homepage replaces its hero
+  // banner with an embedded player. Cached briefly so a busy homepage doesn't
+  // hammer the Twitch API. Channel + enabled flag are admin-configurable and
+  // stored in server_settings (see /api/admin/homepage-live).
+  const HOMEPAGE_LIVE_CACHE_TTL_MS = 30_000;
+  let homepageLiveCache: { expires: number; data: any } | null = null;
+  app.get("/api/homepage/live", async (req, res) => {
+    try {
+      if (homepageLiveCache && Date.now() < homepageLiveCache.expires) {
+        return res.json(homepageLiveCache.data);
+      }
+
+      const settings = await db.select().from(serverSettings)
+        .where(inArray(serverSettings.key, ["homepage_twitch_channel", "homepage_twitch_enabled"]));
+      const channel = settings.find((s) => s.key === "homepage_twitch_channel")?.value?.trim() || "gamefolio";
+      // Default ON so it works out of the box for the gamefolio channel; admins can disable.
+      const enabledRaw = settings.find((s) => s.key === "homepage_twitch_enabled")?.value;
+      const enabled = enabledRaw == null ? true : enabledRaw === "true";
+
+      let data: any = { isLive: false, channel, enabled };
+      if (enabled && channel) {
+        const stream = await twitchApi.getStreamByLogin(channel);
+        if (stream) {
+          data = {
+            isLive: true,
+            channel,
+            enabled,
+            title: stream.title,
+            gameName: stream.game_name,
+            viewerCount: stream.viewer_count,
+            startedAt: stream.started_at,
+          };
+        }
+      }
+
+      homepageLiveCache = { expires: Date.now() + HOMEPAGE_LIVE_CACHE_TTL_MS, data };
+      res.json(data);
+    } catch (err) {
+      console.error("Error checking homepage live status:", err);
+      // Fail safe: never block the homepage — just report offline.
+      res.json({ isLive: false, channel: null });
+    }
+  });
+
   // Helper to sign all Supabase URLs in clip objects (thumbnails, videos, avatars)
   // Short-lived in-memory cache for trending feeds (DB query + signed URLs).
   // Keyed by route+normalized-params+user. Bounded LRU so user-controlled
