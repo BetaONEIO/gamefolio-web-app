@@ -648,14 +648,16 @@ export default function OnboardingFlow({
             style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
           >
             {/* ── Visual area ── */}
-            <div className="flex-1 relative flex items-center justify-center" style={{ overflowX: 'clip' }}>
+            <div className="flex-1 relative flex items-start justify-center overflow-hidden">
               <img
                 src={imgGamefolioCard}
                 alt="Gamefolio profile card"
                 draggable={false}
-                className="ob-float select-none"
-                style={{ height: 'clamp(300px, calc(100dvh - 360px), 480px)', width: 'auto', objectFit: 'contain', animationDuration: '5s' }}
+                className="select-none w-full"
+                style={{ objectFit: 'contain', objectPosition: 'top center', maxHeight: '100%' }}
               />
+              {/* Fade into bottom chrome */}
+              <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, #0a0f1c, transparent)' }} />
             </div>
 
             {/* ── Static bottom chrome ── */}
