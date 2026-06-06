@@ -25,6 +25,7 @@ import imgGoldStar from "@assets/gold-star_1780747173613.png";
 import imgPurplePotion from "@assets/purple-potion_1780747173612.png";
 import imgHeartPng from "@assets/heart-png_1780747173615.png";
 import imgUnityLogo from "@assets/unity-logo_1780747173618.png";
+import imgIndieShirt from "@assets/gamefolio-shirt_1780747534126.png";
 import Cropper from "react-easy-crop";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -983,21 +984,19 @@ export default function OnboardingFlow({
             title: 'INDIE GAME',
             ctaLabel: 'CONTINUE AS INDIE',
             visual: (
-              <div className="flex-1 relative overflow-hidden flex items-center justify-center">
-                {/* Green glow blob */}
-                <div className="absolute w-[330px] h-[330px] rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)' }} />
-                {/* Scattered items — match Figma positions */}
-                <div className="relative z-10" style={{ width: '260px', height: '260px' }}>
-                  {/* GF Sword — center, rotate -7.355deg */}
-                  <img src={imgGfSword} alt="" draggable={false} style={{ position: 'absolute', width: '128px', height: '128px', top: '50%', left: '50%', transform: 'translate(-50%,-50%) rotate(-7.355deg)', objectFit: 'contain' }} />
-                  {/* Gold Star — top-left, rotate 90.49deg */}
-                  <img src={imgGoldStar} alt="" draggable={false} style={{ position: 'absolute', width: '66px', height: '48px', top: '8px', left: '8px', transform: 'rotate(90.49deg)', objectFit: 'contain' }} />
-                  {/* Purple Potion — top-right, rotate -5.158deg */}
-                  <img src={imgPurplePotion} alt="" draggable={false} style={{ position: 'absolute', width: '77px', height: '77px', top: '4px', right: '8px', transform: 'rotate(-5.158deg)', objectFit: 'contain' }} />
+              <div className="flex-1 min-h-0 relative overflow-hidden flex items-center justify-center">
+                <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)' }} />
+                <div className="relative z-10" style={{ width: '210px', height: '210px' }}>
+                  {/* Shirt — large center */}
+                  <img src={imgIndieShirt} alt="" draggable={false} style={{ position: 'absolute', width: '160px', height: '160px', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', objectFit: 'contain' }} />
+                  {/* Gold Star — top-left, rotate 90deg */}
+                  <img src={imgGoldStar} alt="" draggable={false} style={{ position: 'absolute', width: '50px', height: '36px', top: '-4px', left: '-4px', transform: 'rotate(90.49deg)', objectFit: 'contain' }} />
+                  {/* Purple Potion — top-right, rotate -5deg */}
+                  <img src={imgPurplePotion} alt="" draggable={false} style={{ position: 'absolute', width: '54px', height: '54px', top: '-4px', right: '-4px', transform: 'rotate(-5.158deg)', objectFit: 'contain' }} />
                   {/* Heart — bottom-right */}
-                  <img src={imgHeartPng} alt="" draggable={false} style={{ position: 'absolute', width: '102px', height: '102px', bottom: '4px', right: '0px', objectFit: 'contain' }} />
+                  <img src={imgHeartPng} alt="" draggable={false} style={{ position: 'absolute', width: '60px', height: '60px', bottom: '-8px', right: '-8px', objectFit: 'contain' }} />
                   {/* Unity Logo — bottom-left */}
-                  <img src={imgUnityLogo} alt="" draggable={false} style={{ position: 'absolute', width: '79px', height: '62px', bottom: '16px', left: '4px', objectFit: 'contain' }} />
+                  <img src={imgUnityLogo} alt="" draggable={false} style={{ position: 'absolute', width: '54px', height: '42px', bottom: '-4px', left: '-8px', objectFit: 'contain' }} />
                 </div>
               </div>
             ),
@@ -1007,18 +1006,16 @@ export default function OnboardingFlow({
             title: 'GAMER',
             ctaLabel: 'CONTINUE AS GAMER',
             visual: (
-              <div className="flex-1 relative overflow-hidden flex items-end justify-center">
-                {/* Three glow orbs — Figma positions */}
-                <div className="absolute w-72 h-72 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '-10%', left: '-15%' }} />
-                <div className="absolute w-72 h-72 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '10%', right: '-15%' }} />
-                <div className="absolute w-72 h-72 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', bottom: '-10%', left: '10%' }} />
-                {/* Mac Cat — portrait 261:391, anchored to bottom */}
+              <div className="flex-1 min-h-0 relative overflow-hidden flex items-end justify-center">
+                <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '-5%', left: '-10%' }} />
+                <div className="absolute w-56 h-56 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '15%', right: '-10%' }} />
+                <div className="absolute w-48 h-48 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', bottom: '-5%', left: '15%' }} />
                 <img
                   src={imgMacCat}
                   alt="Gaming cat"
                   draggable={false}
-                  className="relative z-10 w-auto select-none"
-                  style={{ height: 'min(75%, 320px)', maxWidth: '100%', objectFit: 'contain', objectPosition: 'bottom' }}
+                  className="relative z-10 select-none"
+                  style={{ height: '72%', maxHeight: '280px', width: 'auto', objectFit: 'contain', objectPosition: 'bottom' }}
                 />
               </div>
             ),
@@ -1028,16 +1025,14 @@ export default function OnboardingFlow({
             title: 'STREAMER',
             ctaLabel: 'CONTINUE AS STREAMER',
             visual: (
-              <div className="flex-1 relative overflow-hidden flex items-center justify-center">
-                {/* Single stronger glow — Figma uses #c1ff0066 */}
-                <div className="absolute w-72 h-72 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.4)' }} />
-                {/* Streamer graphic — landscape 385:328 */}
+              <div className="flex-1 min-h-0 relative overflow-hidden flex items-center justify-center">
+                <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.4)' }} />
                 <img
                   src={imgStreamer}
                   alt="Streamer"
                   draggable={false}
                   className="relative z-10 select-none"
-                  style={{ width: 'min(90%, 340px)', height: 'auto', objectFit: 'contain' }}
+                  style={{ width: 'min(85%, 300px)', height: 'auto', objectFit: 'contain' }}
                 />
               </div>
             ),
@@ -1045,7 +1040,6 @@ export default function OnboardingFlow({
         ];
 
         const totalCards = pathCards.length;
-        const currentCard = pathCards[pathCardIndex];
 
         const handlePathBack = () => {
           if (pathCardIndex > 0) setPathCardIndex(pathCardIndex - 1);
@@ -1072,26 +1066,23 @@ export default function OnboardingFlow({
               pathTouchStartX.current = null;
             }}
           >
-            {/* Slide rail — all 3 cards in a flex row, slide via translateX */}
             <div className="flex-1 overflow-hidden relative bg-[#0a0f1c]">
               <div
                 className="flex h-full"
                 style={{ transform: `translateX(-${pathCardIndex * 100}%)`, transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1)' }}
               >
-                {pathCards.map((card, idx) => (
+                {pathCards.map((card) => (
                   <div key={card.id} className="w-full h-full flex-shrink-0 flex flex-col relative overflow-hidden">
 
-                    {/* Top chrome: back + dots + spacer */}
-                    <div className="relative z-20 flex items-center justify-between px-5 sm:px-6 pt-5 pb-2">
+                    {/* Top chrome: back + dots only */}
+                    <div className="relative z-20 flex items-center justify-between px-5 sm:px-6 pt-4 pb-1">
                       <button
                         onClick={handlePathBack}
-                        className="flex items-center gap-1 text-white/60 hover:text-white transition-colors text-sm font-medium"
+                        className="flex items-center gap-1 text-white/50 hover:text-white transition-colors text-sm font-medium"
                       >
                         <ChevronLeft className="h-5 w-5" />
                         Back
                       </button>
-
-                      {/* Dot indicators */}
                       <div className="flex items-center gap-2">
                         {pathCards.map((_, dotIdx) => (
                           <button
@@ -1107,31 +1098,15 @@ export default function OnboardingFlow({
                           />
                         ))}
                       </div>
-
-                      {/* Prev/next arrows — always visible */}
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={handlePathBack}
-                          disabled={pathCardIndex === 0}
-                          className="p-1.5 rounded-full border border-white/10 text-white/40 hover:text-white hover:border-white/30 disabled:opacity-20 transition-all"
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={handlePathNext}
-                          disabled={pathCardIndex === totalCards - 1}
-                          className="p-1.5 rounded-full border border-white/10 text-white/40 hover:text-white hover:border-white/30 disabled:opacity-20 transition-all"
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </button>
-                      </div>
+                      {/* Spacer to balance back button */}
+                      <div className="w-16" />
                     </div>
 
-                    {/* Title block */}
-                    <div className="relative z-20 text-center px-5 sm:px-6 mt-1 sm:mt-2">
+                    {/* Title block — compact */}
+                    <div className="relative z-20 text-center px-5 sm:px-6 mt-1">
                       <p
-                        className="text-[10px] uppercase tracking-[4px] mb-2"
-                        style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, color: 'rgba(148,163,184,0.6)' }}
+                        className="text-[9px] uppercase tracking-[4px] mb-1"
+                        style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, color: 'rgba(148,163,184,0.55)' }}
                       >
                         CHOOSE YOUR PATH
                       </p>
@@ -1140,8 +1115,8 @@ export default function OnboardingFlow({
                         style={{
                           fontFamily: "'Space Grotesk', sans-serif",
                           fontWeight: 700,
-                          fontSize: 'clamp(52px, 13vw, 72px)',
-                          letterSpacing: '-3.6px',
+                          fontSize: 'clamp(44px, 11vw, 64px)',
+                          letterSpacing: '-3px',
                           color: '#c1ff00',
                           textShadow: '0 0 40px rgba(193,255,0,0.3)',
                         }}
@@ -1150,17 +1125,35 @@ export default function OnboardingFlow({
                       </h2>
                     </div>
 
-                    {/* Visual artwork — fills remaining vertical space */}
+                    {/* Visual artwork — fills remaining space */}
                     {card.visual}
+
+                    {/* Arrow nav row — above the CTA button, bright white */}
+                    <div className="relative z-20 flex items-center justify-center gap-6 pb-3">
+                      <button
+                        onClick={handlePathBack}
+                        disabled={pathCardIndex === 0}
+                        className="text-white disabled:opacity-20 transition-opacity active:scale-90"
+                      >
+                        <ChevronLeft className="h-8 w-8" strokeWidth={2.5} />
+                      </button>
+                      <button
+                        onClick={handlePathNext}
+                        disabled={pathCardIndex === totalCards - 1}
+                        className="text-white disabled:opacity-20 transition-opacity active:scale-90"
+                      >
+                        <ChevronRight className="h-8 w-8" strokeWidth={2.5} />
+                      </button>
+                    </div>
 
                     {/* CTA button */}
                     <div
                       className="relative z-20 px-5 sm:px-6"
-                      style={{ paddingBottom: 'calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 1.5rem)' }}
+                      style={{ paddingBottom: 'calc(max(2rem, env(safe-area-inset-bottom, 0px)) + 1rem)' }}
                     >
                       <button
                         onClick={() => selectAndContinue(card.id)}
-                        className="w-full py-4 sm:py-5 rounded-2xl font-black uppercase transition-transform active:scale-[0.98] hover:brightness-105"
+                        className="w-full py-4 rounded-2xl font-black uppercase transition-transform active:scale-[0.98] hover:brightness-105"
                         style={{
                           fontFamily: "'Outfit', sans-serif",
                           fontSize: '14px',
