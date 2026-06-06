@@ -645,7 +645,7 @@ export default function OnboardingFlow({
       case OnboardingStep.Intro1:
         return (
           <div
-            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#0a0f1c]"
+            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#0a0f1c] overflow-hidden"
             style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
           >
             {/* ── Visual area ── */}
@@ -700,17 +700,17 @@ export default function OnboardingFlow({
       case OnboardingStep.Intro2:
         return (
           <div
-            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#0a0f1c]"
+            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#0a0f1c] overflow-hidden"
             style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
           >
             {/* ── Visual area ── */}
-            <div className="flex-none relative overflow-hidden" style={{ maxHeight: 'clamp(300px, calc(100dvh - 340px), 500px)' }}>
+            <div className="flex-none relative overflow-hidden" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)', width: '130%', marginLeft: '-15%' }}>
               <img
                 src={imgProgression}
                 alt="Track your progression"
                 draggable={false}
-                className="select-none w-full"
-                style={{ display: 'block', height: 'auto' }}
+                className="select-none w-full h-full"
+                style={{ objectFit: 'contain', objectPosition: 'top center' }}
               />
               {/* Fade into bottom chrome */}
               <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, #0a0f1c, transparent)' }} />
@@ -755,7 +755,7 @@ export default function OnboardingFlow({
       case OnboardingStep.Intro3:
         return (
           <div
-            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#0a0f1c]"
+            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#0a0f1c] overflow-hidden"
             style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
           >
             {/* ── Visual area ── */}
