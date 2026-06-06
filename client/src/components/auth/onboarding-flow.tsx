@@ -1055,19 +1055,19 @@ export default function OnboardingFlow({
                   </div>
                   {/* Gold Star — top-left */}
                   <div className="ob-float-sm" style={{ position: 'absolute', top: '-4px', left: '-4px', animationDuration: '3.5s', animationDelay: '0.4s' }}>
-                    <img src={imgGoldStar} alt="" draggable={false} style={{ transform: 'rotate(90.49deg)', width: '65px', height: '48px', objectFit: 'contain' }} />
+                    <img src={imgGoldStar} alt="" draggable={false} style={{ transform: 'rotate(90.49deg)', width: '65px', height: '48px', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(255,200,0,0.85))' }} />
                   </div>
                   {/* Purple Potion — top-right */}
                   <div className="ob-float" style={{ position: 'absolute', top: '-4px', right: '-4px', animationDuration: '4.5s', animationDelay: '0.8s' }}>
-                    <img src={imgPurplePotion} alt="" draggable={false} style={{ transform: 'rotate(-5.158deg)', width: '70px', height: '70px', objectFit: 'contain' }} />
+                    <img src={imgPurplePotion} alt="" draggable={false} style={{ transform: 'rotate(-5.158deg)', width: '70px', height: '70px', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(160,0,255,0.85))' }} />
                   </div>
                   {/* Heart — bottom-right */}
                   <div className="ob-float-sm" style={{ position: 'absolute', bottom: '-8px', right: '-8px', animationDuration: '4s', animationDelay: '0.2s' }}>
-                    <img src={imgHeartPng} alt="" draggable={false} style={{ width: '76px', height: '76px', objectFit: 'contain' }} />
+                    <img src={imgHeartPng} alt="" draggable={false} style={{ width: '76px', height: '76px', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(255,30,60,0.85))' }} />
                   </div>
                   {/* Unity Logo — bottom-left */}
                   <div className="ob-float" style={{ position: 'absolute', bottom: '-4px', left: '-8px', animationDuration: '3.8s', animationDelay: '1s' }}>
-                    <img src={imgUnityLogo} alt="" draggable={false} style={{ width: '70px', height: '54px', objectFit: 'contain' }} />
+                    <img src={imgUnityLogo} alt="" draggable={false} style={{ width: '70px', height: '54px', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.75))' }} />
                   </div>
                 </div>
               </div>
