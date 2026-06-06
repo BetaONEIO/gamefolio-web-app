@@ -670,7 +670,7 @@ export default function OnboardingFlow({
                 ))}
               </div>
               {/* Title */}
-              <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(30px, 8vw, 38px)', letterSpacing: '-0.75px', color: '#fff' }}>
+              <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(24px, 6vw, 30px)', letterSpacing: '-0.9px', color: '#fff' }}>
                 BUILD YOUR <span style={{ color: '#c1ff00' }}>GAMEFOLIO</span>
               </h2>
               {/* Subtitle */}
@@ -728,7 +728,7 @@ export default function OnboardingFlow({
                 ))}
               </div>
               {/* Title */}
-              <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(30px, 8vw, 38px)', letterSpacing: '-0.9px', color: '#fff' }}>
+              <h2 className="text-center mb-2 leading-none uppercase whitespace-nowrap" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(22px, 5.5vw, 30px)', letterSpacing: '-0.9px', color: '#fff' }}>
                 TRACK YOUR <span style={{ color: '#c1ff00' }}>PROGRESSION</span>
               </h2>
               {/* Subtitle */}
@@ -796,8 +796,8 @@ export default function OnboardingFlow({
                 ))}
               </div>
               {/* Title */}
-              <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(30px, 8vw, 38px)', letterSpacing: '-0.9px', color: '#fff' }}>
-                REWARDS FOR <span style={{ color: '#c1ff00' }}>EVERY BOUNTY</span>
+              <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 'clamp(24px, 6vw, 30px)', letterSpacing: '-0.9px', color: '#fff' }}>
+                EARN <span style={{ color: '#c1ff00' }}>REWARDS</span>
               </h2>
               {/* Subtitle */}
               <p className="text-center mb-5" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 400, fontSize: '14px', lineHeight: '20px', color: '#94A3B8' }}>
