@@ -18,6 +18,13 @@ import TwitchGameSearch, { TwitchGame } from "@/components/games/TwitchGameSearc
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
+import imgMacCat from "@assets/Mac-cat_1780747173609.png";
+import imgStreamer from "@assets/streamer_1780747173601.png";
+import imgGfSword from "@assets/gf-sword_1780747173616.png";
+import imgGoldStar from "@assets/gold-star_1780747173613.png";
+import imgPurplePotion from "@assets/purple-potion_1780747173612.png";
+import imgHeartPng from "@assets/heart-png_1780747173615.png";
+import imgUnityLogo from "@assets/unity-logo_1780747173618.png";
 import Cropper from "react-easy-crop";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -977,15 +984,20 @@ export default function OnboardingFlow({
             ctaLabel: 'CONTINUE AS INDIE',
             visual: (
               <div className="flex-1 relative overflow-hidden flex items-center justify-center">
-                <div className="absolute w-[330px] h-[330px] rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.13)' }} />
-                <div className="relative z-10 flex flex-col items-center gap-3">
-                  <div className="relative w-48 h-48 sm:w-56 sm:h-56">
-                    <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[90px] sm:text-[110px] leading-none select-none" style={{ filter: 'drop-shadow(0 0 24px rgba(193,255,0,0.5))', transform: 'translate(-50%,-50%) rotate(-7deg)' }}>⚔️</span>
-                    <span className="absolute -top-2 -left-2 text-5xl select-none" style={{ filter: 'drop-shadow(0 0 14px rgba(255,215,0,0.7))', transform: 'rotate(90deg)' }}>⭐</span>
-                    <span className="absolute -top-2 -right-2 text-5xl select-none" style={{ filter: 'drop-shadow(0 0 14px rgba(180,0,255,0.7))', transform: 'rotate(-5deg)' }}>🧪</span>
-                    <span className="absolute -bottom-2 -right-4 text-5xl select-none" style={{ filter: 'drop-shadow(0 0 14px rgba(255,80,80,0.7))' }}>❤️</span>
-                    <span className="absolute -bottom-2 -left-4 text-4xl select-none" style={{ filter: 'drop-shadow(0 0 12px rgba(255,255,255,0.5))' }}>💎</span>
-                  </div>
+                {/* Green glow blob */}
+                <div className="absolute w-[330px] h-[330px] rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)' }} />
+                {/* Scattered items — match Figma positions */}
+                <div className="relative z-10" style={{ width: '260px', height: '260px' }}>
+                  {/* GF Sword — center, rotate -7.355deg */}
+                  <img src={imgGfSword} alt="" draggable={false} style={{ position: 'absolute', width: '128px', height: '128px', top: '50%', left: '50%', transform: 'translate(-50%,-50%) rotate(-7.355deg)', objectFit: 'contain' }} />
+                  {/* Gold Star — top-left, rotate 90.49deg */}
+                  <img src={imgGoldStar} alt="" draggable={false} style={{ position: 'absolute', width: '66px', height: '48px', top: '8px', left: '8px', transform: 'rotate(90.49deg)', objectFit: 'contain' }} />
+                  {/* Purple Potion — top-right, rotate -5.158deg */}
+                  <img src={imgPurplePotion} alt="" draggable={false} style={{ position: 'absolute', width: '77px', height: '77px', top: '4px', right: '8px', transform: 'rotate(-5.158deg)', objectFit: 'contain' }} />
+                  {/* Heart — bottom-right */}
+                  <img src={imgHeartPng} alt="" draggable={false} style={{ position: 'absolute', width: '102px', height: '102px', bottom: '4px', right: '0px', objectFit: 'contain' }} />
+                  {/* Unity Logo — bottom-left */}
+                  <img src={imgUnityLogo} alt="" draggable={false} style={{ position: 'absolute', width: '79px', height: '62px', bottom: '16px', left: '4px', objectFit: 'contain' }} />
                 </div>
               </div>
             ),
@@ -995,14 +1007,19 @@ export default function OnboardingFlow({
             title: 'GAMER',
             ctaLabel: 'CONTINUE AS GAMER',
             visual: (
-              <div className="flex-1 relative overflow-hidden flex items-end justify-center pb-2">
-                <div className="absolute w-72 h-72 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.13)', top: '0%', left: '-20%' }} />
-                <div className="absolute w-56 h-56 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.13)', top: '15%', right: '-15%' }} />
-                <div className="absolute w-44 h-44 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.13)', bottom: '5%', left: '25%' }} />
-                <div className="relative z-10 text-center select-none">
-                  <div className="text-[110px] sm:text-[130px] leading-none" style={{ filter: 'drop-shadow(0 0 30px rgba(193,255,0,0.45))' }}>🐱</div>
-                  <div className="text-[60px] leading-none -mt-4" style={{ filter: 'drop-shadow(0 0 20px rgba(193,255,0,0.5))' }}>🎮</div>
-                </div>
+              <div className="flex-1 relative overflow-hidden flex items-end justify-center">
+                {/* Three glow orbs — Figma positions */}
+                <div className="absolute w-72 h-72 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '-10%', left: '-15%' }} />
+                <div className="absolute w-72 h-72 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '10%', right: '-15%' }} />
+                <div className="absolute w-72 h-72 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', bottom: '-10%', left: '10%' }} />
+                {/* Mac Cat — portrait 261:391, anchored to bottom */}
+                <img
+                  src={imgMacCat}
+                  alt="Gaming cat"
+                  draggable={false}
+                  className="relative z-10 w-auto select-none"
+                  style={{ height: 'min(75%, 320px)', maxWidth: '100%', objectFit: 'contain', objectPosition: 'bottom' }}
+                />
               </div>
             ),
           },
@@ -1012,14 +1029,16 @@ export default function OnboardingFlow({
             ctaLabel: 'CONTINUE AS STREAMER',
             visual: (
               <div className="flex-1 relative overflow-hidden flex items-center justify-center">
-                <div className="absolute w-72 h-72 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.25)' }} />
-                <div className="relative z-10 text-center select-none">
-                  <div className="text-[100px] sm:text-[120px] leading-none" style={{ filter: 'drop-shadow(0 0 30px rgba(193,255,0,0.5))' }}>🎙️</div>
-                  <div className="mt-4 inline-flex items-center gap-2 px-5 py-2 rounded-full text-white font-black tracking-widest text-sm" style={{ background: '#ef4444' }}>
-                    <span className="w-2 h-2 rounded-full bg-white" style={{ animation: 'pulse 1.5s infinite' }} />
-                    LIVE
-                  </div>
-                </div>
+                {/* Single stronger glow — Figma uses #c1ff0066 */}
+                <div className="absolute w-72 h-72 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.4)' }} />
+                {/* Streamer graphic — landscape 385:328 */}
+                <img
+                  src={imgStreamer}
+                  alt="Streamer"
+                  draggable={false}
+                  className="relative z-10 select-none"
+                  style={{ width: 'min(90%, 340px)', height: 'auto', objectFit: 'contain' }}
+                />
               </div>
             ),
           },
