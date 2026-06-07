@@ -1,4 +1,36 @@
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
+import { eq } from 'drizzle-orm';
+import { db } from './db';
+import { users } from '../shared/schema';
+import { scrypt, randomBytes } from 'crypto';
+import { promisify } from 'util';
+
+const scryptAsync = promisify(scrypt);
+
+async function ensureOnboardingTestAccount() {
+  try {
+    const email = 'onboarding@gamefolio.com';
+    const username = 'onboardingtest';
+
+    const [existing] = await db.select().from(users).where(eq(users.email, email));
+    if (existing) return;
+
+    const [byUsername] = await db.select().from(users).where(eq(users.username, username));
+    const salt = randomBytes(16).toString('hex');
+    const buf = (await scryptAsync('Helloworld1!', salt, 64)) as Buffer;
+    const hashed = `${buf.toString('hex')}.${salt}`;
+
+    if (byUsername) {
+      await db.update(users).set({ email, password: hashed, emailVerified: true, userType: null }).where(eq(users.id, byUsername.id));
+    } else {
+      await db.insert(users).values({ username, email, password: hashed, displayName: 'Onboarding Test', emailVerified: true, userType: null, authProvider: 'local', role: 'user', status: 'active' });
+    }
+    log('Onboarding test account ready');
+  } catch (err) {
+    console.error('Failed to ensure onboarding test account:', err);
+  }
+}
 import { setupVite, serveStatic, log } from './vite';
 import { registerRoutes } from './routes';
 import { runMigration } from './migrate-to-supabase';
@@ -32,6 +64,13 @@ const app = express();
 if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
+
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: false,
+}));
 
 // CORS configuration for production and mobile apps
 function isOriginAllowed(origin: string, allowedOrigins: string[]): boolean {
