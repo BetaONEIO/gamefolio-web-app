@@ -32,7 +32,7 @@ function historyTypeColor(type: string): string {
   if (type === "stake") return "#60a5fa";
   if (type === "unstake") return "#f87171";
   if (type === "claim") return "#B7FF1A";
-  return "#94a3b8";
+  return "#B8C0AE";
 }
 
 export default function StakingHubScreen({
@@ -77,12 +77,12 @@ export default function StakingHubScreen({
     return (
       <div
         className="flex flex-col w-full"
-        style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif", height: "100dvh" }}
+        style={{ background: "#0B1218", fontFamily: "Plus Jakarta Sans, sans-serif", height: "100dvh" }}
       >
         <div
           className="flex flex-col items-center gap-6 px-6 pt-12 pb-8"
           style={{
-            background: "linear-gradient(180deg, rgba(239, 68, 68, 0.1) 0%, #101D27 100%)",
+            background: "linear-gradient(180deg, rgba(239, 68, 68, 0.1) 0%, #0B1218 100%)",
             borderBottom: "1px solid rgba(30, 41, 59, 0.3)",
           }}
         >
@@ -90,9 +90,9 @@ export default function StakingHubScreen({
             <button
               onClick={() => setShowUnstakeDialog(false)}
               className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
-              style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+              style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
             >
-              <ArrowLeft className="w-6 h-6" style={{ color: "#f8fafc" }} />
+              <ArrowLeft className="w-6 h-6" style={{ color: "#F5F7F2" }} />
             </button>
             <span className="text-xl font-bold" style={{ color: "#fff" }}>Unstake GFT</span>
             <div className="w-10 h-10" />
@@ -102,17 +102,17 @@ export default function StakingHubScreen({
         <div className="scrollbar-hide flex-1 overflow-y-auto flex flex-col gap-6 px-6 py-8 max-w-[430px] mx-auto w-full pb-28">
           <div
             className="flex flex-col gap-4 p-5 rounded-2xl"
-            style={{ background: "#0f172a", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+            style={{ background: "#0B1218", border: "1px solid rgba(30, 41, 59, 0.5)" }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: "#94a3b8" }}>Currently Staked</span>
+              <span className="text-sm" style={{ color: "#B8C0AE" }}>Currently Staked</span>
               <span className="text-base font-bold" style={{ color: "#fff" }}>
                 {totalStaked.toFixed(2)} GFT
               </span>
             </div>
 
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium" style={{ color: "#94a3b8" }}>
+              <label className="text-sm font-medium" style={{ color: "#B8C0AE" }}>
                 Amount to Unstake
               </label>
               <div className="relative">
@@ -123,7 +123,7 @@ export default function StakingHubScreen({
                   placeholder="0.00"
                   className="w-full h-14 px-4 rounded-xl text-lg font-bold outline-none"
                   style={{
-                    background: "#1e293b",
+                    background: "#1B2A33",
                     border: "1px solid rgba(30, 41, 59, 0.5)",
                     color: "#fff",
                   }}
@@ -144,8 +144,8 @@ export default function StakingHubScreen({
             disabled={!isValidAmount || isUnstaking}
             className="w-full h-14 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all disabled:opacity-50"
             style={{
-              background: isValidAmount ? "#ef4444" : "#1e293b",
-              color: isValidAmount ? "#fff" : "#94a3b8",
+              background: isValidAmount ? "#ef4444" : "#1B2A33",
+              color: isValidAmount ? "#fff" : "#B8C0AE",
             }}
           >
             {isUnstaking ? "Processing..." : "Confirm Unstake"}
@@ -172,12 +172,12 @@ export default function StakingHubScreen({
   return (
     <div
       className="flex flex-col w-full overflow-x-hidden"
-      style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif", height: "100dvh" }}
+      style={{ background: "#0B1218", fontFamily: "Plus Jakarta Sans, sans-serif", height: "100dvh" }}
     >
       <div
         className="flex flex-col items-center gap-6 px-6 pt-12 pb-8"
         style={{
-          background: "linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #101D27 100%)",
+          background: "linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #0B1218 100%)",
           borderBottom: "1px solid rgba(30, 41, 59, 0.3)",
         }}
       >
@@ -185,27 +185,27 @@ export default function StakingHubScreen({
           <button
             onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
-            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
           >
-            <ArrowLeft className="w-6 h-6" style={{ color: "#f8fafc" }} />
+            <ArrowLeft className="w-6 h-6" style={{ color: "#F5F7F2" }} />
           </button>
 
-          <span className="text-xl font-bold" style={{ color: "#f8fafc" }}>
+          <span className="text-xl font-bold" style={{ color: "#F5F7F2" }}>
             Staking Hub
           </span>
 
           <button
             className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
-            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
           >
-            <Info className="w-6 h-6" style={{ color: "#f8fafc" }} />
+            <Info className="w-6 h-6" style={{ color: "#F5F7F2" }} />
           </button>
         </div>
 
         <div className="flex flex-col items-center gap-3 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full">
           <span
             className="text-sm font-medium uppercase"
-            style={{ color: "#94a3b8", letterSpacing: "0.7px" }}
+            style={{ color: "#B8C0AE", letterSpacing: "0.7px" }}
           >
             Total Staked Amount
           </span>
@@ -238,9 +238,9 @@ export default function StakingHubScreen({
         <div className="flex gap-4">
           <div
             className="flex-1 min-w-0 flex flex-col gap-1 p-4 rounded-2xl"
-            style={{ background: "#0f172a", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+            style={{ background: "#0B1218", border: "1px solid rgba(30, 41, 59, 0.5)" }}
           >
-            <span className="text-[10px] font-bold uppercase" style={{ color: "#94a3b8" }}>
+            <span className="text-[10px] font-bold uppercase" style={{ color: "#B8C0AE" }}>
               Rewards Earned
             </span>
             <span className="text-lg font-bold truncate" style={{ color: "#B7FF1A" }}>
@@ -250,15 +250,15 @@ export default function StakingHubScreen({
 
           <div
             className="flex-1 min-w-0 flex flex-col gap-1 p-4 rounded-2xl"
-            style={{ background: "#0f172a", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+            style={{ background: "#0B1218", border: "1px solid rgba(30, 41, 59, 0.5)" }}
           >
-            <span className="text-[10px] font-bold uppercase" style={{ color: "#94a3b8" }}>
+            <span className="text-[10px] font-bold uppercase" style={{ color: "#B8C0AE" }}>
               Available GFT
             </span>
             <span className="text-lg font-bold truncate" style={{ color: "#fff" }}>
               {availableGft.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
-            <span className="text-[10px]" style={{ color: "#94a3b8" }}>
+            <span className="text-[10px]" style={{ color: "#B8C0AE" }}>
               In wallet
             </span>
           </div>
@@ -283,13 +283,13 @@ export default function StakingHubScreen({
             disabled={!hasActiveStake}
             className="flex-1 h-14 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all hover:bg-slate-700 disabled:opacity-40"
             style={{
-              background: "#1e293b",
-              border: "1px solid #1e293b",
-              color: "#f8fafc",
+              background: "#1B2A33",
+              border: "1px solid #1B2A33",
+              color: "#F5F7F2",
             }}
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M10 3.33334V16.6667M10 16.6667L16.6667 10M10 16.6667L3.33334 10" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M10 3.33334V16.6667M10 16.6667L16.6667 10M10 16.6667L3.33334 10" stroke="#F5F7F2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             Unstake
           </button>
@@ -299,23 +299,23 @@ export default function StakingHubScreen({
             disabled={!hasActiveStake || rewardsEarned < 0.000001 || isClaiming}
             className="flex-1 h-14 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all hover:bg-slate-700 disabled:opacity-40"
             style={{
-              background: "#1e293b",
-              border: "1px solid #1e293b",
-              color: "#f8fafc",
+              background: "#1B2A33",
+              border: "1px solid #1B2A33",
+              color: "#F5F7F2",
             }}
           >
-            <Gift className="w-5 h-5" style={{ color: "#f8fafc" }} />
+            <Gift className="w-5 h-5" style={{ color: "#F5F7F2" }} />
             {isClaiming ? "Claiming..." : "Claim"}
           </button>
         </div>
 
-        <div className="flex gap-2 p-1 rounded-xl" style={{ background: "#0f172a" }}>
+        <div className="flex gap-2 p-1 rounded-xl" style={{ background: "#0B1218" }}>
           <button
             onClick={() => setActiveTab("positions")}
             className="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all"
             style={{
-              background: activeTab === "positions" ? "#1e293b" : "transparent",
-              color: activeTab === "positions" ? "#f8fafc" : "#94a3b8",
+              background: activeTab === "positions" ? "#1B2A33" : "transparent",
+              color: activeTab === "positions" ? "#F5F7F2" : "#B8C0AE",
             }}
           >
             Active Stakes
@@ -324,8 +324,8 @@ export default function StakingHubScreen({
             onClick={() => setActiveTab("history")}
             className="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all"
             style={{
-              background: activeTab === "history" ? "#1e293b" : "transparent",
-              color: activeTab === "history" ? "#f8fafc" : "#94a3b8",
+              background: activeTab === "history" ? "#1B2A33" : "transparent",
+              color: activeTab === "history" ? "#F5F7F2" : "#B8C0AE",
             }}
           >
             History
@@ -337,7 +337,7 @@ export default function StakingHubScreen({
             {hasActiveStake ? (
               <div
                 className="flex flex-col gap-3 p-4 rounded-2xl"
-                style={{ background: "#0f172a", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+                style={{ background: "#0B1218", border: "1px solid rgba(30, 41, 59, 0.5)" }}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -348,10 +348,10 @@ export default function StakingHubScreen({
                       <TrendingUp className="w-5 h-5" style={{ color: "#B7FF1A" }} />
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-base font-bold" style={{ color: "#f8fafc" }}>
+                      <span className="text-base font-bold" style={{ color: "#F5F7F2" }}>
                         {totalStaked.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT
                       </span>
-                      <span className="text-xs" style={{ color: "#94a3b8" }}>
+                      <span className="text-xs" style={{ color: "#B8C0AE" }}>
                         {estimatedApy}% APY
                       </span>
                     </div>
@@ -360,7 +360,7 @@ export default function StakingHubScreen({
                     <span className="text-sm font-bold" style={{ color: "#B7FF1A" }}>
                       +{rewardsEarned.toFixed(4)} GFT
                     </span>
-                    <span className="text-[10px]" style={{ color: "#94a3b8" }}>
+                    <span className="text-[10px]" style={{ color: "#B8C0AE" }}>
                       pending rewards
                     </span>
                   </div>
@@ -373,9 +373,9 @@ export default function StakingHubScreen({
                   className="w-16 h-16 rounded-full flex items-center justify-center"
                   style={{ background: "rgba(30, 41, 59, 0.5)" }}
                 >
-                  <TrendingUp className="w-8 h-8" style={{ color: "#94a3b8" }} />
+                  <TrendingUp className="w-8 h-8" style={{ color: "#B8C0AE" }} />
                 </div>
-                <span className="text-base font-medium text-center" style={{ color: "#94a3b8" }}>
+                <span className="text-base font-medium text-center" style={{ color: "#B8C0AE" }}>
                   No active stakes
                 </span>
                 <span className="text-sm text-center max-w-[280px]" style={{ color: "#64748b" }}>
@@ -393,7 +393,7 @@ export default function StakingHubScreen({
                 <div
                   key={item.id}
                   className="flex items-center justify-between p-4 rounded-2xl"
-                  style={{ background: "#0f172a", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+                  style={{ background: "#0B1218", border: "1px solid rgba(30, 41, 59, 0.5)" }}
                 >
                   <div className="flex items-center gap-3">
                     <div
@@ -409,7 +409,7 @@ export default function StakingHubScreen({
                       {item.type === "claim" && <Gift className="w-4 h-4" style={{ color: historyTypeColor(item.type) }} />}
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold" style={{ color: "#f8fafc" }}>
+                      <span className="text-sm font-bold" style={{ color: "#F5F7F2" }}>
                         {historyTypeLabel(item.type)}
                       </span>
                       <span className="text-xs" style={{ color: "#64748b" }}>
@@ -436,9 +436,9 @@ export default function StakingHubScreen({
                   className="w-16 h-16 rounded-full flex items-center justify-center"
                   style={{ background: "rgba(30, 41, 59, 0.5)" }}
                 >
-                  <Clock className="w-8 h-8" style={{ color: "#94a3b8" }} />
+                  <Clock className="w-8 h-8" style={{ color: "#B8C0AE" }} />
                 </div>
-                <span className="text-base font-medium text-center" style={{ color: "#94a3b8" }}>
+                <span className="text-base font-medium text-center" style={{ color: "#B8C0AE" }}>
                   No staking history
                 </span>
                 <span className="text-sm text-center max-w-[280px]" style={{ color: "#64748b" }}>

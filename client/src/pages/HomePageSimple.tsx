@@ -1,7 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
-import { TrendingSection } from "@/components/trending/TrendingSection";
+import VideoClipCard from "@/components/clips/VideoClipCard";
 
 import { Button } from "@/components/ui/button";
 import { ClipWithUser, Game } from "@shared/schema";
@@ -16,11 +15,19 @@ import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBann
 import { LatestReelsCarousel } from "@/components/clips/LatestReelsCarousel";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
+import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreenshotsViewer";
+import { useMobile } from "@/hooks/use-mobile";
 import { Camera } from "lucide-react";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
 import { ProUpgradeDialog } from "@/components/ProUpgradeDialog";
 import { LazySection } from "@/components/ui/lazy-section";
 import { openExternal } from "@/lib/platform";
+import { useAuthModal } from "@/hooks/use-auth-modal";
+import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
+import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
+import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
+import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
+import { Trophy } from "lucide-react";
 
 interface TrendingContentCarouselProps {
   clips: ClipWithUser[] | undefined;
@@ -114,16 +121,16 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
       {/* Navigation Arrows - hidden on mobile, visible on larger screens */}
       <button
         onClick={() => scroll('left')}
-        className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+        className="absolute -left-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
       >
-        <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+        <ChevronLeft className="h-5 w-5" />
       </button>
       
       <button
         onClick={() => scroll('right')}
-        className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+        className="absolute -right-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
       >
-        <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+        <ChevronRight className="h-5 w-5" />
       </button>
 
       {/* Carousel Container */}
@@ -145,10 +152,10 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
             key={`trending-clip-${clip.id}`} 
             className="flex-shrink-0 w-[280px] sm:w-[320px] md:w-[400px] lg:w-[480px]"
           >
-            <VideoClipGridItem 
+            <VideoClipCard
               clip={clip}
               userId={userId}
-              compact={false}
+              clipsList={clips}
             />
           </div>
         ))}
@@ -214,8 +221,13 @@ interface HeroBannerSlideshowProps {
 }
 
 const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSlides, slideIntervalMs }: HeroBannerSlideshowProps) => {
-  const useDbSlides = dbSlides && dbSlides.length > 0;
-  const slidesCount = useDbSlides ? dbSlides.length : HERO_SLIDES.length;
+  const { openModal } = useAuthModal();
+  // Filter out Pro slides for users who are already Pro
+  const visibleDbSlides = dbSlides?.filter(slide =>
+    !(slide.buttonLink === '/pro' && (user as any)?.isPro)
+  );
+  const useDbSlides = visibleDbSlides && visibleDbSlides.length > 0;
+  const slidesCount = useDbSlides ? visibleDbSlides.length : HERO_SLIDES.length;
   const interval = slideIntervalMs || SLIDE_INTERVAL;
 
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -290,7 +302,11 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
     >
       <div className="relative h-[300px] sm:h-[350px] md:h-[500px]">
         {useDbSlides ? (
-          dbSlides.map((slide, index) => (
+          visibleDbSlides.map((slide, index) => {
+            const isLootboxSlide = slide.buttonLink === '/lootbox';
+            const isProSlide = slide.buttonLink === '/pro';
+            const effectiveAlign = isLootboxSlide ? 'center' : slide.textAlign;
+            return (
             <div
               key={slide.id}
               className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
@@ -300,9 +316,9 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
                 zIndex: currentSlide === index ? 1 : 0,
               }}
             >
-              <div className={`absolute inset-0 ${slide.textAlign === 'left' ? 'bg-gradient-to-r from-black/80 via-black/40 to-transparent' : slide.textAlign === 'right' ? 'bg-gradient-to-l from-black/80 via-black/40 to-transparent' : 'bg-gradient-to-t from-black/70 via-black/50 to-black/30'}`} />
-              <div className={`relative flex ${slide.textAlign === 'right' ? 'items-center justify-end' : slide.textAlign === 'left' ? 'items-center justify-start' : 'items-center justify-center'} h-full`}>
-                <div className={`${slide.textAlign === 'center' ? 'text-center' : slide.textAlign === 'right' ? 'text-right' : 'text-left'} text-white px-8 sm:px-14 md:px-24 ${slide.textAlign === 'center' ? 'max-w-4xl' : 'max-w-lg'}`}>
+              <div className={`absolute inset-0 ${effectiveAlign === 'left' ? 'bg-gradient-to-r from-black/80 via-black/40 to-transparent' : effectiveAlign === 'right' ? 'bg-gradient-to-l from-black/80 via-black/40 to-transparent' : 'bg-gradient-to-t from-black/70 via-black/50 to-black/30'}`} />
+              <div className={`relative flex ${effectiveAlign === 'right' ? 'items-center justify-end' : effectiveAlign === 'left' ? 'items-center justify-start' : 'items-center justify-center'} h-full`}>
+                <div className={`${effectiveAlign === 'center' ? 'text-center' : effectiveAlign === 'right' ? 'text-right' : 'text-left'} text-white px-8 sm:px-14 md:px-24 ${effectiveAlign === 'center' ? 'max-w-4xl' : 'max-w-lg'}`}>
                   <h1 className="text-2xl sm:text-3xl md:text-6xl font-bold mb-3 sm:mb-4 leading-tight">
                     {slide.title.split('\n').map((line, idx) => (
                       <span key={idx}>
@@ -312,13 +328,19 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
                     ))}
                   </h1>
                   {slide.subtitle && (
-                    <p className={`text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl ${slide.textAlign === 'center' ? 'mx-auto' : ''} leading-relaxed`}>
+                    <p className={`text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl ${effectiveAlign === 'center' ? 'mx-auto' : ''} leading-relaxed`}>
                       {slide.subtitle}
                     </p>
                   )}
                   {slide.buttonText && slide.buttonLink && (
                     <Button 
-                      className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                      className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground border-0"
+                      style={isProSlide ? {
+                        background: 'linear-gradient(90deg, #B7FF1A, #FFE500, #AAFF00, #FFE500, #B7FF1A)',
+                        backgroundSize: '300% 100%',
+                        animation: 'gradient-shift 3s ease infinite',
+                        color: '#071013',
+                      } : undefined}
                       onClick={() => {
                         if (slide.buttonLink === '/lootbox') {
                           window.dispatchEvent(new CustomEvent('open-lootbox'));
@@ -327,7 +349,11 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
                         } else if (slide.buttonLink?.startsWith('http')) {
                           void openExternal(slide.buttonLink);
                         } else {
-                          setLocation(slide.buttonLink || '/');
+                          if (!user) {
+                            openModal('login');
+                          } else {
+                            setLocation(slide.buttonLink || '/');
+                          }
                         }
                       }}
                     >
@@ -337,7 +363,8 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
                 </div>
               </div>
             </div>
-          ))
+            );
+          })
         ) : (
           HERO_SLIDES.map((slide, index) => (
             <div
@@ -352,13 +379,13 @@ const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSl
               }}
             >
               {slide.type === 'lootbox' && (
-                <div className="flex items-start justify-start h-full">
-                  <div className="text-left text-white px-6 sm:px-10 md:px-16 flex flex-col justify-center h-full max-w-lg">
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center text-white px-6 sm:px-10 md:px-16 flex flex-col items-center justify-center h-full max-w-lg">
                     <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-4 sm:mb-6 leading-tight drop-shadow-lg">
                       Claim your<br />Daily Lootbox
                     </h2>
                     <Button 
-                      className="w-fit px-8 py-3 sm:py-4 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
+                      className="w-full sm:w-fit px-8 py-3 sm:py-4 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
                       onClick={() => {
                         if (user) {
                           window.dispatchEvent(new CustomEvent('open-lootbox'));
@@ -457,6 +484,7 @@ const HomePage = () => {
   const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [selectedGameFilter, setSelectedGameFilter] = useState<string | null>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
+  const isMobile = useMobile();
   const [, setLocation] = useLocation();
   const screenshotsScrollRef = useRef<HTMLDivElement>(null);
   const [screenshotsDragging, setScreenshotsDragging] = useState(false);
@@ -467,11 +495,11 @@ const HomePage = () => {
   const { user } = useAuth();
   const userId = user?.id;
 
-  // Query latest clips for the homepage section — newest uploaded first, same as dedicated page
+  // Query latest clips for the homepage section — newest uploaded first
   const { data: trendingClipsData, isLoading: isLoadingTrendingClips } = useQuery<ClipWithUser[]>({
-    queryKey: ['/api/clips/trending', 'recent'],
+    queryKey: ['/api/clips/latest'],
     queryFn: async () => {
-      const response = await fetch('/api/clips/trending?period=recent&limit=20');
+      const response = await fetch('/api/clips/latest?limit=20', { credentials: 'include' });
       if (!response.ok) {
         throw new Error('Failed to fetch latest clips');
       }
@@ -496,10 +524,10 @@ const HomePage = () => {
     }
   });
 
-  const { data: latestScreenshots, isLoading: isLoadingScreenshots } = useQuery<ClipWithUser[]>({
-    queryKey: ['/api/screenshots', 'recent'],
+  const { data: latestScreenshots, isLoading: isLoadingScreenshots } = useQuery<any[]>({
+    queryKey: ['/api/screenshots/latest'],
     queryFn: async () => {
-      const response = await fetch('/api/screenshots?period=recent&limit=12');
+      const response = await fetch('/api/screenshots/latest?limit=12', { credentials: 'include' });
       if (!response.ok) {
         throw new Error('Failed to fetch latest screenshots');
       }
@@ -522,7 +550,7 @@ const HomePage = () => {
     enabled: !!userId, // Only run query if user is logged in
   });
 
-  const { data: dbHeroSlides } = useQuery<DbHeroSlide[]>({
+  const { data: dbHeroSlides, isLoading: isLoadingDbSlides } = useQuery<DbHeroSlide[]>({
     queryKey: ["/api/hero-slides"],
     queryFn: async () => {
       const response = await fetch('/api/hero-slides');
@@ -609,8 +637,8 @@ const HomePage = () => {
         </div>
       )}
       
-      {/* Hero Slideshow Section - hidden when all DB slides are disabled */}
-      {(!dbHeroSlides || dbHeroSlides.length > 0) && (
+      {/* Hero Slideshow Section - wait for DB slides before rendering to prevent fallback flash */}
+      {!isLoadingDbSlides && dbHeroSlides && dbHeroSlides.length > 0 && (
         <HeroBannerSlideshow 
           heroText={heroText}
           user={user}
@@ -620,12 +648,17 @@ const HomePage = () => {
           slideIntervalMs={slideIntervalMs}
         />
       )}
+
+      {/* Ecosystem Activity Rail */}
+      {/* <EcosystemActivityRail /> */}
       
       <div className="space-y-4 sm:space-y-6 md:space-y-8 mt-4 sm:mt-6 md:mt-8">
-      {/* Recommended for You Section */}
-      <LazySection minHeight="300px" rootMargin="300px">
-        <RecommendedForYou userId={userId} />
-      </LazySection>
+      {/* Recommended for You Section - only for logged-in users */}
+      {user && (
+        <LazySection minHeight="300px" rootMargin="300px">
+          <RecommendedForYou userId={userId} />
+        </LazySection>
+      )}
       
       {/* Latest Clips Section */}
       <LazySection minHeight="400px" rootMargin="200px">
@@ -682,7 +715,7 @@ const HomePage = () => {
 
       {/* Latest Screenshots Section */}
       <LazySection minHeight="400px" rootMargin="200px">
-        <section className="px-4 sm:px-6 md:px-8 pt-8 sm:pt-10 mt-2">
+        <section className="px-4 sm:px-6 md:px-8 pt-8 sm:pt-10 mt-2 pb-24 sm:pb-10">
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-xl sm:text-2xl font-bold">Latest Screenshots</h2>
             <Link href="/latest-screenshots" className="text-primary text-sm font-medium hover:underline flex items-center">
@@ -703,19 +736,19 @@ const HomePage = () => {
             <div className="relative">
               <button
                 onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft -= 480; } }}
-                className="absolute -left-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
+                className="absolute -left-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
               <button
                 onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft += 480; } }}
-                className="absolute -right-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
+                className="absolute -right-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
               >
                 <ChevronRight className="h-5 w-5" />
               </button>
               <div
                 ref={screenshotsScrollRef}
-                className={`flex gap-5 overflow-x-auto scrollbar-hide pb-4 select-none ${screenshotsDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                className={`flex gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-8 py-2 select-none ${screenshotsDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
                 style={{ scrollBehavior: screenshotsDragging ? 'auto' : 'smooth' }}
                 onMouseDown={(e) => {
                   if (!screenshotsScrollRef.current) return;
@@ -747,7 +780,7 @@ const HomePage = () => {
               </div>
             </div>
           ) : (
-            <div className="text-center py-8 sm:py-12 bg-card/50 rounded-xl border border-border/50 mx-2">
+            <div className="text-center py-8 sm:py-12 pb-16 sm:pb-20 bg-card/50 rounded-xl border border-border/50 mx-2">
               <Camera className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">No Screenshots Yet</h3>
               <p className="text-muted-foreground text-sm px-4">
@@ -757,15 +790,54 @@ const HomePage = () => {
           )}
         </section>
       </LazySection>
+
+      {/* Daily XP Challenges */}
+      {/* <LazySection minHeight="280px" rootMargin="200px">
+        <div className="px-4 sm:px-6 md:px-8">
+          <DailyXPChallenges />
+        </div>
+      </LazySection> */}
+
+      {/* Live Streams Now */}
+      {/* <LazySection minHeight="280px" rootMargin="200px">
+        <div className="px-4 sm:px-6 md:px-8">
+          <LiveStreamsSection />
+        </div>
+      </LazySection> */}
+
+      {/* Trending Gamefolios */}
+      {/* <LazySection minHeight="260px" rootMargin="200px">
+        <section className="px-4 sm:px-6 md:px-8 pb-10">
+          <div className="flex justify-between items-center mb-5">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-5 h-5" style={{ color: '#B7FF1A' }} />
+              <h2 className="text-xl font-semibold text-foreground">Trending Gamefolios</h2>
+            </div>
+            <Link href="/explore" className="text-primary text-sm font-medium hover:underline flex items-center">
+              View all <ChevronRight className="h-4 w-4 ml-1" />
+            </Link>
+          </div>
+          <FeaturedUsersSection />
+        </section>
+      </LazySection> */}
+
       </div>
 
-      <ScreenshotLightbox
-        screenshot={selectedScreenshot}
-        onClose={() => setSelectedScreenshot(null)}
-        currentUserId={user?.id}
-        screenshots={latestScreenshots || []}
-        onNavigate={(s: any) => setSelectedScreenshot(s)}
-      />
+      {selectedScreenshot && isMobile ? (
+        <MobileScreenshotsViewer
+          screenshots={latestScreenshots || []}
+          startId={selectedScreenshot.id}
+          onBack={() => setSelectedScreenshot(null)}
+        />
+      ) : (
+        <ScreenshotLightbox
+          screenshot={selectedScreenshot}
+          onClose={() => setSelectedScreenshot(null)}
+          currentUserId={user?.id}
+          screenshots={latestScreenshots || []}
+          onNavigate={(s: any) => setSelectedScreenshot(s)}
+        />
+      )}
     </div>
   );
 };

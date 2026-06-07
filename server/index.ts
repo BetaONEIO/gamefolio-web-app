@@ -142,20 +142,24 @@ app.use(gfWebhookRoutes);
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ extended: false, limit: '500mb' }));
 
-// Serve attached assets (including videos) as static files.
-// Served from the repo-root folder if present (dev + deploys that ship it);
-// a subset is also copied into dist/public/attached_assets at build time via
-// client/public/attached_assets and served by serveStatic as a fallback.
-const attachedAssetsPath = path.resolve(process.cwd(), 'attached_assets');
-if (fs.existsSync(attachedAssetsPath) && fs.statSync(attachedAssetsPath).isDirectory()) {
-  const count = fs.readdirSync(attachedAssetsPath).length;
-  console.log(`📁 attached_assets present at ${attachedAssetsPath} (${count} files)`);
-} else {
-  console.warn(
-    `⚠️  attached_assets folder not found at ${attachedAssetsPath} — falling back to bundled copies in dist/public/attached_assets`
-  );
-}
-app.use('/attached_assets', express.static(attachedAssetsPath));
+// All referenced /attached_assets/* files live under client/public/
+// attached_assets/ and ship via the SPA build to dist/public/attached_assets/,
+// where serveStatic picks them up. The previous public route over the
+// repo-root attached_assets/ directory has been removed to avoid exposing
+// dev/agent scratch content.
+
+// Universal Links (iOS) + App Links (Android) domain-association files.
+// Served explicitly, before the SPA catch-all, with an application/json
+// content type: the AASA file has no extension so express.static would
+// mislabel it, and a miss would otherwise fall through to index.html and
+// break link verification.
+const wellKnownDir = path.resolve(process.cwd(), 'client/public/.well-known');
+app.get('/.well-known/apple-app-site-association', (_req, res) => {
+  res.type('application/json').sendFile(path.join(wellKnownDir, 'apple-app-site-association'));
+});
+app.get('/.well-known/assetlinks.json', (_req, res) => {
+  res.type('application/json').sendFile(path.join(wellKnownDir, 'assetlinks.json'));
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -328,6 +332,13 @@ app.use((req, res, next) => {
       res.status(status).json({ message });
     });
 
+    // Unmatched /api/* routes must return JSON 404, otherwise they fall
+    // through to the SPA wildcard below and the client gets index.html
+    // with status 200 — which then crashes any res.json() caller.
+    app.use("/api", (_req, res) => {
+      res.status(404).json({ error: "Not found" });
+    });
+
     // importantly only setup vite in development and after
     // setting up all the other routes so the catch-all route
     // doesn't interfere with the other routes
@@ -347,8 +358,6 @@ app.use((req, res, next) => {
       reusePort: true,
     }, () => {
       log(`serving on port ${port}`);
-
-      ensureOnboardingTestAccount().catch(console.error);
 
       LeaderboardService.processPeriodicLeaderboardClosures()
         .then(() => log('Leaderboard periodic closures check completed'))
@@ -396,6 +405,22 @@ app.use((req, res, next) => {
         setTimeout(tick, 90 * 1000);
         setInterval(tick, RECONCILE_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule gamefolio reconciler:', err));
+
+      // Auto-refresh connected Xbox/PSN profiles. The runner only touches
+      // profiles whose last sync is stale (~23h), so a 6h interval keeps every
+      // connected profile fresh roughly daily while spreading API load across
+      // runs rather than one big nightly batch. Set PLATFORM_AUTOSYNC_DISABLED
+      // to "true" to turn it off.
+      import('./platform-sync').then(({ runScheduledPlatformSync }) => {
+        const SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000;
+        const tick = () => {
+          runScheduledPlatformSync()
+            .catch((err) => console.error('platform-sync failed:', err));
+        };
+        // Delay first run so the app is fully warm.
+        setTimeout(tick, 2 * 60 * 1000);
+        setInterval(tick, SYNC_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule platform sync:', err));
     });
   } catch (error) {
     console.error("Fatal server error:", error);

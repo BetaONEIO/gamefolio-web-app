@@ -171,7 +171,7 @@ function SearchResults({
           >
           <div className="relative h-20 w-20 mb-2 overflow-hidden rounded-md">
             <img
-              src={game.box_art_url ? game.box_art_url.replace('{width}', '200').replace('{height}', '200') : "https://placehold.co/80x80?text=Game"}
+              src={game.box_art_url ? game.box_art_url.replace('{width}', '285').replace('{height}', '380') : "https://placehold.co/80x80?text=Game"}
               alt={game.name}
               className="h-full w-full object-cover transition-transform group-hover:scale-110"
               onError={(e) => {

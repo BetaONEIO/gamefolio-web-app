@@ -25,19 +25,21 @@ export function VerificationBadge({ isVerified, badgeImageUrl, badgeName, size =
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger>
-          <img 
-            src={imgSrc} 
-            alt="Verified" 
-            className={`${sizeClasses[size]} ml-1`}
-            style={{
-              userSelect: 'none',
-              WebkitUserDrag: 'none',
-              pointerEvents: 'none'
-            } as React.CSSProperties}
-            draggable="false"
-            onContextMenu={(e) => e.preventDefault()}
-          />
+        <TooltipTrigger asChild>
+          <span className="inline-flex items-center" style={{ lineHeight: 0 }}>
+            <img 
+              src={imgSrc} 
+              alt="Verified" 
+              className={`${sizeClasses[size]} ml-1`}
+              style={{
+                userSelect: 'none',
+                WebkitUserDrag: 'none',
+                pointerEvents: 'none'
+              } as React.CSSProperties}
+              draggable="false"
+              onContextMenu={(e) => e.preventDefault()}
+            />
+          </span>
         </TooltipTrigger>
         <TooltipContent>
           <p className="text-xs">{tooltipText}</p>

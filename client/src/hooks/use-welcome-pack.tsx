@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "./use-auth";
 
@@ -47,6 +47,13 @@ export function WelcomePackProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const canClaimWelcomePack = status?.canClaim ?? false;
+
+  // Welcome pack auto-open disabled — feature temporarily hidden
+  // useEffect(() => {
+  //   if (status?.canClaim && !status?.claimed) {
+  //     setShowWelcomePack(true);
+  //   }
+  // }, [status?.canClaim, status?.claimed]);
 
   return (
     <WelcomePackContext.Provider

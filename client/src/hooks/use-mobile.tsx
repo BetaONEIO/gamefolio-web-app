@@ -1,19 +1,14 @@
 import { useState, useEffect } from 'react';
 
+const getIsMobile = () =>
+  typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
+
 export const useMobile = () => {
-  // Initialize with a default value but will be immediately updated in useEffect
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(getIsMobile);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-
-    // Check right away on mount
-    checkMobile();
-    
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener('resize', checkMobile);
-    
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 

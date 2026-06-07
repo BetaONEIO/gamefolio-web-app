@@ -1,4 +1,5 @@
-import { ArrowLeft, ExternalLink, Share2, Image, Hexagon } from "lucide-react";
+import { ArrowLeft, ExternalLink, Image, Hexagon } from "lucide-react";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { useState } from "react";
 import QuickSellScreen from "./QuickSellScreen";
 import { useToast } from "@/hooks/use-toast";
@@ -173,25 +174,25 @@ export default function MintedNftDetailScreen({
       ];
 
   return (
-    <div className="fixed inset-0 z-[110] bg-[#101D27] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="fixed inset-0 z-[110] bg-[#0B1218] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
       <div className="w-full max-w-[430px] md:max-w-5xl mx-auto px-6 pt-16 md:pt-20 pb-1">
         <span className="text-sm font-medium text-[#64748b] tracking-wide">{headerLabel}</span>
       </div>
 
       <header className="z-40 flex-shrink-0">
         <div className="w-full max-w-[430px] md:max-w-5xl mx-auto px-4 pb-4">
-          <div className="flex items-center justify-between w-full rounded-2xl bg-[#0f172a] border border-[#1e293b80] px-4 py-3">
+          <div className="flex items-center justify-between w-full rounded-2xl bg-[#0B1218] border border-[#1B2A3380] px-4 py-3">
             <div className="flex items-center gap-3">
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#1e293b] transition-colors"
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#1B2A33] transition-colors"
               >
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M0 10C0 4.47715 4.47715 0 10 0C15.5228 0 20 4.47715 20 10C20 15.5228 15.5228 20 10 20C4.47715 20 0 15.5228 0 10Z" stroke="#F8FAFC" strokeWidth="1.5" />
-                  <path d="M12.5 7.5L7.5 12.5M7.5 7.5L12.5 12.5" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M0 10C0 4.47715 4.47715 0 10 0C15.5228 0 20 4.47715 20 10C20 15.5228 15.5228 20 10 20C4.47715 20 0 15.5228 0 10Z" stroke="#F5F7F2" strokeWidth="1.5" />
+                  <path d="M12.5 7.5L7.5 12.5M7.5 7.5L12.5 12.5" stroke="#F5F7F2" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               </button>
-              <span className="text-base font-bold text-[#f8fafc] leading-6">{closeLabel || headerLabel}</span>
+              <span className="text-base font-bold text-[#F5F7F2] leading-6">{closeLabel || headerLabel}</span>
             </div>
             <button
               onClick={() => {
@@ -212,13 +213,13 @@ export default function MintedNftDetailScreen({
                   await openExternal(shareUrl);
                 })();
               }}
-              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#1e293b] transition-colors"
+              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#1B2A33] transition-colors"
             >
               <svg width="15" height="18" viewBox="0 0 15 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path fillRule="evenodd" clipRule="evenodd" d="M5 9C5 10.3807 3.88071 11.5 2.5 11.5C1.11929 11.5 0 10.3807 0 9C0 7.61929 1.11929 6.5 2.5 6.5C3.88071 6.5 5 7.61929 5 9Z" stroke="#94A3B8" strokeWidth="1.5" />
-                <path d="M10 3.5L5 7M10 14.5L5 11" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
-                <path fillRule="evenodd" clipRule="evenodd" d="M15 15.5C15 16.8807 13.8807 18 12.5 18C11.1193 18 10 16.8807 10 15.5C10 14.1193 11.1193 13 12.5 13C13.8807 13 15 14.1193 15 15.5Z" stroke="#94A3B8" strokeWidth="1.5" />
-                <path fillRule="evenodd" clipRule="evenodd" d="M15 2.5C15 3.88071 13.8807 5 12.5 5C11.1193 5 10 3.88071 10 2.5C10 1.11929 11.1193 0 12.5 0C13.8807 0 15 1.11929 15 2.5Z" stroke="#94A3B8" strokeWidth="1.5" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M5 9C5 10.3807 3.88071 11.5 2.5 11.5C1.11929 11.5 0 10.3807 0 9C0 7.61929 1.11929 6.5 2.5 6.5C3.88071 6.5 5 7.61929 5 9Z" stroke="#B8C0AE" strokeWidth="1.5" />
+                <path d="M10 3.5L5 7M10 14.5L5 11" stroke="#B8C0AE" strokeWidth="1.5" strokeLinecap="round" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M15 15.5C15 16.8807 13.8807 18 12.5 18C11.1193 18 10 16.8807 10 15.5C10 14.1193 11.1193 13 12.5 13C13.8807 13 15 14.1193 15 15.5Z" stroke="#B8C0AE" strokeWidth="1.5" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M15 2.5C15 3.88071 13.8807 5 12.5 5C11.1193 5 10 3.88071 10 2.5C10 1.11929 11.1193 0 12.5 0C13.8807 0 15 1.11929 15 2.5Z" stroke="#B8C0AE" strokeWidth="1.5" />
               </svg>
             </button>
           </div>
@@ -238,7 +239,7 @@ export default function MintedNftDetailScreen({
                     className={`w-full h-full object-cover transition-all duration-300 ${sold ? "grayscale brightness-50" : ""}`}
                   />
                 ) : (
-                  <div className="w-full h-full bg-[#1e293b] flex flex-col items-center justify-center p-8 text-center">
+                  <div className="w-full h-full bg-[#1B2A33] flex flex-col items-center justify-center p-8 text-center">
                     <Hexagon className="w-16 h-16 text-slate-600 mb-4" />
                     <p className="text-slate-400 text-sm font-medium">Image still indexing on IPFS</p>
                     <p className="text-slate-500 text-xs mt-1">This can take a few minutes for newly minted items</p>
@@ -281,22 +282,22 @@ export default function MintedNftDetailScreen({
                 </svg>
               </div>
 
-              <h1 className="text-[30px] md:text-4xl font-bold text-[#f8fafc] leading-9 md:leading-[44px]">
+              <h1 className="text-[30px] md:text-4xl font-bold text-[#F5F7F2] leading-9 md:leading-[44px]">
                 {displayName}
               </h1>
 
               <div className="flex items-center gap-2 mt-1">
-                <div className={`w-6 h-6 rounded-full border-2 border-[#101D27] flex items-center justify-center overflow-hidden ${sold ? 'bg-amber-500/20' : isBuyerView && buyAction && !buyAction.isOfficial ? 'bg-orange-500/20' : 'bg-[#B7FF1A]/20'}`}>
+                <div className={`w-6 h-6 rounded-full border-2 border-[#0B1218] flex items-center justify-center overflow-hidden ${sold ? 'bg-amber-500/20' : isBuyerView && buyAction && !buyAction.isOfficial ? 'bg-orange-500/20' : 'bg-[#B7FF1A]/20'}`}>
                   <div className={`w-full h-full opacity-60 ${sold ? 'bg-gradient-to-br from-amber-500 to-orange-500' : isBuyerView && buyAction && !buyAction.isOfficial ? 'bg-gradient-to-br from-orange-500 to-amber-500' : 'bg-gradient-to-br from-[#B7FF1A] to-[#A2F000]'}`} />
                 </div>
                 {isBuyerView && buyAction ? (
                   <>
-                    <span className="text-sm font-normal text-[#94a3b8] leading-5">Listed by</span>
-                    <span className="text-sm font-normal text-[#f8fafc] leading-5" data-testid="text-seller-name">{buyAction.sellerLabel}</span>
+                    <span className="text-sm font-normal text-[#B8C0AE] leading-5">Listed by</span>
+                    <span className="text-sm font-normal text-[#F5F7F2] leading-5" data-testid="text-seller-name">{buyAction.sellerLabel}</span>
                   </>
                 ) : sold ? (
                   <>
-                    <span className="text-sm font-normal text-[#94a3b8] leading-5">
+                    <span className="text-sm font-normal text-[#B8C0AE] leading-5">
                       {isListedOnMarketplace ? 'Listed on Marketplace' : 'Sold'}
                     </span>
                     {listedPrice && (
@@ -305,8 +306,8 @@ export default function MintedNftDetailScreen({
                   </>
                 ) : (
                   <>
-                    <span className="text-sm font-normal text-[#94a3b8] leading-5">Owned by</span>
-                    <span className="text-sm font-normal text-[#f8fafc] leading-5">{ownerDisplay}</span>
+                    <span className="text-sm font-normal text-[#B8C0AE] leading-5">Owned by</span>
+                    <span className="text-sm font-normal text-[#F5F7F2] leading-5">{ownerDisplay}</span>
                   </>
                 )}
               </div>
@@ -318,17 +319,17 @@ export default function MintedNftDetailScreen({
               </p>
             )}
 
-            <div className="w-full rounded-2xl bg-[#0f172a] border border-[#1e293b80] p-5">
+            <div className="w-full rounded-2xl bg-[#0B1218] border border-[#1B2A3380] p-5">
               {isBuyerView && buyAction ? (
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">Price</span>
+                    <span className="text-xs font-bold text-[#B8C0AE] uppercase tracking-[1.2px] leading-4">Price</span>
                     <span className={`text-2xl font-bold leading-7 ${buyAction.isOfficial ? "text-[#B7FF1A]" : "text-orange-400"}`} data-testid="text-listing-price">
                       {buyAction.price} GFT
                     </span>
                   </div>
                   <div className="flex flex-col gap-1 text-right">
-                    <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">Listing</span>
+                    <span className="text-xs font-bold text-[#B8C0AE] uppercase tracking-[1.2px] leading-4">Listing</span>
                     <span className={`text-sm font-bold leading-5 ${buyAction.isOfficial ? "text-[#B7FF1A]" : "text-orange-400"}`}>
                       {buyAction.isOfficial ? "Official" : "Resale"}
                     </span>
@@ -338,7 +339,7 @@ export default function MintedNftDetailScreen({
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">
+                      <span className="text-xs font-bold text-[#B8C0AE] uppercase tracking-[1.2px] leading-4">
                         Status
                       </span>
                       <div className="flex items-center gap-2">
@@ -351,15 +352,15 @@ export default function MintedNftDetailScreen({
                       </div>
                     </div>
                     <div className="flex flex-col gap-1 text-right">
-                      <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">
+                      <span className="text-xs font-bold text-[#B8C0AE] uppercase tracking-[1.2px] leading-4">
                         {isListedOnMarketplace ? 'Listed Date' : 'Sold Date'}
                       </span>
-                      <span className="text-sm font-bold text-[#f8fafc] leading-5">{soldDate || mintDate}</span>
+                      <span className="text-sm font-bold text-[#F5F7F2] leading-5">{soldDate || mintDate}</span>
                     </div>
                   </div>
                   {listedPrice && (
-                    <div className="flex items-center justify-between border-t border-[#1e293b4d] pt-3">
-                      <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">
+                    <div className="flex items-center justify-between border-t border-[#1B2A334d] pt-3">
+                      <span className="text-xs font-bold text-[#B8C0AE] uppercase tracking-[1.2px] leading-4">
                         {isListedOnMarketplace ? 'Listing Price' : 'Sale Price'}
                       </span>
                       <span className="text-lg font-bold text-amber-400 leading-7">{listedPrice} GFT</span>
@@ -369,7 +370,7 @@ export default function MintedNftDetailScreen({
               ) : (
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">
+                    <span className="text-xs font-bold text-[#B8C0AE] uppercase tracking-[1.2px] leading-4">
                       Mint Status
                     </span>
                     <div className="flex items-center gap-2">
@@ -380,17 +381,17 @@ export default function MintedNftDetailScreen({
                     </div>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">
+                    <span className="text-xs font-bold text-[#B8C0AE] uppercase tracking-[1.2px] leading-4">
                       Minted Date
                     </span>
-                    <span className="text-sm font-bold text-[#f8fafc] leading-5">{mintDate}</span>
+                    <span className="text-sm font-bold text-[#F5F7F2] leading-5">{mintDate}</span>
                   </div>
                 </div>
               )}
             </div>
 
             <div className="flex flex-col gap-3">
-              <span className="text-sm font-bold text-[#94a3b8] uppercase tracking-[0.7px] leading-5">
+              <span className="text-sm font-bold text-[#B8C0AE] uppercase tracking-[0.7px] leading-5">
                 Traits & Rarity
               </span>
 
@@ -398,12 +399,12 @@ export default function MintedNftDetailScreen({
                 {displayAttributes.map((attr, index) => (
                   <div
                     key={index}
-                    className="bg-[#0f172a] border border-[#1e293b80] rounded-xl px-3.5 py-3 flex flex-col gap-0.5"
+                    className="bg-[#0B1218] border border-[#1B2A3380] rounded-xl px-3.5 py-3 flex flex-col gap-0.5"
                   >
-                    <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider leading-[15px]">
+                    <span className="text-[10px] font-bold text-[#B8C0AE] uppercase tracking-wider leading-[15px]">
                       {attr.trait_type}
                     </span>
-                    <span className="text-sm font-semibold text-[#f8fafc] leading-5 truncate">
+                    <span className="text-sm font-semibold text-[#F5F7F2] leading-5 truncate">
                       {String(attr.value).replace(/_/g, ' ')}
                     </span>
                     <span className="text-[10px] font-normal text-[#6FA800] leading-[15px]">
@@ -418,7 +419,7 @@ export default function MintedNftDetailScreen({
               <button
                 onClick={() => setProfilePictureMutation.mutate()}
                 disabled={setProfilePictureMutation.isPending}
-                className="h-[44px] w-full rounded-xl bg-[#0f172a] border border-[#B7FF1A]/30 flex items-center justify-center gap-2 hover:bg-[#B7FF1A]/10 hover:border-[#B7FF1A]/50 transition-colors disabled:opacity-50"
+                className="h-[44px] w-full rounded-xl bg-[#0B1218] border border-[#B7FF1A]/30 flex items-center justify-center gap-2 hover:bg-[#B7FF1A]/10 hover:border-[#B7FF1A]/50 transition-colors disabled:opacity-50"
               >
                 <Image className="w-4 h-4 text-[#B7FF1A]" />
                 <span className="text-sm font-bold text-[#B7FF1A] leading-5">
@@ -432,10 +433,10 @@ export default function MintedNftDetailScreen({
                 {buyAction.isSeller || buyAction.isAlreadyOwned ? (
                   <button
                     disabled
-                    className="h-[52px] w-full rounded-xl bg-[#1e293b] border border-[#334155] flex items-center justify-center gap-2 cursor-not-allowed"
+                    className="h-[52px] w-full rounded-xl bg-[#1B2A33] border border-[#22313A] flex items-center justify-center gap-2 cursor-not-allowed"
                     data-testid="button-your-listing"
                   >
-                    <span className="text-sm font-bold text-[#94a3b8] leading-5">
+                    <span className="text-sm font-bold text-[#B8C0AE] leading-5">
                       {buyAction.isAlreadyOwned ? "You already own this NFT" : "This is your listing"}
                     </span>
                   </button>
@@ -460,7 +461,7 @@ export default function MintedNftDetailScreen({
                     )}
                   </button>
                 )}
-                <p className="text-[11px] text-[#94a3b8] text-center leading-relaxed mt-3">
+                <p className="text-[11px] text-[#B8C0AE] text-center leading-relaxed mt-3">
                   Purchasing transfers GFT from your wallet and assigns ownership of this NFT to your account.
                 </p>
               </div>
@@ -496,66 +497,66 @@ export default function MintedNftDetailScreen({
                     disabled={isNftProfilePic}
                     className={`h-[52px] rounded-xl flex items-center justify-center gap-2 ${
                       !isNftProfilePic
-                        ? "bg-[#1e293b] hover:bg-[#334155] cursor-pointer"
-                        : "bg-[#1e293b] opacity-50 cursor-not-allowed"
+                        ? "bg-[#1B2A33] hover:bg-[#22313A] cursor-pointer"
+                        : "bg-[#1B2A33] opacity-50 cursor-not-allowed"
                     }`}
                   >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path fillRule="evenodd" clipRule="evenodd" d="M16.1002 4.62203L17.9414 6.46328C20.647 9.16982 21.9992 10.5221 21.9992 12.2024C21.9992 13.8836 20.647 15.2359 17.9414 17.9414C15.2349 20.648 13.8826 22.0002 12.2014 22.0002C10.5211 22.0002 9.16781 20.648 6.46227 17.9424L4.62102 16.1012C3.06652 14.5457 2.28876 13.7689 2 12.7598C1.71023 11.7506 1.95774 10.679 2.45277 8.53695L2.73751 7.3014C3.15305 5.49838 3.36132 4.59687 3.97809 3.9791C4.59486 3.36132 5.49738 3.15405 7.3004 2.73851L8.53595 2.45277C10.679 1.95875 11.7496 1.71124 12.7588 2C13.7679 2.28977 14.5447 3.06752 16.0992 4.62203M11.0785 14.2811C10.4014 13.6049 10.4064 12.633 10.8119 11.8633C10.6047 11.5641 10.6406 11.1597 10.8972 10.9017C11.1537 10.6436 11.5579 10.6054 11.8583 10.8109C12.2003 10.6297 12.5756 10.5332 12.9499 10.5372C13.3667 10.5411 13.7014 10.8821 13.6975 11.2988C13.6936 11.7156 13.3526 12.0503 12.9358 12.0464C12.7029 12.055 12.4827 12.1552 12.3231 12.3251C11.9337 12.7145 12.0353 13.1049 12.145 13.2145C12.2557 13.3242 12.6451 13.4258 13.0344 13.0365C13.8233 12.2476 15.1856 11.986 16.0579 12.8584C16.7351 13.5355 16.73 14.5074 16.3246 15.2772C16.5303 15.5764 16.4938 15.9797 16.2377 16.2371C15.9815 16.4945 15.5783 16.5329 15.2782 16.3286C14.8267 16.5763 14.3029 16.6589 13.7971 16.562C13.5329 16.5077 13.3177 16.3166 13.2326 16.0607C13.1475 15.8047 13.2054 15.5228 13.3846 15.3212C13.5637 15.1195 13.8368 15.0287 14.101 15.083C14.2791 15.1202 14.5668 15.0618 14.8133 14.8153C15.2027 14.4249 15.1011 14.0356 14.9914 13.9259C14.8807 13.8162 14.4913 13.7146 14.102 14.104C13.3131 14.8928 11.9508 15.1544 11.0785 14.2811ZM9.94556 10.2212C10.4538 9.71279 10.6523 8.97179 10.4661 8.27738C10.2799 7.58296 9.73734 7.04063 9.04286 6.85468C8.34838 6.66873 7.60745 6.8674 7.09917 7.37586C6.31343 8.16187 6.31366 9.43602 7.09967 10.2218C7.88568 11.0075 9.15983 11.0073 9.94556 10.2212Z" fill="#F8FAFC" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M16.1002 4.62203L17.9414 6.46328C20.647 9.16982 21.9992 10.5221 21.9992 12.2024C21.9992 13.8836 20.647 15.2359 17.9414 17.9414C15.2349 20.648 13.8826 22.0002 12.2014 22.0002C10.5211 22.0002 9.16781 20.648 6.46227 17.9424L4.62102 16.1012C3.06652 14.5457 2.28876 13.7689 2 12.7598C1.71023 11.7506 1.95774 10.679 2.45277 8.53695L2.73751 7.3014C3.15305 5.49838 3.36132 4.59687 3.97809 3.9791C4.59486 3.36132 5.49738 3.15405 7.3004 2.73851L8.53595 2.45277C10.679 1.95875 11.7496 1.71124 12.7588 2C13.7679 2.28977 14.5447 3.06752 16.0992 4.62203M11.0785 14.2811C10.4014 13.6049 10.4064 12.633 10.8119 11.8633C10.6047 11.5641 10.6406 11.1597 10.8972 10.9017C11.1537 10.6436 11.5579 10.6054 11.8583 10.8109C12.2003 10.6297 12.5756 10.5332 12.9499 10.5372C13.3667 10.5411 13.7014 10.8821 13.6975 11.2988C13.6936 11.7156 13.3526 12.0503 12.9358 12.0464C12.7029 12.055 12.4827 12.1552 12.3231 12.3251C11.9337 12.7145 12.0353 13.1049 12.145 13.2145C12.2557 13.3242 12.6451 13.4258 13.0344 13.0365C13.8233 12.2476 15.1856 11.986 16.0579 12.8584C16.7351 13.5355 16.73 14.5074 16.3246 15.2772C16.5303 15.5764 16.4938 15.9797 16.2377 16.2371C15.9815 16.4945 15.5783 16.5329 15.2782 16.3286C14.8267 16.5763 14.3029 16.6589 13.7971 16.562C13.5329 16.5077 13.3177 16.3166 13.2326 16.0607C13.1475 15.8047 13.2054 15.5228 13.3846 15.3212C13.5637 15.1195 13.8368 15.0287 14.101 15.083C14.2791 15.1202 14.5668 15.0618 14.8133 14.8153C15.2027 14.4249 15.1011 14.0356 14.9914 13.9259C14.8807 13.8162 14.4913 13.7146 14.102 14.104C13.3131 14.8928 11.9508 15.1544 11.0785 14.2811ZM9.94556 10.2212C10.4538 9.71279 10.6523 8.97179 10.4661 8.27738C10.2799 7.58296 9.73734 7.04063 9.04286 6.85468C8.34838 6.66873 7.60745 6.8674 7.09917 7.37586C6.31343 8.16187 6.31366 9.43602 7.09967 10.2218C7.88568 11.0075 9.15983 11.0073 9.94556 10.2212Z" fill="#F5F7F2" />
                     </svg>
-                    <span className="text-sm font-bold text-[#f8fafc] leading-5">Quick Sell</span>
+                    <span className="text-sm font-bold text-[#F5F7F2] leading-5">Quick Sell</span>
                   </button>
                 </>
               ) : (
                 <button
                   disabled
-                  className="h-[52px] rounded-xl bg-[#1e293b] flex items-center justify-center gap-2 cursor-not-allowed opacity-50"
+                  className="h-[52px] rounded-xl bg-[#1B2A33] flex items-center justify-center gap-2 cursor-not-allowed opacity-50"
                 >
-                  <span className="text-sm font-bold text-[#94a3b8] leading-5">Quick Sell</span>
+                  <span className="text-sm font-bold text-[#B8C0AE] leading-5">Quick Sell</span>
                 </button>
               )}
             </div>
             )}
 
             <div className="flex flex-col gap-4 pt-2">
-              <span className="text-sm font-bold text-[#94a3b8] uppercase tracking-[0.7px] leading-5">
+              <span className="text-sm font-bold text-[#B8C0AE] uppercase tracking-[0.7px] leading-5">
                 Chain Info
               </span>
 
-              <div className="rounded-2xl bg-[#0f172a] border border-[#1e293b80] overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-4 border-b border-[#1e293b4d]">
-                  <span className="text-sm font-normal text-[#94a3b8] leading-5">Contract Address</span>
+              <div className="rounded-2xl bg-[#0B1218] border border-[#1B2A3380] overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-4 border-b border-[#1B2A334d]">
+                  <span className="text-sm font-normal text-[#B8C0AE] leading-5">Contract Address</span>
                   <span className="text-sm font-normal text-[#B7FF1A] font-['JetBrains_Mono',monospace] leading-5">
                     {formatAddress(NFT_CONTRACT_ADDRESS)}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between px-4 py-4 border-b border-[#1e293b4d]">
-                  <span className="text-sm font-normal text-[#94a3b8] leading-5">Token ID</span>
-                  <span className="text-sm font-normal text-[#f8fafc] font-['JetBrains_Mono',monospace] leading-5">
+                <div className="flex items-center justify-between px-4 py-4 border-b border-[#1B2A334d]">
+                  <span className="text-sm font-normal text-[#B8C0AE] leading-5">Token ID</span>
+                  <span className="text-sm font-normal text-[#F5F7F2] font-['JetBrains_Mono',monospace] leading-5">
                     {nft.id}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between px-4 py-4 border-b border-[#1e293b4d]">
-                  <span className="text-sm font-normal text-[#94a3b8] leading-5">Token Standard</span>
-                  <span className="text-sm font-normal text-[#f8fafc] font-['JetBrains_Mono',monospace] leading-5">
+                <div className="flex items-center justify-between px-4 py-4 border-b border-[#1B2A334d]">
+                  <span className="text-sm font-normal text-[#B8C0AE] leading-5">Token Standard</span>
+                  <span className="text-sm font-normal text-[#F5F7F2] font-['JetBrains_Mono',monospace] leading-5">
                     ERC-721
                   </span>
                 </div>
 
-                <div className={`flex items-center justify-between px-4 py-4 ${sold ? 'border-b border-[#1e293b4d]' : ''}`}>
-                  <span className="text-sm font-normal text-[#94a3b8] leading-5">Network</span>
+                <div className={`flex items-center justify-between px-4 py-4 ${sold ? 'border-b border-[#1B2A334d]' : ''}`}>
+                  <span className="text-sm font-normal text-[#B8C0AE] leading-5">Network</span>
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-[#B7FF1A]" />
-                    <span className="text-sm font-normal text-[#f8fafc] leading-5">SKALE Nebula</span>
+                    <span className="text-sm font-normal text-[#F5F7F2] leading-5">SKALE on Base</span>
                   </div>
                 </div>
 
                 {sold && (
                   <>
-                    <div className="flex items-center justify-between px-4 py-4 border-b border-[#1e293b4d]">
-                      <span className="text-sm font-normal text-[#94a3b8] leading-5">Sale Status</span>
+                    <div className="flex items-center justify-between px-4 py-4 border-b border-[#1B2A334d]">
+                      <span className="text-sm font-normal text-[#B8C0AE] leading-5">Sale Status</span>
                       <div className="flex items-center gap-1.5">
                         <div className={`w-2 h-2 rounded-full ${isListedOnMarketplace ? 'bg-amber-400' : 'bg-red-400'}`} />
                         <span className="text-sm font-normal text-amber-400 leading-5">
@@ -564,8 +565,8 @@ export default function MintedNftDetailScreen({
                       </div>
                     </div>
                     {listedPrice && (
-                      <div className="flex items-center justify-between px-4 py-4 border-b border-[#1e293b4d]">
-                        <span className="text-sm font-normal text-[#94a3b8] leading-5">
+                      <div className="flex items-center justify-between px-4 py-4 border-b border-[#1B2A334d]">
+                        <span className="text-sm font-normal text-[#B8C0AE] leading-5">
                           {isListedOnMarketplace ? 'Listing Price' : 'Sale Price'}
                         </span>
                         <span className="text-sm font-bold text-amber-400 font-['JetBrains_Mono',monospace] leading-5">
@@ -575,10 +576,10 @@ export default function MintedNftDetailScreen({
                     )}
                     {soldDate && (
                       <div className="flex items-center justify-between px-4 py-4">
-                        <span className="text-sm font-normal text-[#94a3b8] leading-5">
+                        <span className="text-sm font-normal text-[#B8C0AE] leading-5">
                           {isListedOnMarketplace ? 'Listed Date' : 'Sold Date'}
                         </span>
-                        <span className="text-sm font-normal text-[#f8fafc] font-['JetBrains_Mono',monospace] leading-5">
+                        <span className="text-sm font-normal text-[#F5F7F2] font-['JetBrains_Mono',monospace] leading-5">
                           {soldDate}
                         </span>
                       </div>

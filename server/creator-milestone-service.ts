@@ -1,5 +1,11 @@
 import { storage } from "./storage";
 import { LeaderboardService } from "./leaderboard-service";
+import { NotificationService } from "./notification-service";
+
+// In-memory lock to prevent concurrent view events from double-awarding
+// milestones before the DB write lands. The lock is acquired BEFORE the
+// async DB check so no two concurrent calls can both see "not claimed yet".
+const inFlightCreatorMilestones = new Set<string>();
 
 export class CreatorMilestoneService {
   private static isSameCalendarDay(date1: Date, date2: Date): boolean {
@@ -26,15 +32,15 @@ export class CreatorMilestoneService {
   }
 
   private static async hasSourceToday(userId: number, source: string): Promise<boolean> {
-    const history = await storage.getUserXPHistory(userId, 200);
+    const history = await storage.getUserPointsHistory(userId, 500);
     const today = new Date();
     return history.some(
-      (h) => h.source === source && this.isSameCalendarDay(new Date(h.createdAt), today)
+      (h) => h.action === source && this.isSameCalendarDay(new Date(h.createdAt), today)
     );
   }
 
   private static async hasSourceThisWeek(userId: number, source: string): Promise<boolean> {
-    const history = await storage.getUserXPHistory(userId, 500);
+    const history = await storage.getUserPointsHistory(userId, 1000);
     const now = new Date();
     const dayOfWeek = now.getDay();
     const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -43,13 +49,13 @@ export class CreatorMilestoneService {
     startOfWeek.setHours(0, 0, 0, 0);
 
     return history.some(
-      (h) => h.source === source && new Date(h.createdAt) >= startOfWeek
+      (h) => h.action === source && new Date(h.createdAt) >= startOfWeek
     );
   }
 
   private static async hasSourceEver(userId: number, source: string): Promise<boolean> {
-    const history = await storage.getUserXPHistory(userId, 1000);
-    return history.some((h) => h.source === source);
+    const history = await storage.getUserPointsHistory(userId, 999999);
+    return history.some((h) => h.action === source);
   }
 
   static async checkFirstUploadOfDay(userId: number): Promise<void> {
@@ -101,6 +107,11 @@ export class CreatorMilestoneService {
   }
 
   static async checkFirst100Views(userId: number, clipId: number): Promise<void> {
+    const lockKey = `${userId}:first_100_views`;
+    // Acquire the lock BEFORE the async DB check so concurrent calls are
+    // blocked immediately — not after they've all read "not claimed yet".
+    if (inFlightCreatorMilestones.has(lockKey)) return;
+    inFlightCreatorMilestones.add(lockKey);
     try {
       const alreadyClaimed = await this.hasSourceEver(userId, "first_100_views");
       if (!alreadyClaimed) {
@@ -110,13 +121,25 @@ export class CreatorMilestoneService {
           250,
           `First clip to reach 100 views (clip #${clipId})!`
         );
+        await NotificationService.createViewMilestoneNotification(
+          clipId,
+          userId,
+          100,
+          100
+        );
       }
     } catch (error) {
       console.error("Error checking first 100 views:", error);
+    } finally {
+      inFlightCreatorMilestones.delete(lockKey);
     }
   }
 
   static async checkFirst1000Views(userId: number, clipId: number): Promise<void> {
+    const lockKey = `${userId}:first_1000_views`;
+    // Same fix — lock before the DB check.
+    if (inFlightCreatorMilestones.has(lockKey)) return;
+    inFlightCreatorMilestones.add(lockKey);
     try {
       const alreadyClaimed = await this.hasSourceEver(userId, "first_1000_views");
       if (!alreadyClaimed) {
@@ -126,9 +149,17 @@ export class CreatorMilestoneService {
           1000,
           `First clip to reach 1,000 views (clip #${clipId})!`
         );
+        await NotificationService.createViewMilestoneNotification(
+          clipId,
+          userId,
+          1000,
+          1000
+        );
       }
     } catch (error) {
       console.error("Error checking first 1,000 views:", error);
+    } finally {
+      inFlightCreatorMilestones.delete(lockKey);
     }
   }
 
@@ -179,7 +210,6 @@ export class CreatorMilestoneService {
     if (weeklyUploadsCount >= 5) {
       const xpAwarded5 = await this.hasSourceThisWeek(userId, "weekly_uploads_5");
       if (!xpAwarded5) {
-        // Retroactively award — fire and forget so status page doesn't block
         LeaderboardService.awardCustomPoints(userId, "weekly_uploads_5", 300, "5 uploads in a week!").catch(() => {});
       }
       weekly5Done = true;
@@ -193,7 +223,9 @@ export class CreatorMilestoneService {
       weekly10Done = true;
     }
 
-    // View milestones: check actual clip data if XP history entry is missing
+    // View milestones: if DB history says already claimed, trust it.
+    // If not, check actual clip view counts — but use the shared in-flight lock
+    // so this page visit can't race with a concurrent view-tracking call.
     let first100ViewsDone = xpHas100Views;
     let first1000ViewsDone = xpHas1000Views;
 
@@ -205,22 +237,13 @@ export class CreatorMilestoneService {
 
           if (!first100ViewsDone && views >= 100) {
             first100ViewsDone = true;
-            LeaderboardService.awardCustomPoints(
-              userId,
-              "first_100_views",
-              250,
-              `First clip to reach 100 views (clip #${clip.id})!`
-            ).catch(() => {});
+            // Use the same checkFirst100Views path so the in-flight lock is respected
+            this.checkFirst100Views(userId, clip.id).catch(() => {});
           }
 
           if (!first1000ViewsDone && views >= 1000) {
             first1000ViewsDone = true;
-            LeaderboardService.awardCustomPoints(
-              userId,
-              "first_1000_views",
-              1000,
-              `First clip to reach 1,000 views (clip #${clip.id})!`
-            ).catch(() => {});
+            this.checkFirst1000Views(userId, clip.id).catch(() => {});
           }
 
           if (first100ViewsDone && first1000ViewsDone) break;

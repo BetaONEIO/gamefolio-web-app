@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { openExternal, openShareWindow, nativeShare, isNative } from "@/lib/platform";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { 
   CheckCircle, 
   Upload, 
@@ -16,7 +17,6 @@ import {
   Download, 
   Facebook, 
   MessageCircle, 
-  Share2, 
   Plus,
   ExternalLink,
   TrendingUp,
@@ -96,7 +96,7 @@ const PostUploadSuccessPage = () => {
         title: 'Share with friends',
         description: 'Get your content seen by sharing it on social media',
         action: 'share',
-        icon: Share2,
+        icon: ShareLaunchIcon,
         priority: 'high'
       },
       {
@@ -365,7 +365,7 @@ const PostUploadSuccessPage = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Share2 className="h-5 w-5" />
+                  <ShareLaunchIcon size={20} />
                   Share Your {contentTypeDisplay}
                 </CardTitle>
               </CardHeader>

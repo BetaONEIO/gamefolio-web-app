@@ -19,12 +19,14 @@ export function GamefolioHomeIcon({ className }: GamefolioHomeIconProps) {
       className={cn("w-6 h-6", className)}
       aria-hidden="true"
     >
-      <g transform="translate(12 12) scale(1.2) translate(-12 -12)">
-        <path d="M7.5 11.2 12 7.2l4.5 4"/>
-        <path d="M9 11.8v5.2c0 .9.7 1.6 1.6 1.6h2.8c.9 0 1.6-.7 1.6-1.6v-5.2"/>
-        <path d="M5.2 18.8c2 1.6 4.4 2.4 6.8 2.4s4.8-.8 6.8-2.4"/>
-        <circle cx="12" cy="13.2" r="0.8" fill="currentColor" stroke="none"/>
-      </g>
+      {/* Roof */}
+      <path d="M2 11.5 12 3l10 8.5" />
+      {/* House body */}
+      <path d="M5 10.5v10c0 .8.7 1.5 1.5 1.5h11c.8 0 1.5-.7 1.5-1.5v-10" />
+      {/* Bottom arc */}
+      <path d="M4 20c2.5 1.8 5.2 2.7 8 2.7s5.5-.9 8-2.7" />
+      {/* Controller dot */}
+      <circle cx="12" cy="15" r="1" fill="currentColor" stroke="none" />
     </svg>
   );
 }

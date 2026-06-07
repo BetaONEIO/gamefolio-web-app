@@ -1,14 +1,27 @@
 import { Link, useLocation } from "wouter";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Settings, LogOut, CheckCircle2, Palette, UserCog, Menu, ShieldCheck, Flame, Trophy, Crown, Video, Film, Camera, Gift } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera, Clock, X as XIcon } from "lucide-react";
+import {
+  LevelTrackerIcon,
+  ReferFriendIcon,
+  GoProIcon,
+  ManageProIcon,
+  AccountSettingsIcon,
+  ProfileAppearanceIcon,
+  AdminPanelIcon,
+  LogoutIcon,
+} from "@/components/icons/DropdownIcons";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
 import { User, Game } from "@shared/schema";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
+import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
+import logoGreen from "@assets/gamefolio-logo-green.png";
 
 
 import { CustomAvatar } from "@/components/ui/custom-avatar";
@@ -31,14 +44,100 @@ import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useLevelTracker } from "@/hooks/use-level-tracker";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import ManageProDialog from "@/components/ManageProDialog";
+import { useAuthModal } from "@/hooks/use-auth-modal";
+
+const RECENT_SEARCHES_KEY = "gamefolio_recent_searches";
+const MAX_RECENT = 8;
+
+function loadRecentSearches(): string[] {
+  try {
+    if (typeof window === "undefined" || typeof localStorage === "undefined") return [];
+    const raw = localStorage.getItem(RECENT_SEARCHES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    // Only keep actual non-empty strings
+    return parsed.filter((s): s is string => typeof s === "string" && s.length > 0);
+  } catch { return []; }
+}
+
+function persistRecentSearches(searches: string[]) {
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
+    }
+  } catch {}
+}
+
+// Error boundary specifically for the mobile search overlay
+class MobileSearchErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; errorMsg: string }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, errorMsg: "" };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, errorMsg: error?.message ?? "Unknown error" };
+  }
+  componentDidCatch(error: Error) {
+    console.error("[MobileSearch] Render crash:", error?.message, error?.stack);
+    try {
+      sessionStorage.setItem("__gf_search_crash__", JSON.stringify({
+        msg: error?.message ?? "",
+        stack: error?.stack ?? "",
+        time: new Date().toISOString(),
+      }));
+    } catch {}
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, padding: "16px", zIndex: 99999, background: "rgba(3,8,10,0.93)", backdropFilter: "blur(20px)" }}>
+          <p style={{ color: "#fff", textAlign: "center", fontSize: 14, margin: 0 }}>Search could not load. Please try again.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [recentSearches, setRecentSearches] = useState<string[]>(loadRecentSearches);
+
+  const saveRecentSearch = (term: string) => {
+    const trimmed = term.trim();
+    if (!trimmed) return;
+    setRecentSearches(prev => {
+      const deduped = [trimmed, ...prev.filter(s => s.toLowerCase() !== trimmed.toLowerCase())].slice(0, MAX_RECENT);
+      persistRecentSearches(deduped);
+      return deduped;
+    });
+  };
+
+  const removeRecentSearch = (term: string) => {
+    setRecentSearches(prev => {
+      const next = prev.filter(s => s !== term);
+      persistRecentSearches(next);
+      return next;
+    });
+  };
+
+  const clearRecentSearches = () => {
+    persistRecentSearches([]);
+    setRecentSearches([]);
+  };
   const [lootboxOpen, setLootboxOpen] = useState(false);
   const [levelTrackerOpen, setLevelTrackerOpen] = useState(false);
+  const { openModal } = useAuthModal();
+  const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
+  const [manageProOpen, setManageProOpen] = useState(false);
+  const { user, logoutMutation } = useAuth();
 
   useEffect(() => {
     const handleOpenLootbox = () => setLootboxOpen(true);
@@ -50,9 +149,13 @@ const Header = () => {
       window.removeEventListener('open-pro-upgrade', handleOpenProUpgrade);
     };
   }, []);
-  const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
-  const [manageProOpen, setManageProOpen] = useState(false);
-  const { user, logoutMutation } = useAuth();
+
+  useEffect(() => {
+    if (user && user.userType && sessionStorage.getItem('pending_pro_upgrade')) {
+      sessionStorage.removeItem('pending_pro_upgrade');
+      setProUpgradeOpen(true);
+    }
+  }, [user?.id, (user as any)?.userType]);
   const { isPro } = useRevenueCat();
   const { state: levelTrackerState, hideLevelTracker } = useLevelTracker();
   
@@ -120,9 +223,9 @@ const Header = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
+      saveRecentSearch(searchQuery.trim());
       const isHashtag = searchQuery.startsWith('#');
       if (isHashtag) {
-        // For hashtag searches, route to dedicated hashtag page
         setLocation(`/hashtag/${encodeURIComponent(searchQuery.slice(1))}`);
       } else {
         setLocation(`/explore?q=${encodeURIComponent(searchQuery)}`);
@@ -136,10 +239,11 @@ const Header = () => {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
-    setShowDropdown(value.length >= 2);
+    setShowDropdown(value.length >= 2 || (value.length === 0 && recentSearches.length > 0));
   };
 
   const handleUserSelect = (username: string) => {
+    saveRecentSearch(searchQuery.trim() || username);
     setLocation(`/profile/${username}`);
     setShowDropdown(false);
     setShowMobileSearch(false);
@@ -147,7 +251,7 @@ const Header = () => {
   };
 
   const handleGameSelect = (gameId: number, gameName: string) => {
-    // Create a URL-safe slug from the game name to match explore page behavior
+    saveRecentSearch(searchQuery.trim() || gameName);
     const gameSlug = gameName
       .toLowerCase()
       .replace(/[^a-z0-9\s]/g, '')
@@ -199,9 +303,9 @@ const Header = () => {
           <Link href="/">
             <div className="flex items-center flex-shrink-0">
               <img
-                src="/attached_assets/Gamefolio logo copy.png"
+                src={logoGreen}
                 alt="Gamefolio"
-                className="h-8 sm:h-10 md:h-12 xl:h-16 w-auto object-contain flex-shrink-0"
+                className="h-[45px] sm:h-[60px] md:h-[72px] xl:h-24 w-auto object-contain flex-shrink-0"
               />
             </div>
           </Link>
@@ -216,25 +320,64 @@ const Header = () => {
             <Input
               type="text"
               placeholder="Search #hashtags, users, games..."
-              className="w-full py-6 px-10 pr-20 rounded-full bg-secondary text-foreground text-3xl"
+              className="w-full py-2 pl-10 pr-12 rounded-full bg-secondary text-foreground text-sm"
               value={searchQuery}
               onChange={handleSearchChange}
-              onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
+              onFocus={() => setShowDropdown(searchQuery.length >= 2 || recentSearches.length > 0)}
             />
             <Button
               type="submit"
               variant="ghost"
               size="icon"
-              className="absolute right-6 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
             >
-              <Search className="h-8 w-8" />
+              <Search className="h-4 w-4" />
             </Button>
           </form>
 
           {/* Search Dropdown */}
-          {showDropdown && (searchQuery.startsWith('#') || (userResults && userResults.length > 0) || (gameResults && gameResults.length > 0)) && (
+          {showDropdown && (recentSearches.length > 0 || searchQuery.startsWith('#') || (userResults && userResults.length > 0) || (gameResults && gameResults.length > 0)) && (
             <div className="absolute top-full mt-2 w-full bg-card border border-border rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
               <div className="p-2">
+                {/* Recent Searches — shown when input is empty */}
+                {searchQuery.length === 0 && recentSearches.length > 0 && (
+                  <>
+                    <div className="flex items-center justify-between px-3 py-2">
+                      <span className="text-xs text-muted-foreground font-medium">Recent searches</span>
+                      <button
+                        onClick={clearRecentSearches}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Clear all
+                      </button>
+                    </div>
+                    {recentSearches.map((term) => (
+                      <div key={term} className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-secondary transition-colors group">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                        <button
+                          className="flex-1 text-sm text-foreground text-left truncate"
+                          onClick={() => {
+                            setSearchQuery(term);
+                            setDebouncedQuery(term);
+                            setShowDropdown(true);
+                          }}
+                        >
+                          {term}
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeRecentSearch(term); }}
+                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-opacity"
+                        >
+                          <XIcon className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    {(searchQuery.startsWith('#') || (userResults && userResults.length > 0) || (gameResults && gameResults.length > 0)) && (
+                      <div className="border-t border-border my-2" />
+                    )}
+                  </>
+                )}
+
                 {/* Hashtag Section */}
                 {searchQuery.startsWith('#') && searchQuery.length > 1 && (
                   <>
@@ -360,6 +503,15 @@ const Header = () => {
           )}
           
           
+          <ProUpgradeDialog 
+            open={proUpgradeOpen} 
+            onOpenChange={setProUpgradeOpen}
+            onAuthRequired={() => {
+              setProUpgradeOpen(false);
+              sessionStorage.setItem('pending_pro_upgrade', '1');
+              openModal('login');
+            }}
+          />
           {user ? (
             <>
               <LootboxTrigger onClick={() => setLootboxOpen(true)} />
@@ -373,10 +525,6 @@ const Header = () => {
                 username={user?.username}
                 xpDelta={levelTrackerState.xpDelta}
                 previousXP={levelTrackerState.previousXP}
-              />
-              <ProUpgradeDialog 
-                open={proUpgradeOpen} 
-                onOpenChange={setProUpgradeOpen}
               />
               <ManageProDialog 
                 open={manageProOpen} 
@@ -449,15 +597,17 @@ const Header = () => {
                       className="cursor-pointer"
                       onClick={() => setLocation(`/profile/${user.username}`)}
                     >
-                      <GamefolioProfileIcon className="mr-2 h-4 w-4" />
-                      <span>View Gamefolio</span>
+                      <span className="mr-2 inline-flex items-center justify-center h-4 w-4 overflow-visible flex-shrink-0">
+                        <GamefolioIcon glow={location === `/profile/${user.username}`} className="h-4 w-4 scale-[1.85]" />
+                      </span>
+                      <span>My Gamefolio</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="cursor-pointer"
                       onClick={() => setLocation("/level-tracker")}
                       data-testid="button-level-tracker"
                     >
-                      <Trophy className="mr-2 h-4 w-4" />
+                      <LevelTrackerIcon className="mr-2 h-4 w-4" />
                       <span>Level Tracker</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -465,7 +615,7 @@ const Header = () => {
                       onClick={() => setLocation("/account/settings?tab=referral")}
                       data-testid="button-referral"
                     >
-                      <Gift className="mr-2 h-4 w-4" />
+                      <ReferFriendIcon className="mr-2 h-4 w-4" />
                       <span>Refer a Friend</span>
                     </DropdownMenuItem>
                     
@@ -476,7 +626,7 @@ const Header = () => {
                         onClick={() => setProUpgradeOpen(true)}
                         data-testid="button-go-pro"
                       >
-                        <img src="/attached_assets/Gamefolio logo copy.png" alt="Gamefolio" className="mr-2 h-4 w-4 rounded-full object-cover" />
+                        <GoProIcon className="mr-2 h-4 w-4" />
                         <span>Go Pro</span>
                       </DropdownMenuItem>
                     )}
@@ -487,7 +637,7 @@ const Header = () => {
                         onClick={() => setManageProOpen(true)}
                         data-testid="button-manage-pro"
                       >
-                        <Crown className="mr-2 h-4 w-4 text-yellow-500" />
+                        <ManageProIcon className="mr-2 h-4 w-4 text-yellow-500" />
                         <span>Manage Pro Subscription</span>
                       </DropdownMenuItem>
                     )}
@@ -501,14 +651,14 @@ const Header = () => {
                         className="cursor-pointer"
                         onClick={() => setLocation("/account/settings")}
                       >
-                        <Settings className="mr-2 h-4 w-4" />
+                        <AccountSettingsIcon className="mr-2 h-4 w-4" />
                         <span>Account Settings</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="cursor-pointer"
                         onClick={() => setLocation("/settings/profile")}
                       >
-                        <UserCog className="mr-2 h-4 w-4" />
+                        <ProfileAppearanceIcon className="mr-2 h-4 w-4" />
                         <span>Profile & Appearance</span>
                       </DropdownMenuItem>
                     </DropdownMenuGroup>
@@ -519,7 +669,7 @@ const Header = () => {
                         className="cursor-pointer"
                         onClick={() => setLocation("/admin")}
                       >
-                        <ShieldCheck className="mr-2 h-4 w-4" />
+                        <AdminPanelIcon className="mr-2 h-4 w-4" />
                         Admin Panel
                       </DropdownMenuItem>
                     )}
@@ -527,7 +677,7 @@ const Header = () => {
                       onClick={handleLogout}
                       className="text-red-600 focus:text-red-600"
                     >
-                      <LogOut className="mr-2 h-4 w-4" />
+                      <LogoutIcon className="mr-2 h-4 w-4" />
                       Logout
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -542,10 +692,23 @@ const Header = () => {
         </div>
       </div>
       
-      {/* Mobile Search Overlay */}
-      {showMobileSearch && (
+      {/* Mobile Search Overlay - portaled to body so no parent can clip it */}
+      {showMobileSearch && typeof document !== 'undefined' && !!document.body && createPortal(
+        <MobileSearchErrorBoundary>
         <div
-          className="fixed inset-0 bg-black/50 z-50 md:hidden flex flex-col"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(3, 8, 10, 0.93)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            zIndex: 99999,
+          }}
           onClick={() => {
             setShowMobileSearch(false);
             setShowDropdown(false);
@@ -553,54 +716,107 @@ const Header = () => {
           }}
         >
           <div
-            className="bg-card w-full p-4 shadow-lg safe-area-top"
+            style={{
+              position: 'absolute',
+              top: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+              left: 0,
+              right: 0,
+              padding: '0 12px',
+              zIndex: 1,
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <div
               ref={mobileSearchRef}
-              className="relative max-w-full"
+              className="relative"
+              style={{ width: '100%', maxWidth: 'calc(100vw - 24px)' }}
             >
-              <form onSubmit={handleSearch} className="flex items-center gap-2">
-                <div className="flex-1 relative">
-                  <Input
-                    type="text"
-                    placeholder="Search #hashtags, users, games..."
-                    className="w-full py-3 px-4 pr-12 rounded-lg bg-secondary text-foreground text-base"
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                    onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
-                    autoFocus
-                    inputMode="search"
-                    data-testid="mobile-search-input"
-                  />
-                  <Button
-                    type="submit"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground"
-                  >
-                    <Search className="h-5 w-5" />
-                  </Button>
-                </div>
-                <Button
+              <form onSubmit={handleSearch} className="relative flex items-center">
+                <Input
+                  type="text"
+                  placeholder="Search #hashtags, users, games..."
+                  className="rounded-full bg-secondary text-foreground border border-primary/40"
+                  style={{
+                    width: '100%',
+                    height: '44px',
+                    fontSize: '16px',
+                    paddingLeft: '40px',
+                    paddingRight: '76px',
+                    boxSizing: 'border-box',
+                  }}
+                  value={searchQuery ?? ""}
+                  onChange={handleSearchChange}
+                  onFocus={() => {
+                    try {
+                      const sq = searchQuery ?? "";
+                      const sr = Array.isArray(recentSearches) ? recentSearches : [];
+                      setShowDropdown(sq.length >= 2 || sr.length > 0);
+                    } catch {}
+                  }}
+                  autoFocus
+                  inputMode="search"
+                  data-testid="mobile-search-input"
+                />
+                {/* Search icon — left side */}
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                {/* Cancel — right side, inside the row */}
+                <button
                   type="button"
-                  variant="ghost"
                   onClick={() => {
                     setShowMobileSearch(false);
                     setShowDropdown(false);
                     setSearchQuery("");
                   }}
-                  className="text-muted-foreground touch-manipulation min-w-[60px] px-3"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground touch-manipulation whitespace-nowrap"
                   data-testid="mobile-search-close"
                 >
                   Cancel
-                </Button>
+                </button>
               </form>
 
               {/* Mobile Search Dropdown */}
-              {showDropdown && (searchQuery.startsWith('#') || (userResults && userResults.length > 0) || (gameResults && gameResults.length > 0)) && (
+              {showDropdown && (recentSearches.length > 0 || searchQuery.startsWith('#') || (userResults && userResults.length > 0) || (gameResults && gameResults.length > 0)) && (
                 <div className="absolute top-full mt-2 w-full bg-card border border-border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto left-0 right-0">
                   <div className="p-2">
+                    {/* Recent Searches — shown when input is empty */}
+                    {searchQuery.length === 0 && recentSearches.length > 0 && (
+                      <>
+                        <div className="flex items-center justify-between px-3 py-2">
+                          <span className="text-xs text-muted-foreground font-medium">Recent searches</span>
+                          <button
+                            onClick={clearRecentSearches}
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            Clear all
+                          </button>
+                        </div>
+                        {recentSearches.map((term) => (
+                          <div key={term} className="flex items-center gap-2 px-3 py-2.5 rounded-md active:bg-secondary transition-colors">
+                            <Clock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                            <button
+                              className="flex-1 text-sm text-foreground text-left truncate touch-manipulation"
+                              onClick={() => {
+                                setSearchQuery(term);
+                                setDebouncedQuery(term);
+                                setShowDropdown(true);
+                              }}
+                            >
+                              {term}
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); removeRecentSearch(term); }}
+                              className="text-muted-foreground p-1 touch-manipulation"
+                            >
+                              <XIcon className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                        {(searchQuery.startsWith('#') || (userResults && userResults.length > 0) || (gameResults && gameResults.length > 0)) && (
+                          <div className="border-t border-border my-2" />
+                        )}
+                      </>
+                    )}
+
                     {/* Hashtag Section */}
                     {searchQuery.startsWith('#') && searchQuery.length > 1 && (
                       <>
@@ -712,6 +928,8 @@ const Header = () => {
             </div>
           </div>
         </div>
+        </MobileSearchErrorBoundary>,
+        document.body
       )}
     </header>
   );

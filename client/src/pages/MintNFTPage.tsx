@@ -243,13 +243,13 @@ export default function MintNFTPage() {
 
   if (mintState === "processing") {
     return (
-      <div className="fixed inset-0 z-[100] bg-[#101D27] flex flex-col items-center justify-center px-6">
+      <div className="fixed inset-0 z-[100] bg-[#0B1218] flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-md md:max-w-4xl flex flex-col md:flex-row md:items-center md:gap-16 items-center">
           <div className="md:flex-1 flex flex-col items-center">
             <div className="relative mb-8 md:mb-0">
               <div className="absolute inset-0 blur-[32px] bg-[#B7FF1A]/20 rounded-full scale-150" />
-              <div className="relative w-48 h-48 md:w-72 md:h-72 rounded-full border-4 border-[#1e293b]/50 flex items-center justify-center">
-                <div className="w-40 h-40 md:w-60 md:h-60 rounded-full border-2 border-[#1e293b]/50 flex items-center justify-center overflow-hidden p-0.5">
+              <div className="relative w-48 h-48 md:w-72 md:h-72 rounded-full border-4 border-[#1B2A33]/50 flex items-center justify-center">
+                <div className="w-40 h-40 md:w-60 md:h-60 rounded-full border-2 border-[#1B2A33]/50 flex items-center justify-center overflow-hidden p-0.5">
                   <video
                     ref={previewVideo1Ref}
                     src={MINT_VIDEO_URL}
@@ -262,7 +262,7 @@ export default function MintNFTPage() {
               </div>
               
               <div className="absolute -bottom-4 left-1/2 -translate-x-1/2">
-                <div className="bg-[#0f172a] border border-[#1e293b] rounded-full px-4 py-2 shadow-lg flex items-center gap-2">
+                <div className="bg-[#0B1218] border border-[#1B2A33] rounded-full px-4 py-2 shadow-lg flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-[#B7FF1A] animate-pulse" />
                   <span className="text-xs font-bold text-[#B7FF1A]">On-Chain Processing</span>
                 </div>
@@ -272,15 +272,15 @@ export default function MintNFTPage() {
 
           <div className="md:flex-1 flex flex-col items-center md:items-start">
             <div className="text-center md:text-left mb-8">
-              <h1 className="text-2xl md:text-4xl font-bold text-[#f8fafc] mb-2">
+              <h1 className="text-2xl md:text-4xl font-bold text-[#F5F7F2] mb-2">
                 Minting Your NFT
               </h1>
-              <p className="text-sm md:text-base text-[#94a3b8] max-w-xs">
+              <p className="text-sm md:text-base text-[#B8C0AE] max-w-xs">
                 Please don't close the app or refresh. Your Guardian is being forged on the blockchain.
               </p>
             </div>
 
-            <div className="w-full max-w-sm bg-[#0f172a] border border-[#1e293b]/50 rounded-3xl p-6">
+            <div className="w-full max-w-sm bg-[#0B1218] border border-[#1B2A33]/50 rounded-3xl p-6">
               <div className="flex flex-col gap-4">
                 {mintSteps.map((step, index) => (
                   <div key={step.id} className="flex items-start gap-4">
@@ -288,29 +288,29 @@ export default function MintNFTPage() {
                       <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
                         step.status === "completed" ? "bg-[#B7FF1A]" :
                         step.status === "active" ? "bg-[#14532d] animate-pulse" :
-                        "bg-[#1e293b]"
+                        "bg-[#1B2A33]"
                       }`}>
                         {step.status === "completed" ? (
                           <Check className="w-4 h-4 text-[#071013]" />
                         ) : step.status === "active" ? (
                           <div className="w-3 h-3 rounded-full bg-[#B7FF1A] animate-pulse" />
                         ) : (
-                          <div className="w-2 h-2 rounded-full bg-[#94a3b8]" />
+                          <div className="w-2 h-2 rounded-full bg-[#B8C0AE]" />
                         )}
                       </div>
                       {index < mintSteps.length - 1 && (
                         <div className={`w-0.5 h-8 ${
-                          step.status === "completed" ? "bg-[#B7FF1A]/30" : "bg-[#1e293b]/50"
+                          step.status === "completed" ? "bg-[#B7FF1A]/30" : "bg-[#1B2A33]/50"
                         }`} />
                       )}
                     </div>
                     <div className="flex-1 pt-0.5">
                       <p className={`text-sm font-bold ${
-                        step.status === "active" ? "text-[#B7FF1A]" : "text-[#f8fafc]"
+                        step.status === "active" ? "text-[#B7FF1A]" : "text-[#F5F7F2]"
                       }`}>
                         {step.title}
                       </p>
-                      <p className="text-xs text-[#94a3b8]">{step.subtitle}</p>
+                      <p className="text-xs text-[#B8C0AE]">{step.subtitle}</p>
                     </div>
                   </div>
                 ))}
@@ -319,17 +319,17 @@ export default function MintNFTPage() {
 
             <div className="flex flex-col items-center md:items-start gap-4 mt-8">
               <div className="flex items-center gap-2">
-                <Shield className="w-3 h-3 text-[#94a3b8]" />
-                <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">
+                <Shield className="w-3 h-3 text-[#B8C0AE]" />
+                <span className="text-[10px] font-bold text-[#B8C0AE] uppercase tracking-wider">
                   Secure Transaction
                 </span>
               </div>
               <button
                 onClick={copyTxHash}
-                className="bg-[#1e293b]/30 rounded-full px-4 py-2 flex items-center gap-2 hover:bg-[#1e293b]/50 transition-colors"
+                className="bg-[#1B2A33]/30 rounded-full px-4 py-2 flex items-center gap-2 hover:bg-[#1B2A33]/50 transition-colors"
               >
-                <span className="text-xs font-mono text-[#94a3b8]">tx: {txHash}...</span>
-                <Copy className="w-3 h-3 text-[#94a3b8]" />
+                <span className="text-xs font-mono text-[#B8C0AE]">tx: {txHash}...</span>
+                <Copy className="w-3 h-3 text-[#B8C0AE]" />
               </button>
             </div>
           </div>
@@ -414,15 +414,15 @@ export default function MintNFTPage() {
     }
     
     return (
-      <div className="min-h-screen bg-[#101D27] flex flex-col">
-        <header className="sticky top-0 z-40 backdrop-blur-md bg-[#101D27]/80 border-b border-[#1e293b]/50">
+      <div className="min-h-screen bg-[#0B1218] flex flex-col">
+        <header className="sticky top-0 z-40 backdrop-blur-md bg-[#0B1218]/80 border-b border-[#1B2A33]/50">
           <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-5xl mx-auto px-6 pt-12 md:pt-6 pb-4">
             <div className="w-10 h-10" />
-            <span className="text-lg font-bold text-[#f8fafc]">Mint Complete</span>
+            <span className="text-lg font-bold text-[#F5F7F2]">Mint Complete</span>
             <Button
               variant="ghost"
               size="icon"
-              className="w-10 h-10 rounded-full bg-[#1e293b]/50 hover:bg-[#1e293b]/80"
+              className="w-10 h-10 rounded-full bg-[#1B2A33]/50 hover:bg-[#1B2A33]/80"
               onClick={() => navigate("/store")}
             >
               <X className="h-5 w-5 text-white" />
@@ -497,7 +497,7 @@ export default function MintNFTPage() {
                 
                 <button
                   onClick={() => setShowSingleNftDetail(true)}
-                  className="absolute -bottom-4 right-6 w-14 h-14 rounded-full bg-[#B7FF1A] border-4 border-[#101D27] flex items-center justify-center shadow-[0_4px_6px_-4px_rgba(183, 255, 26,0.4),0_10px_15px_-3px_rgba(183, 255, 26,0.4)] hover:bg-[#A2F000] transition-colors cursor-pointer"
+                  className="absolute -bottom-4 right-6 w-14 h-14 rounded-full bg-[#B7FF1A] border-4 border-[#0B1218] flex items-center justify-center shadow-[0_4px_6px_-4px_rgba(183, 255, 26,0.4),0_10px_15px_-3px_rgba(183, 255, 26,0.4)] hover:bg-[#A2F000] transition-colors cursor-pointer"
                 >
                   <Eye className="h-7 w-7 text-[#071013]" />
                 </button>
@@ -511,18 +511,18 @@ export default function MintNFTPage() {
                     navigator.clipboard.writeText(txHash);
                     toast({ title: "Copied!", description: "Transaction hash copied to clipboard" });
                   }}
-                  className="flex items-center gap-2 bg-[#1e293b]/30 border border-[#1e293b]/30 rounded-full px-4 py-2 hover:bg-[#1e293b]/50 transition-colors"
+                  className="flex items-center gap-2 bg-[#1B2A33]/30 border border-[#1B2A33]/30 rounded-full px-4 py-2 hover:bg-[#1B2A33]/50 transition-colors"
                 >
-                  <span className="text-[10px] text-[#94a3b8] font-mono">
+                  <span className="text-[10px] text-[#B8C0AE] font-mono">
                     Tx Hash: {txHash.slice(0, 10)}...
                   </span>
-                  <Copy className="h-3.5 w-3.5 text-[#94a3b8]" />
+                  <Copy className="h-3.5 w-3.5 text-[#B8C0AE]" />
                 </button>
                 
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#B7FF1A]" />
-                  <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-[2px]">
-                    Network: SKALE Nebula
+                  <span className="text-[10px] font-bold text-[#B8C0AE] uppercase tracking-[2px]">
+                    Network: SKALE on Base
                   </span>
                 </div>
               </div>
@@ -531,36 +531,36 @@ export default function MintNFTPage() {
                 <span className="text-sm font-bold text-[#B7FF1A] uppercase tracking-[1.4px]">
                   Successfully Minted
                 </span>
-                <h2 className="text-[30px] md:text-4xl font-bold text-[#f8fafc] leading-9 md:leading-[44px]">
+                <h2 className="text-[30px] md:text-4xl font-bold text-[#F5F7F2] leading-9 md:leading-[44px]">
                   Guardian #{firstTokenId}
                 </h2>
-                <p className="text-sm text-[#94a3b8] leading-5 mt-1 max-w-[300px] md:max-w-none">
+                <p className="text-sm text-[#B8C0AE] leading-5 mt-1 max-w-[300px] md:max-w-none">
                   Your Guardian has been successfully forged and added to your collection on the blockchain.
                 </p>
               </div>
 
               <div className="flex gap-3 w-full max-w-[382px]">
-                <div className="flex-1 bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col gap-1">
-                  <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-tight">
+                <div className="flex-1 bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-[#B8C0AE] uppercase tracking-tight">
                     Rarity Score
                   </span>
                   <div className="flex items-center gap-2">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                       <path fillRule="evenodd" clipRule="evenodd" d="M6.09091 3.61833C6.94044 2.09494 7.36486 1.33325 7.99983 1.33325C8.6348 1.33325 9.05923 2.09494 9.90876 3.61833L10.1287 4.01259C10.3701 4.44573 10.4908 4.66231 10.6785 4.80512C10.8662 4.94794 11.1009 5.00091 11.5703 5.10685L11.9967 5.2034C13.6461 5.57687 14.4702 5.76327 14.6667 6.39422C14.8624 7.02449 14.3006 7.68226 13.1761 8.99712L12.8851 9.33706C12.566 9.71053 12.4057 9.8976 12.334 10.1283C12.2622 10.3596 12.2864 10.609 12.3346 11.1072L12.3789 11.5611C12.5485 13.3158 12.6337 14.1929 12.1201 14.5824C11.6065 14.972 10.8341 14.6166 9.29055 13.9059L8.89026 13.7222C8.45175 13.5197 8.2325 13.4191 7.99983 13.4191C7.76717 13.4191 7.54791 13.5197 7.1094 13.7222L6.70978 13.9059C5.16561 14.6166 4.39319 14.972 3.88025 14.5831C3.36598 14.1929 3.45113 13.3158 3.62077 11.5611L3.66502 11.1079C3.7133 10.609 3.73744 10.3596 3.66502 10.1289C3.59395 9.8976 3.4337 9.71053 3.11454 9.33773L2.82354 8.99712C1.6991 7.68293 1.13722 7.02516 1.33301 6.39422C1.5288 5.76327 2.35419 5.5762 4.00363 5.2034L4.43007 5.10685C4.89875 5.00091 5.13276 4.94794 5.32117 4.80512C5.50958 4.66231 5.6296 4.44573 5.87098 4.01259L6.09091 3.61833Z" fill="#B7FF1A" />
                     </svg>
-                    <span className="text-lg font-bold text-[#f8fafc]">{rarityScore}</span>
+                    <span className="text-lg font-bold text-[#F5F7F2]">{rarityScore}</span>
                   </div>
                 </div>
                 
-                <div className="flex-1 bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col gap-1">
-                  <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-tight">
+                <div className="flex-1 bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-[#B8C0AE] uppercase tracking-tight">
                     Mint Number
                   </span>
                   <div className="flex items-center gap-2">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                       <path fillRule="evenodd" clipRule="evenodd" d="M7.14835 2.11694C7.22198 1.85073 7.06588 1.57524 6.79968 1.5016C6.53348 1.42796 6.25798 1.58407 6.18434 1.85027L5.17501 5.48361H2.66634C2.3902 5.48361 2.16634 5.70746 2.16634 5.98361C2.16634 6.25975 2.3902 6.48361 2.66634 6.48361H4.89768L3.87901 10.1503H1.33301C1.05687 10.1503 0.833008 10.3741 0.833008 10.6503C0.833008 10.9264 1.05687 11.1503 1.33301 11.1503H3.60101L2.85101 13.8503C2.77737 14.1165 2.93347 14.392 3.19968 14.4656C3.46588 14.5392 3.74137 14.3831 3.81501 14.1169L4.63901 11.1503H9.60101L8.85101 13.8503C8.77738 14.1165 8.93348 14.392 9.19968 14.4656C9.46588 14.5392 9.74138 14.3831 9.81501 14.1169L10.639 11.1503H13.333C13.6092 11.1503 13.833 10.9264 13.833 10.6503C13.833 10.3741 13.6092 10.1503 13.333 10.1503H10.917L11.935 6.48361H14.6664C14.9425 6.48361 15.1664 6.25975 15.1664 5.98361C15.1664 5.70746 14.9425 5.48361 14.6664 5.48361H12.213L13.1483 2.11694C13.196 1.94473 13.1481 1.7602 13.0228 1.63285C12.8975 1.50549 12.7138 1.45466 12.5408 1.49951C12.3679 1.54436 12.232 1.67807 12.1843 1.85027L11.175 5.48361H6.21301L7.14835 2.11694ZM9.87901 10.1503L10.8977 6.48361H5.93501L4.91701 10.1503H9.87901Z" fill="#B7FF1A" />
                     </svg>
-                    <span className="text-lg font-bold text-[#f8fafc]">{firstTokenId}/{maxSupply.toLocaleString()}</span>
+                    <span className="text-lg font-bold text-[#F5F7F2]">{firstTokenId}/{maxSupply.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -575,7 +575,7 @@ export default function MintNFTPage() {
                 </Button>
                 <Button
                   onClick={() => void openExternal(`${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`)}
-                  className="w-full md:flex-1 h-14 rounded-2xl bg-[#1e293b] hover:bg-[#334155] border border-[#1e293b]/50 text-[#f8fafc] text-base font-bold flex items-center justify-center gap-2"
+                  className="w-full md:flex-1 h-14 rounded-2xl bg-[#1B2A33] hover:bg-[#22313A] border border-[#1B2A33]/50 text-[#F5F7F2] text-base font-bold flex items-center justify-center gap-2"
                 >
                   <ExternalLink className="h-5 w-5" />
                   View on Explorer
@@ -589,18 +589,18 @@ export default function MintNFTPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#101D27] flex flex-col">
-      <header className="sticky top-0 z-40 backdrop-blur-md bg-[#101D27]/80">
+    <div className="min-h-screen bg-[#0B1218] flex flex-col">
+      <header className="sticky top-0 z-40 backdrop-blur-md bg-[#0B1218]/80">
         <div className="flex items-center justify-between w-full max-w-7xl mx-auto px-4 pt-12 pb-4">
           <Button
             variant="ghost"
             size="icon"
-            className="w-10 h-10 rounded-full bg-[#1e293b]/50 hover:bg-[#1e293b]/80"
+            className="w-10 h-10 rounded-full bg-[#1B2A33]/50 hover:bg-[#1B2A33]/80"
             onClick={() => navigate("/store")}
           >
             <ArrowLeft className="h-6 w-6 text-white" />
           </Button>
-          <span className="text-lg font-bold text-[#f8fafc]">NFT Minting</span>
+          <span className="text-lg font-bold text-[#F5F7F2]">NFT Minting</span>
           <div className="w-10 h-10" />
         </div>
       </header>
@@ -627,18 +627,18 @@ export default function MintNFTPage() {
                       Live Minting
                     </span>
                   </div>
-                  <h2 className="text-2xl font-bold text-[#f8fafc] leading-8">
+                  <h2 className="text-2xl font-bold text-[#F5F7F2] leading-8">
                     Cosmic Fragments #124
                   </h2>
-                  <span className="text-sm text-[#94a3b8]">
+                  <span className="text-sm text-[#B8C0AE]">
                     Genesis Avatar Collection by Gamefolio
                   </span>
                 </div>
                 <div className="backdrop-blur-md bg-white/10 border border-white/10 rounded-2xl p-3 flex flex-col items-center">
-                  <span className="text-[10px] font-bold text-[#94a3b8] uppercase text-center">
+                  <span className="text-[10px] font-bold text-[#B8C0AE] uppercase text-center">
                     Supply
                   </span>
-                  <span className="text-sm font-bold text-[#f8fafc]">
+                  <span className="text-sm font-bold text-[#F5F7F2]">
                     {maxSupply.toLocaleString()}
                   </span>
                 </div>
@@ -650,12 +650,12 @@ export default function MintNFTPage() {
           <div className="md:flex-1 flex flex-col gap-6 max-w-[382px] w-full mx-auto md:mx-0">
 
             {needsWalletRegeneration && (
-              <div className="bg-[#1e293b] border border-[#ef4444]/30 rounded-3xl p-5 flex flex-col gap-3">
+              <div className="bg-[#1B2A33] border border-[#ef4444]/30 rounded-3xl p-5 flex flex-col gap-3">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-[#ef4444]" />
-                  <span className="text-sm font-bold text-[#f8fafc]">Wallet Key Missing</span>
+                  <span className="text-sm font-bold text-[#F5F7F2]">Wallet Key Missing</span>
                 </div>
-                <p className="text-xs text-[#94a3b8]">
+                <p className="text-xs text-[#B8C0AE]">
                   Your wallet was created before signing keys were stored. To mint NFTs, you need to regenerate your wallet. This will create a new wallet address.
                 </p>
                 <Button
@@ -678,16 +678,16 @@ export default function MintNFTPage() {
             {useServerSigning && !needsWalletRegeneration && (
               <div className="bg-[#14532d]/20 border border-[#B7FF1A]/20 rounded-3xl p-4 flex items-center gap-3">
                 <Shield className="h-5 w-5 text-[#B7FF1A] shrink-0" />
-                <p className="text-xs text-[#94a3b8]">
+                <p className="text-xs text-[#B8C0AE]">
                   Transactions will be signed securely on the server using your Gamefolio wallet.
                 </p>
               </div>
             )}
 
             {/* Balance & Allowance Card */}
-            <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-3xl overflow-hidden">
+            <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-3xl overflow-hidden">
               {/* Balance Header */}
-              <div className="flex items-center justify-between p-5 bg-[#14532d]/5 border-b border-[#1e293b]/50">
+              <div className="flex items-center justify-between p-5 bg-[#14532d]/5 border-b border-[#1B2A33]/50">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-[#B7FF1A]/20 flex items-center justify-center">
                     <svg width="18" height="15" viewBox="0 0 18 15" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -696,13 +696,13 @@ export default function MintNFTPage() {
                     </svg>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-[#94a3b8] uppercase">
+                    <span className="text-[10px] font-bold text-[#B8C0AE] uppercase">
                       Your Balance
                     </span>
                     {!balanceLoaded ? (
-                      <span className="text-sm font-bold text-[#94a3b8]">Loading...</span>
+                      <span className="text-sm font-bold text-[#B8C0AE]">Loading...</span>
                     ) : (
-                      <span className={`text-sm font-bold ${hasInsufficientBalance ? 'text-[#ef4444]' : 'text-[#f8fafc]'}`}>
+                      <span className={`text-sm font-bold ${hasInsufficientBalance ? 'text-[#ef4444]' : 'text-[#F5F7F2]'}`}>
                         {onChainBalanceFormatted.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT
                       </span>
                     )}
@@ -711,8 +711,8 @@ export default function MintNFTPage() {
                 <div className="flex items-center gap-1.5">
                   {isCheckingAllowance ? (
                     <>
-                      <Loader2 className="h-3 w-3 text-[#94a3b8] animate-spin" />
-                      <span className="text-[10px] font-bold uppercase text-[#94a3b8]">Checking...</span>
+                      <Loader2 className="h-3 w-3 text-[#B8C0AE] animate-spin" />
+                      <span className="text-[10px] font-bold uppercase text-[#B8C0AE]">Checking...</span>
                     </>
                   ) : (
                     <>
@@ -734,20 +734,20 @@ export default function MintNFTPage() {
                 {/* Quantity Controls */}
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-[#f8fafc]">Mint Quantity</span>
-                    <span className="text-[10px] font-bold text-[#94a3b8] uppercase">
+                    <span className="text-sm font-bold text-[#F5F7F2]">Mint Quantity</span>
+                    <span className="text-[10px] font-bold text-[#B8C0AE] uppercase">
                       {pricePerMint} GFT per NFT
                     </span>
                   </div>
-                  <div className="flex items-center gap-4 bg-[#1e293b] rounded-2xl p-1">
+                  <div className="flex items-center gap-4 bg-[#1B2A33] rounded-2xl p-1">
                     <button
                       onClick={handleDecrement}
                       disabled={quantity <= 1}
-                      className="w-10 h-10 rounded-2xl bg-[#1e293b] hover:bg-[#334155] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                      className="w-10 h-10 rounded-2xl bg-[#1B2A33] hover:bg-[#22313A] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
                     >
-                      <Minus className="h-5 w-5 text-[#f8fafc]" />
+                      <Minus className="h-5 w-5 text-[#F5F7F2]" />
                     </button>
-                    <span className="text-lg font-bold text-[#f8fafc] w-4 text-center">
+                    <span className="text-lg font-bold text-[#F5F7F2] w-4 text-center">
                       {quantity}
                     </span>
                     <button
@@ -760,18 +760,18 @@ export default function MintNFTPage() {
                   </div>
                 </div>
 
-                <div className="h-px bg-[#1e293b]/30" />
+                <div className="h-px bg-[#1B2A33]/30" />
 
                 {/* Price Breakdown */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#94a3b8]">Price ({quantity} NFT)</span>
-                    <span className="text-sm font-bold text-[#f8fafc]">
+                    <span className="text-sm text-[#B8C0AE]">Price ({quantity} NFT)</span>
+                    <span className="text-sm font-bold text-[#F5F7F2]">
                       {mintPrice.toFixed(2)} GFT
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#94a3b8]">Gas (sFUEL)</span>
+                    <span className="text-sm text-[#B8C0AE]">Gas (sFUEL)</span>
                     <span className="text-sm font-bold text-[#B7FF1A]">
                       Free
                     </span>
@@ -779,13 +779,13 @@ export default function MintNFTPage() {
                 </div>
 
                 {/* Total */}
-                <div className="flex items-center justify-between pt-3 border-t border-[#1e293b]/30">
-                  <span className="text-base font-bold text-[#f8fafc]">Total Required</span>
+                <div className="flex items-center justify-between pt-3 border-t border-[#1B2A33]/30">
+                  <span className="text-base font-bold text-[#F5F7F2]">Total Required</span>
                   <div className="flex flex-col items-end">
                     <span className="text-xl font-bold text-[#B7FF1A]">
                       {mintPrice.toLocaleString()} GFT
                     </span>
-                    <span className="text-[10px] font-medium text-[#94a3b8]">
+                    <span className="text-[10px] font-medium text-[#B8C0AE]">
                       {hasInsufficientBalance ? 'Insufficient balance' : `≈ £${totalGBP.toFixed(2)} GBP`}
                     </span>
                   </div>
@@ -794,7 +794,7 @@ export default function MintNFTPage() {
             </div>
 
             <div className="flex flex-col gap-3">
-              <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-[1.2px]">
+              <span className="text-[10px] font-bold text-[#B8C0AE] uppercase tracking-[1.2px]">
                 Pay With
               </span>
               <div className="grid grid-cols-3 gap-2" data-testid="wallet-mode-picker">
@@ -810,7 +810,7 @@ export default function MintNFTPage() {
                     className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
                       walletMode === opt.val
                         ? 'border-[#B7FF1A] bg-[#B7FF1A]/10 text-[#B7FF1A]'
-                        : 'border-[#1e293b] text-[#94a3b8] hover:text-[#f8fafc]'
+                        : 'border-[#1B2A33] text-[#B8C0AE] hover:text-[#F5F7F2]'
                     }`}
                     data-testid={`wallet-mode-${opt.val}`}
                   >
@@ -832,7 +832,7 @@ export default function MintNFTPage() {
                   className={`w-full h-[68px] rounded-2xl text-xl font-bold flex items-center justify-center gap-2.5 transition-all ${
                     canMint && mintState !== "processing"
                       ? "bg-[#B7FF1A] text-[#071013] hover:bg-[#A2F000]"
-                      : "bg-[#1e293b] text-[#94a3b8] cursor-not-allowed opacity-50"
+                      : "bg-[#1B2A33] text-[#B8C0AE] cursor-not-allowed opacity-50"
                   }`}
                 >
                   <Sparkles className="h-6 w-6" />

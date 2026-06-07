@@ -23,10 +23,6 @@ export default function ReviewOrderScreen({
   const { wallet } = useCrossmint();
   const displayAddress = walletAddress || wallet?.address || "";
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-  
   const truncateAddress = (address: string) => {
     if (!address) return "";
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -35,7 +31,7 @@ export default function ReviewOrderScreen({
   return (
     <div 
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: '#101D27' }}
+      style={{ background: '#0B1218' }}
     >
       {/* Header */}
       <div 
@@ -45,10 +41,10 @@ export default function ReviewOrderScreen({
         <button
           onClick={onBack}
           className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
-          style={{ background: '#1e293b', border: '1px solid #1e293b' }}
+          style={{ background: '#1B2A33', border: '1px solid #1B2A33' }}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F5F7F2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
         
@@ -77,7 +73,7 @@ export default function ReviewOrderScreen({
           
           <span 
             className="text-sm font-medium uppercase tracking-wider"
-            style={{ color: '#94a3b8', letterSpacing: '1.4px' }}
+            style={{ color: '#B8C0AE', letterSpacing: '1.4px' }}
           >
             You will receive
           </span>
@@ -102,7 +98,7 @@ export default function ReviewOrderScreen({
         <div 
           className="rounded-2xl p-5 mb-4"
           style={{ 
-            background: '#0f172a',
+            background: '#0B1218',
             border: '1px solid rgba(30, 41, 59, 0.5)'
           }}
         >
@@ -114,18 +110,18 @@ export default function ReviewOrderScreen({
             <div className="flex items-center gap-3">
               <div 
                 className="w-10 h-10 rounded-2xl flex items-center justify-center"
-                style={{ background: '#1e293b' }}
+                style={{ background: '#1B2A33' }}
               >
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M6.87484 4.16666C4.944 4.17166 3.91067 4.21916 3.14817 4.72832C2.78405 4.97158 2.47143 5.2842 2.22817 5.64832C1.6665 6.48916 1.6665 7.65832 1.6665 9.99999C1.6665 12.3417 1.6665 13.5108 2.22817 14.3517C2.47143 14.7158 2.78405 15.0284 3.14817 15.2717C3.91067 15.7808 4.944 15.8283 6.87484 15.8333V12.4217C5.771 12.1363 4.99988 11.1405 4.99988 10.0004C4.99988 8.86029 5.771 7.86449 6.87484 7.57916L6.87484 4.16666Z" fill="#94A3B8" />
-                  <path fillRule="evenodd" clipRule="evenodd" d="M8.12484 15.8333H11.8748V4.16666H8.12484V15.8333Z" fill="#94A3B8" />
-                  <path fillRule="evenodd" clipRule="evenodd" d="M13.1248 4.16666V7.57916C14.2279 7.86507 14.9982 8.86049 14.9982 9.99999C14.9982 11.1395 14.2279 12.1349 13.1248 12.4208V15.8333C15.0557 15.8283 16.0898 15.7808 16.8515 15.2717C17.2156 15.0284 17.5282 14.7158 17.7715 14.3517C18.3332 13.5108 18.3332 12.3417 18.3332 9.99999C18.3332 7.65832 18.3332 6.48916 17.7715 5.64832C17.5282 5.2842 17.2156 4.97158 16.8515 4.72832C16.089 4.21916 15.0557 4.17082 13.1248 4.16666Z" fill="#94A3B8" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M6.87484 4.16666C4.944 4.17166 3.91067 4.21916 3.14817 4.72832C2.78405 4.97158 2.47143 5.2842 2.22817 5.64832C1.6665 6.48916 1.6665 7.65832 1.6665 9.99999C1.6665 12.3417 1.6665 13.5108 2.22817 14.3517C2.47143 14.7158 2.78405 15.0284 3.14817 15.2717C3.91067 15.7808 4.944 15.8283 6.87484 15.8333V12.4217C5.771 12.1363 4.99988 11.1405 4.99988 10.0004C4.99988 8.86029 5.771 7.86449 6.87484 7.57916L6.87484 4.16666Z" fill="#B8C0AE" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M8.12484 15.8333H11.8748V4.16666H8.12484V15.8333Z" fill="#B8C0AE" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M13.1248 4.16666V7.57916C14.2279 7.86507 14.9982 8.86049 14.9982 9.99999C14.9982 11.1395 14.2279 12.1349 13.1248 12.4208V15.8333C15.0557 15.8283 16.0898 15.7808 16.8515 15.2717C17.2156 15.0284 17.5282 14.7158 17.7715 14.3517C18.3332 13.5108 18.3332 12.3417 18.3332 9.99999C18.3332 7.65832 18.3332 6.48916 17.7715 5.64832C17.5282 5.2842 17.2156 4.97158 16.8515 4.72832C16.089 4.21916 15.0557 4.17082 13.1248 4.16666Z" fill="#B8C0AE" />
                 </svg>
               </div>
               <div className="flex flex-col">
                 <span 
                   className="text-[10px] font-bold uppercase"
-                  style={{ color: '#94a3b8', letterSpacing: '0.5px' }}
+                  style={{ color: '#B8C0AE', letterSpacing: '0.5px' }}
                 >
                   Purchase Amount
                 </span>
@@ -142,15 +138,15 @@ export default function ReviewOrderScreen({
           {/* Fee Details */}
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: '#94a3b8' }}>Exchange Rate</span>
+              <span className="text-sm" style={{ color: '#B8C0AE' }}>Exchange Rate</span>
               <span className="text-sm font-bold" style={{ color: '#fff' }}>1 GFT ≈ £{GFT_RATE}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: '#94a3b8' }}>Network Fee</span>
+              <span className="text-sm" style={{ color: '#B8C0AE' }}>Network Fee</span>
               <span className="text-sm font-bold" style={{ color: '#B7FF1A' }}>Free</span>
             </div>
             <div className="flex items-center justify-between pt-2">
-              <span className="text-sm" style={{ color: '#94a3b8' }}>Service Fee</span>
+              <span className="text-sm" style={{ color: '#B8C0AE' }}>Service Fee</span>
               <span className="text-sm font-bold" style={{ color: '#fff' }}>£0.00</span>
             </div>
           </div>
@@ -177,7 +173,7 @@ export default function ReviewOrderScreen({
             <div className="flex flex-col">
               <span 
                 className="text-[10px] font-bold uppercase"
-                style={{ color: '#94a3b8', letterSpacing: '0.5px' }}
+                style={{ color: '#B8C0AE', letterSpacing: '0.5px' }}
               >
                 Destination Wallet
               </span>
@@ -187,7 +183,7 @@ export default function ReviewOrderScreen({
               >
                 {truncateAddress(displayAddress)}
               </span>
-              <span className="text-xs" style={{ color: '#94a3b8' }}>
+              <span className="text-xs" style={{ color: '#B8C0AE' }}>
                 GFT Mainnet Address
               </span>
             </div>
@@ -217,7 +213,7 @@ export default function ReviewOrderScreen({
           <svg width="15" height="20" viewBox="0 0 15 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
             <path fillRule="evenodd" clipRule="evenodd" d="M1.9749 5.95547C1.75391 6.27001 1.75391 7.20542 1.75391 9.0745V9.99472C1.75391 13.2909 4.23218 14.891 5.78731 15.5698C6.20883 15.754 6.41988 15.8463 7.01562 15.8463C7.61195 15.8463 7.82242 15.754 8.24394 15.5698C9.79907 14.8905 12.2773 13.2915 12.2773 9.99472V9.0745C12.2773 7.20484 12.2773 6.27001 12.0564 5.95547C11.8359 5.64152 10.9572 5.34044 9.19924 4.73885L8.86424 4.62426C7.94812 4.31031 7.49035 4.15363 7.01562 4.15363C6.5409 4.15363 6.08313 4.31031 5.16701 4.62426L4.83201 4.73826C3.07401 5.34044 2.19531 5.64152 1.9749 5.95547ZM8.80461 9.12303C8.90894 9.00606 8.94294 8.84232 8.89381 8.69348C8.84468 8.54464 8.71988 8.43332 8.56642 8.40146C8.41296 8.36959 8.25415 8.42201 8.14982 8.53898L6.38948 10.5115L5.88085 9.9421C5.71902 9.76328 5.44317 9.74872 5.26341 9.9095C5.08366 10.0703 5.06749 10.3461 5.22723 10.5267L6.06208 11.4622C6.14528 11.5553 6.26427 11.6086 6.38919 11.6086C6.51411 11.6086 6.6331 11.5553 6.71629 11.4622L8.80461 9.12303Z" fill="#B7FF1A" />
           </svg>
-          <span className="text-xs leading-relaxed" style={{ color: '#94a3b8' }}>
+          <span className="text-xs leading-relaxed" style={{ color: '#B8C0AE' }}>
             The GFT tokens will be sent instantly to your wallet once the payment is confirmed.
           </span>
         </div>
@@ -227,7 +223,7 @@ export default function ReviewOrderScreen({
       <div 
         className="px-6 pb-24 pt-6"
         style={{ 
-          background: '#101D27',
+          background: '#0B1218',
           borderTop: '1px solid rgba(30, 41, 59, 0.3)'
         }}
       >
@@ -235,7 +231,7 @@ export default function ReviewOrderScreen({
           {/* Total to Pay */}
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium" style={{ color: '#94a3b8' }}>Total to Pay</span>
+              <span className="text-sm font-medium" style={{ color: '#B8C0AE' }}>Total to Pay</span>
               <span className="text-xs font-bold" style={{ color: '#B7FF1A' }}>Includes all taxes</span>
             </div>
             <span className="text-3xl font-bold" style={{ color: '#fff' }}>£{amount.toFixed(2)}</span>

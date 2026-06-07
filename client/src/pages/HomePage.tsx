@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
+import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 import TrendingGameCard from "@/components/clips/TrendingGameCard";
 import GameClipsSection from "@/components/clips/GameClipsSection";
 import { LazyImage } from "@/components/ui/lazy-image";
@@ -16,6 +17,10 @@ import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
 import { useLocation, Link } from "wouter";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
+import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
+import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
+import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
+import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient as globalQueryClient } from "@/lib/queryClient";
@@ -47,6 +52,7 @@ const HomePage = () => {
   const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [selectedGameFilter, setSelectedGameFilter] = useState<string | null>(null);
   const [activeContentTab, setActiveContentTab] = useState<'clips' | 'reels' | 'screenshots'>('clips');
+  const [reelsViewer, setReelsViewer] = useState<number | null>(null);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   
@@ -319,18 +325,30 @@ const HomePage = () => {
     };
   }, []);
 
-  // Query all clips (used for screenshots and popular clips sections)
+  // Query all clips (used for popular clips section)
   const { data: userClips, isLoading: isLoadingUserClips } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/clips`, Date.now()], // Force new query every time
     staleTime: 0,
     gcTime: 0, // Don't cache at all
   });
 
-  // Latest clips — same endpoint as dedicated Latest Clips page, sorted newest first
-  const { data: latestClipsRaw, isLoading: isLoadingLatestClips } = useQuery<ClipWithUser[]>({
-    queryKey: ['/api/clips/trending', 'recent'],
+  // Latest screenshots — sorted newest first
+  const { data: latestScreenshots, isLoading: isLoadingLatestScreenshots } = useQuery<any[]>({
+    queryKey: ['/api/screenshots/latest'],
     queryFn: async () => {
-      const response = await fetch('/api/clips/trending?period=recent&limit=20', { credentials: 'include' });
+      const response = await fetch('/api/screenshots/latest?limit=20', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch latest screenshots');
+      return response.json();
+    },
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  // Latest clips — dedicated endpoint sorted purely by upload date, newest first
+  const { data: latestClipsRaw, isLoading: isLoadingLatestClips } = useQuery<ClipWithUser[]>({
+    queryKey: ['/api/clips/latest'],
+    queryFn: async () => {
+      const response = await fetch('/api/clips/latest?limit=20', { credentials: 'include' });
       if (!response.ok) throw new Error('Failed to fetch latest clips');
       return response.json();
     },
@@ -338,11 +356,11 @@ const HomePage = () => {
     gcTime: 0,
   });
 
-  // Latest reels — same endpoint as dedicated Latest Reels page, sorted newest first
+  // Latest reels — sorted newest first
   const { data: latestReelsRaw, isLoading: isLoadingLatestReels } = useQuery<ClipWithUser[]>({
-    queryKey: ['/api/reels/trending', 'recent'],
+    queryKey: ['/api/reels/latest'],
     queryFn: async () => {
-      const response = await fetch('/api/reels/trending?period=recent&limit=20', { credentials: 'include' });
+      const response = await fetch('/api/reels/latest?limit=20', { credentials: 'include' });
       if (!response.ok) throw new Error('Failed to fetch latest reels');
       return response.json();
     },
@@ -436,6 +454,7 @@ const HomePage = () => {
   const isLoadingGames = isLoadingTwitchGames;
 
   return (
+    <>
     <div className="space-y-16 max-w-none px-4 md:px-6 py-4 md:py-6">
       {/* Hero Banner Carousel - Full width with negative margin to compensate for parent padding */}
       <section className="mb-10 -mx-4 md:-mx-6 -mt-4 md:-mt-6">
@@ -467,7 +486,15 @@ const HomePage = () => {
                         {slide.buttonText && (
                           <Button
                             className="w-fit px-6 py-5 h-auto text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground mt-4"
-                            onClick={() => slide.buttonLink && setLocation(slide.buttonLink)}
+                            onClick={() => {
+                              if (!slide.buttonLink) return;
+                              const link = slide.buttonLink.toLowerCase();
+                              if (link === '#pro' || link === '/pro' || link.includes('pro')) {
+                                window.dispatchEvent(new CustomEvent('open-pro-upgrade'));
+                              } else {
+                                setLocation(slide.buttonLink);
+                              }
+                            }}
                           >
                             {slide.buttonText}
                           </Button>
@@ -536,6 +563,9 @@ const HomePage = () => {
           )}
         </div>
       </section>
+
+      {/* Ecosystem Activity Rail */}
+      {/* <EcosystemActivityRail /> */}
       
       {/* Latest Clips Section */}
       <section className="px-0">
@@ -585,6 +615,7 @@ const HomePage = () => {
                     clip={clip}
                     userId={userId}
                     compact={true}
+                    clipsList={latestClips ?? undefined}
                   />
                 ))
               )}
@@ -626,7 +657,7 @@ const HomePage = () => {
                     return (
                       <div 
                         key={`reel-${reel.id}`}
-                        onClick={() => openClipDialog(reel.id, latestReels)}
+                        onClick={() => setReelsViewer(index)}
                         className="break-inside-avoid mb-1"
                       >
                         <div className={`relative ${aspectRatio} w-full rounded-sm overflow-hidden cursor-pointer group`}>
@@ -647,14 +678,16 @@ const HomePage = () => {
                           <div className="absolute top-2 left-2 flex items-center gap-1.5">
                             <div className="w-6 h-6 rounded-full overflow-hidden border border-white/50">
                               <img
-                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio-logo-green.png'}
                                 alt={reel.user.displayName}
                                 className="w-full h-full object-cover"
                               />
                             </div>
-                            <span className="text-white text-xs font-medium drop-shadow-lg">
-                              {reel.user.displayName || reel.user.username}
-                            </span>
+                            <ProfileHoverCard username={reel.user.username}>
+                              <span className="text-white text-xs font-medium drop-shadow-lg cursor-default">
+                                {reel.user.displayName || reel.user.username}
+                              </span>
+                            </ProfileHoverCard>
                           </div>
                           
                           {/* View count and game - bottom left */}
@@ -686,10 +719,10 @@ const HomePage = () => {
               ) : (
                 // Desktop: Grid with 4 columns
                 <div className="grid grid-cols-4 gap-4 w-full">
-                  {latestReels.map((reel) => (
+                  {latestReels.map((reel, index) => (
                     <div 
                       key={`reel-${reel.id}`}
-                      onClick={() => openClipDialog(reel.id, latestReels)}
+                      onClick={() => setReelsViewer(index)}
                       className="group relative bg-black rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
                     >
                       {/* Thumbnail/Video */}
@@ -721,14 +754,16 @@ const HomePage = () => {
                           <div className="flex items-center gap-2 mb-2">
                             <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/50">
                               <img
-                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio-logo-green.png'}
                                 alt={reel.user.displayName}
                                 className="w-full h-full object-cover"
                               />
                             </div>
-                            <span className="text-white text-sm font-medium">
-                              {reel.user.displayName || reel.user.username}
-                            </span>
+                            <ProfileHoverCard username={reel.user.username}>
+                              <span className="text-white text-sm font-medium cursor-default">
+                                {reel.user.displayName || reel.user.username}
+                              </span>
+                            </ProfileHoverCard>
                           </div>
 
                           {/* Title */}
@@ -783,15 +818,14 @@ const HomePage = () => {
           {/* Screenshots Tab Content */}
           <TabsContent value="screenshots" className="space-y-6" data-content-tab="screenshots">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
-              {userClips?.filter(clip => clip.thumbnailUrl && !clip.videoUrl)?.slice(0, 12).map((screenshot, i) => (
+              {latestScreenshots?.slice(0, 12).map((screenshot) => (
                 <div 
                   key={`screenshot-${screenshot.id}`} 
-                  className="relative overflow-hidden rounded-xl cursor-pointer group shadow-lg transition-all duration-500 border aspect-video"
-                  style={{ borderColor: 'rgba(255,255,255,0.05)' }}
+                  className="relative overflow-hidden rounded-xl cursor-pointer group shadow-lg transition-all duration-500 aspect-video"
                   onClick={() => setLocation(`/view/screenshot/${screenshot.id}`)}
                 >
                   <img 
-                    src={screenshot.thumbnailUrl || undefined} 
+                    src={screenshot.imageUrl || screenshot.thumbnailUrl || undefined} 
                     alt={screenshot.title}
                     className="w-full h-full object-cover"
                   />
@@ -807,17 +841,21 @@ const HomePage = () => {
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-3">
                     <div className="space-y-1">
                       <h4 className="text-white text-sm font-medium line-clamp-2 leading-tight">{screenshot.title}</h4>
-                      <Link href={`/profile/${screenshot.user.username}`} onClick={(e) => e.stopPropagation()}>
-                        <p className="text-white/80 hover:text-white text-xs cursor-pointer transition-colors">
-                          {screenshot.user.displayName || screenshot.user.username}
-                        </p>
-                      </Link>
+                      {screenshot.user && (
+                        <ProfileHoverCard username={screenshot.user.username}>
+                          <Link href={`/profile/${screenshot.user.username}`} onClick={(e) => e.stopPropagation()}>
+                            <p className="text-white/80 hover:text-white text-xs cursor-pointer transition-colors">
+                              {screenshot.user.displayName || screenshot.user.username}
+                            </p>
+                          </Link>
+                        </ProfileHoverCard>
+                      )}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-            {(!userClips || userClips.filter(clip => clip.thumbnailUrl && !clip.videoUrl).length === 0) && (
+            {(!latestScreenshots || latestScreenshots.length === 0) && !isLoadingLatestScreenshots && (
               <div className="text-center py-12">
                 <Image className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No screenshots yet</h3>
@@ -832,23 +870,19 @@ const HomePage = () => {
         </Tabs>
       </section>
 
+      {/* Daily XP Challenges */}
+      {/* <DailyXPChallenges /> */}
+
+      {/* Live Streams Section */}
+      {/* <LiveStreamsSection /> */}
+
       {/* Recommended for You Section - Only show for authenticated users */}
       {user && <RecommendedForYou userId={user.id} />}
       
-      {/* Featured Gamers Section */}
-      <section className="mt-16 px-0">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-medium text-foreground">Featured Gamers</h2>
-          <Link 
-            href="/explore" 
-            className="text-primary text-sm font-medium hover:underline flex items-center"
-          >
-            View all <ChevronRight className="h-4 w-4 ml-1" />
-          </Link>
-        </div>
-        
+      {/* Trending Gamefolios Section */}
+      {/* <section className="mt-16 px-0">
         <FeaturedUsersSection />
-      </section>
+      </section> */}
 
       {/* Trending Games Section */}
       <section className="mt-16 px-0">
@@ -954,6 +988,7 @@ const HomePage = () => {
                 key={clip.id} 
                 clip={clip} 
                 userId={userId}
+                clipsList={topClips ?? undefined}
               />
             ))
           )}
@@ -986,6 +1021,7 @@ const HomePage = () => {
                 clip={clip} 
                 userId={userId}
                 compact={true}
+                clipsList={popularClips ?? undefined}
               />
             ))
           )}
@@ -994,6 +1030,17 @@ const HomePage = () => {
 
 
     </div>
+
+    {reelsViewer !== null && latestReels.length > 0 && (
+      <MobileTrendingViewer
+        content={latestReels}
+        initialIndex={reelsViewer}
+        onClose={() => setReelsViewer(null)}
+        hideCloseButton={false}
+      />
+    )}
+
+    </>
   );
 };
 

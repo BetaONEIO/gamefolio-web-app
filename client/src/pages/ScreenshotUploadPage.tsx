@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToastAction } from '@/components/ui/toast';
 import ProUpgradeDialog from '@/components/ProUpgradeDialog';
+import ImageCropModal from '@/components/shared/ImageCropModal';
 import type { UploadLimits } from '@shared/schema';
 
 // Shape of the structured error payload returned by /api/screenshots/upload
@@ -44,8 +45,31 @@ const ScreenshotUploadPage: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showProUpgrade, setShowProUpgrade] = useState(false);
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const dragCounterRef = React.useRef(0);
+
+  // Signal to useVersionCheck that a reload must not happen mid-upload.
+  useEffect(() => {
+    window.__gf_uploading__ = isUploading;
+    return () => { window.__gf_uploading__ = false; };
+  }, [isUploading]);
+
+  const addFileToState = (file: File) => {
+    setSelectedFiles(prev => {
+      if (prev.length >= 3) return prev;
+      return [...prev, file];
+    });
+    setPreviews(prev => {
+      if (prev.length >= 3) return prev;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPreviews(p => [...p, e.target?.result as string]);
+      };
+      reader.readAsDataURL(file);
+      return prev;
+    });
+  };
 
   // Fetch games for selection
   const { data: games = [] } = useQuery({
@@ -97,18 +121,7 @@ const ScreenshotUploadPage: React.FC = () => {
       return;
     }
 
-    const newFiles = [...selectedFiles, ...imageFiles];
-    setSelectedFiles(newFiles);
-
-    const newPreviews = [...previews];
-    imageFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        newPreviews.push(e.target?.result as string);
-        setPreviews([...newPreviews]);
-      };
-      reader.readAsDataURL(file);
-    });
+    setCropQueue(prev => [...prev, ...imageFiles]);
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -261,7 +274,7 @@ const ScreenshotUploadPage: React.FC = () => {
   };
 
   return (
-    <div className="container max-w-4xl mx-auto px-4 py-8">
+    <div className="container max-w-4xl mx-auto px-4 py-8 pb-28 md:pb-8">
       <h1 className="text-3xl font-bold mb-8">Upload Screenshots</h1>
       
       <Card>
@@ -476,6 +489,19 @@ const ScreenshotUploadPage: React.FC = () => {
         open={showProUpgrade}
         onOpenChange={setShowProUpgrade}
         subtitle="Get larger screenshot uploads"
+      />
+
+      <ImageCropModal
+        file={cropQueue[0] ?? null}
+        onConfirm={(croppedFile) => {
+          addFileToState(croppedFile);
+          setCropQueue(q => q.slice(1));
+        }}
+        onSkip={() => {
+          addFileToState(cropQueue[0]);
+          setCropQueue(q => q.slice(1));
+        }}
+        onCancel={() => setCropQueue([])}
       />
     </div>
   );

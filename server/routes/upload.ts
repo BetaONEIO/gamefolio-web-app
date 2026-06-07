@@ -469,15 +469,18 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
       });
     }
 
-    // Process and upload image
+    // Process and upload image (rotate() normalises EXIF orientation so
+    // portrait photos from mobile are stored upright with no EXIF tag)
     const processedBuffer = await sharp(req.file.path, { failOn: 'none' })
+      .rotate()
       .resize(1920, 1080, { fit: 'inside', withoutEnlargement: true })
       .jpeg({ quality: 90 })
       .toBuffer();
 
-    // Create thumbnail
+    // Create thumbnail (rotate first so portrait thumbnails aren't sideways)
     const thumbnailBuffer = await sharp(req.file.path, { failOn: 'none' })
-      .resize(320, 180, { fit: 'cover' })
+      .rotate()
+      .resize(320, 180, { fit: 'inside', withoutEnlargement: true })
       .jpeg({ quality: 80 })
       .toBuffer();
 

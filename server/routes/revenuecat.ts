@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
 import { EmailService } from '../email-service';
 import { storage } from '../storage';
+import { notifyProPurchase } from '../telegram-notify';
 
 const router = Router();
 
@@ -186,6 +187,8 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
             plan
           ).catch(err => console.error('[RevenueCat Webhook] Failed to send Pro welcome email:', err));
         }
+
+        notifyProPurchase(user, { kind: 'new', plan, source: 'RevenueCat' });
       }
 
       if (type === 'RENEWAL') {
@@ -194,6 +197,8 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
         } catch (err) {
           console.error('[RevenueCat Webhook] Failed to grant renewal pro lootbox:', err);
         }
+
+        notifyProPurchase(user, { kind: 'renewal', plan, source: 'RevenueCat' });
       }
 
       console.log(`[RevenueCat Webhook] User ${user.id} Pro activated/renewed (type: ${type}, plan: ${plan}, until: ${endDate})`);

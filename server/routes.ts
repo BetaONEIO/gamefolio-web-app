@@ -22,9 +22,10 @@ import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, desc, inArray, and } from "drizzle-orm";
+import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
-import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings } from "@shared/schema";
+import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory } from "@shared/schema";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -46,7 +47,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 import { getDemoUser, getDemoUserWithStats, getDemoClips, getDemoFavoriteGames } from "./demo-user";
+import { getMacUserWithStats, MAC_BONUS_XP } from "./mac-profile";
 import axios from "axios";
+import { syncXboxForUser, syncPsnForUser, PlatformSyncError } from "./platform-sync";
 import adminRouter from "./routes/admin";
 import adminContentFilterRouter from "./routes/admin-content-filter";
 import twitchGamesRouter from "./routes/twitch-games";
@@ -63,13 +66,16 @@ import linkedWalletsRouter from "./routes/linked-wallets";
 import quickSellRouter from "./routes/quick-sell";
 import adminNftSeedRouter from "./routes/admin-nft-seed";
 import adminWalletAuditRouter from "./routes/admin-wallet-audit";
+import { pushRouter, adminPushRouter } from "./routes/push";
 import { twitchApi } from "./services/twitch-api";
 import { VideoProcessor } from "./video-processor";
+import ffmpeg from "fluent-ffmpeg";
 import sharp from "sharp";
 import { EmailService } from "./email-service";
 import { createVerificationCode, verifyEmailCode, createPasswordResetCode, verifyPasswordResetCode, deletePasswordResetTokensByUser } from "./services/token-service";
 import { NotificationService } from "./notification-service";
 import { MentionService } from "./mention-service";
+import { sendPushToUser } from "./push-service";
 import { initializeRealtimeNotificationService } from './realtime-notification-service';
 import { adminMiddleware } from "./middleware/admin";
 import { optionalHybridAuth } from "./middleware/optional-hybrid-auth";
@@ -170,7 +176,14 @@ function generateSocialMediaLinks(contentUrl: string, title: string) {
     twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`,
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
     reddit: `https://reddit.com/submit?url=${encodedUrl}&title=${encodedTitle}`,
-    discord: contentUrl // Discord doesn't have a direct share URL, just copy the link
+    discord: contentUrl,
+    instagram: contentUrl,
+    tiktok: contentUrl,
+    bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`${decodeURIComponent(encodedTitle)} ${contentUrl}`)}`,
+    snapchat: contentUrl,
+    threads: contentUrl,
+    pinterest: `https://pinterest.com/pin/create/button/?url=${encodedUrl}&description=${encodedTitle}`,
+    youtube: contentUrl,
   };
 }
 
@@ -294,6 +307,116 @@ declare global {
 
 // Simple in-memory tracking for unblocked users
 const unblockedUsers = new Map<string, Set<number>>();
+
+// Whitelist of safe public fields from the users table.
+// NEVER add sensitive fields: password, email, twoFactorSecret, encryptedPrivateKey,
+// stripeCustomerId, stripeSubscriptionId, revenuecatUserId, referralCode, referredBy,
+// walletAddress, dateOfBirth, birthday, externalId, twitchAccessToken, kickAccessToken,
+// bannedReason, lastLoginAt, totalLoginTime, canMintNfts, canSellNfts, welcomePackClaimed,
+// gfTokenBalance, proSubscriptionStartDate, proSubscriptionEndDate, lastBirthdayNotificationYear.
+function toPublicUser(user: any): Record<string, unknown> {
+  return {
+    id: user.id,
+    username: user.username,
+    displayName: user.displayName,
+    avatarUrl: user.avatarUrl,
+    bannerUrl: user.bannerUrl,
+    bio: user.bio,
+    isPrivate: user.isPrivate,
+    isPro: user.isPro,
+    isPartner: user.isPartner,
+    isStreamer: user.isStreamer,
+    role: user.role,
+    status: user.status,
+    level: user.level,
+    totalXP: user.totalXP,
+    currentStreak: user.currentStreak,
+    longestStreak: user.longestStreak,
+    emailVerified: user.emailVerified,
+    twoFactorEnabled: user.twoFactorEnabled,
+    streamPlatform: user.streamPlatform,
+    twitchChannelName: user.twitchChannelName,
+    twitchChannelId: user.twitchChannelId,
+    twitchVerified: user.twitchVerified,
+    kickChannelName: user.kickChannelName,
+    kickChannelId: user.kickChannelId,
+    kickVerified: user.kickVerified,
+    liveEnabled: user.liveEnabled,
+    showLiveOverlay: user.showLiveOverlay,
+    accentColor: user.accentColor,
+    primaryColor: user.primaryColor,
+    backgroundColor: user.backgroundColor,
+    cardColor: user.cardColor,
+    avatarBorderColor: user.avatarBorderColor,
+    profileFont: user.profileFont,
+    profileFontEffect: user.profileFontEffect,
+    profileFontAnimation: user.profileFontAnimation,
+    profileFontColor: user.profileFontColor,
+    profileBackgroundImageUrl: user.profileBackgroundImageUrl,
+    profileBackgroundPositionX: user.profileBackgroundPositionX,
+    profileBackgroundPositionY: user.profileBackgroundPositionY,
+    profileBackgroundZoom: user.profileBackgroundZoom,
+    profileBackgroundDesktopX: user.profileBackgroundDesktopX,
+    profileBackgroundDesktopY: user.profileBackgroundDesktopY,
+    profileBackgroundDesktopZoom: user.profileBackgroundDesktopZoom,
+    profileBackgroundGradient: user.profileBackgroundGradient,
+    hideBanner: user.hideBanner,
+    statsGlassEffect: user.statsGlassEffect,
+    layoutStyle: user.layoutStyle,
+    nftProfileTokenId: user.nftProfileTokenId,
+    nftProfileImageUrl: user.nftProfileImageUrl,
+    activeProfilePicType: user.activeProfilePicType,
+    selectedAvatarBorderId: user.selectedAvatarBorderId,
+    selectedNameTagId: user.selectedNameTagId,
+    selectedBorderId: user.selectedBorderId,
+    selectedVerificationBadgeId: user.selectedVerificationBadgeId,
+    createdAt: user.createdAt,
+    proSubscriptionType: user.proSubscriptionType,
+    messagingEnabled: user.messagingEnabled,
+  };
+}
+
+// Checks whether the requesting user is allowed to access media owned by `ownerId`.
+// Enforces suspended/banned account hiding and private-profile follower gating.
+// Returns true if access is allowed; writes the appropriate HTTP response and returns false otherwise.
+async function checkMediaOwnerAccess(
+  ownerId: number,
+  req: Request,
+  res: Response
+): Promise<boolean> {
+  const owner = await storage.getUser(ownerId);
+  if (!owner) {
+    res.status(404).json({ message: "Not found" });
+    return false;
+  }
+
+  const isAdmin = (req.user as any)?.role === 'admin' || (req.user as any)?.role === 'moderator';
+
+  if ((owner.status === 'suspended' || owner.status === 'banned') && !isAdmin) {
+    res.status(404).json({ message: "Not found" });
+    return false;
+  }
+
+  if (owner.isPrivate) {
+    const requesterId = req.user?.id;
+    // Use Number() on both sides — JWT auth returns id as a string while session
+    // auth returns a number; strict === would wrongly block the owner in JWT sessions.
+    const isOwner = requesterId != null && Number(requesterId) === Number(ownerId);
+    if (!isOwner) {
+      if (!requesterId) {
+        res.status(403).json({ message: "This profile is private. Please log in and follow the user to see their content." });
+        return false;
+      }
+      const isFollowing = await storage.isFollowing(Number(requesterId), ownerId);
+      if (!isFollowing) {
+        res.status(403).json({ message: "This profile is private. Follow the user to see their content." });
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -599,6 +722,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return done(null, false, { message: "Incorrect password" });
         }
 
+        // Check if user account is banned or suspended
+        if (user.status === 'banned') {
+          const reason = user.bannedReason || 'Violation of community guidelines';
+          console.log(`🚫 Banned user attempted login: ${user.username}`);
+          return done(null, false, { 
+            message: `Your account has been permanently banned. Reason: ${reason}` 
+          });
+        }
+
+        if (user.status === 'suspended') {
+          const reason = user.bannedReason || 'Account temporarily suspended';
+          console.log(`⏸️ Suspended user attempted login: ${user.username}`);
+          return done(null, false, { 
+            message: `Your account has been suspended. Reason: ${reason}` 
+          });
+        }
+
         console.log(`✅ Authentication successful for user ${user.username}`);
         return done(null, user);
       } catch (error) {
@@ -760,8 +900,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check username format
-      if (username.length < 3) {
-        return res.status(400).json({ message: "Username must be at least 3 characters long" });
+      if (username.length < 4) {
+        return res.status(400).json({ message: "Username must be at least 4 characters long" });
       }
 
       if (!/^[a-zA-Z0-9_]+$/.test(username)) {
@@ -793,7 +933,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Google authentication route
   app.post("/api/auth/google", async (req, res) => {
     try {
-      const { email, displayName, photoURL, uid } = req.body;
+      const { idToken } = req.body;
+
+      if (!idToken) {
+        return res.status(400).json({ message: "Missing required Google auth data" });
+      }
+
+      // Verify the Firebase ID token server-side — do not trust client-supplied fields
+      let claims: Awaited<ReturnType<typeof verifyFirebaseIdToken>>;
+      try {
+        claims = await verifyFirebaseIdToken(idToken);
+      } catch (err) {
+        console.error("Firebase token verification failed:", err);
+        return res.status(401).json({ message: "Invalid or expired Google token" });
+      }
+
+      const { uid, email, name: displayName, picture: photoURL } = claims;
 
       if (!email || !uid) {
         return res.status(400).json({ message: "Missing required Google auth data" });
@@ -824,7 +979,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: email.toLowerCase(),
           password: uid, // Use Firebase UID as password (they won't use traditional login)
           emailVerified: true, // Google accounts are pre-verified - no email verification needed
-          avatarUrl: photoURL || "/attached_assets/gamefolio social logo 3d circle web.png",
+          avatarUrl: photoURL || "/attached_assets/gamefolio-logo-green.png",
           bannerUrl: "/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg",
           authProvider: "google",
           externalId: uid,
@@ -883,7 +1038,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ...userToReturn,
             needsOnboarding: true,
             isNewGoogleUser: true,
-            ...(streakInfo && {
+            ...(streakInfo && !streakInfo.isFirstLogin && {
               streakInfo: {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
@@ -938,7 +1093,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.status(200).json({
             ...userToReturn,
             needsOnboarding,
-            ...(streakInfo && {
+            ...(streakInfo && !streakInfo.isFirstLogin && {
               streakInfo: {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
@@ -958,13 +1113,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Discord OAuth state initialization (web flow).
+  // Generates a CSRF state token and stores it in the server-side session.
+  // The client redirects to Discord with this state; on return /token verifies
+  // it matches the session-stored value before exchanging the code.
+  // This replaces the previous client-side cookie/localStorage approach which
+  // proved fragile across browser storage-partitioning and cross-site redirects.
+  app.post("/api/auth/discord/init", (req, res) => {
+    const state = randomBytes(16).toString('hex');
+    (req.session as any).discordOAuthState = state;
+    req.session.save((err) => {
+      if (err) {
+        console.error('Failed to persist Discord OAuth state to session:', err);
+        return res.status(500).json({ message: 'Failed to start Discord sign-in' });
+      }
+      console.log(`[discord-auth] /init sid=${req.sessionID} stored state`);
+      res.json({ state });
+    });
+  });
+
   // Discord OAuth token exchange route
   app.post("/api/auth/discord/token", async (req, res) => {
     try {
-      const { code, redirectUri } = req.body;
+      const { code, redirectUri, state } = req.body;
 
       if (!code || !redirectUri) {
         return res.status(400).json({ message: "Missing authorization code or redirect URI" });
+      }
+
+      // CSRF state verification — must match the value /init stored on the
+      // session. We DON'T clear the state on first read: that would make a
+      // double-fired callback (React re-mount, browser back/forward, etc.)
+      // appear as an "invalid state" failure to the user, even though the
+      // first call already succeeded. Instead the state is naturally
+      // single-use because Discord rejects the code on the second exchange
+      // (invalid_grant), and the session entry expires with the session.
+      const sessionState = (req.session as any).discordOAuthState;
+      console.log(
+        `[discord-auth] /token sid=${req.sessionID} sessionStatePresent=${!!sessionState} bodyStatePresent=${!!state} match=${sessionState === state}`
+      );
+      if (!sessionState || !state || sessionState !== state) {
+        console.warn('Discord OAuth state mismatch', {
+          sessionStatePresent: !!sessionState,
+          bodyStatePresent: !!state,
+        });
+        return res.status(400).json({ message: 'Invalid OAuth state — please try signing in again' });
       }
 
       // Exchange authorization code for access token
@@ -984,7 +1177,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!tokenResponse.ok) {
-        throw new Error('Failed to exchange authorization code for token');
+        const errBody = await tokenResponse.json().catch(() => ({}));
+        console.error("Discord token exchange failed:", tokenResponse.status, errBody);
+        const errMsg = (errBody as any)?.error_description || (errBody as any)?.error || 'Unknown Discord error';
+        throw new Error(`Discord token exchange failed (${tokenResponse.status}): ${errMsg}`);
       }
 
       const tokenData = await tokenResponse.json();
@@ -1047,7 +1243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const avatarUrl = avatar 
           ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`
-          : "/attached_assets/gamefolio social logo 3d circle web.png";
+          : "/attached_assets/gamefolio-logo-green.png";
 
         user = await storage.createUser({
           username: tempUsername.toLowerCase(),
@@ -1116,7 +1312,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ...userToReturn,
             needsOnboarding: true,
             isNewDiscordUser: true,
-            ...(streakInfo && {
+            ...(streakInfo && !streakInfo.isFirstLogin && {
               streakInfo: {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
@@ -1169,7 +1365,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.status(200).json({
             ...userToReturn,
             needsOnboarding,
-            ...(streakInfo && {
+            ...(streakInfo && !streakInfo.isFirstLogin && {
               streakInfo: {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
@@ -1313,7 +1509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // New user — create account from their Xbox profile
         const timestamp = Date.now().toString().slice(-6);
         const tempUsername = `temp_xbox_${xuid.substring(0, 8)}_${timestamp}`;
-        const avatarUrl = gamerpic || "/attached_assets/gamefolio social logo 3d circle web.png";
+        const avatarUrl = gamerpic || "/attached_assets/gamefolio-logo-green.png";
 
         user = await storage.createUser({
           username: tempUsername.toLowerCase(),
@@ -1363,7 +1559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ...userToReturn,
             needsOnboarding: true,
             isNewXboxUser: true,
-            ...(streakInfo && {
+            ...(streakInfo && !streakInfo.isFirstLogin && {
               streakInfo: {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
@@ -1405,7 +1601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.status(200).json({
             ...userToReturn,
             needsOnboarding,
-            ...(streakInfo && {
+            ...(streakInfo && !streakInfo.isFirstLogin && {
               streakInfo: {
                 currentStreak: streakInfo.currentStreak,
                 bonusAwarded: streakInfo.bonusAwarded,
@@ -1578,85 +1774,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ── Kick OAuth ───────────────────────────────────────────────────────────
 
   // Kick Connect — redirect to Kick OAuth authorization
-  app.get("/api/auth/kick/connect", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
-    const clientId = process.env.KICK_CLIENT_ID;
-    const clientSecret = process.env.KICK_CLIENT_SECRET;
-    if (!clientId || !clientSecret) {
-      return res.redirect("/settings?tab=platforms&kick_error=not_configured");
-    }
-    const state = randomBytes(16).toString("hex");
-    (req.session as any).kickOAuthState = state;
-    (req.session as any).kickOAuthUserId = (req.user as any).id;
-    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/kick/callback`;
-    const url = new URL("https://id.kick.com/oauth/authorize");
-    url.searchParams.set("client_id", clientId);
-    url.searchParams.set("redirect_uri", redirectUri);
-    url.searchParams.set("response_type", "code");
-    url.searchParams.set("scope", "user:read");
-    url.searchParams.set("state", state);
-    res.redirect(url.toString());
-  });
-
-  // Kick Callback — exchange code, fetch user info, save to DB
-  app.get("/api/auth/kick/callback", async (req, res) => {
-    const { code, state, error } = req.query as Record<string, string>;
-    const storedState = (req.session as any).kickOAuthState;
-    const userId = (req.session as any).kickOAuthUserId;
-    delete (req.session as any).kickOAuthState;
-    delete (req.session as any).kickOAuthUserId;
-
-    if (error) return res.redirect(`/settings?tab=platforms&kick_error=${encodeURIComponent(error)}`);
-    if (!state || state !== storedState || !userId) {
-      return res.redirect("/settings?tab=platforms&kick_error=invalid_state");
-    }
-
-    const clientId = process.env.KICK_CLIENT_ID!;
-    const clientSecret = process.env.KICK_CLIENT_SECRET!;
-    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/kick/callback`;
-
-    try {
-      // Exchange code for access token
-      const tokenRes = await fetch("https://id.kick.com/oauth/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          client_id: clientId,
-          client_secret: clientSecret,
-          code,
-          grant_type: "authorization_code",
-          redirect_uri: redirectUri,
-        }),
-      });
-      if (!tokenRes.ok) throw new Error(`Kick token exchange failed: ${tokenRes.status}`);
-      const tokenData = await tokenRes.json() as any;
-      const accessToken = tokenData.access_token;
-
-      // Fetch Kick user info
-      const userRes = await fetch("https://api.kick.com/public/v1/users/me", {
-        headers: { "Authorization": `Bearer ${accessToken}` },
-      });
-      if (!userRes.ok) throw new Error(`Kick user fetch failed: ${userRes.status}`);
-      const userData = await userRes.json() as any;
-      const kickUser = userData.data ?? userData;
-      const channelName = kickUser.username ?? kickUser.slug ?? kickUser.login;
-      const channelId = String(kickUser.id ?? kickUser.user_id ?? "");
-
-      if (!channelName) throw new Error("No Kick channel data returned");
-
-      await storage.updateUser(userId, {
-        kickChannelName: channelName,
-        kickChannelId: channelId,
-        kickVerified: true,
-        kickAccessToken: accessToken,
-      });
-
-      res.redirect("/settings?tab=platforms&kick_connected=1");
-    } catch (err: any) {
-      console.error("Kick callback error:", err);
-      res.redirect(`/settings?tab=platforms&kick_error=${encodeURIComponent(err.message || "connection_failed")}`);
-    }
-  });
+  // Kick OAuth connect/callback handled by social-oauth router (server/routes/social-oauth.ts)
+  // which includes required PKCE (code_challenge/code_challenge_method) for Kick OAuth 2.1
 
   // Kick Disconnect
   app.post("/api/auth/kick/disconnect", async (req, res) => {
@@ -1704,53 +1823,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Xbox Achievements — sync from xbl.io
+  // Xbox Achievements — sync from xbl.io. The per-user sync logic lives in
+  // server/platform-sync.ts so the daily background scheduler can reuse it.
   app.post("/api/xbox/achievements/sync", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const user = await storage.getUserById((req.user as any).id);
       if (!user) return res.status(404).json({ message: "User not found" });
-      if (!user.xboxXuid) return res.status(400).json({ message: "No Xbox account linked. Please connect your Xbox account first." });
 
-      const xblApiKey = process.env.XBL_API_KEY;
-      if (!xblApiKey) return res.status(500).json({ message: "Xbox integration is not configured" });
-
-      const axiosResponse = await axios.get(`https://xbl.io/api/v2/achievements/player/${user.xboxXuid}`, {
-        headers: {
-          'x-authorization': xblApiKey,
-          'Accept': 'application/json',
-          'Accept-Language': 'en-US',
-        },
-        validateStatus: null,
+      const result = await syncXboxForUser(user);
+      res.json({
+        achievements: result.achievements,
+        syncedAt: new Date().toISOString(),
+        gamerscore: result.gamerscore,
+        totalAchievements: result.totalAchievements,
       });
-
-      if (axiosResponse.status < 200 || axiosResponse.status >= 300) {
-        console.error("xbl.io achievements error:", axiosResponse.status, JSON.stringify(axiosResponse.data));
-        return res.status(502).json({ message: "Failed to fetch achievements from Xbox Live" });
-      }
-
-      const data = axiosResponse.data as any;
-      const allTitles = data.titles || data.achievements || data.data || [];
-      const achievements = allTitles.slice(0, 100);
-
-      // Tally true totals across ALL games before slicing
-      const totalAchievementsEarned = allTitles.reduce((sum: number, t: any) => {
-        return sum + (t.achievement?.currentAchievements ?? t.earnedAchievements ?? t.currentAchievements ?? 0);
-      }, 0);
-
-      const totalGamerscoreEarned = allTitles.reduce((sum: number, t: any) => {
-        return sum + (t.achievement?.currentGamerscore ?? t.currentGamerscore ?? 0);
-      }, 0);
-
-      await storage.updateUser(user.id, {
-        xboxAchievements: achievements,
-        xboxAchievementsLastSync: new Date(),
-        xboxTotalAchievements: totalAchievementsEarned,
-        xboxGamerscore: totalGamerscoreEarned > 0 ? totalGamerscoreEarned : null,
-      });
-
-      res.json({ achievements, syncedAt: new Date().toISOString(), gamerscore: totalGamerscoreEarned, totalAchievements: totalAchievementsEarned });
     } catch (error) {
+      if (error instanceof PlatformSyncError) {
+        return res.status(error.httpStatus).json({ message: error.message });
+      }
       console.error("Xbox achievements sync error:", error);
       res.status(500).json({ message: "Failed to sync achievements" });
     }
@@ -1772,140 +1863,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PSN helpers — store/retrieve refresh token from server_settings
-  async function getPsnRefreshToken(): Promise<string | null> {
-    try {
-      const rows = await db.select().from(serverSettings).where(eq(serverSettings.key, "psn_refresh_token"));
-      return rows[0]?.value ?? null;
-    } catch { return null; }
-  }
-
-  async function setPsnRefreshToken(token: string): Promise<void> {
-    try {
-      await db.insert(serverSettings).values({ key: "psn_refresh_token", value: token, updatedAt: new Date() })
-        .onConflictDoUpdate({ target: serverSettings.key, set: { value: token, updatedAt: new Date() } });
-    } catch (e) {
-      console.error("Failed to save PSN refresh token:", e);
-    }
-  }
-
-  // PSN Trophy Sync
+  // PSN Trophy Sync. Per-user logic + the self-renewing refresh-token handling
+  // live in server/platform-sync.ts so the daily background scheduler reuses it.
   app.post("/api/psn/trophies/sync", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const user = await storage.getUserById((req.user as any).id);
       if (!user) return res.status(404).json({ message: "User not found" });
-      if (!user.playstationUsername) return res.status(400).json({ message: "No PlayStation ID saved. Please add your PSN ID first." });
 
-      const {
-        exchangeNpssoForCode,
-        exchangeCodeForAccessToken,
-        exchangeRefreshTokenForAuthTokens,
-        getProfileFromUserName,
-        getUserPlayedGames,
-      } = await import("psn-api");
-
-      let accessToken: string;
-
-      // Try refresh token first (self-renewing — no manual rotation needed)
-      const storedRefreshToken = await getPsnRefreshToken();
-      if (storedRefreshToken) {
-        try {
-          const tokens = await exchangeRefreshTokenForAuthTokens(storedRefreshToken);
-          accessToken = tokens.accessToken;
-          // Save the new refresh token — keeps the chain alive indefinitely
-          if (tokens.refreshToken) await setPsnRefreshToken(tokens.refreshToken);
-        } catch (refreshErr: any) {
-          console.warn("PSN refresh token expired, falling back to NPSSO:", refreshErr?.message);
-          // Fall through to NPSSO below
-          accessToken = "";
-        }
-      } else {
-        accessToken = "";
-      }
-
-      // Fall back to NPSSO (one-time bootstrap)
-      if (!accessToken) {
-        const npsso = process.env.PSN_NPSSO_TOKEN;
-        if (!npsso) {
-          return res.status(503).json({
-            message: "PSN is not configured. Please add a PSN_NPSSO_TOKEN secret to get started. After the first sync, it will self-renew automatically.",
-          });
-        }
-        try {
-          const code = await exchangeNpssoForCode(npsso);
-          const tokens = await exchangeCodeForAccessToken(code);
-          accessToken = tokens.accessToken;
-          if (tokens.refreshToken) await setPsnRefreshToken(tokens.refreshToken);
-        } catch (authErr: any) {
-          console.error("PSN NPSSO auth error:", authErr?.message || authErr);
-          return res.status(503).json({ message: "Failed to authenticate with PSN. The NPSSO token may be expired — please update it in your secrets." });
-        }
-      }
-
-      let profile: any;
-      try {
-        profile = await getProfileFromUserName({ accessToken }, user.playstationUsername);
-      } catch (lookupErr: any) {
-        const msg = lookupErr?.message || "";
-        if (msg.includes("not found") || msg.includes("404") || msg.includes("2105023")) {
-          return res.status(404).json({ message: `Could not find PSN user "${user.playstationUsername}". Check the PSN ID is correct and the profile is public.` });
-        }
-        throw lookupErr;
-      }
-
-      const accountId: string = profile?.profile?.accountId;
-      if (!accountId) {
-        return res.status(404).json({ message: `Could not find PSN user "${user.playstationUsername}". Check the PSN ID is correct and the profile is public.` });
-      }
-
-      const trophySummaryData = profile?.profile?.trophySummary ?? null;
-      const trophyLevel: number | null = trophySummaryData?.level ?? null;
-      const earnedTrophies = trophySummaryData?.earnedTrophies ?? {};
-      const totalTrophies = (
-        (earnedTrophies.platinum ?? 0) +
-        (earnedTrophies.gold ?? 0) +
-        (earnedTrophies.silver ?? 0) +
-        (earnedTrophies.bronze ?? 0)
-      ) || null;
-
-      let recentGames: any[] = [];
-      try {
-        const gamesResult = await getUserPlayedGames({ accessToken }, accountId, { limit: 12, categories: "ps4_game,ps5_native_game" });
-        recentGames = gamesResult?.titles ?? [];
-      } catch (gamesErr: any) {
-        console.warn("PSN recent games unavailable:", gamesErr?.message || gamesErr);
-      }
-
-      const trophyData = {
-        earnedTrophies,
-        trophyLevel,
-        recentGames: recentGames.slice(0, 10).map((g: any) => ({
-          titleId: g.titleId,
-          name: g.name,
-          imageUrl: g.imageUrl,
-          category: g.category,
-          playCount: g.playCount,
-          lastPlayedDateTime: g.lastPlayedDateTime,
-        })),
-      };
-
-      await storage.updateUser(user.id, {
-        psnTrophyData: [trophyData],
-        psnTrophiesLastSync: new Date(),
-        psnTrophyLevel: trophyLevel,
-        psnTotalTrophies: totalTrophies,
-      });
-
+      const result = await syncPsnForUser(user);
       res.json({
         success: true,
-        trophyLevel,
-        totalTrophies,
-        earnedTrophies,
-        recentGames: trophyData.recentGames,
+        trophyLevel: result.trophyLevel,
+        totalTrophies: result.totalTrophies,
+        earnedTrophies: result.earnedTrophies,
+        recentGames: result.recentGames,
         syncedAt: new Date().toISOString(),
       });
     } catch (error: any) {
+      if (error instanceof PlatformSyncError) {
+        return res.status(error.httpStatus).json({ message: error.message });
+      }
       console.error("PSN sync error:", error?.message || error);
       res.status(500).json({ message: "Failed to fetch PSN data. Please try again later." });
     }
@@ -2156,75 +2134,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Track login time for session security
         req.session.loginTime = Date.now();
 
-        // Update user's last login time in database
-        try {
-          await storage.updateUserLoginTime(user.id, 0);
-          console.log(`✅ Updated lastLoginAt for user ${user.username} (ID: ${user.id})`);
-        } catch (error) {
-          console.error("Error updating user login time:", error);
-          // Don't fail the login if this update fails
+        // Run login-time update and streak update in parallel — no sequential waiting
+        const [, streakInfo] = await Promise.all([
+          storage.updateUserLoginTime(user.id, 0).catch((error: unknown) => {
+            console.error("Error updating user login time:", error);
+          }),
+          StreakService.updateLoginStreak(user.id).catch((error: unknown) => {
+            console.error("Error updating login streak:", error);
+            return null;
+          }),
+        ]);
+
+        if (streakInfo && streakInfo.bonusAwarded > 0) {
+          console.log(`🎉 Streak bonus for ${user.username}: ${streakInfo.message}`);
         }
 
-        // Update user's login streak and award bonus points if applicable
-        let streakInfo;
-        try {
-          streakInfo = await StreakService.updateLoginStreak(user.id);
-          if (streakInfo.bonusAwarded > 0) {
-            console.log(`🎉 Streak bonus for ${user.username}: ${streakInfo.message}`);
+        // Birthday check is fire-and-forget — never blocks the login response
+        void (async () => {
+          try {
+            const now = new Date();
+            const todayMMDD = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const currentYear = now.getFullYear();
+            if (user.birthday && user.birthday === todayMMDD && user.lastBirthdayNotificationYear !== currentYear) {
+              const notif = await storage.createNotification({
+                userId: user.id,
+                type: "birthday",
+                title: "🎂 Happy Birthday!",
+                message: `Happy Birthday, ${user.displayName}! 🎉 Wishing you an amazing day from the Gamefolio team!`,
+                fromUserId: null,
+                clipId: null,
+                screenshotId: null,
+                commentId: null,
+                metadata: null,
+                actionUrl: `/profile/${user.username}`,
+              });
+              void sendPushToUser(user.id, {
+                title: notif.title,
+                body: notif.message,
+                actionUrl: notif.actionUrl,
+                data: { notificationId: String(notif.id), type: notif.type },
+              }).catch((err: unknown) => console.warn('[routes] birthday push fan-out failed:', err));
+              await db.update(users).set({ lastBirthdayNotificationYear: currentYear }).where(eq(users.id, user.id));
+              console.log(`🎂 Birthday notification sent for ${user.username}`);
+            }
+          } catch (error) {
+            console.error("Error checking birthday:", error);
           }
-        } catch (error) {
-          console.error("Error updating login streak:", error);
-          // Don't fail the login if streak update fails
-        }
+        })();
 
-        // Check for birthday and send notification if applicable
-        try {
-          const now = new Date();
-          const todayMMDD = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-          const currentYear = now.getFullYear();
-          
-          if (user.birthday && user.birthday === todayMMDD && user.lastBirthdayNotificationYear !== currentYear) {
-            await storage.createNotification({
-              userId: user.id,
-              type: "birthday",
-              title: "🎂 Happy Birthday!",
-              message: `Happy Birthday, ${user.displayName}! 🎉 Wishing you an amazing day from the Gamefolio team!`,
-              fromUserId: null,
-              clipId: null,
-              screenshotId: null,
-              commentId: null,
-              metadata: null,
-              actionUrl: `/profile/${user.username}`,
-            });
-            await db.update(users).set({ lastBirthdayNotificationYear: currentYear }).where(eq(users.id, user.id));
-            console.log(`🎂 Birthday notification sent for ${user.username}`);
-          }
-        } catch (error) {
-          console.error("Error checking birthday:", error);
-        }
+        // Use the already-loaded user object — no extra DB round-trip needed
+        const { password, twoFactorSecret, ...userWithoutSensitive } = user;
+        console.log("Login successful for user:", user.username);
 
-        // Fetch updated user data to get the latest streak information
-        const updatedUser = await storage.getUserById(user.id);
-        const userToReturn = updatedUser || user;
-
-        // Remove password and 2FA secret from response
-        const { password, twoFactorSecret, ...userWithoutSensitive } = userToReturn;
-        console.log("Login successful for user:", userToReturn.username);
-        
         // Include streak info in response if available
-        const response = streakInfo ? {
+        const response = (streakInfo && !streakInfo.isFirstLogin) ? {
           ...userWithoutSensitive,
           streakInfo: {
             currentStreak: streakInfo.currentStreak,
             bonusAwarded: streakInfo.bonusAwarded,
             dailyXP: streakInfo.dailyXP,
-            longestStreak: userToReturn.longestStreak || 0,
+            longestStreak: user.longestStreak || 0,
             nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
             message: streakInfo.message,
             isNewMilestone: streakInfo.isNewMilestone
           }
         } : userWithoutSensitive;
-        
+
         return res.json(response);
       });
     })(req, res, next);
@@ -2439,7 +2414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const { password: _, twoFactorSecret: __, ...userWithoutSensitive } = user;
         
-        const response = streakInfo ? {
+        const response = (streakInfo && !streakInfo.isFirstLogin) ? {
           ...userWithoutSensitive,
           streakInfo: {
             currentStreak: streakInfo.currentStreak,
@@ -2461,8 +2436,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get app version for cache busting
+  // IMPORTANT: must be stable across ALL autoscale instances of the same deployment.
+  // Using Date.now() would give each instance a different hash → reload loop in production.
+  // Instead, hash the built index.html (identical on every instance for the same deploy).
   const SERVER_START_TIME = new Date().toISOString();
-  const SERVER_BUILD_HASH = Date.now().toString(36);
+  const SERVER_BUILD_HASH = (() => {
+    try {
+      const indexPath = path.join(__dirname, '../dist/public/index.html');
+      if (fs.existsSync(indexPath)) {
+        const content = fs.readFileSync(indexPath, 'utf8');
+        const crypto = require('crypto') as typeof import('crypto');
+        return crypto.createHash('sha256').update(content).digest('hex').substring(0, 12);
+      }
+    } catch {}
+    // Dev fallback: no built files exist yet — use a per-session constant so
+    // the dev server doesn't trigger reload loops on every file-save restart.
+    return process.env.npm_package_version ?? Date.now().toString(36);
+  })();
   
   app.get("/api/version", (req, res) => {
     try {
@@ -2484,285 +2474,210 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current user (supports guest access)
   app.get("/api/user", optionalHybridAuth, async (req, res) => {
     if (!req.user) {
-      // Return null for guest users instead of 401 error
       return res.json(null);
     }
 
-    // Update streak when user accesses the app (daily check-in)
     try {
-      const streakInfo = await StreakService.updateLoginStreak((req.user as any).id);
-      if (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0) {
-        console.log(`🎉 Daily check-in for ${(req.user as any).username}: ${streakInfo.message}`);
-      }
-      
-      // Fetch fresh user data after streak update
       const freshUser = await storage.getUserById((req.user as any).id);
       if (freshUser) {
-        const { password, ...userWithoutPassword } = freshUser as any;
+        const { password, ...u } = freshUser as any;
+        if (u.username === 'busyguy') {
+          u.userType = null;
+          u.ageRange = null;
+        }
         return res.json({
-          id: userWithoutPassword.id,
-          username: userWithoutPassword.username,
-          email: userWithoutPassword.email,
-          emailVerified: userWithoutPassword.emailVerified || false,
-          profilePictureUrl: userWithoutPassword.profilePictureUrl,
-          bio: userWithoutPassword.bio,
-          bannerUrl: userWithoutPassword.bannerUrl,
-          displayName: userWithoutPassword.displayName,
-          backgroundColor: userWithoutPassword.backgroundColor,
-          accentColor: userWithoutPassword.accentColor,
-          avatarUrl: userWithoutPassword.avatarUrl,
-          createdAt: userWithoutPassword.createdAt,
-          userType: userWithoutPassword.userType,
-          ageRange: userWithoutPassword.ageRange,
-          role: userWithoutPassword.role,
-          isAdmin: userWithoutPassword.isAdmin || false,
-          messagingEnabled: userWithoutPassword.messagingEnabled || false,
-          isPrivate: userWithoutPassword.isPrivate || false,
-          currentStreak: userWithoutPassword.currentStreak || 0,
-          longestStreak: userWithoutPassword.longestStreak || 0,
-          level: userWithoutPassword.level || 1,
-          totalXP: userWithoutPassword.totalXP || 0,
-          isPro: userWithoutPassword.isPro || false,
-          walletAddress: userWithoutPassword.walletAddress || null,
-          walletChain: userWithoutPassword.walletChain || null,
-          gfTokenBalance: userWithoutPassword.gfTokenBalance || 0,
-          steamUsername: userWithoutPassword.steamUsername || null,
-          xboxUsername: userWithoutPassword.xboxUsername || null,
-          xboxXuid: userWithoutPassword.xboxXuid || null,
-          showXboxAchievements: userWithoutPassword.showXboxAchievements || false,
-          xboxAchievements: userWithoutPassword.xboxAchievements || null,
-          xboxAchievementsLastSync: userWithoutPassword.xboxAchievementsLastSync || null,
-          xboxGamerscore: userWithoutPassword.xboxGamerscore || null,
-          xboxTotalAchievements: userWithoutPassword.xboxTotalAchievements || null,
-          playstationUsername: userWithoutPassword.playstationUsername || null,
-          psnTrophyData: userWithoutPassword.psnTrophyData || null,
-          psnTrophiesLastSync: userWithoutPassword.psnTrophiesLastSync || null,
-          showPsnTrophies: userWithoutPassword.showPsnTrophies || false,
-          psnTrophyLevel: userWithoutPassword.psnTrophyLevel || null,
-          psnTotalTrophies: userWithoutPassword.psnTotalTrophies || null,
-          discordUsername: userWithoutPassword.discordUsername || null,
-          epicUsername: userWithoutPassword.epicUsername || null,
-          nintendoUsername: userWithoutPassword.nintendoUsername || null,
-          twitterUsername: userWithoutPassword.twitterUsername || null,
-          youtubeUsername: userWithoutPassword.youtubeUsername || null,
-          nftProfileTokenId: userWithoutPassword.nftProfileTokenId || null,
-          nftProfileImageUrl: userWithoutPassword.nftProfileImageUrl || null,
-          activeProfilePicType: userWithoutPassword.activeProfilePicType || 'upload',
-          proSubscriptionType: userWithoutPassword.proSubscriptionType || null,
-          proSubscriptionEndDate: userWithoutPassword.proSubscriptionEndDate || null,
-          profileFont: userWithoutPassword.profileFont || 'default',
-          profileFontEffect: userWithoutPassword.profileFontEffect || 'none',
-          profileFontAnimation: userWithoutPassword.profileFontAnimation || 'none',
-          profileFontColor: userWithoutPassword.profileFontColor || '#FFFFFF',
-          cardColor: userWithoutPassword.cardColor || '#1E3A8A',
-          primaryColor: userWithoutPassword.primaryColor || '#02172C',
-          avatarBorderColor: userWithoutPassword.avatarBorderColor || '#4ADE80',
-          hideBanner: userWithoutPassword.hideBanner || false,
-          statsGlassEffect: userWithoutPassword.statsGlassEffect || false,
-          profileBackgroundGradient: userWithoutPassword.profileBackgroundGradient !== false,
-          profileBackgroundType: userWithoutPassword.profileBackgroundType || 'solid',
-          profileBackgroundTheme: userWithoutPassword.profileBackgroundTheme || 'default',
-          profileBackgroundAnimation: userWithoutPassword.profileBackgroundAnimation || 'none',
-          profileBackgroundImageUrl: userWithoutPassword.profileBackgroundImageUrl || '',
-          profileBackgroundPositionX: userWithoutPassword.profileBackgroundPositionX || '50',
-          profileBackgroundPositionY: userWithoutPassword.profileBackgroundPositionY || '50',
-          profileBackgroundZoom: userWithoutPassword.profileBackgroundZoom || '100',
-          profileBackgroundDesktopX: userWithoutPassword.profileBackgroundDesktopX || '50',
-          profileBackgroundDesktopY: userWithoutPassword.profileBackgroundDesktopY || '50',
-          profileBackgroundDesktopZoom: userWithoutPassword.profileBackgroundDesktopZoom || '100',
-          layoutStyle: userWithoutPassword.layoutStyle || 'grid',
-          showUserType: userWithoutPassword.showUserType !== false,
-          selectedAvatarBorderId: userWithoutPassword.selectedAvatarBorderId || null,
-          selectedNameTagId: userWithoutPassword.selectedNameTagId || null,
-          selectedVerificationBadgeId: userWithoutPassword.selectedVerificationBadgeId || null,
-          canMintNfts: userWithoutPassword.canMintNfts || false,
-          canSellNfts: userWithoutPassword.canSellNfts || false,
-          isStreamer: userWithoutPassword.isStreamer || false,
-          streamPlatform: userWithoutPassword.streamPlatform || null,
-          streamChannelName: userWithoutPassword.streamChannelName || null,
-          twitchChannelName: userWithoutPassword.twitchChannelName || null,
-          twitchVerified: userWithoutPassword.twitchVerified || false,
-          twitchUserId: userWithoutPassword.twitchUserId || null,
-          kickChannelName: userWithoutPassword.kickChannelName || null,
-          kickVerified: userWithoutPassword.kickVerified || false,
-          kickId: userWithoutPassword.kickId || null,
-          showLiveOverlay: userWithoutPassword.showLiveOverlay || false,
-          liveEnabled: userWithoutPassword.liveEnabled || false,
-          referralCode: userWithoutPassword.referralCode || null,
-          referredBy: userWithoutPassword.referredBy || null,
-          ...(streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0 ? { streakInfo } : {}),
+          id: u.id,
+          username: u.username,
+          email: u.email,
+          emailVerified: u.emailVerified || false,
+          profilePictureUrl: u.profilePictureUrl,
+          bio: u.bio,
+          bannerUrl: u.bannerUrl,
+          displayName: u.displayName,
+          backgroundColor: u.backgroundColor,
+          accentColor: u.accentColor,
+          avatarUrl: u.avatarUrl,
+          createdAt: u.createdAt,
+          userType: u.userType,
+          ageRange: u.ageRange,
+          role: u.role,
+          isAdmin: u.isAdmin || false,
+          messagingEnabled: u.messagingEnabled || false,
+          isPrivate: u.isPrivate || false,
+          currentStreak: u.currentStreak || 0,
+          longestStreak: u.longestStreak || 0,
+          level: u.level || 1,
+          totalXP: u.totalXP || 0,
+          isPro: u.isPro || false,
+          walletAddress: u.walletAddress || null,
+          walletChain: u.walletChain || null,
+          gfTokenBalance: u.gfTokenBalance || 0,
+          steamUsername: u.steamUsername || null,
+          xboxUsername: u.xboxUsername || null,
+          xboxXuid: u.xboxXuid || null,
+          showXboxAchievements: u.showXboxAchievements || false,
+          xboxAchievements: u.xboxAchievements || null,
+          xboxAchievementsLastSync: u.xboxAchievementsLastSync || null,
+          xboxGamerscore: u.xboxGamerscore || null,
+          xboxTotalAchievements: u.xboxTotalAchievements || null,
+          playstationUsername: u.playstationUsername || null,
+          psnTrophyData: u.psnTrophyData || null,
+          psnTrophiesLastSync: u.psnTrophiesLastSync || null,
+          showPsnTrophies: u.showPsnTrophies || false,
+          psnTrophyLevel: u.psnTrophyLevel || null,
+          psnTotalTrophies: u.psnTotalTrophies || null,
+          discordUsername: u.discordUsername || null,
+          epicUsername: u.epicUsername || null,
+          nintendoUsername: u.nintendoUsername || null,
+          twitterUsername: u.twitterUsername || null,
+          youtubeUsername: u.youtubeUsername || null,
+          rumbleUsername: u.rumbleUsername || null,
+          nftProfileTokenId: u.nftProfileTokenId || null,
+          nftProfileImageUrl: u.nftProfileImageUrl || null,
+          activeProfilePicType: u.activeProfilePicType || 'upload',
+          proSubscriptionType: u.proSubscriptionType || null,
+          proSubscriptionEndDate: u.proSubscriptionEndDate || null,
+          profileFont: u.profileFont || 'default',
+          profileFontEffect: u.profileFontEffect || 'none',
+          profileFontAnimation: u.profileFontAnimation || 'none',
+          profileFontColor: u.profileFontColor || '#FFFFFF',
+          cardColor: u.cardColor || '#1E3A8A',
+          primaryColor: u.primaryColor || '#02172C',
+          avatarBorderColor: u.avatarBorderColor || '#4ADE80',
+          hideBanner: u.hideBanner || false,
+          statsGlassEffect: u.statsGlassEffect || false,
+          profileBackgroundGradient: u.profileBackgroundGradient !== false,
+          profileBackgroundType: u.profileBackgroundType || 'solid',
+          profileBackgroundTheme: u.profileBackgroundTheme || 'default',
+          profileBackgroundAnimation: u.profileBackgroundAnimation || 'none',
+          profileBackgroundImageUrl: u.profileBackgroundImageUrl || '',
+          profileBackgroundPositionX: u.profileBackgroundPositionX || '50',
+          profileBackgroundPositionY: u.profileBackgroundPositionY || '50',
+          profileBackgroundZoom: u.profileBackgroundZoom || '100',
+          profileBackgroundDesktopX: u.profileBackgroundDesktopX || '50',
+          profileBackgroundDesktopY: u.profileBackgroundDesktopY || '50',
+          profileBackgroundDesktopZoom: u.profileBackgroundDesktopZoom || '100',
+          layoutStyle: u.layoutStyle || 'grid',
+          showUserType: u.showUserType !== false,
+          selectedAvatarBorderId: u.selectedAvatarBorderId || null,
+          selectedNameTagId: u.selectedNameTagId || null,
+          selectedVerificationBadgeId: u.selectedVerificationBadgeId || null,
+          canMintNfts: u.canMintNfts || false,
+          canSellNfts: u.canSellNfts || false,
+          isStreamer: u.isStreamer || false,
+          streamPlatform: u.streamPlatform || null,
+          streamChannelName: u.streamChannelName || null,
+          twitchChannelName: u.twitchChannelName || null,
+          twitchVerified: u.twitchVerified || false,
+          twitchUserId: u.twitchUserId || null,
+          kickChannelName: u.kickChannelName || null,
+          kickVerified: u.kickVerified || false,
+          kickId: u.kickId || null,
+          showLiveOverlay: u.showLiveOverlay || false,
+          liveEnabled: u.liveEnabled || false,
+          referralCode: u.referralCode || null,
+          referredBy: u.referredBy || null,
         });
       }
     } catch (error) {
-      console.error("Error updating daily check-in streak:", error);
-    }
-
-    // Fallback: always try to fetch fresh user data from DB even if streak failed
-    try {
-      const fallbackUser = await storage.getUserById((req.user as any).id);
-      if (fallbackUser) {
-        const { password: pw, ...fallbackWithoutPassword } = fallbackUser as any;
-        return res.json({
-          id: fallbackWithoutPassword.id,
-          username: fallbackWithoutPassword.username,
-          email: fallbackWithoutPassword.email,
-          emailVerified: fallbackWithoutPassword.emailVerified || false,
-          profilePictureUrl: fallbackWithoutPassword.profilePictureUrl,
-          bio: fallbackWithoutPassword.bio,
-          bannerUrl: fallbackWithoutPassword.bannerUrl,
-          displayName: fallbackWithoutPassword.displayName,
-          backgroundColor: fallbackWithoutPassword.backgroundColor,
-          accentColor: fallbackWithoutPassword.accentColor,
-          avatarUrl: fallbackWithoutPassword.avatarUrl,
-          createdAt: fallbackWithoutPassword.createdAt,
-          userType: fallbackWithoutPassword.userType,
-          ageRange: fallbackWithoutPassword.ageRange,
-          role: fallbackWithoutPassword.role,
-          isAdmin: fallbackWithoutPassword.isAdmin || false,
-          messagingEnabled: fallbackWithoutPassword.messagingEnabled || false,
-          isPrivate: fallbackWithoutPassword.isPrivate || false,
-          currentStreak: fallbackWithoutPassword.currentStreak || 0,
-          longestStreak: fallbackWithoutPassword.longestStreak || 0,
-          level: fallbackWithoutPassword.level || 1,
-          totalXP: fallbackWithoutPassword.totalXP || 0,
-          isPro: fallbackWithoutPassword.isPro || false,
-          walletAddress: fallbackWithoutPassword.walletAddress || null,
-          walletChain: fallbackWithoutPassword.walletChain || null,
-          gfTokenBalance: fallbackWithoutPassword.gfTokenBalance || 0,
-          steamUsername: fallbackWithoutPassword.steamUsername || null,
-          xboxUsername: fallbackWithoutPassword.xboxUsername || null,
-          xboxXuid: fallbackWithoutPassword.xboxXuid || null,
-          showXboxAchievements: fallbackWithoutPassword.showXboxAchievements || false,
-          xboxAchievements: fallbackWithoutPassword.xboxAchievements || null,
-          xboxAchievementsLastSync: fallbackWithoutPassword.xboxAchievementsLastSync || null,
-          playstationUsername: fallbackWithoutPassword.playstationUsername || null,
-          psnTrophyData: fallbackWithoutPassword.psnTrophyData || null,
-          psnTrophiesLastSync: fallbackWithoutPassword.psnTrophiesLastSync || null,
-          showPsnTrophies: fallbackWithoutPassword.showPsnTrophies || false,
-          psnTrophyLevel: fallbackWithoutPassword.psnTrophyLevel || null,
-          psnTotalTrophies: fallbackWithoutPassword.psnTotalTrophies || null,
-          discordUsername: fallbackWithoutPassword.discordUsername || null,
-          epicUsername: fallbackWithoutPassword.epicUsername || null,
-          nintendoUsername: fallbackWithoutPassword.nintendoUsername || null,
-          twitterUsername: fallbackWithoutPassword.twitterUsername || null,
-          youtubeUsername: fallbackWithoutPassword.youtubeUsername || null,
-          nftProfileTokenId: fallbackWithoutPassword.nftProfileTokenId || null,
-          nftProfileImageUrl: fallbackWithoutPassword.nftProfileImageUrl || null,
-          activeProfilePicType: fallbackWithoutPassword.activeProfilePicType || 'upload',
-          proSubscriptionType: fallbackWithoutPassword.proSubscriptionType || null,
-          proSubscriptionEndDate: fallbackWithoutPassword.proSubscriptionEndDate || null,
-          profileFont: fallbackWithoutPassword.profileFont || 'default',
-          profileFontEffect: fallbackWithoutPassword.profileFontEffect || 'none',
-          profileFontAnimation: fallbackWithoutPassword.profileFontAnimation || 'none',
-          profileFontColor: fallbackWithoutPassword.profileFontColor || '#FFFFFF',
-          cardColor: fallbackWithoutPassword.cardColor || '#1E3A8A',
-          primaryColor: fallbackWithoutPassword.primaryColor || '#02172C',
-          avatarBorderColor: fallbackWithoutPassword.avatarBorderColor || '#4ADE80',
-          hideBanner: fallbackWithoutPassword.hideBanner || false,
-          statsGlassEffect: fallbackWithoutPassword.statsGlassEffect || false,
-          profileBackgroundGradient: fallbackWithoutPassword.profileBackgroundGradient !== false,
-          profileBackgroundType: fallbackWithoutPassword.profileBackgroundType || 'solid',
-          profileBackgroundTheme: fallbackWithoutPassword.profileBackgroundTheme || 'default',
-          profileBackgroundAnimation: fallbackWithoutPassword.profileBackgroundAnimation || 'none',
-          profileBackgroundImageUrl: fallbackWithoutPassword.profileBackgroundImageUrl || '',
-          profileBackgroundPositionX: fallbackWithoutPassword.profileBackgroundPositionX || '50',
-          profileBackgroundPositionY: fallbackWithoutPassword.profileBackgroundPositionY || '50',
-          profileBackgroundZoom: fallbackWithoutPassword.profileBackgroundZoom || '100',
-          profileBackgroundDesktopX: fallbackWithoutPassword.profileBackgroundDesktopX || '50',
-          profileBackgroundDesktopY: fallbackWithoutPassword.profileBackgroundDesktopY || '50',
-          profileBackgroundDesktopZoom: fallbackWithoutPassword.profileBackgroundDesktopZoom || '100',
-          layoutStyle: fallbackWithoutPassword.layoutStyle || 'grid',
-          showUserType: fallbackWithoutPassword.showUserType !== false,
-          selectedAvatarBorderId: fallbackWithoutPassword.selectedAvatarBorderId || null,
-          selectedNameTagId: fallbackWithoutPassword.selectedNameTagId || null,
-          selectedVerificationBadgeId: fallbackWithoutPassword.selectedVerificationBadgeId || null,
-          canMintNfts: fallbackWithoutPassword.canMintNfts || false,
-          canSellNfts: fallbackWithoutPassword.canSellNfts || false,
-          isStreamer: fallbackWithoutPassword.isStreamer || false,
-          streamPlatform: fallbackWithoutPassword.streamPlatform || null,
-          streamChannelName: fallbackWithoutPassword.streamChannelName || null,
-          twitchChannelName: fallbackWithoutPassword.twitchChannelName || null,
-          twitchVerified: fallbackWithoutPassword.twitchVerified || false,
-          twitchUserId: fallbackWithoutPassword.twitchUserId || null,
-          kickChannelName: fallbackWithoutPassword.kickChannelName || null,
-          kickVerified: fallbackWithoutPassword.kickVerified || false,
-          kickId: fallbackWithoutPassword.kickId || null,
-          showLiveOverlay: fallbackWithoutPassword.showLiveOverlay || false,
-          liveEnabled: fallbackWithoutPassword.liveEnabled || false,
-          referralCode: fallbackWithoutPassword.referralCode || null,
-          referredBy: fallbackWithoutPassword.referredBy || null,
-        });
-      }
-    } catch (fallbackError) {
-      console.error("Error fetching fresh user data in fallback:", fallbackError);
+      console.error("Error fetching user data:", error);
     }
 
     // Last resort: use session data
-    const { password, ...userWithoutPassword } = req.user as any;
+    const { password, ...u } = req.user as any;
     return res.json({
-      id: userWithoutPassword.id,
-      username: userWithoutPassword.username,
-      email: userWithoutPassword.email,
-      emailVerified: userWithoutPassword.emailVerified || false,
-      profilePictureUrl: userWithoutPassword.profilePictureUrl,
-      bio: userWithoutPassword.bio,
-      bannerUrl: userWithoutPassword.bannerUrl,
-      displayName: userWithoutPassword.displayName,
-      backgroundColor: userWithoutPassword.backgroundColor,
-      accentColor: userWithoutPassword.accentColor,
-      avatarUrl: userWithoutPassword.avatarUrl,
-      createdAt: userWithoutPassword.createdAt,
-      userType: userWithoutPassword.userType,
-      ageRange: userWithoutPassword.ageRange,
-      role: userWithoutPassword.role,
-      isAdmin: userWithoutPassword.isAdmin || false,
-      messagingEnabled: userWithoutPassword.messagingEnabled || false,
-      isPrivate: userWithoutPassword.isPrivate || false,
-      currentStreak: userWithoutPassword.currentStreak || 0,
-      longestStreak: userWithoutPassword.longestStreak || 0,
-      level: userWithoutPassword.level || 1,
-      totalXP: userWithoutPassword.totalXP || 0,
-      isPro: userWithoutPassword.isPro || false,
-      walletAddress: userWithoutPassword.walletAddress || null,
-      walletChain: userWithoutPassword.walletChain || null,
-      gfTokenBalance: userWithoutPassword.gfTokenBalance || 0,
-      steamUsername: userWithoutPassword.steamUsername || null,
-      xboxUsername: userWithoutPassword.xboxUsername || null,
-      xboxXuid: userWithoutPassword.xboxXuid || null,
-      showXboxAchievements: userWithoutPassword.showXboxAchievements || false,
-      xboxAchievements: userWithoutPassword.xboxAchievements || null,
-      xboxAchievementsLastSync: userWithoutPassword.xboxAchievementsLastSync || null,
-      xboxGamerscore: userWithoutPassword.xboxGamerscore || null,
-      xboxTotalAchievements: userWithoutPassword.xboxTotalAchievements || null,
-      playstationUsername: userWithoutPassword.playstationUsername || null,
-      discordUsername: userWithoutPassword.discordUsername || null,
-      epicUsername: userWithoutPassword.epicUsername || null,
-      nintendoUsername: userWithoutPassword.nintendoUsername || null,
-      twitterUsername: userWithoutPassword.twitterUsername || null,
-      youtubeUsername: userWithoutPassword.youtubeUsername || null,
-      nftProfileTokenId: userWithoutPassword.nftProfileTokenId || null,
-      nftProfileImageUrl: userWithoutPassword.nftProfileImageUrl || null,
-      activeProfilePicType: userWithoutPassword.activeProfilePicType || 'upload',
-      proSubscriptionType: userWithoutPassword.proSubscriptionType || null,
-      proSubscriptionEndDate: userWithoutPassword.proSubscriptionEndDate || null,
-      profileFont: userWithoutPassword.profileFont || 'default',
-      profileFontEffect: userWithoutPassword.profileFontEffect || 'none',
-      profileFontAnimation: userWithoutPassword.profileFontAnimation || 'none',
-      canMintNfts: userWithoutPassword.canMintNfts || false,
-      canSellNfts: userWithoutPassword.canSellNfts || false,
-      isStreamer: userWithoutPassword.isStreamer || false,
-      streamPlatform: userWithoutPassword.streamPlatform || null,
-      twitchChannelName: userWithoutPassword.twitchChannelName || null,
-      twitchVerified: userWithoutPassword.twitchVerified || false,
-      kickChannelName: userWithoutPassword.kickChannelName || null,
-      kickVerified: userWithoutPassword.kickVerified || false,
-      liveEnabled: userWithoutPassword.liveEnabled || false,
+      id: u.id,
+      username: u.username,
+      email: u.email,
+      emailVerified: u.emailVerified || false,
+      profilePictureUrl: u.profilePictureUrl,
+      bio: u.bio,
+      bannerUrl: u.bannerUrl,
+      displayName: u.displayName,
+      backgroundColor: u.backgroundColor,
+      accentColor: u.accentColor,
+      avatarUrl: u.avatarUrl,
+      createdAt: u.createdAt,
+      userType: u.userType,
+      ageRange: u.ageRange,
+      role: u.role,
+      isAdmin: u.isAdmin || false,
+      messagingEnabled: u.messagingEnabled || false,
+      isPrivate: u.isPrivate || false,
+      currentStreak: u.currentStreak || 0,
+      longestStreak: u.longestStreak || 0,
+      level: u.level || 1,
+      totalXP: u.totalXP || 0,
+      isPro: u.isPro || false,
+      walletAddress: u.walletAddress || null,
+      walletChain: u.walletChain || null,
+      gfTokenBalance: u.gfTokenBalance || 0,
+      steamUsername: u.steamUsername || null,
+      xboxUsername: u.xboxUsername || null,
+      xboxXuid: u.xboxXuid || null,
+      showXboxAchievements: u.showXboxAchievements || false,
+      xboxAchievements: u.xboxAchievements || null,
+      xboxAchievementsLastSync: u.xboxAchievementsLastSync || null,
+      xboxGamerscore: u.xboxGamerscore || null,
+      xboxTotalAchievements: u.xboxTotalAchievements || null,
+      playstationUsername: u.playstationUsername || null,
+      discordUsername: u.discordUsername || null,
+      epicUsername: u.epicUsername || null,
+      nintendoUsername: u.nintendoUsername || null,
+      twitterUsername: u.twitterUsername || null,
+      youtubeUsername: u.youtubeUsername || null,
+      rumbleUsername: u.rumbleUsername || null,
+      nftProfileTokenId: u.nftProfileTokenId || null,
+      nftProfileImageUrl: u.nftProfileImageUrl || null,
+      activeProfilePicType: u.activeProfilePicType || 'upload',
+      proSubscriptionType: u.proSubscriptionType || null,
+      proSubscriptionEndDate: u.proSubscriptionEndDate || null,
+      profileFont: u.profileFont || 'default',
+      profileFontEffect: u.profileFontEffect || 'none',
+      profileFontAnimation: u.profileFontAnimation || 'none',
+      canMintNfts: u.canMintNfts || false,
+      canSellNfts: u.canSellNfts || false,
+      isStreamer: u.isStreamer || false,
+      streamPlatform: u.streamPlatform || null,
+      twitchChannelName: u.twitchChannelName || null,
+      twitchVerified: u.twitchVerified || false,
+      kickChannelName: u.kickChannelName || null,
+      kickVerified: u.kickVerified || false,
+      liveEnabled: u.liveEnabled || false,
     });
   });
 
   // ==========================================
   // Referral Stats Endpoint
   // ==========================================
+
+  // Run migration to ensure the referral_code_customized column exists
+  (async () => {
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code_customized BOOLEAN NOT NULL DEFAULT false`);
+    } catch (err) {
+      // Column already exists or other harmless error
+    }
+  })();
+
+  // Run migration to ensure the is_partner column exists
+  (async () => {
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_partner BOOLEAN NOT NULL DEFAULT false`);
+    } catch (err) {
+      // Column already exists or other harmless error
+    }
+  })();
+
+  // Run migration to ensure portrait outro column exists
+  (async () => {
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS outro_video_path_portrait TEXT`);
+    } catch (err) {
+      // Column already exists or other harmless error
+    }
+  })();
+
   app.get("/api/user/referral-stats", authMiddleware, async (req, res) => {
     try {
       const userId = (req.user as any).id;
@@ -2772,11 +2687,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         referralCode: stats.referralCode,
         referralCount: stats.referralCount,
         totalXpEarned: stats.totalXpEarned,
+        referralCodeCustomized: stats.referralCodeCustomized,
         referralLink: stats.referralCode ? `${appUrl}/auth?ref=${stats.referralCode}` : null,
       });
     } catch (error) {
       console.error('Error fetching referral stats:', error);
       return res.status(500).json({ message: 'Failed to fetch referral stats' });
+    }
+  });
+
+  app.post("/api/user/referral-code/customize", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const { code } = req.body;
+
+      if (!code || typeof code !== 'string') {
+        return res.status(400).json({ message: 'Referral code is required' });
+      }
+
+      const trimmed = code.trim().toUpperCase();
+
+      // Validate length (max 16 chars, min 3)
+      if (trimmed.length < 3 || trimmed.length > 16) {
+        return res.status(400).json({ message: 'Referral code must be between 3 and 16 characters' });
+      }
+
+      // Validate characters — alphanumeric only
+      if (!/^[A-Z0-9]+$/.test(trimmed)) {
+        return res.status(400).json({ message: 'Referral code can only contain letters and numbers' });
+      }
+
+      // Block reserved brand names
+      const RESERVED_CODES = ['GAMEFOLIO', 'ADMIN', 'SUPPORT', 'STAFF', 'MODERATOR', 'MOD', 'OFFICIAL'];
+      if (RESERVED_CODES.includes(trimmed)) {
+        return res.status(400).json({ message: 'That referral code is reserved and cannot be used. Please choose another.' });
+      }
+
+      // Profanity check using the content filter service
+      const { contentFilterService } = await import('./services/content-filter');
+      const isProfane = await contentFilterService.isProfane(trimmed);
+      if (isProfane) {
+        return res.status(400).json({ message: 'Referral code contains inappropriate language. Please choose another.' });
+      }
+
+      const result = await storage.customizeReferralCode(userId, trimmed);
+      if (!result.success) {
+        return res.status(400).json({ message: result.message });
+      }
+
+      return res.json({ message: result.message });
+    } catch (error) {
+      console.error('Error customizing referral code:', error);
+      return res.status(500).json({ message: 'Failed to customize referral code' });
     }
   });
 
@@ -3173,6 +3135,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper to sign all Supabase URLs in clip objects (thumbnails, videos, avatars)
+  // Short-lived in-memory cache for trending feeds (DB query + signed URLs).
+  // Keyed by route+normalized-params+user. Bounded LRU so user-controlled
+  // query params can't blow up memory.
+  const TRENDING_CACHE_TTL_MS = 30_000;
+  const TRENDING_CACHE_MAX_ENTRIES = 500;
+  // Map preserves insertion order — re-inserting on hit gives us LRU semantics.
+  const trendingCache = new Map<string, { expires: number; data: any }>();
+  const trendingInflight = new Map<string, Promise<any>>();
+
+  async function getCachedTrending<T>(key: string, loader: () => Promise<T>): Promise<T> {
+    const now = Date.now();
+    const hit = trendingCache.get(key);
+    if (hit && hit.expires > now) {
+      // LRU bump
+      trendingCache.delete(key);
+      trendingCache.set(key, hit);
+      return hit.data as T;
+    }
+    if (hit) trendingCache.delete(key);
+
+    const existing = trendingInflight.get(key);
+    if (existing) return existing as Promise<T>;
+
+    const promise = (async () => {
+      try {
+        const data = await loader();
+        trendingCache.set(key, { expires: Date.now() + TRENDING_CACHE_TTL_MS, data });
+        // Evict oldest entries when over capacity (insertion-order iteration).
+        while (trendingCache.size > TRENDING_CACHE_MAX_ENTRIES) {
+          const oldest = trendingCache.keys().next().value;
+          if (oldest === undefined) break;
+          trendingCache.delete(oldest);
+        }
+        return data;
+      } finally {
+        trendingInflight.delete(key);
+      }
+    })();
+    trendingInflight.set(key, promise);
+    return promise;
+  }
+
+  // Normalize trending query params so semantically-equivalent queries
+  // ("10" vs "010" vs missing gameId) collapse to one cache key.
+  function trendingCacheKey(
+    route: string,
+    period: unknown,
+    limit: unknown,
+    gameId: unknown,
+    currentUserId: number | undefined,
+  ): string {
+    const allowedPeriods = new Set(['all', 'recent', 'day', 'week', 'month', 'year']);
+    const periodStr = typeof period === 'string' && allowedPeriods.has(period) ? period : 'all';
+    const parsedLimit = Math.max(1, Math.min(50, parseInt(String(limit ?? '10'), 10) || 10));
+    const parsedGameId = gameId !== undefined && gameId !== '' && !Number.isNaN(parseInt(String(gameId), 10))
+      ? parseInt(String(gameId), 10)
+      : '';
+    return `${route}:${periodStr}:${parsedLimit}:${parsedGameId}:${currentUserId ?? 'guest'}`;
+  }
+
+  // Evict all trending cache entries whose key starts with a given route prefix.
+  function invalidateTrendingByRoute(routePrefix: string) {
+    for (const k of trendingCache.keys()) {
+      if (k.startsWith(routePrefix + ':') || k === routePrefix) {
+        trendingCache.delete(k);
+      }
+    }
+  }
+
+  // Periodic eviction so the cache doesn't grow without bound
+  setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of trendingCache) {
+      if (v.expires <= now) trendingCache.delete(k);
+    }
+  }, 60_000).unref?.();
+
   async function signClipUrls<T extends { thumbnailUrl?: string | null; videoUrl?: string | null; user?: { avatarUrl?: string | null } | null }>(clips: T[]): Promise<T[]> {
     return Promise.all(
       clips.map(async (clip) => {
@@ -3224,7 +3263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all-time points leaderboard endpoint
   app.get("/api/leaderboard", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(req.query.limit as string) || 100;
       const leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
@@ -3236,7 +3275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Monthly leaderboard routes
   app.get("/api/leaderboard/monthly/current", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(req.query.limit as string) || 100;
       const leaderboardData = await LeaderboardService.getCurrentMonthLeaderboard(limit);
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
@@ -3247,7 +3286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/leaderboard/monthly/previous", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(req.query.limit as string) || 100;
       const leaderboardData = await LeaderboardService.getPreviousMonthLeaderboard(limit);
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
@@ -3259,7 +3298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Weekly leaderboard routes
   app.get("/api/leaderboard/weekly/current", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(req.query.limit as string) || 100;
       const leaderboardData = await LeaderboardService.getCurrentWeekLeaderboard(limit);
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
@@ -3270,12 +3309,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/leaderboard/weekly/previous", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(req.query.limit as string) || 100;
       const leaderboardData = await LeaderboardService.getPreviousWeekLeaderboard(limit);
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
       console.error("Error fetching previous week leaderboard:", error);
       res.status(500).json({ message: "Error fetching previous week leaderboard" });
+    }
+  });
+
+  // Trending Gamefolios - enriched creator cards ordered by recent upload activity
+  app.get("/api/trending-gamefolios", async (req, res) => {
+    try {
+      const period = (req.query.period as string) || 'week';
+      const limit = Math.min(parseInt(req.query.limit as string) || 10, 20);
+
+      let leaderboardData: Array<{ userId: number; uploadsCount: number; totalPoints: number; rank?: number; user: any }>;
+      if (period === 'month') {
+        leaderboardData = await LeaderboardService.getCurrentMonthLeaderboard(limit);
+      } else if (period === 'week') {
+        leaderboardData = await LeaderboardService.getCurrentWeekLeaderboard(limit);
+      } else {
+        leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
+      }
+
+      if (!leaderboardData || leaderboardData.length === 0) {
+        return res.json([]);
+      }
+
+      const userIds = leaderboardData.map(e => e.userId);
+
+      // Batch: clips count per user (non-reel)
+      const clipRows = await db
+        .select({ userId: clips.userId, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+        .from(clips)
+        .where(and(inArray(clips.userId, userIds), eq(clips.videoType, 'clip')))
+        .groupBy(clips.userId);
+
+      // Batch: reels count per user
+      const reelRows = await db
+        .select({ userId: clips.userId, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+        .from(clips)
+        .where(and(inArray(clips.userId, userIds), eq(clips.videoType, 'reel')))
+        .groupBy(clips.userId);
+
+      // Batch: screenshots count per user
+      const ssRows = await db
+        .select({ userId: screenshots.userId, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+        .from(screenshots)
+        .where(inArray(screenshots.userId, userIds))
+        .groupBy(screenshots.userId);
+
+      // Batch: followers count per user
+      const followerRows = await db
+        .select({ userId: follows.followingId, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+        .from(follows)
+        .where(inArray(follows.followingId, userIds))
+        .groupBy(follows.followingId);
+
+      const clipsMap: Record<number, number> = Object.fromEntries(clipRows.map(r => [r.userId, r.count]));
+      const reelsMap: Record<number, number> = Object.fromEntries(reelRows.map(r => [r.userId, r.count]));
+      const ssMap: Record<number, number> = Object.fromEntries(ssRows.map(r => [r.userId, r.count]));
+      const followerMap: Record<number, number> = Object.fromEntries(followerRows.map(r => [r.userId, r.count]));
+
+      const enriched = await Promise.all(
+        leaderboardData.map(async (entry, index) => {
+          let userData = { ...entry.user };
+          for (const field of SENSITIVE_USER_FIELDS) {
+            delete (userData as Record<string, unknown>)[field];
+          }
+          if (userData.avatarUrl && userData.avatarUrl.includes('supabase.co/storage')) {
+            const signed = await supabaseStorage.convertToSignedUrl(userData.avatarUrl, 3600);
+            if (signed) userData.avatarUrl = signed;
+          }
+          if (userData.bannerUrl && userData.bannerUrl.includes('supabase.co/storage')) {
+            const signed = await supabaseStorage.convertToSignedUrl(userData.bannerUrl, 3600);
+            if (signed) userData.bannerUrl = signed;
+          }
+          return {
+            userId: entry.userId,
+            rank: (entry.rank ?? index + 1),
+            uploadsCount: entry.uploadsCount,
+            totalPoints: entry.totalPoints,
+            user: userData,
+            clipsCount: clipsMap[entry.userId] || 0,
+            reelsCount: reelsMap[entry.userId] || 0,
+            screenshotsCount: ssMap[entry.userId] || 0,
+            followersCount: followerMap[entry.userId] || 0,
+          };
+        })
+      );
+
+      res.json(enriched);
+    } catch (error) {
+      console.error("Error fetching trending gamefolios:", error);
+      res.status(500).json({ message: "Error fetching trending gamefolios" });
     }
   });
 
@@ -3507,6 +3635,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching daily activity:", error);
       res.status(500).json({ message: "Error fetching daily activity" });
+    }
+  });
+
+  // Admin: Export every clip / reel / screenshot to a CSV the admin can
+  // download. Three columns: title, page URL, username. URLs are hard-coded
+  // to the prod host so the export is useful even when run from a dev/preview
+  // environment.
+  app.get("/api/admin/export-content", adminMiddleware, async (_req, res) => {
+    try {
+      const BASE_URL = "https://app.gamefolio.com";
+
+      const clipRows = await db
+        .select({
+          id: clips.id,
+          title: clips.title,
+          videoType: clips.videoType,
+          username: users.username,
+        })
+        .from(clips)
+        .leftJoin(users, eq(clips.userId, users.id))
+        .orderBy(desc(clips.createdAt));
+
+      const screenshotRows = await db
+        .select({
+          id: screenshots.id,
+          title: screenshots.title,
+          shareCode: screenshots.shareCode,
+          username: users.username,
+        })
+        .from(screenshots)
+        .leftJoin(users, eq(screenshots.userId, users.id))
+        .orderBy(desc(screenshots.createdAt));
+
+      const escape = (v: string | null | undefined): string => {
+        if (v == null) return "";
+        const s = String(v);
+        return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+
+      const lines: string[] = ["Title,URL,Username"];
+
+      for (const r of clipRows) {
+        const slug = r.videoType === "reel" ? "reel" : "clip";
+        const url = `${BASE_URL}/${slug}/${r.id}`;
+        lines.push(`${escape(r.title)},${escape(url)},${escape(r.username)}`);
+      }
+
+      for (const r of screenshotRows) {
+        const code = r.shareCode ?? String(r.id);
+        const url = r.username
+          ? `${BASE_URL}/@${r.username}/screenshot/${code}`
+          : "";
+        lines.push(`${escape(r.title)},${escape(url)},${escape(r.username)}`);
+      }
+
+      const csv = lines.join("\r\n") + "\r\n";
+      const stamp = new Date().toISOString().slice(0, 10);
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="gamefolio-content-${stamp}.csv"`,
+      );
+      res.send(csv);
+    } catch (err) {
+      console.error("Error exporting content:", err);
+      res.status(500).json({ message: "Failed to export content" });
     }
   });
 
@@ -3753,7 +3947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get all clips and screenshots
       const allClips = await storage.getAllClips();
-      const allScreenshots = await storage.getAllScreenshots();
+      const allScreenshots = await storage.getAllScreenshots(undefined, undefined, true);
       
       let clipPointsAwarded = 0;
       let screenshotPointsAwarded = 0;
@@ -3883,6 +4077,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "ACCESS_RESTRICTED", redirect: "/" });
       }
 
+      // Hidden "Mac the cat" easter-egg profile (synthetic, not a DB row).
+      // The one-time XP bonus is granted separately via POST /api/mac/discover.
+      if (requestedUsername.toLowerCase() === "mac") {
+        return res.json(getMacUserWithStats());
+      }
+
       // Support demo user lookup
       if (req.params.username === "demo") {
         const demoUser = await storage.getUserWithStats(999);
@@ -3904,6 +4104,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check privacy controls for private profiles
       const requesterId = req.user?.id;
       const isOwnProfile = requesterId === user.id;
+      const isAdmin = (req.user as any)?.role === 'admin' || (req.user as any)?.role === 'moderator';
+
+      // Hide suspended/banned accounts from non-admins
+      if ((user.status === 'suspended' || user.status === 'banned') && !isAdmin) {
+        // Account owner should see a clear suspension/ban message, not a 404
+        if (isOwnProfile) {
+          const reason = user.bannedReason || (user.status === 'banned' ? 'Violation of community guidelines' : 'Account temporarily suspended');
+          if (user.status === 'banned') {
+            return res.status(403).json({ 
+              message: "ACCOUNT_BANNED", 
+              reason,
+              status: 'banned'
+            });
+          } else {
+            return res.status(403).json({ 
+              message: "ACCOUNT_SUSPENDED", 
+              reason,
+              status: 'suspended'
+            });
+          }
+        }
+        return res.status(404).json({ message: "User not found" });
+      }
 
       if (user.isPrivate && !isOwnProfile && requesterId) {
         const isFollowing = await storage.isFollowing(requesterId, user.id);
@@ -4248,13 +4471,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // OG thumbnail with play button overlay for clips/reels
-  app.get('/api/og-thumbnail/:shareCode', async (req: Request, res: Response) => {
+  app.get('/api/og-thumbnail/:identifier', async (req: Request, res: Response) => {
     try {
-      const { shareCode } = req.params;
-      console.log(`🎬 Generating OG thumbnail with play button for shareCode: ${shareCode}`);
-      
-      // Try to find the clip by share code
-      const clip = await storage.getClipByShareCode(shareCode);
+      const { identifier } = req.params;
+      console.log(`🎬 Generating OG thumbnail with play button for: ${identifier}`);
+
+      // Accept both share codes and numeric clip IDs so every clip has a
+      // stable, non-expiring og:image URL regardless of whether it has a shareCode.
+      let clip = await storage.getClipByShareCode(identifier);
+      if (!clip) {
+        const numericId = parseInt(identifier, 10);
+        if (!isNaN(numericId)) {
+          clip = await storage.getClip(numericId);
+        }
+      }
       if (!clip) {
         return res.status(404).json({ error: 'Clip not found' });
       }
@@ -4270,14 +4500,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const thumbnailWithPlayButton = await addPlayButtonOverlay(fullClip.thumbnailUrl);
         res.setHeader('Content-Type', 'image/jpeg');
         res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day (signed URLs)
-        console.log(`✅ OG thumbnail with play button generated for ${shareCode}`);
+        console.log(`✅ OG thumbnail with play button generated for ${identifier}`);
         return res.send(thumbnailWithPlayButton);
       } catch (overlayErr) {
         // Sharp/fetch failed — gracefully redirect to a freshly-signed thumbnail
         // so social crawlers still get a valid image instead of a 500.
         // Only redirect if target is on the trusted Supabase storage host to
         // prevent this endpoint from becoming an open-redirect sink.
-        console.warn(`⚠️ Play button overlay failed for ${shareCode}, falling back to raw thumbnail`);
+        console.warn(`⚠️ Play button overlay failed for ${identifier}, falling back to raw thumbnail`);
         const fresh = await refreshSupabaseSignedUrl(fullClip.thumbnailUrl);
         const supabaseHost = (() => {
           try { return new URL(process.env.SUPABASE_URL || '').host; } catch { return ''; }
@@ -4288,16 +4518,457 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.setHeader('Cache-Control', 'public, max-age=300'); // short cache on fallback
           return res.redirect(302, fresh);
         }
-        // Untrusted/invalid target — serve a transparent placeholder (200) instead
-        // of redirecting, so og:image is still a valid response.
-        return res.status(200)
-          .setHeader('Content-Type', 'image/svg+xml')
-          .setHeader('Cache-Control', 'public, max-age=60')
-          .send('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><rect width="1200" height="630" fill="#0a0a0a"/></svg>');
+        // Untrusted/invalid target — serve a solid-black JPEG placeholder (200)
+        // instead of redirecting. X/Twitter rejects SVG og:image responses, so
+        // we must return a proper JPEG here.
+        try {
+          const placeholderJpeg = await sharp({
+            create: { width: 1200, height: 630, channels: 3, background: { r: 10, g: 10, b: 10 } }
+          }).jpeg({ quality: 80 }).toBuffer();
+          return res.status(200)
+            .setHeader('Content-Type', 'image/jpeg')
+            .setHeader('Cache-Control', 'public, max-age=60')
+            .send(placeholderJpeg);
+        } catch {
+          // If sharp also fails, 404 is safer than serving unsupported SVG to X
+          return res.status(404).json({ error: 'Thumbnail not available' });
+        }
       }
     } catch (error) {
       console.error('Error generating OG thumbnail with play button:', error);
       res.status(500).json({ error: 'Failed to generate thumbnail' });
+    }
+  });
+
+  // Stable OG video proxy — lets Telegram (and other messengers) stream the clip
+  // in-app without an expiring Supabase signed URL in the og:video tag.
+  app.get('/api/og-video/:identifier', async (req: Request, res: Response) => {
+    try {
+      const { identifier } = req.params;
+
+      let clip = await storage.getClipByShareCode(identifier);
+      if (!clip) {
+        const numericId = parseInt(identifier, 10);
+        if (!isNaN(numericId)) clip = await storage.getClip(numericId);
+      }
+      if (!clip || !clip.videoUrl) return res.status(404).json({ error: 'Clip not found' });
+
+      const { refreshSupabaseSignedUrl } = await import('./og-thumbnail');
+      const freshUrl = await refreshSupabaseSignedUrl(clip.videoUrl, 60 * 60 * 4);
+
+      // Forward Range header so seekable/partial-content playback works in Telegram
+      const fetchHeaders: Record<string, string> = {};
+      if (req.headers['range']) fetchHeaders['Range'] = req.headers['range'] as string;
+
+      const videoResponse = await fetch(freshUrl, { headers: fetchHeaders });
+      if (!videoResponse.ok && videoResponse.status !== 206) {
+        return res.status(502).json({ error: 'Video source unavailable' });
+      }
+
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+
+      const contentLength = videoResponse.headers.get('content-length');
+      const contentRange = videoResponse.headers.get('content-range');
+      if (contentLength) res.setHeader('Content-Length', contentLength);
+      if (contentRange) res.setHeader('Content-Range', contentRange);
+
+      res.status(videoResponse.status === 206 ? 206 : 200);
+
+      const { Readable } = await import('stream');
+      const nodeStream = Readable.fromWeb(videoResponse.body as any);
+      nodeStream.pipe(res);
+    } catch (error) {
+      console.error('OG video proxy error:', error);
+      if (!res.headersSent) res.status(500).json({ error: 'Failed to proxy video' });
+    }
+  });
+
+  // OG image proxy for screenshots — re-signs Supabase URL on every request so
+  // social crawlers always get a valid, non-expiring image URL
+  app.get('/api/og-screenshot/:idOrShareCode', async (req: Request, res: Response) => {
+    try {
+      const { idOrShareCode } = req.params;
+
+      let screenshot: any = null;
+      const parsedId = parseInt(idOrShareCode);
+
+      if (!isNaN(parsedId)) {
+        screenshot = await storage.getScreenshot(parsedId);
+      }
+      if (!screenshot) {
+        screenshot = await storage.getScreenshotByShareCode(idOrShareCode);
+      }
+
+      if (!screenshot) {
+        return res.status(404).json({ error: 'Screenshot not found' });
+      }
+
+      const rawImageUrl = screenshot.thumbnailUrl || screenshot.imageUrl;
+      if (!rawImageUrl) {
+        return res.status(404).json({ error: 'Screenshot image not found' });
+      }
+
+      // Re-sign the Supabase storage URL so the token never expires for crawlers
+      const freshUrl = await refreshSupabaseSignedUrl(rawImageUrl, 60 * 60 * 24 * 7);
+
+      // Proxy the image bytes directly — avoids any expiring tokens in the final og:image URL
+      const imgResponse = await fetch(freshUrl);
+      if (!imgResponse.ok) {
+        return res.status(502).json({ error: 'Failed to fetch screenshot image' });
+      }
+
+      const contentType = imgResponse.headers.get('content-type') || 'image/jpeg';
+      const buffer = Buffer.from(await imgResponse.arrayBuffer());
+
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day cache for bots
+      return res.send(buffer);
+    } catch (error) {
+      console.error('Error serving OG screenshot image:', error);
+      res.status(500).json({ error: 'Failed to serve screenshot image' });
+    }
+  });
+
+  // Download clip with Gamefolio watermark — logo + username, TikTok-style
+  // Return a short-lived signed URL for direct download (fallback when FFmpeg watermark fails)
+  app.get('/api/clips/:id/download-url', optionalHybridAuth, async (req: Request, res: Response) => {
+    try {
+      const clipId = parseInt(req.params.id);
+      if (isNaN(clipId)) return res.status(400).json({ error: 'Invalid clip ID' });
+
+      const clip = await storage.getClipWithUser(clipId);
+      if (!clip || !clip.videoUrl) return res.status(404).json({ error: 'Clip not found' });
+
+      if (clip.userId && !(await checkMediaOwnerAccess(clip.userId, req, res))) return;
+
+      const freshUrl = await refreshSupabaseSignedUrl(clip.videoUrl, 60 * 60); // 1-hour signed URL
+      const safeTitle = (clip.title || 'video').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 60);
+
+      // Notify the clip owner (fire-and-forget)
+      const downloaderId = (req as any).user?.id;
+      NotificationService.createDownloadNotification(clipId, downloaderId).catch(() => {});
+
+      res.json({ url: freshUrl, filename: `${safeTitle}_gamefolio.mp4` });
+    } catch (error) {
+      console.error('Download URL error:', error);
+      res.status(500).json({ error: 'Failed to get download URL' });
+    }
+  });
+
+  app.get('/api/clips/:id/download', optionalHybridAuth, async (req: Request, res: Response) => {
+    try {
+      const clipId = parseInt(req.params.id);
+      if (isNaN(clipId)) return res.status(400).json({ error: 'Invalid clip ID' });
+
+      const clip = await storage.getClipWithUser(clipId);
+      if (!clip || !clip.videoUrl) return res.status(404).json({ error: 'Clip not found' });
+
+      if (clip.userId && !(await checkMediaOwnerAccess(clip.userId, req, res))) return;
+
+      // Re-sign the Supabase URL so it's fresh
+      const freshUrl = await refreshSupabaseSignedUrl(clip.videoUrl);
+
+      // Validate the URL is accessible before starting FFmpeg (avoids mid-stream failures)
+      try {
+        const probe = await fetch(freshUrl, { method: 'HEAD' });
+        if (!probe.ok) {
+          return res.status(502).json({ error: 'Video source unavailable, please try again.' });
+        }
+      } catch {
+        return res.status(502).json({ error: 'Video source unreachable, please try again.' });
+      }
+
+      // Sanitise text for ffmpeg drawtext filter
+      const safe = (s: string) =>
+        s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/:/g, '\\:').replace(/[[\]]/g, '');
+      const usernameText = safe(`@${clip.user.username}`);
+      const gameText = clip.game?.name ? safe(clip.game.name) : '';
+      // Top line: username, bottom line: game (if present)
+      const watermarkLine1 = usernameText;
+      const watermarkLine2 = gameText || safe('gamefolio.gg');
+
+      const safeTitle = (clip.title || 'clip').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 60);
+
+      // Notify the clip owner (fire-and-forget)
+      const downloaderId = (req as any).user?.id;
+      const isOwner = Number(downloaderId) === Number(clip.userId);
+      NotificationService.createDownloadNotification(clipId, downloaderId).catch(() => {});
+
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}_gamefolio.mp4"`);
+      res.setHeader('Cache-Control', 'private, no-cache');
+      // Explicitly remove Content-Length — response is chunked/streaming; a stale
+      // Content-Length from any upstream proxy causes "Content-Length exceeds body" errors.
+      res.removeHeader('Content-Length');
+      res.setHeader('Transfer-Encoding', 'chunked');
+
+      const logoPath = path.join(process.cwd(), 'client', 'public', 'attached_assets', 'gamefolio-logo-green.png');
+      const fs = await import('fs');
+      const logoExists = fs.existsSync(logoPath);
+
+      // ── Step 1: Probe clip for dimensions + audio (needed before outro selection) ──
+      let clipHasAudio = false;
+      let clipW = 1280;
+      let clipH = 720;
+      {
+        const probeData = await new Promise<any>((resolve) => {
+          (ffmpeg as any).ffprobe(freshUrl, (err: any, data: any) => resolve(err ? null : data));
+        });
+        if (probeData?.streams) {
+          clipHasAudio = probeData.streams.some((s: any) => s.codec_type === 'audio');
+          const vs = probeData.streams.find((s: any) => s.codec_type === 'video');
+          if (vs?.width && vs?.height) { clipW = vs.width; clipH = vs.height; }
+        }
+      }
+
+      // Determine clip orientation — portrait (9:16) or landscape (16:9)
+      const clipIsPortrait = clipH > clipW;
+      const outroFormat: 'portrait' | 'landscape' = clipIsPortrait ? 'portrait' : 'landscape';
+
+      // ── Step 2: Resolve the owner's pre-generated outro (owner downloads only) ──
+      // Non-owners receive the watermarked clip with no outro appended.
+      // If the owner has not yet generated an outro, skip silently (fail-open).
+      // The outro generator now outputs 1080×1080 (square) regardless of orientation;
+      // the scaler below handles letterbox/pillarbox to match the clip dimensions.
+      // We always use outroVideoPath as the canonical path, falling back to
+      // outroVideoPathPortrait only for users who stored an older portrait-specific outro.
+      let outroSignedUrl: string | null = null;
+      if (isOwner) {
+        try {
+          const clipOwner = await storage.getUser(clip.userId!);
+          if (clipOwner) {
+            const cachedPath = clipOwner.outroVideoPath ?? clipOwner.outroVideoPathPortrait ?? null;
+
+            if (cachedPath) {
+              outroSignedUrl = await supabaseStorage.getSignedUrl(cachedPath, 3600);
+              console.log(`[outro] Using outro for user ${clip.userId}`);
+            } else {
+              console.log(`[outro] No outro found for user ${clip.userId} — downloading clip without outro`);
+            }
+          } else {
+            console.warn(`[outro] Could not find clip owner (userId=${clip.userId})`);
+          }
+        } catch (outroErr: any) {
+          console.error('[outro] Failed to resolve outro (non-fatal):', outroErr?.message ?? outroErr);
+        }
+      }
+
+      // Probe outro for audio stream — cached outros generated before audio support may lack it
+      let outroHasAudio = false;
+      if (outroSignedUrl) {
+        const outroProbe = await new Promise<any>((resolve) => {
+          (ffmpeg as any).ffprobe(outroSignedUrl, (err: any, data: any) => resolve(err ? null : data));
+        });
+        if (outroProbe?.streams) {
+          outroHasAudio = outroProbe.streams.some((s: any) => s.codec_type === 'audio');
+        }
+      }
+
+      // Audio concat is only safe when BOTH the clip AND the outro have audio streams
+      const concatWithAudio = clipHasAudio && outroHasAudio;
+
+      // ── Build watermark filters ──────────────────────────────────────────
+      const sgFont = path.join(process.cwd(), 'server', 'assets', 'fonts', 'SpaceGrotesk-Bold.ttf');
+      const line1Filter =
+        `drawtext=text='${watermarkLine1}':fontfile='${sgFont}':fontsize=38:fontcolor=white@0.95:` +
+        `x=W-tw-20:y=H-th-56:shadowcolor=black@0.75:shadowx=2:shadowy=2`;
+      const line2Filter =
+        `drawtext=text='${watermarkLine2}':fontfile='${sgFont}':fontsize=26:fontcolor=white@0.80:` +
+        `x=W-tw-20:y=H-th-20:shadowcolor=black@0.55:shadowx=1:shadowy=1`;
+
+      const sharedOutputOptions = [
+        '-c:v', 'libx264',
+        '-c:a', 'copy',
+        '-preset', 'ultrafast',
+        '-crf', '24',
+        '-pix_fmt', 'yuv420p',
+        '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
+        '-threads', '0',
+      ];
+
+      // Shared output options for outro branches (codec + container settings)
+      const outroBaseOpts = [
+        '-preset', 'ultrafast', '-crf', '24', '-pix_fmt', 'yuv420p',
+        '-movflags', 'frag_keyframe+empty_moov+default_base_moof', '-threads', '0',
+      ];
+
+      // Scale outro to clip's exact dimensions, letter/pillarbox to preserve aspect ratio
+      const outroScaleFilter =
+        `scale=${clipW}:${clipH}:force_original_aspect_ratio=decrease,` +
+        `pad=${clipW}:${clipH}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=fps=30`;
+
+      if (logoExists && outroSignedUrl) {
+        // Watermark + outro concat
+        // Inputs: 0=clip, 1=logo, 2=outro (outro has audio baked in)
+        const audioFilters = concatWithAudio ? [
+          '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+          `[2:v]${outroScaleFilter}[outro_n]`,
+          '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
+          '[2:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
+          '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
+        ] : [
+          '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+          `[2:v]${outroScaleFilter}[outro_n]`,
+          '[clip_n][outro_n]concat=n=2:v=1:a=0[outv]',
+        ];
+        const outroMapOpts = concatWithAudio
+          ? ['-map', '[outv]', '-map', '[outa]', '-c:v', 'libx264', '-c:a', 'aac', '-ar', '44100', ...outroBaseOpts]
+          : ['-map', '[outv]', '-c:v', 'libx264', '-an', ...outroBaseOpts];
+        const command = (ffmpeg as any)()
+          .input(freshUrl)
+          .input(logoPath)
+          .input(outroSignedUrl)
+          .complexFilter([
+            '[1:v]scale=-1:72[logo]',
+            '[0:v][logo]overlay=x=W-w-20:y=H-h-102[wl]',
+            `[wl]${line1Filter}[wl2]`,
+            `[wl2]${line2Filter}[clip_wm]`,
+            ...audioFilters,
+          ])
+          .outputOptions(outroMapOpts)
+          .format('mp4');
+
+        command.on('error', (err: Error) => {
+          console.error('FFmpeg watermark+outro error:', err.message);
+          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
+        });
+        command.pipe(res, { end: true });
+
+      } else if (logoExists) {
+        // Watermark only (existing behaviour)
+        const command = (ffmpeg as any)()
+          .input(freshUrl)
+          .input(logoPath)
+          .complexFilter([
+            '[1:v]scale=-1:72[logo]',
+            '[0:v][logo]overlay=x=W-w-20:y=H-h-102[wl]',
+            `[wl]${line1Filter}[wl2]`,
+            `[wl2]${line2Filter}[out]`,
+          ])
+          .outputOptions(['-map', '[out]', '-map', '0:a?', ...sharedOutputOptions])
+          .format('mp4');
+
+        command.on('error', (err: Error) => {
+          console.error('FFmpeg watermark error:', err.message);
+          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
+        });
+        command.pipe(res, { end: true });
+
+      } else if (outroSignedUrl) {
+        // Text watermark + outro concat (no logo)
+        // Inputs: 0=clip, 1=outro (outro has audio baked in)
+        const audioFilters2 = concatWithAudio ? [
+          '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+          `[1:v]${outroScaleFilter}[outro_n]`,
+          '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
+          '[1:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
+          '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
+        ] : [
+          '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+          `[1:v]${outroScaleFilter}[outro_n]`,
+          '[clip_n][outro_n]concat=n=2:v=1:a=0[outv]',
+        ];
+        const outroMapOpts2 = concatWithAudio
+          ? ['-map', '[outv]', '-map', '[outa]', '-c:v', 'libx264', '-c:a', 'aac', '-ar', '44100', ...outroBaseOpts]
+          : ['-map', '[outv]', '-c:v', 'libx264', '-an', ...outroBaseOpts];
+        const command = (ffmpeg as any)()
+          .input(freshUrl)
+          .input(outroSignedUrl)
+          .complexFilter([
+            `[0:v]${line1Filter}[wl]`,
+            `[wl]${line2Filter}[clip_wm]`,
+            ...audioFilters2,
+          ])
+          .outputOptions(outroMapOpts2)
+          .format('mp4');
+
+        command.on('error', (err: Error) => {
+          console.error('FFmpeg text-watermark+outro error:', err.message);
+          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
+        });
+        command.pipe(res, { end: true });
+
+      } else {
+        // Fallback: text-only watermark (no logo, no outro)
+        const drawtextFilter =
+          `drawtext=text='${watermarkLine1}':fontsize=38:fontcolor=white@0.92:` +
+          `x=w-tw-20:y=h-th-56:shadowcolor=black@0.75:shadowx=2:shadowy=2:` +
+          `box=1:boxcolor=black@0.38:boxborderw=10,` +
+          `drawtext=text='${watermarkLine2}':fontsize=26:fontcolor=white@0.80:` +
+          `x=w-tw-20:y=h-th-20:shadowcolor=black@0.55:shadowx=1:shadowy=1:` +
+          `box=1:boxcolor=black@0.38:boxborderw=8`;
+
+        const command = (ffmpeg as any)(freshUrl)
+          .videoFilters(drawtextFilter)
+          .audioCodec('copy')
+          .videoCodec('libx264')
+          .outputOptions([
+            '-preset ultrafast',
+            '-crf 24',
+            '-pix_fmt yuv420p',
+            '-movflags frag_keyframe+empty_moov+default_base_moof',
+            '-threads 0',
+          ])
+          .format('mp4');
+
+        command.on('error', (err: Error) => {
+          console.error('FFmpeg watermark error:', err.message);
+          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
+        });
+        command.pipe(res, { end: true });
+      }
+    } catch (error) {
+      console.error('Download clip error:', error);
+      if (!res.headersSent) res.status(500).json({ error: 'Failed to download clip' });
+    }
+  });
+
+  // ── Outro video endpoints ─────────────────────────────────────────────────
+
+  // GET /api/users/me/outro — return a signed URL for the current user's outro
+  app.get('/api/users/me/outro', hybridAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+
+      const user = await storage.getUser(userId);
+      if (!user?.outroVideoPath) return res.json({ url: null });
+
+      const signedUrl = await supabaseStorage.getSignedUrl(user.outroVideoPath, 60 * 60 * 2);
+      res.json({ url: signedUrl });
+    } catch (err) {
+      console.error('GET outro error:', err);
+      res.status(500).json({ error: 'Failed to get outro' });
+    }
+  });
+
+  // POST /api/users/me/outro — generate (or regenerate) the user's outro video
+  app.post('/api/users/me/outro', hybridAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+
+      console.log(`🎬 Generating outro for user ${user.username} (${userId})`);
+
+      const { VideoProcessor } = await import('./video-processor');
+      const buffer = await VideoProcessor.generateOutroVideo(user.username, userId);
+
+      const storagePath = `outros/${userId}.mp4`;
+      await supabaseStorage.uploadBufferToFixedPath(buffer, storagePath, 'video/mp4');
+
+      await db.update(users).set({ outroVideoPath: storagePath }).where(eq(users.id, userId));
+
+      const signedUrl = await supabaseStorage.getSignedUrl(storagePath, 60 * 60 * 2);
+      console.log(`✅ Outro generated and stored for user ${userId}`);
+      res.json({ url: signedUrl });
+    } catch (err) {
+      console.error('POST outro error:', err);
+      res.status(500).json({ error: 'Failed to generate outro' });
     }
   });
 
@@ -4356,7 +5027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "hideBanner", "statsGlassEffect", "profileBackgroundGradient",
         "steamUsername", "xboxUsername", "playstationUsername",
         "discordUsername", "epicUsername", "twitchUsername", "youtubeUsername",
-        "twitterUsername", "instagramUsername", "facebookUsername", "nintendoUsername",
+        "twitterUsername", "instagramUsername", "facebookUsername", "nintendoUsername", "rumbleUsername",
         "streamPlatform", "streamChannelName", "showLiveOverlay",
       ]);
       const safeBody = Object.fromEntries(
@@ -4366,6 +5037,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Prevent the onboarding test account from ever completing onboarding
       if (req.user?.email === 'onboarding@gamefolio.com') {
         delete safeBody.userType;
+      }
+
+      // Testing override: busyguy always sees onboarding on startup
+      if ((req.user as any)?.username === 'busyguy') {
+        delete safeBody.userType;
+        delete safeBody.ageRange;
       }
 
       // Handle demo user separately
@@ -4397,7 +5074,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload avatar
-  app.post("/api/upload/avatar", authMiddleware, upload.single("avatar"), async (req, res) => {
+  app.post("/api/upload/avatar", emailVerificationMiddleware, upload.single("avatar"), async (req, res) => {
     try {
       console.log('Avatar upload request received');
       console.log('User authenticated:', req.isAuthenticated());
@@ -4428,20 +5105,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .jpeg({ quality: 85 })
           .toBuffer();
 
-        // For demo user, save to attached_assets directory
-        const avatarFileName = `demo_avatar_${Date.now()}.jpg`;
-        const avatarPath = path.join('attached_assets', avatarFileName);
-
-        // Ensure attached_assets directory exists
-        const attachedAssetsDir = path.join(process.cwd(), 'attached_assets');
-        if (!fs.existsSync(attachedAssetsDir)) {
-          fs.mkdirSync(attachedAssetsDir, { recursive: true });
-        }
-
-        // Write the processed avatar
-        await fsPromises.writeFile(path.join(process.cwd(), avatarPath), avatarBuffer);
-
-        const avatarUrl = `/attached_assets/${avatarFileName}`;
+        // Store via the same Supabase path real avatars use — no more
+        // writing into attached_assets/ (that dir is gitignored and no
+        // longer publicly served).
+        const fileName = `demo_avatar_${Date.now()}.jpg`;
+        const { url: avatarUrl } = await supabaseStorage.uploadBuffer(
+          avatarBuffer,
+          fileName,
+          'image/jpeg',
+          'image',
+          userId
+        );
 
         // Update demo user's avatar in storage
         await storage.updateUser(userId, { avatarUrl });
@@ -4547,8 +5221,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { username } = req.params;
 
-      if (!username || username.length < 3) {
-        return res.status(400).json({ available: false, message: "Username must be at least 3 characters" });
+      if (!username || username.length < 4) {
+        return res.status(400).json({ available: false, message: "Username must be at least 4 characters" });
       }
 
       const existingUser = await storage.getUserByUsername(username);
@@ -4567,7 +5241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload profile image
-  app.post("/api/users/:id/profile-image", authMiddleware, upload.single("profileImage"), async (req, res) => {
+  app.post("/api/users/:id/profile-image", emailVerificationMiddleware, upload.single("profileImage"), async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
 
@@ -4876,6 +5550,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get screenshot by ID
+  // NOTE: /latest and /share/:shareCode must be registered BEFORE /:id to avoid being captured as an id param
+  app.get("/api/screenshots/latest", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const gameId = req.query.gameId ? parseInt(req.query.gameId as string) : undefined;
+      const screenshotsResult = await storage.getLatestScreenshots(limit, gameId);
+      res.json(screenshotsResult);
+    } catch (err) {
+      console.error("Error fetching latest screenshots:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/screenshots/:id", async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
@@ -4888,11 +5575,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Screenshot not found" });
       }
 
-      // Get user data for the screenshot
+      if (!(await checkMediaOwnerAccess(screenshot.userId, req, res))) return;
+
+      // Get user data for the screenshot (safe public fields only)
       const user = await storage.getUser(screenshot.userId);
       if (user) {
-        const { password, ...userWithoutPassword } = user;
-        screenshot.user = userWithoutPassword;
+        screenshot.user = toPublicUser(user) as any;
       }
 
       res.json(screenshot);
@@ -4915,11 +5603,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Screenshot not found" });
       }
 
-      // Get user data for the screenshot
+      if (!(await checkMediaOwnerAccess(screenshot.userId, req, res))) return;
+
+      // Get user data for the screenshot (safe public fields only)
       const user = await storage.getUser(screenshot.userId);
       if (user) {
-        const { password, ...userWithoutPassword } = user;
-        screenshot.user = userWithoutPassword;
+        screenshot.user = toPublicUser(user) as any;
       }
 
       res.json(screenshot);
@@ -5009,25 +5698,251 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Clip Routes
   // ==========================================
 
-  // Get recent clip uploads for activity banner
+  // Get latest clips sorted purely by upload date (newest first)
+  app.get("/api/clips/latest", async (req, res) => {
+    try {
+      const { limit = '50', period, gameId } = req.query;
+      const currentUserId = (req.user as any)?.id;
+
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+
+      let since: Date | undefined;
+      const now = new Date();
+      if (period === '1d') since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      else if (period === '1w') since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      else if (period === 'ever') since = undefined;
+
+      const latestClips = await storage.getLatestClips(
+        parseInt(limit as string) || 50,
+        since,
+        gameId ? parseInt(gameId as string) : undefined,
+        currentUserId
+      );
+      const signed = await signClipUrls(latestClips);
+      res.json(signed);
+    } catch (err) {
+      console.error('Error fetching latest clips:', err);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // Get recent uploads (clips, reels, screenshots) for activity banner
   app.get("/api/recent-uploads", async (req, res) => {
     try {
-      const limit = 15;
-      const clips = await storage.getAllClips(limit, 0);
-      
-      const recentUploads = clips
-        .filter(clip => clip.user && clip.title)
-        .map(clip => ({
-          clipId: clip.id,
-          username: clip.user.username,
-          clipTitle: clip.title,
-          uploadedAt: clip.createdAt,
+      const limit = 8;
+      const [clips, reels, screenshots] = await Promise.all([
+        storage.getAllClips(limit, 0),
+        storage.getLatestReels(limit),
+        storage.getLatestScreenshots(limit),
+      ]);
+
+      const items: Array<{
+        id: number;
+        contentType: 'clip' | 'reel' | 'screenshot';
+        username: string;
+        displayName: string;
+        title: string;
+        uploadedAt: Date | null;
+        thumbnailUrl?: string | null;
+      }> = [];
+
+      clips
+        .filter(c => !c.isReel && c.user && c.title)
+        .forEach(c => items.push({
+          id: c.id,
+          contentType: 'clip',
+          username: c.user.username,
+          displayName: c.user.displayName || c.user.username,
+          title: c.title,
+          uploadedAt: c.createdAt,
+          thumbnailUrl: c.thumbnailUrl,
         }));
-      
-      res.json(recentUploads);
+
+      reels
+        .filter(r => r.user && r.title)
+        .forEach(r => items.push({
+          id: r.id,
+          contentType: 'reel',
+          username: r.user.username,
+          displayName: r.user.displayName || r.user.username,
+          title: r.title,
+          uploadedAt: r.createdAt,
+          thumbnailUrl: r.thumbnailUrl,
+        }));
+
+      screenshots
+        .filter(s => s.user && s.title)
+        .forEach(s => items.push({
+          id: s.id,
+          contentType: 'screenshot',
+          username: s.user.username,
+          displayName: (s.user as any).displayName || s.user.username,
+          title: s.title,
+          uploadedAt: (s as any).createdAt || null,
+          thumbnailUrl: s.imageUrl || (s as any).thumbnailUrl,
+        }));
+
+      items.sort((a, b) => {
+        const ta = a.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
+        const tb = b.uploadedAt ? new Date(b.uploadedAt).getTime() : 0;
+        return tb - ta;
+      });
+
+      res.json(items.slice(0, 24));
     } catch (err) {
       console.error("Error fetching recent uploads:", err);
       return res.status(500).json({ message: "Error fetching recent uploads" });
+    }
+  });
+
+  // Get ecosystem activity feed (recent uploads + trending creators)
+  app.get("/api/activity-feed", async (req, res) => {
+    try {
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const currentYear = now.getFullYear();
+
+      // Fetch all real data sources in parallel
+      // Dates are expressed as SQL intervals (no JS Date binding) to avoid postgres.js serialisation issues
+      const [xpRows, streakRows, leaderboardRows, followRows] = await Promise.all([
+        // Recent meaningful XP gains (not "view" — too noisy), last 7 days
+        db.execute(sql`
+          SELECT xh.id, xh.user_id, xh.xp_amount, xh.source, xh.created_at,
+                 u.username, u.display_name
+          FROM user_xp_history xh
+          JOIN users u ON u.id = xh.user_id
+          WHERE xh.source IN ('upload','daily_login','like_received','fire_received','welcome_bonus','other')
+            AND xh.created_at >= NOW() - INTERVAL '7 days'
+            AND xh.xp_amount > 0
+            AND u.status = 'active'
+          ORDER BY xh.created_at DESC
+          LIMIT 20
+        `),
+
+        // Users with an active streak of 2+ days
+        db.execute(sql`
+          SELECT id, username, display_name, current_streak
+          FROM users
+          WHERE current_streak >= 2
+            AND status = 'active'
+            AND hide_from_leaderboard = false
+          ORDER BY current_streak DESC
+          LIMIT 10
+        `),
+
+        // Current month leaderboard top 8 (rank > 0, total_points > 0)
+        db.execute(sql`
+          SELECT ml.user_id, ml.rank, ml.total_points, ml.uploads_count,
+                 u.username, u.display_name
+          FROM monthly_leaderboard ml
+          JOIN users u ON u.id = ml.user_id
+          WHERE ml.month = ${currentMonth}
+            AND ml.year = ${currentYear}
+            AND ml.rank > 0
+            AND ml.total_points > 0
+            AND u.status = 'active'
+            AND u.hide_from_leaderboard = false
+          ORDER BY ml.rank ASC
+          LIMIT 8
+        `),
+
+        // Recent follows (last 7 days)
+        db.execute(sql`
+          SELECT f.id, f.created_at,
+                 follower.username AS follower_username, follower.display_name AS follower_display,
+                 following.username AS following_username, following.display_name AS following_display
+          FROM follows f
+          JOIN users follower ON follower.id = f.follower_id
+          JOIN users following ON following.id = f.following_id
+          WHERE f.created_at >= NOW() - INTERVAL '7 days'
+            AND follower.status = 'active'
+            AND following.status = 'active'
+          ORDER BY f.created_at DESC
+          LIMIT 12
+        `),
+      ]);
+
+      type FeedItem = {
+        id: string;
+        kind: 'xp' | 'streak' | 'trending' | 'follow' | 'levelup';
+        username: string;
+        text: string;
+        timestamp?: string | null;
+      };
+
+      const activities: FeedItem[] = [];
+
+      // XP events
+      for (const row of (xpRows as any).rows ?? xpRows) {
+        const name = row.display_name || row.username;
+        const xp = Number(row.xp_amount);
+        const source: string = row.source;
+        let text = '';
+        if (source === 'upload')         text = `${name} earned +${xp} XP from uploading`;
+        else if (source === 'daily_login') text = `${name} earned +${xp} XP daily login bonus`;
+        else if (source === 'like_received') text = `${name} earned +${xp} XP from likes`;
+        else if (source === 'fire_received') text = `${name} earned +${xp} XP from fire reactions`;
+        else if (source === 'welcome_bonus') text = `${name} earned +${xp} XP welcome bonus`;
+        else text = `${name} earned +${xp} XP`;
+        activities.push({
+          id: `xp-${row.id}`,
+          kind: 'xp',
+          username: row.username,
+          text,
+          timestamp: row.created_at ? new Date(row.created_at).toISOString() : null,
+        });
+      }
+
+      // Streak events
+      for (const row of (streakRows as any).rows ?? streakRows) {
+        const name = row.display_name || row.username;
+        const days = Number(row.current_streak);
+        activities.push({
+          id: `streak-${row.id}`,
+          kind: 'streak',
+          username: row.username,
+          text: `${name} is on a ${days}-day upload streak`,
+        });
+      }
+
+      // Leaderboard events
+      for (const row of (leaderboardRows as any).rows ?? leaderboardRows) {
+        const name = row.display_name || row.username;
+        const rank = Number(row.rank);
+        const pts = Math.round(Number(row.total_points)).toLocaleString();
+        activities.push({
+          id: `trending-${row.user_id}`,
+          kind: rank <= 3 ? 'levelup' : 'trending',
+          username: row.username,
+          text: `${name} is #${rank} this month · ${pts} XP`,
+        });
+      }
+
+      // Follow events
+      for (const row of (followRows as any).rows ?? followRows) {
+        const followerName = row.follower_display || row.follower_username;
+        const followingName = row.following_display || row.following_username;
+        activities.push({
+          id: `follow-${row.id}`,
+          kind: 'follow',
+          username: row.follower_username,
+          text: `${followerName} started following ${followingName}`,
+          timestamp: row.created_at ? new Date(row.created_at).toISOString() : null,
+        });
+      }
+
+      // Shuffle so different kinds are interleaved
+      for (let i = activities.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [activities[i], activities[j]] = [activities[j], activities[i]];
+      }
+
+      res.json(activities);
+    } catch (err) {
+      console.error("Error fetching activity feed:", err);
+      return res.status(500).json({ message: "Error fetching activity feed" });
     }
   });
 
@@ -5083,20 +5998,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { period = 'all', limit = 10, gameId } = req.query;
       const currentUserId = (req.user as any)?.id;
-      console.log('🔍 Trending clips API: currentUserId =', currentUserId, 'period =', period, 'session user:', req.user);
-      
+
       // Force no caching for privacy-sensitive content
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
-      
-      const clips = await storage.getTrendingClips(
-        period as string,
-        parseInt(limit as string) || 10,
-        gameId ? parseInt(gameId as string) : undefined,
-        currentUserId
-      );
-      res.json(await signClipUrls(clips));
+
+      const cacheKey = trendingCacheKey('clips', period, limit, gameId, currentUserId);
+      const signed = await getCachedTrending(cacheKey, async () => {
+        const clips = await storage.getTrendingClips(
+          period as string,
+          parseInt(limit as string) || 10,
+          gameId ? parseInt(gameId as string) : undefined,
+          currentUserId
+        );
+        return await signClipUrls(clips);
+      });
+      res.json(signed);
     } catch (err) {
       console.error("Error fetching trending clips:", err);
       res.status(500).json({ message: "Internal server error" });
@@ -5108,12 +6026,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
       const currentUserId = (req.user as any)?.id;
-      const reels = await storage.getTrendingReels(
+      const cacheKey = trendingCacheKey('reels-home', period, limit, gameId, currentUserId);
+      const reels = await getCachedTrending(cacheKey, () => storage.getTrendingReels(
         period as string,
         parseInt(limit as string) || 10,
         gameId ? parseInt(gameId as string) : undefined,
         currentUserId
-      );
+      ));
       res.json(reels);
     } catch (err) {
       console.error("Error fetching trending reels:", err);
@@ -5139,22 +6058,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
       const currentUserId = (req.user as any)?.id;
-      const reels = await storage.getTrendingReels(
-        period as string,
-        parseInt(limit as string) || 10,
-        gameId ? parseInt(gameId as string) : undefined,
-        currentUserId
-      );
-      const reelsWithSignedThumbnails = await Promise.all(
-        reels.map(async (reel) => {
-          if (reel.thumbnailUrl) {
-            const signedUrl = await supabaseStorage.convertToSignedUrl(reel.thumbnailUrl, 3600);
-            return { ...reel, thumbnailUrl: signedUrl || reel.thumbnailUrl };
-          }
-          return reel;
-        })
-      );
-      res.json(reelsWithSignedThumbnails);
+      const cacheKey = trendingCacheKey('reels', period, limit, gameId, currentUserId);
+      const result = await getCachedTrending(cacheKey, async () => {
+        const reels = await storage.getTrendingReels(
+          period as string,
+          parseInt(limit as string) || 10,
+          gameId ? parseInt(gameId as string) : undefined,
+          currentUserId
+        );
+        return await Promise.all(
+          reels.map(async (reel) => {
+            const [signedThumb, signedAvatar] = await Promise.all([
+              reel.thumbnailUrl ? supabaseStorage.convertToSignedUrl(reel.thumbnailUrl, 3600) : null,
+              reel.user?.avatarUrl ? supabaseStorage.convertToSignedUrl(reel.user.avatarUrl, 3600) : null,
+            ]);
+            return {
+              ...reel,
+              thumbnailUrl: signedThumb || reel.thumbnailUrl,
+              user: reel.user ? { ...reel.user, avatarUrl: signedAvatar || reel.user.avatarUrl } : reel.user,
+            };
+          })
+        );
+      });
+      res.json(result);
     } catch (err) {
       console.error("Error fetching trending reels:", err);
       res.status(500).json({ message: "Internal server error" });
@@ -5243,6 +6169,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Latest screenshots endpoint (newest first, pure createdAt DESC)
+  app.get("/api/screenshots/latest", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const gameId = req.query.gameId ? parseInt(req.query.gameId as string) : undefined;
+      const screenshots = await storage.getLatestScreenshots(limit, gameId);
+      res.json(screenshots);
+    } catch (err) {
+      console.error("Error fetching latest screenshots:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // General screenshots endpoint (supports filtering by game and time period)
   app.get("/api/screenshots", async (req, res) => {
     try {
@@ -5295,6 +6234,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Clip not found" });
       }
 
+      if (clip.userId && !(await checkMediaOwnerAccess(clip.userId, req, res))) return;
+
       console.log(`✅ Clips API: Found clip ${id}: "${clip.title}"`);
       console.log(`🔍 Clip user data:`, clip.user ? `User ID: ${clip.user.id}, Username: ${clip.user.username}` : 'No user data');
       res.json(clip);
@@ -5321,6 +6262,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`❌ Reels API: Content with shareCode ${shareCode} is not a reel, it's a ${clip.videoType}`);
         return res.status(404).json({ message: "Reel not found" });
       }
+
+      if (clip.userId && !(await checkMediaOwnerAccess(clip.userId, req, res))) return;
 
       // Get full clip with user data
       const fullClip = await storage.getClipById(clip.id);
@@ -5359,6 +6302,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Reel not found" });
       }
 
+      if (reel.userId && !(await checkMediaOwnerAccess(reel.userId, req, res))) return;
+
       console.log(`✅ Reels API: Found reel ${reelId}: "${reel.title}"`);
       res.json(reel);
     } catch (err) {
@@ -5396,6 +6341,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`❌ Clips API: Clip with shareCode ${shareCode} not found`);
         return res.status(404).json({ message: "Clip not found" });
       }
+
+      if (clip.userId && !(await checkMediaOwnerAccess(clip.userId, req, res))) return;
 
       // Get full clip with user data
       const fullClip = await storage.getClipById(clip.id);
@@ -5494,12 +6441,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `🎮 Epic gaming clip from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
         )}`,
         discord: clipUrl,
+        instagram: clipUrl,
+        tiktok: clipUrl,
+        bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(
+          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! ${clipUrl}`
+        )}`,
+        snapchat: clipUrl,
+        threads: clipUrl,
+        pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(clipUrl)}&description=${encodeURIComponent(
+          `🎮 Epic gaming clip from ${displayName}'s Gamefolio!`
+        )}`,
+        youtube: clipUrl,
         email: `mailto:?subject=${encodeURIComponent(
           `🎮 Amazing gaming clip from ${displayName}'s Gamefolio!`
         )}&body=${encodeURIComponent(
           `Hey! I wanted to share this awesome gaming clip from ${displayName}'s Gamefolio with you:\n\n${clipUrl}\n\nYou can also check out their full gaming profile here: ${gamefolioProfileUrl}\n\nGamefolio is where gamers share their best moments!`
         )}`
       };
+
+      const signedThumbnailUrl = clip.thumbnailUrl
+        ? (await supabaseStorage.convertToSignedUrl(clip.thumbnailUrl, 3600)) || clip.thumbnailUrl
+        : null;
 
       res.json({
         clipId,
@@ -5509,7 +6471,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clipUrl,
         title: clip.title,
         description: clip.description,
-        thumbnailUrl: clip.thumbnailUrl || null,
+        thumbnailUrl: signedThumbnailUrl,
         videoUrl: clip.videoUrl || null,
         videoType: clip.videoType || 'clip'
       });
@@ -5557,6 +6519,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
+      // Notify the clip owner (fire-and-forget)
+      NotificationService.createShareNotification(clipId, sharerId).catch(() => {});
+
       res.json({ awarded: !sharedToday });
     } catch (err) {
       console.error("Error tracking clip share:", err);
@@ -5599,6 +6564,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `Screenshot #${screenshotId} was shared`
         );
       }
+
+      // Notify the screenshot owner (fire-and-forget)
+      NotificationService.createScreenshotShareNotification(screenshotId, sharerId).catch(() => {});
 
       res.json({ awarded: !sharedToday });
     } catch (err) {
@@ -6010,7 +6978,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update clip
-  app.patch("/api/clips/:id", authMiddleware, async (req, res) => {
+  app.patch("/api/clips/:id", emailVerificationMiddleware, async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
       const clip = await storage.getClip(clipId);
@@ -6092,7 +7060,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Pin/unpin clip
-  app.patch("/api/clips/:id/pin", authMiddleware, async (req, res) => {
+  app.patch("/api/clips/:id/pin", emailVerificationMiddleware, async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
       const clip = await storage.getClip(clipId);
@@ -6131,6 +7099,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Clip not found" });
       }
 
+      if (clip.userId && !(await checkMediaOwnerAccess(clip.userId, req, res))) return;
+
       if (clip.thumbnailUrl) {
         const signedUrl = await supabaseStorage.convertToSignedUrl(clip.thumbnailUrl, 3600);
         if (signedUrl) {
@@ -6146,7 +7116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update clip thumbnail
-  app.put("/api/clips/:id/thumbnail", authMiddleware, async (req, res) => {
+  app.put("/api/clips/:id/thumbnail", emailVerificationMiddleware, async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
       const { thumbnailUrl } = req.body;
@@ -6177,7 +7147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload custom thumbnail for clip
-  app.post("/api/clips/:id/thumbnail", authMiddleware, upload.single("thumbnail"), async (req, res) => {
+  app.post("/api/clips/:id/thumbnail", emailVerificationMiddleware, upload.single("thumbnail"), async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
 
@@ -6274,6 +7244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const comment = await storage.createComment(commentData);
+      invalidateTrendingByRoute('clips');
 
       // Award points to the commenter
       await LeaderboardService.awardPoints(
@@ -6336,6 +7307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to delete comment" });
       }
 
+      invalidateTrendingByRoute('clips');
       res.status(200).json({ message: "Comment deleted successfully" });
     } catch (err) {
       console.error("Error deleting comment:", err);
@@ -6344,7 +7316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Like a clip comment
-  app.post("/api/comments/:id/like", authMiddleware, async (req, res) => {
+  app.post("/api/comments/:id/like", emailVerificationMiddleware, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -6366,7 +7338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unlike a clip comment
-  app.delete("/api/comments/:id/like", authMiddleware, async (req, res) => {
+  app.delete("/api/comments/:id/like", emailVerificationMiddleware, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -6398,7 +7370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Like a screenshot comment
-  app.post("/api/screenshot-comments/:id/like", authMiddleware, async (req, res) => {
+  app.post("/api/screenshot-comments/:id/like", emailVerificationMiddleware, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -6420,7 +7392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unlike a screenshot comment
-  app.delete("/api/screenshot-comments/:id/like", authMiddleware, async (req, res) => {
+  app.delete("/api/screenshot-comments/:id/like", emailVerificationMiddleware, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -6455,6 +7427,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/screenshots/:id/share", async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
+      if (isNaN(screenshotId)) {
+        return res.status(400).json({ message: "Invalid screenshot ID" });
+      }
       const screenshot = await storage.getScreenshot(screenshotId);
 
       if (!screenshot) {
@@ -6468,10 +7443,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use production domain for share URLs
       const baseUrl = 'https://app.gamefolio.com';
 
-      // Generate proper share URL with username and share code
-      const screenshotUrl = screenshot.shareCode
-        ? `${baseUrl}/@${username}/screenshot/${screenshot.shareCode}`
-        : `${baseUrl}/screenshots/${screenshotId}`;
+      // Ensure screenshot has a share code - generate one if missing
+      let shareCode = screenshot.shareCode;
+      if (!shareCode) {
+        shareCode = generateShareCode();
+        await storage.updateScreenshot(screenshotId, { shareCode });
+      }
+
+      // Always use username-based URL format with alphanumeric share code
+      const screenshotUrl = `${baseUrl}/@${username}/screenshot/${shareCode}`;
 
       const qrCodeDataUrl = await QRCode.toDataURL(screenshotUrl);
 
@@ -6483,8 +7463,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).from(users).where(eq(users.id, screenshot.userId)).limit(1);
 
       const shareUser = userResult[0];
-      const gamefolioProfileUrl = `${baseUrl}/profile/${shareUser.username}`;
-      const displayName = shareUser.displayName || shareUser.username;
+      const shareUsername = shareUser?.username || user?.username || 'unknown';
+      const gamefolioProfileUrl = `${baseUrl}/profile/${shareUsername}`;
+      const displayName = shareUser?.displayName || shareUsername;
 
       // Generate social media sharing links for screenshot with personalized messaging
       const socialMediaLinks = {
@@ -6507,6 +7488,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `📸 Epic gaming screenshot from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
         )}`,
         discord: screenshotUrl,
+        instagram: screenshotUrl,
+        tiktok: screenshotUrl,
+        bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(
+          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! ${screenshotUrl}`
+        )}`,
+        snapchat: screenshotUrl,
+        threads: screenshotUrl,
+        pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(screenshotUrl)}&description=${encodeURIComponent(
+          `📸 Epic gaming screenshot from ${displayName}'s Gamefolio!`
+        )}`,
+        youtube: screenshotUrl,
         email: `mailto:?subject=${encodeURIComponent(
           `📸 Amazing gaming screenshot from ${displayName}'s Gamefolio!`
         )}&body=${encodeURIComponent(
@@ -6514,12 +7506,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )}`
       };
 
+      const signedImageUrl = screenshot.imageUrl
+        ? (await supabaseStorage.convertToSignedUrl(screenshot.imageUrl, 3600)) || screenshot.imageUrl
+        : null;
+
       res.json({
         screenshotId,
         qrCode: qrCodeDataUrl,
         socialMediaLinks,
         screenshotUrl,
-        imageUrl: screenshot.imageUrl, // Add the actual image URL for preview
+        imageUrl: signedImageUrl,
         title: screenshot.title,
         description: screenshot.description || ""
       });
@@ -6606,67 +7602,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const userId = req.user!.id;
-      
-      // Check if the clip exists
+
       const clip = await storage.getClip(clipId);
       if (!clip) {
         return res.status(404).json({ message: "Clip not found" });
       }
-
-      // Prevent users from liking their own content
       if (clip.userId === userId) {
         return res.status(400).json({ message: "Cannot like your own content, casual!" });
       }
 
-      // Check if user already liked this clip
       const hasLiked = await storage.hasUserLikedClip(userId, clipId);
 
       if (hasLiked) {
-        // Unlike the clip
         await storage.deleteLike(userId, clipId);
-        
-        // Get actual like count after deletion
         const likes = await storage.getLikesByClipId(clipId);
-        const likeCount = likes.length;
-        
-        res.json({ message: "Clip unliked", liked: false, count: likeCount });
-      } else {
-        // Like the clip
-        const likeData = insertLikeSchema.parse({
-          clipId,
-          userId,
-        });
-        const like = await storage.createLike(likeData);
-
-        // Award points to the user for liking (only if they haven't earned points for this clip before)
-        const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'like', 'clip', clipId);
-        if (!hasEarnedPoints) {
-          await LeaderboardService.awardPoints(
-            userId,
-            'like',
-            `Liked clip #${clipId}`
-          );
-          // Award like_received XP to the clip owner
-          const likedClip = await storage.getClip(clipId);
-          if (likedClip && likedClip.userId !== userId) {
-            await LeaderboardService.awardCustomPoints(
-              likedClip.userId,
-              'like_received',
-              10,
-              `Received a like on clip #${clipId}`
-            );
-          }
-        }
-
-        // Create notification for the clip owner
-        await NotificationService.createLikeNotification(clipId, userId);
-
-        // Get actual like count after adding
-        const likes = await storage.getLikesByClipId(clipId);
-        const likeCount = likes.length;
-
-        res.status(201).json({ message: "Clip liked", liked: true, like, count: likeCount });
+        return res.json({ message: "Clip unliked", liked: false, count: likes.length });
       }
+
+      // Like the clip
+      const likeData = insertLikeSchema.parse({ clipId, userId });
+      const like = await storage.createLike(likeData);
+      const likes = await storage.getLikesByClipId(clipId);
+
+      // Respond immediately — XP and notification happen in background
+      res.status(201).json({ message: "Clip liked", liked: true, like, count: likes.length });
+
+      const clipOwnerId = clip.userId;
+      (async () => {
+        try {
+          const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'like', 'clip', clipId);
+          if (!hasEarnedPoints) {
+            await LeaderboardService.awardPoints(userId, 'like', `Liked clip #${clipId}`);
+            if (clipOwnerId !== userId) {
+              await LeaderboardService.awardCustomPoints(clipOwnerId, 'like_received', 10, `Received a like on clip #${clipId}`);
+            }
+          }
+          await NotificationService.createLikeNotification(clipId, userId);
+        } catch (bgErr) {
+          console.error('Error in like side-effects for clip', clipId, bgErr);
+        }
+      })();
     } catch (error) {
       console.error("Error toggling clip like:", error);
       res.status(500).json({ error: "Failed to toggle like" });
@@ -6750,10 +7725,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingReaction = await storage.getUserClipReaction(userId, clipId, emoji);
       
       if (existingReaction) {
-        // Fire reactions cannot be removed
+        // Zaps cannot be removed
         if (emoji === '🔥') {
           return res.status(400).json({ 
-            message: "Fire reactions are permanent and cannot be removed",
+            message: "Zaps are permanent and cannot be removed",
             reacted: true
           });
         }
@@ -6773,14 +7748,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // For fire reactions, check daily limit
+      let fireLimits: Awaited<ReturnType<typeof storage.getFireLimits>> | null = null;
       if (emoji === '🔥') {
-        const fireLimits = await storage.getFireLimits(userId);
+        fireLimits = await storage.getFireLimits(userId);
         
         if (!fireLimits.canFire) {
           return res.status(400).json({ 
             message: fireLimits.isPro 
-              ? "You've used all 3 fire reactions for today. Come back tomorrow!" 
-              : "You've used your daily fire reaction. Pro users can fire 3 times a day!",
+              ? "You've used all 3 zaps for today. Come back tomorrow!" 
+              : "You've used your daily zap. Pro users can zap 3 times a day!",
             firesRemaining: 0,
             maxFires: fireLimits.maxFiresPerDay
           });
@@ -6800,42 +7776,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const reaction = await storage.createClipReaction(reactionData);
-      
-      // Award 5 points for fire reactions (only if they haven't earned points for this clip before)
-      if (emoji === '🔥') {
-        const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'fire', 'clip', clipId);
-        if (!hasEarnedPoints) {
-          await LeaderboardService.awardPoints(
-            userId,
-            'fire',
-            `Fire reaction given to clip #${clipId}`
-          );
-        }
-        
-        // Get updated fire limits to return
-        const fireLimits = await storage.getFireLimits(userId);
-        
-        const reactions = await storage.getClipReactions(clipId);
-        const count = reactions.filter(r => r.emoji === emoji).length;
-        
-        return res.status(201).json({ 
-          ...reaction, 
-          reacted: true, 
+
+      if (emoji === '🔥' && fireLimits) {
+        const firesRemaining = fireLimits.maxFiresPerDay - fireLimits.firesUsedToday - 1;
+        const reactionsList = await storage.getClipReactions(clipId);
+        const count = reactionsList.filter(r => r.emoji === emoji).length;
+
+        // Respond immediately
+        res.status(201).json({
+          ...reaction,
+          reacted: true,
           count,
-          firesRemaining: fireLimits.maxFiresPerDay - fireLimits.firesUsedToday,
+          xpAwarded: 50,
+          firesRemaining,
           maxFires: fireLimits.maxFiresPerDay
         });
+
+        // Background: XP, leaderboard points, and notification
+        (async () => {
+          try {
+            const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'fire', 'clip', clipId);
+            if (!hasEarnedPoints) {
+              await LeaderboardService.awardPoints(userId, 'fire', `Fire reaction given to clip #${clipId}`);
+            }
+            await XPService.awardXP(userId, 50, 'other', `Earned 50 XP for giving a fire reaction on clip #${clipId}`, clipId);
+            await NotificationService.createReactionNotification(clipId, userId, emoji);
+          } catch (bgErr) {
+            console.error('Error in fire reaction side-effects for clip', clipId, bgErr);
+          }
+        })();
+        return;
       }
-      
-      // Get updated reaction count for non-fire reactions
-      const reactions = await storage.getClipReactions(clipId);
-      const count = reactions.filter(r => r.emoji === emoji).length;
-      
-      res.status(201).json({ 
-        ...reaction, 
-        reacted: true, 
-        count 
-      });
+
+      // Non-fire reaction: get count then respond
+      const reactionsList = await storage.getClipReactions(clipId);
+      const count = reactionsList.filter(r => r.emoji === emoji).length;
+
+      res.status(201).json({ ...reaction, reacted: true, count });
+      // Notify the clip owner (fire-and-forget)
+      NotificationService.createReactionNotification(clipId, userId, emoji).catch(() => {});
     } catch (err) {
       return handleValidationError(err, res);
     }
@@ -6855,41 +7834,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ success: true, message: 'Demo clip views not tracked' });
       }
 
-      // Get the clip to find the owner
+      // Get the clip to find the owner, then increment — these are the minimum
+      // operations needed before we can respond.
       const clip = await storage.getClip(clipId);
       if (clip) {
-        // Increment the view count on the clip
         await storage.incrementClipViews(clipId);
-
-        // Award view XP to the content owner
-        await LeaderboardService.awardPoints(
-          clip.userId,
-          'view',
-          `Clip #${clipId} received a view`
-        );
-
-        // Get updated view count for milestone checks
-        const updatedClip = await storage.getClip(clipId);
-        const newViewCount = updatedClip?.views || 0;
-
-        // Check performance milestones (view count thresholds)
-        await PerformanceMilestoneService.checkAndAwardViewMilestones(clipId, clip.userId, newViewCount);
-
-        // Check creator milestones for first clips to reach 100 / 1,000 views
-        if (newViewCount >= 100) {
-          await CreatorMilestoneService.checkFirst100Views(clip.userId, clipId);
-        }
-        if (newViewCount >= 1000) {
-          await CreatorMilestoneService.checkFirst1000Views(clip.userId, clipId);
-        }
-
-        // Award watch XP to the viewer (if authenticated)
-        if (req.user?.id && req.user.id !== clip.userId) {
-          await BonusEventsService.awardWatchClipXP(req.user.id);
-        }
       }
 
+      // Respond immediately so the client isn't blocked.
       res.json({ success: true });
+
+      // Run all XP / milestone side-effects in the background (fire-and-forget).
+      if (clip) {
+        const viewerId: number | undefined = (req as any).user?.id;
+        (async () => {
+          try {
+            await LeaderboardService.awardPoints(
+              clip.userId,
+              'view',
+              `Clip #${clipId} received a view`
+            );
+
+            const updatedClip = await storage.getClip(clipId);
+            const newViewCount = updatedClip?.views || 0;
+
+            await PerformanceMilestoneService.checkAndAwardViewMilestones(clipId, clip.userId, newViewCount);
+
+            if (newViewCount >= 100) {
+              await CreatorMilestoneService.checkFirst100Views(clip.userId, clipId);
+            }
+            if (newViewCount >= 1000) {
+              await CreatorMilestoneService.checkFirst1000Views(clip.userId, clipId);
+            }
+
+            if (viewerId && viewerId !== clip.userId) {
+              await BonusEventsService.awardWatchClipXP(viewerId);
+            }
+          } catch (bgErr) {
+            console.error('Error in view side-effects for clip', clipId, bgErr);
+          }
+        })();
+      }
     } catch (error) {
       console.error('Error incrementing clip views:', error);
       res.status(500).json({
@@ -6899,7 +7884,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a reaction (supports both session and JWT token auth for mobile apps)
-  app.delete("/api/reactions/:id", hybridAuth, async (req, res) => {
+  app.delete("/api/reactions/:id", hybridEmailVerification, async (req, res) => {
     try {
       const reactionId = parseInt(req.params.id);
 
@@ -7094,7 +8079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add game to favorites
-  app.post("/api/users/:id/favorites", authMiddleware, async (req, res) => {
+  app.post("/api/users/:id/favorites", emailVerificationMiddleware, async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
 
@@ -7142,7 +8127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Remove game from favorites
-  app.delete("/api/users/:userId/favorites/:gameId", authMiddleware, async (req, res) => {
+  app.delete("/api/users/:userId/favorites/:gameId", emailVerificationMiddleware, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const gameId = parseInt(req.params.gameId);
@@ -7265,7 +8250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Follow a user by username
-  app.post("/api/users/:username/follow", authMiddleware, async (req, res) => {
+  app.post("/api/users/:username/follow", emailVerificationMiddleware, async (req, res) => {
     try {
       const followerId = req.user?.id ?? 0;
       const { username } = req.params;
@@ -7325,7 +8310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unfollow a user by username
-  app.delete("/api/users/:username/follow", authMiddleware, async (req, res) => {
+  app.delete("/api/users/:username/follow", emailVerificationMiddleware, async (req, res) => {
     try {
       const followerId = req.user?.id ?? 0;
       const { username } = req.params;
@@ -7365,7 +8350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Follow a user
-  app.post("/api/users/:id/follow", authMiddleware, async (req, res) => {
+  app.post("/api/users/:id/follow", emailVerificationMiddleware, async (req, res) => {
     try {
       const followerId = req.user?.id ?? 0;
       const followingId = parseInt(req.params.id);
@@ -7425,7 +8410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unfollow a user
-  app.delete("/api/users/:id/follow", authMiddleware, async (req, res) => {
+  app.delete("/api/users/:id/follow", emailVerificationMiddleware, async (req, res) => {
     try {
       const followerId = req.user?.id ?? 0;
       const followingId = parseInt(req.params.id);
@@ -7475,7 +8460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Approve a follow request
-  app.post("/api/follow-requests/:requestId/approve", authMiddleware, async (req, res) => {
+  app.post("/api/follow-requests/:requestId/approve", emailVerificationMiddleware, async (req, res) => {
     try {
       const userId = req.user?.id ?? 0;
       const requestId = parseInt(req.params.requestId);
@@ -7510,7 +8495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reject a follow request
-  app.post("/api/follow-requests/:requestId/reject", authMiddleware, async (req, res) => {
+  app.post("/api/follow-requests/:requestId/reject", emailVerificationMiddleware, async (req, res) => {
     try {
       const userId = req.user?.id ?? 0;
       const requestId = parseInt(req.params.requestId);
@@ -7542,7 +8527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Approve follow request via notification ID (for notification buttons)
-  app.post("/api/notifications/:notificationId/approve-follow", authMiddleware, async (req, res) => {
+  app.post("/api/notifications/:notificationId/approve-follow", emailVerificationMiddleware, async (req, res) => {
     try {
       const userId = req.user?.id ?? 0;
       const notificationId = parseInt(req.params.notificationId);
@@ -7586,7 +8571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reject follow request via notification ID (for notification buttons)
-  app.post("/api/notifications/:notificationId/reject-follow", authMiddleware, async (req, res) => {
+  app.post("/api/notifications/:notificationId/reject-follow", emailVerificationMiddleware, async (req, res) => {
     try {
       const userId = req.user?.id ?? 0;
       const notificationId = parseInt(req.params.notificationId);
@@ -7752,11 +8737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unlock a banner for the current user (admin or lootbox system use)
-  app.post("/api/user/unlock-banner/:bannerId", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    
+  app.post("/api/user/unlock-banner/:bannerId", emailVerificationMiddleware, async (req, res) => {
     try {
       const userId = (req.user as User).id;
       const bannerId = parseInt(req.params.bannerId);
@@ -7797,11 +8778,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload custom banner with aspect ratio processing and positioning
-  app.post("/api/upload/banner", upload.single('banner'), async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.sendStatus(401);
-    }
-
+  app.post("/api/upload/banner", emailVerificationMiddleware, upload.single('banner'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -8317,19 +9294,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get name tags available for purchase in the store
   app.get("/api/store/name-tags", async (req, res) => {
     try {
-      const allTags = await storage.getAllNameTags();
-      const storeTags = allTags.filter(t => t.availableInStore && t.isActive && !t.isDefault);
-      
-      const tagsWithSignedUrls = await Promise.all(
-        storeTags.map(async (tag) => {
-          let imageUrl = tag.imageUrl;
-          if (imageUrl && imageUrl.includes('supabase.co/storage')) {
-            const signed = await supabaseStorage.convertToSignedUrl(imageUrl, 3600);
-            if (signed) imageUrl = signed;
-          }
-          return { ...tag, imageUrl };
-        })
-      );
+      // Cache the public name-tag list + signed images (slow Supabase signing).
+      // Per-user "owned"/Pro status is merged fresh below.
+      const tagsWithSignedUrls = await getCachedTrending('store-name-tags', async () => {
+        const allTags = await storage.getAllNameTags();
+        const storeTags = allTags.filter(t => t.availableInStore && t.isActive && !t.isDefault);
+        return await Promise.all(
+          storeTags.map(async (tag) => {
+            let imageUrl = tag.imageUrl;
+            if (imageUrl && imageUrl.includes('supabase.co/storage')) {
+              const signed = await supabaseStorage.convertToSignedUrl(imageUrl, 3600);
+              if (signed) imageUrl = signed;
+            }
+            return { ...tag, imageUrl };
+          })
+        );
+      });
 
       if (req.isAuthenticated()) {
         const unlockedTags = await storage.getUserUnlockedNameTags(req.user.id);
@@ -8342,7 +9322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const discountedCost = isPro ? Math.floor(baseCost * 0.8) : baseCost;
           return {
             ...tag,
-            owned: unlockedIds.has(tag.id) || isPro,
+            owned: unlockedIds.has(tag.id),
             originalPrice: baseCost,
             gfCost: discountedCost,
             proDiscount: isPro,
@@ -8393,8 +9373,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/store/verify-name-tag-purchase", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const { nameTagId, txHash, gfCost } = req.body;
-      if (!nameTagId || !txHash || gfCost === undefined) return res.status(400).json({ error: "nameTagId, txHash, and gfCost are required" });
+      const { nameTagId, txHash } = req.body;
+      if (!nameTagId || !txHash) return res.status(400).json({ error: "nameTagId and txHash are required" });
 
       const user = await storage.getUserById(req.user.id);
       if (!user || !user.walletAddress) return res.status(400).json({ error: "Wallet address required" });
@@ -8402,12 +9382,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasUnlocked = await storage.userHasUnlockedNameTag(req.user.id, nameTagId);
       if (hasUnlocked) return res.json({ success: true, message: "Already owned" });
 
+      const nameTagForPrice = await storage.getNameTag(nameTagId);
+      if (!nameTagForPrice) return res.status(404).json({ error: "Name tag not found" });
+      if (!nameTagForPrice.availableInStore || !nameTagForPrice.isActive) return res.status(400).json({ error: "Not available for purchase" });
+      if (nameTagForPrice.isDefault) return res.status(400).json({ error: "This name tag is free for everyone" });
+
+      const baseCost = nameTagForPrice.gfCost || 0;
+      if (baseCost <= 0) return res.status(400).json({ error: "This name tag has no price set" });
+
+      const serverGfCost = user.isPro ? Math.floor(baseCost * 0.8) : baseCost;
+
       const receipt = await nftPublicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
       if (receipt.status !== 'success') return res.status(400).json({ error: 'Transaction failed on-chain' });
 
       const treasuryAddress = getNftTreasuryAddress().toLowerCase();
       const buyerAddress = (user.walletAddress as string).toLowerCase();
-      const expectedAmount = parseUnits(String(gfCost), NFT_GF_DECIMALS);
+      const expectedAmount = parseUnits(String(serverGfCost), NFT_GF_DECIMALS);
 
       let validTransfer = false;
       for (const log of receipt.logs) {
@@ -8426,6 +9416,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!validTransfer) return res.status(400).json({ error: 'Invalid transfer: amount, sender, or recipient mismatch' });
 
+      const claimed = await db.insert(usedPaymentHashes)
+        .values({ txHash, userId: req.user.id, purpose: 'name_tag', itemId: String(nameTagId) })
+        .onConflictDoNothing()
+        .returning();
+      if (!claimed.length) {
+        return res.status(400).json({ error: 'Transaction hash has already been used for another purchase' });
+      }
+
       const nameTag = await storage.getNameTag(nameTagId);
       await storage.unlockNameTagForUser(req.user.id, nameTagId);
 
@@ -8440,63 +9438,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Legacy name tag purchase (deprecated — kept for compatibility)
-  app.post("/api/store/purchase-name-tag", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.sendStatus(401);
-    }
-
-    try {
-      const { nameTagId } = req.body;
-      if (!nameTagId) {
-        return res.status(400).json({ message: "nameTagId is required" });
-      }
-
-      const nameTag = await storage.getNameTag(nameTagId);
-      if (!nameTag) {
-        return res.status(404).json({ message: "Name tag not found" });
-      }
-
-      if (!nameTag.availableInStore || !nameTag.isActive) {
-        return res.status(400).json({ message: "This name tag is not available for purchase" });
-      }
-
-      if (nameTag.isDefault) {
-        return res.status(400).json({ message: "This name tag is free for everyone" });
-      }
-
-      const baseCost = nameTag.gfCost || 0;
-      if (baseCost <= 0) {
-        return res.status(400).json({ message: "This name tag has no price set" });
-      }
-
-      const hasUnlocked = await storage.userHasUnlockedNameTag(req.user.id, nameTagId);
-      if (hasUnlocked) {
-        return res.status(400).json({ message: "You already own this name tag" });
-      }
-
-      const user = await storage.getUserById(req.user.id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      const cost = user.isPro ? Math.floor(baseCost * 0.8) : baseCost;
-
-      await storage.unlockNameTagForUser(req.user.id, nameTagId);
-
-      res.json({ 
-        success: true, 
-        message: `Successfully purchased "${nameTag.name}"!` + (user.isPro ? ` (20% Pro discount applied!)` : ''),
-        nameTag,
-        discountApplied: user.isPro,
-        originalPrice: baseCost,
-        finalPrice: cost,
-      });
-    } catch (err) {
-      console.error("Error purchasing name tag:", err);
-      return res.status(500).json({ message: "Error purchasing name tag" });
-    }
-  });
 
   // Sync name tags from the gamefolio-name-tags Supabase bucket
   app.post("/api/admin/name-tags/sync-bucket", adminMiddleware, async (req, res) => {
@@ -8564,22 +9505,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/store/borders", async (req, res) => {
     try {
       const shapeFilter = req.query.shape as string | undefined;
-      const allBorders = await storage.getAllProfileBordersFromTable();
-      const storeBorders = allBorders.filter(b => {
-        if (!b.availableInStore || !b.isActive || b.isDefault) return false;
-        if (shapeFilter && b.shape !== shapeFilter) return false;
-        return true;
-      });
-
-      const bordersWithSignedUrls = await Promise.all(
-        storeBorders.map(async (border) => {
-          let imageUrl = border.imageUrl;
-          if (imageUrl && imageUrl.includes('supabase.co/storage')) {
-            const signed = await supabaseStorage.convertToSignedUrl(imageUrl, 3600);
-            if (signed) imageUrl = signed;
-          }
-          return { ...border, imageUrl };
-        })
+      // Cache the full border list with signed image URLs (per shape filter).
+      // Per-user "owned"/Pro flags merged fresh below.
+      const bordersWithSignedUrls = await getCachedTrending(
+        `store-borders:${shapeFilter || 'all'}`,
+        async () => {
+          const allBorders = await storage.getAllProfileBordersFromTable();
+          const storeBorders = allBorders.filter(b => {
+            if (!b.availableInStore || !b.isActive || b.isDefault) return false;
+            if (shapeFilter && b.shape !== shapeFilter) return false;
+            return true;
+          });
+          return await Promise.all(
+            storeBorders.map(async (border) => {
+              let imageUrl = border.imageUrl;
+              if (imageUrl && imageUrl.includes('supabase.co/storage')) {
+                const signed = await supabaseStorage.convertToSignedUrl(imageUrl, 3600);
+                if (signed) imageUrl = signed;
+              }
+              return { ...border, imageUrl };
+            })
+          );
+        },
       );
 
       if (req.isAuthenticated()) {
@@ -8637,21 +9584,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/store/verify-border-purchase", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const { borderId, txHash, gfCost } = req.body;
-      if (!borderId || !txHash || gfCost === undefined) return res.status(400).json({ error: "borderId, txHash, and gfCost are required" });
+      const { borderId, txHash } = req.body;
+      if (!borderId || !txHash) return res.status(400).json({ error: "borderId and txHash are required" });
 
       const user = await storage.getUserById(req.user.id);
       if (!user || !user.walletAddress) return res.status(400).json({ error: "Wallet address required" });
+      if (!user.isPro) return res.status(403).json({ error: "Profile borders are a Pro-only feature. Upgrade to Pro to use borders!" });
 
       const hasUnlocked = await storage.userHasUnlockedBorder(req.user.id, borderId);
       if (hasUnlocked) return res.json({ success: true, message: "Already owned" });
+
+      const borderForPrice = await storage.getProfileBorder(borderId);
+      if (!borderForPrice) return res.status(404).json({ error: "Border not found" });
+      if (!borderForPrice.availableInStore || !borderForPrice.isActive) return res.status(400).json({ error: "Not available for purchase" });
+      if (borderForPrice.isDefault) return res.status(400).json({ error: "This border is free for everyone" });
+
+      const serverGfCost = borderForPrice.gfCost || 0;
+      if (serverGfCost <= 0) return res.status(400).json({ error: "This border has no price set" });
 
       const receipt = await nftPublicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
       if (receipt.status !== 'success') return res.status(400).json({ error: 'Transaction failed on-chain' });
 
       const treasuryAddress = getNftTreasuryAddress().toLowerCase();
       const buyerAddress = (user.walletAddress as string).toLowerCase();
-      const expectedAmount = parseUnits(String(gfCost), NFT_GF_DECIMALS);
+      const expectedAmount = parseUnits(String(serverGfCost), NFT_GF_DECIMALS);
 
       let validTransfer = false;
       for (const log of receipt.logs) {
@@ -8670,6 +9626,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!validTransfer) return res.status(400).json({ error: 'Invalid transfer: amount, sender, or recipient mismatch' });
 
+      const claimed = await db.insert(usedPaymentHashes)
+        .values({ txHash, userId: req.user.id, purpose: 'border', itemId: String(borderId) })
+        .onConflictDoNothing()
+        .returning();
+      if (!claimed.length) {
+        return res.status(400).json({ error: 'Transaction hash has already been used for another purchase' });
+      }
+
       const border = await storage.getProfileBorder(borderId);
       await storage.unlockBorderForUser(req.user.id, borderId);
 
@@ -8684,62 +9648,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Legacy border purchase (deprecated — kept for compatibility)
-  app.post("/api/store/purchase-border", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.sendStatus(401);
-    }
-
-    try {
-      const { borderId } = req.body;
-      if (!borderId) {
-        return res.status(400).json({ message: "borderId is required" });
-      }
-
-      const user = await storage.getUserById(req.user.id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      if (!user.isPro) {
-        return res.status(403).json({ message: "Profile borders are a Pro-only feature. Upgrade to Pro to use borders!" });
-      }
-
-      const border = await storage.getProfileBorder(borderId);
-      if (!border) {
-        return res.status(404).json({ message: "Border not found" });
-      }
-
-      if (!border.availableInStore || !border.isActive) {
-        return res.status(400).json({ message: "This border is not available for purchase" });
-      }
-
-      if (border.isDefault) {
-        return res.status(400).json({ message: "This border is free for everyone" });
-      }
-
-      const cost = border.gfCost || 0;
-      if (cost <= 0) {
-        return res.status(400).json({ message: "This border has no price set" });
-      }
-
-      const hasUnlocked = await storage.userHasUnlockedBorder(req.user.id, borderId);
-      if (hasUnlocked) {
-        return res.status(400).json({ message: "You already own this border" });
-      }
-
-      await storage.unlockBorderForUser(req.user.id, borderId);
-
-      res.json({
-        success: true,
-        message: `Successfully purchased "${border.name}"!`,
-        border,
-      });
-    } catch (err) {
-      console.error("Error purchasing border:", err);
-      return res.status(500).json({ message: "Error purchasing border" });
-    }
-  });
 
   app.post("/api/admin/borders/sync-bucket", adminMiddleware, async (req, res) => {
     try {
@@ -8974,58 +9882,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Purchase a verification badge with GF tokens
-  app.post("/api/store/purchase-verification-badge", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.sendStatus(401);
-    }
-
-    try {
-      const { badgeId } = req.body;
-      if (!badgeId) {
-        return res.status(400).json({ message: "badgeId is required" });
-      }
-
-      const user = await storage.getUserById(req.user.id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      const badge = await storage.getVerificationBadge(badgeId);
-      if (!badge) {
-        return res.status(404).json({ message: "Verification badge not found" });
-      }
-
-      if (!badge.availableInStore || !badge.isActive) {
-        return res.status(400).json({ message: "This verification badge is not available for purchase" });
-      }
-
-      if (badge.isDefault) {
-        return res.status(400).json({ message: "This verification badge is free for everyone" });
-      }
-
-      const cost = badge.gfCost || 0;
-      if (cost <= 0) {
-        return res.status(400).json({ message: "This verification badge has no price set" });
-      }
-
-      const hasUnlocked = await storage.userHasUnlockedVerificationBadge(req.user.id, badgeId);
-      if (hasUnlocked) {
-        return res.status(400).json({ message: "You already own this verification badge" });
-      }
-
-      await storage.unlockVerificationBadgeForUser(req.user.id, badgeId);
-
-      res.json({
-        success: true,
-        message: `Successfully purchased "${badge.name}"!`,
-        badge,
-      });
-    } catch (err) {
-      console.error("Error purchasing verification badge:", err);
-      return res.status(500).json({ message: "Error purchasing verification badge" });
-    }
-  });
 
   // Admin sync verification badges from the gamefolio-verification Supabase bucket
   app.post("/api/admin/verification-badges/sync-bucket", adminMiddleware, async (req, res) => {
@@ -9304,16 +10160,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filename = req.file.filename;
       const userId = req.user!.id;
 
-      // Optimize original image
+      // Optimize original image (rotate() normalises EXIF orientation so
+      // portrait photos from mobile are stored upright with no EXIF tag)
       const optimizedImageBuffer = await sharp(originalPath, { failOn: 'none' })
+        .rotate()
         .jpeg({ quality: 85 })
         .resize(1920, 1080, { fit: 'inside', withoutEnlargement: true })
         .toBuffer();
 
-      // Generate thumbnail
+      // Generate thumbnail (rotate first so portrait thumbnails aren't sideways)
       const thumbnailBuffer = await sharp(originalPath, { failOn: 'none' })
+        .rotate()
         .jpeg({ quality: 80 })
-        .resize(400, 300, { fit: 'cover' })
+        .resize(400, 300, { fit: 'inside', withoutEnlargement: true })
         .toBuffer();
 
       // Upload optimized image to Supabase
@@ -9384,6 +10243,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         whatsapp: `https://wa.me/?text=${encodeURIComponent(`Check out this gaming screenshot: ${screenshotUrl}`)}`,
         telegram: `https://t.me/share/url?url=${encodeURIComponent(screenshotUrl)}&text=${encodeURIComponent('Check out this gaming screenshot!')}`,
         discord: screenshotUrl,
+        instagram: screenshotUrl,
+        tiktok: screenshotUrl,
+        bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`Check out this amazing gaming screenshot! 📸 ${screenshotUrl}`)}`,
+        snapchat: screenshotUrl,
+        threads: screenshotUrl,
+        pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(screenshotUrl)}&description=${encodeURIComponent(`Check out this amazing gaming screenshot! 📸`)}`,
+        youtube: screenshotUrl,
         email: `mailto:?subject=${encodeURIComponent(`Gaming Screenshot: ${screenshot.title}`)}&body=${encodeURIComponent(`I wanted to share this awesome gaming screenshot with you: ${screenshotUrl}`)}`
       };
 
@@ -9450,19 +10316,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/user/:userId/content-check", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
-      
-      // Check if user has any clips
-      const userClips = await storage.getClipsByUserId(userId);
-      const hasClips = userClips && userClips.length > 0;
-      
-      // Check if user has any screenshots
-      const userScreenshots = await storage.getScreenshotsByUserId(userId);
-      const hasScreenshots = userScreenshots && userScreenshots.length > 0;
-      
-      // Return true if user has any content (clips or screenshots)
-      const hasContent = hasClips || hasScreenshots;
-      
-      res.json({ hasContent });
+      const { hasClips, hasScreenshots } = await storage.hasContentByUserId(userId);
+      res.json({ hasContent: hasClips || hasScreenshots });
     } catch (err) {
       console.error("Error checking user content:", err);
       return res.status(500).json({ message: "Error checking user content" });
@@ -9532,7 +10387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Pin/unpin screenshot
-  app.patch("/api/screenshots/:id/pin", authMiddleware, async (req, res) => {
+  app.patch("/api/screenshots/:id/pin", emailVerificationMiddleware, async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
       const screenshot = await storage.getScreenshot(screenshotId);
@@ -9763,7 +10618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Send a message
-  app.post("/api/messages", hybridAuth, async (req, res) => {
+  app.post("/api/messages", hybridEmailVerification, async (req, res) => {
     try {
       // Validate content for profanity and inappropriate language
       const contentValidation = await contentFilterService.validateContent(req.body.content, 'message');
@@ -9878,7 +10733,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Start a new conversation with username lookup
-  app.post("/api/messages/start", hybridAuth, async (req, res) => {
+  app.post("/api/messages/start", hybridEmailVerification, async (req, res) => {
     try {
       const { username } = req.body;
       let { content } = req.body;
@@ -10078,6 +10933,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount admin routes
   app.use('/api/admin', adminRouter);
   app.use('/api/admin/content-filter', adminContentFilterRouter);
+  app.use('/api/admin/push', adminPushRouter);
+
+  // Push notifications (token register/unregister, self-test)
+  app.use('/api/push', pushRouter);
 
   // Mount support routes
   app.use('/api/support', supportRouter);
@@ -10135,7 +10994,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     });
   };
-  app.post('/api/videos/upload', hybridAuth, desktopVideoUpload, async (req: Request, res: Response) => {
+  app.post('/api/videos/upload', hybridEmailVerification, desktopVideoUpload, async (req: Request, res: Response) => {
     try {
       console.log('📹 Desktop video upload request received:', {
         fileProvided: !!req.file,
@@ -10463,28 +11322,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
   app.get("/api/health", async (req, res) => {
     try {
-      // Test database connection
-      const testQuery = await storage.getClipStats();
+      // Test database connection (result intentionally not returned —
+      // a public health check must not disclose business data).
+      await storage.getClipStats();
 
       res.json({
         status: "healthy",
         timestamp: new Date().toISOString(),
-        database: "connected",
-        clips: testQuery || "accessible"
+        database: "connected"
       });
     } catch (error) {
+      // Log the detail server-side; return only a generic status to the
+      // client so internal error messages aren't disclosed publicly.
       console.error("Health check failed:", error);
       res.status(500).json({
         status: "unhealthy",
-        timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : "Unknown error"
+        timestamp: new Date().toISOString()
       });
     }
   });
 
-  // Static file serving for banner images and attached assets
+  // Static file serving for banner images and (admin-only) server statics.
+  // The referenced /attached_assets/* files now live under client/public/
+  // and are served by the SPA build — the public express.static route over
+  // the repo-root attached_assets/ directory has been removed to avoid
+  // exposing dev/agent scratch content.
   app.use('/banners', express.static(path.join(__dirname, '../client/public/banners')));
-  app.use('/attached_assets', express.static(path.join(__dirname, '../attached_assets')));
   app.use('/api/static', express.static(path.join(__dirname, 'static')));
 
   // ==========================================
@@ -10510,6 +11373,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error fetching user game favorites:", err);
       return res.status(500).json({ message: "Error fetching favorite games" });
+    }
+  });
+
+  // Get the current user's most frequently used hashtags (for tag input suggestions)
+  app.get("/api/user/top-tags", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+      const rows = await db.execute(sql`
+        SELECT LOWER(tag) AS tag, COUNT(*) AS use_count
+        FROM (
+          SELECT UNNEST(tags) AS tag FROM clips
+            WHERE user_id = ${userId} AND tags IS NOT NULL
+          UNION ALL
+          SELECT UNNEST(tags) AS tag FROM screenshots
+            WHERE user_id = ${userId} AND tags IS NOT NULL
+        ) t
+        WHERE tag IS NOT NULL AND TRIM(tag) <> ''
+        GROUP BY LOWER(tag)
+        ORDER BY use_count DESC, LOWER(tag)
+        LIMIT 20
+      `);
+
+      res.json((rows.rows as any[]).map((r) => r.tag));
+    } catch (err) {
+      console.error("Error fetching user top tags:", err);
+      res.status(500).json({ message: "Error fetching top tags" });
+    }
+  });
+
+  // Get the current user's most-uploaded games (for game picker "Your Games" section)
+  app.get("/api/user/top-games", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+      // Count uploads per game across clips and screenshots
+      const rows = await db.execute(sql`
+        SELECT g.id, g.name, g.image_url AS "imageUrl", g.twitch_id AS "twitchId",
+               g.is_user_added AS "isUserAdded", g.is_approved AS "isApproved",
+               g.created_at AS "createdAt", SUM(t.cnt) AS upload_count
+        FROM (
+          SELECT game_id, COUNT(*) AS cnt FROM clips
+            WHERE user_id = ${userId} AND game_id IS NOT NULL GROUP BY game_id
+          UNION ALL
+          SELECT game_id, COUNT(*) AS cnt FROM screenshots
+            WHERE user_id = ${userId} AND game_id IS NOT NULL GROUP BY game_id
+        ) t
+        JOIN games g ON g.id = t.game_id
+        WHERE g.is_approved = true
+        GROUP BY g.id, g.name, g.image_url, g.twitch_id, g.is_user_added, g.is_approved, g.created_at
+        ORDER BY upload_count DESC
+        LIMIT 6
+      `);
+
+      res.json(rows.rows);
+    } catch (err) {
+      console.error("Error fetching user top games:", err);
+      res.status(500).json({ message: "Error fetching top games" });
     }
   });
 
@@ -10927,10 +11850,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingReaction = await storage.getUserScreenshotReaction(userId, screenshotId, emoji);
 
       if (existingReaction) {
-        // Fire reactions cannot be removed
+        // Zaps cannot be removed
         if (emoji === '🔥') {
           return res.status(400).json({ 
-            message: "Fire reactions are permanent and cannot be removed",
+            message: "Zaps are permanent and cannot be removed",
             reacted: true
           });
         }
@@ -10946,8 +11869,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!fireLimits.canFire) {
             return res.status(400).json({ 
               message: fireLimits.isPro 
-                ? "You've used all 3 fire reactions for today. Come back tomorrow!" 
-                : "You've used your daily fire reaction. Pro users can fire 3 times a day!",
+                ? "You've used all 3 zaps for today. Come back tomorrow!" 
+                : "You've used your daily zap. Pro users can zap 3 times a day!",
               firesRemaining: 0,
               maxFires: fireLimits.maxFiresPerDay
             });
@@ -10976,19 +11899,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
               `Fire reaction given to screenshot #${screenshotId}`
             );
           }
+
+          // Award 50 XP to the reactor for giving a fire reaction
+          await XPService.awardXP(
+            userId,
+            50,
+            'other',
+            `Earned 50 XP for giving a fire reaction on screenshot #${screenshotId}`
+          );
           
           // Get updated fire limits to return
           const fireLimits = await storage.getFireLimits(userId);
-          
+
+          // Notify screenshot owner (fire-and-forget)
+          NotificationService.createScreenshotReactionNotification(screenshotId, userId, emoji).catch(() => {});
+
           return res.status(201).json({ 
             message: "Reaction added", 
             reacted: true, 
             reaction,
+            xpAwarded: 50,
             firesRemaining: fireLimits.maxFiresPerDay - fireLimits.firesUsedToday,
             maxFires: fireLimits.maxFiresPerDay
           });
         }
-        
+
+        // Notify screenshot owner (fire-and-forget)
+        NotificationService.createScreenshotReactionNotification(screenshotId, userId, emoji).catch(() => {});
+
         res.status(201).json({ message: "Reaction added", reacted: true, reaction });
       }
     } catch (err) {
@@ -11162,18 +12100,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let socialMediaLinks;
 
       // Get content based on type
+      const BASE_URL = 'https://app.gamefolio.com';
       if (contentType === 'clip' || contentType === 'reel') {
-        content = await storage.getClip(contentId);
-        if (!content) {
+        const clipWithUser = await storage.getClipWithUser(contentId);
+        if (!clipWithUser) {
           return res.status(404).json({ message: "Clip not found" });
         }
-        shareUrl = `${req.protocol}://${req.get('host')}/view/${contentId}`;
+        content = clipWithUser;
+        const username = clipWithUser.user?.username || 'unknown';
+        let sc = clipWithUser.shareCode;
+        if (!sc) {
+          sc = nanoid(8);
+          await storage.updateClip(contentId, { shareCode: sc });
+        }
+        shareUrl = `${BASE_URL}/@${username}/clip/${sc}`;
       } else if (contentType === 'screenshot') {
-        content = await storage.getScreenshot(contentId);
-        if (!content) {
+        const screenshotWithUser = await storage.getScreenshotWithUser(contentId);
+        if (!screenshotWithUser) {
           return res.status(404).json({ message: "Screenshot not found" });
         }
-        shareUrl = `${req.protocol}://${req.get('host')}/screenshot/${contentId}`;
+        content = screenshotWithUser;
+        const username = screenshotWithUser.user?.username || 'unknown';
+        let sc = screenshotWithUser.shareCode;
+        if (!sc) {
+          sc = nanoid(8);
+          await storage.updateScreenshot(contentId, { shareCode: sc });
+        }
+        shareUrl = `${BASE_URL}/@${username}/screenshots/${sc}`;
       } else {
         return res.status(400).json({ message: "Invalid content type" });
       }
@@ -11200,7 +12153,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
         twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${title}`,
         reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${title}`,
-        discord: shareUrl // For Discord, we just copy the link
+        discord: shareUrl,
+        instagram: shareUrl,
+        tiktok: shareUrl,
+        bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`${decodeURIComponent(title)} ${shareUrl}`)}`,
+        snapchat: shareUrl,
+        threads: shareUrl,
+        pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(shareUrl)}&description=${title}`,
+        youtube: shareUrl,
       };
 
       const uploadedContent = {
@@ -12106,6 +13066,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
+
+      // Testing override: busyguy always sees the welcome pack on startup
+      if (user.username === "busyguy") {
+        return res.json({ claimed: false, canClaim: true });
+      }
       
       res.json({
         claimed: user.welcomePackClaimed || false,
@@ -12230,11 +13195,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Mark welcome pack as claimed
-      await db.update(users).set({ 
-        welcomePackClaimed: true,
-        updatedAt: new Date()
-      }).where(eq(users.id, userId));
+      // Mark welcome pack as claimed (skip for busyguy so they always see it on startup)
+      if (user.username !== "busyguy") {
+        await db.update(users).set({ 
+          welcomePackClaimed: true,
+          updatedAt: new Date()
+        }).where(eq(users.id, userId));
+      }
       
       res.json({
         rewards,
@@ -12244,6 +13211,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error claiming welcome pack:", error);
       res.status(500).json({ message: "Failed to claim welcome pack" });
+    }
+  });
+
+  // ==================== MAC THE CAT EASTER EGG ====================
+
+  // Grant the one-time 5,000 XP bonus the first time a signed-in user discovers
+  // Mac's hidden profile (/mac). The grant is recorded in user_xp_history with
+  // source "mac_bonus"; the existence of that row is the one-time guard, so no
+  // schema change is needed. The client calls this on mount when viewing /mac.
+  app.post("/api/mac/discover", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+
+      // Already claimed? (one row with source "mac_bonus" is enough)
+      const [already] = await db
+        .select({ id: userXPHistory.id })
+        .from(userXPHistory)
+        .where(and(eq(userXPHistory.userId, userId), eq(userXPHistory.source, "mac_bonus")))
+        .limit(1);
+
+      if (already) {
+        return res.json({ granted: false, alreadyClaimed: true });
+      }
+
+      await XPService.awardXP(
+        userId,
+        MAC_BONUS_XP,
+        "mac_bonus",
+        "Found Mac the gaming cat! 🐱"
+      );
+
+      return res.json({ granted: true, xp: MAC_BONUS_XP });
+    } catch (error) {
+      console.error("Error granting Mac bonus:", error);
+      return res.status(500).json({ message: "Failed to grant Mac bonus" });
     }
   });
 
@@ -12650,14 +13652,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         results[url] = url; // Return original URL for non-Supabase URLs
       }
 
-      // Generate signed URLs for Supabase bucket content
-      for (const url of supabaseUrls) {
-        const signedUrl = await supabaseStorage.convertToSignedUrl(url, 3600);
-        if (signedUrl) {
-          results[url] = signedUrl;
-        } else {
-          results[url] = url; // Fallback to original if signing fails
-        }
+      // Generate signed URLs for Supabase bucket content in parallel
+      const signedResults = await Promise.all(
+        supabaseUrls.map(async (url) => {
+          const signedUrl = await supabaseStorage.convertToSignedUrl(url, 3600);
+          return [url, signedUrl || url] as const;
+        })
+      );
+      for (const [url, signed] of signedResults) {
+        results[url] = signed;
       }
 
       res.json({ signedUrls: results });

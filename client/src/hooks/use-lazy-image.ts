@@ -16,8 +16,10 @@ interface LazyImageState {
 }
 
 function isSupabaseStorageUrl(url: string): boolean {
-  // All Supabase storage buckets are private and need signed URLs
-  return url?.includes('gamefolio-media') || url?.includes('gamefolio-assets') || url?.includes('gamefolio-name-tags');
+  if (!url) return false;
+  // Already-signed URLs contain a token query param — no need to re-sign
+  if (url.includes('token=')) return false;
+  return url.includes('gamefolio-media') || url.includes('gamefolio-assets') || url.includes('gamefolio-name-tags');
 }
 
 export function useLazyImage<T extends HTMLElement = HTMLElement>({
@@ -32,23 +34,29 @@ export function useLazyImage<T extends HTMLElement = HTMLElement>({
     isInView: false,
     hasError: false,
   });
-  
+
   const elementRef = useRef<T>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
+  // Use a ref to track isInView so the observer isn't torn down/recreated on load
+  const isInViewRef = useRef(false);
+  // Track the last src we loaded so we can reload when src changes post-load
+  const loadedSrcRef = useRef<string | null>(null);
 
   const loadImage = useCallback(async (imageUrl: string) => {
+    if (!imageUrl) return;
     setState(prev => ({ ...prev, isLoading: true, hasError: false }));
-    
+
     try {
       let finalUrl = imageUrl;
-      
+
       if (isSupabaseStorageUrl(imageUrl)) {
         finalUrl = await fetchSignedUrl(imageUrl);
       }
-      
+
       const img = new Image();
-      
+
       img.onload = () => {
+        loadedSrcRef.current = imageUrl;
         setState(prev => ({
           ...prev,
           imageSrc: finalUrl,
@@ -56,7 +64,7 @@ export function useLazyImage<T extends HTMLElement = HTMLElement>({
           hasError: false,
         }));
       };
-      
+
       img.onerror = () => {
         setState(prev => ({
           ...prev,
@@ -65,7 +73,7 @@ export function useLazyImage<T extends HTMLElement = HTMLElement>({
           imageSrc: placeholder,
         }));
       };
-      
+
       img.src = finalUrl;
     } catch (error) {
       setState(prev => ({
@@ -77,33 +85,34 @@ export function useLazyImage<T extends HTMLElement = HTMLElement>({
     }
   }, [placeholder]);
 
+  // Set up the IntersectionObserver once (not dependent on isInView state)
   useEffect(() => {
     const element = elementRef.current;
-    if (!element || !src) return;
+    if (!element) return;
 
-    // If the browser doesn't support IntersectionObserver, load immediately
     if (!window.IntersectionObserver) {
-      loadImage(src);
+      if (src) loadImage(src);
       return;
+    }
+
+    // Clean up any previous observer
+    if (observerRef.current) {
+      observerRef.current.disconnect();
     }
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
-        if (entry.isIntersecting && !state.isInView) {
+        if (entry.isIntersecting && !isInViewRef.current) {
+          isInViewRef.current = true;
           setState(prev => ({ ...prev, isInView: true }));
-          loadImage(src);
-          
-          // Stop observing once the image is loaded
+          if (src) loadImage(src);
           if (observerRef.current) {
             observerRef.current.unobserve(element);
           }
         }
       },
-      {
-        rootMargin,
-        threshold,
-      }
+      { rootMargin, threshold }
     );
 
     observerRef.current.observe(element);
@@ -113,9 +122,20 @@ export function useLazyImage<T extends HTMLElement = HTMLElement>({
         observerRef.current.disconnect();
       }
     };
-  }, [src, rootMargin, threshold, state.isInView, loadImage]);
+  // Only re-run when src changes, not when isInView/state changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src, rootMargin, threshold]);
 
-  // Cleanup observer on unmount
+  // If src changes AFTER the image was already loaded (e.g. signed URL resolves),
+  // and the element is already in view, reload with the new src
+  useEffect(() => {
+    if (!src) return;
+    if (isInViewRef.current && loadedSrcRef.current !== src) {
+      loadImage(src);
+    }
+  }, [src, loadImage]);
+
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (observerRef.current) {

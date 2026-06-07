@@ -1,11 +1,29 @@
 import { useState, useRef } from "react";
+import { useLazyVideo } from "@/hooks/use-lazy-video";
+import { Link } from "wouter";
 import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { ClipWithUser } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { formatNumber } from "@/lib/format";
+import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
 import { formatDuration } from "@/lib/constants";
+import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
+
+function LazyReelVideoThumbnail({ src, className }: { src: string | undefined; className: string }) {
+  const { ref, visible } = useLazyVideo({ autoPlay: false });
+  return (
+    <video
+      ref={ref}
+      src={visible ? src : undefined}
+      className={className}
+      preload="none"
+      muted
+      playsInline
+    />
+  );
+}
 
 interface LatestReelsCarouselProps {
   reels: ClipWithUser[] | undefined;
@@ -87,16 +105,16 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
     <div className="relative">
       <button
         onClick={() => scroll('left')}
-        className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+        className="absolute -left-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
       >
-        <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+        <ChevronLeft className="h-5 w-5" />
       </button>
 
       <button
         onClick={() => scroll('right')}
-        className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+        className="absolute -right-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
       >
-        <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+        <ChevronRight className="h-5 w-5" />
       </button>
 
       <div
@@ -118,7 +136,7 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
           return (
             <div
               key={`latest-reel-${reel.id}`}
-              onClick={() => openClipDialog(reel.id, reelsArray)}
+              onClick={() => openClipDialog(reel.id, reelsArray, undefined, 'reel')}
               className="w-44 sm:w-52 lg:w-56 xl:w-60 flex-shrink-0 cursor-pointer group"
               data-testid={`reel-card-${reel.id}`}
             >
@@ -128,18 +146,15 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
                   <LazyImage
                     src={reel.thumbnailUrl}
                     alt={reel.title || 'Reel thumbnail'}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
                     showLoadingSpinner={true}
-                    rootMargin="100px"
+                    rootMargin="400px"
                     threshold={0.1}
                   />
                 ) : (
-                  <video
+                  <LazyReelVideoThumbnail
                     src={reel.videoUrl ?? undefined}
-                    className="w-full h-full object-cover"
-                    preload="metadata"
-                    muted
-                    playsInline
+                    className="w-full h-full object-contain"
                   />
                 )}
 
@@ -157,19 +172,35 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
 
               {/* Meta — title / username / game tag UNDER the thumbnail */}
               <div className="pt-2 px-0.5">
-                <h3 className="text-white font-bold text-sm line-clamp-1">
-                  {reel.title}
-                </h3>
-                <p className="text-white/60 text-xs mt-0.5">
-                  @{reel.user.username}
-                </p>
-                {reel.game?.name && (
-                  <span
-                    className="inline-block mt-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded"
-                    style={{ background: '#B7FF1A', color: '#071013' }}
+                <div className="flex items-start justify-between gap-1">
+                  <h3 className="text-white font-bold text-sm line-clamp-1 flex-1 min-w-0">
+                    {reel.title}
+                  </h3>
+                  <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} className="flex-shrink-0 -mt-0.5">
+                    <TrendingClipMenu clip={reel} />
+                  </div>
+                </div>
+                <ProfileHoverCard username={reel.user.username}>
+                  <Link
+                    href={`/profile/${reel.user.username}`}
+                    className="text-white/60 text-xs mt-0.5 hover:text-white/90 transition-colors block"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    {reel.game.name}
-                  </span>
+                    @{reel.user.username}
+                  </Link>
+                </ProfileHoverCard>
+                {reel.game?.name && (
+                  <Link
+                    href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span
+                      className="inline-block mt-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded hover:opacity-90 transition-opacity"
+                      style={{ background: '#B7FF1A', color: '#071013' }}
+                    >
+                      {reel.game.name}
+                    </span>
+                  </Link>
                 )}
               </div>
             </div>

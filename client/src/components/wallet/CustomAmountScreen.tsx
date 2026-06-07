@@ -17,10 +17,6 @@ export default function CustomAmountScreen({
   const [showCursor, setShowCursor] = useState(true);
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  useEffect(() => {
     const interval = setInterval(() => {
       setShowCursor((prev) => !prev);
     }, 530);
@@ -104,7 +100,7 @@ export default function CustomAmountScreen({
   return (
     <div
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: "#101D27f2", backdropFilter: "blur(4px)" }}
+      style={{ background: "#0B1218f2", backdropFilter: "blur(4px)" }}
     >
       {/* Header */}
       <div className="flex items-center justify-center px-6 pt-12 pb-6">
@@ -116,7 +112,7 @@ export default function CustomAmountScreen({
           <button
             onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
-            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
           >
             <svg
               width="20"
@@ -129,12 +125,12 @@ export default function CustomAmountScreen({
                 fillRule="evenodd"
                 clipRule="evenodd"
                 d="M0 10C0 4.47715 4.47715 0 10 0C15.5228 0 20 4.47715 20 10C20 15.5228 15.5228 20 10 20C4.47715 20 0 15.5228 0 10Z"
-                stroke="#F8FAFC"
+                stroke="#F5F7F2"
                 strokeWidth="1.5"
               />
               <path
                 d="M12.5 7.5L7.5 12.5M7.5 7.5L12.5 12.5"
-                stroke="#F8FAFC"
+                stroke="#F5F7F2"
                 strokeWidth="1.5"
                 strokeLinecap="round"
               />
@@ -149,7 +145,7 @@ export default function CustomAmountScreen({
         <div className="flex flex-col items-center gap-6 w-full max-w-[382px]">
           <span
             className="text-sm font-medium uppercase tracking-wider text-center"
-            style={{ color: "#94a3b8", letterSpacing: "0.7px" }}
+            style={{ color: "#B8C0AE", letterSpacing: "0.7px" }}
           >
             How much would you like to buy?
           </span>
@@ -259,7 +255,7 @@ export default function CustomAmountScreen({
       <div
         className="px-6 pb-24 pt-6"
         style={{
-          background: "#0f172a",
+          background: "#0B1218",
           borderTop: "1px solid rgba(30, 41, 59, 0.3)",
           borderRadius: "40px 40px 0 0",
         }}
@@ -292,7 +288,7 @@ export default function CustomAmountScreen({
                 />
               </svg>
             </div>
-            <p className="text-xs leading-5" style={{ color: "#94a3b8" }}>
+            <p className="text-xs leading-5" style={{ color: "#B8C0AE" }}>
               {isOverMax ? (
                 <>
                   The maximum purchase amount is{" "}
@@ -316,7 +312,7 @@ export default function CustomAmountScreen({
             disabled={!isValidAmount}
             className="w-full flex items-center justify-center gap-2 py-5 rounded-2xl font-bold text-lg transition-all"
             style={{
-              background: isValidAmount ? "#B7FF1A" : "#1e293b",
+              background: isValidAmount ? "#B7FF1A" : "#1B2A33",
               boxShadow: isValidAmount ? "0 0 30px -10px #B7FF1A" : "none",
               opacity: isValidAmount ? 1 : 0.5,
               cursor: isValidAmount ? "pointer" : "not-allowed",

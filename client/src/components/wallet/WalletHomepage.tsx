@@ -119,12 +119,12 @@ export default function WalletHomepage({
   };
 
   return (
-    <div className="w-full min-h-screen pb-24 font-['Plus_Jakarta_Sans']" style={{ background: '#101D27' }}>
+    <div className="w-full min-h-screen pb-24 font-['Plus_Jakarta_Sans']" style={{ background: '#0B1218' }}>
       {/* Header Section with Gradient */}
       <div 
         className="w-full"
         style={{ 
-          background: 'linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #101D27 100%)',
+          background: '#0B1218',
           borderBottom: '1px solid rgba(30, 41, 59, 0.3)'
         }}
       >
@@ -132,7 +132,7 @@ export default function WalletHomepage({
           {/* Title */}
           <span 
             className="text-xl font-bold"
-            style={{ color: '#f8fafc' }}
+            style={{ color: '#F5F7F2' }}
           >
             Wallet Hub
           </span>
@@ -141,7 +141,7 @@ export default function WalletHomepage({
           <div className="flex flex-col items-center gap-1 w-full">
             <span 
               className="text-sm font-medium uppercase tracking-wider"
-              style={{ color: '#94a3b8', letterSpacing: '0.7px' }}
+              style={{ color: '#B8C0AE', letterSpacing: '0.7px' }}
             >
               Total Balance
             </span>
@@ -172,12 +172,12 @@ export default function WalletHomepage({
             <div 
               className="rounded-2xl p-5 flex flex-col gap-4 h-full"
               style={{ 
-                background: '#0f172a',
+                background: '#0B1218',
                 border: '1px solid rgba(30, 41, 59, 0.5)'
               }}
             >
               <div className="flex items-center justify-between">
-                <span className="text-lg font-bold" style={{ color: '#f8fafc' }}>NFTs</span>
+                <span className="text-lg font-bold" style={{ color: '#F5F7F2' }}>NFTs</span>
                 {ownedNFTs.length > 0 && (
                   <Link href="/collection">
                     <span 
@@ -193,7 +193,7 @@ export default function WalletHomepage({
               {/* NFT Content Area */}
               <div 
                 className="flex-1 rounded-xl min-h-[200px] overflow-hidden"
-                style={{ background: 'rgba(2, 6, 23, 0.5)', border: '1px solid #1e293b' }}
+                style={{ background: 'rgba(2, 6, 23, 0.5)', border: '1px solid #1B2A33' }}
               >
                 {ownedNFTs.length > 0 ? (
                   <div className="flex items-center justify-center p-4 h-full">
@@ -249,9 +249,9 @@ export default function WalletHomepage({
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8 h-full">
                     <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path fillRule="evenodd" clipRule="evenodd" d="M24 44C35.0457 44 44 35.0457 44 24C44 12.9543 35.0457 4 24 4C12.9543 4 4 12.9543 4 24C4 35.0457 12.9543 44 24 44ZM24 18C24.5523 18 25 18.4477 25 19V23H29C29.5523 23 30 23.4477 30 24C30 24.5523 29.5523 25 29 25H25V29C25 29.5523 24.5523 30 24 30C23.4477 30 23 29.5523 23 29V25H19C18.4477 25 18 24.5523 18 24C18 23.4477 18.4477 23 19 23H23V19C23 18.4477 23.4477 18 24 18Z" fill="#1e293b" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M24 44C35.0457 44 44 35.0457 44 24C44 12.9543 35.0457 4 24 4C12.9543 4 4 12.9543 4 24C4 35.0457 12.9543 44 24 44ZM24 18C24.5523 18 25 18.4477 25 19V23H29C29.5523 23 30 23.4477 30 24C30 24.5523 29.5523 25 29 25H25V29C25 29.5523 24.5523 30 24 30C23.4477 30 23 29.5523 23 29V25H19C18.4477 25 18 24.5523 18 24C18 23.4477 18.4477 23 19 23H23V19C23 18.4477 23.4477 18 24 18Z" fill="#1B2A33" />
                     </svg>
-                    <span className="mt-3" style={{ color: '#94a3b8', fontSize: '14px' }}>No NFTs yet</span>
+                    <span className="mt-3" style={{ color: '#B8C0AE', fontSize: '14px' }}>No NFTs yet</span>
                     <Link href="/store">
                       <span className="hover:underline" style={{ color: '#B7FF1A', fontSize: '12px' }}>Browse the store</span>
                     </Link>
@@ -286,15 +286,15 @@ export default function WalletHomepage({
                 onClick={onStakeClick}
                 className="flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-bold transition-all hover:bg-slate-700"
                 style={{ 
-                  background: '#1e293b',
-                  border: '1px solid #1e293b',
+                  background: '#1B2A33',
+                  border: '1px solid #1B2A33',
                   height: '58px'
                 }}
               >
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path fillRule="evenodd" clipRule="evenodd" d="M10.0001 18.3333C8.84731 18.3333 7.76398 18.1145 6.75009 17.6767C5.7362 17.2389 4.85425 16.6453 4.10425 15.8958C3.35425 15.1464 2.76064 14.2644 2.32342 13.25C1.88619 12.2356 1.6673 11.1522 1.66675 10C1.66619 8.84778 1.88508 7.76444 2.32342 6.75C2.76175 5.73555 3.35536 4.8536 4.10425 4.10416C4.85314 3.35471 5.73509 2.7611 6.75009 2.32332C7.76509 1.88555 8.84842 1.66666 10.0001 1.66666C11.1518 1.66666 12.2351 1.88555 13.2501 2.32332C14.2651 2.7611 15.147 3.35471 15.8959 4.10416C16.6448 4.8536 17.2387 5.73555 17.6776 6.75C18.1165 7.76444 18.3351 8.84778 18.3334 10C18.3318 11.1522 18.1129 12.2356 17.6768 13.25C17.2407 14.2644 16.647 15.1464 15.8959 15.8958C15.1448 16.6453 14.2629 17.2392 13.2501 17.6775C12.2373 18.1158 11.154 18.3345 10.0001 18.3333Z" fill="#B7FF1A" />
                 </svg>
-                <span style={{ color: '#f8fafc', fontSize: '16px' }}>Stake GFT</span>
+                <span style={{ color: '#F5F7F2', fontSize: '16px' }}>Stake GFT</span>
               </button>
             </div>
 
@@ -302,22 +302,22 @@ export default function WalletHomepage({
             <div 
               className="rounded-2xl p-5 flex flex-col gap-4"
               style={{ 
-                background: '#0f172a',
+                background: '#0B1218',
                 border: '1px solid rgba(30, 41, 59, 0.5)'
               }}
             >
-              <span className="text-lg font-bold" style={{ color: '#f8fafc' }}>Quick Stats</span>
+              <span className="text-lg font-bold" style={{ color: '#F5F7F2' }}>Quick Stats</span>
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                  <span style={{ color: '#94a3b8', fontSize: '14px' }}>GFT Balance</span>
+                  <span style={{ color: '#B8C0AE', fontSize: '14px' }}>GFT Balance</span>
                   <span style={{ color: '#B7FF1A', fontSize: '14px', fontWeight: 600 }}>{offChainBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} GFT</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span style={{ color: '#94a3b8', fontSize: '14px' }}>Staked Amount</span>
+                  <span style={{ color: '#B8C0AE', fontSize: '14px' }}>Staked Amount</span>
                   <span style={{ color: '#fff', fontSize: '14px', fontWeight: 600 }}>{stakedAmount} GFT</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span style={{ color: '#94a3b8', fontSize: '14px' }}>NFTs Owned</span>
+                  <span style={{ color: '#B8C0AE', fontSize: '14px' }}>NFTs Owned</span>
                   <span style={{ color: '#fff', fontSize: '14px', fontWeight: 600 }}>{nftsOwned}</span>
                 </div>
               </div>
@@ -330,12 +330,12 @@ export default function WalletHomepage({
             <div 
               className="rounded-2xl p-5 flex flex-col gap-4"
               style={{ 
-                background: '#0f172a',
+                background: '#0B1218',
                 border: '1px solid rgba(30, 41, 59, 0.5)'
               }}
             >
               <div className="flex items-center justify-between">
-                <span className="text-lg font-bold" style={{ color: '#f8fafc' }}>Recent Activity</span>
+                <span className="text-lg font-bold" style={{ color: '#F5F7F2' }}>Recent Activity</span>
                 <button 
                   onClick={onActivityClick}
                   className="hover:opacity-80 transition-opacity"
@@ -348,12 +348,12 @@ export default function WalletHomepage({
               <div className="flex flex-col gap-4">
                 {isLoadingActivity && (
                   <div className="flex items-center justify-center py-6">
-                    <Loader2 className="w-5 h-5 animate-spin" style={{ color: '#94a3b8' }} />
+                    <Loader2 className="w-5 h-5 animate-spin" style={{ color: '#B8C0AE' }} />
                   </div>
                 )}
                 {!isLoadingActivity && transactions.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-6">
-                    <span style={{ color: '#94a3b8', fontSize: '14px' }}>No activity yet</span>
+                    <span style={{ color: '#B8C0AE', fontSize: '14px' }}>No activity yet</span>
                     <span style={{ color: '#64748b', fontSize: '12px' }}>Your purchases will appear here</span>
                   </div>
                 )}
@@ -365,7 +365,7 @@ export default function WalletHomepage({
                     {/* Transaction Icon */}
                     <div 
                       className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ background: '#1e293b', border: '1px solid #1e293b' }}
+                      style={{ background: '#1B2A33', border: '1px solid #1B2A33' }}
                     >
                       {tx.type === "received" && (
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -386,8 +386,8 @@ export default function WalletHomepage({
 
                     {/* Transaction Details */}
                     <div className="flex-1 min-w-0">
-                      <p style={{ color: '#f8fafc', fontSize: '14px', fontWeight: 500 }}>{tx.title}</p>
-                      <p style={{ color: '#94a3b8', fontSize: '12px' }}>{tx.subtitle}</p>
+                      <p style={{ color: '#F5F7F2', fontSize: '14px', fontWeight: 500 }}>{tx.title}</p>
+                      <p style={{ color: '#B8C0AE', fontSize: '12px' }}>{tx.subtitle}</p>
                     </div>
 
                     {/* Amount & Time */}
@@ -414,7 +414,7 @@ export default function WalletHomepage({
             <div 
               className="rounded-2xl p-5 flex flex-col gap-4"
               style={{ 
-                background: '#0f172a',
+                background: '#0B1218',
                 border: '1px solid rgba(30, 41, 59, 0.5)'
               }}
             >
@@ -423,7 +423,7 @@ export default function WalletHomepage({
                 <div className="flex flex-col gap-1">
                   <span 
                     className="text-xs uppercase tracking-wide"
-                    style={{ color: '#94a3b8', letterSpacing: '0.3px' }}
+                    style={{ color: '#B8C0AE', letterSpacing: '0.3px' }}
                   >
                     Wallet Status
                   </span>
@@ -461,7 +461,7 @@ export default function WalletHomepage({
             <div 
               className="rounded-2xl p-4 w-full"
               style={{ 
-                background: '#0f172a',
+                background: '#0B1218',
                 border: '1px solid rgba(30, 41, 59, 0.5)'
               }}
               data-testid="card-wallet-address"
@@ -470,13 +470,13 @@ export default function WalletHomepage({
                 <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                   <span 
                     className="text-xs uppercase"
-                    style={{ color: '#94a3b8', fontSize: '10px' }}
+                    style={{ color: '#B8C0AE', fontSize: '10px' }}
                   >
                     Wallet Address
                   </span>
                   <span 
                     className="font-mono text-xs sm:text-sm font-medium break-all"
-                    style={{ color: '#f8fafc', fontFamily: 'JetBrains Mono, monospace' }}
+                    style={{ color: '#F5F7F2', fontFamily: 'JetBrains Mono, monospace' }}
                   >
                     {walletAddress || "0x86d2...a4cf"}
                   </span>
@@ -504,16 +504,16 @@ export default function WalletHomepage({
               <div
                 className="rounded-2xl p-5 flex flex-col gap-4 w-full"
                 style={{
-                  background: '#0f172a',
+                  background: '#0B1218',
                   border: '1px solid rgba(30, 41, 59, 0.5)',
                 }}
                 data-testid="card-wallet-breakdown"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold" style={{ color: '#f8fafc' }}>
+                  <span className="text-lg font-bold" style={{ color: '#F5F7F2' }}>
                     Your Wallets
                   </span>
-                  <span style={{ color: '#94a3b8', fontSize: '12px' }}>
+                  <span style={{ color: '#B8C0AE', fontSize: '12px' }}>
                     {wallets.length} {wallets.length === 1 ? 'wallet' : 'wallets'}
                   </span>
                 </div>
@@ -529,7 +529,7 @@ export default function WalletHomepage({
                           background: retiredWithBalance ? 'rgba(245, 158, 11, 0.08)' : 'rgba(2, 6, 23, 0.5)',
                           border: retiredWithBalance
                             ? '1px solid rgba(245, 158, 11, 0.5)'
-                            : '1px solid #1e293b',
+                            : '1px solid #1B2A33',
                         }}
                         data-testid={`wallet-entry-${w.address}`}
                       >
@@ -541,7 +541,7 @@ export default function WalletHomepage({
                                 background: w.isPrimary
                                   ? 'rgba(183, 255, 26, 0.15)'
                                   : 'rgba(148, 163, 184, 0.15)',
-                                color: w.isPrimary ? '#B7FF1A' : '#94a3b8',
+                                color: w.isPrimary ? '#B7FF1A' : '#B8C0AE',
                                 border: w.isPrimary
                                   ? '1px solid rgba(183, 255, 26, 0.3)'
                                   : '1px solid rgba(148, 163, 184, 0.3)',
@@ -561,7 +561,7 @@ export default function WalletHomepage({
                           </div>
                           <span
                             className="font-mono text-xs break-all"
-                            style={{ color: '#f8fafc', fontFamily: 'JetBrains Mono, monospace' }}
+                            style={{ color: '#F5F7F2', fontFamily: 'JetBrains Mono, monospace' }}
                           >
                             {w.address}
                           </span>
@@ -580,7 +580,7 @@ export default function WalletHomepage({
                               maximumFractionDigits: 2,
                             })}
                           </span>
-                          <span style={{ color: '#94a3b8', fontSize: '11px' }}> GFT</span>
+                          <span style={{ color: '#B8C0AE', fontSize: '11px' }}> GFT</span>
                         </div>
                       </div>
                     );

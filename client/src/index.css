@@ -8,6 +8,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Keyboard-aware layout ── */
+:root {
+  --keyboard-height: 0px;
+  --visual-viewport-height: 100dvh;
+}
+
+/* Give all inputs scroll-margin so they appear above the keyboard when scrolled into view */
+@media (max-width: 768px) {
+  input:not([type="hidden"]),
+  textarea,
+  select,
+  [contenteditable="true"] {
+    scroll-margin-bottom: 80px;
+  }
+}
+
+/* Smooth transitions for keyboard-driven layout shifts */
+.keyboard-aware-scroll {
+  transition: padding-bottom 0.18s ease-out;
+}
+
+/* Upload page: ensure the form content area is always scrollable with keyboard */
+.upload-form-content {
+  padding-bottom: var(--keyboard-height, 0px);
+  transition: padding-bottom 0.18s ease-out;
+}
+
 /* Text selection highlight */
 ::selection {
   background-color: #B7FF1A;
@@ -83,6 +110,12 @@
   100% {
     background-position: 200% 0;
   }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 @keyframes float-1 {
@@ -180,6 +213,37 @@
   color: #B7FF1A;
 }
 
+/* Date picker field — keeps color transparent at all times so the
+   custom overlay label is always visible instead of the native date text */
+.date-picker-field,
+.date-picker-field:focus,
+.date-picker-field:focus-visible,
+.date-picker-field:active {
+  color: transparent !important;
+  caret-color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  animation: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Expand the native calendar icon to cover the entire input area on desktop */
+.date-picker-field::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Suppress iOS inner shadow on inputs */
+.date-picker-field::-webkit-inner-spin-button,
+.date-picker-field::-webkit-clear-button {
+  display: none;
+}
+
 .auth-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: rgba(183, 255, 26, 0.4) transparent;
@@ -240,13 +304,19 @@ video:focus {
 /* Profile-scoped theme variables - STRICTLY isolated to profile pages only */
 .profile-theme-scope {
   --profile-accent-color: var(--user-accent-color, hsl(var(--primary)));
-  --profile-primary-color: var(--user-primary-color, #02172C);
+  --profile-primary-color: var(--user-primary-color, #071013);
   --profile-avatar-border-color: var(--user-avatar-border-color, hsl(var(--primary)));
   --profile-accent-color-alpha: var(--user-accent-color-alpha, rgba(183, 255, 26, 0.2));
   
   /* Ensure isolation - prevent CSS variable inheritance */
   isolation: isolate;
   contain: layout style paint;
+}
+
+/* Ensure Radix popper (Popover, Tooltip, Select, etc.) always renders above
+   hardware-accelerated video compositing layers and other stacking contexts. */
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important;
 }
 
 /* Apply Gamefolio theme globally to all modals and dialogs */
@@ -303,7 +373,7 @@ video:focus {
 
 :root {
   /* Global Gamefolio theme - Dark gaming SaaS style with neon green accents */
-  --background: 196 56% 3%;      /* #03080A */
+  --background: 208 48% 6%;      /* #081017 */
   --foreground: 84 24% 96%;      /* #F5F7F2 */
 
   /* Card */
@@ -360,14 +430,14 @@ video:focus {
   --chart-5: 214 100% 55%;  /* Blue */
 
   /* Design system hex tokens */
-  --ds-bg:           #03080A;
-  --ds-bg-soft:      #071013;
+  --ds-bg:           #081017;
+  --ds-bg-soft:      #091219;
   --ds-surface:      #0B1218;
   --ds-surface-el:   #101923;
   --ds-border:       #1B2A33;
   --ds-border-muted: #22313A;
   --ds-primary:      #B7FF1A;
-  --ds-primary-hov:  #A2F000;
+  --ds-primary-hov:  #B7FF1A;
   --ds-primary-dark: #6FA800;
   --ds-text:         #F5F7F2;
   --ds-text-sec:     #B8C0AE;
@@ -394,8 +464,7 @@ video:focus {
   body {
     @apply font-sans antialiased bg-background text-foreground;
     font-family: 'Space Grotesk', sans-serif;
-    background-color: #03080A !important;
-    background-image: radial-gradient(circle at 50% 0%, rgba(183,255,26,0.07), transparent 40%) !important;
+    background-color: #081017 !important;
   }
 
   /* Prevent iOS auto-zoom on input focus (triggers when font-size < 16px) */
@@ -515,6 +584,18 @@ video:focus {
   to { transform: translateX(-100%); }
 }
 
+@keyframes push-enter {
+  from { transform: translateX(calc(100% + 2rem)); opacity: 0; max-width: 0; }
+  20% { max-width: 600px; }
+  to { transform: translateX(0); opacity: 1; max-width: 600px; }
+}
+
+@keyframes push-leave {
+  from { transform: translateX(0); opacity: 1; max-width: 600px; }
+  80% { max-width: 0; }
+  to { transform: translateX(calc(-100% - 2rem)); opacity: 0; max-width: 0; }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -588,7 +669,7 @@ video:focus {
 
 /* Professional badge styles */
 .pro-badge {
-  background: linear-gradient(90deg, #B7FF1A 0%, #A2F000 100%);
+  background: #B7FF1A;
   box-shadow: 0 0 10px rgba(183, 255, 26, 0.5);
 }
 
@@ -653,6 +734,10 @@ video:focus {
     transform: scale(1.1);
   }
 }
+
+/* lootbox-blur-bg kept for legacy compatibility but no longer applies a filter
+   (blur is now handled by backdrop-filter on the dialog overlay itself) */
+#root.lootbox-blur-bg {}
 
 /* Lootbox dialog transparent background override */
 .lootbox-dialog-content {
@@ -786,14 +871,14 @@ video:focus {
 /* === Global Gamefolio Design System Component Styles === */
 
 /* Primary button — neon green with dark text and glow on hover */
-button[class*="bg-primary"],
+button[class~="bg-primary"],
 .btn-primary {
   background-color: var(--ds-primary) !important;
   color: var(--ds-btn-text) !important;
   font-weight: 600;
   letter-spacing: 0.01em;
 }
-button[class*="bg-primary"]:hover,
+button[class~="bg-primary"]:hover,
 .btn-primary:hover {
   background-color: var(--ds-primary-hov) !important;
   box-shadow: var(--ds-shadow-glow);
@@ -833,4 +918,153 @@ h1, h2, h3 {
 .border-primary-glow {
   border-color: rgba(183,255,26,0.4);
   box-shadow: 0 0 12px rgba(183,255,26,0.15);
+}
+
+/* ── LootboxIcon animations ── */
+@keyframes lootbox-float {
+  0%, 100% { transform: translateX(0px) rotate(0deg); }
+  20%       { transform: translateX(-4px) rotate(-5deg); }
+  40%       { transform: translateX(4px) rotate(5deg); }
+  60%       { transform: translateX(-3px) rotate(-3deg); }
+  80%       { transform: translateX(3px) rotate(3deg); }
+}
+
+@keyframes lootbox-pulse {
+  0%, 100% { opacity: 0.12; transform: scale(1); }
+  50%       { opacity: 0.22; transform: scale(1.08); }
+}
+
+@keyframes lootbox-ping {
+  0%   { transform: scale(1);   opacity: 0.6; }
+  75%, 100% { transform: scale(2.2); opacity: 0; }
+}
+
+@keyframes lootbox-sparkle {
+  0%, 100% { opacity: 0;   transform: scale(0) translateY(0); }
+  30%       { opacity: 0.9; transform: scale(1) translateY(-3px); }
+  60%       { opacity: 0;   transform: scale(0.5) translateY(-5px); }
+}
+
+/* === RecommendedForYou discovery icon animation === */
+
+.rec-icon-animated {
+  animation: rec-glow-pulse 4s ease-in-out infinite;
+}
+
+.rec-icon-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: rec-spin 4s ease-in-out infinite;
+}
+
+.rec-bracket-tl { animation: rec-bracket-tl 4s ease-in-out infinite; }
+.rec-bracket-tr { animation: rec-bracket-tr 4s ease-in-out infinite; }
+.rec-bracket-bl { animation: rec-bracket-bl 4s ease-in-out infinite; }
+.rec-bracket-br { animation: rec-bracket-br 4s ease-in-out infinite; }
+
+@keyframes rec-glow-pulse {
+  0%,  12%  { filter: drop-shadow(0 0 0px rgba(183,255,26,0));    }
+  30%, 52%  { filter: drop-shadow(0 0 5px rgba(183,255,26,0.5));  }
+  68%, 100% { filter: drop-shadow(0 0 0px rgba(183,255,26,0));    }
+}
+
+@keyframes rec-spin {
+  0%,  12%  { transform: rotate(0deg); }
+  30%, 52%  { transform: rotate(9deg); }
+  68%, 100% { transform: rotate(0deg); }
+}
+
+@keyframes rec-bracket-tl {
+  0%,  12%  { transform: translate(0px,  0px);  }
+  30%, 52%  { transform: translate(-2px, -2px); }
+  68%, 100% { transform: translate(0px,  0px);  }
+}
+
+@keyframes rec-bracket-tr {
+  0%,  12%  { transform: translate(0px, 0px);  }
+  30%, 52%  { transform: translate(2px, -2px); }
+  68%, 100% { transform: translate(0px, 0px);  }
+}
+
+@keyframes rec-bracket-bl {
+  0%,  12%  { transform: translate(0px,  0px); }
+  30%, 52%  { transform: translate(-2px, 2px); }
+  68%, 100% { transform: translate(0px,  0px); }
+}
+
+@keyframes rec-bracket-br {
+  0%,  12%  { transform: translate(0px, 0px); }
+  30%, 52%  { transform: translate(2px, 2px); }
+  68%, 100% { transform: translate(0px, 0px); }
+}
+
+@keyframes gf-splash-logo-in {
+  from { opacity: 0; transform: scale(0.82); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes gf-splash-glow-pulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.12); }
+}
+
+@keyframes gf-splash-dot {
+  0%, 100% { opacity: 0.25; transform: scale(0.75); }
+  50%       { opacity: 1;    transform: scale(1.15); }
+}
+
+@keyframes gf-splash-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; pointer-events: none; }
+}
+
+/* Splash loading screen */
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: #0B1319;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  animation: splash-fade-out 400ms ease 1400ms forwards;
+}
+
+.splash-logo {
+  width: 210px;
+  height: auto;
+  filter: drop-shadow(0 0 28px rgba(183, 255, 24, 0.7)) drop-shadow(0 0 60px rgba(183, 255, 24, 0.35));
+  animation: splash-logo-in 600ms ease forwards;
+}
+
+@keyframes splash-logo-in {
+  0%   { opacity: 0; transform: scale(0.88); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes splash-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-screen { animation: none; opacity: 0; }
+  .splash-logo   { animation: none; }
+}
+
+/* ── DesktopShortsViewer slide animations ── */
+@keyframes dsvSlideInUp {
+  from { transform: translateY(40px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes dsvSlideInDown {
+  from { transform: translateY(-40px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+.dsv-slide-up   { animation: dsvSlideInUp   0.38s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+.dsv-slide-down { animation: dsvSlideInDown 0.38s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dsv-slide-up, .dsv-slide-down { animation: none; }
 }

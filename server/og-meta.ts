@@ -80,21 +80,14 @@ export function createOGMetaMiddleware(storage: IStorage) {
 
         if (clip && clip.user) {
           const contentType = type === 'reel' ? 'Reel' : 'Clip';
-          
-          // Use OG thumbnail endpoint with play button overlay for clips/reels
-          // Fallback to original thumbnail, then game image or user avatar
-          const baseHost = `https://${req.get('host')}`;
-          let imageUrl: string;
 
-          if (clip.shareCode && clip.thumbnailUrl) {
-            // Use the OG thumbnail endpoint (it re-signs internally) — no need to pre-sign here
-            imageUrl = `${baseHost}/api/og-thumbnail/${clip.shareCode}`;
-          } else {
-            // Fall back to the raw thumbnail/game/avatar URL, re-signed
-            const raw = clip.thumbnailUrl || clip.gameImageUrl || clip.user.avatarUrl || '';
-            imageUrl = await refreshSupabaseSignedUrl(raw);
-          }
-          const freshVideoUrl = clip.videoUrl ? await refreshSupabaseSignedUrl(clip.videoUrl) : undefined;
+          // Always route through the stable server-side proxy so og:image never
+          // contains an expiring Supabase signed URL.  The endpoint accepts both
+          // share codes and numeric clip IDs, so every clip is covered.
+          const baseHost = `https://${req.get('host')}`;
+          const identifier = clip.shareCode || clip.id;
+          const imageUrl = `${baseHost}/api/og-thumbnail/${identifier}`;
+          const stableVideoUrl = clip.videoUrl ? `${baseHost}/api/og-video/${identifier}` : undefined;
 
           ogTags = {
             title: `${clip.title} - ${clip.user.displayName || clip.user.username} | Gamefolio`,
@@ -102,24 +95,26 @@ export function createOGMetaMiddleware(storage: IStorage) {
             image: imageUrl,
             url: `https://${req.get('host')}${url}`,
             type: 'video.other',
-            videoUrl: freshVideoUrl,
+            videoUrl: stableVideoUrl,
           };
         }
       }
 
-      // Match screenshot URLs: /@username/screenshot/:id
-      const screenshotMatch = url.match(/^\/@([^/]+)\/screenshots?\/([^/?]+)/);
+      // Match screenshot URLs: /@username/screenshot/:id  OR  /screenshots/:id
+      const screenshotMatch = url.match(/^\/@([^/]+)\/screenshots?\/([^/?]+)/) ||
+                              url.match(/^\/screenshots?\/([^/?]+)/);
       if (screenshotMatch && !ogTags) {
-        const [, username, idOrShareCode] = screenshotMatch;
-        
+        // Group indices differ depending on which pattern matched
+        const idOrShareCode = screenshotMatch[2] || screenshotMatch[1];
+
         // Try to get screenshot by ID first, then by share code
         let screenshot = null;
         const parsedId = parseInt(idOrShareCode);
-        
+
         if (!isNaN(parsedId)) {
           screenshot = await storage.getScreenshot(parsedId);
         }
-        
+
         // If not found by ID, try share code
         if (!screenshot) {
           screenshot = await storage.getScreenshotByShareCode(idOrShareCode);
@@ -128,18 +123,55 @@ export function createOGMetaMiddleware(storage: IStorage) {
         if (screenshot) {
           // Get user data
           const user = await storage.getUser(screenshot.userId);
-          
-          if (user) {
-            const rawImage = screenshot.thumbnailUrl || screenshot.imageUrl || '';
-            const freshImage = await refreshSupabaseSignedUrl(rawImage);
+
+          // Skip OG preview for suspended/banned accounts
+          if (user && user.status !== 'suspended' && user.status !== 'banned') {
+            const baseHost = `https://${req.get('host')}`;
+            // Use our stable server-side proxy endpoint — avoids expiring Supabase signed URL tokens
+            const idOrCode = screenshot.shareCode || screenshot.id;
+            const screenshotImageUrl = `${baseHost}/api/og-screenshot/${idOrCode}`;
+
             ogTags = {
               title: `${screenshot.title} - ${user.displayName || user.username} | Gamefolio`,
               description: screenshot.description || `Check out this screenshot by ${user.displayName || user.username} on Gamefolio`,
-              image: freshImage,
-              url: `https://${req.get('host')}${url}`,
+              image: screenshotImageUrl,
+              url: `${baseHost}${url}`,
               type: 'website',
             };
           }
+        }
+      }
+
+      // Match direct clip/reel URLs without username prefix: /clips/:id  /reels/:id
+      const directClipMatch = url.match(/^\/(clips?|reels?)\/([^/?]+)/);
+      if (directClipMatch && !ogTags) {
+        const [, type, idOrShareCode] = directClipMatch;
+
+        let clip = null;
+        const parsedId = parseInt(idOrShareCode);
+        if (!isNaN(parsedId)) {
+          clip = await storage.getClipWithUser(parsedId);
+        }
+        if (!clip) {
+          const byCode = await storage.getClipByShareCode(idOrShareCode);
+          if (byCode) clip = await storage.getClipWithUser(byCode.id);
+        }
+
+        if (clip && clip.user) {
+          const contentType = type.startsWith('reel') ? 'Reel' : 'Clip';
+          const baseHost = `https://${req.get('host')}`;
+          const identifier = clip.shareCode || clip.id;
+          const imageUrl = `${baseHost}/api/og-thumbnail/${identifier}`;
+          const stableVideoUrl = clip.videoUrl ? `${baseHost}/api/og-video/${identifier}` : undefined;
+
+          ogTags = {
+            title: `${clip.title} - ${clip.user.displayName || clip.user.username} | Gamefolio`,
+            description: clip.description || `Watch this amazing ${contentType.toLowerCase()} by ${clip.user.displayName || clip.user.username} on Gamefolio`,
+            image: imageUrl,
+            url: `${baseHost}${url}`,
+            type: 'video.other',
+            videoUrl: stableVideoUrl,
+          };
         }
       }
 
@@ -150,7 +182,7 @@ export function createOGMetaMiddleware(storage: IStorage) {
         
         const user = await storage.getUserByUsername(username);
         
-        if (user) {
+        if (user && user.status !== 'suspended' && user.status !== 'banned') {
           const baseHost = `https://${req.get('host')}`;
           const previewImageUrl = `${baseHost}/api/social-preview/${username}`;
           
@@ -200,16 +232,16 @@ export function createOGMetaMiddleware(storage: IStorage) {
     <meta property="og:video:width" content="1280" />
     <meta property="og:video:height" content="720" />` : ''}
     
-    <!-- Twitter -->
+    <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@gamefolio" />
     <meta name="twitter:url" content="${escapeHtml(ogTags.url)}" />
     <meta name="twitter:title" content="${escapeHtml(ogTags.title)}" />
     <meta name="twitter:description" content="${escapeHtml(ogTags.description)}" />
     <meta name="twitter:image" content="${escapeHtml(ogTags.image)}" />
     <meta name="twitter:image:alt" content="${escapeHtml(ogTags.title)}" />
-    ${ogTags.videoUrl ? `<meta name="twitter:player" content="${escapeHtml(ogTags.videoUrl)}" />
-    <meta name="twitter:player:width" content="1280" />
-    <meta name="twitter:player:height" content="720" />` : ''}
+    <meta name="twitter:image:width" content="1200" />
+    <meta name="twitter:image:height" content="630" />
 `;
 
         // Inject meta tags after the viewport meta tag

@@ -31,7 +31,7 @@ import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord } from 'react-icon
 import { connectXboxAccount, isXboxConfigValid } from '@/lib/xbox';
 import { useTheme } from '@/hooks/use-theme';
 import { FaXTwitter } from 'react-icons/fa6';
-import gamefolioLogo from '@assets/gamefolio social logo 3d circle web.png';
+import gamefolioLogo from '@assets/gamefolio-logo-green.png';
 import { SiEpicgames, SiTwitch, SiKick } from 'react-icons/si';
 import Cropper from "react-easy-crop";
 import NftProfilePopup from "@/components/nft/NftProfilePopup";
@@ -288,8 +288,8 @@ const PRESET_THEMES = [
     name: "None",
     backgroundColor: "#121F2B",
     accentColor: "#B7FF1A",
-    gradientTopColor: "#02172C",
-    primaryColor: "#02172C"
+    gradientTopColor: "#071013",
+    primaryColor: "#071013"
   },
   {
     name: "Cutesy Pink",
@@ -409,18 +409,92 @@ const darkenColor = (hex: string, percent: number) => {
 };
 
 const PLATFORM_DEFINITIONS = [
-  { key: "steamUsername" as const, label: "Steam", placeholder: "Enter your Steam username", icon: "steam", category: "gaming" },
+  { key: "steamUsername" as const, label: "Steam", placeholder: "Your Steam username (e.g. CoolGamer99)", icon: "steam", category: "gaming" },
   { key: "xboxUsername" as const, label: "Xbox", placeholder: "Enter your Xbox gamertag", icon: "xbox", category: "gaming" },
-  { key: "playstationUsername" as const, label: "PlayStation", placeholder: "Enter your PlayStation ID", icon: "playstation", category: "gaming" },
-  { key: "discordUsername" as const, label: "Discord", placeholder: "Enter your Discord username", icon: "discord", category: "gaming" },
-  { key: "epicUsername" as const, label: "Epic Games", placeholder: "Enter your Epic Games username", icon: "epic", category: "gaming" },
-  { key: "nintendoUsername" as const, label: "Nintendo", placeholder: "Enter your Nintendo username", icon: "nintendo", category: "gaming" },
-  { key: "twitterUsername" as const, label: "X (Twitter)", placeholder: "Enter your X username", icon: "twitter", category: "social" },
-  { key: "youtubeUsername" as const, label: "YouTube", placeholder: "Enter your YouTube username", icon: "youtube", category: "social" },
-  { key: "rumbleUsername" as const, label: "Rumble", placeholder: "Enter your Rumble username", icon: "rumble", category: "social" },
+  { key: "playstationUsername" as const, label: "PlayStation", placeholder: "Your PSN ID (e.g. CoolGamer99)", icon: "playstation", category: "gaming" },
+  { key: "discordUsername" as const, label: "Discord", placeholder: "Your Discord username (e.g. coolgamer)", icon: "discord", category: "gaming" },
+  { key: "epicUsername" as const, label: "Epic Games", placeholder: "Your Epic Games display name", icon: "epic", category: "gaming" },
+  { key: "nintendoUsername" as const, label: "Nintendo", placeholder: "Your Nintendo username", icon: "nintendo", category: "gaming" },
+  { key: "twitterUsername" as const, label: "X (Twitter)", placeholder: "Your X handle without @ (e.g. coolgamer)", icon: "twitter", category: "social" },
+  { key: "youtubeUsername" as const, label: "YouTube", placeholder: "Your YouTube handle without @ (e.g. coolgamer)", icon: "youtube", category: "social" },
+  { key: "rumbleUsername" as const, label: "Rumble", placeholder: "Your Rumble username (e.g. coolgamer)", icon: "rumble", category: "social" },
 ] as const;
 
 type PlatformKey = typeof PLATFORM_DEFINITIONS[number]["key"];
+
+function sanitizePlatformInput(key: PlatformKey, raw: string): string {
+  let v = raw;
+  const urlPatterns: Partial<Record<PlatformKey, RegExp>> = {
+    twitterUsername: /^(?:https?:\/\/)?(?:www\.)?(?:twitter\.com|x\.com)\/@?/i,
+    youtubeUsername: /^(?:https?:\/\/)?(?:www\.)?youtube\.com\/@?/i,
+    steamUsername: /^(?:https?:\/\/)?(?:www\.)?steamcommunity\.com\/id\//i,
+    rumbleUsername: /^(?:https?:\/\/)?(?:www\.)?rumble\.com\/(?:user\/|c\/)/i,
+    playstationUsername: /^(?:https?:\/\/)?(?:www\.)?psnprofiles\.com\//i,
+  };
+  const pattern = urlPatterns[key];
+  if (pattern) v = v.replace(pattern, '');
+  if (key === 'twitterUsername' || key === 'youtubeUsername') v = v.replace(/^@+/, '');
+  return v.trim();
+}
+
+function getPlatformUrl(key: PlatformKey, username: string): string | null {
+  const u = username.trim();
+  if (!u) return null;
+  switch (key) {
+    case 'steamUsername': return `steamcommunity.com/id/${u}`;
+    case 'playstationUsername': return `psnprofiles.com/${u}`;
+    case 'twitterUsername': return `x.com/${u}`;
+    case 'youtubeUsername': return `youtube.com/@${u}`;
+    case 'rumbleUsername': return `rumble.com/user/${u}`;
+    default: return null;
+  }
+}
+
+function validatePlatformInput(key: PlatformKey, username: string): string | null {
+  const u = username.trim();
+  if (!u) return null;
+  switch (key) {
+    case 'steamUsername':
+      if (u.length < 2) return 'Must be at least 2 characters';
+      if (u.length > 32) return 'Must be 32 characters or fewer';
+      if (!/^[a-zA-Z0-9_-]+$/.test(u)) return 'Only letters, numbers, _ and - allowed';
+      return null;
+    case 'playstationUsername':
+      if (u.length < 3) return 'Must be at least 3 characters';
+      if (u.length > 16) return 'Must be 16 characters or fewer';
+      if (!/^[a-zA-Z0-9_-]+$/.test(u)) return 'Only letters, numbers, _ and - allowed';
+      return null;
+    case 'discordUsername':
+      if (u.length < 2) return 'Must be at least 2 characters';
+      if (u.length > 32) return 'Must be 32 characters or fewer';
+      if (!/^[a-zA-Z0-9_.]+$/.test(u)) return 'Only letters, numbers, _ and . allowed';
+      return null;
+    case 'epicUsername':
+      if (u.length < 3) return 'Must be at least 3 characters';
+      if (u.length > 16) return 'Must be 16 characters or fewer';
+      return null;
+    case 'nintendoUsername':
+      if (u.length < 2) return 'Must be at least 2 characters';
+      if (u.length > 10) return 'Must be 10 characters or fewer';
+      return null;
+    case 'twitterUsername':
+      if (u.length > 15) return 'Must be 15 characters or fewer';
+      if (!/^[a-zA-Z0-9_]+$/.test(u)) return 'Only letters, numbers and _ allowed';
+      return null;
+    case 'youtubeUsername':
+      if (u.length < 3) return 'Must be at least 3 characters';
+      if (u.length > 30) return 'Must be 30 characters or fewer';
+      if (!/^[a-zA-Z0-9_.]+$/.test(u)) return 'Only letters, numbers, _ and . allowed';
+      return null;
+    case 'rumbleUsername':
+      if (u.length < 2) return 'Must be at least 2 characters';
+      if (u.length > 50) return 'Must be 50 characters or fewer';
+      if (!/^[a-zA-Z0-9_-]+$/.test(u)) return 'Only letters, numbers, _ and - allowed';
+      return null;
+    default:
+      return null;
+  }
+}
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
@@ -487,9 +561,15 @@ export default function SettingsPage() {
 
   const handleAddPlatform = async () => {
     if (!user || !selectedPlatform || !platformHandle.trim()) return;
+    const sanitized = sanitizePlatformInput(selectedPlatform, platformHandle);
+    const validationError = validatePlatformInput(selectedPlatform, sanitized);
+    if (validationError) {
+      toast({ title: "Invalid username", description: validationError, variant: "destructive" });
+      return;
+    }
     setSavingPlatform(true);
     try {
-      await apiRequest("PATCH", `/api/users/${user.id}`, { [selectedPlatform]: platformHandle.trim() });
+      await apiRequest("PATCH", `/api/users/${user.id}`, { [selectedPlatform]: sanitized });
       await refreshUser();
       toast({ title: "Platform added", description: "Your platform connection has been saved.", duration: 3000 });
       setShowAddPlatform(false);
@@ -1055,6 +1135,7 @@ export default function SettingsPage() {
     profileData.profileFontAnimation !== ((user as any)?.profileFontAnimation || "none") ||
     profileData.profileFontColor !== ((user as any)?.profileFontColor || "#FFFFFF") ||
     profileData.statsGlassEffect !== ((user as any)?.statsGlassEffect || false) ||
+    profileData.hideBanner !== ((user as any)?.hideBanner || false) ||
     profileData.profileBackgroundGradient !== ((user as any)?.profileBackgroundGradient !== false) ||
     avatarFile !== null ||
     selectedPreviousAvatar !== null ||
@@ -1541,7 +1622,7 @@ export default function SettingsPage() {
       const combinedUserType = buildUserType(primaryUserType, isStreamingEnabled);
       updateProfileMutation.mutate({
         ...updatedData,
-        avatarBorderColor,
+        avatarBorderColor: avatarBorderColor?.trim() || '#B7FF1A',
         userType: combinedUserType,
         streamPlatform,
         showLiveOverlay,
@@ -2412,7 +2493,7 @@ export default function SettingsPage() {
                     >
                       {isNamedThemeActive && (
                         <div className="px-3 py-2 rounded-md bg-muted text-xs text-muted-foreground border border-border">
-                          A visual theme is active — its border colour overrides this setting. Switch to "None" in Themes to customise.
+                          A visual theme is active — its border colour overrides this setting. Switch to "Gamefolio Default" in Themes to customise.
                         </div>
                       )}
                       <div className="flex items-center justify-between">
@@ -2568,8 +2649,8 @@ export default function SettingsPage() {
                       <CardContent>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {PRESET_THEMES.map((theme) => {
-                            const topColor = theme.gradientTopColor || '#0B2232';
-                            const defaultThemeColor = '#0B2232';
+                            const topColor = theme.gradientTopColor || '#071013';
+                            const defaultThemeColor = '#071013';
                             const isActive = profileData.accentColor === theme.accentColor && profileData.backgroundColor === theme.backgroundColor;
                             const isLocked = (theme as any).proOnly && !user?.isPro && theme.name !== "None";
                             return (
@@ -2582,11 +2663,90 @@ export default function SettingsPage() {
                                 }}
                               >
                                 <div
-                                  className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm relative"
+                                  className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm relative overflow-hidden"
                                   style={{ 
                                     background: `linear-gradient(180deg, ${topColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
                                   }}
                                 >
+                                  {/* ── Theme-specific visual overlays ── */}
+                                  {theme.name === 'None' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, #B7FF1A06 1px, transparent 1px), linear-gradient(90deg, #B7FF1A06 1px, transparent 1px)', backgroundSize:'14px 14px' }} />
+                                    <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'2px', background:'linear-gradient(90deg, transparent, #B7FF1Acc, transparent)', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Zombie' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, #9ae60028 1px, transparent 1px), linear-gradient(90deg, #9ae60028 1px, transparent 1px)', backgroundSize:'18px 18px' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 80% 60% at 50% 100%, #9ae60033 0%, transparent 70%)' }} />
+                                    <div style={{ position:'absolute', top:'-50%', left:'-50%', width:'200%', height:'200%', pointerEvents:'none', background:'linear-gradient(90deg, transparent 44%, #9ae60006 46%, #9ae60044 49%, #9ae600aa 50%, #9ae60044 51%, #9ae60006 54%, transparent 58%)', opacity:0.5 }} />
+                                  </>}
+                                  {theme.name === 'Cyberpunk' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'radial-gradient(circle, #00d3f230 1.5px, transparent 1.5px), linear-gradient(45deg, #00b8db18 1px, transparent 1px)', backgroundSize:'16px 16px' }} />
+                                    <div style={{ position:'absolute', left:0, right:0, top:'42%', height:'1px', pointerEvents:'none', background:'linear-gradient(90deg, transparent, #00d3f2aa 30%, #e12afbaa 70%, transparent)' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'repeating-linear-gradient(0deg, transparent, transparent 5px, rgba(0,0,0,0.15) 5px, rgba(0,0,0,0.15) 6px)' }} />
+                                  </>}
+                                  {theme.name === 'NEO' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'radial-gradient(circle at 50% 50%, #00ff4118 1px, transparent 1px)', backgroundSize:'10px 10px' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #00ff4100 30%, #00ff4118 100%)' }} />
+                                    <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', opacity:0.6 }} viewBox="0 0 120 80" preserveAspectRatio="none">
+                                      {['0','1','ア','イ','2','カ','3','ウ','キ','エ'].map((c,i) => (
+                                        <text key={i} x={8 + i*11} y={20 + (i%3)*22} style={{ font: '9px "Courier New", monospace', fill: i%3===0 ? '#ccffcc' : '#00ff41', opacity: 0.7 }}>{c}</text>
+                                      ))}
+                                    </svg>
+                                  </>}
+                                  {theme.name === 'Blocks' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #5ba3d0 0%, #87ceeb 45%, #5ea832 55%, #8b5e3c 72%, #6b4a2e 88%)', opacity:0.9 }} />
+                                    <div style={{ position:'absolute', top:'8%', left:'12%', width:'22px', height:'9px', background:'rgba(255,255,255,0.85)', borderRadius:'3px', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', top:'5%', left:'55%', width:'16px', height:'7px', background:'rgba(255,255,255,0.85)', borderRadius:'2px', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, rgba(0,0,0,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.12) 1px, transparent 1px)', backgroundSize:'12px 12px', opacity:0.5 }} />
+                                  </>}
+                                  {theme.name === 'Watermelon' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #1d3932 0%, #1d3932 30%, #ff4d6d 30%, #ff4d6d 100%)', opacity:0.9 }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'radial-gradient(ellipse 5px 8px at center, #1d393288 100%, transparent 100%)', backgroundSize:'18px 22px', backgroundPosition:'4px 36px', opacity:0.7 }} />
+                                    <div style={{ position:'absolute', top:'18%', left:'50%', transform:'translateX(-50%)', width:'40px', height:'1px', background:'rgba(255,255,255,0.3)', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Forest' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #e8d5b7 0%, #c5a97a 35%, #2d5a27 35%, #0a2f1f 100%)', opacity:0.88 }} />
+                                    <div style={{ position:'absolute', bottom:'38%', left:'8%', width:0, height:0, borderLeft:'10px solid transparent', borderRight:'10px solid transparent', borderBottom:'22px solid #1a4a2e', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'38%', left:'32%', width:0, height:0, borderLeft:'13px solid transparent', borderRight:'13px solid transparent', borderBottom:'28px solid #0d3520', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'38%', right:'15%', width:0, height:0, borderLeft:'9px solid transparent', borderRight:'9px solid transparent', borderBottom:'20px solid #1a4a2e', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Ice' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, rgba(56,189,248,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.1) 1px, transparent 1px)', backgroundSize:'12px 12px' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(135deg, rgba(255,255,255,0.55) 0%, transparent 45%, rgba(56,189,248,0.2) 100%)' }} />
+                                    <div style={{ position:'absolute', top:'10%', left:'10%', width:'30%', height:'1px', background:'rgba(255,255,255,0.8)', transform:'rotate(45deg)', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Gothic' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 90% 90% at 50% 40%, rgba(194,122,255,0.2) 0%, rgba(30,5,58,0.75) 100%)' }} />
+                                    <div style={{ position:'absolute', bottom:'15%', left:'50%', transform:'translateX(-50%)', width:'36px', height:'36px', borderRadius:'50%', background:'radial-gradient(circle, #c27aff55 0%, transparent 70%)', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', top:'10%', left:'15%', fontSize:'14px', color:'#c27affaa', pointerEvents:'none', lineHeight:1 }}>✦</div>
+                                    <div style={{ position:'absolute', top:'8%', right:'18%', fontSize:'10px', color:'#c27aff88', pointerEvents:'none', lineHeight:1 }}>✦</div>
+                                  </>}
+                                  {theme.name === 'Mac' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'rgba(255,255,255,0.55)' }} />
+                                    <div style={{ position:'absolute', top:'-20%', left:'-10%', width:'80%', height:'80%', borderRadius:'50%', background:'radial-gradient(circle, rgba(255,80,80,0.25) 0%, rgba(255,200,0,0.2) 30%, rgba(0,200,100,0.2) 55%, rgba(0,100,255,0.2) 80%, transparent 100%)', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'8px', left:'50%', transform:'translateX(-50%)', width:'75%', height:'7px', background:'rgba(0,0,0,0.07)', borderRadius:'6px', pointerEvents:'none', backdropFilter:'blur(2px)' }} />
+                                  </>}
+                                  {theme.name === 'Cartoon' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'rgba(255,255,255,0.55)' }} />
+                                    <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'28%', background:'#ff5e5e44', pointerEvents:'none', borderTop:'2px solid #1d1d1f33' }} />
+                                    <div style={{ position:'absolute', top:'18%', left:'50%', transform:'translateX(-50%)', width:'30px', height:'4px', background:'#1d1d1f55', borderRadius:'2px', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', top:'30%', left:'50%', transform:'translateX(-50%)', width:'20px', height:'4px', background:'#1d1d1f33', borderRadius:'2px', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Bubble Tea' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #ffedd4bb 0%, #fefce8bb 100%)' }} />
+                                    <div style={{ position:'absolute', bottom:'10px', left:'16%', width:'11px', height:'11px', borderRadius:'50%', background:'#d4a574', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'22px', left:'28%', width:'8px', height:'8px', borderRadius:'50%', background:'#c49060', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'8px', left:'42%', width:'10px', height:'10px', borderRadius:'50%', background:'#d4a574bb', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'18px', right:'22%', width:'9px', height:'9px', borderRadius:'50%', background:'#c49060', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'7px', right:'12%', width:'12px', height:'12px', borderRadius:'50%', background:'#d4a574aa', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Cutesy Pink' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 100% 70% at 50% 110%, #fce7f3cc 0%, transparent 60%)' }} />
+                                    <div style={{ position:'absolute', top:'18%', left:'18%', fontSize:'13px', color:'#ff2056bb', pointerEvents:'none', lineHeight:1, userSelect:'none' }}>♥</div>
+                                    <div style={{ position:'absolute', top:'12%', right:'22%', fontSize:'9px', color:'#ff2056dd', pointerEvents:'none', lineHeight:1, userSelect:'none' }}>♥</div>
+                                    <div style={{ position:'absolute', bottom:'22%', left:'38%', fontSize:'11px', color:'#ff205699', pointerEvents:'none', lineHeight:1, userSelect:'none' }}>♥</div>
+                                    <div style={{ position:'absolute', bottom:'15%', right:'14%', fontSize:'8px', color:'#ff2056bb', pointerEvents:'none', lineHeight:1, userSelect:'none' }}>♥</div>
+                                  </>}
+                                  {/* ── Badges ── */}
                                   {isActive && (
                                     <div
                                       className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
@@ -2601,16 +2761,21 @@ export default function SettingsPage() {
                                     </div>
                                   )}
                                 </div>
-                                <p className="text-center mt-2 text-sm font-medium">{theme.name}</p>
+                                <p className="text-center mt-2 text-sm font-medium">
+                                  {theme.name === 'None' ? 'Gamefolio Default' : theme.name}
+                                </p>
                                 {isLocked && theme.name !== "None" && (
                                   <p className="text-center text-xs text-muted-foreground">Pro only</p>
                                 )}
                                 <div className="flex justify-center p-2">
                                   <Button
                                     onClick={() => setThemePreviewData(theme)}
-                                    className="text-xs px-4 py-1.5 transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)] text-white"
+                                    className={isActive
+                                      ? "text-xs px-4 py-1.5 transition-all duration-300 bg-transparent border border-primary/60 text-primary/80 hover:bg-primary/10 shadow-none"
+                                      : "text-xs px-4 py-1.5 transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)] text-white"
+                                    }
                                   >
-                                    Preview
+                                    {isActive ? 'Active' : 'Preview'}
                                   </Button>
                                 </div>
                               </div>
@@ -2637,7 +2802,7 @@ export default function SettingsPage() {
                     )}
                     {isNamedThemeActive && !profileData.profileBackgroundImageUrl && (
                       <div className="mb-3 px-3 py-2 rounded-md bg-muted text-xs text-muted-foreground border border-border">
-                        A visual theme is active — its colours override this setting. Switch to "None" in Themes to use a custom colour.
+                        A visual theme is active — its colours override this setting. Switch to "Gamefolio Default" in Themes to use a custom colour.
                       </div>
                     )}
                     <Card>
@@ -3565,7 +3730,24 @@ export default function SettingsPage() {
                               )}
                             </div>
                             {isConnected ? (
-                              <div className="text-xs text-slate-400 truncate">{user?.[platform.key]}</div>
+                              (() => {
+                                const username = user?.[platform.key] as string;
+                                const url = username ? getPlatformUrl(platform.key, username) : null;
+                                return url ? (
+                                  <a
+                                    href={`https://${url}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="flex items-center gap-1 text-xs text-slate-400 hover:text-primary transition-colors group truncate"
+                                  >
+                                    <span className="truncate">{url}</span>
+                                    <ExternalLink className="w-3 h-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </a>
+                                ) : (
+                                  <div className="text-xs text-slate-400 truncate">{username}</div>
+                                );
+                              })()
                             ) : (
                               <div className="text-xs text-slate-500">Not connected</div>
                             )}
@@ -3682,18 +3864,46 @@ export default function SettingsPage() {
                                 <Input
                                   placeholder={platform.placeholder}
                                   value={platformHandle}
-                                  onChange={(e) => setPlatformHandle(e.target.value)}
+                                  onChange={(e) => setPlatformHandle(sanitizePlatformInput(platform.key, e.target.value))}
                                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPlatform(); } }}
                                   autoFocus
+                                  className={platformHandle.trim() && validatePlatformInput(platform.key, platformHandle) ? 'border-red-500 focus-visible:ring-red-500' : ''}
                                 />
+                                {/* Live URL preview */}
+                                {platformHandle.trim() && getPlatformUrl(platform.key, platformHandle) && !validatePlatformInput(platform.key, platformHandle) && (
+                                  <a
+                                    href={`https://${getPlatformUrl(platform.key, platformHandle)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2 transition-colors group"
+                                  >
+                                    <ExternalLink className="w-3 h-3 flex-shrink-0 text-primary group-hover:text-slate-200" />
+                                    <span className="font-mono truncate">{getPlatformUrl(platform.key, platformHandle)}</span>
+                                    <span className="ml-auto text-[10px] text-slate-500 group-hover:text-slate-400 flex-shrink-0">click to verify</span>
+                                  </a>
+                                )}
+                                {/* For platforms without a URL, show a simple username preview */}
+                                {platformHandle.trim() && !getPlatformUrl(platform.key, platformHandle) && !validatePlatformInput(platform.key, platformHandle) && (
+                                  <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
+                                    <Check className="w-3 h-3 flex-shrink-0 text-[#B7FF1A]" />
+                                    <span>Will show as <span className="text-white font-medium">{platformHandle}</span> on your profile</span>
+                                  </div>
+                                )}
+                                {/* Validation error */}
+                                {platformHandle.trim() && validatePlatformInput(platform.key, platformHandle) && (
+                                  <p className="flex items-center gap-1.5 text-xs text-red-400">
+                                    <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                                    {validatePlatformInput(platform.key, platformHandle)}
+                                  </p>
+                                )}
                                 <div className="flex gap-2 justify-end">
-                                  <Button variant="outline" size="sm" onClick={() => setShowAddPlatform(false)}>
+                                  <Button variant="outline" size="sm" onClick={() => { setShowAddPlatform(false); setPlatformHandle(''); }}>
                                     Cancel
                                   </Button>
                                   <Button
                                     size="sm"
                                     onClick={handleAddPlatform}
-                                    disabled={!platformHandle.trim() || savingPlatform}
+                                    disabled={!platformHandle.trim() || savingPlatform || !!validatePlatformInput(platform.key, platformHandle)}
                                   >
                                     {savingPlatform ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />}
                                     Save
@@ -4667,7 +4877,7 @@ export default function SettingsPage() {
       {showNftSelector && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/70" onClick={() => setShowNftSelector(false)} />
-          <div className="relative bg-[#0f172a] border border-slate-700 rounded-xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl mx-4">
+          <div className="relative bg-[#0B1218] border border-slate-700 rounded-xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl mx-4">
             <div className="flex items-center justify-between p-4 border-b border-slate-700">
               <h3 className="text-lg font-semibold text-white">Select NFT as Profile Picture</h3>
               <button
@@ -4724,13 +4934,13 @@ export default function SettingsPage() {
                         common: "",
                       };
                       const dotColor: Record<string, string> = {
-                        legendary: "bg-primary shadow-[0_0_8px_#A2F000]",
+                        legendary: "bg-primary shadow-[0_0_8px_#B7FF1A]",
                         epic: "bg-primary shadow-[0_0_8px_#6FA800]",
                         rare: "bg-primary shadow-[0_0_8px_#B7FF1A]",
-                        common: "bg-slate-400/50 shadow-[0_0_8px_#1e293b]",
+                        common: "bg-slate-400/50 shadow-[0_0_8px_#1B2A33]",
                       };
                       const rarityText: Record<string, string> = {
-                        legendary: "bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] bg-clip-text text-transparent font-black",
+                        legendary: "text-[#B7FF1A] font-black",
                         epic: "text-slate-400 font-normal",
                         rare: "text-slate-400 font-normal",
                         common: "text-slate-400 font-normal",
@@ -4754,7 +4964,7 @@ export default function SettingsPage() {
                           }}
                           disabled={setNftProfileMutation.isPending}
                           className={`relative rounded-2xl overflow-hidden transition-all duration-200 hover:scale-[1.03] text-left ${cardBg[rarityLabel]} ${cardGlow[rarityLabel]} ${
-                            isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#0f172a]' : ''
+                            isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#0B1218]' : ''
                           }`}
                         >
                           <div className="relative">
@@ -4962,18 +5172,20 @@ export default function SettingsPage() {
         };
 
         const isThemeLocked = (themePreviewData as any).proOnly && !user?.isPro && tn !== "None";
+        const isCurrentTheme = !isThemeLocked && themePreviewData.accentColor === profileData.accentColor && themePreviewData.backgroundColor === profileData.backgroundColor;
+        const displayName = tn === 'None' ? 'Gamefolio Default' : tn;
 
         return (
           <Dialog open={!!themePreviewData} onOpenChange={(open) => { if (!open) setThemePreviewData(null); }}>
-            <DialogContent className="max-w-sm p-0 overflow-hidden border-none bg-transparent shadow-2xl [&>button:not([data-custom-close])]:hidden">
-              <DialogTitle className="sr-only">{tn} Theme Preview</DialogTitle>
+            <DialogContent className="max-w-[340px] w-[calc(100vw-32px)] p-0 overflow-hidden border-none bg-transparent shadow-2xl [&>button:not([data-custom-close])]:hidden">
+              <DialogTitle className="sr-only">{displayName} Theme Preview</DialogTitle>
               <button
                 onClick={() => setThemePreviewData(null)}
                 data-custom-close
-                className="absolute top-4 right-4 z-20 p-1 hover:bg-white/10 rounded-lg transition-colors"
+                className="absolute top-3 right-3 z-20 p-2 hover:bg-white/15 active:bg-white/25 rounded-xl transition-colors"
                 aria-label="Close"
               >
-                <X className="w-6 h-6 text-white" />
+                <X className="w-5 h-5 text-white" />
               </button>
               <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&family=Bangers&family=Bricolage+Grotesque:wght@400;800&display=swap');
@@ -5077,14 +5289,14 @@ export default function SettingsPage() {
                 </>}
 
                 {/* ── Content ── */}
-                <div className="relative z-10 px-5 pt-5 pb-0 text-center">
-                  <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ fontFamily: themeFont, color: isLight && !isWatermelon ? '#666' : `${accent}cc`, letterSpacing: '1.5px' }}>
-                    {tn} Theme
+                <div className="relative z-10 px-4 pt-4 pb-0 text-center">
+                  <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ fontFamily: themeFont, color: isLight && !isWatermelon ? '#666' : `${accent}cc`, letterSpacing: '1.5px' }}>
+                    {displayName}
                   </p>
 
                   {/* Avatar */}
-                  <div className="flex justify-center mb-3">
-                    <div className="w-20 h-20 overflow-hidden flex-shrink-0" style={{ ...avatarBorderStyle }}>
+                  <div className="flex justify-center mb-2">
+                    <div className="w-16 h-16 overflow-hidden flex-shrink-0" style={{ ...avatarBorderStyle }}>
                       {signedAvatarUrl ? (
                         <img src={signedAvatarUrl} alt="avatar" className="w-full h-full object-cover" />
                       ) : (
@@ -5097,13 +5309,13 @@ export default function SettingsPage() {
 
                   {/* Display Name */}
                   <h2 style={nameStyle}>{profileData.displayName || user?.username}</h2>
-                  <p className="text-xs mt-0.5 mb-4" style={{ color: isLight && !isWatermelon ? '#888' : `${accent}99`, fontFamily: themeFont }}>
+                  <p className="text-xs mt-0.5 mb-3" style={{ color: isLight && !isWatermelon ? '#888' : `${accent}99`, fontFamily: themeFont }}>
                     @{user?.username}
                   </p>
                 </div>
 
                 {/* Stats Card */}
-                <div className="relative z-10 mx-4 mb-5 p-3" style={statsCardStyle}>
+                <div className="relative z-10 mx-4 mb-3 p-2.5" style={statsCardStyle}>
                   <div className="grid grid-cols-3" style={{ gap: 0 }}>
                     {[
                       { label: 'Uploads', value: profileStats?._count?.clips ?? '—' },
@@ -5118,8 +5330,8 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Buttons */}
-                <div className="relative z-10 flex gap-3 px-4 pb-5">
+                {/* Buttons — pb accounts for mobile safe-area (home indicator) */}
+                <div className="relative z-10 flex gap-2.5 px-4 pb-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 1rem))' }}>
                   <button
                     onClick={() => setThemePreviewData(null)}
                     className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
@@ -5131,9 +5343,10 @@ export default function SettingsPage() {
                       fontSize: isBlocks ? '0.5rem' : '0.875rem',
                     }}
                   >
-                    Cancel
+                    Close
                   </button>
                   <button
+                    disabled={isCurrentTheme}
                     onClick={() => {
                       if (isThemeLocked) {
                         setThemePreviewData(null);
@@ -5145,16 +5358,18 @@ export default function SettingsPage() {
                     }}
                     className="flex-1 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2"
                     style={{
-                      background: isThemeLocked ? '#B7FF1A' : accent,
-                      color: isThemeLocked ? '#1a1a1a' : (isLight && !isGothic ? '#1d1d1f' : bg),
-                      boxShadow: isThemeLocked ? '0 8px 24px -8px #B7FF1A66' : `0 8px 24px -8px ${accent}`,
+                      background: isCurrentTheme ? `${accent}40` : isThemeLocked ? '#B7FF1A' : accent,
+                      color: isCurrentTheme ? (isLight ? '#333' : 'rgba(255,255,255,0.5)') : isThemeLocked ? '#1a1a1a' : (isLight && !isGothic ? '#1d1d1f' : bg),
+                      boxShadow: isCurrentTheme ? 'none' : isThemeLocked ? '0 8px 24px -8px #B7FF1A66' : `0 8px 24px -8px ${accent}`,
                       fontFamily: isThemeLocked ? undefined : themeFont,
                       fontSize: '0.875rem',
                       borderRadius: '12px',
+                      cursor: isCurrentTheme ? 'default' : 'pointer',
+                      border: isCurrentTheme ? `1px solid ${accent}44` : 'none',
                     }}
                   >
                     {isThemeLocked && <img src={gamefolioLogo} alt="Gamefolio" className="w-5 h-5 rounded-full flex-shrink-0" />}
-                    {isThemeLocked ? 'Go Pro' : 'Apply Theme'}
+                    {isCurrentTheme ? 'Current Theme' : isThemeLocked ? 'Go Pro' : 'Apply Theme'}
                   </button>
                 </div>
               </div>

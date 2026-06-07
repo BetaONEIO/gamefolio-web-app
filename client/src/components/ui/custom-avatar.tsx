@@ -509,15 +509,12 @@ export const CustomAvatar = ({
 
   const displayName = user?.displayName || user?.username || "?";
   const hasUploadedAvatar = !!(avatarSignedUrl || user?.avatarUrl);
-  const showDefaultCircleBorder = showBorder && hasUploadedAvatar && !hasNftProfile;
-  
   return (
     <div className={`relative inline-flex items-center justify-center ${className} ${onClick ? 'cursor-pointer' : ''}`} style={{ overflow: 'visible' }}>
       <Avatar 
         className={`${sizeClasses[size]} transition-all duration-300 rounded-full`}
         style={showBorder ? {
-          boxShadow: borderStyles[borderIntensity](borderColor),
-          ...(showDefaultCircleBorder ? { border: '2px solid hsl(var(--primary))', padding: '1px' } : {})
+          boxShadow: borderStyles[borderIntensity](borderColor)
         } : {}}
         onClick={onClick}
       >

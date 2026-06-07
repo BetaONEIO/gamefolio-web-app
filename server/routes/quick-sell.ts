@@ -117,70 +117,36 @@ router.post('/api/nft/quick-sell', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/api/nft/server-sell', async (req: Request, res: Response) => {
+router.get('/api/marketplace/listings', async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.id;
-    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+    const currentUserId: number | null = (req as any).user?.id ?? null;
 
-    const { tokenId } = req.body;
-    if (tokenId == null || typeof tokenId !== 'number') {
-      return res.status(400).json({ error: 'Token ID is required' });
-    }
-
-    console.log(`[NFT Server Sell] User ${userId} listing NFT #${tokenId}`);
-
-    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    if (user.activeProfilePicType === 'nft' && user.nftProfileTokenId === tokenId) {
-      return res.status(400).json({ error: 'This NFT is currently set as your profile picture. Please remove it before selling.' });
-    }
-
-    const nftRows = await db.execute(
-      sql`SELECT * FROM user_nfts WHERE user_id = ${userId} AND token_id = ${tokenId} AND sold = false LIMIT 1`
-    );
-    const nft = ((nftRows as any).rows || nftRows)?.[0];
-    if (!nft) {
-      return res.status(404).json({ error: 'NFT not found or already sold' });
-    }
-
-    await db.execute(
-      sql`UPDATE user_nfts SET sold = true, sold_at = NOW(), listing_active = true, listed_price = ${QUICK_SELL_PRICE} WHERE user_id = ${userId} AND token_id = ${tokenId} AND sold = false`
-    );
-
-    invalidateTokenMetadata(tokenId);
-    console.log(`[NFT Server Sell] NFT #${tokenId} listed for ${QUICK_SELL_PRICE} GFT by user ${userId}`);
-
-    if (user.walletAddress) {
-      console.log(`[NFT Server Sell] Transferring ${QUICK_SELL_PRICE} GFT to ${user.walletAddress} for NFT #${tokenId}`);
-      transferGfTokens(user.walletAddress, QUICK_SELL_PRICE).catch(err =>
-        console.error(`[NFT Server Sell] Failed to transfer GFT to user ${userId} for NFT #${tokenId}:`, err)
-      );
-    }
-
-    return res.json({
-      success: true,
-      tokenId,
-      sellPrice: QUICK_SELL_PRICE,
-      receivedAmount: QUICK_SELL_PRICE,
-      message: `NFT #${tokenId} listed for quick sale at ${QUICK_SELL_PRICE} GFT.`,
-    });
-  } catch (error: any) {
-    console.error('[NFT Server Sell] Error:', error);
-    return res.status(500).json({ error: error.message || 'Server sell failed. Please try again.' });
-  }
-});
-
-router.get('/api/marketplace/listings', async (_req: Request, res: Response) => {
-  try {
-    const listings = await db.execute(
-      sql`SELECT un.token_id, un.listed_price, un.sold_at, un.user_id,
-                 u.username, u.display_name
-          FROM user_nfts un
-          JOIN users u ON u.id = un.user_id
-          WHERE un.sold = true AND un.listing_active = true
-          ORDER BY un.sold_at DESC`
-    );
+    // If the requesting user is authenticated, exclude token IDs they already
+    // own (i.e. have a row with sold = false) so owned NFTs don't appear in
+    // the store for them.
+    const listings = currentUserId
+      ? await db.execute(
+          sql`SELECT un.token_id, un.listed_price, un.sold_at, un.user_id,
+                     u.username, u.display_name
+              FROM user_nfts un
+              JOIN users u ON u.id = un.user_id
+              WHERE un.sold = true AND un.listing_active = true
+                AND NOT EXISTS (
+                  SELECT 1 FROM user_nfts owned
+                  WHERE owned.token_id = un.token_id
+                    AND owned.user_id = ${currentUserId}
+                    AND owned.sold = false
+                )
+              ORDER BY un.sold_at DESC`
+        )
+      : await db.execute(
+          sql`SELECT un.token_id, un.listed_price, un.sold_at, un.user_id,
+                     u.username, u.display_name
+              FROM user_nfts un
+              JOIN users u ON u.id = un.user_id
+              WHERE un.sold = true AND un.listing_active = true
+              ORDER BY un.sold_at DESC`
+        );
 
     const rows = (listings as any).rows || listings;
     return res.json({ listings: rows || [] });

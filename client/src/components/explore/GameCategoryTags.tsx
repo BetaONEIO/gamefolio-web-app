@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Flame, Star, TrendingUp, ZapIcon, Gamepad2 } from "lucide-react";
+import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -63,7 +64,7 @@ const GameCategoryTags = ({ className, onCategorySelect }: GameCategoryTagsProps
         className="h-7 rounded-full text-xs px-3"
         onClick={() => handleCategoryClick("")}
       >
-        <Flame className="h-3 w-3 mr-1" /> Hot
+        <ZapIconSvg className="h-3 w-3 mr-1" active={true} /> Hot
       </Button>
       
       <Button

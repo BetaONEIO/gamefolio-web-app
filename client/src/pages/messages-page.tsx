@@ -291,7 +291,7 @@ export default function MessagesPage() {
             </p>
             <Button 
               onClick={() => setLocation("/account/settings")}
-              className="bg-green text-black hover:bg-green/90"
+              className="bg-[#B7FF1A] text-black hover:bg-[#A2F000]"
             >
               Go to Settings
             </Button>
@@ -302,7 +302,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <KeyboardAvoidingWrapper className="h-screen bg-navy text-white">
+    <KeyboardAvoidingWrapper className="h-full bg-navy text-white">
       <div className="flex h-full">
         {/* Left Sidebar - Conversations */}
         <div className="w-80 border-r border-navy-light flex flex-col">
@@ -322,7 +322,7 @@ export default function MessagesPage() {
                     <DialogTitle className="flex items-center gap-2 text-white">
                       {newConversationUsername && (
                         <Avatar className="w-8 h-8">
-                          <AvatarImage src={`/api/static/gamefolio%20social%20logo%203d%20circle%20web.png`} />
+                          <AvatarImage src={`/api/static/gamefolio-logo-green.png`} />
                           <AvatarFallback>
                             {newConversationUsername[0]?.toUpperCase()}
                           </AvatarFallback>
@@ -355,7 +355,7 @@ export default function MessagesPage() {
                     <Button
                       onClick={handleStartConversation}
                       disabled={startConversationMutation.isPending}
-                      className="w-full bg-green text-black hover:bg-green/90"
+                      className="w-full bg-[#B7FF1A] text-black hover:bg-[#A2F000]"
                     >
                       {startConversationMutation.isPending ? "Sending..." : "Send Message"}
                     </Button>
@@ -411,7 +411,7 @@ export default function MessagesPage() {
                             {conversation.displayName}
                           </p>
                           {!conversation.isRead && (
-                            <div className="w-2 h-2 bg-green rounded-full"></div>
+                            <div className="w-2 h-2 bg-[#B7FF1A] rounded-full"></div>
                           )}
                         </div>
                         <p className="text-xs text-gray-500">
@@ -506,7 +506,7 @@ export default function MessagesPage() {
                         <div
                           className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
                             message.senderId === user.id
-                              ? "bg-green text-black"
+                              ? "bg-[#B7FF1A] text-black"
                               : "bg-navy-light text-white"
                           }`}
                         >
@@ -555,7 +555,7 @@ export default function MessagesPage() {
                     onClick={handleSendMessage}
                     disabled={(sendMessageMutation.isPending || startConversationMutation.isPending) || !newMessage.trim()}
                     size="sm"
-                    className="bg-green hover:bg-green/90 text-black rounded-full p-2 h-8 w-8"
+                    className="bg-[#B7FF1A] hover:bg-[#A2F000] text-black rounded-full p-2 h-8 w-8"
                   >
                     <Send className="w-4 h-4" />
                   </Button>

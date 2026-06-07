@@ -23,10 +23,6 @@ export default function BuyGFTScreen({
   const { balance: tokenBalanceStr } = useTokenBalance();
   const balance = parseFloat(tokenBalanceStr || '0') || currentBalance;
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
   const displayAmount = isCustom && customAmount !== null ? customAmount : selectedAmount;
   const gftReceived = displayAmount / GFT_RATE;
 
@@ -62,7 +58,7 @@ export default function BuyGFTScreen({
   return (
     <div 
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: '#101D27' }}
+      style={{ background: '#0B1218' }}
     >
       {/* Header */}
       <div 
@@ -73,14 +69,14 @@ export default function BuyGFTScreen({
           <button
             onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
-            style={{ background: '#1e293b', border: '1px solid #1e293b' }}
+            style={{ background: '#1B2A33', border: '1px solid #1B2A33' }}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F5F7F2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
           
-          <span className="text-xl font-bold" style={{ color: '#f8fafc' }}>
+          <span className="text-xl font-bold" style={{ color: '#F5F7F2' }}>
             Buy GFT
           </span>
           
@@ -94,7 +90,7 @@ export default function BuyGFTScreen({
         <div className="flex flex-col items-center gap-4 mb-8">
           <span 
             className="text-sm font-medium uppercase tracking-wider"
-            style={{ color: '#94a3b8', letterSpacing: '0.7px' }}
+            style={{ color: '#B8C0AE', letterSpacing: '0.7px' }}
           >
             Purchase Amount
           </span>
@@ -102,7 +98,7 @@ export default function BuyGFTScreen({
           <div className="flex items-center justify-center gap-1">
             <span 
               className="text-3xl font-bold"
-              style={{ color: '#94a3b8' }}
+              style={{ color: '#B8C0AE' }}
             >
               £
             </span>
@@ -143,9 +139,9 @@ export default function BuyGFTScreen({
                 onClick={() => handlePresetClick(amount)}
                 className="h-14 rounded-2xl font-bold text-lg transition-all"
                 style={{ 
-                  background: isSelected ? '#B7FF1A' : '#1e293b',
-                  border: `1px solid ${isSelected ? '#B7FF1A' : '#1e293b'}`,
-                  color: isSelected ? '#071013' : '#f8fafc',
+                  background: isSelected ? '#B7FF1A' : '#1B2A33',
+                  border: `1px solid ${isSelected ? '#B7FF1A' : '#1B2A33'}`,
+                  color: isSelected ? '#071013' : '#F5F7F2',
                   boxShadow: isSelected ? '0 0 20px -5px #B7FF1A' : 'none'
                 }}
               >
@@ -159,16 +155,16 @@ export default function BuyGFTScreen({
             onClick={handleCustomClick}
             className="h-14 rounded-2xl font-bold transition-all flex items-center justify-center"
             style={{ 
-              background: isCustom ? '#B7FF1A' : '#1e293b',
-              border: `1px solid ${isCustom ? '#B7FF1A' : '#1e293b'}`,
-              color: isCustom ? '#071013' : '#f8fafc',
+              background: isCustom ? '#B7FF1A' : '#1B2A33',
+              border: `1px solid ${isCustom ? '#B7FF1A' : '#1B2A33'}`,
+              color: isCustom ? '#071013' : '#F5F7F2',
               boxShadow: isCustom ? '0 0 20px -5px #B7FF1A' : 'none'
             }}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" clipRule="evenodd" d="M21.9999 1.99982C23.1438 3.14391 23.1438 4.99865 21.9999 6.14275L21.472 6.67059C21.2801 6.62755 21.0908 6.5739 20.9048 6.50989C20.1159 6.2335 19.3999 5.78198 18.8105 5.18922C18.2177 4.59982 17.7662 3.88378 17.4898 3.09488C17.4262 2.9089 17.3729 2.71954 17.3302 2.52766L17.8569 1.99982C19.001 0.855916 20.8558 0.855916 21.9999 1.99982Z" fill={isCustom ? '#071013' : '#F8FAFC'} />
-              <path fillRule="evenodd" clipRule="evenodd" d="M14.9613 13.1814C14.5313 13.6113 14.3164 13.8263 14.079 14.0114C13.7993 14.2295 13.4967 14.4164 13.1766 14.5691C12.9052 14.6978 12.6168 14.7936 12.04 14.9862L8.99855 16.0004C8.71441 16.0956 8.40087 16.0217 8.18909 15.8097C7.97731 15.5977 7.90379 15.2841 7.99927 15.0001L9.01345 11.9597C9.20501 11.3829 9.30078 11.0945 9.43062 10.8231C9.58457 10.5017 9.77045 10.2009 9.98826 9.92065C10.1734 9.68334 10.3884 9.46837 10.8183 9.03737L16.0499 3.80683C16.4098 4.75005 16.9659 5.6061 17.6814 6.31834C18.3936 7.03381 19.2496 7.58988 20.1929 7.94976L14.9613 13.1814Z" fill={isCustom ? '#071013' : '#F8FAFC'} />
-              <path fillRule="evenodd" clipRule="evenodd" d="M20.536 20.536C22 19.07 22 16.714 22 12C22 10.452 22 9.158 21.948 8.066L15.586 14.428C15.235 14.78 14.971 15.044 14.674 15.275C14.3258 15.5478 13.9485 15.7812 13.549 15.971C13.209 16.133 12.855 16.251 12.383 16.408L9.451 17.385C8.64535 17.6536 7.75709 17.4439 7.15658 16.8434C6.55607 16.2429 6.34641 15.3547 6.615 14.549L7.592 11.617C7.749 11.145 7.867 10.791 8.029 10.451C8.22033 10.051 8.45233 9.676 8.725 9.326C8.956 9.029 9.22 8.766 9.572 8.414L15.934 2.052C14.842 2 13.548 2 12 2C7.286 2 4.929 2 3.464 3.464C2 4.93 2 7.286 2 12C2 16.714 2 19.071 3.464 20.535C4.93 22 7.286 22 12 22C16.714 22 19.071 22 20.535 20.535" fill={isCustom ? '#071013' : '#F8FAFC'} />
+              <path fillRule="evenodd" clipRule="evenodd" d="M21.9999 1.99982C23.1438 3.14391 23.1438 4.99865 21.9999 6.14275L21.472 6.67059C21.2801 6.62755 21.0908 6.5739 20.9048 6.50989C20.1159 6.2335 19.3999 5.78198 18.8105 5.18922C18.2177 4.59982 17.7662 3.88378 17.4898 3.09488C17.4262 2.9089 17.3729 2.71954 17.3302 2.52766L17.8569 1.99982C19.001 0.855916 20.8558 0.855916 21.9999 1.99982Z" fill={isCustom ? '#071013' : '#F5F7F2'} />
+              <path fillRule="evenodd" clipRule="evenodd" d="M14.9613 13.1814C14.5313 13.6113 14.3164 13.8263 14.079 14.0114C13.7993 14.2295 13.4967 14.4164 13.1766 14.5691C12.9052 14.6978 12.6168 14.7936 12.04 14.9862L8.99855 16.0004C8.71441 16.0956 8.40087 16.0217 8.18909 15.8097C7.97731 15.5977 7.90379 15.2841 7.99927 15.0001L9.01345 11.9597C9.20501 11.3829 9.30078 11.0945 9.43062 10.8231C9.58457 10.5017 9.77045 10.2009 9.98826 9.92065C10.1734 9.68334 10.3884 9.46837 10.8183 9.03737L16.0499 3.80683C16.4098 4.75005 16.9659 5.6061 17.6814 6.31834C18.3936 7.03381 19.2496 7.58988 20.1929 7.94976L14.9613 13.1814Z" fill={isCustom ? '#071013' : '#F5F7F2'} />
+              <path fillRule="evenodd" clipRule="evenodd" d="M20.536 20.536C22 19.07 22 16.714 22 12C22 10.452 22 9.158 21.948 8.066L15.586 14.428C15.235 14.78 14.971 15.044 14.674 15.275C14.3258 15.5478 13.9485 15.7812 13.549 15.971C13.209 16.133 12.855 16.251 12.383 16.408L9.451 17.385C8.64535 17.6536 7.75709 17.4439 7.15658 16.8434C6.55607 16.2429 6.34641 15.3547 6.615 14.549L7.592 11.617C7.749 11.145 7.867 10.791 8.029 10.451C8.22033 10.051 8.45233 9.676 8.725 9.326C8.956 9.029 9.22 8.766 9.572 8.414L15.934 2.052C14.842 2 13.548 2 12 2C7.286 2 4.929 2 3.464 3.464C2 4.93 2 7.286 2 12C2 16.714 2 19.071 3.464 20.535C4.93 22 7.286 22 12 22C16.714 22 19.071 22 20.535 20.535" fill={isCustom ? '#071013' : '#F5F7F2'} />
             </svg>
           </button>
         </div>
@@ -179,27 +175,27 @@ export default function BuyGFTScreen({
           <div 
             className="flex items-center justify-between rounded-2xl px-4 py-4"
             style={{ 
-              background: '#0f172a',
+              background: '#0B1218',
               border: '1px solid rgba(30, 41, 59, 0.5)'
             }}
           >
             <div className="flex items-center gap-3">
               <div 
                 className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{ background: '#1e293b' }}
+                style={{ background: '#1B2A33' }}
               >
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path fillRule="evenodd" clipRule="evenodd" d="M18.3334 9.99998C18.3334 14.6025 14.6026 18.3333 10.0001 18.3333C5.39758 18.3333 1.66675 14.6025 1.66675 9.99998C1.66675 5.39749 5.39758 1.66666 10.0001 1.66666C14.6026 1.66666 18.3334 5.39749 18.3334 9.99998ZM10.0001 14.7916C10.3453 14.7916 10.6251 14.5118 10.6251 14.1666V9.16665C10.6251 8.82147 10.3453 8.54165 10.0001 8.54165C9.6549 8.54165 9.37508 8.82147 9.37508 9.16665V14.1666C9.37508 14.5116 9.65508 14.7916 10.0001 14.7916ZM10.0001 5.83332C10.4603 5.83332 10.8334 6.20642 10.8334 6.66665C10.8334 7.12689 10.4603 7.49999 10.0001 7.49999C9.53984 7.49999 9.16674 7.12689 9.16674 6.66665C9.16674 6.20642 9.53984 5.83332 10.0001 5.83332Z" fill="#B7FF1A" />
                 </svg>
               </div>
               <div className="flex flex-col">
-                <span className="text-xs uppercase" style={{ color: '#94a3b8' }}>Current Rate</span>
+                <span className="text-xs uppercase" style={{ color: '#B8C0AE' }}>Current Rate</span>
                 <span className="text-base font-bold" style={{ color: '#fff' }}>1 GFT ≈ £{GFT_RATE} GBP</span>
               </div>
             </div>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="10" cy="10" r="9" stroke="#94A3B8" strokeWidth="1.25"/>
-              <path d="M7 8L10 5L13 8M13 12L10 15L7 12" stroke="#94A3B8" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="10" cy="10" r="9" stroke="#B8C0AE" strokeWidth="1.25"/>
+              <path d="M7 8L10 5L13 8M13 12L10 15L7 12" stroke="#B8C0AE" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
 
@@ -221,7 +217,7 @@ export default function BuyGFTScreen({
               </svg>
             </div>
             <div className="flex flex-col">
-              <span className="text-xs uppercase" style={{ color: '#94a3b8' }}>Available Balance</span>
+              <span className="text-xs uppercase" style={{ color: '#B8C0AE' }}>Available Balance</span>
               <span className="text-base font-bold" style={{ color: '#fff' }}>
                 {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT
               </span>
@@ -234,14 +230,14 @@ export default function BuyGFTScreen({
       <div 
         className="px-6 pb-24 pt-6"
         style={{ 
-          background: '#101D27',
+          background: '#0B1218',
           borderTop: '1px solid rgba(30, 41, 59, 0.3)'
         }}
       >
         <div className="max-w-[600px] mx-auto w-full flex flex-col gap-6">
           {/* Total to Pay */}
           <div className="flex items-center justify-between">
-            <span className="text-base font-medium" style={{ color: '#94a3b8' }}>Total to Pay</span>
+            <span className="text-base font-medium" style={{ color: '#B8C0AE' }}>Total to Pay</span>
             <span className="text-2xl font-bold" style={{ color: '#fff' }}>£{displayAmount.toFixed(2)}</span>
           </div>
 

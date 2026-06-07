@@ -47,6 +47,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Progress } from "@/components/ui/progress";
 import { DualRangeSlider } from "@/components/ui/slider";
 import SimpleVideoPlayer from "@/components/shared/SimpleVideoPlayer";
+import ImageCropModal from "@/components/shared/ImageCropModal";
 import { ShareDialog } from "@/components/shared/ShareDialog";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { XPGainedDialog } from "@/components/gamification/XPGainedDialog";
@@ -153,6 +154,7 @@ const UploadPage = () => {
   // Screenshot-specific state - supports multiple screenshots
   const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
   const [screenshotPreviews, setScreenshotPreviews] = useState<string[]>([]);
+  const [screenshotCropQueue, setScreenshotCropQueue] = useState<File[]>([]);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
   const [cropPosition, setCropPosition] = useState({ x: 0, y: 0 });
   const [cropSize, setCropSize] = useState({ width: 100, height: 100 });
@@ -173,6 +175,7 @@ const UploadPage = () => {
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [videoPreviewError, setVideoPreviewError] = useState<string | null>(null);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [ageRestricted, setAgeRestricted] = useState(false);
@@ -183,6 +186,7 @@ const UploadPage = () => {
   
   // XP Dialog state
   const [showProUpgrade, setShowProUpgrade] = useState(false);
+  const [showUploadSizeTip, setShowUploadSizeTip] = useState(false);
   const [xpDialogOpen, setXpDialogOpen] = useState(false);
   const [xpGained, setXpGained] = useState(0);
   const [userXP, setUserXP] = useState(0);
@@ -209,7 +213,10 @@ const UploadPage = () => {
   const [reelPanY, setReelPanY] = useState(0);
   const [isReelAspectMismatch, setIsReelAspectMismatch] = useState(false);
   const [videoAspectRatio, setVideoAspectRatio] = useState(0);
+  // Format suggestion: shown when the uploaded video's orientation doesn't match the active tab
+  const [formatSuggestion, setFormatSuggestion] = useState<'switch-to-reel' | 'switch-to-clip' | null>(null);
   const [isDraggingReel, setIsDraggingReel] = useState(false);
+  const [isReelPlaying, setIsReelPlaying] = useState(false);
   const reelDragStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
   const [isDraggingClip, setIsDraggingClip] = useState(false);
   const [isDraggingReelDrop, setIsDraggingReelDrop] = useState(false);
@@ -238,6 +245,7 @@ const UploadPage = () => {
   } | null>(null);
 
   const userId = user?.id;
+  const uploadSizeTipStorageKey = "gamefolio_upload_size_tip_dismissed";
 
   // Fetch upload limits (size + duration only — no count caps)
   const { data: uploadLimits, isLoading: limitsLoading } = useQuery<{
@@ -251,6 +259,16 @@ const UploadPage = () => {
     queryKey: ['/api/upload/limits'],
     enabled: !!userId,
   });
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem(uploadSizeTipStorageKey) === "true";
+    setShowUploadSizeTip(!dismissed);
+  }, []);
+
+  const dismissUploadSizeTip = () => {
+    localStorage.setItem(uploadSizeTipStorageKey, "true");
+    setShowUploadSizeTip(false);
+  };
 
   // Reset form function
   const resetFormAndNavigate = () => {
@@ -343,6 +361,19 @@ const UploadPage = () => {
     fileInputRef.current?.click();
   };
 
+  // On Android, file.type is sometimes an empty string even for valid video files.
+  // Fall back to extension-based detection so those files aren't rejected.
+  const getEffectiveMimeType = (f: File): string => {
+    if (f.type) return f.type;
+    const ext = f.name.split('.').pop()?.toLowerCase() ?? '';
+    const extMap: Record<string, string> = {
+      mp4: 'video/mp4', m4v: 'video/mp4',
+      mov: 'video/quicktime',
+      webm: 'video/webm',
+    };
+    return extMap[ext] ?? '';
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log('=== FILE SELECTION EVENT ===');
     const selectedFile = e.target.files?.[0];
@@ -359,11 +390,13 @@ const UploadPage = () => {
     }
 
     setFileError(null);
+    setVideoPreviewError(null);
     
-    // Validate file type
+    // Validate file type — use extension fallback for Android where file.type can be empty
+    const effectiveMime = getEffectiveMimeType(selectedFile);
     const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
-    if (!allowedTypes.includes(selectedFile.type)) {
-      console.log('Invalid file type:', selectedFile.type);
+    if (!allowedTypes.includes(effectiveMime)) {
+      console.log('Invalid file type:', selectedFile.type, '(effective:', effectiveMime, ')');
       setFileError("Please upload a valid video file (MP4, WebM, or MOV)");
       return;
     }
@@ -394,6 +427,7 @@ const UploadPage = () => {
     setReelPanY(0);
     setIsReelAspectMismatch(false);
     setVideoAspectRatio(0);
+    setFormatSuggestion(null);
     
     // Then set the new file - this will trigger videoSrc recreation via useMemo
     setFile(selectedFile);
@@ -435,13 +469,9 @@ const UploadPage = () => {
       }
     }
     
-    // Add files and create previews synchronously to keep them in sync
-    const newFiles = [...screenshotFiles, ...files];
-    const newPreviews = [...screenshotPreviews, ...files.map(file => URL.createObjectURL(file))];
-    
-    setScreenshotFiles(newFiles);
-    setScreenshotPreviews(newPreviews);
-    
+    // Queue files for crop modal instead of adding directly
+    setScreenshotCropQueue(prev => [...prev, ...files]);
+
     // Clear the input so the same file can be selected again if needed
     e.target.value = '';
   };
@@ -569,6 +599,12 @@ const UploadPage = () => {
         uploadAbortRef.current = null;
       }
     };
+  }, [isUploading]);
+
+  // Signal to useVersionCheck that a reload must not happen mid-upload.
+  useEffect(() => {
+    window.__gf_uploading__ = isUploading;
+    return () => { window.__gf_uploading__ = false; };
   }, [isUploading]);
 
   // Upload mutation for clips
@@ -722,6 +758,8 @@ const UploadPage = () => {
     onSuccess: async (data: any) => {
       // Invalidate all relevant queries to ensure the new clip appears everywhere
       queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clips/latest"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reels/latest"] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/clips`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/upload/limits'] });
@@ -900,7 +938,7 @@ const UploadPage = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 pb-28 md:pb-6">
       <div className="flex items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Upload Content</h1>
       </div>
@@ -908,8 +946,16 @@ const UploadPage = () => {
       <EmailVerificationBanner />
 
       {/* Upload Limits Display — unlimited uploads, capped by file size & duration */}
-      {!limitsLoading && uploadLimits && !uploadLimits.isPro && (
-        <Alert className="mb-4">
+      {!limitsLoading && uploadLimits && !uploadLimits.isPro && showUploadSizeTip && (
+        <Alert className="mb-4 relative pr-10">
+          <button
+            type="button"
+            onClick={dismissUploadSizeTip}
+            className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Dismiss upload size tip"
+          >
+            <X className="h-4 w-4" />
+          </button>
           <Info className="h-4 w-4" />
           <AlertTitle>Upload Limits</AlertTitle>
           <AlertDescription>
@@ -1037,6 +1083,7 @@ const UploadPage = () => {
                                 setShowEditingTools(false);
                                 setGeneratedThumbnails([]);
                                 setThumbnailUrl("");
+                                setVideoPreviewError(null);
                                 if (fileInputRef.current) {
                                   fileInputRef.current.value = '';
                                 }
@@ -1086,6 +1133,11 @@ const UploadPage = () => {
                                   const videoType = getVideoType(videoRef.current);
                                   console.log('Aspect ratio:', aspectRatio, 'Auto-detected type:', videoType);
                                   
+                                  // Suggest switching to Reels if this is a portrait (9:16-ish) video uploaded as a clip
+                                  if (aspectRatio < 0.75) {
+                                    setFormatSuggestion('switch-to-reel');
+                                  }
+                                  
                                   // Generate thumbnails after video loads
                                   setTimeout(() => {
                                     generateThumbnails();
@@ -1113,10 +1165,10 @@ const UploadPage = () => {
                               onError={(e) => {
                                 console.error('Video preview error:', e);
                                 console.error('Video src:', videoSrc);
-                                console.error('File type:', file?.type);
+                                console.error('File type:', file?.type, '(effective:', file ? getEffectiveMimeType(file) : 'n/a', ')');
                                 console.error('Video readyState:', videoRef.current?.readyState);
                                 console.error('Video networkState:', videoRef.current?.networkState);
-                                setFileError("Failed to load video preview");
+                                setVideoPreviewError("Preview unavailable on this device — your video is still ready to upload.");
                               }}
                               onEnded={() => {
                                 console.log('Video preview ended');
@@ -1146,6 +1198,13 @@ const UploadPage = () => {
                             >
                               Your browser does not support the video tag.
                             </video>
+                            {videoPreviewError && (
+                              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-10 p-4 text-center">
+                                <AlertCircle className="h-8 w-8 text-amber-400 mb-2 shrink-0" />
+                                <p className="text-sm font-medium text-white mb-1">Preview unavailable</p>
+                                <p className="text-xs text-gray-300">{videoPreviewError}</p>
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -1159,6 +1218,35 @@ const UploadPage = () => {
                             </p>
                           </div>
                         </div>
+
+                        {/* Format mismatch suggestion — portrait video uploaded as a clip */}
+                        {formatSuggestion === 'switch-to-reel' && (
+                          <Alert className="border-primary/40 bg-primary/10 relative pr-10">
+                            <Info className="h-4 w-4 text-primary" />
+                            <button
+                              type="button"
+                              onClick={() => setFormatSuggestion(null)}
+                              className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                              aria-label="Dismiss"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                            <AlertTitle className="text-primary">Vertical video detected</AlertTitle>
+                            <AlertDescription className="flex flex-col sm:flex-row sm:items-center gap-3 mt-1">
+                              <span className="flex-1 text-muted-foreground">
+                                This looks like a 9:16 portrait video — it'll look and perform much better uploaded as a <span className="text-foreground font-medium">Reel</span>.
+                              </span>
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="shrink-0"
+                                onClick={() => { setContentType('reels'); setFormatSuggestion(null); }}
+                              >
+                                Switch to Reels
+                              </Button>
+                            </AlertDescription>
+                          </Alert>
+                        )}
                         
                         {/* Video Trimmer */}
                         {showEditingTools && videoDuration > 0 && (
@@ -1321,6 +1409,7 @@ const UploadPage = () => {
                     checked={ageRestricted}
                     onCheckedChange={(checked) => setAgeRestricted(checked as boolean)}
                     data-testid="checkbox-age-restricted"
+                    className="h-5 w-5 rounded-full border-gray-500 bg-transparent data-[state=checked]:bg-transparent data-[state=checked]:border-gray-500 [&_svg]:text-[#B7FF1A] [&_svg]:h-3.5 [&_svg]:w-3.5"
                   />
                   <div className="flex-1">
                     <Label
@@ -1484,20 +1573,14 @@ const UploadPage = () => {
                             >
                               <X className="h-4 w-4 text-white" />
                             </button>
-                            <video
-                              ref={videoRef}
-                              src={videoSrc}
-                              controls
-                              preload="auto"
-                              muted
-                              playsInline
-                              className="w-full h-full"
+                            {/* Transform wrapper — only the video scales, not the UI controls */}
+                            <div
                               style={{
-                                objectFit: 'contain',
+                                width: '100%',
+                                height: '100%',
                                 transform: isReelAspectMismatch ? `scale(${reelZoom}) translate(${reelPanX}%, ${reelPanY}%)` : 'none',
                                 transformOrigin: 'center center',
                                 cursor: isReelAspectMismatch && reelZoom > 1 ? (isDraggingReel ? 'grabbing' : 'grab') : 'default',
-                                userSelect: 'none',
                               }}
                               onMouseDown={(e) => {
                                 if (!isReelAspectMismatch || reelZoom <= 1) return;
@@ -1545,57 +1628,124 @@ const UploadPage = () => {
                                 setIsDraggingReel(false);
                                 reelDragStart.current = null;
                               }}
-                              onLoadedMetadata={() => {
-                                if (videoRef.current && videoDuration === 0) {
-                                  const duration = videoRef.current.duration;
-                                  setVideoDuration(duration);
-                                  setTrimEnd(duration);
-                                  setShowEditingTools(true);
-                                  
-                                  const aspectRatio = videoRef.current.videoWidth / videoRef.current.videoHeight;
-                                  const targetRatio = 9 / 16;
-                                  setVideoAspectRatio(aspectRatio);
-                                  
-                                  if (Math.abs(aspectRatio - targetRatio) > 0.1) {
-                                    setIsReelAspectMismatch(true);
-                                    setReelZoom(1);
-                                    setReelPanX(0);
-                                    setReelPanY(0);
-                                  } else {
-                                    setIsReelAspectMismatch(false);
+                            >
+                              <video
+                                ref={videoRef}
+                                src={videoSrc}
+                                preload="auto"
+                                muted
+                                playsInline
+                                className="w-full h-full"
+                                style={{
+                                  objectFit: 'contain',
+                                  userSelect: 'none',
+                                  pointerEvents: 'none',
+                                }}
+                                onLoadedMetadata={() => {
+                                  if (videoRef.current && videoDuration === 0) {
+                                    const duration = videoRef.current.duration;
+                                    setVideoDuration(duration);
+                                    setTrimEnd(duration);
+                                    setShowEditingTools(true);
+                                    
+                                    const aspectRatio = videoRef.current.videoWidth / videoRef.current.videoHeight;
+                                    const targetRatio = 9 / 16;
+                                    setVideoAspectRatio(aspectRatio);
+                                    
+                                    if (Math.abs(aspectRatio - targetRatio) > 0.1) {
+                                      setIsReelAspectMismatch(true);
+                                      setReelZoom(1);
+                                      setReelPanX(0);
+                                      setReelPanY(0);
+                                      // Suggest switching to Clips if this is a landscape (16:9-ish) video uploaded as a reel
+                                      if (aspectRatio > 1.2) {
+                                        setFormatSuggestion('switch-to-clip');
+                                      }
+                                    } else {
+                                      setIsReelAspectMismatch(false);
+                                    }
+                                    
+                                    setTimeout(() => {
+                                      generateThumbnails();
+                                    }, 1000);
                                   }
-                                  
-                                  setTimeout(() => {
-                                    generateThumbnails();
-                                  }, 1000);
-                                }
-                              }}
-                              onTimeUpdate={() => {
-                                if (videoRef.current) {
-                                  const currentTime = videoRef.current.currentTime;
-                                  setCurrentTime(currentTime);
+                                }}
+                                onTimeUpdate={() => {
+                                  if (videoRef.current) {
+                                    const currentTime = videoRef.current.currentTime;
+                                    setCurrentTime(currentTime);
 
-                                  if (trimEnd > 0 && trimEnd < videoDuration) {
-                                    if (currentTime >= trimEnd) {
-                                      videoRef.current.pause();
+                                    if (trimEnd > 0 && trimEnd < videoDuration) {
+                                      if (currentTime >= trimEnd) {
+                                        videoRef.current.pause();
+                                        videoRef.current.currentTime = trimStart;
+                                      }
+                                    }
+                                    if (currentTime < trimStart - 0.1) {
                                       videoRef.current.currentTime = trimStart;
                                     }
                                   }
-                                  if (currentTime < trimStart - 0.1) {
-                                    videoRef.current.currentTime = trimStart;
+                                }}
+                                onPlay={() => {
+                                  setIsReelPlaying(true);
+                                  if (videoRef.current) {
+                                    if (videoRef.current.currentTime < trimStart || videoRef.current.currentTime >= trimEnd) {
+                                      videoRef.current.currentTime = trimStart;
+                                    }
                                   }
+                                }}
+                                onPause={() => setIsReelPlaying(false)}
+                              />
+                            </div>
+                            {/* Play/pause button — outside the transform wrapper so it stays fixed size */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!videoRef.current) return;
+                                if (videoRef.current.paused) {
+                                  void videoRef.current.play();
+                                } else {
+                                  videoRef.current.pause();
                                 }
                               }}
-                              onPlay={() => {
-                                if (videoRef.current) {
-                                  if (videoRef.current.currentTime < trimStart || videoRef.current.currentTime >= trimEnd) {
-                                    videoRef.current.currentTime = trimStart;
-                                  }
-                                }
-                              }}
-                            />
+                              className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 p-3 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                              title={isReelPlaying ? "Pause" : "Play"}
+                            >
+                              {isReelPlaying
+                                ? <Pause className="h-5 w-5 text-white" />
+                                : <Play className="h-5 w-5 text-white" />}
+                            </button>
                           </div>
                           
+                          {/* Format mismatch suggestion — landscape video uploaded as a reel */}
+                          {formatSuggestion === 'switch-to-clip' && (
+                            <Alert className="border-primary/40 bg-primary/10 relative pr-10 mt-4">
+                              <Info className="h-4 w-4 text-primary" />
+                              <button
+                                type="button"
+                                onClick={() => setFormatSuggestion(null)}
+                                className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                                aria-label="Dismiss"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                              <AlertTitle className="text-primary">Landscape video detected</AlertTitle>
+                              <AlertDescription className="flex flex-col sm:flex-row sm:items-center gap-3 mt-1">
+                                <span className="flex-1 text-muted-foreground">
+                                  This looks like a 16:9 horizontal video — it'll look and perform much better uploaded as a <span className="text-foreground font-medium">Clip</span>.
+                                </span>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="shrink-0"
+                                  onClick={() => { setContentType('clips'); setFormatSuggestion(null); }}
+                                >
+                                  Switch to Clips
+                                </Button>
+                              </AlertDescription>
+                            </Alert>
+                          )}
+
                           {/* Zoom/Crop controls for non-9:16 videos */}
                           {isReelAspectMismatch && file && (
                             <div className="mt-4 space-y-3 p-4 bg-muted/30 rounded-lg">
@@ -1850,6 +2000,7 @@ const UploadPage = () => {
                     checked={ageRestricted}
                     onCheckedChange={(checked) => setAgeRestricted(checked as boolean)}
                     data-testid="checkbox-reel-age-restricted"
+                    className="h-5 w-5 rounded-full border-gray-500 bg-transparent data-[state=checked]:bg-transparent data-[state=checked]:border-gray-500 [&_svg]:text-[#B7FF1A] [&_svg]:h-3.5 [&_svg]:w-3.5"
                   />
                   <div className="flex-1">
                     <Label
@@ -2018,7 +2169,7 @@ const UploadPage = () => {
                   ) : (
                     <div className="space-y-4">
                       {/* Screenshot Previews Grid */}
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {screenshotPreviews.map((preview, index) => (
                           <div key={index} className="relative group">
                             <div className="w-full rounded-lg border overflow-hidden bg-muted flex items-center justify-center">
@@ -2057,9 +2208,13 @@ const UploadPage = () => {
                             data-testid="button-add-another-screenshot"
                             asChild
                           >
-                            <span className="cursor-pointer flex items-center justify-center gap-2">
-                              <Upload className="h-5 w-5" />
-                              Add Another Screenshot ({3 - screenshotFiles.length} remaining)
+                            <span className="cursor-pointer flex items-center justify-center gap-2 text-center leading-tight">
+                              <Upload className="h-5 w-5 shrink-0" />
+                              <span>
+                                <span className="hidden sm:inline">Add Another Screenshot </span>
+                                <span className="sm:hidden">Add Screenshot </span>
+                                ({3 - screenshotFiles.length} remaining)
+                              </span>
                             </span>
                           </Button>
                         </label>
@@ -2135,6 +2290,7 @@ const UploadPage = () => {
                     checked={screenshotAgeRestricted}
                     onCheckedChange={(checked) => setScreenshotAgeRestricted(checked as boolean)}
                     data-testid="checkbox-screenshot-age-restricted"
+                    className="h-5 w-5 rounded-full border-gray-500 bg-transparent data-[state=checked]:bg-transparent data-[state=checked]:border-gray-500 [&_svg]:text-[#B7FF1A] [&_svg]:h-3.5 [&_svg]:w-3.5"
                   />
                   <div className="flex-1">
                     <Label
@@ -2187,9 +2343,9 @@ const UploadPage = () => {
       
       {/* Upload Progress Modal */}
       {isUploading && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-0">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative w-full sm:max-w-2xl bg-[#101D27] sm:rounded-2xl overflow-hidden shadow-2xl border border-[#1e3a4a]/50">
+          <div className="relative w-full sm:max-w-2xl bg-[#0B1218] rounded-2xl overflow-hidden shadow-2xl border border-[#1e3a4a]/50">
             <div className="flex flex-col items-center justify-center px-6 py-10 sm:px-10 sm:py-14 gap-6">
               <div className="flex items-center gap-1">
                 <span className="text-6xl sm:text-8xl font-black text-white tracking-tighter leading-none" style={{ letterSpacing: '-4px' }}>
@@ -2320,6 +2476,22 @@ const UploadPage = () => {
           // Clear success data
           setUploadSuccessData(null);
         }}
+      />
+
+      <ImageCropModal
+        file={screenshotCropQueue[0] ?? null}
+        onConfirm={(croppedFile) => {
+          setScreenshotFiles(prev => [...prev, croppedFile]);
+          setScreenshotPreviews(prev => [...prev, URL.createObjectURL(croppedFile)]);
+          setScreenshotCropQueue(q => q.slice(1));
+        }}
+        onSkip={() => {
+          const file = screenshotCropQueue[0];
+          setScreenshotFiles(prev => [...prev, file]);
+          setScreenshotPreviews(prev => [...prev, URL.createObjectURL(file)]);
+          setScreenshotCropQueue(q => q.slice(1));
+        }}
+        onCancel={() => setScreenshotCropQueue([])}
       />
     </div>
   );

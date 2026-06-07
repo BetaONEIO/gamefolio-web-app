@@ -1,18 +1,37 @@
 import { useState, useEffect } from "react";
-import { Bell, User as UserIcon, Heart, MessageCircle, Upload, UserPlus, X, UserCheck, UserX } from "lucide-react";
+import { Bell, MessageCircle, Upload, UserPlus, X, UserCheck, UserX, Flame, Video, Download, Share2, Trophy } from "lucide-react";
+import { ZapIconFire } from "@/components/ui/ZapReactionIcon";
+import { PixelHeartReaction } from "@/components/ui/PixelHeartReaction";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Notification } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, getQueryFn, queryClient } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
+
+let _notifZapStylesInjected = false;
+function ensureNotifZapStyles() {
+  if (_notifZapStylesInjected || typeof document === 'undefined') return;
+  _notifZapStylesInjected = true;
+  const el = document.createElement('style');
+  el.id = 'notif-zap-sweep-keyframes';
+  el.textContent = `
+    @keyframes notifZapSwipe {
+      0%   { transform: translateX(-105%); opacity: 1; }
+      45%  { transform: translateX(0%);    opacity: 0.75; }
+      100% { transform: translateX(105%);  opacity: 0; }
+    }
+  `;
+  document.head.appendChild(el);
+}
 
 interface NotificationWithUser extends Notification {
   fromUser?: {
@@ -30,6 +49,7 @@ interface NotificationWithUser extends Notification {
 }
 
 export function NotificationBell() {
+  ensureNotifZapStyles();
   const [isOpen, setIsOpen] = useState(false);
   const [showGreenPopup, setShowGreenPopup] = useState(false);
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
@@ -81,24 +101,19 @@ export function NotificationBell() {
     },
   });
 
-  // Fetch notifications (with fallback for demo)
+  // Fetch notifications
   const { data: notifications = [] } = useQuery<NotificationWithUser[]>({
     queryKey: ['/api/notifications'],
-    queryFn: async () => {
-      const response = await fetch('/api/notifications', { credentials: 'include' });
-      if (!response.ok) throw new Error("Failed to fetch notifications");
-      return await response.json();
-    },
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    staleTime: 0,
   });
 
-  // Fetch unread count (with fallback for demo)
+  // Fetch unread count
   const { data: unreadCount = 0 } = useQuery<number>({
     queryKey: ['/api/notifications/unread-count'],
-    queryFn: async () => {
-      const response = await fetch('/api/notifications/unread-count', { credentials: 'include' });
-      if (!response.ok) throw new Error("Failed to fetch unread count");
-      return await response.json();
-    },
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    staleTime: 0,
+    refetchInterval: 30000,
   });
 
   // Trigger green popup animation when new notifications arrive
@@ -187,18 +202,34 @@ export function NotificationBell() {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'like':
-        return <Heart className="h-4 w-4 text-red-500" />;
+        return <PixelHeartReaction size={16} active={true} />;
+      case 'reaction':
+        return <ZapIconFire className="h-4 w-4" style={{ width: 14, height: 14 }} />;
       case 'comment':
       case 'reply':
         return <MessageCircle className="h-4 w-4 text-[#B7FF1A]" />;
+      case 'comment_mention':
+        return <MessageCircle className="h-4 w-4 text-primary" />;
       case 'follow':
         return <UserPlus className="h-4 w-4 text-primary" />;
       case 'follow_request':
         return <UserPlus className="h-4 w-4 text-orange-500" />;
+      case 'follow_request_accepted':
+        return <UserCheck className="h-4 w-4 text-primary" />;
       case 'upload':
         return <Upload className="h-4 w-4 text-primary" />;
+      case 'clip_mention':
+        return <Video className="h-4 w-4 text-[#B7FF1A]" />;
       case 'message':
-        return <MessageCircle className="h-4 w-4 text-primary" />;
+        return <MessageCircle className="h-4 w-4 text-sky-400" />;
+      case 'streak':
+        return <Flame className="h-4 w-4 text-orange-500" />;
+      case 'download':
+        return <Download className="h-4 w-4 text-[#B7FF1A]" />;
+      case 'share':
+        return <Share2 className="h-4 w-4 text-[#B7FF1A]" />;
+      case 'milestone':
+        return <Trophy className="h-4 w-4 text-[#B7FF1A]" />;
       default:
         return <Bell className="h-4 w-4 text-gray-500" />;
     }
@@ -242,7 +273,7 @@ export function NotificationBell() {
             <Bell className="h-4 w-4" />
             <span className="text-sm font-medium">New notification!</span>
           </div>
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-green-500"></div>
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#B7FF1A]"></div>
         </div>
       )}
       
@@ -271,6 +302,7 @@ export function NotificationBell() {
           className="w-80 max-h-96 overflow-hidden p-0" 
           align="end"
           sideOffset={2}
+          collisionPadding={{ left: 12 }}
         >
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="font-semibold">Notifications</h3>
@@ -308,16 +340,33 @@ export function NotificationBell() {
             </div>
           ) : (
             <div className="space-y-0">
-              {notifications.slice(0, 10).map((notification) => (
+              {notifications.slice(0, 10).map((notification) => {
+                const isZapReaction = notification.type === 'reaction';
+                return (
                 <div
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification)}
                   className={cn(
-                    "w-full p-4 text-left hover:bg-secondary transition-colors border-b border-border/50 last:border-b-0 cursor-pointer",
-                    !notification.isRead && "bg-primary/5 border-l-4 border-l-primary"
+                    "relative w-full p-4 text-left hover:bg-secondary transition-colors border-b border-border/50 last:border-b-0 cursor-pointer overflow-hidden",
+                    !notification.isRead && "bg-primary/5 border-l-4 border-l-primary",
+                    isZapReaction && !notification.isRead && "border-l-[#B7FF1A]"
                   )}
                 >
-                  <div className="flex items-start gap-3">
+                  {/* Neon green swipe animation for unread zap reactions */}
+                  {isZapReaction && !notification.isRead && (
+                    <div
+                      aria-hidden
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'rgba(183, 255, 26, 0.18)',
+                        animation: 'notifZapSwipe 0.75s cubic-bezier(0.4,0,0.2,1) forwards',
+                        pointerEvents: 'none',
+                        zIndex: 0,
+                      }}
+                    />
+                  )}
+                  <div className="relative flex items-start gap-3" style={{ zIndex: 1 }}>
                     <div className="flex-shrink-0 mt-0.5 relative">
                       {notification.fromUser ? (
                         <div className="relative">
@@ -399,7 +448,8 @@ export function NotificationBell() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
               {notifications.length > 10 && (
                 <div className="p-4 text-center border-t">
                   <Link href="/notifications">

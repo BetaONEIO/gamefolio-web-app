@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
+import { silentReplaceState } from "@/lib/native-history";
 import { createPortal } from "react-dom";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
@@ -11,7 +12,8 @@ import { FireButton } from "@/components/engagement/FireButton";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { formatDistance } from "date-fns";
 import { Link } from "wouter";
-import { Eye, Clock, MessageSquare, Share2, User as UserIcon, UserPlus, UserCheck, ChevronLeft, ChevronRight, X, Maximize2, Minimize2 } from "lucide-react";
+import { Eye, Clock, MessageSquare, User as UserIcon, UserPlus, UserCheck, ChevronLeft, ChevronRight, X, Maximize2, Minimize2 } from "lucide-react";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import type { Game, Screenshot } from "@shared/schema";
 
 const ScreenshotShareDialog = React.lazy(() => import("@/components/screenshot/ScreenshotShareDialog").then(m => ({ default: m.ScreenshotShareDialog })));
@@ -34,12 +36,39 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   const [isMobile, setIsMobile] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isDesktopFullscreen, setIsDesktopFullscreen] = useState(false);
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; time: number } | null>(null);
   const hasDraggedRef = useRef(false);
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const previousUrlRef = useRef<string | null>(null);
+  const desktopImageRef = useRef<HTMLDivElement>(null);
+
+  // Update the address bar URL to reflect the current screenshot so it can be copied/shared
+  useEffect(() => {
+    if (!screenshot) return;
+    if (previousUrlRef.current === null) {
+      previousUrlRef.current = window.location.pathname + window.location.search + window.location.hash;
+    }
+    const username = screenshot.user?.username;
+    const shareCode = screenshot.shareCode;
+    if (username && shareCode) {
+      silentReplaceState(`/@${username}/screenshot/${shareCode}`);
+    } else if (username && screenshot.id) {
+      silentReplaceState(`/@${username}/screenshot/${screenshot.id}`);
+    }
+    return () => {};
+  }, [screenshot?.id]);
+
+  const handleClose = useCallback(() => {
+    if (previousUrlRef.current !== null) {
+      silentReplaceState(previousUrlRef.current);
+      previousUrlRef.current = null;
+    }
+    onClose();
+  }, [onClose]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
@@ -154,6 +183,21 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
     }
   }, []);
 
+  const toggleDesktopFullscreen = useCallback(() => {
+    if (!desktopImageRef.current) return;
+    if (!document.fullscreenElement) {
+      desktopImageRef.current.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setIsDesktopFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
+
   if (!screenshot) return null;
 
   const getVisibleDots = (total: number, current: number, windowSize = 5) => {
@@ -171,7 +215,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
       <div className="fixed inset-0 z-[100] bg-black flex flex-col">
         <div className="absolute top-3 right-3 z-50">
           <button
-            onClick={() => { setIsFullscreen(false); onClose(); }}
+            onClick={() => setIsFullscreen(false)}
             className="rounded-sm opacity-70 transition-opacity hover:opacity-100 p-3 bg-black/30 backdrop-blur-sm hover:bg-black/50 flex items-center justify-center"
           >
             <X className="h-6 w-6 text-white" />
@@ -249,10 +293,10 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   if (isMobile) {
     const visibleDotsMobile = getVisibleDots(totalSlides, currentIndex);
     return createPortal(
-      <div className="fixed inset-0 z-[100] bg-background flex flex-col">
-        <div className="flex items-center justify-end px-3 py-2 flex-shrink-0">
+      <div className="fixed left-0 right-0 top-0 z-[100] bg-background flex flex-col" style={{ height: 'calc(100dvh - 64px)' }}>
+        <div className="flex items-center justify-start px-3 py-2 flex-shrink-0">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-sm opacity-70 transition-opacity hover:opacity-100 p-2 bg-black/30 backdrop-blur-sm hover:bg-black/50 flex items-center justify-center"
           >
             <X className="h-5 w-5 text-white" />
@@ -333,12 +377,12 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
           </div>
 
 
-          <div className="px-4 py-3 space-y-3">
+          <div className="px-4 py-3 space-y-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 120px)' }}>
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-3 min-w-0">
                 <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
                   e.stopPropagation();
-                  onClose();
+                  handleClose();
                 }}>
                   {screenshotUser?.nftProfileTokenId && screenshotUser?.nftProfileImageUrl && screenshotUser?.activeProfilePicType === 'nft' ? (
                     <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#B7FF1A]/40 flex-shrink-0">
@@ -356,7 +400,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                 </Link>
                 <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
                   e.stopPropagation();
-                  onClose();
+                  handleClose();
                 }}>
                   <span className="text-foreground font-medium text-sm hover:text-primary transition-colors">
                     {screenshot.user?.displayName || screenshot.user?.username || 'Unknown'}
@@ -399,7 +443,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
               {screenshot.gameId && games?.find((g: Game) => g.id === screenshot.gameId) && (
                 <div className="mt-2">
                   <Link href={`/games/${(games.find((g: Game) => g.id === screenshot.gameId)?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                    <span className="bg-primary text-white px-2 py-1 rounded text-xs font-bold hover:bg-primary cursor-pointer transition-colors">
+                    <span className="bg-primary text-[#071013] px-2 py-1 rounded text-xs font-bold hover:bg-primary cursor-pointer transition-colors">
                       {games.find((g: Game) => g.id === screenshot.gameId)?.name}
                     </span>
                   </Link>
@@ -422,7 +466,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                       contentOwnerId={screenshot.userId}
                       initialLiked={false}
                       initialCount={(screenshot as any)._count?.likes || 0}
-                      size="lg"
+                      size="sm"
                     />
                     <FireButton
                       contentId={screenshot.id}
@@ -430,13 +474,13 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                       contentOwnerId={screenshot.userId}
                       initialFired={false}
                       initialCount={(screenshot as any)._count?.reactions || 0}
-                      size="lg"
+                      size="sm"
                     />
                     <button
                       onClick={scrollToComments}
                       className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      <MessageSquare className="h-4 w-4" />
+                      <MessageSquare className="h-[18px] w-[18px]" />
                       <span className="text-sm">{(screenshot as any)._count?.comments || 0}</span>
                     </button>
                   </div>
@@ -448,7 +492,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                         isOwnContent={isOwnContent}
                         trigger={
                           <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                            <Share2 className="h-4 w-4" />
+                            <ShareLaunchIcon size={16} />
                           </Button>
                         }
                       />
@@ -478,23 +522,33 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   }
 
   return (
-    <Dialog open={!!screenshot} onOpenChange={() => onClose()}>
+    <Dialog open={!!screenshot} onOpenChange={() => handleClose()}>
       <DialogPortal>
         <DialogOverlay />
         <DialogPrimitive.Content
-          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] max-w-[80%] w-[80%] p-0 bg-background text-foreground max-h-[76vh] h-[76vh] overflow-hidden rounded-lg border shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]"
+          className="fixed left-[50%] top-[50%] z-[10000] translate-x-[-50%] translate-y-[-50%] max-w-[80%] w-[80%] p-0 bg-background text-foreground max-h-[76vh] h-[76vh] overflow-hidden rounded-lg border shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]"
         >
           <DialogPrimitive.Close className="absolute right-3 top-3 z-[100] w-8 h-8 flex items-center justify-center rounded-lg bg-black/40 hover:bg-black/60 text-white opacity-100 transition-colors">
             <X className="h-4 w-4" />
           </DialogPrimitive.Close>
 
           <div className="flex flex-row h-full">
-          <div className="bg-black flex items-center justify-center w-[75%] h-full flex-shrink-0">
+          <div ref={desktopImageRef} className="bg-black flex items-center justify-center w-[75%] h-full flex-shrink-0 relative">
             <img
               src={signedUrl || screenshot.imageUrl}
               alt={screenshot.title}
               className="max-w-full max-h-full object-contain"
             />
+            <button
+              onClick={toggleDesktopFullscreen}
+              className="absolute bottom-3 right-3 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors"
+              title={isDesktopFullscreen ? "Exit fullscreen" : "View fullscreen"}
+            >
+              {isDesktopFullscreen
+                ? <Minimize2 className="h-4 w-4 text-white" />
+                : <Maximize2 className="h-4 w-4 text-white" />
+              }
+            </button>
           </div>
 
           <div className="flex flex-col w-[25%] h-full">
@@ -520,7 +574,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                   )}
                   <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
                     e.stopPropagation();
-                    onClose();
+                    handleClose();
                   }}>
                     <div className="text-white flex items-center hover:text-primary transition-colors cursor-pointer font-medium">
                       {screenshot.user?.displayName || screenshot.user?.username}
@@ -566,7 +620,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                 {screenshot.gameId && games?.find((g: Game) => g.id === screenshot.gameId) && (
                   <div className="mt-2">
                     <Link href={`/games/${(games.find((g: Game) => g.id === screenshot.gameId)?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                      <span className="bg-primary text-white px-2 py-1 rounded text-xs font-bold hover:bg-primary cursor-pointer transition-colors">
+                      <span className="bg-primary text-[#071013] px-2 py-1 rounded text-xs font-bold hover:bg-primary cursor-pointer transition-colors">
                         {games.find((g: Game) => g.id === screenshot.gameId)?.name}
                       </span>
                     </Link>
@@ -589,7 +643,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                         contentOwnerId={screenshot.userId}
                         initialLiked={false}
                         initialCount={(screenshot as any)._count?.likes || 0}
-                        size="lg"
+                        size="sm"
                       />
                       <FireButton
                         contentId={screenshot.id}
@@ -597,16 +651,19 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                         contentOwnerId={screenshot.userId}
                         initialFired={false}
                         initialCount={(screenshot as any)._count?.reactions || 0}
-                        size="lg"
-                      />
-                      <Button
-                        variant="ghost"
                         size="sm"
-                        className="text-muted-foreground hover:text-foreground flex items-center gap-1"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                        <span>{(screenshot as any)._count?.comments || 0}</span>
-                      </Button>
+                      />
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={scrollToComments}
+                          className="p-0 h-auto transition-colors text-muted-foreground hover:text-white focus:outline-none"
+                        >
+                          <MessageSquare className="h-[18px] w-[18px]" />
+                        </button>
+                        <span className="font-medium min-w-[1rem] text-center text-base text-muted-foreground">
+                          {(screenshot as any)._count?.comments || 0}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -616,7 +673,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                           isOwnContent={isOwnContent}
                           trigger={
                             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                              <Share2 className="h-4 w-4" />
+                              <ShareLaunchIcon size={16} />
                             </Button>
                           }
                         />

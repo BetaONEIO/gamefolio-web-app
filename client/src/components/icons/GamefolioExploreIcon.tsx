@@ -6,25 +6,27 @@ interface GamefolioExploreIconProps {
 
 export function GamefolioExploreIcon({ className }: GamefolioExploreIconProps) {
   return (
-    <svg 
+    <svg
       xmlns="http://www.w3.org/2000/svg"
-      width="24" 
-      height="24" 
+      width="24"
+      height="24"
       viewBox="0 0 24 24"
-      fill="none" 
+      fill="none"
       stroke="currentColor"
-      strokeWidth="2" 
-      strokeLinecap="round" 
+      strokeWidth="2"
+      strokeLinecap="round"
       strokeLinejoin="round"
       className={cn("w-6 h-6", className)}
       aria-hidden="true"
     >
-      <g transform="translate(12 12) scale(1.2) translate(-12 -12)">
-        <path d="M6.2 12a5.8 5.8 0 1 1 5.8 5.8"/>
-        <path d="M8.8 12a3.2 3.2 0 1 1 3.2 3.2"/>
-        <path d="M12 12l4.7-2.7"/>
-        <circle cx="15.8" cy="9.7" r="0.9" fill="currentColor" stroke="none"/>
-      </g>
+      {/* Outer ring */}
+      <circle cx="12" cy="12" r="9" />
+      {/* Inner ring */}
+      <circle cx="12" cy="12" r="5" />
+      {/* Sweep line toward top-right */}
+      <line x1="12" y1="12" x2="17.5" y2="6.5" />
+      {/* Ping dot */}
+      <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none" />
     </svg>
   );
 }

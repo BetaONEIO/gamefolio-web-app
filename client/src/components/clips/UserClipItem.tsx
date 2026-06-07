@@ -8,6 +8,7 @@ import QuickShareButton from "@/components/clips/QuickShareButton";
 import { Link, useLocation } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
+import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 
 interface UserClipItemProps {
   clip: ClipWithUser;
@@ -15,6 +16,7 @@ interface UserClipItemProps {
 
 const UserClipItem = ({ clip }: UserClipItemProps) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [isPortrait, setIsPortrait] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const { openClipDialog } = useClipDialog();
   const [, setLocation] = useLocation();
@@ -53,12 +55,26 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
 
   return (
     <div 
-      className="overflow-hidden relative group bg-[#1E2327] rounded-sm cursor-pointer aspect-square"
+      className="overflow-hidden relative group bg-[#101923] rounded-sm cursor-pointer aspect-square"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleClipClick}
     >
-      <div className="relative overflow-hidden w-full h-full"> 
+      <div className="relative overflow-hidden w-full h-full">
+        {/* Blurred background — always shown; invisible for landscape (fills square);
+            visible as bars for portrait clips. */}
+        {clip.thumbnailUrl && (
+          <div className="absolute inset-0 z-0 overflow-hidden">
+            <img
+              src={clip.thumbnailUrl}
+              alt=""
+              aria-hidden="true"
+              className="w-full h-full object-cover"
+              style={{ filter: 'blur(24px)', opacity: 0.35, transform: 'scale(1.08)' }}
+            />
+          </div>
+        )}
+
         {/* Video element for hover playback */}
         <video 
           ref={videoRef}
@@ -68,7 +84,8 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
           muted
           loop
           className={cn(
-            "w-full h-full object-cover object-center transition-opacity duration-200",
+            "w-full h-full transition-opacity duration-200 relative z-10",
+            isPortrait ? "object-contain" : "object-cover object-center",
             isHovered ? "opacity-100" : "opacity-0"
           )}
         />
@@ -79,9 +96,14 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
           alt={clip.title} 
           loading="lazy"
           className={cn(
-            "w-full h-full object-cover object-center absolute inset-0 transition-opacity duration-200",
+            "w-full h-full absolute inset-0 transition-opacity duration-200 z-10",
+            isPortrait ? "object-contain" : "object-cover object-center",
             isHovered ? "opacity-0" : "opacity-100"
           )}
+          onLoad={(e) => {
+            const img = e.currentTarget as HTMLImageElement;
+            setIsPortrait(img.naturalHeight > img.naturalWidth);
+          }}
         />
         
         {/* Username removed from thumbnail as requested */}
@@ -122,7 +144,11 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
           )}
           
           <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center">
+            <Link
+              href={`/profile/${clip.user.username}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center hover:opacity-80 transition-opacity"
+            >
               <img 
                 src={clip.user.avatarUrl || `https://ui-avatars.com/api/?name=${clip.user.displayName}`} 
                 alt={clip.user.displayName} 
@@ -130,7 +156,7 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
                 className="w-5 h-5 rounded-full mr-2"
               />
               <span className="text-sm text-white">{clip.user.displayName}</span>
-            </div>
+            </Link>
             <div className="flex items-center space-x-2">
               <div onClick={(e) => e.stopPropagation()}>
                 <LikeButton 
@@ -164,6 +190,16 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
         </div>
       </div>
       
+      {/* Three-dot menu — always visible so it works on mobile (no hover) */}
+      <div
+        className="absolute bottom-2 right-2 z-30"
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      >
+        <div className="bg-black/60 backdrop-blur-sm rounded-full">
+          <TrendingClipMenu clip={clip} />
+        </div>
+      </div>
+
       {/* Top right badges: duration and views - same structure as VideoClipGridItem */}
       <div className="absolute top-2 right-2 flex items-center gap-1">
         {/* Duration badge - use actual duration from database */}

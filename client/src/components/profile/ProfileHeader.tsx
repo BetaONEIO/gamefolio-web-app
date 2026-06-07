@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { UserWithStats } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
+import { requireEmailVerified } from "@/lib/email-verification";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import {
   UserPlus,
   UserCheck,
-  Share2,
   Trophy,
   Heart,
   Flame,
@@ -18,6 +20,7 @@ import {
   Scroll,
   Settings,
 } from "lucide-react";
+import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -28,7 +31,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+
 import PlatformConnections from "./PlatformConnections";
 import { GamefolioShareDialog } from "./GamefolioShareDialog";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
@@ -126,6 +129,7 @@ const ProfileHeader = ({
   isFollowLoading = false,
 }: ProfileHeaderProps) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { isOpen, actionType, openDialog, closeDialog } = useJoinDialog();
   const [nftPopup, setNftPopup] = useState<{
@@ -162,6 +166,8 @@ const ProfileHeader = ({
       return;
     }
 
+    if (!requireEmailVerified(user, toast)) return;
+
     if (onFollowClick) {
       onFollowClick();
     } else {
@@ -182,7 +188,7 @@ const ProfileHeader = ({
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const bannerStyle = {
-    backgroundColor: "#02172C",
+    backgroundColor: "#071013",
     backgroundImage: signedBannerUrl ? `url(${signedBannerUrl})` : undefined,
     backgroundSize: "cover",
     backgroundPosition: "center",
@@ -288,7 +294,7 @@ const ProfileHeader = ({
               </Link>
 
               {(() => {
-                const isLight = getRelativeLuminance(profile.backgroundColor || "#0B2232") > 0.179;
+                const isLight = getRelativeLuminance(profile.backgroundColor || "#071013") > 0.179;
                 const numColor = isLight ? "#111827" : "#FFFFFF";
                 const lblColor = isLight ? "#374151" : profile.accentColor || undefined;
 
@@ -339,7 +345,7 @@ const ProfileHeader = ({
                           className="font-bold block flex items-center gap-1 justify-center"
                           style={{ color: numColor }}
                         >
-                          <Flame className="w-3 h-3 text-orange-500" />
+                          <ZapIconSvg className="w-3 h-3" active={true} />
                           {profile._count?.firesReceived || 0}
                         </span>
                         <span className="text-muted-foreground" style={{ color: lblColor }}>
@@ -539,11 +545,39 @@ const ProfileHeader = ({
             ) : (
               <GamefolioShareDialog
                 username={profile.username}
+                userId={profile.id}
                 open={shareDialogOpen}
                 onOpenChange={setShareDialogOpen}
+                userProfile={{
+                  displayName: profile.displayName,
+                  bio: profile.bio,
+                  avatarUrl: profile.avatarUrl,
+                  bannerUrl: profile.bannerUrl,
+                  hideBanner: profile.hideBanner,
+                  selectedAvatarBorderId: profile.selectedAvatarBorderId,
+                  avatarBorderColor: profile.avatarBorderColor,
+                  nftProfileTokenId: profile.nftProfileTokenId,
+                  nftProfileImageUrl: profile.nftProfileImageUrl,
+                  activeProfilePicType: profile.activeProfilePicType,
+                  emailVerified: profile.emailVerified,
+                  role: profile.role,
+                  isPro: profile.isPro,
+                  selectedVerificationBadgeId: profile.selectedVerificationBadgeId,
+                  userType: profile.userType,
+                  showUserType: profile.showUserType,
+                  accentColor: profile.accentColor,
+                  backgroundColor: profile.backgroundColor,
+                  cardColor: profile.cardColor,
+                  primaryColor: profile.primaryColor,
+                }}
+                userStats={{
+                  clips: (profile._count?.clips || 0) + (profile._count?.screenshots || 0),
+                  followers: profile._count?.followers || 0,
+                  following: profile._count?.following || 0,
+                }}
                 trigger={
                   <Button variant="outline" size="sm" className="h-8 px-4">
-                    <Share2 className="mr-1 h-4 w-4" /> Share
+                    <ShareLaunchIcon size={16} className="mr-1" /> Share
                   </Button>
                 }
               />
@@ -556,12 +590,6 @@ const ProfileHeader = ({
           <PlatformConnections profile={profile} />
         </div>
       </div>
-
-      <JoinGamefolioDialog
-        open={isOpen}
-        onOpenChange={closeDialog}
-        actionType={actionType}
-      />
 
       {nftPopup && (
         <NftProfilePopup

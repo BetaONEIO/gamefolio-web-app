@@ -210,16 +210,14 @@ router.post('/', async (req: Request, res: Response) => {
       }
 
       try {
-        const apiInstance = new (await import('@getbrevo/brevo')).TransactionalEmailsApi();
-        apiInstance.setApiKey((await import('@getbrevo/brevo')).TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
-        
-        const sendSmtpEmail = new (await import('@getbrevo/brevo')).SendSmtpEmail();
-        sendSmtpEmail.to = [{ email: params.to }];
-        sendSmtpEmail.sender = { email: 'noreply@gamefolio.com', name: 'Gamefolio' };
-        sendSmtpEmail.subject = params.subject;
-        sendSmtpEmail.htmlContent = params.html;
-
-        await apiInstance.sendTransacEmail(sendSmtpEmail);
+        const { BrevoClient } = await import('@getbrevo/brevo');
+        const brevoClient = new BrevoClient({ apiKey: process.env.BREVO_API_KEY });
+        await brevoClient.transactionalEmails.sendTransacEmail({
+          to: [{ email: params.to }],
+          sender: { email: 'noreply@gamefolio.com', name: 'Gamefolio' },
+          subject: params.subject,
+          htmlContent: params.html,
+        });
         console.log('Email sent successfully to:', params.to);
         return true;
       } catch (error) {

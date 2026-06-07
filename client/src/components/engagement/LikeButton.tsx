@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { Heart } from "lucide-react";
+import { PixelHeartReaction } from "@/components/ui/PixelHeartReaction";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+
 import { useJoinDialog } from "@/hooks/use-join-dialog";
+import { requireEmailVerified, isEmailVerificationError } from "@/lib/email-verification";
 
 interface LikeButtonProps {
   contentId: number;
@@ -18,6 +19,7 @@ interface LikeButtonProps {
   showCount?: boolean;
   variant?: 'horizontal' | 'vertical';
   onUnauthenticatedAction?: () => void;
+  iconSize?: number;
 }
 
 export function LikeButton({ 
@@ -29,7 +31,8 @@ export function LikeButton({
   size = 'md',
   showCount = true,
   variant = 'horizontal',
-  onUnauthenticatedAction
+  onUnauthenticatedAction,
+  iconSize: iconSizeProp,
 }: LikeButtonProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -100,11 +103,19 @@ export function LikeButton({
         setLiked(context.previousLiked);
         setCount(context.previousCount);
       }
-      toast({
-        title: "Error",
-        description: error.message || "Failed to toggle like",
-        variant: "gamefolioError",
-      });
+      if (isEmailVerificationError(error)) {
+        toast({
+          title: "Email verification required",
+          description: "Please verify your email address to like content.",
+          variant: "gamefolioError",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to toggle like",
+          variant: "gamefolioError",
+        });
+      }
     },
   });
 
@@ -117,6 +128,8 @@ export function LikeButton({
       }
       return;
     }
+
+    if (!requireEmailVerified(user, toast)) return;
 
     // Prevent users from liking their own content
     if (contentOwnerId && user.id === contentOwnerId) {
@@ -139,10 +152,11 @@ export function LikeButton({
   };
 
   const iconSizes = {
-    sm: 16,
-    md: 20,
+    sm: 18,
+    md: 24,
     lg: 28
   };
+  const resolvedIconSize = iconSizeProp ?? iconSizes[size];
 
   // Define text sizes for the count
   const countTextSizes = {
@@ -155,88 +169,56 @@ export function LikeButton({
     return (
       <>
         <div className="flex flex-col items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon" // Use "icon" size for consistent button dimensions
-            onClick={handleLike}
-            disabled={likeMutation.isPending}
-            className={cn(
-              "transition-colors rounded-full", // Fixed size for vertical
-              liked 
-                ? "text-red-500 hover:text-red-600" 
-                : "text-white hover:text-red-500",
-              "bg-black/50 hover:bg-black/70", // Darker background for better contrast
-              size === "sm" && "w-8 h-8",
-              size === "lg" && "w-10 h-10 md:w-12 md:h-12"
-            )}
-          >
-            <Heart 
-              size={iconSizes[size]} 
+          <div className="flex items-center justify-center bg-black/50 rounded-full p-1 hover:bg-black/70 transition-colors">
+            <PixelHeartReaction
+              active={liked}
+              onClick={handleLike}
+              size={resolvedIconSize}
+              fillColour="#ff4d6d"
               className={cn(
-                "transition-all duration-200",
-                liked ? 'fill-current scale-110' : 'hover:scale-105',
-                size === "sm" && "h-4 w-4",
-                size === "lg" && "h-5 w-5 md:h-6 md:w-6"
-              )} 
+                "text-white",
+                likeMutation.isPending && "opacity-50 pointer-events-none"
+              )}
             />
-          </Button>
+          </div>
           {showCount && (
             <span className={cn(
               "text-white transition-colors text-center",
-              countTextSizes[size] // Apply text size based on 'size' prop
+              countTextSizes[size]
             )}>
               {count}
             </span>
           )}
         </div>
         
-        <JoinGamefolioDialog 
-          open={isOpen} 
-          onOpenChange={closeDialog} 
-          actionType={actionType} 
-        />
       </>
     );
   }
 
-  // Horizontal layout (original)
+  // Horizontal layout
   return (
     <>
       <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn(
-            "p-1.5 h-auto transition-colors hover:bg-red-50 dark:hover:bg-red-900/20",
-            liked ? 'text-red-500 hover:text-red-600' : 'text-gray-500 hover:text-red-500'
-          )}
+        <PixelHeartReaction
+          active={liked}
           onClick={handleLike}
-          disabled={likeMutation.isPending}
-        >
-          <Heart 
-            size={iconSizes[size]} 
-            className={cn(
-              "transition-all duration-200",
-              liked ? 'fill-current scale-110' : 'hover:scale-105'
-            )}
-          />
-        </Button>
+          size={resolvedIconSize}
+          fillColour="#ff4d6d"
+          className={cn(
+            "text-gray-500",
+            likeMutation.isPending && "opacity-50 pointer-events-none"
+          )}
+        />
         {showCount && (
           <span className={cn(
             "font-medium min-w-[1rem] text-center transition-colors",
             countTextSizes[size],
-            liked ? 'text-red-500' : 'text-muted-foreground'
+            liked ? 'text-[#ff4d6d]' : 'text-muted-foreground'
           )}>
             {count}
           </span>
         )}
       </div>
-      
-      <JoinGamefolioDialog 
-        open={isOpen} 
-        onOpenChange={closeDialog} 
-        actionType={actionType} 
-      />
     </>
   );
 }

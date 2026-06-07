@@ -13,12 +13,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
-import { Heart, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
+import { PixelHeartReaction } from "@/components/ui/PixelHeartReaction";
+import { EmojiPickerButton } from "@/components/ui/EmojiPickerButton";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
+import { PartnerBadge } from "@/components/ui/partner-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
-import { useJoinDialog } from "@/hooks/use-join-dialog";
+import { useAuthModal } from "@/hooks/use-auth-modal";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -49,10 +51,12 @@ function CommentAvatar({ avatarUrl, username }: { avatarUrl: string | null | und
 }
 
 interface CommentSectionProps {
-  clipId: number;
+  clipId?: number;
+  screenshotId?: number;
   currentUserId?: number | null;
-  onUsernameClick?: () => void; // Function to close parent dialog
-  highlightCommentId?: number | null; // Comment ID to highlight
+  onUsernameClick?: () => void;
+  highlightCommentId?: number | null;
+  hideForm?: boolean;
 }
 
 interface CommentLikeButtonProps {
@@ -95,40 +99,67 @@ function CommentLikeButton({ commentId, isLoggedIn, onNotLoggedIn }: CommentLike
   };
 
   return (
-    <button
-      onClick={handleClick}
-      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+    <div
+      className="flex items-center gap-1 text-xs text-muted-foreground"
       data-testid={`button-like-comment-${commentId}`}
     >
-      <Heart 
-        className={`h-3.5 w-3.5 ${likeStatus?.hasLiked ? 'fill-red-500 text-red-500' : ''}`} 
+      <PixelHeartReaction
+        active={likeStatus?.hasLiked ?? false}
+        onClick={handleClick}
+        size={14}
       />
       {(likeStatus?.likeCount ?? 0) > 0 && (
-        <span>{likeStatus?.likeCount}</span>
+        <span className={likeStatus?.hasLiked ? 'text-[#ff4d6d]' : ''}>{likeStatus?.likeCount}</span>
       )}
-    </button>
+    </div>
   );
 }
 
-const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightCommentId }: CommentSectionProps) => {
+const CommentSection = ({ clipId, screenshotId, currentUserId = 1, onUsernameClick, highlightCommentId, hideForm = false }: CommentSectionProps) => {
   const [newComment, setNewComment] = useState("");
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null);
   
+  const { openModal } = useAuthModal();
+
   const { user } = useAuth();
   const { toast } = useToast();
-  const { isOpen, actionType, openDialog, closeDialog } = useJoinDialog();
+  const queryClient = useQueryClient();
+
+  const apiBase = screenshotId
+    ? `/api/screenshots/${screenshotId}/comments`
+    : `/api/clips/${clipId}/comments`;
   
   const { data: comments, isLoading } = useQuery<CommentWithUser[]>({
-    queryKey: [`/api/clips/${clipId}/comments`],
+    queryKey: [apiBase],
     queryFn: async () => {
-      const res = await fetch(`/api/clips/${clipId}/comments`, { credentials: "include" });
+      const res = await fetch(apiBase, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch comments");
       return res.json();
     },
+    enabled: !!(screenshotId || clipId),
   });
   
   const createCommentMutation = useCreateComment();
   const deleteCommentMutation = useDeleteComment();
+
+  const screenshotCreateMutation = useMutation({
+    mutationFn: async (data: { screenshotId: number; text: string }) => {
+      const res = await apiRequest("POST", `/api/screenshots/${data.screenshotId}/comments`, { content: data.text });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [apiBase] });
+    },
+  });
+
+  const screenshotDeleteMutation = useMutation({
+    mutationFn: async (data: { screenshotId: number; commentId: number }) => {
+      await apiRequest("DELETE", `/api/screenshots/${data.screenshotId}/comments/${data.commentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [apiBase] });
+    },
+  });
 
   // Use the authenticated user data
   const currentUser = user;
@@ -150,7 +181,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
     if (!newComment.trim()) return;
     
     if (!user) {
-      openDialog('comment');
+      openModal('login');
       return;
     }
 
@@ -162,15 +193,18 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
       });
       return;
     }
-    
-    createCommentMutation.mutate({
-      clipId,
-      text: newComment
-    }, {
-      onSuccess: () => {
-        setNewComment("");
-      }
-    });
+
+    if (screenshotId) {
+      screenshotCreateMutation.mutate(
+        { screenshotId, text: newComment },
+        { onSuccess: () => setNewComment("") }
+      );
+    } else {
+      createCommentMutation.mutate(
+        { clipId: clipId!, text: newComment },
+        { onSuccess: () => setNewComment("") }
+      );
+    }
   };
 
   const handleSubmitComment = (e: React.FormEvent) => {
@@ -179,12 +213,17 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
   };
 
   const handleDeleteComment = (commentId: number) => {
-    deleteCommentMutation.mutate({
-      commentId,
-      clipId
-    });
+    if (screenshotId) {
+      screenshotDeleteMutation.mutate({ screenshotId, commentId });
+    } else {
+      deleteCommentMutation.mutate({ commentId, clipId: clipId! });
+    }
     setCommentToDelete(null);
   };
+
+  const isSubmitting = screenshotId
+    ? screenshotCreateMutation.isPending
+    : createCommentMutation.isPending;
 
   if (isLoading) {
     return (
@@ -224,23 +263,25 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                   : ''
               }`}
               style={{
-                backgroundColor: highlightCommentId === comment.id ? '#fef3c7' : 'transparent',
-                border: highlightCommentId === comment.id ? '3px solid #f59e0b' : 'none',
+                backgroundColor: highlightCommentId === comment.id ? 'rgba(183, 255, 26, 0.07)' : 'transparent',
+                border: highlightCommentId === comment.id ? '1px solid rgba(183, 255, 26, 0.35)' : '1px solid transparent',
                 animation: highlightCommentId === comment.id ? 'pulse 1s ease-in-out infinite' : 'none'
               }}
             >
-              {comment.user.nftProfileTokenId && comment.user.nftProfileImageUrl && (comment.user as any).activeProfilePicType === 'nft' ? (
-                <img
-                  src={comment.user.nftProfileImageUrl}
-                  alt={comment.user.username || "User"}
-                  className="h-8 w-8 rounded-lg border border-[#B7FF1A]/40 object-cover flex-shrink-0"
-                />
-              ) : (
-                <CommentAvatar 
-                  avatarUrl={comment.user.avatarUrl} 
-                  username={comment.user.username || "U"} 
-                />
-              )}
+              <Link href={`/profile/${comment.user.username}`} onClick={onUsernameClick}>
+                {comment.user.nftProfileTokenId && comment.user.nftProfileImageUrl && (comment.user as any).activeProfilePicType === 'nft' ? (
+                  <img
+                    src={comment.user.nftProfileImageUrl}
+                    alt={comment.user.username || "User"}
+                    className="h-8 w-8 rounded-lg border border-[#B7FF1A]/40 object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <CommentAvatar 
+                    avatarUrl={comment.user.avatarUrl} 
+                    username={comment.user.username || "U"} 
+                  />
+                )}
+              </Link>
               <div className="flex-1">
                 <div className="flex flex-wrap items-baseline">
                   <Link href={`/profile/${comment.user.username}`}>
@@ -251,6 +292,7 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
                       {comment.user.username}
                       <ModeratorBadge isModerator={((comment.user as any).role === "moderator" || (comment.user as any).role === "admin") && !(comment.user as any).selectedVerificationBadgeId} size="sm" />
                       <ProBadge selectedVerificationBadgeId={(comment.user as any).selectedVerificationBadgeId} size="sm" />
+                      <PartnerBadge isPartner={(comment.user as any).isPartner} size="sm" />
                     </span>
                   </Link>
                   <MentionText text={comment.content} className="inline text-sm break-words" onLinkClick={onUsernameClick} />
@@ -302,59 +344,51 @@ const CommentSection = ({ clipId, currentUserId = 1, onUsernameClick, highlightC
         )}
       </div>
       
-      {/* Comment form - only show to authenticated users */}
-      {user ? (
-        <form 
-          onSubmit={handleSubmitComment} 
-          className="mt-4 space-y-3 flex-shrink-0"
+      {/* Comment form - only show to authenticated users, hidden in bottom-sheet mode */}
+      {!hideForm && (user ? (
+        <form
+          onSubmit={handleSubmitComment}
+          className="mt-4 flex items-center gap-2 flex-shrink-0"
         >
-          <div className="flex items-start gap-3">
-            {currentUser && (
-              <div className="hidden sm:flex flex-shrink-0">
-                <CustomAvatar user={currentUser} size="sm" showBorder={false} />
-              </div>
-            )}
-            <div className="flex-1 space-y-2">
-              <StyledMentionInput
-                value={newComment}
-                onChange={setNewComment}
-                onSubmit={submitComment}
-                placeholder="Add a comment... Use @username to mention other users!"
-                className="min-h-[60px] text-sm resize-none"
-                data-testid="input-comment"
-              />
-              <div className="flex justify-end">
-                <Button 
-                  type="submit" 
-                  variant="default"
-                  size="sm"
-                  disabled={!newComment.trim() || createCommentMutation.isPending}
-                  data-testid="button-post-comment"
-                >
-                  {createCommentMutation.isPending ? "Posting..." : "Post Comment"}
-                </Button>
-              </div>
+          {currentUser && (
+            <div className="flex-shrink-0">
+              <CustomAvatar user={currentUser} size="sm" showBorder={false} />
             </div>
+          )}
+          <div className="flex-1 flex items-center gap-2">
+            <StyledMentionInput
+              value={newComment}
+              onChange={setNewComment}
+              onSubmit={submitComment}
+              placeholder="Add a comment..."
+              className="min-h-[36px] max-h-[80px] text-sm resize-none rounded-xl flex-1"
+              data-testid="input-comment"
+            />
+            <Button
+              type="submit"
+              variant="default"
+              size="sm"
+              disabled={!newComment.trim() || isSubmitting}
+              className="flex-shrink-0"
+              data-testid="button-post-comment"
+            >
+              {isSubmitting ? "..." : "Post"}
+            </Button>
           </div>
         </form>
       ) : (
         <div className="mt-4 flex items-center justify-center">
           <Button 
             variant="outline"
-            onClick={() => openDialog('comment')}
+            onClick={() => openModal('login')}
             className="w-full"
             data-testid="button-join-to-comment"
           >
-            Sign in to add a comment
+            <span style={{ color: '#B7FF1A' }}>Sign in</span>&nbsp;to add a comment
           </Button>
         </div>
-      )}
-      
-      <JoinGamefolioDialog 
-        open={isOpen} 
-        onOpenChange={closeDialog} 
-        actionType={actionType} 
-      />
+      ))}
+
     </div>
   );
 };

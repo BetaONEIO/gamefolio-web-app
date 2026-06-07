@@ -55,6 +55,7 @@ export type NativeGoogleAuthResult = {
   displayName: string;
   photoURL: string | null;
   uid: string;
+  idToken: string | null;
 };
 
 /**
@@ -81,26 +82,24 @@ export async function signInWithGoogleNative(): Promise<NativeGoogleAuthResult> 
     displayName: user.displayName || user.email.split('@')[0],
     photoURL: user.photoUrl ?? null,
     uid: user.uid,
+    idToken: result.credential?.idToken ?? null,
   };
 }
 
-export const signInWithGoogle = async () => {
-  // Web (and any non-native context) uses the Firebase JS popup. Native
-  // platforms must use the Capacitor plugin via signInWithGoogleNative.
+/**
+ * Web Google sign-in using a popup window.
+ * The popup resolves without leaving the page. Firebase triggers
+ * onAuthStateChanged in use-auth.tsx after the popup completes, which
+ * calls /api/auth/google and sets the user session.
+ */
+export const signInWithGoogle = async (): Promise<void> => {
   if (isNative) {
     throw new Error('Use signInWithGoogleNative on native platforms');
   }
   if (!auth || !googleProvider) {
     throw new Error('Firebase not properly configured');
   }
-
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    return result;
-  } catch (error: any) {
-    console.error('Google sign-in error:', error);
-    throw error;
-  }
+  await signInWithPopup(auth, googleProvider);
 };
 
 export const signOutUser = async () => {

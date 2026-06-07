@@ -10,10 +10,11 @@ import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useDailyStreak } from "@/hooks/use-daily-streak";
 import { isNative } from "@/lib/platform";
 import { clearTokens, setTokens } from "@/lib/auth-token";
+import { initPushNotifications, unregisterCurrentPushToken } from "@/lib/push-notifications";
 
 type AuthContextType = {
   user: User | null;
@@ -71,6 +72,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         credentials: "include",
       });
       if (!res.ok) return;
+      // Guard against SPA fallback returning index.html with status 200
+      // when the route is missing on a stale deploy.
+      if (!res.headers.get("content-type")?.includes("application/json")) return;
       const data = (await res.json()) as {
         accessToken?: string;
         refreshToken?: string;
@@ -83,7 +87,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Handle Firebase authentication state changes
+  // The first onAuthStateChanged after mount is always Firebase restoring the
+  // existing session (or confirming there isn't one). Skip the server-side
+  // re-auth POST entirely in that case — /api/auth/google is also the
+  // daily-streak / welcome-toast trigger, so calling it on every refresh
+  // re-awards XP and re-shows the daily reward. The persisted server session
+  // (web cookie) or stored JWT (native) handles authentication; /api/user
+  // will load the user normally. Subsequent fires are real sign-in events
+  // and run the full flow.
+  const isInitialAuthCheckRef = useRef(true);
+
+  // Handle Firebase authentication state changes (+ redirect sign-in results)
   useEffect(() => {
     if (!auth) {
       setFirebaseAuthChecked(true);
@@ -92,66 +106,83 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let mounted = true;
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser && firebaseUser.email) {
-        try {
-          const response = await apiRequest("POST", "/api/auth/google", {
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-            photoURL: firebaseUser.photoURL,
-            uid: firebaseUser.uid
-          });
+    // Dedup: track which Firebase UID we've already processed in this page
+    // load so that rapid onAuthStateChanged fires don't double-call
+    // /api/auth/google for the same user.
+    const processedUid = { current: null as string | null };
 
-          if (!mounted) return;
+    const handleFirebaseSignIn = async (firebaseUser: FirebaseUser) => {
+      if (!firebaseUser.email) return;
+      if (processedUid.current === firebaseUser.uid) return;
+      processedUid.current = firebaseUser.uid;
 
-          const userData = await response.json();
+      try {
+        const idToken = await firebaseUser.getIdToken();
+        const response = await apiRequest("POST", "/api/auth/google", {
+          idToken
+        });
 
-          if (!mounted) return;
+        if (!mounted) return;
 
-          // On native, exchange the freshly-created session for a JWT pair.
-          await issueNativeTokens();
+        const userData = await response.json();
 
-          const streakInfo = userData.streakInfo;
-          // Mark reward as shown so the session-restore useEffect doesn't double-fire
-          if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
-            dailyRewardShownRef.current = true;
-          }
-          queryClient.setQueryData(["/api/user"], userData);
+        if (!mounted) return;
 
-          if (userData.needsOnboarding) {
-            if (userData.isNewGoogleUser) {
-              toast({
-                title: "Welcome to Gamefolio!",
-                description: "Let's set up your gaming profile.",
-                variant: "gamefolioSuccess",
-              });
-            } else {
-              toast({
-                title: "Complete your profile",
-                description: "Finish setting up your gaming profile to continue.",
-                variant: "gamefolioSuccess",
-              });
-            }
-            setLocation("/onboarding");
-          } else {
+        // On native, exchange the freshly-created session for a JWT pair.
+        await issueNativeTokens();
+
+        const streakInfo = userData.streakInfo;
+        // Mark reward as shown so the session-restore useEffect doesn't double-fire
+        if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
+          dailyRewardShownRef.current = true;
+        }
+        queryClient.setQueryData(["/api/user"], userData);
+
+        if (userData.needsOnboarding) {
+          if (userData.isNewGoogleUser) {
             toast({
-              title: "Welcome back!",
-              description: `You're now signed in with Google.`,
+              title: "Welcome to Gamefolio!",
+              description: "Let's set up your gaming profile.",
               variant: "gamefolioSuccess",
             });
-            
-            setLocation("/");
+          } else {
+            toast({
+              title: "Complete your profile",
+              description: "Finish setting up your gaming profile to continue.",
+              variant: "gamefolioSuccess",
+            });
           }
-        } catch (error) {
-          if (!mounted) return;
-          console.error('Google auth error:', error);
+          setLocation("/onboarding");
+        } else {
           toast({
-            title: "Authentication failed",
-            description: "There was an error signing you in. Please try again.",
-            variant: "gamefolioError",
+            title: "Welcome back!",
+            description: `You're now signed in with Google.`,
+            variant: "gamefolioSuccess",
           });
+          setLocation("/");
         }
+      } catch (error) {
+        if (!mounted) return;
+        console.error('Google auth error:', error);
+        toast({
+          title: "Authentication failed",
+          description: "There was an error signing you in. Please try again.",
+          variant: "gamefolioError",
+        });
       }
+    };
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      // Firebase always emits one onAuthStateChanged on init to report the
+      // restored session state. Consume the flag on that very first fire
+      // regardless of whether a user is present.
+      const isInitialRestore = isInitialAuthCheckRef.current;
+      isInitialAuthCheckRef.current = false;
+
+      if (firebaseUser && firebaseUser.email && !isInitialRestore) {
+        if (mounted) await handleFirebaseSignIn(firebaseUser);
+      }
+
       if (mounted) {
         setFirebaseAuthChecked(true);
       }
@@ -183,6 +214,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     retry: 1,
     retryDelay: 500,
   });
+
+  // Once the user is authenticated, fire off the push-notification handshake
+  // (request OS permission, fetch FCM token, POST to /api/push/register). Safe
+  // to run multiple times — initPushNotifications is idempotent.
+  const pushBoundForUserId = useRef<number | null>(null);
+  useEffect(() => {
+    if (!isNative || !user) return;
+    if (pushBoundForUserId.current === user.id) return;
+    pushBoundForUserId.current = user.id;
+    void initPushNotifications();
+  }, [user]);
 
   useEffect(() => {
     if (!user || dailyRewardShownRef.current) return;
@@ -309,9 +351,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
+      // Best-effort: revoke the FCM token before tearing down the session so
+      // the next user on this device gets a fresh registration.
+      if (isNative) {
+        await unregisterCurrentPushToken();
+      }
       await apiRequest("POST", "/api/logout");
     },
     onSuccess: async () => {
+      pushBoundForUserId.current = null;
       await clearTokens();
       queryClient.setQueryData(["/api/user"], null);
 

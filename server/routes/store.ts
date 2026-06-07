@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
-import { storeItems, storePurchases, users } from '@shared/schema';
+import { storeItems, storePurchases, users, usedPaymentHashes } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { privateKeyToAccount } from 'viem/accounts';
 import { createPublicClient, http, parseUnits, decodeEventLog, type Address } from 'viem';
@@ -232,6 +232,14 @@ router.post('/api/store/verify-purchase', async (req: Request, res: Response) =>
     if (!validTransfer) {
       await db.update(storePurchases).set({ status: 'failed' }).where(eq(storePurchases.id, purchaseId));
       return res.status(400).json({ error: 'Invalid transfer: amount, sender, or recipient mismatch' });
+    }
+
+    const claimed = await db.insert(usedPaymentHashes)
+      .values({ txHash, userId, purpose: 'store_item', itemId: String(purchase[0].itemId) })
+      .onConflictDoNothing()
+      .returning();
+    if (!claimed.length) {
+      return res.status(400).json({ error: 'Transaction hash has already been used for another purchase' });
     }
 
     await db

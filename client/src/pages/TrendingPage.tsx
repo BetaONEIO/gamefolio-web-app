@@ -1,9 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLikeScreenshot } from '@/hooks/use-clips';
 import { useToast } from '@/hooks/use-toast';
 import { ClipWithUser } from '@shared/schema';
-import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Share2, Heart, Play, MessageCircle, AlertTriangle, Film, Video, Camera, ChevronDown, Check, Search, ArrowLeft, MoreHorizontal, Bookmark, BarChart2, BadgeCheck, Repeat2 } from 'lucide-react';
+import { TrendingUp, Clock, Calendar, CalendarDays, Gamepad2, Eye, MessageSquare, Heart, Play, MessageCircle, AlertTriangle, Film, Video, Camera, ChevronDown, ChevronUp, Check, Search, ArrowLeft, Bookmark, BarChart2, BadgeCheck, Repeat2 } from 'lucide-react';
+import { TrendingClipMenu } from '@/components/clips/TrendingClipMenu';
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
+import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
+import { PartnerBadge } from '@/components/ui/partner-badge';
 import { formatDuration } from '@/lib/constants';
 import { formatDistance } from 'date-fns';
 import { useClipDialog } from '@/hooks/use-clip-dialog';
@@ -15,6 +19,7 @@ import VideoClipGridItem from '@/components/clips/VideoClipGridItem';
 import VideoPlayer from '@/components/shared/VideoPlayer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
+import { useAuthModal } from '@/hooks/use-auth-modal';
 import { useMobile } from '@/hooks/use-mobile';
 import { useSignedUrl } from '@/hooks/use-signed-url';
 import { LazyImage } from '@/components/ui/lazy-image';
@@ -22,15 +27,20 @@ import { LikeButton } from '@/components/engagement/LikeButton';
 import { FireButton } from '@/components/engagement/FireButton';
 import { ReportButton } from '@/components/reporting/ReportButton';
 import { MobileTrendingViewer } from '@/components/clips/MobileTrendingViewer';
+import { MobileScreenshotsViewer } from '@/components/screenshots/MobileScreenshotsViewer';
+import { CustomAvatar } from '@/components/ui/custom-avatar';
+import { ProfileHoverCard } from '@/components/ui/ProfileHoverCard';
 import { Dialog, DialogContent, DialogClose, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import CommentSection from '@/components/clips/CommentSection';
-import { UserIcon, X, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Link } from 'wouter';
+import { UserIcon, X, Trash2, ChevronLeft, ChevronRight, Send } from 'lucide-react';
+import { Link, useLocation } from 'wouter';
 import { AgeRestrictionDialog } from '@/components/content/AgeRestrictionDialog';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { ScreenshotCard } from '@/components/screenshots/ScreenshotCard';
 import { ScreenshotLightbox } from '@/components/screenshots/ScreenshotLightbox';
+import { ClipShareDialog } from '@/components/clip/ClipShareDialog';
+import { ClipFeedCard, MobileClipsViewer } from '@/components/clips/MobileClipsViewer';
 
 type ContentType = 'clips' | 'reels' | 'screenshots';
 type FilterType = 'likes' | 'comments';
@@ -65,339 +75,18 @@ interface ScreenshotWithUser {
   };
 }
 
-// ── Shared clip feed card — X/Twitter post style ──────────────────────────
-const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesktop?: boolean }> = ({ clip, clips, isDesktop }) => {
-  const { openClipDialog } = useClipDialog();
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-  const [showFullDesc, setShowFullDesc] = useState(false);
-  const [localFollowing, setLocalFollowing] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
-  const [commentsOpen, setCommentsOpen] = useState(false);
-  const [isInView, setIsInView] = useState(true);
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  // Pause video when this card scrolls out of view, so only the visible clip plays
-  useEffect(() => {
-    const el = cardRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsInView(entry.intersectionRatio >= 0.5),
-      { threshold: [0, 0.5, 1] }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  const fmt = (n: number) => {
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-    return n.toString();
-  };
-
-  const likes    = (clip as any)._count?.likes    || 0;
-  const fires    = (clip as any)._count?.fires    || (clip as any)._count?.reactions || 0;
-  const comments = (clip as any)._count?.comments || 0;
-  const views    = clip.views || 0;
-  const isSelf   = user && user.id === clip.user.id;
-  const isPro    = (clip.user as any).isPro;
-  const gameSlug = clip.game?.name?.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-  // Follow status — hide Follow button when already following or request pending
-  const { data: followStatus } = useQuery<{ following?: boolean; requested?: boolean }>({
-    queryKey: [`/api/users/${clip.user.username}/follow-status`],
-    queryFn: getQueryFn({ on401: 'returnNull' }),
-    enabled: !!user && !isSelf,
-    staleTime: 60_000,
-  });
-  const isAlreadyFollowing =
-    localFollowing ||
-    followStatus?.following === true ||
-    followStatus?.requested === true;
-
-  const followMutation = useMutation({
-    mutationFn: () => apiRequest('POST', `/api/users/${clip.user.username}/follow`),
-    onSuccess: () => {
-      setLocalFollowing(true);
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/follow-status`] });
-    },
-  });
-
-  const caption = [clip.title, clip.description].filter(Boolean).join(' — ');
-  const captionTrimmed = caption.length > 120 && !showFullDesc;
-
-  const canCollapse = caption.length > 120;
-
-  return (
-    <div ref={cardRef} className="w-full" style={{ background: '#03080A' }}>
-
-      {/* ── Video (full-width, auto-plays when in view) ── */}
-      <VideoPlayer
-        videoUrl={clip.videoUrl || ''}
-        thumbnailUrl={clip.thumbnailUrl || undefined}
-        autoPlay={isInView}
-        clipId={clip.id}
-        objectFit="contain"
-        autoHideControls
-        externalPaused={!isInView}
-        className="w-full"
-      />
-
-      {/* ── Header (creator info) — sits directly BELOW the video ── */}
-      <div className="px-4 pt-3 pb-2">
-        <div className="flex items-start gap-3">
-          <Link href={`/profile/${clip.user.username}`} className="flex-shrink-0">
-            <div
-              className="w-10 h-10 rounded-full overflow-hidden"
-              style={{ border: '2px solid rgba(183,255,26,0.4)' }}
-            >
-              <img
-                src={clip.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                alt={clip.user.displayName || clip.user.username}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </Link>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <Link href={`/profile/${clip.user.username}`} className="no-underline min-w-0">
-                <span className="font-bold text-[15px] leading-tight truncate block" style={{ color: '#F5F7F2' }}>
-                  {clip.user.displayName || clip.user.username}
-                </span>
-              </Link>
-              {isPro && (
-                <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-              )}
-            </div>
-            <Link href={`/profile/${clip.user.username}`} className="no-underline">
-              <span className="text-[13px] block leading-tight mt-0.5" style={{ color: '#7E887A' }}>
-                @{clip.user.username}
-              </span>
-            </Link>
-            {clip.game?.name && gameSlug && (
-              <Link
-                href={`/games/${gameSlug}`}
-                className="inline-flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity"
-              >
-                <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-                <span className="text-[12px] font-medium" style={{ color: '#B7FF1A' }}>{clip.game.name}</span>
-              </Link>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {!isSelf && !isAlreadyFollowing && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (!user) { toast({ description: 'Sign in to follow creators' }); return; }
-                  followMutation.mutate();
-                }}
-                disabled={followMutation.isPending}
-                className="text-xs font-bold px-3 py-1 rounded-full"
-                style={{ background: '#B7FF1A', color: '#071013' }}
-              >
-                {followMutation.isPending ? '…' : 'Follow'}
-              </button>
-            )}
-            <button className="p-1" style={{ color: '#7E887A' }}>
-              <MoreHorizontal className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Caption (description with see less) sits above the social row ── */}
-      <div className="px-4" style={{ background: '#03080A' }}>
-        {caption && (
-          <div className="pb-3">
-            <p className="text-[14px] leading-relaxed" style={{ color: '#B8C0AE' }}>
-              {captionTrimmed ? caption.slice(0, 120) : caption}
-              {captionTrimmed && (
-                <button
-                  onClick={() => setShowFullDesc(true)}
-                  className="font-semibold ml-0.5"
-                  style={{ color: '#B7FF1A' }}
-                >
-                  … more
-                </button>
-              )}
-              {!captionTrimmed && canCollapse && (
-                <button
-                  onClick={() => setShowFullDesc(false)}
-                  className="font-semibold ml-1"
-                  style={{ color: '#B7FF1A' }}
-                >
-                  See less
-                </button>
-              )}
-            </p>
-          </div>
-        )}
-
-        {/* ── Social / engagement row at the very bottom ── */}
-        <div
-          className="flex items-center py-2.5"
-          style={{ borderTop: '1px solid #1B2A33' }}
-        >
-          {/* Comments */}
-          <button
-            onClick={(e) => { e.stopPropagation(); setCommentsOpen(true); }}
-            className="flex items-center gap-1.5 flex-1 justify-center transition-colors"
-            style={{ color: '#7E887A' }}
-          >
-            <MessageCircle className="h-[18px] w-[18px]" />
-            <span className="text-[13px]">{fmt(comments)}</span>
-          </button>
-
-          {/* Fire / reaction */}
-          <div className="flex-1 flex justify-center">
-            <FireButton
-              contentId={clip.id}
-              contentType="clip"
-              contentOwnerId={clip.user.id}
-              initialFired={(clip as any).isFired ?? false}
-              initialCount={fires}
-              size="sm"
-              variant="horizontal"
-            />
-          </div>
-
-          {/* Likes */}
-          <div className="flex-1 flex justify-center">
-            <LikeButton
-              contentId={clip.id}
-              contentType="clip"
-              contentOwnerId={clip.user.id}
-              initialLiked={(clip as any).isLiked ?? false}
-              initialCount={likes}
-              size="sm"
-              variant="horizontal"
-            />
-          </div>
-
-          {/* Views */}
-          <button
-            className="flex items-center gap-1.5 flex-1 justify-center"
-            style={{ color: '#7E887A' }}
-          >
-            <BarChart2 className="h-[18px] w-[18px]" />
-            <span className="text-[13px]">{fmt(views)}</span>
-          </button>
-
-          {/* Bookmark */}
-          <button
-            onClick={() => setBookmarked(v => !v)}
-            className="flex items-center justify-center flex-1 transition-colors"
-            style={{ color: bookmarked ? '#B7FF1A' : '#7E887A' }}
-          >
-            <Bookmark className={`h-[18px] w-[18px] ${bookmarked ? 'fill-current' : ''}`} />
-          </button>
-
-          {/* Share */}
-          <button
-            className="flex items-center justify-center flex-1 transition-colors"
-            style={{ color: '#7E887A' }}
-          >
-            <Share2 className="h-[18px] w-[18px]" />
-          </button>
-        </div>
-      </div>
-
-      {/* Comments popup — opens in-place instead of navigating away */}
-      <Dialog open={commentsOpen} onOpenChange={setCommentsOpen}>
-        <DialogContent
-          className="p-0 max-w-lg w-[95vw] max-h-[85vh] flex flex-col gap-0 overflow-hidden border"
-          style={{ background: '#0B1218', borderColor: '#1B2A33' }}
-        >
-          <DialogHeader
-            className="px-4 py-3 flex-shrink-0"
-            style={{ borderBottom: '1px solid #1B2A33' }}
-          >
-            <DialogTitle className="text-base font-semibold text-left" style={{ color: '#F5F7F2' }}>
-              Comments
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-4 py-3">
-            <CommentSection
-              clipId={clip.id}
-              currentUserId={user?.id}
-              onUsernameClick={() => setCommentsOpen(false)}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-// ── Mobile: full-screen clips viewer with top bar ─────────────────────────
-const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void }> = ({ clips, onBack }) => {
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
-
-  return (
-    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: '#03080A' }}>
-      {/* Top bar */}
-      <div
-        className="flex-shrink-0 flex items-center justify-between px-4 py-3"
-        style={{ background: '#03080A', borderBottom: '1px solid #1B2A33' }}
-      >
-        <button
-          onClick={onBack}
-          className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
-          style={{ color: '#F5F7F2' }}
-          aria-label="Back"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <span className="sr-only">Clips</span>
-        <button
-          className="w-9 h-9 flex items-center justify-center rounded-full"
-          style={{ color: '#F5F7F2' }}
-          aria-label="More"
-        >
-          <MoreHorizontal className="h-5 w-5" />
-        </button>
-      </div>
-
-      {/* Snap-scrolling feed — one clip per scroll */}
-      <div
-        className="flex-1 overflow-y-auto"
-        style={{
-          scrollSnapType: 'y mandatory',
-          WebkitOverflowScrolling: 'touch',
-        }}
-      >
-        {clips.map((clip) => (
-          <div
-            key={clip.id}
-            className="flex flex-col justify-center"
-            style={{
-              scrollSnapAlign: 'start',
-              scrollSnapStop: 'always',
-              minHeight: '100%',
-            }}
-          >
-            <ClipFeedCard clip={clip} clips={clips} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 // Reel card component - TikTok/YouTube Shorts style
-const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({ reel, reelsList }) => {
+const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[]; onOpenViewer?: (index: number) => void }> = ({ reel, reelsList, onOpenViewer }) => {
   const { openClipDialog } = useClipDialog();
 
   const handleReelClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    openClipDialog(reel.id, reelsList); // Enable fullscreen mode for reels
+    if (onOpenViewer) {
+      const index = reelsList.findIndex(r => r.id === reel.id);
+      onOpenViewer(index >= 0 ? index : 0);
+    } else {
+      openClipDialog(reel.id, reelsList, undefined, 'reel');
+    }
   };
 
   const formatNumber = (num: number) => {
@@ -407,17 +96,17 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
   };
 
   return (
-    <div 
-      onClick={handleReelClick}
-      className="group relative bg-black rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
-    >
-      {/* Thumbnail/Video */}
-      <div className="absolute inset-0">
+    <div className="group flex flex-col gap-2">
+      {/* Thumbnail */}
+      <div
+        onClick={handleReelClick}
+        className="relative bg-black rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer aspect-[9/16]"
+      >
         <div className="absolute inset-0 bg-gray-800" />
         <LazyImage
           src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
           alt={reel.title}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
           placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
           showLoadingSpinner={true}
           rootMargin="50px"
@@ -429,9 +118,6 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
           }
         />
 
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
-
         {/* Play button overlay */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <div className="bg-primary backdrop-blur-sm rounded-full p-3">
@@ -442,9 +128,9 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
         </div>
 
         {/* Duration badge - top left */}
-        <div className="absolute top-3 left-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-semibold">
+        <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded-md font-semibold">
           {(() => {
-            const actualDuration = reel.trimEnd && reel.trimEnd > 0 
+            const actualDuration = reel.trimEnd && reel.trimEnd > 0
               ? reel.trimEnd - (reel.trimStart || 0)
               : reel.duration || 0;
             return formatDuration(actualDuration);
@@ -452,31 +138,796 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[] }> = ({
         </div>
 
         {/* View count - top right */}
-        <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-semibold flex items-center gap-1">
-          <Eye className="h-3 w-3" />
+        <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded-md font-semibold flex items-center gap-1">
+          <BarChart2 className="h-3 w-3" />
           {formatNumber(reel.views || 0)}
         </div>
+      </div>
 
-        {/* Content overlay - left aligned bottom */}
-        <div className="absolute bottom-0 left-0 right-0 p-3">
-          {/* Title */}
-          <h3 className="text-white font-bold text-sm mb-0.5 drop-shadow-lg line-clamp-2">
+      {/* Metadata below thumbnail */}
+      <div className="px-0.5 space-y-0.5">
+        <div className="flex items-start justify-between gap-1">
+          <h3
+            onClick={handleReelClick}
+            className="text-sm font-semibold leading-tight line-clamp-2 cursor-pointer hover:text-primary transition-colors flex-1 min-w-0"
+          >
             {reel.title}
           </h3>
-
-          {/* Username */}
-          <p className="text-white text-xs mb-1.5 drop-shadow-lg">
+          <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} className="flex-shrink-0 -mt-0.5">
+            <TrendingClipMenu clip={reel} />
+          </div>
+        </div>
+        <ProfileHoverCard username={reel.user.username}>
+          <p className="text-xs text-muted-foreground cursor-default hover:text-foreground transition-colors">
             @{reel.user.username}
           </p>
+        </ProfileHoverCard>
+        {reel.game && (
+          <Link
+            href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+            className="inline-block bg-primary text-[#071013] text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
+          >
+            {reel.game.name}
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+};
 
-          {/* Game badge underneath username */}
-          {reel.game && (
-            <div className="inline-block bg-primary text-[#071013] text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
-              {reel.game.name}
+// ── Desktop YouTube Shorts-style viewer ─────────────────────────────────────
+const DesktopShortsViewer: React.FC<{
+  clips: ClipWithUser[];
+  initialIndex: number;
+  onClose: () => void;
+  onOpenGameFilter: () => void;
+  selectedGameId: number | null;
+  selectedGameName: string | null;
+  isLandscape?: boolean;
+  activeTab: ContentType;
+  onTabChange: (tab: ContentType) => void;
+  timePeriod: TimePeriod;
+  onTimePeriodChange: (p: TimePeriod) => void;
+}> = ({ clips, initialIndex, onClose, onOpenGameFilter, selectedGameId, selectedGameName, isLandscape = false, activeTab, onTabChange, timePeriod, onTimePeriodChange }) => {
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [slideDir, setSlideDir] = useState<'up' | 'down'>('up');
+  const [showComments, setShowComments] = useState(false);
+  const [showContentDropdown, setShowContentDropdown] = useState(false);
+  const [showTimeDropdown, setShowTimeDropdown] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [inlineComment, setInlineComment] = useState('');
+  const wheelCooldown = useRef(false);
+  const wheelAccum = useRef(0);
+  const wheelIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { user } = useAuth();
+  const { openModal } = useAuthModal();
+  const queryClient = useQueryClient();
+  const createCommentMutation = useMutation({
+    mutationFn: async ({ clipId, text }: { clipId: number; text: string }) => {
+      const res = await apiRequest('POST', `/api/clips/${clipId}/comments`, { content: text });
+      return res.json();
+    },
+    onSuccess: (_, { clipId }) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/clips/${clipId}/comments`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
+      setInlineComment('');
+    },
+  });
+
+  const contentMeta: Record<ContentType, { label: string; Icon: React.ElementType }> = {
+    reels:       { label: 'Reels',       Icon: Film   },
+    clips:       { label: 'Clips',       Icon: Video  },
+    screenshots: { label: 'Screenshots', Icon: Camera },
+  };
+  const timeMeta: Record<TimePeriod, string> = {
+    recent: 'Most Recent',
+    '1w':   '1 Week',
+    '1m':   '1 Month',
+    ever:   'All Time',
+  };
+  const { label: activeLabel, Icon: ActiveIcon } = contentMeta[activeTab];
+  const pillBase = (active: boolean) => ({
+    background: active ? 'rgba(183,255,26,0.15)' : 'rgba(255,255,255,0.07)',
+    border: `1px solid ${active ? '#B7FF1A' : 'rgba(255,255,255,0.12)'}`,
+    color: active ? '#B7FF1A' : '#F5F7F2',
+  });
+
+  const clip = clips[currentIndex];
+
+  const goNext = useCallback(() => {
+    setSlideDir('up');
+    setCurrentIndex(i => Math.min(i + 1, clips.length - 1));
+  }, [clips.length]);
+
+  const goPrev = useCallback(() => {
+    setSlideDir('down');
+    setCurrentIndex(i => Math.max(i - 1, 0));
+  }, []);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); goNext(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); goPrev(); }
+      else if (e.key === 'Escape') { onClose(); }
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+
+      // Reset accumulated delta after scroll gesture goes idle (150 ms of silence)
+      if (wheelIdleTimer.current) clearTimeout(wheelIdleTimer.current);
+      wheelIdleTimer.current = setTimeout(() => { wheelAccum.current = 0; }, 150);
+
+      if (wheelCooldown.current) return;
+
+      // Accumulate delta — Mac trackpads send many small events; mice send one large one
+      wheelAccum.current += e.deltaY + e.deltaX;
+
+      const THRESHOLD = 80; // px accumulated before triggering navigation
+
+      if (wheelAccum.current > THRESHOLD) {
+        wheelAccum.current = 0;
+        wheelCooldown.current = true;
+        goNext();
+        setTimeout(() => { wheelCooldown.current = false; }, 700);
+      } else if (wheelAccum.current < -THRESHOLD) {
+        wheelAccum.current = 0;
+        wheelCooldown.current = true;
+        goPrev();
+        setTimeout(() => { wheelCooldown.current = false; }, 700);
+      }
+    };
+
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('wheel', handleWheel);
+      if (wheelIdleTimer.current) clearTimeout(wheelIdleTimer.current);
+    };
+  }, [goNext, goPrev, onClose]);
+
+  const fmt = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    return String(n);
+  };
+
+  if (!clip) return null;
+
+  const likes = (clip as any)._count?.likes || 0;
+  const fires = (clip as any)._count?.fires || (clip as any)._count?.reactions || 0;
+  const comments = (clip as any)._count?.comments || 0;
+  const views = clip.views || 0;
+  const gameSlug = clip.game?.name?.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  return (
+    <div
+      className="fixed top-0 right-0 bottom-0 z-[45] flex flex-col lg:left-64 left-0"
+      style={{ background: '#081017' }}
+    >
+      {/* Top bar — rendered above main content, below the sticky app header */}
+      <div className="flex items-center justify-between px-5 pb-3 flex-shrink-0 pt-[128px] xl:pt-[152px]">
+        <button
+          onClick={onClose}
+          className="group fixed left-5 lg:left-[276px] z-[50] top-[128px] xl:top-[152px]"
+          aria-label="Back to Trending"
+        >
+          <ChevronLeft className="h-8 w-8 text-white/80 group-hover:text-white transition-colors" strokeWidth={2} />
+        </button>
+      </div>
+
+      {/* Main area — fills remaining height */}
+      <div className={`flex-1 relative min-h-0 overflow-hidden flex ${isLandscape ? 'flex-col items-center justify-center gap-0' : 'items-center justify-center'}`}>
+
+      {/* ── Comment panel — slides in from the left ── */}
+      <div
+        className="absolute left-0 top-0 bottom-0 z-[55] flex flex-col"
+        style={{
+          width: '360px',
+          background: '#0B1218',
+          borderRight: '1px solid rgba(255,255,255,0.07)',
+          transform: showComments ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1)',
+          boxShadow: showComments ? '4px 0 24px rgba(0,0,0,0.5)' : 'none',
+        }}
+      >
+        {/* Header */}
+        <div
+          className="flex items-center justify-between px-4 pb-3 flex-shrink-0"
+          style={{ paddingTop: '16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5" style={{ color: '#B7FF1A' }} />
+            <span className="text-white font-bold text-base">Comments</span>
+          </div>
+          <button
+            onClick={() => setShowComments(false)}
+            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+            aria-label="Close comments"
+          >
+            <X className="h-4 w-4 text-white/60" />
+          </button>
+        </div>
+
+        {/* Scrollable comment list — form lives below, always visible */}
+        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 min-h-0">
+          {showComments && (
+            <CommentSection clipId={clip.id} currentUserId={user?.id ?? null} hideForm={true} />
+          )}
+        </div>
+
+        {/* Pinned comment input — always visible at the bottom of the panel */}
+        <div
+          className="flex-shrink-0 px-3 py-3"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.07)', background: '#0B1218' }}
+        >
+          {user ? (
+            <div className="flex items-center gap-2">
+              <CustomAvatar user={user} size="sm" showBorder={false} />
+              <div
+                className="flex-1 flex items-center gap-2 rounded-full px-3 py-1.5"
+                style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}
+              >
+                <input
+                  type="text"
+                  value={inlineComment}
+                  onChange={(e) => setInlineComment(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && inlineComment.trim()) {
+                      e.preventDefault();
+                      createCommentMutation.mutate({ clipId: clip.id, text: inlineComment });
+                    }
+                  }}
+                  placeholder="Add a comment…"
+                  className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/35 min-w-0"
+                />
+                <button
+                  onClick={() => {
+                    if (!inlineComment.trim()) return;
+                    createCommentMutation.mutate({ clipId: clip.id, text: inlineComment });
+                  }}
+                  disabled={!inlineComment.trim() || createCommentMutation.isPending}
+                  className="flex-shrink-0 transition-opacity disabled:opacity-30"
+                  style={{ color: '#B7FF1A' }}
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
             </div>
+          ) : (
+            <button
+              onClick={() => openModal('login')}
+              className="w-full text-center text-sm py-2 rounded-full"
+              style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)' }}
+            >
+              <span style={{ color: '#B7FF1A' }}>Sign in</span> to comment
+            </button>
           )}
         </div>
       </div>
+
+      {isLandscape ? (
+        /* ── LANDSCAPE layout: video stacked above engagement row ── */
+        <div key={currentIndex} className={`flex flex-col w-full h-full items-center justify-center gap-0 ${slideDir === 'up' ? 'dsv-slide-up' : 'dsv-slide-down'}`}>
+          {/* Up/Down nav arrows — right edge, vertically centred */}
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-3">
+            <button
+              onClick={goPrev}
+              disabled={currentIndex === 0}
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
+              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              aria-label="Previous"
+            >
+              <ChevronUp className="h-6 w-6 text-white" />
+            </button>
+            <button
+              onClick={goNext}
+              disabled={currentIndex === clips.length - 1}
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
+              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              aria-label="Next"
+            >
+              <ChevronDown className="h-6 w-6 text-white" />
+            </button>
+          </div>
+
+          {/* Video — 16:9, constrained by both width and height */}
+          <div className="flex-1 flex items-center justify-center w-full min-h-0 px-16 pt-2">
+            <div
+              className="relative rounded-2xl overflow-hidden bg-black w-full"
+              style={{ aspectRatio: '16/9', maxHeight: '100%', isolation: 'isolate' }}
+            >
+              <VideoPlayer
+                key={clip.id}
+                videoUrl={clip.videoUrl || ''}
+                thumbnailUrl={clip.thumbnailUrl || undefined}
+                autoPlay={true}
+                disableAspectRatio={true}
+                objectFit="contain"
+                transparentBg={true}
+                autoHideControls={true}
+                className="w-full h-full"
+                clipId={clip.id}
+              />
+            </div>
+          </div>
+
+          {/* Creator info — below the video, left-aligned */}
+          <div className="flex items-center gap-3 flex-shrink-0 px-16 pt-2 pb-1">
+            <div
+              className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border-2"
+              style={{ borderColor: 'rgba(183,255,26,0.5)' }}
+            >
+              {clip.user.avatarUrl ? (
+                <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
+                  <UserIcon className="h-4 w-4 text-white/60" />
+                </div>
+              )}
+            </div>
+            <ProfileHoverCard username={clip.user.username}>
+            <div className="min-w-0 flex-1 cursor-default">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
+                  <span className="text-white font-semibold text-sm hover:text-[#B7FF1A] transition-colors">
+                    {clip.user.displayName || clip.user.username}
+                  </span>
+                </Link>
+                <span className="text-white/45 text-xs">@{clip.user.username}</span>
+                {clip.game && (
+                  <Link
+                    href={`/games/${gameSlug}`}
+                    className="inline-block text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
+                    style={{ background: '#B7FF1A' }}
+                    onClick={onClose}
+                  >
+                    {clip.game.name}
+                  </Link>
+                )}
+              </div>
+              {clip.title && (
+                <p className="text-white/55 text-xs mt-0.5 line-clamp-1">{clip.title}</p>
+              )}
+            </div>
+            </ProfileHoverCard>
+          </div>
+
+          {/* Horizontal engagement row */}
+          <div
+            className="flex items-center justify-center gap-5 flex-shrink-0 px-4"
+            style={{ paddingTop: '6px', paddingBottom: '14px' }}
+          >
+            <LikeButton
+              contentId={clip.id}
+              contentType="clip"
+              contentOwnerId={clip.user.id}
+              initialLiked={(clip as any).isLiked ?? false}
+              initialCount={likes}
+              size="sm"
+              variant="horizontal"
+              showCount={true}
+            />
+            <FireButton
+              contentId={clip.id}
+              contentType="clip"
+              contentOwnerId={clip.user.id}
+              initialFired={(clip as any).isFired ?? false}
+              initialCount={fires}
+              size="sm"
+              variant="horizontal"
+              showCount={true}
+            />
+            {/* Comments toggle */}
+            <button
+              className="flex items-center gap-2 group"
+              onClick={() => setShowComments(v => !v)}
+              aria-label="Toggle comments"
+            >
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+                style={showComments
+                  ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
+                  : { background: '#0B1218', border: '1px solid #1B2A33' }
+                }
+              >
+                <MessageCircle className="h-4 w-4" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+              </div>
+              <span className="text-sm font-medium" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }}>
+                {fmt(comments)}
+              </span>
+            </button>
+            {/* Views */}
+            <div className="flex items-center gap-2">
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center"
+                style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              >
+                <BarChart2 className="h-4 w-4 text-white/70" />
+              </div>
+              <span className="text-sm font-medium text-white/50">{fmt(views)}</span>
+            </div>
+            {/* Share */}
+            <button
+              className="flex items-center gap-2 group"
+              onClick={() => setShowShareDialog(true)}
+              aria-label="Share"
+            >
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+                style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              >
+                <ShareLaunchIcon className="h-4 w-4 text-white/70" />
+              </div>
+            </button>
+            {/* 3-dot menu */}
+            <div onClick={(e) => e.stopPropagation()}>
+              <TrendingClipMenu clip={clip} />
+            </div>
+            {/* Eye filter — sits inline with icons; flyout opens rightward */}
+            <div className="relative" onClick={e => e.stopPropagation()}>
+              <button
+                onClick={() => { setShowContentDropdown(false); setShowTimeDropdown(false); setControlsVisible(v => !v); }}
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
+                style={{
+                  border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.5)'}`,
+                  background: controlsVisible ? 'rgba(183,255,26,0.12)' : 'rgba(30,41,59,0.5)',
+                }}
+              >
+                <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.7)' }} />
+              </button>
+
+              {controlsVisible && (
+                <div
+                  className="absolute left-full ml-2 top-1/2 -translate-y-1/2 flex flex-row items-center gap-2"
+                  style={{ pointerEvents: 'auto' }}
+                >
+                  {/* Gamepad */}
+                  <button
+                    onClick={() => { setControlsVisible(false); onOpenGameFilter(); }}
+                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
+                    style={pillBase(!!selectedGameId)}
+                    title={selectedGameId ? selectedGameName || 'Game filter' : 'Filter by game'}
+                  >
+                    <Gamepad2 className="h-5 w-5" />
+                  </button>
+
+                  {/* Clock */}
+                  <div className="relative">
+                    <button
+                      onClick={() => { setShowTimeDropdown(v => !v); setShowContentDropdown(false); }}
+                      className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
+                      style={pillBase(showTimeDropdown)}
+                    >
+                      <Clock className="h-5 w-5" />
+                    </button>
+                    {showTimeDropdown && (
+                      <div
+                        className="absolute bottom-full mb-1.5 right-0 rounded-xl overflow-hidden min-w-[148px] z-50"
+                        style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
+                      >
+                        <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>Time Period</p>
+                        {(Object.entries(timeMeta) as [TimePeriod, string][]).map(([period, label]) => (
+                          <button
+                            key={period}
+                            className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                            style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                            onClick={() => { onTimePeriodChange(period); setShowTimeDropdown(false); setControlsVisible(false); }}
+                          >
+                            {label}
+                            {timePeriod === period && <Check className="h-3 w-3 ml-auto" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content type pill */}
+                  <div className="relative">
+                    <button
+                      onClick={() => { setShowContentDropdown(v => !v); setShowTimeDropdown(false); }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold transition-all hover:scale-105"
+                      style={pillBase(showContentDropdown)}
+                    >
+                      <ActiveIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                      {activeLabel}
+                      <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                    </button>
+                    {showContentDropdown && (
+                      <div
+                        className="absolute bottom-full mb-1.5 right-0 rounded-xl overflow-hidden min-w-[155px] z-50"
+                        style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
+                      >
+                        {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
+                          <button
+                            key={type}
+                            className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                            style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                            onClick={() => { onTabChange(type); setShowContentDropdown(false); setControlsVisible(false); }}
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                            {label}
+                            {activeTab === type && <Check className="h-3 w-3 ml-auto" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* ── PORTRAIT layout (Reels): video | right floating column ── */
+        <div key={currentIndex} className={`flex w-full h-full items-center justify-center ${slideDir === 'up' ? 'dsv-slide-up' : 'dsv-slide-down'}`}>
+          {/* Outer row — video left, right column no background */}
+          <div className="flex items-end gap-5 px-6" style={{ height: '100%', paddingBottom: '28px' }}>
+
+            {/* Video — 9:16, fills available height */}
+            <div
+              className="relative rounded-2xl overflow-hidden bg-black flex-shrink-0"
+              style={{ height: '100%', aspectRatio: '9/16', isolation: 'isolate' }}
+            >
+              <VideoPlayer
+                key={clip.id}
+                videoUrl={clip.videoUrl || ''}
+                thumbnailUrl={clip.thumbnailUrl || undefined}
+                autoPlay={true}
+                disableAspectRatio={true}
+                objectFit="contain"
+                transparentBg={true}
+                autoHideControls={true}
+                className="w-full h-full"
+                clipId={clip.id}
+              />
+            </div>
+
+            {/* ── Right column — no background, floating ── */}
+            <div className="flex flex-col items-center gap-4 flex-shrink-0 pb-1" style={{ minWidth: '56px' }}>
+
+              {/* Eye — top of column, toggles horizontal filter bar */}
+              <div className="relative" onClick={e => e.stopPropagation()}>
+                <button
+                  onClick={() => { setShowContentDropdown(false); setShowTimeDropdown(false); setControlsVisible(v => !v); }}
+                  className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
+                  style={{
+                    border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.5)'}`,
+                    background: controlsVisible ? 'rgba(183,255,26,0.12)' : 'rgba(30,41,59,0.5)',
+                  }}
+                >
+                  <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.7)' }} />
+                </button>
+
+                {/* Horizontal flyout — expands to the RIGHT of Eye when open */}
+                {controlsVisible && (
+                  <div
+                    className="absolute top-0 left-full ml-2 flex flex-row items-center gap-2"
+                    style={{ pointerEvents: 'auto' }}
+                  >
+                    {/* Gamepad */}
+                    <button
+                      onClick={() => { setControlsVisible(false); onOpenGameFilter(); }}
+                      className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
+                      style={pillBase(!!selectedGameId)}
+                      title={selectedGameId ? selectedGameName || 'Game filter' : 'Filter by game'}
+                    >
+                      <Gamepad2 className="h-5 w-5" />
+                    </button>
+
+                    {/* Clock */}
+                    <div className="relative">
+                      <button
+                        onClick={() => { setShowTimeDropdown(v => !v); setShowContentDropdown(false); }}
+                        className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
+                        style={pillBase(showTimeDropdown)}
+                      >
+                        <Clock className="h-5 w-5" />
+                      </button>
+                      {showTimeDropdown && (
+                        <div
+                          className="absolute top-full mt-1.5 right-0 rounded-xl overflow-hidden min-w-[148px] z-50"
+                          style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
+                        >
+                          <p className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>Time Period</p>
+                          {(Object.entries(timeMeta) as [TimePeriod, string][]).map(([period, label]) => (
+                            <button
+                              key={period}
+                              className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                              style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                              onClick={() => { onTimePeriodChange(period); setShowTimeDropdown(false); }}
+                            >
+                              {label}
+                              {timePeriod === period && <Check className="h-3 w-3 ml-auto" />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Content type pill */}
+                    <div className="relative">
+                      <button
+                        onClick={() => { setShowContentDropdown(v => !v); setShowTimeDropdown(false); }}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold transition-all hover:scale-105"
+                        style={pillBase(showContentDropdown)}
+                      >
+                        <ActiveIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                        {activeLabel}
+                        <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                      </button>
+                      {showContentDropdown && (
+                        <div
+                          className="absolute top-full mt-1.5 right-0 rounded-xl overflow-hidden min-w-[155px] z-50"
+                          style={{ background: 'rgba(19,31,42,0.97)', border: '1px solid rgba(183,255,26,0.25)' }}
+                        >
+                          {(Object.entries(contentMeta) as [ContentType, { label: string; Icon: React.ElementType }][]).map(([type, { label, Icon }]) => (
+                            <button
+                              key={type}
+                              className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
+                              style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                              onClick={() => { onTabChange(type); setShowContentDropdown(false); setControlsVisible(false); }}
+                            >
+                              <Icon className="h-3.5 w-3.5" />
+                              {label}
+                              {activeTab === type && <Check className="h-3 w-3 ml-auto" />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 3-dot menu — swapped up, directly below Eye */}
+              <div onClick={(e) => e.stopPropagation()}>
+                <TrendingClipMenu clip={clip} />
+              </div>
+
+              {/* Engagement icons */}
+              <LikeButton
+                contentId={clip.id}
+                contentType="clip"
+                contentOwnerId={clip.user.id}
+                initialLiked={(clip as any).isLiked ?? false}
+                initialCount={likes}
+                size="sm"
+                variant="vertical"
+                showCount={true}
+              />
+              <FireButton
+                contentId={clip.id}
+                contentType="clip"
+                contentOwnerId={clip.user.id}
+                initialFired={(clip as any).isFired ?? false}
+                initialCount={fires}
+                size="sm"
+                variant="vertical"
+                showCount={true}
+              />
+              <button
+                className="flex flex-col items-center gap-1 group"
+                onClick={() => setShowComments(v => !v)}
+                aria-label="Toggle comments"
+              >
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+                  style={showComments
+                    ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
+                    : { background: '#0B1218', border: '1px solid #1B2A33' }
+                  }
+                >
+                  <MessageCircle className="h-5 w-5" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+                </div>
+                <span className="text-[11px] font-medium" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }}>
+                  {fmt(comments)}
+                </span>
+              </button>
+              <div className="flex flex-col items-center gap-1">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+                >
+                  <BarChart2 className="h-5 w-5 text-white/70" />
+                </div>
+                <span className="text-white/50 text-[11px] font-medium">{fmt(views)}</span>
+              </div>
+
+              {/* Share */}
+              <button
+                className="flex flex-col items-center gap-1 group"
+                onClick={() => setShowShareDialog(true)}
+                aria-label="Share"
+              >
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
+                  style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+                >
+                  <ShareLaunchIcon className="h-5 w-5 text-white/70" />
+                </div>
+              </button>
+
+              {/* Creator info — fixed layout width (56px) so it doesn't widen the column; visual content overflows right */}
+              <div
+                className="flex flex-row items-center gap-3"
+                style={{ alignSelf: 'flex-start', width: '56px', overflow: 'visible', whiteSpace: 'nowrap' }}
+              >
+                {/* Avatar — anchored in column on the left */}
+                <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
+                  <div
+                    className="w-11 h-11 rounded-full overflow-hidden border-2 flex-shrink-0 hover:scale-105 transition-transform"
+                    style={{ borderColor: '#B7FF1A' }}
+                  >
+                    {clip.user.avatarUrl ? (
+                      <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
+                        <UserIcon className="h-5 w-5 text-white/60" />
+                      </div>
+                    )}
+                  </div>
+                </Link>
+                {/* Text flows to the right */}
+                <ProfileHoverCard username={clip.user.username}>
+                <div className="flex flex-col gap-1 items-start cursor-default">
+                  <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
+                    <p className="text-white font-bold text-sm hover:text-[#B7FF1A] transition-colors leading-tight">
+                      {clip.user.displayName || clip.user.username}
+                    </p>
+                  </Link>
+                  {clip.title && (
+                    <p className="text-white/60 text-xs leading-snug">{clip.title}</p>
+                  )}
+                  {clip.game && (
+                    <Link
+                      href={`/games/${gameSlug}`}
+                      className="inline-block text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
+                      style={{ background: '#B7FF1A' }}
+                      onClick={onClose}
+                    >
+                      {clip.game.name}
+                    </Link>
+                  )}
+                </div>
+                </ProfileHoverCard>
+              </div>
+            </div>
+          </div>
+
+          {/* Nav arrows — restored to absolute right edge, vertically centred */}
+          <div className="absolute right-6 top-1/2 -translate-y-1/2 flex flex-col items-center gap-3 z-20">
+            <button
+              onClick={goPrev}
+              disabled={currentIndex === 0}
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
+              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              aria-label="Previous"
+            >
+              <ChevronUp className="h-6 w-6 text-white" />
+            </button>
+            <button
+              onClick={goNext}
+              disabled={currentIndex === clips.length - 1}
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
+              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              aria-label="Next"
+            >
+              <ChevronDown className="h-6 w-6 text-white" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      </div>
+
+      <ClipShareDialog
+        clipId={clip.id}
+        open={showShareDialog}
+        onOpenChange={setShowShareDialog}
+      />
     </div>
   );
 };
@@ -485,14 +936,15 @@ const TrendingPage: React.FC = () => {
   const { user } = useAuth();
   const isMobile = useMobile();
   const { openClipDialog } = useClipDialog();
-  const [activeTab, setActiveTab] = useState<ContentType>('clips');
+  const [, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<ContentType>('reels');
   const [filter, setFilter] = useState<FilterType>('likes');
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('recent');
   const [showMobileViewer, setShowMobileViewer] = useState(false);
   const [showContentDropdown, setShowContentDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
   const [showGameFilter, setShowGameFilter] = useState(false);
-  const [controlsVisible, setControlsVisible] = useState(true);
+  const [controlsVisible, setControlsVisible] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
   const [selectedGameName, setSelectedGameName] = useState<string | null>(null);
@@ -511,6 +963,10 @@ const TrendingPage: React.FC = () => {
   const [screenshotsScrollStart, setScreenshotsScrollStart] = useState(0);
   const [screenshotsTouchStart, setScreenshotsTouchStart] = useState(0);
   const [screenshotsTouchScrollStart, setScreenshotsTouchScrollStart] = useState(0);
+  const [desktopShortsOpen, setDesktopShortsOpen] = useState(false);
+  const [desktopShortsIndex, setDesktopShortsIndex] = useState(0);
+  const [desktopShortsClips, setDesktopShortsClips] = useState<ClipWithUser[]>([]);
+  const [desktopShortsLandscape, setDesktopShortsLandscape] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -644,7 +1100,7 @@ const TrendingPage: React.FC = () => {
   const { data: trendingReels, isLoading: isLoadingReels } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/reels/trending', timePeriod, selectedGameId],
     queryFn: async () => {
-      const params = new URLSearchParams({ period: timePeriod, limit: '20' });
+      const params = new URLSearchParams({ period: timePeriod, limit: '40' });
       if (selectedGameId) params.set('gameId', String(selectedGameId));
       const response = await fetch(`/api/reels/trending?${params}`);
       if (!response.ok) throw new Error('Failed to fetch trending reels');
@@ -657,7 +1113,7 @@ const TrendingPage: React.FC = () => {
   const { data: trendingScreenshots, isLoading: isLoadingScreenshots } = useQuery<ScreenshotWithUser[]>({
     queryKey: ['/api/trending/screenshots', timePeriod, selectedGameId],
     queryFn: async () => {
-      const params = new URLSearchParams({ period: timePeriod, limit: '20' });
+      const params = new URLSearchParams({ period: timePeriod, limit: '40' });
       if (selectedGameId) params.set('gameId', String(selectedGameId));
       const response = await fetch(`/api/trending/screenshots?${params}`);
       if (!response.ok) throw new Error('Failed to fetch trending screenshots');
@@ -696,6 +1152,26 @@ const TrendingPage: React.FC = () => {
     }
     setActiveTabGameIds(ids);
   }, [activeTab, trendingClips, trendingReels, trendingScreenshots]);
+
+  const handleTabChange = useCallback((value: string) => {
+    const tab = value as ContentType;
+    setActiveTab(tab);
+    if (!isMobile) {
+      if (tab === 'reels' && trendingReels?.length) {
+        setDesktopShortsLandscape(false);
+        setDesktopShortsClips(trendingReels);
+        setDesktopShortsIndex(0);
+        setDesktopShortsOpen(true);
+      } else if (tab === 'clips' && trendingClips?.length) {
+        setDesktopShortsLandscape(true);
+        setDesktopShortsClips(trendingClips);
+        setDesktopShortsIndex(0);
+        setDesktopShortsOpen(true);
+      } else if (tab === 'screenshots' && trendingScreenshots?.length) {
+        setSelectedScreenshot(trendingScreenshots[0] as ScreenshotWithUser);
+      }
+    }
+  }, [isMobile, trendingReels, trendingClips, trendingScreenshots]);
 
   const getPeriodIcon = (period: TimePeriod) => {
     switch (period) {
@@ -762,61 +1238,18 @@ const TrendingPage: React.FC = () => {
       }
 
       return (
-        <div className="relative">
-          <button
-            onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft -= 480; } }}
-            className="absolute -left-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft += 480; } }}
-            className="absolute -right-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-          <div
-            ref={screenshotsScrollRef}
-            className={`flex gap-5 overflow-x-auto scrollbar-hide pb-4 select-none ${screenshotsDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-            style={{ scrollBehavior: screenshotsDragging ? 'auto' : 'smooth', touchAction: 'pan-x' }}
-            onMouseDown={(e) => {
-              if (!screenshotsScrollRef.current) return;
-              setScreenshotsDragging(true);
-              setScreenshotsDragStart(e.clientX);
-              setScreenshotsScrollStart(screenshotsScrollRef.current.scrollLeft);
-              e.preventDefault();
-            }}
-            onMouseMove={(e) => {
-              if (!screenshotsDragging || !screenshotsScrollRef.current) return;
-              e.preventDefault();
-              screenshotsScrollRef.current.scrollLeft = screenshotsScrollStart - (e.clientX - screenshotsDragStart);
-            }}
-            onMouseUp={() => setScreenshotsDragging(false)}
-            onMouseLeave={() => setScreenshotsDragging(false)}
-            onTouchStart={(e) => {
-              if (!screenshotsScrollRef.current) return;
-              setScreenshotsTouchStart(e.touches[0].clientX);
-              setScreenshotsTouchScrollStart(screenshotsScrollRef.current.scrollLeft);
-            }}
-            onTouchMove={(e) => {
-              if (!screenshotsScrollRef.current) return;
-              const delta = screenshotsTouchStart - e.touches[0].clientX;
-              screenshotsScrollRef.current.scrollLeft = screenshotsTouchScrollStart + delta;
-            }}
-          >
-            {trendingScreenshots.map((screenshot) => (
-              <div key={screenshot.id} className="flex-shrink-0 w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px]">
-                <ScreenshotCard
-                  screenshot={screenshot}
-                  isOwnProfile={user?.id === screenshot.userId}
-                  profile={screenshot.user}
-                  onDelete={(id) => deleteScreenshotMutation.mutate(id)}
-                  onSelect={setSelectedScreenshot}
-                  showUserInfo={true}
-                />
-              </div>
-            ))}
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-20">
+          {trendingScreenshots.map((screenshot) => (
+            <ScreenshotCard
+              key={screenshot.id}
+              screenshot={screenshot}
+              isOwnProfile={user?.id === screenshot.userId}
+              profile={screenshot.user}
+              onDelete={(id) => deleteScreenshotMutation.mutate(id)}
+              onSelect={setSelectedScreenshot}
+              showUserInfo={true}
+            />
+          ))}
         </div>
       );
     }
@@ -847,7 +1280,7 @@ const TrendingPage: React.FC = () => {
                 return (
                   <div
                     key={reel.id}
-                    onClick={() => openClipDialog(reel.id, trendingReels)}
+                    onClick={() => openClipDialog(reel.id, trendingReels, undefined, 'reel')}
                     className="w-full"
                   >
                     <div className="relative aspect-[9/16] w-full rounded-sm overflow-hidden cursor-pointer group">
@@ -879,7 +1312,7 @@ const TrendingPage: React.FC = () => {
                       </div>
                       
                       <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
+                        <BarChart2 className="h-3 w-3" />
                         {formatNumber(reel.views || 0)}
                       </div>
                       
@@ -887,13 +1320,19 @@ const TrendingPage: React.FC = () => {
                         <h3 className="text-white font-bold text-xs mb-0.5 drop-shadow-lg line-clamp-2">
                           {reel.title}
                         </h3>
-                        <p className="text-white text-[10px] mb-1 drop-shadow-lg">
-                          @{reel.user.username}
-                        </p>
+                        <ProfileHoverCard username={reel.user.username}>
+                          <p className="text-white text-[10px] mb-1 drop-shadow-lg cursor-default">
+                            @{reel.user.username}
+                          </p>
+                        </ProfileHoverCard>
                         {reel.game && (
-                          <div className="inline-block bg-primary text-[#071013] text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis">
+                          <Link
+                            href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-block bg-primary text-[#071013] text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
+                          >
                             {reel.game.name}
-                          </div>
+                          </Link>
                         )}
                       </div>
                     </div>
@@ -905,14 +1344,20 @@ const TrendingPage: React.FC = () => {
         );
       }
 
-      // Desktop: 1 row with 4 columns filling the page
+      // Desktop: multi-row grid — clicking opens the Shorts viewer
       return (
-        <div className="grid grid-cols-4 gap-4 w-full">
-          {trendingReels.slice(0, 4).map((reel) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 w-full pb-20">
+          {trendingReels.map((reel) => (
             <ReelCard
               key={reel.id}
               reel={reel}
               reelsList={trendingReels}
+              onOpenViewer={(index) => {
+                setDesktopShortsLandscape(false);
+                setDesktopShortsClips(trendingReels);
+                setDesktopShortsIndex(index);
+                setDesktopShortsOpen(true);
+              }}
             />
           ))}
         </div>
@@ -931,13 +1376,20 @@ const TrendingPage: React.FC = () => {
     }
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-20">
         {trendingClips.map((clip) => (
           <VideoClipGridItem
             key={clip.id}
             clip={clip}
             userId={user?.id}
             clipsList={trendingClips}
+            onCardClick={(clipId, clips) => {
+              const idx = clips.findIndex(c => c.id === clipId);
+              setDesktopShortsLandscape(true);
+              setDesktopShortsClips(clips);
+              setDesktopShortsIndex(idx >= 0 ? idx : 0);
+              setDesktopShortsOpen(true);
+            }}
           />
         ))}
       </div>
@@ -1008,17 +1460,26 @@ const TrendingPage: React.FC = () => {
                 <p className="text-white/50 text-sm text-center">Check back later!</p>
               </div>
             ) : (
-              <MobileClipsViewer clips={trendingClips} onBack={() => setActiveTab('reels')} />
+              <MobileClipsViewer clips={trendingClips} viewAllHref="/trending" onBack={() => setLocation('/')} />
             )}
           </div>
         )}
 
-        {/* ── REELS / SCREENSHOTS: full-screen immersive viewer ─────────── */}
-        {activeTab !== 'clips' && activeContent.length > 0 && !isLoadingContent && (
+        {/* ── SCREENSHOTS: X/Twitter-style scrollable feed (mirrors clips) ── */}
+        {activeTab === 'screenshots' && activeContent.length > 0 && !isLoadingContent && (
+          <MobileScreenshotsViewer
+            key={`screenshots-${selectedGameId ?? 'all'}`}
+            screenshots={trendingScreenshots || []}
+            onBack={() => setLocation('/')}
+          />
+        )}
+
+        {/* ── REELS: full-screen immersive TikTok-style viewer ─────────── */}
+        {activeTab === 'reels' && activeContent.length > 0 && !isLoadingContent && (
           <MobileTrendingViewer
-            key={activeTab}
+            key={`reels-${selectedGameId ?? 'all'}`}
             content={activeContent}
-            onClose={() => {}}
+            onClose={() => setLocation('/')}
             hideCloseButton={true}
             onCommentsVisibilityChange={setCommentsOpen}
           />
@@ -1026,7 +1487,7 @@ const TrendingPage: React.FC = () => {
 
         {/* Loading — reels / screenshots only */}
         {activeTab !== 'clips' && isLoadingContent && (
-          <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ background: '#131F2A' }}>
+          <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ background: '#0B1218' }}>
             <div className="flex flex-col items-center gap-3">
               <div className="w-8 h-8 border-2 border-[#B7FF1A] border-t-transparent rounded-full animate-spin" />
               <p className="text-white/60 text-sm">Loading {activeLabel.toLowerCase()}…</p>
@@ -1036,7 +1497,7 @@ const TrendingPage: React.FC = () => {
 
         {/* Empty state — reels / screenshots only */}
         {activeTab !== 'clips' && !isLoadingContent && activeContent.length === 0 && (
-          <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ background: '#131F2A' }}>
+          <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ background: '#0B1218' }}>
             <div className="text-center px-8">
               <TrendingUp className="h-14 w-14 mx-auto mb-4" style={{ color: '#B7FF1A' }} />
               <p className="text-white font-semibold mb-1">No trending {activeLabel.toLowerCase()}</p>
@@ -1070,13 +1531,13 @@ const TrendingPage: React.FC = () => {
 
           return (
         <div
-          className={`fixed z-[70] flex gap-2 ${
+          className={`fixed z-[100002] flex gap-2 ${
             isClipsMode
               ? 'flex-row items-center flex-wrap-reverse justify-end max-w-[calc(100vw-24px)]'
               : 'flex-col items-end'
           }`}
           style={{
-            top: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+            top: 'max(calc(env(safe-area-inset-top, 0px) + 12px), 56px)',
             right: 12,
             opacity: (activeTab !== 'clips' && commentsOpen) ? 0 : 1,
             pointerEvents: (activeTab !== 'clips' && commentsOpen) ? 'none' : 'auto',
@@ -1084,7 +1545,7 @@ const TrendingPage: React.FC = () => {
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* 1. Eye circle — fixed position, identical across modes */}
+          {/* 1. Eye circle — hidden from default UI; filter functionality preserved */}
           <button
             onClick={() => {
               setControlsVisible((v) => !v);
@@ -1094,12 +1555,12 @@ const TrendingPage: React.FC = () => {
             }}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0"
             style={{
-              border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(183, 255, 26,0.35)'}`,
+              border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.5)'}`,
               background: 'rgba(30,41,59,0.7)',
               order: orderEye,
             }}
           >
-            <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(183, 255, 26,0.5)' }} />
+            <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.7)' }} />
           </button>
 
           {/* 2. Content-type pill (Clips ▼) */}
@@ -1109,21 +1570,21 @@ const TrendingPage: React.FC = () => {
               opacity: controlsVisible ? 1 : 0,
               transform: controlsVisible ? visibleTransform : hiddenTransform,
               pointerEvents: controlsVisible ? 'auto' : 'none',
-              transition: itemTransition,
-              transitionDelay: controlsVisible && isClipsMode ? '60ms' : '0ms',
+              maxWidth: controlsVisible ? '200px' : '0',
+              overflow: controlsVisible ? 'visible' : 'hidden',
+              transition: controlsVisible && isClipsMode
+                ? `${itemTransition}, max-width 0.25s ease 60ms`
+                : `${itemTransition}, max-width 0.25s ease`,
               order: orderContentPill,
             }}
           >
             <button
               onClick={() => { setShowContentDropdown(!showContentDropdown); setShowTimeDropdown(false); setShowGameFilter(false); }}
-              className={`flex items-center gap-1.5 ${activeTab === 'clips' ? 'px-2 py-1.5' : 'px-3 py-1.5'} rounded-full text-xs font-semibold transition-all hover:shadow-[0_0_12px_rgba(183,255,26,0.35)]`}
-              style={isClipsMode
-                ? pillBaseStyle(showContentDropdown)
-                : { background: 'rgba(30,41,59,0.88)', border: '1px solid rgba(183, 255, 26,0.4)', color: '#fff' }}
-              aria-label={activeTab === 'clips' ? `Content type: ${activeLabel}` : undefined}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:shadow-[0_0_12px_rgba(183,255,26,0.35)]"
+              style={{ background: '#0B1218', border: 'none', color: '#F5F7F2' }}
             >
               <ActiveIcon className="h-3.5 w-3.5" />
-              {activeTab !== 'clips' && activeLabel}
+              {activeLabel}
               <ChevronDown className="h-3.5 w-3.5" />
             </button>
             {showContentDropdown && (
@@ -1135,7 +1596,7 @@ const TrendingPage: React.FC = () => {
                   <button
                     key={type}
                     className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                    style={activeTab === type ? { background: 'rgba(183, 255, 26,0.15)', color: '#B7FF1A' } : { color: '#94A3B8' }}
+                    style={activeTab === type ? { background: 'rgba(183, 255, 26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
                     onClick={() => { setActiveTab(type); setShowContentDropdown(false); }}
                   >
                     <Icon className="h-3.5 w-3.5" />
@@ -1147,32 +1608,29 @@ const TrendingPage: React.FC = () => {
             )}
           </div>
 
-          {/* 3. Gamepad circle (DOM order preserves Reels vertical order: Eye → Content → Gamepad → Clock) */}
-          <button
-            onClick={() => { setShowGameFilter(true); setShowContentDropdown(false); setShowTimeDropdown(false); }}
-            className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:shadow-[0_0_12px_rgba(183,255,26,0.35)] flex-shrink-0"
-            style={isClipsMode
-              ? {
-                  ...pillBaseStyle(!!selectedGameId),
-                  opacity: controlsVisible ? 1 : 0,
-                  transform: controlsVisible ? visibleTransform : hiddenTransform,
-                  pointerEvents: controlsVisible ? 'auto' : 'none',
-                  transition: itemTransition,
-                  transitionDelay: controlsVisible ? '180ms' : '0ms',
-                  order: orderGamepad,
-                }
-              : {
-                  background: selectedGameId ? 'rgba(183, 255, 26,0.18)' : 'rgba(30,41,59,0.88)',
-                  border: selectedGameId ? '1px solid #B7FF1A' : '1px solid rgba(183, 255, 26,0.3)',
-                  opacity: controlsVisible ? 1 : 0,
-                  transform: controlsVisible ? visibleTransform : hiddenTransform,
-                  pointerEvents: controlsVisible ? 'auto' : 'none',
-                  transition: itemTransition,
-                  order: orderGamepad,
-                }}
+          {/* 3. Gamepad circle — hidden behind Eye toggle */}
+          <div
+            className="flex items-center justify-end flex-shrink-0"
+            style={{
+              opacity: controlsVisible ? 1 : 0,
+              transform: controlsVisible ? visibleTransform : hiddenTransform,
+              pointerEvents: controlsVisible ? 'auto' : 'none',
+              maxWidth: controlsVisible ? '50px' : '0',
+              overflow: 'hidden',
+              transition: controlsVisible && isClipsMode
+                ? `${itemTransition}, max-width 0.25s ease 180ms`
+                : `${itemTransition}, max-width 0.25s ease`,
+              order: orderGamepad,
+            }}
           >
-            <Gamepad2 className="h-5 w-5" style={{ color: selectedGameId ? '#B7FF1A' : (isClipsMode ? '#F5F7F2' : '#fff') }} />
-          </button>
+            <button
+              onClick={() => { setShowGameFilter(true); setShowContentDropdown(false); setShowTimeDropdown(false); }}
+              className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:shadow-[0_0_12px_rgba(183,255,26,0.35)] flex-shrink-0"
+              style={pillBaseStyle(!!selectedGameId)}
+            >
+              <Gamepad2 className="h-5 w-5" style={{ color: selectedGameId ? '#B7FF1A' : '#F5F7F2' }} />
+            </button>
+          </div>
 
           {/* 4. Clock circle */}
           <div
@@ -1181,8 +1639,11 @@ const TrendingPage: React.FC = () => {
               opacity: controlsVisible ? 1 : 0,
               transform: controlsVisible ? visibleTransform : hiddenTransform,
               pointerEvents: controlsVisible ? 'auto' : 'none',
-              transition: itemTransition,
-              transitionDelay: controlsVisible && isClipsMode ? '120ms' : '0ms',
+              maxWidth: controlsVisible ? '50px' : '0',
+              overflow: controlsVisible ? 'visible' : 'hidden',
+              transition: controlsVisible && isClipsMode
+                ? `${itemTransition}, max-width 0.25s ease 120ms`
+                : `${itemTransition}, max-width 0.25s ease`,
               order: orderClock,
             }}
           >
@@ -1208,7 +1669,7 @@ const TrendingPage: React.FC = () => {
                   <button
                     key={period}
                     className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                    style={timePeriod === period ? { background: 'rgba(183, 255, 26,0.15)', color: '#B7FF1A' } : { color: '#94A3B8' }}
+                    style={timePeriod === period ? { background: 'rgba(183, 255, 26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
                     onClick={() => { setTimePeriod(period); setShowTimeDropdown(false); }}
                   >
                     {label}
@@ -1225,13 +1686,13 @@ const TrendingPage: React.FC = () => {
         {/* Game filter bottom-sheet modal */}
         {showGameFilter && (
           <div
-            className="fixed inset-0 z-[80] flex items-end"
+            className="fixed inset-0 z-[100003] flex items-end"
             style={{ background: 'rgba(0,0,0,0.65)' }}
             onClick={() => { setShowGameFilter(false); setGameSearchQuery(''); }}
           >
             <div
               className="w-full rounded-t-3xl flex flex-col"
-              style={{ background: '#0F1923', maxHeight: '82vh' }}
+              style={{ background: '#0B1218', maxHeight: '82vh' }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -1285,10 +1746,18 @@ const TrendingPage: React.FC = () => {
                     className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center transition-all"
                     style={{
                       aspectRatio: '3/4',
-                      background: '#1A2736',
+                      background: '#101923',
                       border: !selectedGameId ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                     }}
-                    onClick={() => { setSelectedGameId(null); setSelectedGameName(null); setShowGameFilter(false); setGameSearchQuery(''); }}
+                    onClick={() => {
+                      setSelectedGameId(null);
+                      setSelectedGameName(null);
+                      setShowGameFilter(false);
+                      setGameSearchQuery('');
+                      queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
+                      queryClient.invalidateQueries({ queryKey: ['/api/reels/trending'] });
+                      queryClient.invalidateQueries({ queryKey: ['/api/trending/screenshots'] });
+                    }}
                   >
                     {!selectedGameId && (
                       <div
@@ -1327,7 +1796,7 @@ const TrendingPage: React.FC = () => {
                           className="relative rounded-xl overflow-hidden flex flex-col justify-end transition-all"
                           style={{
                             aspectRatio: '3/4',
-                            background: '#1A2736',
+                            background: '#101923',
                             border: isSelected ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                             opacity: isInCurrentTab ? 1 : 0.4,
                             filter: isInCurrentTab ? 'none' : 'grayscale(70%)',
@@ -1340,6 +1809,9 @@ const TrendingPage: React.FC = () => {
                             setSelectedGameName(game.name);
                             setShowGameFilter(false);
                             setGameSearchQuery('');
+                            queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
+                            queryClient.invalidateQueries({ queryKey: ['/api/reels/trending'] });
+                            queryClient.invalidateQueries({ queryKey: ['/api/trending/screenshots'] });
                           }}
                         >
                           {/* Cover art */}
@@ -1382,26 +1854,26 @@ const TrendingPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-4 md:px-6 md:py-6 max-w-7xl">
       {/* Tabs at the top - Mobile responsive */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ContentType)} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <div className="bg-card/50 dark:bg-card/30 backdrop-blur-sm border-b border-border mb-0 md:mb-6 md:rounded-xl md:border sticky top-0 z-30">
           <div className="px-4 py-3 md:py-4">
             <TabsList className="grid w-full grid-cols-3 bg-slate-800/90 dark:bg-slate-900/90 p-1 rounded-xl h-auto">
-              <TabsTrigger 
-                value="clips" 
+              <TabsTrigger
+                value="clips"
                 className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70 rounded-lg px-4 py-2.5 md:py-3 text-sm md:text-base font-medium transition-all"
                 data-testid="tab-clips"
               >
                 Clips
               </TabsTrigger>
-              <TabsTrigger 
-                value="reels" 
+              <TabsTrigger
+                value="reels"
                 className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70 rounded-lg px-4 py-2.5 md:py-3 text-sm md:text-base font-medium transition-all"
                 data-testid="tab-reels"
               >
                 Reels
               </TabsTrigger>
-              <TabsTrigger 
-                value="screenshots" 
+              <TabsTrigger
+                value="screenshots"
                 className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70 rounded-lg px-4 py-2.5 md:py-3 text-sm md:text-base font-medium transition-all"
                 data-testid="tab-screenshots"
               >
@@ -1414,13 +1886,12 @@ const TrendingPage: React.FC = () => {
         {/* Header - below tabs on mobile, visible on desktop */}
         <div className="px-4 mb-6 hidden md:flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-3">
-            <TrendingUp className="h-8 w-8 text-primary" />
+            <ZapIconSvg size={32} active={true} />
             <div>
               <h1 className="text-3xl font-bold">Trending</h1>
               <p className="text-muted-foreground">Discover the most popular gaming content</p>
             </div>
           </div>
-
         </div>
 
         {/* Content */}
@@ -1466,6 +1937,173 @@ const TrendingPage: React.FC = () => {
           }}
           contentType="screenshot"
         />
+      )}
+
+      {/* Desktop Shorts-style viewer — clips & reels */}
+      {desktopShortsOpen && !isMobile && desktopShortsClips.length > 0 && (
+        <DesktopShortsViewer
+          clips={desktopShortsClips}
+          initialIndex={desktopShortsIndex}
+          onClose={() => setDesktopShortsOpen(false)}
+          onOpenGameFilter={() => setShowGameFilter(true)}
+          selectedGameId={selectedGameId}
+          selectedGameName={selectedGameName}
+          isLandscape={desktopShortsLandscape}
+          activeTab={activeTab}
+          onTabChange={(tab) => {
+            setActiveTab(tab);
+            if (tab === 'clips' && trendingClips?.length) {
+              setDesktopShortsLandscape(true);
+              setDesktopShortsClips(trendingClips);
+              setDesktopShortsIndex(0);
+            } else {
+              setDesktopShortsOpen(false);
+            }
+          }}
+          timePeriod={timePeriod}
+          onTimePeriodChange={setTimePeriod}
+        />
+      )}
+
+      {/* Game Filter Modal — desktop */}
+      {showGameFilter && !isMobile && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.65)' }}
+          onClick={() => { setShowGameFilter(false); setGameSearchQuery(''); }}
+        >
+          <div
+            className="rounded-2xl flex flex-col"
+            style={{ background: '#0B1218', maxHeight: '80vh', width: '480px', maxWidth: '90vw' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-4">
+              <div className="flex items-center gap-2.5">
+                <Gamepad2 className="h-6 w-6" style={{ color: '#B7FF1A' }} />
+                <span className="text-white font-bold text-lg">
+                  Filter by Game
+                </span>
+              </div>
+              <button
+                onClick={() => { setShowGameFilter(false); setGameSearchQuery(''); }}
+                className="text-white/70 hover:text-white transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Search input */}
+            <div className="px-4 pb-4">
+              <div
+                className="flex items-center gap-3 rounded-2xl px-4 py-3"
+                style={{ background: 'rgba(255,255,255,0.07)', border: '1.5px solid rgba(183, 255, 26,0.35)' }}
+              >
+                <Search className="h-4 w-4 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.4)' }} />
+                <input
+                  autoFocus
+                  value={gameSearchQuery}
+                  onChange={(e) => setGameSearchQuery(e.target.value)}
+                  placeholder="Search for games..."
+                  className="flex-1 bg-transparent text-sm text-white outline-none"
+                  style={{ color: '#fff' }}
+                />
+              </div>
+            </div>
+
+            {/* Section label */}
+            <p className="px-4 pb-3 text-white font-semibold text-base">Available Games</p>
+
+            {/* 3-column game grid */}
+            <div className="flex-1 overflow-y-auto px-3 pb-6">
+              {isGameSearchLoading && (
+                <div className="flex items-center justify-center py-10">
+                  <div className="w-6 h-6 border-2 border-[#B7FF1A] border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 gap-2">
+                {/* "All Games" card */}
+                <button
+                  className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center transition-all"
+                  style={{
+                    aspectRatio: '3/4',
+                    background: '#101923',
+                    border: !selectedGameId ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
+                  }}
+                  onClick={() => {
+                    setSelectedGameId(null);
+                    setSelectedGameName(null);
+                    setShowGameFilter(false);
+                    setGameSearchQuery('');
+                    queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/reels/trending'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/trending/screenshots'] });
+                  }}
+                >
+                  {!selectedGameId && (
+                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: '#B7FF1A' }}>
+                      <Check className="h-3 w-3 text-black" strokeWidth={3} />
+                    </div>
+                  )}
+                  <Gamepad2 className="h-7 w-7 mb-1" style={{ color: '#B7FF1A' }} />
+                  <span className="text-white text-[11px] font-bold text-center px-1 leading-tight">All Games</span>
+                </button>
+
+                {debouncedGameQuery.length < 2 && availableGames.length === 0 && !isGameSearchLoading && (
+                  <div className="col-span-2 flex flex-col items-center justify-center py-10 gap-2">
+                    <p className="text-white/40 text-sm text-center">Search for a game above</p>
+                  </div>
+                )}
+
+                {(() => {
+                  const gameList = debouncedGameQuery.length >= 2 ? (gameSearchResults || []) : availableGames;
+                  return gameList.map((game: { id: number; name: string; imageUrl?: string }) => {
+                    const isSelected = selectedGameId === game.id;
+                    const isInCurrentTab = activeTabGameIds.has(game.id);
+                    const imgSrc = game.imageUrl ? game.imageUrl.replace('{width}', '144').replace('{height}', '192') : null;
+                    return (
+                      <button
+                        key={game.id}
+                        className="relative rounded-xl overflow-hidden flex flex-col justify-end transition-all"
+                        style={{
+                          aspectRatio: '3/4',
+                          background: '#101923',
+                          border: isSelected ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
+                          opacity: isInCurrentTab ? 1 : 0.4,
+                          filter: isInCurrentTab ? 'none' : 'grayscale(70%)',
+                          cursor: isInCurrentTab ? 'pointer' : 'not-allowed',
+                        }}
+                        disabled={!isInCurrentTab}
+                        onClick={() => {
+                          if (!isInCurrentTab) return;
+                          setSelectedGameId(game.id);
+                          setSelectedGameName(game.name);
+                          setShowGameFilter(false);
+                          setGameSearchQuery('');
+                          queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
+                          queryClient.invalidateQueries({ queryKey: ['/api/reels/trending'] });
+                          queryClient.invalidateQueries({ queryKey: ['/api/trending/screenshots'] });
+                        }}
+                      >
+                        {imgSrc && <img src={imgSrc} alt={game.name} className="absolute inset-0 w-full h-full object-cover" />}
+                        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 55%, transparent 100%)' }} />
+                        {isSelected && (
+                          <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: '#B7FF1A' }}>
+                            <Check className="h-3 w-3 text-black" strokeWidth={3} />
+                          </div>
+                        )}
+                        <div className="relative z-10 px-1.5 pb-1.5">
+                          <p className="text-white text-[11px] font-bold leading-tight line-clamp-2">{game.name}</p>
+                        </div>
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

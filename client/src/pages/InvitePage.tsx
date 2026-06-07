@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
+import { useLazyVideo } from "@/hooks/use-lazy-video";
 import {
   Upload,
   Tv2,
@@ -16,6 +17,9 @@ import {
 } from "lucide-react";
 import { SiTwitch, SiKick } from "react-icons/si";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
+import heroVid1 from "@assets/gamer.mp4";
+import gamerPoster from "@assets/gamer-poster.jpg";
+import promoHeroPoster from "@assets/promo-hero-poster.jpg";
 
 const PRIMARY = "#b5f23d";
 const PRIMARY_DIM = "rgba(181,242,61,0.12)";
@@ -34,10 +38,11 @@ function smoothScroll(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
 
+
 function GlowDot({ top, left, size = 300, opacity = 0.08 }: { top: string; left: string; size?: number; opacity?: number }) {
   return (
     <div
-      className="absolute rounded-full pointer-events-none"
+      className="absolute rounded-full pointer-events-none z-[2]"
       style={{
         top,
         left,
@@ -164,6 +169,8 @@ function UsernameChecker() {
 
 export default function InvitePage() {
   const [, setLocation] = useLocation();
+  const heroVideo = useLazyVideo();
+  const promoVideo = useLazyVideo();
 
   return (
     <div className="min-h-screen" style={{ background: BG, color: "white", fontFamily: "inherit" }}>
@@ -187,6 +194,27 @@ export default function InvitePage() {
 
       {/* Hero */}
       <section className="relative px-6 pt-40 pb-28 overflow-hidden">
+        {/* Video background */}
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <video
+            ref={heroVideo.ref}
+            src={heroVid1}
+            poster={gamerPoster}
+            preload="none"
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover"
+            style={{
+              opacity: heroVideo.visible ? 1 : 0,
+              filter: heroVideo.isPlaying ? "blur(0px) brightness(1)" : "blur(6px) brightness(0.65)",
+              transition: "opacity 700ms, filter 700ms",
+            }}
+          />
+        </div>
+        {/* Dark overlay */}
+        <div className="absolute inset-0 z-[1]" style={{ background: "rgba(8,14,23,0.82)" }} />
+
         <GlowDot top="30%" left="50%" size={600} opacity={0.07} />
         <GlowDot top="10%" left="20%" size={300} opacity={0.05} />
         <GlowDot top="60%" left="80%" size={250} opacity={0.05} />
@@ -261,12 +289,19 @@ export default function InvitePage() {
             </div>
             <div className="relative rounded-3xl overflow-hidden border shadow-2xl" style={{ borderColor: "rgba(183,255,26,0.25)", background: CARD_BG, zIndex: 1 }}>
               <video
+                ref={promoVideo.ref}
                 src="/promo-hero.mp4"
-                autoPlay
+                poster={promoHeroPoster}
+                preload="none"
                 loop
                 muted
                 playsInline
                 className="w-full h-[380px] md:h-[500px] object-cover"
+                style={{
+                  opacity: promoVideo.visible ? 1 : 0,
+                  filter: promoVideo.isPlaying ? "blur(0px) brightness(1)" : "blur(6px) brightness(0.65)",
+                  transition: "opacity 700ms, filter 700ms",
+                }}
               />
             </div>
           </div>
@@ -322,16 +357,16 @@ export default function InvitePage() {
         >
           <div className="flex flex-col gap-4 flex-1">
             <p className="text-xs font-bold tracking-widest uppercase" style={{ color: PRIMARY }}>Early Access</p>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-white leading-tight">We've just launched</h2>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-white leading-tight">Join Gamefolio Early Access</h2>
             <p className="text-gray-400 text-base leading-relaxed">
-              Secure your username, start building your profile, upload your clips, and be part of Gamefolio from the beginning.
+              Secure your username, upload your clips, and grow with Gamefolio from the beginning.
             </p>
           </div>
           <div className="flex flex-col gap-4 flex-1">
             {[
-              "First pick of usernames",
-              "More visibility while the platform grows",
-              "Help shape what we build next",
+              "Priority username access",
+              "Increased visibility as Gamefolio grows",
+              "Direct influence on future features",
             ].map(point => (
               <div key={point} className="flex items-start gap-3">
                 <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: PRIMARY_DIM }}>

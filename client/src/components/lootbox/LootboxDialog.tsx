@@ -13,6 +13,7 @@ import { useLevelTracker } from "@/hooks/use-level-tracker";
 import { useAuth } from "@/hooks/use-auth";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { playLootboxOpenSound, useLootboxMute } from "@/lib/lootbox-sound";
+import { LootboxIcon } from "@/components/lootbox/LootboxIcon";
 
 interface LootboxStatus {
   canOpen: boolean;
@@ -148,16 +149,22 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogPortal>
-        <DialogPrimitive.Overlay 
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+        {/* Separate backdrop overlay so backdrop-filter isn't broken by Content's CSS animations */}
+        <DialogPrimitive.Overlay
+          className="fixed inset-0 z-[199]"
+          style={{
+            background: 'rgba(2,23,44,0.6)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+          }}
         />
         <DialogPrimitive.Content
-          className="lootbox-dialog-content fixed left-[50%] top-[50%] z-50 w-full max-w-xl md:max-w-3xl lg:max-w-4xl translate-x-[-50%] translate-y-[-50%] p-0 overflow-hidden border-none shadow-none duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg"
+          className="fixed inset-0 z-[200] flex flex-col items-center justify-center w-screen h-screen border-none shadow-none outline-none bg-transparent duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
         >
           <button
             type="button"
             onClick={toggleMuted}
-            className="absolute right-14 top-4 z-50 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            className="absolute right-14 top-4 z-10 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none"
             aria-label={isMuted ? "Unmute lootbox sound" : "Mute lootbox sound"}
             data-testid="button-lootbox-mute-toggle"
           >
@@ -167,11 +174,11 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
               <Volume2 className="h-5 w-5 text-white" />
             )}
           </button>
-          <DialogPrimitive.Close className="absolute right-4 top-4 z-50 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+          <DialogPrimitive.Close className="absolute right-4 top-4 z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none">
             <X className="h-5 w-5 text-white" />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
-        <div className="flex flex-col items-center px-6 py-6">
+        <div className="lootbox-dialog-content w-full max-w-xl flex flex-col items-center px-6 py-6 overflow-y-auto max-h-screen">
           <AnimatePresence mode="wait">
             {phase === "idle" && (
               <motion.div
@@ -287,15 +294,10 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                     transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
                     className={cn(
                       "relative p-1 rounded-2xl",
-                      rarityStyle.bg,
-                      "shadow-lg",
-                      rarityStyle.glow
+                      rarityStyle.bg
                     )}
                   >
-                  <div className={cn(
-                    "w-40 h-40 rounded-xl border-2 overflow-hidden flex items-center justify-center bg-[#1a1a2e]",
-                    rarityStyle.border
-                  )}>
+                  <div className="w-40 h-40 rounded-xl overflow-hidden flex items-center justify-center bg-[#0B1218]">
                     {reward.assetType === 'xp_reward' ? (
                       <div className="w-28 h-28 rounded-full bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-yellow-500/30">
                         <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-300 to-amber-400 flex flex-col items-center justify-center border-4 border-yellow-200/50">
@@ -430,25 +432,18 @@ export function LootboxTrigger({ onClick }: { onClick: () => void }) {
       if (!response.ok) throw new Error("Failed to fetch lootbox status");
       return response.json();
     },
+    refetchInterval: 60_000,
   });
 
+  if (!status?.canOpen) return null;
+
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={onClick}
-      className="relative"
-      title="Daily Lootbox"
-      data-testid="button-lootbox-trigger"
-    >
-      <Gift className="w-5 h-5" />
-      {status?.canOpen && (
-        <motion.span
-          className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full"
-          animate={{ scale: [1, 1.2, 1] }}
-          transition={{ duration: 1, repeat: Infinity }}
-        />
-      )}
-    </Button>
+    <div data-testid="button-lootbox-trigger">
+      <LootboxIcon
+        isClaimable
+        onClick={onClick}
+        size={22}
+      />
+    </div>
   );
 }

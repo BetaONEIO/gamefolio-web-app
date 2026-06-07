@@ -6,9 +6,10 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Share2, Copy, Facebook, Linkedin, Mail } from "lucide-react";
-import { FaReddit, FaWhatsapp, FaTelegram } from "react-icons/fa";
-import { FaXTwitter } from "react-icons/fa6";
+import { Copy, Facebook, Linkedin, Mail } from "lucide-react";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
+import { FaReddit, FaWhatsapp, FaTelegram, FaPinterest, FaYoutube } from "react-icons/fa";
+import { FaXTwitter, FaInstagram, FaTiktok, FaSnapchat, FaBluesky, FaThreads } from "react-icons/fa6";
 import { useToast } from "@/hooks/use-toast";
 import { openShareWindow, nativeShare, isNative } from "@/lib/platform";
 
@@ -55,6 +56,13 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
             whatsapp: `https://wa.me/?text=${encodeURIComponent(fallbackUrl)}`,
             telegram: `https://t.me/share/url?url=${encodeURIComponent(fallbackUrl)}`,
             discord: fallbackUrl,
+            instagram: fallbackUrl,
+            tiktok: fallbackUrl,
+            bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(fallbackUrl)}`,
+            snapchat: fallbackUrl,
+            threads: fallbackUrl,
+            pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(fallbackUrl)}`,
+            youtube: fallbackUrl,
             email: `mailto:?body=${encodeURIComponent(fallbackUrl)}`
           }
         });
@@ -80,14 +88,30 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
   const linkedinUrl = socialMediaLinks.linkedin;
   const whatsappUrl = socialMediaLinks.whatsapp;
   const telegramUrl = socialMediaLinks.telegram;
+  const blueskyUrl = socialMediaLinks.bluesky;
   const mailUrl = socialMediaLinks.email;
-  
   // Handle copy link to clipboard
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareUrl);
     toast({
       title: "Link copied!",
       description: "The link has been copied to your clipboard.",
+      duration: 3000,
+    });
+  };
+
+  // Handle copy-only platforms (Instagram, TikTok) — no web share intent URL available
+  const handleCopyOnlyShare = (platformName: string) => {
+    if (isNative) {
+      nativeShare({ title: 'Shared from Gamefolio', url: shareUrl }).then((handled) => {
+        if (handled) return;
+      });
+      return;
+    }
+    navigator.clipboard.writeText(shareUrl);
+    toast({
+      title: `Link copied for ${platformName}!`,
+      description: `Paste this link in ${platformName} to share the clip.`,
       duration: 3000,
     });
   };
@@ -109,7 +133,7 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
       <DropdownMenuTrigger asChild>
         {variant === 'icon-only' ? (
           <button className="focus:outline-none">
-            <Share2 className="h-6 w-6 text-muted-foreground hover:text-foreground transition-colors" />
+            <ShareLaunchIcon size={24} className="text-muted-foreground hover:text-foreground transition-colors" />
           </button>
         ) : (
           <Button 
@@ -117,7 +141,7 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
             size="sm" 
             className="text-muted-foreground flex items-center gap-1"
           >
-            <Share2 className="h-5 w-5" />
+            <ShareLaunchIcon size={20} />
             <span>Share</span>
           </Button>
         )}
@@ -176,6 +200,62 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
           <span>Telegram</span>
         </DropdownMenuItem>
         
+        <DropdownMenuItem
+          onClick={() => handleCopyOnlyShare('Instagram')}
+          className="cursor-pointer"
+        >
+          <FaInstagram className="mr-2 h-4 w-4 text-[#E1306C]" />
+          <span>Instagram</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => handleCopyOnlyShare('TikTok')}
+          className="cursor-pointer"
+        >
+          <FaTiktok className="mr-2 h-4 w-4" />
+          <span>TikTok</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => handleShareClick(blueskyUrl)}
+          className="cursor-pointer"
+        >
+          <FaBluesky className="mr-2 h-4 w-4 text-[#0085ff]" />
+          <span>Bluesky</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => handleCopyOnlyShare('Snapchat')}
+          className="cursor-pointer"
+        >
+          <FaSnapchat className="mr-2 h-4 w-4 text-[#FFFC00]" />
+          <span>Snapchat</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => handleCopyOnlyShare('Threads')}
+          className="cursor-pointer"
+        >
+          <FaThreads className="mr-2 h-4 w-4" />
+          <span>Threads</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => handleShareClick(socialMediaLinks.pinterest)}
+          className="cursor-pointer"
+        >
+          <FaPinterest className="mr-2 h-4 w-4 text-[#E60023]" />
+          <span>Pinterest</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => handleCopyOnlyShare('YouTube')}
+          className="cursor-pointer"
+        >
+          <FaYoutube className="mr-2 h-4 w-4 text-[#FF0000]" />
+          <span>YouTube</span>
+        </DropdownMenuItem>
+
         <DropdownMenuItem 
           onClick={() => handleShareClick(mailUrl)} 
           className="cursor-pointer"

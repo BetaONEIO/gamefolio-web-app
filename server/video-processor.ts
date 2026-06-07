@@ -235,15 +235,15 @@ export class VideoProcessor {
         const randomTime = Math.random() * (maxTime - minTime) + minTime;
 
         // Use appropriate size based on video type
-        // Reels: 9:16 (720x1280), Clips: 16:9 (1280x720)
-        const thumbnailSize = videoType === 'reel' ? '720x1280' : '1280x720';
+        // Reels: 9:16 (1080x1920), Clips: 16:9 (1920x1080)
+        const thumbnailSize = videoType === 'reel' ? '1080x1920' : '1920x1080';
 
         // Generate thumbnail at random timestamp
         ffmpeg(videoPath)
           .seekInput(randomTime)
           .frames(1)
           .size(thumbnailSize)
-          .outputOptions(['-q:v 2']) // High quality JPEG
+          .outputOptions(['-q:v 1']) // Highest quality JPEG
           .output(thumbnailPath)
           .on('end', async () => {
             try {
@@ -441,8 +441,8 @@ export class VideoProcessor {
       console.log(`Generating thumbnail from trimmed video: ${videoPath}`);
       
       // Use appropriate aspect ratio based on video type
-      // Reels: 9:16 (180x320), Clips: 16:9 (320x180)
-      const thumbnailSize = videoType === 'reel' ? '180x320' : '320x180';
+      // Reels: 9:16 (540x960), Clips: 16:9 (960x540)
+      const thumbnailSize = videoType === 'reel' ? '540x960' : '960x540';
       
       ffmpeg(videoPath)
         .seekInput(1) // 1 second into the trimmed video
@@ -458,7 +458,7 @@ export class VideoProcessor {
             
             // Optimize with sharp
             await sharp(thumbnailPath)
-              .jpeg({ quality: 85 })
+              .jpeg({ quality: 92, mozjpeg: true })
               .toFile(thumbnailPath.replace('.jpg', '_opt.jpg'));
             
             // Replace original with optimized
@@ -531,6 +531,112 @@ export class VideoProcessor {
       // Return empty string if everything fails
       return '';
     }
+  }
+
+  /**
+   * Generate a personalised outro video: dark background → logo fade+glow → @username fade-in.
+   * Always outputs 1080×1080 at 4 seconds; the download route scales it to match the clip.
+   * format parameter is kept for API compatibility but no longer affects canvas dimensions.
+   * Returns the raw MP4 buffer (caller uploads to storage).
+   */
+  static async generateOutroVideo(username: string, userId: number, format: 'portrait' | 'landscape' = 'landscape'): Promise<Buffer> {
+    await this.ensureDirectories();
+
+    const outputPath = path.join(this.TEMP_DIR, `outro_${userId}_${format}_${Date.now()}.mp4`);
+    const logoPath = path.join(process.cwd(), 'client', 'public', 'attached_assets', 'gamefolio-logo-green.png');
+    const fontPath = path.join(process.cwd(), 'server', 'assets', 'fonts', 'SpaceGrotesk-Bold.ttf');
+
+    // Strip any characters that could break the drawtext filter
+    const safeUser = `@${username}`.replace(/[^a-zA-Z0-9_@.-]/g, '');
+
+    const logoExists = (() => {
+      try { accessSync(logoPath); return true; } catch { return false; }
+    })();
+
+    const audioPath = path.join(process.cwd(), 'server', 'assets', 'audio', 'outro-sting.mp3');
+    const audioExists = (() => {
+      try { accessSync(audioPath); return true; } catch { return false; }
+    })();
+
+    // Square canvas — download route scales to clip dimensions via letter/pillarbox
+    const canvasSize = '1080x1080';
+    // Timing: logo fades in at 0.3 s over 0.8 s (fully visible at 1.1 s)
+    //         username fades in at 1.1 s (0.8 s after logo starts) over 0.8 s
+    const logoFadeStart = 0.3;
+    const logoFadeDur   = 0.8;
+    const userFadeStart = logoFadeStart + logoFadeDur; // 1.1 s
+    const userFadeDur   = 0.8;
+    const totalDur      = 4;
+
+    return new Promise<Buffer>((resolve, reject) => {
+      const cmd = (ffmpeg as any)()
+        // Input 0: 4-second solid dark background
+        .input(`color=c=0x0B1319:size=${canvasSize}:rate=30:d=${totalDur}`)
+        .inputOptions(['-f', 'lavfi']);
+
+      if (logoExists) {
+        cmd.input(logoPath).inputOptions(['-loop', '1']);
+      }
+
+      // Audio input index: 2 if logo present, 1 otherwise
+      const audioIdx = logoExists ? 2 : 1;
+      if (audioExists) {
+        cmd.input(audioPath);
+      }
+
+      const audioFilter = audioExists
+        ? [`[${audioIdx}:a]adelay=400:all=1,atrim=duration=3.5,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[aout]`]
+        : [];
+
+      const filters: string[] = logoExists ? [
+        // Scale logo to 320 px wide, force RGBA
+        '[1:v]scale=320:-1,format=rgba[logo_raw]',
+        // Split into glow copy and main copy
+        '[logo_raw]split=2[logo1][logo2]',
+        // Blur second copy to create the glow halo
+        '[logo2]gblur=sigma=22[glow_blur]',
+        // Logo fades in at logoFadeStart s over logoFadeDur s
+        `[logo1]fade=t=in:st=${logoFadeStart}:d=${logoFadeDur}:alpha=1[logo_faded]`,
+        `[glow_blur]fade=t=in:st=${logoFadeStart}:d=${logoFadeDur}:alpha=1[glow_faded]`,
+        // Composite: glow behind logo, both centred
+        '[0:v][glow_faded]overlay=(W-w)/2:(H-h)/2-90[bg_glow]',
+        '[bg_glow][logo_faded]overlay=(W-w)/2:(H-h)/2-90[with_logo]',
+        // Username text fades in 0.8 s AFTER logo starts (i.e. once logo is fully visible)
+        `[with_logo]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+120:alpha='if(lt(t\\,${userFadeStart})\\,0\\,if(lt(t\\,${userFadeStart + userFadeDur})\\,(t-${userFadeStart})/${userFadeDur}\\,1))'[out]`,
+        ...audioFilter,
+      ] : [
+        // Fallback: no logo — just text fading in at userFadeStart
+        `[0:v]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+10:alpha='if(lt(t\\,${userFadeStart})\\,0\\,if(lt(t\\,${userFadeStart + userFadeDur})\\,(t-${userFadeStart})/${userFadeDur}\\,1))'[out]`,
+        ...audioFilter,
+      ];
+
+      cmd
+        .complexFilter(filters)
+        .outputOptions([
+          '-map', '[out]',
+          ...(audioExists ? ['-map', '[aout]', '-c:a', 'aac', '-ar', '44100'] : ['-an']),
+          '-c:v', 'libx264',
+          '-t', `${totalDur}`,
+          '-preset', 'slow',
+          '-crf', '18',
+          '-pix_fmt', 'yuv420p',
+        ])
+        .format('mp4')
+        .on('error', (err: Error) => {
+          console.error('❌ Outro generation failed:', err.message);
+          reject(err);
+        })
+        .on('end', async () => {
+          try {
+            const buffer = await fs.readFile(outputPath);
+            await fs.unlink(outputPath).catch(() => {});
+            resolve(buffer);
+          } catch (e) {
+            reject(e);
+          }
+        })
+        .save(outputPath);
+    });
   }
 
   static async getVideoInfo(videoPath: string): Promise<{ duration: number; width: number; height: number }> {

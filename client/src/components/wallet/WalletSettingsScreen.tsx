@@ -11,7 +11,7 @@ interface WalletSettingsScreenProps {
 export default function WalletSettingsScreen({
   onBack,
   walletAddress = "0x12a8...3b89e4f2",
-  network = "SKALE Nebula",
+  network = "SKALE on Base",
   isConnected = true,
 }: WalletSettingsScreenProps) {
   const [copied, setCopied] = useState(false);
@@ -25,13 +25,13 @@ export default function WalletSettingsScreen({
   return (
     <div
       className="flex flex-col min-h-screen w-full"
-      style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif" }}
+      style={{ background: "#0B1218", fontFamily: "Plus Jakarta Sans, sans-serif" }}
     >
       {/* Header with gradient */}
       <div
         className="flex items-center justify-center px-6 pt-12 pb-6"
         style={{
-          background: "linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #101D27 100%)",
+          background: "linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #0B1218 100%)",
           borderBottom: "1px solid rgba(30, 41, 59, 0.3)",
         }}
       >
@@ -39,12 +39,12 @@ export default function WalletSettingsScreen({
           <button
             onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
-            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
           >
-            <ArrowLeft className="w-6 h-6" style={{ color: "#f8fafc" }} />
+            <ArrowLeft className="w-6 h-6" style={{ color: "#F5F7F2" }} />
           </button>
 
-          <span className="text-lg font-bold" style={{ color: "#f8fafc" }}>
+          <span className="text-lg font-bold" style={{ color: "#F5F7F2" }}>
             Wallet Settings
           </span>
 
@@ -58,21 +58,21 @@ export default function WalletSettingsScreen({
         <div className="flex flex-col gap-4">
           <span
             className="text-xs font-bold uppercase tracking-wider px-0.5"
-            style={{ color: "#94a3b8", letterSpacing: "1.2px" }}
+            style={{ color: "#B8C0AE", letterSpacing: "1.2px" }}
           >
             Identity & Network
           </span>
 
           <div
             className="flex flex-col rounded-2xl overflow-hidden"
-            style={{ background: "#0f172a", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+            style={{ background: "#0B1218", border: "1px solid rgba(30, 41, 59, 0.5)" }}
           >
             {/* Current Network Row */}
             <div className="flex items-center justify-between p-5">
               <div className="flex flex-col gap-1">
                 <span
                   className="text-[10px] uppercase tracking-wide"
-                  style={{ color: "#94a3b8", letterSpacing: "0.25px" }}
+                  style={{ color: "#B8C0AE", letterSpacing: "0.25px" }}
                 >
                   Current Network
                 </span>
@@ -108,18 +108,18 @@ export default function WalletSettingsScreen({
             {/* Public Address Row */}
             <div
               className="flex items-center justify-between p-4 mx-3 mb-3 rounded-2xl"
-              style={{ background: "rgba(2, 6, 23, 0.5)", border: "1px solid #1e293b" }}
+              style={{ background: "rgba(2, 6, 23, 0.5)", border: "1px solid #1B2A33" }}
             >
               <div className="flex flex-col gap-0.5">
                 <span
                   className="text-[10px] uppercase tracking-wide"
-                  style={{ color: "#94a3b8", letterSpacing: "-0.25px" }}
+                  style={{ color: "#B8C0AE", letterSpacing: "-0.25px" }}
                 >
                   Your Public Address
                 </span>
                 <span
                   className="text-sm font-medium"
-                  style={{ color: "#f8fafc", fontFamily: "JetBrains Mono, monospace", letterSpacing: "-0.35px" }}
+                  style={{ color: "#F5F7F2", fontFamily: "JetBrains Mono, monospace", letterSpacing: "-0.35px" }}
                 >
                   {walletAddress}
                 </span>
@@ -128,7 +128,7 @@ export default function WalletSettingsScreen({
               <button
                 onClick={handleCopy}
                 className="w-[42px] h-[42px] rounded-xl flex items-center justify-center transition-colors hover:bg-slate-700"
-                style={{ background: "#1e293b", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+                style={{ background: "#1B2A33", border: "1px solid rgba(30, 41, 59, 0.5)" }}
               >
                 {copied ? (
                   <Check className="w-5 h-5" style={{ color: "#B7FF1A" }} />
@@ -144,14 +144,14 @@ export default function WalletSettingsScreen({
         <div className="flex flex-col gap-3">
           <span
             className="text-xs font-bold uppercase tracking-wider px-0.5"
-            style={{ color: "#94a3b8", letterSpacing: "1.2px" }}
+            style={{ color: "#B8C0AE", letterSpacing: "1.2px" }}
           >
             Actions & Resources
           </span>
 
           <div
             className="flex flex-col rounded-2xl overflow-hidden"
-            style={{ background: "#0f172a", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+            style={{ background: "#0B1218", border: "1px solid rgba(30, 41, 59, 0.5)" }}
           >
             {/* View on Explorer */}
             <button
@@ -160,38 +160,38 @@ export default function WalletSettingsScreen({
             >
               <div
                 className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
-                style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+                style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
               >
-                <ExternalLink className="w-5 h-5" style={{ color: "#f8fafc" }} />
+                <ExternalLink className="w-5 h-5" style={{ color: "#F5F7F2" }} />
               </div>
               <div className="flex flex-col items-start gap-0 flex-1">
-                <span className="text-sm" style={{ color: "#f8fafc" }}>
+                <span className="text-sm" style={{ color: "#F5F7F2" }}>
                   View on Explorer
                 </span>
-                <span className="text-[11px]" style={{ color: "#94a3b8" }}>
+                <span className="text-[11px]" style={{ color: "#B8C0AE" }}>
                   Check transactions on SKALE Labs
                 </span>
               </div>
-              <ChevronRight className="w-5 h-5" style={{ color: "#94a3b8" }} />
+              <ChevronRight className="w-5 h-5" style={{ color: "#B8C0AE" }} />
             </button>
 
             {/* Customer Support */}
             <button className="flex items-center gap-4 p-4 transition-colors hover:bg-slate-800/50">
               <div
                 className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
-                style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+                style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
               >
-                <Headphones className="w-5 h-5" style={{ color: "#f8fafc" }} />
+                <Headphones className="w-5 h-5" style={{ color: "#F5F7F2" }} />
               </div>
               <div className="flex flex-col items-start gap-0 flex-1">
-                <span className="text-sm" style={{ color: "#f8fafc" }}>
+                <span className="text-sm" style={{ color: "#F5F7F2" }}>
                   Customer Support
                 </span>
-                <span className="text-[11px]" style={{ color: "#94a3b8" }}>
+                <span className="text-[11px]" style={{ color: "#B8C0AE" }}>
                   Get help with your wallet
                 </span>
               </div>
-              <ChevronRight className="w-5 h-5" style={{ color: "#94a3b8" }} />
+              <ChevronRight className="w-5 h-5" style={{ color: "#B8C0AE" }} />
             </button>
           </div>
         </div>
@@ -199,15 +199,15 @@ export default function WalletSettingsScreen({
         {/* Footer Info */}
         <div className="flex-1 flex flex-col justify-end items-center gap-2 py-8">
           <div className="flex items-center gap-1.5">
-            <Shield className="w-3.5 h-3.5" style={{ color: "#f8fafc" }} />
+            <Shield className="w-3.5 h-3.5" style={{ color: "#F5F7F2" }} />
             <span
               className="text-[10px] font-bold uppercase tracking-wider"
-              style={{ color: "#f8fafc", letterSpacing: "1px" }}
+              style={{ color: "#F5F7F2", letterSpacing: "1px" }}
             >
               Secured by GFT Protocol
             </span>
           </div>
-          <span className="text-[10px]" style={{ color: "#94a3b8" }}>
+          <span className="text-[10px]" style={{ color: "#B8C0AE" }}>
             Version 2.4.0 (Build 842)
           </span>
         </div>

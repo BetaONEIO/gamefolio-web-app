@@ -7,7 +7,11 @@ import { Upload, ArrowLeft, Play, TrendingUp, Camera, Users, Clock, Calendar, Ca
 import { Link, useLocation } from "wouter";
 import { ClipWithUser, Game } from "@shared/schema";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
+import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
+import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
+import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreenshotsViewer";
+import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useMobile } from "@/hooks/use-mobile";
@@ -29,6 +33,10 @@ const GamePage = () => {
   const [contentType, setContentType] = useState<'clips' | 'reels' | 'screenshots'>('clips');
   const [selectedUserId, setSelectedUserId] = useState<string>('all');
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [mobileViewerOpen, setMobileViewerOpen] = useState(false);
+  const [mobileViewerIndex, setMobileViewerIndex] = useState(0);
+  const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
+  const [mobileViewerClipId, setMobileViewerClipId] = useState<number | null>(null);
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -154,7 +162,13 @@ const GamePage = () => {
       if (contentType === 'reels') return c.videoType === 'reel';
       return true;
     });
-  const rawDisplayData = currentData?.length ? currentData : fallbackData;
+  const rawDisplayData = (() => {
+    const source = currentData?.length ? currentData : fallbackData;
+    if (!source) return source;
+    if (contentType === 'clips') return (source as any[]).filter((c: any) => !c.videoType || c.videoType === 'clip');
+    if (contentType === 'reels') return (source as any[]).filter((c: any) => c.videoType === 'reel');
+    return source;
+  })();
   
   const uniqueUsers = useMemo(() => {
     if (!rawDisplayData) return [];
@@ -180,6 +194,14 @@ const GamePage = () => {
     const userId = parseInt(selectedUserId);
     return rawDisplayData.filter((item: any) => item.user?.id === userId);
   }, [rawDisplayData, selectedUserId]);
+
+  const handleClipClick = (clipId: number) => {
+    const clips = displayData as ClipWithUser[];
+    const idx = clips.findIndex(c => c.id === clipId);
+    setMobileViewerIndex(idx >= 0 ? idx : 0);
+    setMobileViewerClipId(clipId);
+    setMobileViewerOpen(true);
+  };
 
   if (!match || !gameSlug) {
     return <div>Game not found</div>;
@@ -224,6 +246,22 @@ const GamePage = () => {
     : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6";
 
   return (
+    <>
+    {isMobile && mobileViewerOpen && (displayData as ClipWithUser[]).length > 0 && (
+      contentType === 'clips' ? (
+        <MobileClipsViewerOverlay
+          clips={displayData as ClipWithUser[]}
+          startClipId={mobileViewerClipId ?? (displayData as ClipWithUser[])[mobileViewerIndex]?.id ?? 0}
+          onBack={() => setMobileViewerOpen(false)}
+        />
+      ) : (
+        <MobileTrendingViewer
+          content={displayData as ClipWithUser[]}
+          initialIndex={mobileViewerIndex}
+          onClose={() => setMobileViewerOpen(false)}
+        />
+      )
+    )}
     <div className="py-6 px-4 sm:px-6">
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="sm" onClick={() => navigate("/explore")}>
@@ -373,7 +411,7 @@ const GamePage = () => {
             ))}
           </div>
         ) : displayData && displayData.length > 0 ? (
-          <div className={gridColsClass}>
+          <div className={`${gridColsClass} pb-20`}>
             {contentType === 'screenshots' ? (
               displayData.map((screenshot: any) => (
                 <ScreenshotCard
@@ -382,6 +420,7 @@ const GamePage = () => {
                   isOwnProfile={user?.id === screenshot.userId}
                   profile={screenshot.user}
                   showUserInfo={true}
+                  onSelect={(s) => setSelectedScreenshot(s)}
                 />
               ))
             ) : contentType === 'reels' ? (
@@ -401,7 +440,8 @@ const GamePage = () => {
                   clip={clip}
                   userId={user?.id}
                   compact={false}
-                  clipsList={displayData}
+                  clipsList={displayData as ClipWithUser[]}
+                  onCardClick={isMobile ? handleClipClick : undefined}
                 />
               ))
             )}
@@ -427,6 +467,21 @@ const GamePage = () => {
         )}
       </div>
 
+      {selectedScreenshot && isMobile ? (
+        <MobileScreenshotsViewer
+          screenshots={displayData as any[]}
+          startId={selectedScreenshot.id}
+          onBack={() => setSelectedScreenshot(null)}
+        />
+      ) : (
+        <ScreenshotLightbox
+          screenshot={selectedScreenshot}
+          onClose={() => setSelectedScreenshot(null)}
+          screenshots={displayData as any[]}
+          onNavigate={(s: any) => setSelectedScreenshot(s)}
+        />
+      )}
+
       <Dialog open={showUploadDialog} onOpenChange={(open) => {
         if (!open) handleUploadDialogClose();
         else setShowUploadDialog(true);
@@ -443,6 +498,7 @@ const GamePage = () => {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 };
 

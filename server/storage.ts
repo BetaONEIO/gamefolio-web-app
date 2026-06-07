@@ -54,7 +54,9 @@ import {
   type ScreenshotCommentWithUser,
   type XpSetting, type InsertXpSetting,
   adminAlertSettings,
-  type AdminAlertSettings, type InsertAdminAlertSettings
+  type AdminAlertSettings, type InsertAdminAlertSettings,
+  type PushToken, type InsertPushToken,
+  type PushBroadcast, type PushAudience
 } from "@shared/schema";
 
 export interface IStorage {
@@ -69,7 +71,8 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | null>;
   getUserByExternalId?(externalId: string, authProvider: string): Promise<User | null>;
   getUserByReferralCode(referralCode: string): Promise<User | null>;
-  getReferralStats(userId: number): Promise<{ referralCount: number; totalXpEarned: number; referralCode: string | null }>;
+  getReferralStats(userId: number): Promise<{ referralCount: number; totalXpEarned: number; referralCode: string | null; referralCodeCustomized: boolean }>;
+  customizeReferralCode(userId: number, newCode: string): Promise<{ success: boolean; message: string }>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<User>): Promise<User | null>;
   updateUserType(id: number, userType: string): Promise<User | null>;
@@ -85,6 +88,7 @@ export interface IStorage {
   getClipCount(): Promise<number>;
   getGameCount(): Promise<number>;
   getAllClips(limit?: number, offset?: number, currentUserId?: number): Promise<ClipWithUser[]>;
+  getLatestClips(limit?: number, since?: Date, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]>;
   getUserTypeDistribution(): Promise<{type: string, count: number}[]>;
   getAgeRangeDistribution(): Promise<{range: string, count: number}[]>;
   getTopGames(limit?: number): Promise<Game[]>;
@@ -134,6 +138,7 @@ export interface IStorage {
   getTrendingClips(period: string, limit: number, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]>;
   getTrendingReels(period: string, limit: number, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]>;
   getLatestReels(limit: number, currentUserId?: number): Promise<ClipWithUser[]>;
+  getLatestScreenshots(limit: number, gameId?: number): Promise<any[]>;
   getClipById(id: number): Promise<ClipWithUser | null>;
 
   // Like operations
@@ -261,6 +266,7 @@ export interface IStorage {
   // Top contributors operations
   createTopContributor(contributor: InsertTopContributor): Promise<TopContributor>;
   getTopContributors(periodType: string, limit?: number): Promise<(TopContributor & { user: User })[]>;
+  getTopContributorByPeriod(periodType: string, period: string, year: number): Promise<TopContributor | null>;
   getTopContributorsByPeriod(periodType: string, period: string, year: number): Promise<(TopContributor & { user: User })[]>;
 
   // XP operations (legacy - kept for backward compatibility, totalXP now stores points)
@@ -284,6 +290,28 @@ export interface IStorage {
   markAllNotificationsAsRead(userId: number): Promise<boolean>;
   deleteNotification(id: number): Promise<boolean>;
   deleteAllNotifications(userId: number): Promise<boolean>;
+  hasContentByUserId(userId: number): Promise<{ hasClips: boolean; hasScreenshots: boolean }>;
+
+  // Push notifications
+  upsertPushToken(input: InsertPushToken): Promise<PushToken>;
+  deletePushToken(token: string): Promise<boolean>;
+  deletePushTokensByUser(userId: number): Promise<number>;
+  getPushTokensByUserIds(userIds: number[]): Promise<PushToken[]>;
+  getAllPushTokens(): Promise<PushToken[]>;
+  getPushTokensByRole(role: string): Promise<PushToken[]>;
+  getPushTokensForProUsers(): Promise<PushToken[]>;
+  removeStalePushTokens(tokens: string[]): Promise<number>;
+  createPushBroadcast(input: {
+    sentByUserId: number;
+    title: string;
+    body: string;
+    actionUrl?: string | null;
+    audience: PushAudience;
+    recipientCount: number;
+    successCount: number;
+    failureCount: number;
+  }): Promise<PushBroadcast>;
+  getRecentPushBroadcasts(limit?: number): Promise<PushBroadcast[]>;
 
   // Badge definition operations
   createBadge(badge: InsertBadge): Promise<Badge>;
@@ -329,8 +357,10 @@ export interface IStorage {
 
   // Screenshot operations
   getScreenshot(id: number): Promise<Screenshot | null>;
+  getScreenshotWithUser(id: number): Promise<(Screenshot & { user: User; game?: any }) | undefined>;
+  updateScreenshot(id: number, data: Partial<Screenshot>): Promise<Screenshot | null>;
   getScreenshotByShareCode(shareCode: string): Promise<Screenshot | null>;
-  getAllScreenshots(limit?: number, offset?: number): Promise<Array<{
+  getAllScreenshots(limit?: number, offset?: number, includeAllUsers?: boolean): Promise<Array<{
     id: number;
     title: string;
     description?: string | null;

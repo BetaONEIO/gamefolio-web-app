@@ -10,11 +10,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
+import { useMobile } from "@/hooks/use-mobile";
 import { NameTagDetailDialog } from "@/components/store/NameTagDetailDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { LevelBadgeWithProgress } from "@/components/profile/LevelBadgeWithProgress";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { 
   Heart, 
   Users, 
@@ -30,7 +32,6 @@ import {
   Eye,
   Clock,
   Flame,
-  Share2,
   User as UserIcon,
   MessageSquare,
   Flag,
@@ -70,15 +71,17 @@ import {
 } from "@/components/ui/dialog";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
+import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreenshotsViewer";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { ModeratorIcon } from "@/components/ui/moderator-icon";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
+import { PartnerBadge } from "@/components/ui/partner-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { useProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
 import { BannerLightbox, useBannerLightbox } from "@/components/ui/banner-lightbox";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
@@ -88,6 +91,7 @@ import { cn } from "@/lib/utils";
 import NotFound from "./not-found";
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET, NFT_CONTRACT_ADDRESS } from "@shared/contracts";
+import { OutroPanel } from "@/components/profile/OutroPanel";
 
 const GameSelectionDialog = React.lazy(() => import("@/components/games/GameSelectionDialog"));
 const CommentSection = React.lazy(() => import("@/components/clips/CommentSection"));
@@ -116,6 +120,26 @@ interface OwnedNft {
 interface OwnedNftsData {
   nfts: OwnedNft[];
   count: number;
+}
+
+function ExpandableBio({ bio, limit = 150, className, style }: { bio: string; limit?: number; className?: string; style?: React.CSSProperties }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = bio.length > limit;
+  const displayed = isLong && !expanded ? bio.slice(0, limit).trimEnd() + "…" : bio;
+  return (
+    <span className={className} style={style}>
+      {displayed}
+      {isLong && (
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="ml-1 font-semibold underline-offset-2 hover:underline focus:outline-none"
+          style={{ color: "#B7FF18", background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "inherit", lineHeight: "inherit" }}
+        >
+          {expanded ? "See less" : "See more"}
+        </button>
+      )}
+    </span>
+  );
 }
 
 const RARE_TRAITS: Record<string, string[]> = {
@@ -170,8 +194,8 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
   legendary: {
     bg: "bg-gradient-to-b from-[#f6cfff] via-[#cefafe] to-[#fff085]",
     glow: "shadow-[0_0_25px_rgba(236,72,153,0.4)]",
-    dotColor: "bg-primary shadow-[0_0_8px_#A2F000]",
-    textStyle: "bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] bg-clip-text text-transparent font-black",
+    dotColor: "bg-primary shadow-[0_0_8px_#B7FF1A]",
+    textStyle: "bg-gradient-to-r from-[#B7FF1A] to-[#B7FF1A] bg-clip-text text-transparent font-black",
     nameColor: "text-slate-800",
   },
   epic: {
@@ -191,17 +215,17 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
   common: {
     bg: "bg-slate-900",
     glow: "",
-    dotColor: "bg-slate-400/50 shadow-[0_0_8px_#1e293b]",
+    dotColor: "bg-slate-400/50 shadow-[0_0_8px_#1B2A33]",
     textStyle: "text-slate-400 font-normal",
     nameColor: "text-slate-50",
   },
 };
 
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
-  streamer: { label: "Streamer", icon: Video, color: "bg-primary/20 text-primary border-primary/30" },
-  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-primary/20 text-primary border-primary/30" },
+  streamer: { label: "Streamer", icon: Video, color: "bg-[#B7FF1A]/20 text-[#B7FF1A] border-[#B7FF1A]/30" },
+  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-[#B7FF1A]/20 text-[#B7FF1A] border-[#B7FF1A]/30" },
   professional_gamer: { label: "Professional Gamer", icon: Trophy, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
-  content_creator: { label: "Content Creator", icon: Upload, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+  content_creator: { label: "Content Creator", icon: Upload, color: "bg-[#B7FF1A]/20 text-[#B7FF1A] border-[#B7FF1A]/30" },
   indie_developer: { label: "Indie Developer", icon: Code, color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
   viewer: { label: "Viewer", icon: Eye, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
   filthy_casual: { label: "Filthy Casual", icon: Coffee, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
@@ -228,6 +252,11 @@ const ProfilePage = () => {
   const { lightboxData: bannerLightboxData, openLightbox: openBannerLightbox, closeLightbox: closeBannerLightbox } = useBannerLightbox();
   const isOwnProfile = currentUser?.username === username;
 
+  // Mac the cat easter egg: discovering /mac grants a one-time 5,000 XP bonus.
+  const isMacProfile = username?.toLowerCase() === "mac";
+  const [macBonusXp, setMacBonusXp] = useState<number | null>(null);
+  const macDiscoverFiredRef = useRef(false);
+
   // Handle highlighting content from share links
   const [highlightedContent, setHighlightedContent] = useState<{type: string, id: string} | null>(null);
 
@@ -253,6 +282,7 @@ const ProfilePage = () => {
   
   // Clip dialog for opening clips/reels
   const { openClipDialog } = useClipDialog();
+  const isMobile = useMobile();
 
   // Profile picture action dialog state  
   const [profileActionDialogOpen, setProfileActionDialogOpen] = useState(false);
@@ -375,6 +405,27 @@ const ProfilePage = () => {
       return failureCount < 3;
     },
   });
+
+  // Mac the cat easter egg: when a signed-in user lands on /mac, silently claim
+  // the one-time 5,000 XP bonus. The ref guards against React double-invoke /
+  // re-renders so we only fire once per mount; the server is idempotent too.
+  useEffect(() => {
+    if (!isMacProfile || !currentUser || macDiscoverFiredRef.current) return;
+    macDiscoverFiredRef.current = true;
+    (async () => {
+      try {
+        const res = await apiRequest("POST", "/api/mac/discover");
+        const data = await res.json();
+        if (data?.granted) {
+          setMacBonusXp(data.xp ?? 5000);
+          // Refresh the signed-in user so their XP / level updates everywhere.
+          queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        }
+      } catch (err) {
+        console.error("Mac bonus discover failed", err);
+      }
+    })();
+  }, [isMacProfile, currentUser]);
 
   // Get signed URL for profile avatar (private bucket)
   const { signedUrl: profileAvatarSignedUrl } = useSignedUrl(profile?.avatarUrl);
@@ -535,16 +586,24 @@ const ProfilePage = () => {
       const response = await apiRequest('DELETE', `/api/clips/${clipId}`);
       return response;
     },
-    onSuccess: () => {
-      // Invalidate clips data to refresh the UI
+    onSuccess: (_, clipId) => {
+      // Immediately remove the clip from all caches so the UI updates instantly
+      const removeClip = (old: any) => {
+        if (!old) return old;
+        if (Array.isArray(old)) return old.filter((c: any) => c.id !== clipId);
+        if (old?.clips && Array.isArray(old.clips)) return { ...old, clips: old.clips.filter((c: any) => c.id !== clipId) };
+        return old;
+      };
+      queryClient.setQueryData([`/api/users/${username}/clips`], removeClip);
+      queryClient.setQueryData(['/api/clips/latest'], removeClip);
+      queryClient.setQueryData(['/api/reels/latest'], removeClip);
+
+      // Then invalidate in the background for eventual consistency
       queryClient.invalidateQueries({ queryKey: [`/api/users/${username}/clips`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${username}`] });
-
-      // Invalidate trending content cache so deleted clips don't show up
       queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
       queryClient.invalidateQueries({ queryKey: ['/api/clips/reels/trending'] });
-      
-      // Invalidate reels queries (for home page, trending page, etc.)
+      queryClient.invalidateQueries({ queryKey: ['/api/clips/latest'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reels/latest'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reels/trending'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reels'] });
@@ -1100,8 +1159,8 @@ const ProfilePage = () => {
   const bannerStyle = useMemo(() => ({
     backgroundImage: resolvedBannerUrl 
       ? `url(${resolvedBannerUrl})` 
-      : `linear-gradient(135deg, ${profile?.primaryColor || '#0f172a'}, ${profile?.accentColor || '#B7FF1A'}, transparent)`,
-    backgroundColor: resolvedBannerUrl ? 'transparent' : (profile?.primaryColor || '#0f172a'),
+      : `linear-gradient(135deg, ${profile?.primaryColor || '#0B1218'}, ${profile?.accentColor || '#B7FF1A'}, transparent)`,
+    backgroundColor: resolvedBannerUrl ? 'transparent' : (profile?.primaryColor || '#0B1218'),
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     boxShadow: 'inset 0 -10px 20px rgba(0, 0, 0, 0.2)',
@@ -1120,7 +1179,7 @@ const ProfilePage = () => {
   //     requestAnimationFrame(() => {
   //       // Ensure complete isolation - set CSS custom properties only on this element
   //       scope.style.setProperty('--user-accent-color', profile.accentColor || '#B7FF1A');
-  //       scope.style.setProperty('--user-primary-color', profile.primaryColor || '#02172C');
+  //       scope.style.setProperty('--user-primary-color', profile.primaryColor || '#071013');
   //       scope.style.setProperty('--user-avatar-border-color', profile.avatarBorderColor || '#B7FF1A');
 
   //       // Calculate alpha version of accent color for subtle effects
@@ -1176,7 +1235,75 @@ const ProfilePage = () => {
     const errorMessage = (profileError as Error)?.message || '';
     const is404Error = errorMessage.includes('404:') || errorMessage.includes('User not found');
     const is403Error = errorMessage.includes('403:') || errorMessage.includes('private');
-    
+
+    // Parse suspension/ban info from 403 response body
+    let suspendedReason: string | null = null;
+    let bannedReason: string | null = null;
+    if (is403Error) {
+      try {
+        const jsonStart = errorMessage.indexOf('{');
+        if (jsonStart !== -1) {
+          const parsed = JSON.parse(errorMessage.slice(jsonStart));
+          if (parsed.message === 'ACCOUNT_SUSPENDED') suspendedReason = parsed.reason || 'Account temporarily suspended';
+          if (parsed.message === 'ACCOUNT_BANNED') bannedReason = parsed.reason || 'Violation of community guidelines';
+        }
+      } catch {}
+    }
+
+    if (suspendedReason !== null) {
+      return (
+        <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-secondary/20">
+          <div className="max-w-lg w-full text-center space-y-6">
+            <div className="flex justify-center mb-4">
+              <img src="/attached_assets/Gamefolio logo copy.png" alt="Gamefolio" className="h-16 w-auto drop-shadow-lg" />
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-center">
+                <div className="h-20 w-20 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-yellow-600 dark:text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" /></svg>
+                </div>
+              </div>
+              <h1 className="text-3xl font-bold text-foreground">Account Suspended</h1>
+              <p className="text-muted-foreground leading-relaxed">Your account has been temporarily suspended. You cannot access your profile until the suspension is lifted.</p>
+              <div className="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4 text-left">
+                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Reason</p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">{suspendedReason}</p>
+              </div>
+              <p className="text-sm text-muted-foreground">If you believe this is an error, please contact support.</p>
+            </div>
+            <Button onClick={() => setLocation("/")} variant="outline" className="mt-4">Go Home</Button>
+          </div>
+        </div>
+      );
+    }
+
+    if (bannedReason !== null) {
+      return (
+        <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-secondary/20">
+          <div className="max-w-lg w-full text-center space-y-6">
+            <div className="flex justify-center mb-4">
+              <img src="/attached_assets/Gamefolio logo copy.png" alt="Gamefolio" className="h-16 w-auto drop-shadow-lg" />
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-center">
+                <div className="h-20 w-20 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636a9 9 0 010 12.728M5.636 5.636a9 9 0 000 12.728M9 10h.01M15 10h.01M10 14s1 2 4 0" /></svg>
+                </div>
+              </div>
+              <h1 className="text-3xl font-bold text-foreground">Account Banned</h1>
+              <p className="text-muted-foreground leading-relaxed">Your account has been permanently banned from Gamefolio.</p>
+              <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-left">
+                <p className="text-sm font-medium text-red-800 dark:text-red-200">Reason</p>
+                <p className="text-sm text-red-700 dark:text-red-300 mt-1">{bannedReason}</p>
+              </div>
+              <p className="text-sm text-muted-foreground">If you believe this is an error, please contact support.</p>
+            </div>
+            <Button onClick={() => setLocation("/")} variant="outline" className="mt-4">Go Home</Button>
+          </div>
+        </div>
+      );
+    }
+
     if (is404Error) {
       // User not found
       return (
@@ -1324,9 +1451,9 @@ const ProfilePage = () => {
   const isCyberpunkTheme = !isLightBackground && accentColor?.toLowerCase() === '#00d3f2';
   const isNeoTheme = !isLightBackground && accentColor?.toLowerCase() === '#00ff41';
   const isGothicTheme = !isLightBackground && accentColor?.toLowerCase() === '#c27aff' && backgroundColor?.toLowerCase() === '#1e053a';
-  const isBlocksTheme = !isLightBackground && accentColor?.toLowerCase() === '#B7FF1A' && backgroundColor?.toLowerCase() === '#1a1a1a';
-  const isForestTheme = !isLightBackground && accentColor?.toLowerCase() === '#B7FF1A' && backgroundColor?.toLowerCase() === '#0a2f1f';
-  const isWatermelonTheme = accentColor?.toLowerCase() === '#B7FF1A' && backgroundColor?.toLowerCase() === '#ff4d6d';
+  const isBlocksTheme = !isLightBackground && accentColor?.toLowerCase() === '#b7ff1a' && backgroundColor?.toLowerCase() === '#1a1a1a';
+  const isForestTheme = !isLightBackground && accentColor?.toLowerCase() === '#b7ff1a' && backgroundColor?.toLowerCase() === '#0a2f1f';
+  const isWatermelonTheme = accentColor?.toLowerCase() === '#b7ff1a' && backgroundColor?.toLowerCase() === '#ff4d6d';
   const isElectricTheme = !isLightBackground && accentColor?.toLowerCase() === '#ffe033' && backgroundColor?.toLowerCase() === '#1a1200';
 
   const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isLightBackground;
@@ -1501,17 +1628,26 @@ const ProfilePage = () => {
     screenshots: '#27ae60',
     favorites: '#f39c12',
   };
-  const getTabStyle = (tabName: string) => ({
-    backgroundColor: isCartoonTheme ? 'transparent' : activeTab === tabName ? (isBlocksTheme ? (blocksTabColors[tabName] || accentColor) : isForestTheme ? '#e8d5b7' : isMacTheme ? accentColor : 'transparent') : 'transparent',
-    color: isCartoonTheme ? (activeTab === tabName ? (cartoonTabColors[tabName] || '#1d1d1f') : 'rgba(0,0,0,0.25)') : activeTab === tabName ? (isBlocksTheme ? '#1a1a1a' : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#5C3317' : accentColor) : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#c4a882' : isLightBackground ? accentColor : undefined,
-    ...(isCartoonTheme ? { fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: '800', letterSpacing: '-0.5px', fontSize: '1.1rem', borderBottom: activeTab === tabName ? `4px solid ${cartoonTabColors[tabName] || 'gold'}` : '4px solid transparent', borderRadius: '0', paddingBottom: '6px' } : {}),
-    ...(isZombieTheme ? { fontFamily: "'Creepster', cursive", letterSpacing: '2px', fontSize: '0.8rem' } : {}),
-    ...(isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2.5px', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase' as const } : {}),
-    ...(isNeoTheme ? { fontFamily: "'JetBrains Mono', monospace", letterSpacing: '1.5px', fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase' as const } : {}),
-    ...(isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.55rem', letterSpacing: '0.5px', textTransform: 'uppercase' as const, borderRadius: '2px' } : {}),
-    ...(isGothicTheme ? { fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '1.5px', fontSize: '0.78rem' } : {}),
-    ...(isElectricTheme ? { fontFamily: "'Bangers', 'Impact', cursive", letterSpacing: '2px', fontSize: '0.85rem', textTransform: 'uppercase' as const } : {}),
-  });
+  const getTabStyle = (tabName: string) => {
+    const isActive = activeTab === tabName;
+    const frostedGlass = isActive ? {
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+      border: isMacTheme ? '1px solid rgba(255,255,255,0.25)' : `1px solid ${accentColor}25`,
+    } : {};
+    return {
+      backgroundColor: isCartoonTheme ? 'transparent' : isActive ? (isBlocksTheme ? (blocksTabColors[tabName] || accentColor) : isForestTheme ? '#e8d5b7' : isMacTheme ? 'rgba(255,255,255,0.18)' : `${accentColor}22`) : 'transparent',
+      color: isCartoonTheme ? (isActive ? (cartoonTabColors[tabName] || '#1d1d1f') : 'rgba(0,0,0,0.25)') : isActive ? (isBlocksTheme ? '#1a1a1a' : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#5C3317' : accentColor) : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#c4a882' : isLightBackground ? accentColor : undefined,
+      ...(!isCartoonTheme && !isBlocksTheme && !isForestTheme ? frostedGlass : {}),
+      ...(isCartoonTheme ? { fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: '800', letterSpacing: '-0.5px', fontSize: '1.1rem', borderBottom: isActive ? `4px solid ${cartoonTabColors[tabName] || 'gold'}` : '4px solid transparent', borderRadius: '0', paddingBottom: '6px' } : {}),
+      ...(isZombieTheme ? { fontFamily: "'Creepster', cursive", letterSpacing: '2px', fontSize: '0.8rem' } : {}),
+      ...(isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2.5px', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase' as const } : {}),
+      ...(isNeoTheme ? { fontFamily: "'JetBrains Mono', monospace", letterSpacing: '1.5px', fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase' as const } : {}),
+      ...(isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.55rem', letterSpacing: '0.5px', textTransform: 'uppercase' as const, borderRadius: '2px' } : {}),
+      ...(isGothicTheme ? { fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '1.5px', fontSize: '0.78rem' } : {}),
+      ...(isElectricTheme ? { fontFamily: "'Bangers', 'Impact', cursive", letterSpacing: '2px', fontSize: '0.85rem', textTransform: 'uppercase' as const } : {}),
+    };
+  };
 
   const nameTagBgStyle = isWatermelonTheme ? {
     background: '#ffb3c1',
@@ -1674,7 +1810,7 @@ const ProfilePage = () => {
 
   const bgRgb = hexToRgb(backgroundColor);
   const accentRgb = hexToRgb(accentColor);
-  const defaultThemeColor = profile.primaryColor || '#0B2232';
+  const defaultThemeColor = profile.primaryColor || '#071013';
 
   const selectedProfileNftDetail = selectedProfileNft ? (() => {
     const { score } = getNftRarity(selectedProfileNft);
@@ -1747,10 +1883,12 @@ const ProfilePage = () => {
         zIndex: 1
       } : (profile as any).profileBackgroundGradient !== false ? {
         background: isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
+        backgroundAttachment: 'fixed',
         position: 'relative',
         zIndex: 1
       } : {
         backgroundColor: backgroundColor,
+        backgroundAttachment: 'fixed',
         position: 'relative',
         zIndex: 1
       }}
@@ -1767,7 +1905,7 @@ const ProfilePage = () => {
         if (profile.birthday !== todayMMDD) return null;
         return (
           <div className="relative overflow-hidden rounded-xl mx-1 md:mx-0 mb-3" style={{
-            background: 'linear-gradient(135deg, #B7FF1A 0%, #A2F000 50%, #EAB308 100%)',
+            background: 'linear-gradient(135deg, #B7FF1A 0%, #B7FF1A 50%, #EAB308 100%)',
             padding: '1px',
           }}>
             <div className="relative rounded-xl px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-center gap-3 text-center" style={{
@@ -2188,7 +2326,7 @@ const ProfilePage = () => {
           .neo-canvas {
             position: fixed; inset: 0; pointer-events: none; z-index: 0;
             opacity: 0.18;
-            animation: neoFlicker 8s step-start infinite;
+            animation: neoFlicker 30s step-start infinite;
           }
           .neo-vignette {
             position: fixed; inset: 0; pointer-events: none; z-index: 0;
@@ -2197,16 +2335,16 @@ const ProfilePage = () => {
           .neo-scanline {
             position: fixed; left: 0; width: 100%; height: 2px; pointer-events: none; z-index: 0;
             background: linear-gradient(180deg, transparent 0%, #00ff4122 50%, transparent 100%);
-            animation: neoScanline 6s linear infinite;
+            animation: neoScanline 30s linear infinite;
           }
           .neo-stats-card {
-            animation: neoGlow 3s ease-in-out infinite;
+            animation: neoGlow 30s ease-in-out infinite;
           }
           .neo-tab-list {
             background: #000800 !important;
             border: 1px solid #00ff4177 !important;
             border-radius: 2px !important;
-            animation: neoGlow 3s ease-in-out infinite;
+            animation: neoGlow 30s ease-in-out infinite;
           }
           .neo-gradient-text {
             background: linear-gradient(90deg, #00ff41 0%, #88ffaa 50%, #00ff41 100%);
@@ -2214,7 +2352,7 @@ const ProfilePage = () => {
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            animation: neoTextShift 4s linear infinite;
+            animation: neoTextShift 30s linear infinite;
           }
           @keyframes neoTextShift {
             0%   { background-position: 0% center; }
@@ -2533,7 +2671,7 @@ const ProfilePage = () => {
                 className="p-2 h-10 w-10 rounded-full hover:opacity-90 backdrop-blur-sm"
                 style={shareButtonStyle}
               >
-                <Share2 className="w-5 h-5" />
+                <ShareLaunchIcon size={20} />
               </Button>
             }
           />
@@ -2582,9 +2720,9 @@ const ProfilePage = () => {
                 <div className="w-3 h-3 rounded-full bg-primary shadow-[0_0_0_2px_rgba(0,0,0,0.8)]"></div>
               </div>
               )}
-              {/* Level Badge with Progress - positioned halfway on/off bottom border */}
+              {/* Level Badge with Progress - bottom-right of avatar */}
               {!selectedProfileNft && !lightboxData.isOpen && (
-              <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 scale-75" style={{ top: '100%' }}>
+              <div className="absolute z-30" style={{ bottom: '-2px', right: '-2px' }}>
                 <LevelBadgeWithProgress 
                   userId={profile.id}
                   level={profile.level || 1}
@@ -2694,7 +2832,7 @@ const ProfilePage = () => {
                       style={{
                         width: '120px',
                         height: '28px',
-                        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
+                        background: 'linear-gradient(135deg, rgba(16, 25, 35, 0.8) 0%, rgba(11, 18, 24, 0.9) 100%)',
                         border: '1px solid rgba(148, 163, 184, 0.2)',
                         boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
                       }}
@@ -2740,6 +2878,7 @@ const ProfilePage = () => {
                 isModerator={(profile.role === "moderator" || profile.role === "admin") && !verificationBadgeData?.verificationBadge} 
                 size="lg" 
               />
+              <PartnerBadge isPartner={(profile as any).isPartner} size="lg" />
             </div>
             <span className="text-sm font-normal" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.6)' }}>@{profile.username}</span>
             {/* User type badges on their own line */}
@@ -2782,7 +2921,9 @@ const ProfilePage = () => {
           {/* Bio — below the streamer badge, outside the card */}
           {profile.bio && (
             <div className="mx-4 mt-2 mb-1">
-              <p className={`text-sm pr-4 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>{profile.bio}</p>
+              <p className={`text-sm pr-4 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>
+                <ExpandableBio bio={profile.bio} style={{ color: isLightBackground ? '#1d293d' : undefined }} />
+              </p>
             </div>
           )}
 
@@ -2794,7 +2935,7 @@ const ProfilePage = () => {
               className="absolute -top-3 -right-1 z-10 px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
               style={{ 
                 background: profileSectionTab === 'collection'
-                  ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : '#1a1a2e')
+                  ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : '#0B1218')
                   : isWatermelonTheme
                     ? '#ffb3c1'
                     : isLightBackground
@@ -2806,14 +2947,14 @@ const ProfilePage = () => {
                           : isNeoTheme
                             ? 'linear-gradient(180deg, #003300 0%, #001400 100%)'
                             : isBlocksTheme
-                              ? 'linear-gradient(180deg, #B7FF1A 0%, #A2F000 100%)'
+                              ? '#B7FF1A'
                               : isForestTheme
                                 ? '#1d3932'
                                 : isGothicTheme
                                   ? 'linear-gradient(135deg, #3d0070 0%, #1e053a 100%)'
                                   : isCartoonTheme
                                     ? (profileSectionTab === 'collection' ? '#fffaec' : 'linear-gradient(135deg, #ff5e5e 0%, #ff7a5e 100%)')
-                                    : 'linear-gradient(270deg, #B7FF1A 0%, #A2F000 100%)',
+                                    : '#B7FF1A',
                 color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : '#0f172b',
                 border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #B7FF1A' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : undefined,
                 fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : isGothicTheme ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" : isCartoonTheme ? "'Bricolage Grotesque', 'Arial Black', sans-serif" : undefined,
@@ -2829,6 +2970,7 @@ const ProfilePage = () => {
             {/* Stats card container */}
             <div
               className="relative mt-4 rounded-lg transition-all duration-300"
+              style={{ width: '100%', maxWidth: '600px' }}
             >
 
             <div 
@@ -2857,6 +2999,7 @@ const ProfilePage = () => {
                 boxShadow: '0 0 16px #00ff4122, 0 0 40px #00ff4111',
               } : isBlocksTheme ? {
                 background: '#2a2a2a',
+                border: '1px solid rgba(183, 255, 26, 0.2)',
               } : isForestTheme ? {
                 background: '#e8d5b7',
                 border: '1px solid #c4a88266',
@@ -2865,9 +3008,8 @@ const ProfilePage = () => {
                 border: '1px solid #c27aff55',
                 boxShadow: '0 0 20px #c27aff22, 0 0 40px #c27aff11',
               } : {
-                background: `${accentColor}14`,
-                border: `1px solid ${accentColor}55`,
-                boxShadow: `0 0 20px ${accentColor}12`,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.1)',
               }}
             >
               <div className="p-4">
@@ -2913,15 +3055,15 @@ const ProfilePage = () => {
                   <div className="flex mt-1" style={isWatermelonTheme ? { gap: 0 } : { gap: '1.5rem' }}>
                     <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
                       <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>UPLOADS</span>
+                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: '#B7FF1A', letterSpacing: '0.8px' }}>UPLOADS</span>
                     </div>
                     <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
                       <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : isBlocksTheme ? '#3b82f6' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.followers || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>FOLLOWERS</span>
+                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: '#B7FF1A', letterSpacing: '0.8px' }}>FOLLOWERS</span>
                     </div>
                     <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
                       <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#B7FF1A', color: '#1a1a1a', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>FOLLOWING</span>
+                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#B7FF1A', color: '#1a1a1a', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: '#B7FF1A', letterSpacing: '0.8px' }}>FOLLOWING</span>
                     </div>
                   </div>
                   )}
@@ -3028,6 +3170,18 @@ const ProfilePage = () => {
                 <span>{profile.youtubeUsername}</span>
               </a>
             )}
+            {profile.rumbleUsername && (
+              <a 
+                href={`https://rumble.com/user/${profile.rumbleUsername}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
+                style={{ background: 'rgba(133,199,66,0.15)', color: '#85C742', border: '1px solid rgba(133,199,66,0.3)' }}
+              >
+                <FaYoutube className="w-2.5 h-2.5" style={{ color: '#85C742' }} />
+                <span>{profile.rumbleUsername}</span>
+              </a>
+            )}
             {profile.instagramUsername && (
               <a 
                 href={`https://instagram.com/${profile.instagramUsername}`}
@@ -3098,9 +3252,9 @@ const ProfilePage = () => {
                   themeColor={avatarThemeColor}
                 />
               </div>
-              {/* Level Badge with Progress */}
+              {/* Level Badge with Progress - bottom-right of avatar */}
               {!selectedProfileNft && !lightboxData.isOpen && (
-              <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 z-30">
+              <div className="absolute z-30" style={{ bottom: '2px', right: '2px' }}>
                 <LevelBadgeWithProgress 
                   userId={profile.id}
                   level={profile.level || 1}
@@ -3124,6 +3278,7 @@ const ProfilePage = () => {
                 isModerator={(profile.role === "moderator" || profile.role === "admin") && !verificationBadgeData?.verificationBadge} 
                 size="xl" 
               />
+              <PartnerBadge isPartner={(profile as any).isPartner} size="xl" />
               {profile.userType && profile.showUserType !== false && (() => {
                 const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
                 const displayTypes = userTypes.slice(0, 2);
@@ -3161,7 +3316,9 @@ const ProfilePage = () => {
 
             {/* Bio — below the streamer badge, outside the card */}
             {profile.bio && (
-              <p className={`text-sm max-w-md mt-2 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>{profile.bio}</p>
+              <p className={`text-sm max-w-md mt-2 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>
+                <ExpandableBio bio={profile.bio} style={{ color: isLightBackground ? '#1d293d' : undefined }} />
+              </p>
             )}
 
             {/* Profile Info Card — stats only, Collection button on top-right border */}
@@ -3172,7 +3329,7 @@ const ProfilePage = () => {
                 className="absolute -top-3 -right-1 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
                 style={{ 
                   background: profileSectionTab === 'collection'
-                    ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : isCartoonTheme ? '#fffaec' : '#1a1a2e')
+                    ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : isCartoonTheme ? '#fffaec' : '#0B1218')
                     : isWatermelonTheme
                       ? '#ffb3c1'
                       : isLightBackground
@@ -3184,14 +3341,14 @@ const ProfilePage = () => {
                             : isNeoTheme
                               ? 'linear-gradient(180deg, #003300 0%, #001400 100%)'
                               : isBlocksTheme
-                                ? 'linear-gradient(180deg, #B7FF1A 0%, #A2F000 100%)'
+                                ? '#B7FF1A'
                                 : isForestTheme
                                   ? '#1d3932'
                                   : isGothicTheme
                                     ? 'linear-gradient(135deg, #3d0070 0%, #1e053a 100%)'
                                     : isCartoonTheme
                                       ? 'linear-gradient(135deg, #ff5e5e 0%, #ff7a5e 100%)'
-                                      : 'linear-gradient(270deg, #B7FF1A 0%, #A2F000 100%)',
+                                      : '#B7FF1A',
                   color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : '#0f172b',
                   border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #B7FF1A' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : undefined,
                   fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : isGothicTheme ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" : isCartoonTheme ? "'Bricolage Grotesque', 'Arial Black', sans-serif" : undefined,
@@ -3234,13 +3391,13 @@ const ProfilePage = () => {
                   boxShadow: '0 0 16px #00ff4122, 0 0 40px #00ff4111',
                 } : isBlocksTheme ? {
                   background: '#2a2a2a',
+                  border: '1px solid rgba(183, 255, 26, 0.2)',
                 } : isForestTheme ? {
                   background: '#e8d5b7',
                   border: '1px solid #c4a88266',
                 } : {
-                  background: `${accentColor}14`,
-                  border: `1px solid ${accentColor}55`,
-                  boxShadow: `0 0 20px ${accentColor}12`,
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                 }}
               >
                 <div className="p-5">
@@ -3279,7 +3436,7 @@ const ProfilePage = () => {
             </div>
 
             {/* Platform Connections — below the stats card */}
-            {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.instagramUsername || profile.facebookUsername) && (
+            {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.rumbleUsername || profile.instagramUsername || profile.facebookUsername) && (
               <div className={`flex flex-wrap gap-2 mt-4 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''}`}>
                 {profile.steamUsername && (
                   <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('steam')}>
@@ -3339,6 +3496,18 @@ const ProfilePage = () => {
                   >
                     <FaYoutube className="w-3 h-3" />
                     <span>{profile.youtubeUsername}</span>
+                  </a>
+                )}
+                {profile.rumbleUsername && (
+                  <a 
+                    href={`https://rumble.com/user/${profile.rumbleUsername}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
+                    style={{ background: 'rgba(133,199,66,0.15)', color: '#85C742', border: '1px solid rgba(133,199,66,0.3)' }}
+                  >
+                    <FaYoutube className="w-3 h-3" style={{ color: '#85C742' }} />
+                    <span>{profile.rumbleUsername}</span>
                   </a>
                 )}
                 {profile.instagramUsername && (
@@ -3519,7 +3688,7 @@ const ProfilePage = () => {
                           className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg px-4 py-3"
                           style={shareButtonStyle}
                         >
-                          <Share2 className="h-5 w-5" />
+                          <ShareLaunchIcon size={20} />
                         </Button>
                       }
                     />
@@ -3567,7 +3736,7 @@ const ProfilePage = () => {
                           className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
                           style={shareButtonStyle}
                         >
-                          <Share2 className="h-4 w-4" />
+                          <ShareLaunchIcon size={16} />
                         </Button>
                       }
                     />
@@ -3865,12 +4034,12 @@ const ProfilePage = () => {
             className={`w-full max-w-lg lg:max-w-full mx-auto justify-start md:justify-center p-1 relative flex flex-nowrap gap-0.5 overflow-x-auto scrollbar-hide ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : isGothicTheme ? 'rounded-2xl' : isCartoonTheme ? '' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : isForestTheme ? '' : isZombieTheme ? '' : isMacTheme ? '' : isGothicTheme ? '' : isCartoonTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
             style={tabListStyle}
           >
-            {/* Mac Theme – traffic light dots on the left of the tab bar */}
+            {/* Mac Theme – traffic light dots in top-left corner of the tab bar */}
             {isMacTheme && (
-              <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6, alignItems: 'center', zIndex: 2 }}>
-                <div style={{ width: 13, height: 13, borderRadius: '50%', background: '#ff5f57', border: '0.5px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
-                <div style={{ width: 13, height: 13, borderRadius: '50%', background: '#febc2e', border: '0.5px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
-                <div style={{ width: 13, height: 13, borderRadius: '50%', background: '#28c840', border: '0.5px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
+              <div style={{ position: 'absolute', left: 8, top: 6, display: 'flex', gap: 4, alignItems: 'center', zIndex: 2 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff5f57', border: '0.5px solid rgba(0,0,0,0.15)', flexShrink: 0 }} />
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#febc2e', border: '0.5px solid rgba(0,0,0,0.15)', flexShrink: 0 }} />
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#28c840', border: '0.5px solid rgba(0,0,0,0.15)', flexShrink: 0 }} />
               </div>
             )}
             <TabsTrigger 
@@ -3998,7 +4167,7 @@ const ProfilePage = () => {
           })()}
 
           {/* Clips Tab */}
-          <TabsContent value="clips" className="pt-4 px-1 md:px-4">
+          <TabsContent value="clips" className="pt-4 px-1 md:px-4 pb-24">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -4139,7 +4308,7 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(15 clip limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] text-[#071013] font-semibold px-8"
+                  className="bg-[#B7FF1A] hover:bg-[#B7FF1A]/90 text-[#071013] font-semibold px-8"
                 >
                   Go PRO
                 </Button>
@@ -4259,6 +4428,7 @@ const ProfilePage = () => {
                         canDelete={isOwnProfile}
                         onDelete={() => deleteClipMutation.mutate(reel.id)}
                         reelsList={clips?.filter(c => c.videoType === 'reel')}
+                        onCardClick={isMobile ? (reelId, reelsList) => openClipDialog(reelId, reelsList, undefined, 'reel') : undefined}
                       />
                     </div>
                   );
@@ -4289,7 +4459,7 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(15 reel limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] text-[#071013] font-semibold px-8"
+                  className="bg-[#B7FF1A] hover:bg-[#B7FF1A]/90 text-[#071013] font-semibold px-8"
                 >
                   Go PRO
                 </Button>
@@ -4447,7 +4617,7 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(10 screenshot limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] text-[#071013] font-semibold px-8"
+                  className="bg-[#B7FF1A] hover:bg-[#B7FF1A]/90 text-[#071013] font-semibold px-8"
                 >
                   Go PRO
                 </Button>
@@ -4456,7 +4626,7 @@ const ProfilePage = () => {
           </TabsContent>
 
           {/* Favorite Games Tab */}
-          <TabsContent value="favorites" className="pt-6 px-1 md:px-4">
+          <TabsContent value="favorites" className="pt-6 px-1 md:px-4 pb-24">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -4861,7 +5031,9 @@ const ProfilePage = () => {
                 <div>
                   <h3 className="text-lg font-medium mb-2">About {profile.displayName}</h3>
                   <p className="text-muted-foreground">
-                    {profile.bio || `${profile.displayName} hasn't added a bio yet.`}
+                    {profile.bio
+                      ? <ExpandableBio bio={profile.bio} limit={200} className="text-muted-foreground" />
+                      : `${profile.displayName} hasn't added a bio yet.`}
                   </p>
                 </div>
 
@@ -4889,6 +5061,19 @@ const ProfilePage = () => {
                       >
                         <FaXTwitter className="h-5 w-5" />
                         <span>X: @{profile.twitterUsername}</span>
+                      </a>
+                    )}
+
+                    {profile.rumbleUsername && (
+                      <a 
+                        href={`https://rumble.com/user/${profile.rumbleUsername}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:opacity-80 flex items-center gap-2"
+                        style={{ color: '#85C742' }}
+                      >
+                        <FaYoutube className="h-5 w-5" style={{ color: '#85C742' }} />
+                        <span>Rumble: {profile.rumbleUsername}</span>
                       </a>
                     )}
 
@@ -4920,6 +5105,7 @@ const ProfilePage = () => {
 
                     {!profile.youtubeUsername && 
                      !profile.twitterUsername && 
+                     !profile.rumbleUsername &&
                      !profile.steamUsername && 
                      !profile.xboxUsername && 
                      !profile.playstationUsername && (
@@ -4949,6 +5135,10 @@ const ProfilePage = () => {
                     </Button>
                   </div>
                 </div>
+
+                {isOwnProfile && (
+                  <OutroPanel />
+                )}
               </div>
             </div>
           </TabsContent>
@@ -4969,14 +5159,22 @@ const ProfilePage = () => {
           </React.Suspense>
         )}
 
-        {/* Screenshot Lightbox */}
-        <ScreenshotLightbox
-          screenshot={selectedScreenshot}
-          onClose={() => setSelectedScreenshot(null)}
-          currentUserId={currentUser?.id}
-          screenshots={screenshots as any[]}
-          onNavigate={(s: any) => setSelectedScreenshot({ ...s, user: s.user || { id: profile?.id, username: profile?.username, displayName: profile?.displayName, avatarUrl: profile?.avatarUrl } })}
-        />
+        {/* Screenshot viewer — mobile snap-scroll or desktop lightbox */}
+        {selectedScreenshot && isMobile ? (
+          <MobileScreenshotsViewer
+            screenshots={(screenshots as any[]) || [selectedScreenshot]}
+            startId={selectedScreenshot.id}
+            onBack={() => setSelectedScreenshot(null)}
+          />
+        ) : (
+          <ScreenshotLightbox
+            screenshot={selectedScreenshot}
+            onClose={() => setSelectedScreenshot(null)}
+            currentUserId={currentUser?.id}
+            screenshots={screenshots as any[]}
+            onNavigate={(s: any) => setSelectedScreenshot({ ...s, user: s.user || { id: profile?.id, username: profile?.username, displayName: profile?.displayName, avatarUrl: profile?.avatarUrl } })}
+          />
+        )}
 
       {/* Share Dialogs for newly uploaded content */}
       <React.Suspense fallback={null}>
@@ -5032,12 +5230,36 @@ const ProfilePage = () => {
         username={bannerLightboxData.username}
       />
 
-      {/* Join Dialog for Guest Users */}
-      <JoinGamefolioDialog
-        open={isOpen}
-        onOpenChange={closeDialog}
-        actionType={actionType}
-      />
+      {/* Mac the cat easter-egg reward celebration */}
+      <Dialog open={macBonusXp !== null} onOpenChange={(open) => { if (!open) setMacBonusXp(null); }}>
+        <DialogContent className="sm:max-w-md text-center border-amber-500/40 bg-[#0A0A0A]">
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl">You found Mac! 🐱</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-2">
+            <img
+              src="/attached_assets/mac-gamer.png"
+              alt="Mac the gaming cat"
+              className="w-40 h-40 rounded-2xl object-cover ring-2 ring-amber-500/60 shadow-[0_0_40px_-8px_rgba(245,166,35,0.6)]"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+            />
+            <p className="text-amber-400 text-3xl font-extrabold tracking-tight">
+              +{(macBonusXp ?? 0).toLocaleString()} XP
+            </p>
+            <p className="text-sm text-muted-foreground px-2">
+              Mac the gaming cat approves of your snooping. He's tossed you a
+              one-time stash of XP from his secret CAT FUEL™ reserves. Don't tell
+              the other cats. 🐾
+            </p>
+            <button
+              onClick={() => setMacBonusXp(null)}
+              className="mt-1 rounded-lg bg-amber-500 px-6 py-2 font-semibold text-black hover:bg-amber-400 transition-colors"
+            >
+              Purrfect
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ProUpgradeDialog
         open={proUpgradeOpen}
@@ -5083,7 +5305,7 @@ const ProfilePage = () => {
                 favoriteGames={favoriteGames?.slice(0, 5).map(g => ({ id: g.id, name: g.name, imageUrl: g.imageUrl }))}
                 trigger={
                   <Button variant="outline" className="w-full justify-start" onClick={() => setProfileActionDialogOpen(false)}>
-                    <Share2 className="mr-2 h-4 w-4" />
+                    <ShareLaunchIcon size={16} className="mr-2" />
                     Share Profile
                   </Button>
                 }
@@ -5144,6 +5366,7 @@ const ProfilePage = () => {
         ownerName={`@${profile?.username || username}`}
         ownerAvatarUrl={profileAvatarSignedUrl || profile?.avatarUrl || undefined}
       />
+
     </div>
     </>
   );

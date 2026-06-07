@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { AlertSettings } from "@/components/admin/AlertSettings";
+import { PushBroadcastPanel } from "@/components/admin/PushBroadcastPanel";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect, useLocation } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
@@ -1168,6 +1169,8 @@ import {
   Package,
   ChevronDown,
   Clock,
+  PauseCircle,
+  Download,
 } from "lucide-react";
 
 interface PendingGame {
@@ -1828,6 +1831,9 @@ const AdminPage = () => {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [banReason, setBanReason] = useState("");
+  const [actionType, setActionType] = useState<"ban" | "suspend">("ban");
+  const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
+  const [restoreAction, setRestoreAction] = useState<"unsuspend" | "unban">("unsuspend");
   const [badgeDialogOpen, setBadgeDialogOpen] = useState(false);
   const [selectedBadgeType, setSelectedBadgeType] = useState("");
   const [badgeUserSearch, setBadgeUserSearch] = useState("");
@@ -2341,7 +2347,7 @@ const AdminPage = () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"], exact: false });
       toast({
         title: "User banned",
-        description: "The user has been banned successfully.",
+        description: "The user has been permanently banned.",
       });
       setUserDialogOpen(false);
     } catch (error) {
@@ -2358,15 +2364,79 @@ const AdminPage = () => {
       await apiRequest("POST", `/api/admin/users/${userId}/unban`);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"], exact: false });
       toast({
-        title: "User unbanned",
-        description: "The user has been unbanned successfully.",
+        title: "Account restored",
+        description: "The user account has been restored to active.",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to unban user. Please try again.",
+        description: "Failed to restore user. Please try again.",
         variant: "gamefolioError",
       });
+    }
+  };
+
+  const handleSuspendUser = async (userId: number) => {
+    try {
+      await apiRequest("POST", `/api/admin/users/${userId}/suspend`, { reason: banReason });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"], exact: false });
+      toast({
+        title: "User suspended",
+        description: "The user account has been temporarily suspended.",
+      });
+      setUserDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to suspend user. Please try again.",
+        variant: "gamefolioError",
+      });
+    }
+  };
+
+  const handleUnsuspendUser = async (userId: number) => {
+    try {
+      await apiRequest("POST", `/api/admin/users/${userId}/unsuspend`);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"], exact: false });
+      toast({
+        title: "Account restored",
+        description: "The user account has been restored to active.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to restore user. Please try again.",
+        variant: "gamefolioError",
+      });
+    }
+  };
+
+  const handleStatusAction = async () => {
+    if (!selectedUser) return;
+    if (actionType === "ban") {
+      await handleBanUser(selectedUser.id);
+    } else {
+      await handleSuspendUser(selectedUser.id);
+    }
+  };
+
+  const handleMakePartner = async (userId: number) => {
+    try {
+      await apiRequest("POST", `/api/admin/users/${userId}/make-partner`);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"], exact: false });
+      toast({ title: "Partner status granted", description: "The user is now a Gamefolio Partner." });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to grant partner status.", variant: "gamefolioError" });
+    }
+  };
+
+  const handleRemovePartner = async (userId: number) => {
+    try {
+      await apiRequest("POST", `/api/admin/users/${userId}/remove-partner`);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"], exact: false });
+      toast({ title: "Partner status removed", description: "Partner badge removed from user." });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to remove partner status.", variant: "gamefolioError" });
     }
   };
 
@@ -2918,11 +2988,16 @@ const AdminPage = () => {
           <TabsTrigger value="settings" className="text-xs px-3 py-1.5">Settings</TabsTrigger>
           <TabsTrigger value="games" className="text-xs px-3 py-1.5">Games</TabsTrigger>
           <TabsTrigger value="alerts" className="text-xs px-3 py-1.5">Alerts</TabsTrigger>
+          <TabsTrigger value="push" className="text-xs px-3 py-1.5">Push</TabsTrigger>
         </TabsList>
 
         <TabsContent value="alerts" className="space-y-4">
           <AlertSettings />
           <AdminAlertsSection />
+        </TabsContent>
+
+        <TabsContent value="push" className="space-y-4">
+          <PushBroadcastPanel />
         </TabsContent>
 
         {/* Dashboard Tab */}
@@ -3209,6 +3284,7 @@ const AdminPage = () => {
                                   ? "destructive"
                                   : "outline"
                               }
+                              className={user.status === "suspended" ? "border-yellow-500 text-yellow-600 dark:text-yellow-400" : ""}
                             >
                               {user.status}
                             </Badge>
@@ -3242,27 +3318,96 @@ const AdminPage = () => {
                               </Button>
                               
                               {user.status === "active" ? (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => {
-                                    setSelectedUser(user);
-                                    setBanReason("");
-                                    setUserDialogOpen(true);
-                                  }}
-                                  title="Ban User"
-                                >
-                                  <Ban className="h-4 w-4" />
-                                </Button>
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      setSelectedUser(user);
+                                      setBanReason("");
+                                      setActionType("suspend");
+                                      setUserDialogOpen(true);
+                                    }}
+                                    title="Suspend User"
+                                    className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50 dark:hover:bg-yellow-950"
+                                  >
+                                    <PauseCircle className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      setSelectedUser(user);
+                                      setBanReason("");
+                                      setActionType("ban");
+                                      setUserDialogOpen(true);
+                                    }}
+                                    title="Ban User"
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                                  >
+                                    <Ban className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              ) : user.status === "suspended" ? (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      setSelectedUser(user);
+                                      setRestoreAction("unsuspend");
+                                      setRestoreDialogOpen(true);
+                                    }}
+                                    title="Restore Account"
+                                    className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950"
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      setSelectedUser(user);
+                                      setBanReason("");
+                                      setActionType("ban");
+                                      setUserDialogOpen(true);
+                                    }}
+                                    title="Ban User"
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                                  >
+                                    <Ban className="h-4 w-4" />
+                                  </Button>
+                                </>
                               ) : (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleUnbanUser(user.id)}
-                                  title="Unban User"
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                </Button>
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      setSelectedUser(user);
+                                      setRestoreAction("unban");
+                                      setRestoreDialogOpen(true);
+                                    }}
+                                    title="Restore Account"
+                                    className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950"
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      setSelectedUser(user);
+                                      setBanReason("");
+                                      setActionType("suspend");
+                                      setUserDialogOpen(true);
+                                    }}
+                                    title="Suspend User"
+                                    className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50 dark:hover:bg-yellow-950"
+                                  >
+                                    <PauseCircle className="h-4 w-4" />
+                                  </Button>
+                                </>
                               )}
                               
                               {user.role === "admin" ? (
@@ -3282,6 +3427,28 @@ const AdminPage = () => {
                                   title="Make Admin"
                                 >
                                   <UserCog className="h-4 w-4" />
+                                </Button>
+                              )}
+
+                              {(user as any).isPartner ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemovePartner(user.id)}
+                                  title="Remove Partner"
+                                  style={{ color: '#B7FF1A' }}
+                                >
+                                  <Star className="h-4 w-4 fill-current" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleMakePartner(user.id)}
+                                  title="Make Partner"
+                                  className="text-muted-foreground hover:text-yellow-500"
+                                >
+                                  <Star className="h-4 w-4" />
                                 </Button>
                               )}
                               
@@ -3345,11 +3512,19 @@ const AdminPage = () => {
         {/* Content Tab */}
         <TabsContent value="content" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Content Moderation</CardTitle>
-              <CardDescription>
-                Manage clips and other content
-              </CardDescription>
+            <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+              <div>
+                <CardTitle>Content Moderation</CardTitle>
+                <CardDescription>
+                  Manage clips and other content
+                </CardDescription>
+              </div>
+              <a href="/api/admin/export-content" download>
+                <Button variant="outline" size="sm" data-testid="button-export-content-csv">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
+              </a>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
@@ -6565,22 +6740,44 @@ const AdminPage = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Ban User Dialog */}
+      {/* Ban / Suspend User Dialog */}
       <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ban User</DialogTitle>
+            <DialogTitle>
+              {actionType === "ban" ? "Ban User" : "Suspend User"}
+            </DialogTitle>
             <DialogDescription>
-              Enter a reason for banning this user. This will be visible to the user when they attempt to log in.
+              {actionType === "ban"
+                ? "Permanently ban this user. They will not be able to log in. This will be visible to the user when they attempt to log in."
+                : "Temporarily suspend this user. They will not be able to log in until the suspension is lifted."}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="grid gap-4 py-4">
+          {selectedUser && (
+            <div className="flex items-center gap-3 px-1 py-2 rounded-lg bg-muted/50">
+              <User className="h-5 w-5 text-muted-foreground shrink-0" />
+              <div>
+                <div className="font-medium text-sm">{selectedUser.displayName || selectedUser.username}</div>
+                <div className="text-xs text-muted-foreground">@{selectedUser.username}</div>
+              </div>
+              <Badge
+                variant={actionType === "ban" ? "destructive" : "outline"}
+                className={actionType === "suspend" ? "ml-auto border-yellow-500 text-yellow-600" : "ml-auto"}
+              >
+                {actionType === "ban" ? "Permanent Ban" : "Temporary Suspension"}
+              </Badge>
+            </div>
+          )}
+
+          <div className="grid gap-4 py-2">
             <div className="space-y-2">
-              <label htmlFor="reason" className="text-sm font-medium">Reason</label>
+              <label htmlFor="reason" className="text-sm font-medium">
+                Reason <span className="text-muted-foreground font-normal">(shown to user at login)</span>
+              </label>
               <Input
                 id="reason"
-                placeholder="Violated community guidelines..."
+                placeholder={actionType === "ban" ? "Violated community guidelines..." : "Temporary suspension pending review..."}
                 value={banReason}
                 onChange={(e) => setBanReason(e.target.value)}
               />
@@ -6592,10 +6789,59 @@ const AdminPage = () => {
               Cancel
             </Button>
             <Button 
-              variant="destructive" 
-              onClick={() => selectedUser && handleBanUser(selectedUser.id)}
+              variant={actionType === "ban" ? "destructive" : "default"}
+              className={actionType === "suspend" ? "bg-yellow-600 hover:bg-yellow-700 text-white" : ""}
+              onClick={handleStatusAction}
             >
-              Ban User
+              {actionType === "ban" ? "Ban User" : "Suspend User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Restore Account Confirmation Dialog */}
+      <Dialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Restore Account</DialogTitle>
+            <DialogDescription>
+              {restoreAction === "unsuspend"
+                ? "This will lift the suspension and restore the account to active status. The user will be able to log in again."
+                : "This will remove the permanent ban and restore the account to active status. The user will be able to log in again."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedUser && (
+            <div className="flex items-center gap-3 px-1 py-2 rounded-lg bg-muted/50">
+              <User className="h-5 w-5 text-muted-foreground shrink-0" />
+              <div>
+                <div className="font-medium text-sm">{selectedUser.displayName || selectedUser.username}</div>
+                <div className="text-xs text-muted-foreground">@{selectedUser.username}</div>
+              </div>
+              <Badge variant="outline" className="ml-auto border-yellow-500 text-yellow-600">
+                Currently {selectedUser.status}
+              </Badge>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRestoreDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={async () => {
+                if (!selectedUser) return;
+                if (restoreAction === "unsuspend") {
+                  await handleUnsuspendUser(selectedUser.id);
+                } else {
+                  await handleUnbanUser(selectedUser.id);
+                }
+                setRestoreDialogOpen(false);
+              }}
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Restore Account
             </Button>
           </DialogFooter>
         </DialogContent>

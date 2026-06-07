@@ -341,6 +341,54 @@ adminRouter.post("/users/:id/unban", async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/admin/users/:id/suspend - Suspend user
+adminRouter.post("/users/:id/suspend", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const user = await storage.getUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.role === "admin") {
+      return res.status(403).json({ message: "Cannot suspend an admin user" });
+    }
+
+    const updatedUser = await storage.updateUser(userId, {
+      status: "suspended",
+      bannedReason: req.body.reason || "Account temporarily suspended"
+    });
+
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("Error suspending user:", err);
+    res.status(500).json({ message: "Error suspending user" });
+  }
+});
+
+// POST /api/admin/users/:id/unsuspend - Unsuspend user
+adminRouter.post("/users/:id/unsuspend", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const user = await storage.getUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const updatedUser = await storage.updateUser(userId, {
+      status: "active",
+      bannedReason: null
+    });
+
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("Error unsuspending user:", err);
+    res.status(500).json({ message: "Error unsuspending user" });
+  }
+});
+
 // POST /api/admin/users/:id/make-admin - Make user an admin
 adminRouter.post("/users/:id/make-admin", async (req: Request, res: Response) => {
   try {
@@ -450,6 +498,42 @@ adminRouter.post("/users/:id/remove-admin", async (req: Request, res: Response) 
   } catch (err) {
     console.error("Error removing admin role:", err);
     res.status(500).json({ message: "Error removing admin role" });
+  }
+});
+
+// POST /api/admin/users/:id/make-partner - Grant partner status to user
+adminRouter.post("/users/:id/make-partner", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const user = await storage.getUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const updatedUser = await storage.updateUser(userId, { isPartner: true });
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("Error granting partner status:", err);
+    res.status(500).json({ message: "Error granting partner status" });
+  }
+});
+
+// POST /api/admin/users/:id/remove-partner - Remove partner status from user
+adminRouter.post("/users/:id/remove-partner", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const user = await storage.getUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const updatedUser = await storage.updateUser(userId, { isPartner: false });
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("Error removing partner status:", err);
+    res.status(500).json({ message: "Error removing partner status" });
   }
 });
 
@@ -605,7 +689,7 @@ adminRouter.get("/screenshots", async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
 
-    const screenshots = await storage.getAllScreenshots(limit, offset);
+    const screenshots = await storage.getAllScreenshots(limit, offset, true);
     const total = await storage.getScreenshotCount();
 
     res.json({

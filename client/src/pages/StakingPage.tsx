@@ -103,7 +103,7 @@ export default function StakingPage() {
         : "You don't have enough GF tokens on-chain";
     } else if (error.message?.includes("chain") || error.message?.includes("network")) {
       title = "Wrong network";
-      description = "Please switch to SKALE Nebula Testnet";
+      description = "Please switch to SKALE on Base";
     }
 
     toast({ title, description, variant: "destructive" });
@@ -378,7 +378,7 @@ export default function StakingPage() {
                 <AlertCircle className="w-6 h-6 text-orange-500" />
                 <div>
                   <h3 className="font-semibold text-orange-500">Wrong Network</h3>
-                  <p className="text-sm text-muted-foreground">Please switch to SKALE Nebula Testnet to stake</p>
+                  <p className="text-sm text-muted-foreground">Please switch to SKALE on Base to stake</p>
                 </div>
               </div>
             </CardContent>

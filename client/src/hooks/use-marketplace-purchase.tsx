@@ -6,7 +6,15 @@ import { ToastAction } from "@/components/ui/toast";
 import { useWallet } from "@/hooks/use-wallet";
 import { useAccount, useWalletClient, usePublicClient, useChainId } from "wagmi";
 import { useOpenConnectModal } from "@0xsequence/connect";
+import { sequenceConfig } from "@/lib/sequence-config";
 import { useQueryClient } from "@tanstack/react-query";
+
+// Match the guard in use-wallet.tsx — useOpenConnectModal throws when the
+// Sequence provider isn't mounted (sequenceConfig === null), which is the
+// fallback path in App.tsx when Sequence env vars are missing.
+const useConnectModalSafe: () => { setOpenConnectModal: (open: boolean) => void } = sequenceConfig
+  ? useOpenConnectModal
+  : () => ({ setOpenConnectModal: () => {} });
 import { apiRequest } from "@/lib/queryClient";
 import { parseUnits, type Address } from "viem";
 import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from "@shared/contracts";
@@ -47,7 +55,7 @@ export function useMarketplacePurchase(options: UseMarketplacePurchaseOptions = 
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const chainId = useChainId();
-  const { setOpenConnectModal } = useOpenConnectModal();
+  const { setOpenConnectModal } = useConnectModalSafe();
 
   const [pendingNftPurchase, setPendingNftPurchase] = useState<PendingNftPurchase | null>(null);
   const [purchaseConfirmOpen, setPurchaseConfirmOpen] = useState(false);
@@ -124,7 +132,7 @@ export function useMarketplacePurchase(options: UseMarketplacePurchaseOptions = 
       return;
     }
     if (chainId !== SKALE_CHAIN_ID) {
-      toast({ title: "Wrong network", description: "Please switch to SKALE Nebula Testnet", variant: "destructive" });
+      toast({ title: "Wrong network", description: "Please switch to SKALE on Base", variant: "destructive" });
       setPendingNftPurchase(null);
       return;
     }
@@ -218,7 +226,7 @@ export function MarketplacePurchaseDialog({
       : pendingNftPurchase?.currentBalance || "0";
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : onCancel())}>
-      <DialogContent className="bg-[#0f172a] border-gray-700 text-white max-w-sm">
+      <DialogContent className="bg-[#0B1218] border-gray-700 text-white max-w-sm">
         <DialogHeader>
           <DialogTitle className="text-white text-lg">Confirm NFT Purchase</DialogTitle>
           <DialogDescription className="text-gray-400">

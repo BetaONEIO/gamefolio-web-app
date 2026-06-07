@@ -21,10 +21,14 @@ interface VideoPlayerProps {
   disableAspectRatio?: boolean;
   hideControls?: boolean;
   autoHideControls?: boolean;
+  persistControls?: boolean;
+  transparentBg?: boolean;
   onPlayingChange?: (isPlaying: boolean) => void;
   onMutedChange?: (isMuted: boolean) => void;
+  onAspectRatioDetected?: (isPortrait: boolean) => void;
   externalPaused?: boolean;
   externalMuted?: boolean;
+  videoStyle?: React.CSSProperties;
 }
 
 const VideoPlayer = ({ 
@@ -40,10 +44,14 @@ const VideoPlayer = ({
   disableAspectRatio = false,
   hideControls = false,
   autoHideControls = false,
+  persistControls = false,
+  transparentBg = false,
   onPlayingChange,
   onMutedChange,
+  onAspectRatioDetected,
   externalPaused,
-  externalMuted
+  externalMuted,
+  videoStyle,
 }: VideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
@@ -170,59 +178,70 @@ const VideoPlayer = ({
     }
   };
 
-  const toggleFullscreen = async () => {
+  const enterFullscreen = async () => {
     const video = videoRef.current;
     if (!video) return;
 
-    if (!isFullscreen) {
-      // iOS WKWebView (Capacitor) does not implement HTMLElement.requestFullscreen.
-      // Use the WebKit-only video method, which hands off to the native iOS
-      // player — that player auto-rotates to landscape and handles further
-      // rotation correctly without us needing a screen-orientation plugin.
-      const iosVideo = video as HTMLVideoElement & {
-        webkitEnterFullscreen?: () => void;
-      };
-      if (typeof iosVideo.webkitEnterFullscreen === "function") {
-        try {
-          iosVideo.webkitEnterFullscreen();
-          return;
-        } catch (err) {
-          console.warn("webkitEnterFullscreen failed, falling back:", err);
-        }
+    // iOS WKWebView (Capacitor) does not implement HTMLElement.requestFullscreen.
+    // Use the WebKit-only video method, which hands off to the native iOS
+    // player — that player auto-rotates to landscape and handles further
+    // rotation correctly without us needing a screen-orientation plugin.
+    const iosVideo = video as HTMLVideoElement & {
+      webkitEnterFullscreen?: () => void;
+      webkitDisplayingFullscreen?: boolean;
+    };
+    if (iosVideo.webkitDisplayingFullscreen) return; // already presenting
+    if (typeof iosVideo.webkitEnterFullscreen === "function") {
+      try {
+        iosVideo.webkitEnterFullscreen();
+        return;
+      } catch (err) {
+        console.warn("webkitEnterFullscreen failed, falling back:", err);
       }
+    }
 
-      // Standard path (Android WebView, desktop browsers).
-      if (video.requestFullscreen) {
-        try {
-          await video.requestFullscreen();
-          // Lock to landscape only for landscape-aspect videos so vertical
-          // reels don't get rotated. The Screen Orientation API is unavailable
-          // on iOS Safari/WKWebView and may reject in some other browsers —
-          // either is fine, fall through silently.
-          const isLandscapeVideo =
-            video.videoWidth > 0 && video.videoWidth > video.videoHeight;
-          const orientation = screen.orientation as
-            | (ScreenOrientation & { lock?: (o: string) => Promise<void> })
-            | undefined;
-          if (isLandscapeVideo && orientation?.lock) {
-            try {
-              await orientation.lock("landscape");
-            } catch (err) {
-              console.warn("Orientation lock failed:", err);
-            }
+    // Standard path (Android WebView, desktop browsers).
+    if (document.fullscreenElement) return; // already presenting
+    if (video.requestFullscreen) {
+      try {
+        await video.requestFullscreen();
+        // Lock to landscape only for landscape-aspect videos so vertical
+        // reels don't get rotated. The Screen Orientation API is unavailable
+        // on iOS Safari/WKWebView and may reject in some other browsers —
+        // either is fine, fall through silently.
+        const isLandscapeVideo =
+          video.videoWidth > 0 && video.videoWidth > video.videoHeight;
+        const orientation = screen.orientation as
+          | (ScreenOrientation & { lock?: (o: string) => Promise<void> })
+          | undefined;
+        if (isLandscapeVideo && orientation?.lock) {
+          try {
+            await orientation.lock("landscape");
+          } catch (err) {
+            console.warn("Orientation lock failed:", err);
           }
-        } catch (err) {
-          console.error("Error attempting to enable fullscreen:", err);
         }
+      } catch (err) {
+        console.error("Error attempting to enable fullscreen:", err);
       }
+    }
+  };
+
+  const exitFullscreen = async () => {
+    if (document.exitFullscreen && document.fullscreenElement) {
+      try {
+        await document.exitFullscreen();
+      } catch (err) {
+        console.error("Error attempting to exit fullscreen:", err);
+      }
+    }
+  };
+
+  const toggleFullscreen = async () => {
+    if (!isFullscreen) {
+      await enterFullscreen();
     } else {
-      if (document.exitFullscreen) {
-        try {
-          await document.exitFullscreen();
-        } catch (err) {
-          console.error("Error attempting to exit fullscreen:", err);
-        }
-      }
+      await exitFullscreen();
     }
   };
 
@@ -314,6 +333,11 @@ const VideoPlayer = ({
         setCurrentTime(initialTime);
         hasSetInitialTime.current = true;
       }
+
+      // Fire aspect ratio callback so parent can adapt layout
+      if (onAspectRatioDetected && video.videoWidth > 0 && video.videoHeight > 0) {
+        onAspectRatioDetected(video.videoHeight > video.videoWidth);
+      }
     };
 
     const onVideoEnded = () => {
@@ -355,7 +379,7 @@ const VideoPlayer = ({
     video.addEventListener("webkitbeginfullscreen", onWebkitBeginFullscreen);
     video.addEventListener("webkitendfullscreen", onWebkitEndFullscreen);
 
-    if (!autoHideControls) {
+    if (!persistControls && !autoHideControls) {
       hideControlsTimer();
     }
 
@@ -373,15 +397,17 @@ const VideoPlayer = ({
     };
   }, [isPlaying, onEnded, initialTime]);
 
+
   return (
     <div 
       className={cn(
-        "relative overflow-hidden bg-black flex items-center justify-center video-container",
+        "relative overflow-hidden flex items-center justify-center video-container",
+        !transparentBg && "bg-black",
         disableAspectRatio ? "w-full h-full" : "w-full aspect-video",
         className
       )}
-      onMouseMove={hideControlsTimer}
-      onMouseLeave={() => isPlaying && setShowControls(false)}
+      onMouseMove={persistControls ? undefined : hideControlsTimer}
+      onMouseLeave={persistControls ? undefined : () => isPlaying && setShowControls(false)}
     >
       <video
         ref={videoRef}
@@ -393,41 +419,14 @@ const VideoPlayer = ({
           filter !== 'none' && `filter-${filter}`,
           'focus:outline-none focus:ring-0 outline-none border-none'
         )}
+        style={videoStyle}
         onClick={togglePlay}
         autoPlay={autoPlay}
         muted={isMuted}
         playsInline
         preload="metadata"
-        onError={(e) => {
-          console.error("Video playback error:", e);
-          console.error("Failed video URL:", effectiveVideoUrl);
-          console.error("Video element src:", videoRef.current?.src);
-          console.error("Video readyState:", videoRef.current?.readyState);
-          console.error("Video networkState:", videoRef.current?.networkState);
-        }}
-        onLoadStart={() => {
-          console.log("Video loading started for:", effectiveVideoUrl);
-        }}
-        onCanPlay={() => {
-          console.log("Video can play:", videoUrl);
-        }}
-        onLoadedData={() => {
-          console.log("Video data loaded successfully");
-        }}
-        onCanPlayThrough={() => {
-          console.log("Video can play through without buffering");
-        }}
-        onLoadedMetadata={() => {
-          console.log("Video metadata loaded - duration:", videoRef.current?.duration);
-          console.log("Video ready to play:", videoUrl);
-          console.log("ShowControls state:", showControls);
-        }}
         onPlay={() => {
-          console.log("Video started playing:", videoUrl);
           trackView();
-        }}
-        onPause={() => {
-          console.log("Video paused:", videoUrl);
         }}
       />
       
@@ -472,11 +471,11 @@ const VideoPlayer = ({
         </div>
         
         <div className="flex items-center justify-between px-2 py-1 rounded bg-black/60" style={{ color: 'white' }}>
-          <div className="flex items-center">
+          <div className="flex items-center gap-1">
             <Button 
               variant="ghost" 
               size="sm" 
-              className="text-white p-1 md:p-2 h-6 md:h-8 w-6 md:w-8"
+              className="p-0 h-7 w-7 md:h-8 md:w-8 rounded-full flex items-center justify-center bg-[#B7FF1A] hover:bg-[#c8ff4d] text-[#071013]"
               onClick={togglePlay}
               aria-label={isPlaying ? "Pause video" : "Play video"}
             >
@@ -487,7 +486,7 @@ const VideoPlayer = ({
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="text-white p-1 md:p-2 h-6 md:h-8 w-6 md:w-8"
+                className="text-[#B7FF1A] p-1 md:p-2 h-6 md:h-8 w-6 md:w-8 hover:bg-white/10"
                 onClick={toggleMute}
                 aria-label={isMuted ? "Unmute video" : "Mute video"}
               >
@@ -507,7 +506,7 @@ const VideoPlayer = ({
           <Button 
             variant="ghost" 
             size="sm" 
-            className="text-white p-1 md:p-2 h-6 md:h-8 w-6 md:w-8"
+            className="text-[#B7FF1A] p-1 md:p-2 h-6 md:h-8 w-6 md:w-8 hover:bg-white/10"
             onClick={toggleFullscreen}
             aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
           >

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, User, MessageCircle, Video, X, Flame } from "lucide-react";
+import { Bell, User, MessageCircle, Video, X, Flame, Download, Share2, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { API_BASE, isNative, openExternal } from "@/lib/platform";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface NotificationData {
   id: number;
-  type: 'clip_mention' | 'comment_mention' | 'like' | 'follow' | 'comment';
+  type: 'clip_mention' | 'comment_mention' | 'like' | 'follow' | 'comment' | 'download' | 'share' | 'milestone';
   title: string;
   message: string;
   isRead: boolean;
@@ -176,6 +177,12 @@ export function NotificationPanel({
         return <MessageCircle className="h-4 w-4 text-gray-500" />;
       case 'streak':
         return <Flame className="h-4 w-4 text-orange-500" />;
+      case 'download':
+        return <Download className="h-4 w-4 text-[#B7FF1A]" />;
+      case 'share':
+        return <Share2 className="h-4 w-4 text-[#B7FF1A]" />;
+      case 'milestone':
+        return <Trophy className="h-4 w-4 text-[#B7FF1A]" />;
       default:
         return <Bell className="h-4 w-4 text-gray-500" />;
     }
@@ -215,11 +222,9 @@ export function NotificationPanel({
   // Handle mark all as read
   const handleMarkAllRead = async () => {
     try {
-      await fetch('/api/notifications/mark-all-read', {
-        method: 'POST',
-        credentials: 'include',
-      });
-      refetch();
+      await apiRequest("POST", '/api/notifications/mark-all-read');
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
     } catch (error) {
       console.error('Failed to mark notifications as read:', error);
     }
@@ -293,11 +298,16 @@ export function NotificationPanel({
                         <div className="flex-shrink-0 mt-0.5 relative">
                           {notification.fromUser ? (
                             <div className="relative">
-                              <CustomAvatar 
-                                user={notification.fromUser as any}
-                                size="sm"
-                                borderIntensity="subtle"
-                              />
+                              <Link
+                                href={`/profile/${(notification.fromUser as any).username}`}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <CustomAvatar 
+                                  user={notification.fromUser as any}
+                                  size="sm"
+                                  borderIntensity="subtle"
+                                />
+                              </Link>
                               <div className="absolute -bottom-1 -right-1">
                                 {getNotificationIcon(notification.type)}
                               </div>

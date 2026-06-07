@@ -115,6 +115,8 @@ export const users = pgTable("users", {
   gfTokenBalance: real("gf_token_balance").default(0).notNull(),
   // Gamefolio Pro subscription
   isPro: boolean("is_pro").default(false).notNull(), // Gamefolio Pro subscriber status
+  isPartner: boolean("is_partner").default(false).notNull(), // Official Gamefolio Partner
+  hideFromLeaderboard: boolean("hide_from_leaderboard").default(false).notNull(), // Admin-controlled leaderboard exclusion
   proSubscriptionType: text("pro_subscription_type"), // "yearly", "monthly", etc.
   proSubscriptionStartDate: timestamp("pro_subscription_start_date"), // When subscription started
   proSubscriptionEndDate: timestamp("pro_subscription_end_date"), // When subscription expires
@@ -149,6 +151,10 @@ export const users = pgTable("users", {
   // Referral System
   referralCode: text("referral_code").unique(), // User's unique referral code
   referredBy: text("referred_by"), // The referral code used when this user signed up
+  referralCodeCustomized: boolean("referral_code_customized").default(false).notNull(), // Whether the user has already customised their referral code
+  // Outro videos — auto-appended on download; separate files for landscape (16:9) and portrait (9:16)
+  outroVideoPath: text("outro_video_path"),          // landscape 1920×1080 — "outros/42.mp4"
+  outroVideoPathPortrait: text("outro_video_path_portrait"), // portrait 1080×1920 — "outros/42_portrait.mp4"
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -448,6 +454,36 @@ export const notifications = pgTable("notifications", {
   metadata: json("metadata"), // For storing additional context like mention details
   // Metadata
   actionUrl: text("action_url"), // URL to navigate to when clicked
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// FCM device tokens for push notifications (per-device, per-user)
+export const pushTokens = pgTable("push_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  platform: text("platform").notNull(), // "ios" | "android" | "web"
+  deviceModel: text("device_model"),
+  appVersion: text("app_version"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index("push_tokens_user_idx").on(table.userId),
+}));
+
+// Admin-sent push broadcast history
+export const pushBroadcasts = pgTable("push_broadcasts", {
+  id: serial("id").primaryKey(),
+  sentByUserId: integer("sent_by_user_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  actionUrl: text("action_url"),
+  // Audience descriptor — JSON for flexibility:
+  //   { kind: "all" } | { kind: "role", role: "admin" } | { kind: "pro" } | { kind: "users", userIds: number[] }
+  audience: json("audience").notNull(),
+  recipientCount: integer("recipient_count").default(0).notNull(),
+  successCount: integer("success_count").default(0).notNull(),
+  failureCount: integer("failure_count").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -1320,6 +1356,33 @@ export type InsertHeroTextSettings = z.infer<typeof insertHeroTextSettingsSchema
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
 
+// Push tokens
+export const insertPushTokenSchema = createInsertSchema(pushTokens).omit({
+  id: true,
+  createdAt: true,
+  lastSeenAt: true,
+});
+export type PushToken = typeof pushTokens.$inferSelect;
+export type InsertPushToken = z.infer<typeof insertPushTokenSchema>;
+
+// Push broadcasts
+export const pushAudienceSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("all") }),
+  z.object({ kind: z.literal("role"), role: z.enum(["user", "admin", "moderator"]) }),
+  z.object({ kind: z.literal("pro") }),
+  z.object({ kind: z.literal("users"), userIds: z.array(z.number().int().positive()).min(1).max(5000) }),
+]);
+export type PushAudience = z.infer<typeof pushAudienceSchema>;
+
+export const insertPushBroadcastSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+  body: z.string().trim().min(1).max(500),
+  actionUrl: z.string().trim().max(500).optional(),
+  audience: pushAudienceSchema,
+});
+export type InsertPushBroadcast = z.infer<typeof insertPushBroadcastSchema>;
+export type PushBroadcast = typeof pushBroadcasts.$inferSelect;
+
 // Schema for inserting clip mentions
 export const insertClipMentionSchema = createInsertSchema(clipMentions).omit({
   id: true,
@@ -1693,3 +1756,12 @@ export type AdminAlert = typeof adminAlerts.$inferSelect;
 export type InsertAdminAlert = typeof adminAlerts.$inferInsert;
 
 export type XpSetting = typeof xpSettings.$inferSelect;
+
+export const usedPaymentHashes = pgTable("used_payment_hashes", {
+  id: serial("id").primaryKey(),
+  txHash: text("tx_hash").notNull().unique(),
+  userId: integer("user_id").notNull(),
+  purpose: text("purpose").notNull(),
+  itemId: text("item_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

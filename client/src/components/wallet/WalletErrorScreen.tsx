@@ -22,13 +22,13 @@ export default function WalletErrorScreen({
   return (
     <div
       className="flex flex-col min-h-screen w-full"
-      style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif" }}
+      style={{ background: "#0B1218", fontFamily: "Plus Jakarta Sans, sans-serif" }}
     >
       {/* Header with red gradient */}
       <div
         className="flex flex-col items-center gap-4 px-6 pt-12 pb-6"
         style={{
-          background: "linear-gradient(180deg, rgba(239, 68, 68, 0.1) 0%, #101D27 100%)",
+          background: "linear-gradient(180deg, rgba(239, 68, 68, 0.1) 0%, #0B1218 100%)",
           borderBottom: "1px solid rgba(30, 41, 59, 0.3)",
         }}
       >
@@ -37,24 +37,24 @@ export default function WalletErrorScreen({
           <button
             onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
-            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
           >
-            <ArrowLeft className="w-6 h-6" style={{ color: "#f8fafc" }} />
+            <ArrowLeft className="w-6 h-6" style={{ color: "#F5F7F2" }} />
           </button>
 
-          <span className="text-xl font-bold" style={{ color: "#f8fafc" }}>
+          <span className="text-xl font-bold" style={{ color: "#F5F7F2" }}>
             Error Encountered
           </span>
 
           <button
             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
-            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
           >
-            <HelpCircle className="w-6 h-6" style={{ color: "#94a3b8" }} />
+            <HelpCircle className="w-6 h-6" style={{ color: "#B8C0AE" }} />
           </button>
         </div>
 
-        <span className="text-sm text-center max-w-[270px] md:max-w-[400px]" style={{ color: "#94a3b8" }}>
+        <span className="text-sm text-center max-w-[270px] md:max-w-[400px]" style={{ color: "#B8C0AE" }}>
           Something went wrong while processing your wallet request.
         </span>
       </div>
@@ -65,10 +65,10 @@ export default function WalletErrorScreen({
         <div className="flex flex-col items-center gap-6">
           {/* Error Text */}
           <div className="flex flex-col items-center gap-2 text-center">
-            <span className="text-2xl font-bold" style={{ color: "#f8fafc" }}>
+            <span className="text-2xl font-bold" style={{ color: "#F5F7F2" }}>
               {title}
             </span>
-            <span className="text-sm leading-relaxed max-w-[336px]" style={{ color: "#94a3b8", lineHeight: "22.75px" }}>
+            <span className="text-sm leading-relaxed max-w-[336px]" style={{ color: "#B8C0AE", lineHeight: "22.75px" }}>
               {description}
             </span>
           </div>
@@ -87,7 +87,7 @@ export default function WalletErrorScreen({
             {/* X Badge */}
             <div
               className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ background: "#101D27", border: "2px solid #ef4444" }}
+              style={{ background: "#0B1218", border: "2px solid #ef4444" }}
             >
               <XCircle className="w-5 h-5" style={{ color: "#ef4444" }} />
             </div>
@@ -98,21 +98,21 @@ export default function WalletErrorScreen({
         <div className="flex flex-col gap-4">
           <div
             className="flex flex-col gap-3 p-5 rounded-2xl"
-            style={{ background: "#0f172a", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+            style={{ background: "#0B1218", border: "1px solid rgba(30, 41, 59, 0.5)" }}
           >
             {/* Header Row */}
             <div className="flex items-center justify-between">
               <span
                 className="text-xs font-bold uppercase tracking-wider"
-                style={{ color: "#94a3b8", letterSpacing: "0.6px" }}
+                style={{ color: "#B8C0AE", letterSpacing: "0.6px" }}
               >
                 Technical Details
               </span>
               <div
                 className="px-2 py-1 rounded"
-                style={{ background: "#1e293b" }}
+                style={{ background: "#1B2A33" }}
               >
-                <span className="text-[10px] font-bold" style={{ color: "#94a3b8" }}>
+                <span className="text-[10px] font-bold" style={{ color: "#B8C0AE" }}>
                   CODE {errorCode}
                 </span>
               </div>
@@ -121,11 +121,11 @@ export default function WalletErrorScreen({
             {/* Error Message Box */}
             <div
               className="p-3 rounded-2xl"
-              style={{ background: "rgba(30, 41, 59, 0.5)", border: "1px solid #1e293b" }}
+              style={{ background: "rgba(30, 41, 59, 0.5)", border: "1px solid #1B2A33" }}
             >
               <span
                 className="text-xs leading-4"
-                style={{ color: "#94a3b8", fontFamily: "JetBrains Mono, monospace" }}
+                style={{ color: "#B8C0AE", fontFamily: "JetBrains Mono, monospace" }}
               >
                 {errorMessage}
               </span>
@@ -147,7 +147,7 @@ export default function WalletErrorScreen({
               <Info className="w-5 h-5" style={{ color: "#B7FF1A" }} />
             </div>
             <div className="flex-1">
-              <span className="text-xs leading-relaxed" style={{ color: "#94a3b8", lineHeight: "16.5px" }}>
+              <span className="text-xs leading-relaxed" style={{ color: "#B8C0AE", lineHeight: "16.5px" }}>
                 Your funds are <span className="font-bold" style={{ color: "#B7FF1A" }}>safe</span> and remain on the SKALE network. This is only a display issue.
               </span>
             </div>
@@ -173,9 +173,9 @@ export default function WalletErrorScreen({
             onClick={onGoHome}
             className="w-full h-14 rounded-2xl font-bold text-base transition-all hover:bg-slate-700"
             style={{
-              background: "#1e293b",
-              border: "1px solid #1e293b",
-              color: "#f8fafc",
+              background: "#1B2A33",
+              border: "1px solid #1B2A33",
+              color: "#F5F7F2",
             }}
           >
             Return to Home

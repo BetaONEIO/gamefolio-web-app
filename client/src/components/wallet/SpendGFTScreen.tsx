@@ -43,13 +43,13 @@ export default function SpendGFTScreen({
   return (
     <div
       className="flex flex-col min-h-screen w-full"
-      style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif" }}
+      style={{ background: "#0B1218", fontFamily: "Plus Jakarta Sans, sans-serif" }}
     >
       {/* Header with gradient */}
       <div
         className="flex flex-col items-center gap-6 px-6 pt-12 pb-8"
         style={{
-          background: "linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #101D27 100%)",
+          background: "linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #0B1218 100%)",
           borderBottom: "1px solid rgba(30, 41, 59, 0.3)",
         }}
       >
@@ -58,20 +58,20 @@ export default function SpendGFTScreen({
           <button
             onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
-            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
           >
-            <ArrowLeft className="w-6 h-6" style={{ color: "#f8fafc" }} />
+            <ArrowLeft className="w-6 h-6" style={{ color: "#F5F7F2" }} />
           </button>
 
-          <span className="text-xl font-bold" style={{ color: "#f8fafc" }}>
+          <span className="text-xl font-bold" style={{ color: "#F5F7F2" }}>
             Spend GFT
           </span>
 
           <button
             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
-            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
           >
-            <Settings className="w-6 h-6" style={{ color: "#f8fafc" }} />
+            <Settings className="w-6 h-6" style={{ color: "#F5F7F2" }} />
           </button>
         </div>
 
@@ -79,7 +79,7 @@ export default function SpendGFTScreen({
         <div className="flex flex-col items-center gap-1">
           <span
             className="text-sm font-medium uppercase tracking-wider"
-            style={{ color: "#94a3b8", letterSpacing: "0.7px" }}
+            style={{ color: "#B8C0AE", letterSpacing: "0.7px" }}
           >
             Available to Spend
           </span>
@@ -131,25 +131,25 @@ export default function SpendGFTScreen({
             onClick={onViewNFTs}
             className="flex items-center gap-4 p-5 rounded-2xl transition-all hover:bg-slate-700"
             style={{
-              background: "#1e293b",
+              background: "#1B2A33",
               border: "1px solid rgba(30, 41, 59, 0.5)",
             }}
           >
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
-              style={{ background: "#101D27", border: "1px solid #1e293b" }}
+              style={{ background: "#0B1218", border: "1px solid #1B2A33" }}
             >
-              <Image className="w-8 h-8" style={{ color: "#f8fafc" }} />
+              <Image className="w-8 h-8" style={{ color: "#F5F7F2" }} />
             </div>
             <div className="flex flex-col items-start gap-0.5 flex-1">
-              <span className="text-lg font-bold" style={{ color: "#f8fafc" }}>
+              <span className="text-lg font-bold" style={{ color: "#F5F7F2" }}>
                 View NFTs
               </span>
-              <span className="text-sm" style={{ color: "#94a3b8" }}>
+              <span className="text-sm" style={{ color: "#B8C0AE" }}>
                 Manage your digital collectibles
               </span>
             </div>
-            <ChevronRight className="w-6 h-6" style={{ color: "#94a3b8" }} />
+            <ChevronRight className="w-6 h-6" style={{ color: "#B8C0AE" }} />
           </button>
         </div>
 
@@ -169,12 +169,12 @@ export default function SpendGFTScreen({
               <div
                 key={deal.id}
                 className="flex-1 flex flex-col rounded-2xl overflow-hidden"
-                style={{ background: "#0f172a", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+                style={{ background: "#0B1218", border: "1px solid rgba(30, 41, 59, 0.5)" }}
               >
                 {/* Product Image Placeholder */}
                 <div
                   className="h-28 w-full relative"
-                  style={{ background: "#1e293b" }}
+                  style={{ background: "#1B2A33" }}
                 >
                   {deal.discount && (
                     <div
@@ -188,7 +188,7 @@ export default function SpendGFTScreen({
                 
                 {/* Product Info */}
                 <div className="flex flex-col gap-1 p-3">
-                  <span className="text-sm font-bold truncate" style={{ color: "#f8fafc" }}>
+                  <span className="text-sm font-bold truncate" style={{ color: "#F5F7F2" }}>
                     {deal.name}
                   </span>
                   <span className="text-base font-bold" style={{ color: "#B7FF1A" }}>
@@ -216,26 +216,26 @@ export default function SpendGFTScreen({
               <div
                 key={item.id}
                 className="flex items-center gap-4 p-3 rounded-2xl"
-                style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+                style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
               >
                 {/* Icon */}
                 <div
                   className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: "#1e293b" }}
+                  style={{ background: "#1B2A33" }}
                 >
                   {item.icon === "booster" ? (
-                    <Gamepad2 className="w-6 h-6" style={{ color: "#f8fafc" }} />
+                    <Gamepad2 className="w-6 h-6" style={{ color: "#F5F7F2" }} />
                   ) : (
-                    <Trophy className="w-6 h-6" style={{ color: "#f8fafc" }} />
+                    <Trophy className="w-6 h-6" style={{ color: "#F5F7F2" }} />
                   )}
                 </div>
 
                 {/* Details */}
                 <div className="flex flex-col gap-0 flex-1 min-w-0">
-                  <span className="text-base truncate" style={{ color: "#f8fafc" }}>
+                  <span className="text-base truncate" style={{ color: "#F5F7F2" }}>
                     {item.title}
                   </span>
-                  <span className="text-xs" style={{ color: "#94a3b8" }}>
+                  <span className="text-xs" style={{ color: "#B8C0AE" }}>
                     {item.subtitle}
                   </span>
                 </div>
@@ -245,7 +245,7 @@ export default function SpendGFTScreen({
                   <span className="text-base font-bold" style={{ color: "#fff" }}>
                     -{item.amount.toFixed(2)}
                   </span>
-                  <span className="text-[10px]" style={{ color: "#94a3b8" }}>
+                  <span className="text-[10px]" style={{ color: "#B8C0AE" }}>
                     {item.time}
                   </span>
                 </div>

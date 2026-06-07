@@ -1,11 +1,31 @@
+import { nanoid } from "nanoid";
 import { type IStorage } from './storage';
 import { getRealtimeNotificationService } from './realtime-notification-service';
+import { sendPushToUser } from './push-service';
 
 export interface MentionMatch {
   username: string;
   userId: number;
   startIndex: number;
   endIndex: number;
+}
+
+// Build a user-scoped clip URL from a clip+user record.
+// Generates and persists a shareCode via nanoid(8) if the clip has none.
+async function buildClipUrl(
+  storage: IStorage,
+  clipId: number,
+  username: string,
+  shareCode: string | null | undefined,
+  suffix?: string
+): Promise<string> {
+  let code = shareCode;
+  if (!code) {
+    code = nanoid(8);
+    await storage.updateClip(clipId, { shareCode: code });
+  }
+  const base = `/@${username}/clip/${code}`;
+  return suffix ? `${base}${suffix}` : base;
 }
 
 export class MentionService {
@@ -17,17 +37,14 @@ export class MentionService {
    * @returns Array of valid mention matches with user IDs
    */
   async parseMentions(text: string): Promise<MentionMatch[]> {
-    // Regex pattern to match @username mentions
-    // Matches @username where username can contain letters, numbers, underscores, and hyphens
     const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
     const mentions: MentionMatch[] = [];
     let match;
 
-    // Extract all @username patterns from the text
     const potentialMentions: Array<{ username: string; startIndex: number; endIndex: number }> = [];
     while ((match = mentionRegex.exec(text)) !== null) {
       potentialMentions.push({
-        username: match[1], // The captured username without @
+        username: match[1],
         startIndex: match.index,
         endIndex: match.index + match[0].length
       });
@@ -37,19 +54,15 @@ export class MentionService {
       return [];
     }
 
-    // Get all unique usernames to validate in a single query
     const uniqueUsernames = Array.from(new Set(potentialMentions.map(m => m.username)));
-    
-    // Validate usernames against the database
     const validUsers = await this.storage.getUsersByUsernames(uniqueUsernames);
     const validUsernameMap = new Map(validUsers.map(user => [user.username.toLowerCase(), user]));
 
-    // Build the final mentions array with user IDs
     for (const potential of potentialMentions) {
       const user = validUsernameMap.get(potential.username.toLowerCase());
       if (user) {
         mentions.push({
-          username: user.username, // Use the actual username from DB (preserves case)
+          username: user.username,
           userId: user.id,
           startIndex: potential.startIndex,
           endIndex: potential.endIndex
@@ -68,37 +81,38 @@ export class MentionService {
    * @param clipTitle The title of the clip for notification context
    */
   async createClipMentions(
-    clipId: number, 
-    mentionedUserIds: number[], 
+    clipId: number,
+    mentionedUserIds: number[],
     mentionedByUserId: number,
     clipTitle: string
   ): Promise<void> {
     if (mentionedUserIds.length === 0) return;
 
-    // Get the user who created the mention for notification context
     const mentionCreator = await this.storage.getUserById(mentionedByUserId);
     if (!mentionCreator) return;
 
-    // Remove duplicates and self-mentions
+    const clip = await this.storage.getClipWithUser(clipId);
+    if (!clip || !clip.user) return;
+
+    const actionUrl = await buildClipUrl(this.storage, clipId, clip.user.username, clip.shareCode);
+
     const uniqueUserIds = Array.from(new Set(mentionedUserIds)).filter(id => id !== mentionedByUserId);
 
     for (const userId of uniqueUserIds) {
-      // Create mention record
       await this.storage.createClipMention({
         clipId,
         mentionedUserId: userId,
         mentionedByUserId
       });
 
-      // Create notification for the mentioned user
-      await this.storage.createNotification({
+      const notif = await this.storage.createNotification({
         userId: userId,
         type: 'clip_mention',
         title: `@${mentionCreator.username} mentioned you in a clip`,
         message: `${mentionCreator.displayName} mentioned you in "${clipTitle}"`,
         fromUserId: mentionedByUserId,
         clipId: clipId,
-        actionUrl: `/clips/${clipId}`,
+        actionUrl,
         metadata: {
           mentionType: 'clip',
           clipTitle,
@@ -109,8 +123,13 @@ export class MentionService {
           }
         }
       });
+      void sendPushToUser(userId, {
+        title: notif.title,
+        body: notif.message,
+        actionUrl: notif.actionUrl,
+        data: { notificationId: String(notif.id), type: notif.type },
+      }).catch(err => console.warn('[mention-service] push fan-out failed:', err));
 
-      // Send real-time notification via WebSocket
       const realtimeService = getRealtimeNotificationService();
       if (realtimeService) {
         realtimeService.sendMentionNotification(userId, {
@@ -125,7 +144,7 @@ export class MentionService {
   }
 
   /**
-   * Creates mention records and notifications for a comment
+   * Creates mention records and notifications for a comment on a clip
    * @param commentId The ID of the comment
    * @param mentionedUserIds Array of user IDs that were mentioned
    * @param mentionedByUserId The ID of the user who created the mention
@@ -139,23 +158,30 @@ export class MentionService {
   ): Promise<void> {
     if (mentionedUserIds.length === 0) return;
 
-    // Get the user who created the mention for notification context
     const mentionCreator = await this.storage.getUserById(mentionedByUserId);
     if (!mentionCreator) return;
 
-    // Remove duplicates and self-mentions
+    const clip = await this.storage.getClipWithUser(clipId);
+    if (!clip || !clip.user) return;
+
+    const actionUrl = await buildClipUrl(
+      this.storage,
+      clipId,
+      clip.user.username,
+      clip.shareCode,
+      `?openComments=true&highlightComment=${commentId}`
+    );
+
     const uniqueUserIds = Array.from(new Set(mentionedUserIds)).filter(id => id !== mentionedByUserId);
 
     for (const userId of uniqueUserIds) {
-      // Create mention record
       await this.storage.createCommentMention({
         commentId,
         mentionedUserId: userId,
         mentionedByUserId
       });
 
-      // Create notification for the mentioned user
-      await this.storage.createNotification({
+      const notif = await this.storage.createNotification({
         userId: userId,
         type: 'comment_mention',
         title: `@${mentionCreator.username} mentioned you in a comment`,
@@ -163,7 +189,7 @@ export class MentionService {
         fromUserId: mentionedByUserId,
         clipId: clipId,
         commentId: commentId,
-        actionUrl: `/clips/${clipId}#comment-${commentId}`,
+        actionUrl,
         metadata: {
           mentionType: 'comment',
           mentionedBy: {
@@ -173,8 +199,13 @@ export class MentionService {
           }
         }
       });
+      void sendPushToUser(userId, {
+        title: notif.title,
+        body: notif.message,
+        actionUrl: notif.actionUrl,
+        data: { notificationId: String(notif.id), type: notif.type },
+      }).catch(err => console.warn('[mention-service] push fan-out failed:', err));
 
-      // Send real-time notification via WebSocket
       const realtimeService = getRealtimeNotificationService();
       if (realtimeService) {
         realtimeService.sendMentionNotification(userId, {
@@ -182,7 +213,7 @@ export class MentionService {
           mentionedByUserId: mentionedByUserId,
           mentionedByUsername: mentionCreator.username,
           contentId: commentId,
-          contentText: `Comment on clip #${clipId}`
+          contentText: `Comment on clip by ${clip.user.username}`
         });
       }
     }
@@ -203,30 +234,32 @@ export class MentionService {
   ): Promise<void> {
     if (mentionedUserIds.length === 0) return;
 
-    // Get the user who created the mention for notification context
     const mentionCreator = await this.storage.getUserById(mentionedByUserId);
     if (!mentionCreator) return;
 
-    // Remove duplicates and self-mentions
+    const screenshot = await this.storage.getScreenshotWithUser(screenshotId);
+    const username = screenshot?.user?.username;
+    const actionUrl = username
+      ? `/@${username}/screenshots/${screenshotId}?openComments=true&highlightComment=${screenshotCommentId}`
+      : null;
+
     const uniqueUserIds = Array.from(new Set(mentionedUserIds)).filter(id => id !== mentionedByUserId);
 
     for (const userId of uniqueUserIds) {
-      // Create mention record
       await this.storage.createScreenshotCommentMention({
         screenshotCommentId,
         mentionedUserId: userId,
         mentionedByUserId
       });
 
-      // Create notification for the mentioned user
-      await this.storage.createNotification({
+      const notif = await this.storage.createNotification({
         userId: userId,
         type: 'comment_mention',
         title: `@${mentionCreator.username} mentioned you in a comment`,
         message: `${mentionCreator.displayName} mentioned you in a comment on a screenshot`,
         fromUserId: mentionedByUserId,
         screenshotId: screenshotId,
-        actionUrl: `/screenshots/${screenshotId}#comment-${screenshotCommentId}`,
+        actionUrl,
         metadata: {
           mentionType: 'screenshot_comment',
           mentionedBy: {
@@ -236,6 +269,12 @@ export class MentionService {
           }
         }
       });
+      void sendPushToUser(userId, {
+        title: notif.title,
+        body: notif.message,
+        actionUrl: notif.actionUrl,
+        data: { notificationId: String(notif.id), type: notif.type },
+      }).catch(err => console.warn('[mention-service] push fan-out failed:', err));
     }
   }
 
@@ -248,9 +287,8 @@ export class MentionService {
   renderMentionsAsHTML(text: string, mentions: MentionMatch[]): string {
     if (mentions.length === 0) return text;
 
-    // Sort mentions by start index in descending order to avoid index shifting
     const sortedMentions = [...mentions].sort((a, b) => b.startIndex - a.startIndex);
-    
+
     let result = text;
     for (const mention of sortedMentions) {
       const beforeMention = result.substring(0, mention.startIndex);

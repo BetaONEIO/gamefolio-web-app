@@ -82,6 +82,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ profile, trigger })
       userId: profile.id,
       userData: submitData
     });
+    form.reset(values);
     setIsOpen(false);
   };
   
@@ -305,7 +306,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ profile, trigger })
             <DialogFooter>
               <Button 
                 type="submit" 
-                disabled={updateProfile.isPending}
+                disabled={!form.formState.isDirty || updateProfile.isPending}
               >
                 {updateProfile.isPending ? 'Saving...' : 'Save changes'}
               </Button>

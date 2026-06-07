@@ -1,4 +1,5 @@
-import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Copy, Check, Share2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { useState, useRef, useCallback } from "react";
 import MintedNftDetailScreen from "./MintedNftDetailScreen";
 import { openExternal, nativeShare } from "@/lib/platform";
@@ -164,16 +165,16 @@ export default function MultiMintSuccessScreen({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#101D27] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
-      <header className="sticky top-0 z-40 backdrop-blur-md bg-[#101D27cc] border-b border-[#1e293b80] flex-shrink-0">
+    <div className="fixed inset-0 z-[100] bg-[#0B1218] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+      <header className="sticky top-0 z-40 backdrop-blur-md bg-[#0B1218cc] border-b border-[#1B2A3380] flex-shrink-0">
         <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-5xl mx-auto px-6 pt-12 md:pt-6 pb-[17px]">
           <button
             onClick={onBack}
-            className="w-10 h-10 flex items-center justify-center hover:bg-[#1e293b] rounded-full transition-colors"
+            className="w-10 h-10 flex items-center justify-center hover:bg-[#1B2A33] rounded-full transition-colors"
           >
-            <ArrowLeft className="h-6 w-6 text-[#f8fafc]" />
+            <ArrowLeft className="h-6 w-6 text-[#F5F7F2]" />
           </button>
-          <span className="text-lg font-bold text-[#f8fafc] leading-7">Success!</span>
+          <span className="text-lg font-bold text-[#F5F7F2] leading-7">Success!</span>
           <button
             onClick={() => {
               const shareUrl = `${SKALE_EXPLORER_BASE_URL}/tx/${txHash}`;
@@ -193,9 +194,9 @@ export default function MultiMintSuccessScreen({
                 await openExternal(shareUrl);
               })();
             }}
-            className="w-10 h-10 rounded-full bg-[#1e293b80] flex items-center justify-center hover:bg-[#1e293b] transition-colors"
+            className="w-10 h-10 rounded-full bg-[#1B2A3380] flex items-center justify-center hover:bg-[#1B2A33] transition-colors"
           >
-            <Share2 className="h-5 w-5 text-[#f8fafc]" />
+            <ShareLaunchIcon size={20} className="text-[#F5F7F2]" />
           </button>
         </div>
       </header>
@@ -212,7 +213,7 @@ export default function MultiMintSuccessScreen({
                     key={i}
                     onClick={() => setActiveIndex(i)}
                     className={`flex-1 h-1.5 rounded-full transition-colors ${
-                      i === activeIndex ? "bg-[#B7FF1A]" : "bg-[#1e293b]"
+                      i === activeIndex ? "bg-[#B7FF1A]" : "bg-[#1B2A33]"
                     }`}
                   />
                 ))}
@@ -222,9 +223,9 @@ export default function MultiMintSuccessScreen({
                 {totalSlides > 1 && (
                   <button
                     onClick={goPrev}
-                    className="absolute left-2 md:left-4 z-30 w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#1e293bcc] border border-[#1e293b80] backdrop-blur-md flex items-center justify-center shadow-lg hover:bg-[#334155] transition-colors"
+                    className="absolute left-2 md:left-4 z-30 w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#1B2A33cc] border border-[#1B2A3380] backdrop-blur-md flex items-center justify-center shadow-lg hover:bg-[#22313A] transition-colors"
                   >
-                    <ChevronLeft className="h-5 w-5 md:h-6 md:w-6 text-[#f8fafc]" />
+                    <ChevronLeft className="h-5 w-5 md:h-6 md:w-6 text-[#F5F7F2]" />
                   </button>
                 )}
 
@@ -268,10 +269,10 @@ export default function MultiMintSuccessScreen({
                           <div className="absolute -inset-3 rounded-[48px] bg-gradient-to-br from-[#fbbf24] via-[#f59e0b] to-[#d97706] opacity-40 blur-[24px] pointer-events-none animate-pulse" />
                         )}
                         <div
-                          className={`relative w-full rounded-[40px] overflow-hidden bg-[#0f172a] shadow-[0_25px_50px_-12px_rgba(183, 255, 26,0.05)] cursor-pointer ${
+                          className={`relative w-full rounded-[40px] overflow-hidden bg-[#0B1218] shadow-[0_25px_50px_-12px_rgba(183, 255, 26,0.05)] cursor-pointer ${
                             legendary
                               ? "border-2 border-[#fbbf24]/60 shadow-[0_0_30px_rgba(251,191,36,0.3)]"
-                              : "border border-[#1e293b80] hover:border-[#B7FF1A40]"
+                              : "border border-[#1B2A3380] hover:border-[#B7FF1A40]"
                           } transition-all`}
                           onClick={() => {
                             if (!hasDraggedRef.current) {
@@ -288,7 +289,7 @@ export default function MultiMintSuccessScreen({
                                 draggable={false}
                               />
                             ) : (
-                              <div className="w-full h-full bg-[#1e293b] flex items-center justify-center">
+                              <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
                                 <div className="w-12 h-12 rounded-full border-2 border-[#B7FF1A]/30 border-t-[#B7FF1A] animate-spin" />
                               </div>
                             )}
@@ -320,7 +321,7 @@ export default function MultiMintSuccessScreen({
 
                           <div className="p-4 pb-5 flex flex-col gap-1">
                             <div className="flex items-start justify-between gap-3">
-                              <span className="text-base font-bold text-[#f8fafc] leading-6 truncate">
+                              <span className="text-base font-bold text-[#F5F7F2] leading-6 truncate">
                                 {nft.name || `Gamefolio Genesis`}
                               </span>
                               <span className={`text-sm font-normal font-['JetBrains_Mono',monospace] leading-5 flex-shrink-0 ${
@@ -329,7 +330,7 @@ export default function MultiMintSuccessScreen({
                                 {getTokenIdPadded(nft.id)}
                               </span>
                             </div>
-                            <span className="text-xs font-normal text-[#94a3b8] leading-4">
+                            <span className="text-xs font-normal text-[#B8C0AE] leading-4">
                               Genesis Collection
                             </span>
                           </div>
@@ -342,15 +343,15 @@ export default function MultiMintSuccessScreen({
                 {totalSlides > 1 && (
                   <button
                     onClick={goNext}
-                    className="absolute right-2 md:right-4 z-30 w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#1e293bcc] border border-[#1e293b80] backdrop-blur-md flex items-center justify-center shadow-lg hover:bg-[#334155] transition-colors"
+                    className="absolute right-2 md:right-4 z-30 w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#1B2A33cc] border border-[#1B2A3380] backdrop-blur-md flex items-center justify-center shadow-lg hover:bg-[#22313A] transition-colors"
                   >
-                    <ChevronRight className="h-5 w-5 md:h-6 md:w-6 text-[#f8fafc]" />
+                    <ChevronRight className="h-5 w-5 md:h-6 md:w-6 text-[#F5F7F2]" />
                   </button>
                 )}
               </div>
 
               <div className="flex items-center justify-center gap-4 mt-4 pb-2">
-                <span className="text-sm text-[#94a3b8]">
+                <span className="text-sm text-[#B8C0AE]">
                   {activeIndex + 1} / {totalSlides}
                 </span>
               </div>
@@ -367,28 +368,28 @@ export default function MultiMintSuccessScreen({
                   </span>
                 </div>
 
-                <span className="text-[30px] md:text-4xl font-bold text-[#f8fafc] text-center leading-9 md:leading-[44px]">
+                <span className="text-[30px] md:text-4xl font-bold text-[#F5F7F2] text-center leading-9 md:leading-[44px]">
                   {quantity} NFTs Minted
                 </span>
 
-                <span className="text-sm font-normal text-[#94a3b8] text-center leading-5 max-w-[223px]">
+                <span className="text-sm font-normal text-[#B8C0AE] text-center leading-5 max-w-[223px]">
                   Your new digital assets have been successfully forged on-chain.
                 </span>
               </div>
 
               <div className="flex flex-col gap-3 px-6 md:px-0 pb-4">
-                <div className="w-full h-[74px] rounded-2xl bg-[#0f172a80] border border-[#1e293b80] flex items-center justify-between px-4">
+                <div className="w-full h-[74px] rounded-2xl bg-[#0B121880] border border-[#1B2A3380] flex items-center justify-between px-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-[#1e293b] flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-2xl bg-[#1B2A33] flex items-center justify-center">
                       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path fillRule="evenodd" clipRule="evenodd" d="M7.61339 4.52303C8.6753 2.6188 9.20583 1.66669 9.99954 1.66669C10.7933 1.66669 11.3238 2.6188 12.3857 4.52303L12.6606 5.01585C12.9623 5.55729 13.1132 5.828 13.3479 6.00652C13.5825 6.18505 13.8759 6.25126 14.4626 6.38368L14.9956 6.50437C17.0574 6.97121 18.0875 7.20421 18.3331 7.99289C18.5778 8.78073 17.8754 9.60294 16.4699 11.2465L16.1062 11.6714C15.7072 12.1383 15.5069 12.3721 15.4172 12.6604C15.3275 12.9496 15.3577 13.2614 15.4181 13.8841L15.4734 14.4515C15.6854 16.6449 15.7919 17.7412 15.1499 18.2281C14.5078 18.7151 13.5423 18.2709 11.6129 17.3825L11.1126 17.1528C10.5644 16.8997 10.2904 16.774 9.99954 16.774C9.70871 16.774 9.43464 16.8997 8.88651 17.1528L8.38698 17.3825C6.45677 18.2709 5.49124 18.7151 4.85007 18.229C4.20723 17.7412 4.31367 16.6449 4.52572 14.4515L4.58103 13.8849C4.64138 13.2614 4.67155 12.9496 4.58103 12.6613C4.49219 12.3721 4.29188 12.1383 3.89293 11.6723L3.52918 11.2465C2.12363 9.60378 1.42128 8.78157 1.66602 7.99289C1.91075 7.20421 2.94249 6.97037 5.00429 6.50437L5.53734 6.38368C6.12319 6.25126 6.4157 6.18505 6.65121 6.00652C6.88673 5.828 7.03675 5.55729 7.33848 5.01585L7.61339 4.52303Z" fill="#B7FF1A" />
                       </svg>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-[#94a3b8] uppercase leading-[15px]">
+                      <span className="text-[10px] font-bold text-[#B8C0AE] uppercase leading-[15px]">
                         Collection Value
                       </span>
-                      <span className="text-sm font-bold text-[#f8fafc] leading-5">
+                      <span className="text-sm font-bold text-[#F5F7F2] leading-5">
                         {totalValue} GF Tokens
                       </span>
                     </div>
@@ -414,22 +415,22 @@ export default function MultiMintSuccessScreen({
 
                 <button
                   onClick={onMintMore || onBack}
-                  className="w-full h-[58px] rounded-2xl bg-[#1e293b] border border-[#1e293b80] flex items-center justify-center gap-[6.5px] hover:bg-[#334155] transition-colors"
+                  className="w-full h-[58px] rounded-2xl bg-[#1B2A33] border border-[#1B2A3380] flex items-center justify-center gap-[6.5px] hover:bg-[#22313A] transition-colors"
                 >
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M10.0184 1.875C6.02345 1.875 2.74011 4.9275 2.42011 8.81917H1.61928C1.36586 8.81905 1.13746 8.97196 1.04102 9.20631C0.944573 9.44066 0.999186 9.71005 1.17928 9.88833L2.57928 11.2767C2.82291 11.5182 3.21565 11.5182 3.45928 11.2767L4.85928 9.88833C5.03938 9.71005 5.09399 9.44066 4.99755 9.20631C4.9011 8.97196 4.6727 8.81905 4.41928 8.81917H3.67511C3.99178 5.62667 6.70678 3.125 10.0184 3.125C12.2387 3.12072 14.3016 4.27039 15.4659 6.16083C15.58 6.35723 15.7916 6.47629 16.0187 6.47184C16.2457 6.46739 16.4525 6.34011 16.5588 6.1394C16.665 5.93869 16.6541 5.69613 16.5301 5.50583C15.1386 3.24603 12.6723 1.87118 10.0184 1.875Z" fill="#F8FAFC" />
-                    <path fillRule="evenodd" clipRule="evenodd" d="M17.3201 8.7225C17.0767 8.4821 16.6852 8.4821 16.4418 8.7225L15.0359 10.1108C14.8554 10.2889 14.8003 10.5585 14.8966 10.7931C14.9929 11.0278 15.2215 11.181 15.4751 11.1808H16.2243C15.9059 14.3725 13.1818 16.875 9.85428 16.875C7.62727 16.8807 5.55653 15.7313 4.38345 13.8383C4.26614 13.6482 4.05634 13.5352 3.83306 13.5417C3.60978 13.5482 3.40695 13.6734 3.30098 13.87C3.195 14.0667 3.20198 14.3049 3.31928 14.495C4.72016 16.757 7.19364 18.1309 9.85428 18.125C13.8609 18.125 17.1584 15.075 17.4793 11.1808H18.2859C18.5396 11.181 18.7681 11.0278 18.8644 10.7931C18.9608 10.5585 18.9057 10.2889 18.7251 10.1108L17.3201 8.7225Z" fill="#F8FAFC" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M10.0184 1.875C6.02345 1.875 2.74011 4.9275 2.42011 8.81917H1.61928C1.36586 8.81905 1.13746 8.97196 1.04102 9.20631C0.944573 9.44066 0.999186 9.71005 1.17928 9.88833L2.57928 11.2767C2.82291 11.5182 3.21565 11.5182 3.45928 11.2767L4.85928 9.88833C5.03938 9.71005 5.09399 9.44066 4.99755 9.20631C4.9011 8.97196 4.6727 8.81905 4.41928 8.81917H3.67511C3.99178 5.62667 6.70678 3.125 10.0184 3.125C12.2387 3.12072 14.3016 4.27039 15.4659 6.16083C15.58 6.35723 15.7916 6.47629 16.0187 6.47184C16.2457 6.46739 16.4525 6.34011 16.5588 6.1394C16.665 5.93869 16.6541 5.69613 16.5301 5.50583C15.1386 3.24603 12.6723 1.87118 10.0184 1.875Z" fill="#F5F7F2" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M17.3201 8.7225C17.0767 8.4821 16.6852 8.4821 16.4418 8.7225L15.0359 10.1108C14.8554 10.2889 14.8003 10.5585 14.8966 10.7931C14.9929 11.0278 15.2215 11.181 15.4751 11.1808H16.2243C15.9059 14.3725 13.1818 16.875 9.85428 16.875C7.62727 16.8807 5.55653 15.7313 4.38345 13.8383C4.26614 13.6482 4.05634 13.5352 3.83306 13.5417C3.60978 13.5482 3.40695 13.6734 3.30098 13.87C3.195 14.0667 3.20198 14.3049 3.31928 14.495C4.72016 16.757 7.19364 18.1309 9.85428 18.125C13.8609 18.125 17.1584 15.075 17.4793 11.1808H18.2859C18.5396 11.181 18.7681 11.0278 18.8644 10.7931C18.9608 10.5585 18.9057 10.2889 18.7251 10.1108L17.3201 8.7225Z" fill="#F5F7F2" />
                   </svg>
-                  <span className="text-base font-bold text-[#f8fafc] leading-6">Mint More NFTs</span>
+                  <span className="text-base font-bold text-[#F5F7F2] leading-6">Mint More NFTs</span>
                 </button>
               </div>
 
               <div className="flex flex-col items-center gap-4 px-6 md:px-0 py-8">
                 <button
                   onClick={copyTxHash}
-                  className="flex items-center gap-2 bg-[#1e293b4d] border border-[#1e293b4d] rounded-full px-[17px] py-[9px] hover:bg-[#1e293b80] transition-colors"
+                  className="flex items-center gap-2 bg-[#1B2A334d] border border-[#1B2A334d] rounded-full px-[17px] py-[9px] hover:bg-[#1B2A3380] transition-colors"
                 >
-                  <span className="text-[10px] text-[#94a3b8] leading-[15px] font-['JetBrains_Mono',monospace]">
+                  <span className="text-[10px] text-[#B8C0AE] leading-[15px] font-['JetBrains_Mono',monospace]">
                     Tx Hash: {txHash.slice(0, 6)}...{txHash.slice(-4)}
                   </span>
                   {copied ? (
@@ -444,8 +445,8 @@ export default function MultiMintSuccessScreen({
 
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#B7FF1A]" />
-                  <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-[2px] leading-[15px]">
-                    SKALE Nebula
+                  <span className="text-[10px] font-bold text-[#B8C0AE] uppercase tracking-[2px] leading-[15px]">
+                    SKALE on Base
                   </span>
                 </div>
               </div>

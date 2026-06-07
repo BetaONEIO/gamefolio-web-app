@@ -8,6 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ClipWithUser } from "@shared/schema";
+import { useMobile } from "@/hooks/use-mobile";
+import { useClipDialog } from "@/hooks/use-clip-dialog";
+import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
+import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 
 interface Clip {
   id: number;
@@ -50,67 +55,26 @@ interface Game {
   tags?: string[];
 }
 
-export default function GameClipsPage() {
-  const [, params] = useRoute("/games/:gameId/clips");
-  const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState("clips");
-  const gameId = parseInt(params?.gameId || "0");
+// ── Module-level helpers (safe for nested component hooks) ──────────────
 
-  // Fetch game details
-  const { data: game, isLoading: gameLoading } = useQuery<Game>({
-    queryKey: [`/api/games/${gameId}`],
-    enabled: !!gameId,
-  });
+function formatDuration(seconds: number | null): string {
+  if (!seconds) return "0:00";
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
 
-  // Fetch clips for this game
-  const { data: clips, isLoading: clipsLoading } = useQuery<Clip[]>({
-    queryKey: [`/api/games/${gameId}/clips`],
-    enabled: !!gameId,
-  });
+function formatViews(views: number): string {
+  if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`;
+  if (views >= 1000) return `${(views / 1000).toFixed(1)}K`;
+  return views.toString();
+}
 
-  // Fetch reels for this game (using clips API with filter)
-  const { data: allClips, isLoading: allClipsLoading } = useQuery<Clip[]>({
-    queryKey: [`/api/games/${gameId}/clips-all`],
-    enabled: !!gameId,
-  });
+interface ClipItemProps { clip: Clip; onClipClick: (id: number) => void; }
 
-  // Fetch screenshots for this game
-  const { data: screenshots, isLoading: screenshotsLoading } = useQuery<Screenshot[]>({
-    queryKey: [`/api/games/${gameId}/screenshots`],
-    enabled: !!gameId,
-  });
-
-  // Filter clips and reels from all clips
-  const reels = allClips?.filter(clip => clip.videoType === 'reel') || [];
-  const normalClips = allClips?.filter(clip => clip.videoType === 'clip' || !clip.videoType) || clips || [];
-
-  const formatDuration = (seconds: number | null) => {
-    if (!seconds) return "0:00";
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const formatViews = (views: number) => {
-    if (views >= 1000000) {
-      return `${(views / 1000000).toFixed(1)}M`;
-    }
-    if (views >= 1000) {
-      return `${(views / 1000).toFixed(1)}K`;
-    }
-    return views.toString();
-  };
-
-  const handleClipClick = (clipId: number) => {
-    setLocation(`/clips/${clipId}`);
-  };
-
-  const handleBackClick = () => {
-    setLocation("/explore");
-  };
-
-  // Helper components
-  const ClipGridItem = ({ clip, onClipClick }: { clip: Clip; onClipClick: (id: number) => void }) => (
+function ClipGridItem({ clip, onClipClick }: ClipItemProps) {
+  const [isPortrait, setIsPortrait] = useState(false);
+  return (
     <Card
       className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30"
       onClick={() => onClipClick(clip.id)}
@@ -118,11 +82,27 @@ export default function GameClipsPage() {
     >
       <CardContent className="p-0">
         <div className="aspect-video relative overflow-hidden rounded-t-lg bg-gray-900">
+          {/* Blurred background fill for portrait thumbnails */}
+          {isPortrait && clip.thumbnailUrl && (
+            <div className="absolute inset-0 z-0 overflow-hidden">
+              <img
+                src={clip.thumbnailUrl}
+                alt=""
+                aria-hidden="true"
+                className="w-full h-full object-cover blur-xl scale-110 opacity-60"
+              />
+            </div>
+          )}
+
           {clip.thumbnailUrl ? (
             <img
               src={clip.thumbnailUrl}
               alt={clip.title}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+              className={`w-full h-full transition-transform duration-300 group-hover:scale-110 relative z-10 ${isPortrait ? "object-contain" : "object-cover"}`}
+              onLoad={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                setIsPortrait(img.naturalHeight > img.naturalWidth);
+              }}
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.src = "/api/placeholder/320x180?text=No+Thumbnail";
@@ -133,18 +113,18 @@ export default function GameClipsPage() {
               <Play className="h-12 w-12 text-primary/50" />
             </div>
           )}
-          
+
           {(clip.trimEnd || clip.duration) && (
-            <Badge className="absolute bottom-2 right-2 bg-black/80 text-white text-xs">
+            <Badge className="absolute bottom-2 right-2 bg-black/80 text-white text-xs z-20">
               {formatDuration(
-                clip.trimEnd && clip.trimEnd > 0 
+                clip.trimEnd && clip.trimEnd > 0
                   ? clip.trimEnd - (clip.trimStart || 0)
                   : clip.duration || 0
               )}
             </Badge>
           )}
 
-          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20">
             <div className="bg-primary rounded-full p-3">
               <Play className="h-6 w-6 text-primary-foreground fill-current" />
             </div>
@@ -188,6 +168,57 @@ export default function GameClipsPage() {
       </CardContent>
     </Card>
   );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
+export default function GameClipsPage() {
+  const [, params] = useRoute("/games/:gameId/clips");
+  const [, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState("clips");
+  const gameId = parseInt(params?.gameId || "0");
+
+  // Fetch game details
+  const { data: game, isLoading: gameLoading } = useQuery<Game>({
+    queryKey: [`/api/games/${gameId}`],
+    enabled: !!gameId,
+  });
+
+  // Fetch clips for this game
+  const { data: clips, isLoading: clipsLoading } = useQuery<ClipWithUser[]>({
+    queryKey: [`/api/games/${gameId}/clips`],
+    enabled: !!gameId,
+  });
+
+  // Fetch reels for this game (using clips API with filter)
+  const { data: allClips, isLoading: allClipsLoading } = useQuery<ClipWithUser[]>({
+    queryKey: [`/api/games/${gameId}/clips-all`],
+    enabled: !!gameId,
+  });
+
+  // Fetch screenshots for this game
+  const { data: screenshots, isLoading: screenshotsLoading } = useQuery<Screenshot[]>({
+    queryKey: [`/api/games/${gameId}/screenshots`],
+    enabled: !!gameId,
+  });
+
+  // Filter clips and reels from all clips
+  const reels = allClips?.filter(clip => clip.videoType === 'reel') || [];
+  const normalClips = allClips?.filter(clip => clip.videoType === 'clip' || !clip.videoType) || clips || [];
+
+  const isMobile = useMobile();
+  const [mobileViewerOpen, setMobileViewerOpen] = useState(false);
+  const [mobileViewerStartIndex, setMobileViewerStartIndex] = useState(0);
+
+  const handleClipClick = (clipId: number, _clips?: ClipWithUser[]) => {
+    const idx = normalClips.findIndex(c => c.id === clipId);
+    setMobileViewerStartIndex(idx >= 0 ? idx : 0);
+    setMobileViewerOpen(true);
+  };
+
+  const handleBackClick = () => {
+    setLocation("/explore");
+  };
 
   const ReelGridItem = ({ reel, onReelClick }: { reel: Clip; onReelClick: (id: number) => void }) => (
     <Card
@@ -351,6 +382,14 @@ export default function GameClipsPage() {
   }
 
   return (
+    <>
+    {mobileViewerOpen && normalClips.length > 0 && (
+      <MobileTrendingViewer
+        content={normalClips}
+        initialIndex={mobileViewerStartIndex}
+        onClose={() => setMobileViewerOpen(false)}
+      />
+    )}
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
@@ -455,9 +494,14 @@ export default function GameClipsPage() {
           {/* Clips Tab */}
           <TabsContent value="clips" className="mt-0">
             {normalClips && normalClips.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
                 {normalClips.map((clip) => (
-                  <ClipGridItem key={clip.id} clip={clip} onClipClick={handleClipClick} />
+                  <VideoClipGridItem
+                    key={clip.id}
+                    clip={clip}
+                    clipsList={normalClips}
+                    onCardClick={handleClipClick}
+                  />
                 ))}
               </div>
             ) : (
@@ -474,9 +518,14 @@ export default function GameClipsPage() {
           {/* Reels Tab */}
           <TabsContent value="reels" className="mt-0">
             {reels && reels.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
                 {reels.map((reel) => (
-                  <ReelGridItem key={reel.id} reel={reel} onReelClick={handleClipClick} />
+                  <VideoClipGridItem
+                    key={reel.id}
+                    clip={reel}
+                    clipsList={reels}
+                    onCardClick={handleClipClick}
+                  />
                 ))}
               </div>
             ) : (
@@ -511,5 +560,6 @@ export default function GameClipsPage() {
         </Tabs>
       </div>
     </div>
+    </>
   );
 }

@@ -1,19 +1,20 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import {
-  ShieldAlert,
   Plus,
   Search,
   X,
   Check,
   Trash2,
-  HelpCircle,
-  ShoppingBag,
-  Gift
 } from "lucide-react";
+import { GamefolioStoreIcon } from "@/components/icons/GamefolioStoreIcon";
+import { GamefolioCollectionIcon } from "@/components/icons/GamefolioCollectionIcon";
+import { GamefolioHelpIcon } from "@/components/icons/GamefolioHelpIcon";
+import { GamefolioAdminIcon } from "@/components/icons/GamefolioAdminIcon";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
-import { GamefolioTrendingIcon } from "@/components/icons/GamefolioTrendingIcon";
+import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
+import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioMessagesIcon } from "@/components/icons/GamefolioMessagesIcon";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
@@ -21,6 +22,7 @@ import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Game } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
+import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -40,6 +42,7 @@ interface TwitchGame {
 const Sidebar = () => {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
+  const { closeClipDialog } = useClipDialog();
   const [showAddGames, setShowAddGames] = useState(false);
   const [gameSearchQuery, setGameSearchQuery] = useState("");
   const [selectedGames, setSelectedGames] = useState<TwitchGame[]>([]);
@@ -227,23 +230,27 @@ const Sidebar = () => {
     setShowAddGames(false);
   };
 
+  const TrendingNavIcon = ({ className }: { className?: string }) => {
+    return <ZapIconSvg active={false} className={className} />;
+  };
+
   const menuItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
-    { icon: GamefolioTrendingIcon, label: "Trending", href: "/trending" },
+    { icon: TrendingNavIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
-    { icon: ShoppingBag, label: "Store", href: "/store" },
+    { icon: GamefolioStoreIcon, label: "Store", href: "/store" },
     { icon: GamefolioWalletIcon, label: "Wallet", href: "/wallet" },
-    { icon: Gift, label: "Collection", href: "/collection" },
+    { icon: GamefolioCollectionIcon, label: "Collection", href: "/collection" },
 
     // Only show Messages link if user has messaging enabled - default to true for demo user
     ...(user && user.messagingEnabled !== false ? [{ icon: GamefolioMessagesIcon, label: "Messages", href: "/messages" }] : []),
 
-    { icon: GamefolioProfileIcon, label: "My Gamefolio", href: user ? `/profile/${user.username}` : "/auth", themed: true },
-    { icon: HelpCircle, label: "Help & Support", href: "/help" },
+    { icon: GamefolioProfileIcon, label: "My Gamefolio", href: user ? `/profile/${user.username}` : "/auth", themed: true, gamefolioIcon: true },
+    { icon: GamefolioHelpIcon, label: "Help & Support", href: "/help" },
 
     // Only show admin panel link for users with admin role
-    ...(user?.role === "admin" ? [{ icon: ShieldAlert, label: "Admin Panel", href: "/admin" }] : [])
+    ...(user?.role === "admin" ? [{ icon: GamefolioAdminIcon, label: "Admin Panel", href: "/admin" }] : [])
   ];
 
   return (
@@ -251,26 +258,50 @@ const Sidebar = () => {
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex w-64 bg-card fixed top-0 left-0 bottom-0 flex-col border-r border-border z-40">
         <nav className="px-4 pt-40 pb-4 space-y-1 flex-1 overflow-y-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-          {menuItems.map((item) => (
-            <Link key={item.href} href={item.href}>
-              <div
-                className={cn(
-                  "flex items-center p-3 rounded-lg transition-all cursor-pointer",
-                  location === item.href
-                    ? "text-[#071013] bg-primary"
-                    : "text-muted-foreground hover:bg-primary hover:text-[#071013]"
-                )}
-              >
-                <item.icon className="w-6 h-6" />
-                <span className="ml-3 font-medium">{item.label}</span>
-              </div>
-            </Link>
-          ))}
+          {menuItems.map((item) => {
+            const isActive = location === item.href;
+            const isGamefolioItem = 'gamefolioIcon' in item && item.gamefolioIcon;
+            return (
+              <Link key={item.href} href={item.href} onClick={() => { closeClipDialog(); if (item.href === '/' && location === '/') setLocation('/'); }}>
+                <div
+                  className={cn(
+                    "flex items-center p-3 rounded-lg transition-all cursor-pointer group",
+                    isActive
+                      ? "text-[#071013] bg-primary"
+                      : "text-muted-foreground hover:bg-primary hover:text-[#071013]"
+                  )}
+                >
+                  {isGamefolioItem ? (
+                    <span className="inline-flex items-center justify-center w-6 h-6 flex-shrink-0 overflow-visible">
+                      <GamefolioIcon glow={isActive} className="w-6 h-6 scale-[1.85] transition-all duration-300 group-hover:[filter:drop-shadow(0_0_10px_rgba(183,255,26,0.45))]" />
+                    </span>
+                  ) : item.themed ? (
+                    <span
+                      className={cn(
+                        "transition-all duration-300 inline-flex",
+                        !isActive && "group-hover:[filter:drop-shadow(0_0_7px_#B7FF1A)]"
+                      )}
+                    >
+                      <item.icon
+                        className={cn(
+                          "w-6 h-6",
+                          !isActive && "text-primary"
+                        )}
+                      />
+                    </span>
+                  ) : (
+                    <item.icon className="w-6 h-6" />
+                  )}
+                  <span className="ml-3 font-medium">{item.label}</span>
+                </div>
+              </Link>
+            );
+          })}
 
-          <div className="pt-6 border-t border-border mt-6">
+          {user && <div className="pt-6 border-t border-border mt-6">
             <div className="flex items-center justify-between px-3 mb-3">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                {user ? "Your Games" : "Top Games"}
+                Your Games
               </h3>
               {user && (
                 <Button
@@ -300,8 +331,8 @@ const Sidebar = () => {
                   key={`sidebar-${game.id}`}
                   className="relative flex items-center px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary group cursor-pointer"
                   onClick={() => {
-                    // Navigate to the game page using the game name slug
                     const gameSlug = game.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    closeClipDialog();
                     setLocation(`/games/${gameSlug}`);
                   }}
                   onMouseEnter={() => setHoveredGameId(game.id)}
@@ -397,7 +428,7 @@ const Sidebar = () => {
                 </div>
               )}
             </div>
-          </div>
+          </div>}
         </nav>
       </div>
 

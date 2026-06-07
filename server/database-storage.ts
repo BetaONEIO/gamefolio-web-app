@@ -107,14 +107,19 @@ import {
   UserDailyFires, InsertUserDailyFires,
   FireLimits,
   xpSettings,
-  XpSetting, InsertXpSetting
+  XpSetting, InsertXpSetting,
+  PushToken, InsertPushToken,
+  PushBroadcast, PushAudience,
+  pushTokens,
+  pushBroadcasts
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, isNotNull, getTableColumns } from "drizzle-orm";
+import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, notInArray, isNotNull, getTableColumns } from "drizzle-orm";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { IStorage } from "./storage";
 import { calculateLevel } from "./level-system";
+import { notifyNewSignup } from "./telegram-notify";
 import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 
@@ -210,9 +215,9 @@ export class DatabaseStorage implements IStorage {
     return user || null;
   }
 
-  async getReferralStats(userId: number): Promise<{ referralCount: number; totalXpEarned: number; referralCode: string | null }> {
+  async getReferralStats(userId: number): Promise<{ referralCount: number; totalXpEarned: number; referralCode: string | null; referralCodeCustomized: boolean }> {
     const user = await this.getUser(userId);
-    if (!user) return { referralCount: 0, totalXpEarned: 0, referralCode: null };
+    if (!user) return { referralCount: 0, totalXpEarned: 0, referralCode: null, referralCodeCustomized: false };
 
     let referralCode = user.referralCode || null;
 
@@ -243,7 +248,28 @@ export class DatabaseStorage implements IStorage {
 
     const totalXpEarned = Number(xpResult[0]?.total ?? 0);
 
-    return { referralCount, totalXpEarned, referralCode };
+    return { referralCount, totalXpEarned, referralCode, referralCodeCustomized: user.referralCodeCustomized ?? false };
+  }
+
+  async customizeReferralCode(userId: number, newCode: string): Promise<{ success: boolean; message: string }> {
+    const user = await this.getUser(userId);
+    if (!user) return { success: false, message: 'User not found' };
+
+    if (user.referralCodeCustomized) {
+      return { success: false, message: 'You have already customised your referral code. This can only be done once.' };
+    }
+
+    // Check uniqueness (case-insensitive)
+    const existing = await db.select({ id: users.id }).from(users).where(eq(users.referralCode, newCode.toUpperCase())).limit(1);
+    if (existing.length > 0 && existing[0].id !== userId) {
+      return { success: false, message: 'That referral code is already taken. Please choose another.' };
+    }
+
+    await db.update(users)
+      .set({ referralCode: newCode.toUpperCase(), referralCodeCustomized: true })
+      .where(eq(users.id, userId));
+
+    return { success: true, message: 'Referral code updated successfully.' };
   }
 
   async createUser(userData: InsertUser): Promise<User> {
@@ -268,12 +294,13 @@ export class DatabaseStorage implements IStorage {
 
       const userWithDefaults = {
         ...safeUserData,
-        avatarUrl: safeUserData.avatarUrl || "/attached_assets/gamefolio social logo 3d circle web.png",
+        avatarUrl: safeUserData.avatarUrl || "/attached_assets/gamefolio-logo-green.png",
         bannerUrl: safeUserData.bannerUrl || "/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg",
         selectedAvatarBorderId: safeUserData.selectedAvatarBorderId ?? (await db.select({ id: assetRewards.id }).from(assetRewards).where(eq(assetRewards.category, "avatar_border")).limit(1))[0]?.id,
         referralCode: await generateReferralCode(),
       };
       const [user] = await db.insert(users).values(userWithDefaults).returning();
+      notifyNewSignup(user);
       return user;
     } catch (error) {
       console.error("Error creating user:", error);
@@ -494,10 +521,11 @@ export class DatabaseStorage implements IStorage {
 
   async getFeaturedUsers(limit: number = 6): Promise<User[]> {
     try {
-      // Get the first few users to showcase the feature
+      // Get the first few users to showcase the feature, excluding suspended/banned
       const featuredUsers = await db
         .select()
         .from(users)
+        .where(eq(users.status, 'active'))
         .orderBy(desc(users.createdAt), desc(users.id))
         .limit(limit);
 
@@ -745,14 +773,15 @@ export class DatabaseStorage implements IStorage {
 
   async deleteClip(id: number): Promise<boolean> {
     try {
-      // First delete associated XP history records
+      // Delete associated XP history records
       await db.delete(userXPHistory).where(eq(userXPHistory.clipId, id));
       
-      // Then delete associated likes and comments
+      // Delete associated likes, comments, and notifications
       await db.delete(likes).where(eq(likes.clipId, id));
       await db.delete(comments).where(eq(comments.clipId, id));
+      await db.delete(notifications).where(eq(notifications.clipId, id));
 
-      // Then delete the clip
+      // Delete the clip
       const result = await db.delete(clips).where(eq(clips.id, id)).returning();
       return result.length > 0;
     } catch (error) {
@@ -963,8 +992,6 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Get clips based on engagement (likes + comments) with privacy filtering
-    console.log('getTrendingClips: currentUserId =', currentUserId);
-    
     const clipEngagementQuery = db
       .select({
         clipId: clips.id,
@@ -989,7 +1016,9 @@ export class DatabaseStorage implements IStorage {
           or(
             sql`${clips.gameId} IS NULL`,
             sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
-          )
+          ),
+          // Exclude content from suspended/banned users
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )
       )
       .groupBy(clips.id)
@@ -1002,13 +1031,12 @@ export class DatabaseStorage implements IStorage {
 
     const engagementResults = await clipEngagementQuery;
 
-    const clipsWithDetails: ClipWithUser[] = [];
-    for (const result of engagementResults) {
-      const clipWithUser = await this.getClipWithUser(result.clipId);
-      if (clipWithUser) {
-        clipsWithDetails.push(clipWithUser);
-      }
-    }
+    // Run getClipWithUser in parallel — was a serial N+1 that made this
+    // endpoint take 3s+ for 20 clips. Promise.all preserves order.
+    const fetched = await Promise.all(
+      engagementResults.map(r => this.getClipWithUser(r.clipId))
+    );
+    const clipsWithDetails: ClipWithUser[] = fetched.filter((c): c is ClipWithUser => !!c);
 
     return clipsWithDetails;
   }
@@ -1088,7 +1116,9 @@ export class DatabaseStorage implements IStorage {
             ) : sql`false` // If no current user, don't show any private content
           ),
           // Only show content for approved games (or no game)
-          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
+          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`,
+          // Exclude content from suspended/banned users
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )
       )
       .groupBy(clips.id, users.id, games.id)
@@ -1159,7 +1189,9 @@ export class DatabaseStorage implements IStorage {
             ) : sql`false` // If no current user, don't show any private content
           ),
           // Only show content for approved games (or no game)
-          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
+          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`,
+          // Exclude content from suspended/banned users
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )
       )
       .groupBy(clips.id, users.id, games.id)
@@ -1492,9 +1524,12 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(users)
       .where(
-        or(
-          ilike(users.username, `%${query}%`),
-          ilike(users.displayName, `%${query}%`)
+        and(
+          eq(users.status, 'active'),
+          or(
+            ilike(users.username, `%${query}%`),
+            ilike(users.displayName, `%${query}%`)
+          )
         )
       )
       .orderBy(desc(users.createdAt), desc(users.id))
@@ -1522,6 +1557,8 @@ export class DatabaseStorage implements IStorage {
       sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
     );
 
+    const activeUsersFilter = sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`;
+
     let matchingClips;
 
     if (isHashtag) {
@@ -1533,7 +1570,8 @@ export class DatabaseStorage implements IStorage {
           and(
             eq(clips.videoType, 'clip'),
             sql`EXISTS (SELECT 1 FROM unnest(${clips.tags}) AS tag WHERE LOWER(tag) = ${searchTerm})`,
-            approvedFilter
+            approvedFilter,
+            activeUsersFilter
           )
         );
     } else {
@@ -1548,7 +1586,8 @@ export class DatabaseStorage implements IStorage {
               ilike(clips.title, `%${query}%`),
               ilike(clips.description, `%${query}%`)
             ),
-            approvedFilter
+            approvedFilter,
+            activeUsersFilter
           )
         );
     }
@@ -1574,6 +1613,8 @@ export class DatabaseStorage implements IStorage {
       sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
     );
 
+    const activeUsersFilter = sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`;
+
     let matchingReels;
 
     if (isHashtag) {
@@ -1585,7 +1626,8 @@ export class DatabaseStorage implements IStorage {
           and(
             eq(clips.videoType, 'reel'),
             sql`EXISTS (SELECT 1 FROM unnest(${clips.tags}) AS tag WHERE LOWER(tag) = ${searchTerm})`,
-            approvedFilter
+            approvedFilter,
+            activeUsersFilter
           )
         );
     } else {
@@ -1600,7 +1642,8 @@ export class DatabaseStorage implements IStorage {
               ilike(clips.title, `%${query}%`),
               ilike(clips.description, `%${query}%`)
             ),
-            approvedFilter
+            approvedFilter,
+            activeUsersFilter
           )
         );
     }
@@ -1650,7 +1693,13 @@ export class DatabaseStorage implements IStorage {
       .from(screenshots)
       .leftJoin(users, eq(screenshots.userId, users.id))
       .leftJoin(games, eq(screenshots.gameId, games.id))
-      .where(and(whereClause, approvedFilter))
+      .where(
+        and(
+          whereClause,
+          approvedFilter,
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${screenshots.userId} AND u.status IN ('suspended', 'banned'))`
+        )
+      )
       .orderBy(desc(screenshots.createdAt), desc(screenshots.id))
       .limit(20);
 
@@ -1928,8 +1977,34 @@ export class DatabaseStorage implements IStorage {
     return Number(result.count);
   }
 
+  async getLatestClips(limit: number = 20, since?: Date, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]> {
+    const result = await db
+      .select({ clipId: clips.id })
+      .from(clips)
+      .leftJoin(users, eq(clips.userId, users.id))
+      .where(and(
+        eq(clips.videoType, 'clip'),
+        since ? gt(clips.createdAt, since) : undefined,
+        gameId ? eq(clips.gameId, gameId) : undefined,
+        or(
+          eq(users.isPrivate, false),
+          currentUserId ? eq(users.id, currentUserId) : sql`false`,
+          currentUserId ? sql`exists (select 1 from follows f where f.following_id = ${users.id} and f.follower_id = ${currentUserId})` : sql`false`
+        ),
+        or(
+          sql`${clips.gameId} IS NULL`,
+          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
+        ),
+        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
+      ))
+      .orderBy(desc(clips.createdAt), desc(clips.id))
+      .limit(limit);
+
+    const fetched = await Promise.all(result.map(r => this.getClipWithUser(r.clipId)));
+    return fetched.filter((c): c is ClipWithUser => !!c);
+  }
+
   async getAllClips(limit: number = 10, offset: number = 0, currentUserId?: number): Promise<ClipWithUser[]> {
-    console.log('getAllClips: currentUserId =', currentUserId);
     
     // Show clips excluding those linked to unapproved custom games (public feed safety)
     const allClipsData = await db
@@ -1955,7 +2030,8 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(games, eq(clips.gameId, games.id))
       .where(and(
         eq(clips.videoType, 'clip'),
-        sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
+        sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`,
+        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
       ))
       .orderBy(desc(clips.createdAt), desc(clips.id))
       .limit(limit)
@@ -2181,6 +2257,7 @@ export class DatabaseStorage implements IStorage {
           role: users.role,
           nftProfileTokenId: users.nftProfileTokenId,
           nftProfileImageUrl: users.nftProfileImageUrl,
+          activeProfilePicType: users.activeProfilePicType,
           selectedVerificationBadgeId: users.selectedVerificationBadgeId
         }
       })
@@ -2499,7 +2576,7 @@ export class DatabaseStorage implements IStorage {
         eq(notifications.userId, userId),
         eq(notifications.isRead, false)
       ));
-    return result.count;
+    return parseInt(String(result.count), 10) || 0;
   }
 
   async markNotificationAsRead(id: number): Promise<boolean> {
@@ -2549,6 +2626,14 @@ export class DatabaseStorage implements IStorage {
       console.error("Error deleting all notifications:", error);
       return false;
     }
+  }
+
+  async hasContentByUserId(userId: number): Promise<{ hasClips: boolean; hasScreenshots: boolean }> {
+    const [clipResult, screenshotResult] = await Promise.all([
+      db.select({ id: clips.id }).from(clips).where(eq(clips.userId, userId)).limit(1),
+      db.select({ id: screenshots.id }).from(screenshots).where(eq(screenshots.userId, userId)).limit(1),
+    ]);
+    return { hasClips: clipResult.length > 0, hasScreenshots: screenshotResult.length > 0 };
   }
 
   async getNotification(id: number): Promise<any> {
@@ -2865,7 +2950,8 @@ export class DatabaseStorage implements IStorage {
         and(
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'clip'),
-          gameId ? eq(clips.gameId, gameId) : undefined
+          gameId ? eq(clips.gameId, gameId) : undefined,
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )
       )
       .groupBy(clips.id)
@@ -2874,13 +2960,10 @@ export class DatabaseStorage implements IStorage {
 
     const likesResults = await clipLikesQuery;
 
-    const clipsWithDetails: ClipWithUser[] = [];
-    for (const result of likesResults) {
-      const clipWithUser = await this.getClipWithUser(result.clipId);
-      if (clipWithUser) {
-        clipsWithDetails.push(clipWithUser);
-      }
-    }
+    const fetched = await Promise.all(
+      likesResults.map(r => this.getClipWithUser(r.clipId))
+    );
+    const clipsWithDetails: ClipWithUser[] = fetched.filter((c): c is ClipWithUser => !!c);
 
     return clipsWithDetails;
   }
@@ -2924,7 +3007,8 @@ export class DatabaseStorage implements IStorage {
         and(
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'clip'),
-          gameId ? eq(clips.gameId, gameId) : undefined
+          gameId ? eq(clips.gameId, gameId) : undefined,
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )
       )
       .groupBy(clips.id)
@@ -2933,13 +3017,10 @@ export class DatabaseStorage implements IStorage {
 
     const commentsResults = await clipCommentsQuery;
 
-    const clipsWithDetails: ClipWithUser[] = [];
-    for (const result of commentsResults) {
-      const clipWithUser = await this.getClipWithUser(result.clipId);
-      if (clipWithUser) {
-        clipsWithDetails.push(clipWithUser);
-      }
-    }
+    const fetched = await Promise.all(
+      commentsResults.map(r => this.getClipWithUser(r.clipId))
+    );
+    const clipsWithDetails: ClipWithUser[] = fetched.filter((c): c is ClipWithUser => !!c);
 
     return clipsWithDetails;
   }
@@ -2983,7 +3064,8 @@ export class DatabaseStorage implements IStorage {
         and(
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'reel'),
-          gameId ? eq(clips.gameId, gameId) : undefined
+          gameId ? eq(clips.gameId, gameId) : undefined,
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )
       )
       .groupBy(clips.id)
@@ -2992,13 +3074,10 @@ export class DatabaseStorage implements IStorage {
 
     const likesResults = await reelLikesQuery;
 
-    const clipsWithDetails: ClipWithUser[] = [];
-    for (const result of likesResults) {
-      const clipWithUser = await this.getClipWithUser(result.clipId);
-      if (clipWithUser) {
-        clipsWithDetails.push(clipWithUser);
-      }
-    }
+    const fetched = await Promise.all(
+      likesResults.map(r => this.getClipWithUser(r.clipId))
+    );
+    const clipsWithDetails: ClipWithUser[] = fetched.filter((c): c is ClipWithUser => !!c);
 
     return clipsWithDetails;
   }
@@ -3042,7 +3121,8 @@ export class DatabaseStorage implements IStorage {
         and(
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'reel'),
-          gameId ? eq(clips.gameId, gameId) : undefined
+          gameId ? eq(clips.gameId, gameId) : undefined,
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )
       )
       .groupBy(clips.id)
@@ -3051,13 +3131,10 @@ export class DatabaseStorage implements IStorage {
 
     const commentsResults = await reelCommentsQuery;
 
-    const clipsWithDetails: ClipWithUser[] = [];
-    for (const result of commentsResults) {
-      const clipWithUser = await this.getClipWithUser(result.clipId);
-      if (clipWithUser) {
-        clipsWithDetails.push(clipWithUser);
-      }
-    }
+    const fetched = await Promise.all(
+      commentsResults.map(r => this.getClipWithUser(r.clipId))
+    );
+    const clipsWithDetails: ClipWithUser[] = fetched.filter((c): c is ClipWithUser => !!c);
 
     return clipsWithDetails;
   }
@@ -3125,10 +3202,48 @@ export class DatabaseStorage implements IStorage {
         and(
           dateFilter ? gt(screenshots.createdAt, dateFilter) : undefined,
           gameId ? eq(screenshots.gameId, gameId) : undefined,
-          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${screenshots.gameId} AND g.is_approved = false)`
+          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${screenshots.gameId} AND g.is_approved = false)`,
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${screenshots.userId} AND u.status IN ('suspended', 'banned'))`
         )
       )
       .orderBy(desc(screenshots.views), desc(screenshots.createdAt), desc(screenshots.id))
+      .limit(limit);
+
+    const results = await screenshotsQuery;
+
+    return results.map(row => ({
+      ...row.screenshot,
+      user: row.user?.id ? { ...row.user } : null,
+      game: row.game?.id ? { ...row.game } : null,
+      _count: {
+        likes: Number(row.likesCount) || 0,
+        reactions: Number(row.reactionsCount) || 0,
+        comments: Number(row.commentsCount) || 0
+      }
+    })) as any;
+  }
+
+  async getLatestScreenshots(limit: number = 20, gameId?: number): Promise<(Screenshot & { user: User; game?: Game })[]> {
+    const screenshotsQuery = db
+      .select({
+        screenshot: screenshots,
+        user: users,
+        game: games,
+        likesCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotLikes} WHERE ${screenshotLikes.screenshotId} = ${screenshots.id}), 0)`,
+        reactionsCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotReactions} WHERE ${screenshotReactions.screenshotId} = ${screenshots.id}), 0)`,
+        commentsCount: sql<number>`COALESCE((SELECT COUNT(*) FROM ${screenshotComments} WHERE ${screenshotComments.screenshotId} = ${screenshots.id}), 0)`
+      })
+      .from(screenshots)
+      .leftJoin(users, eq(screenshots.userId, users.id))
+      .leftJoin(games, eq(screenshots.gameId, games.id))
+      .where(
+        and(
+          gameId ? eq(screenshots.gameId, gameId) : undefined,
+          sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${screenshots.gameId} AND g.is_approved = false)`,
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${screenshots.userId} AND u.status IN ('suspended', 'banned'))`
+        )
+      )
+      .orderBy(desc(screenshots.createdAt), desc(screenshots.id))
       .limit(limit);
 
     const results = await screenshotsQuery;
@@ -3482,7 +3597,8 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(monthlyLeaderboard.month, month),
         eq(monthlyLeaderboard.year, year),
-        gt(monthlyLeaderboard.totalPoints, 0)
+        gt(monthlyLeaderboard.totalPoints, 0),
+        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`
       ))
       .orderBy(desc(monthlyLeaderboard.totalPoints));
 
@@ -3528,7 +3644,7 @@ export class DatabaseStorage implements IStorage {
     rank: number;
     user: User;
   }>> {
-    // Aggregate all monthly leaderboard data by user
+    // Aggregate all monthly leaderboard data by user, excluding suspended/banned
     const aggregated = await db
       .select({
         userId: monthlyLeaderboard.userId,
@@ -3540,6 +3656,7 @@ export class DatabaseStorage implements IStorage {
         totalPoints: sql<number>`CAST(SUM(${monthlyLeaderboard.totalPoints}) AS INTEGER)`,
       })
       .from(monthlyLeaderboard)
+      .where(sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`)
       .groupBy(monthlyLeaderboard.userId)
       .having(sql`SUM(${monthlyLeaderboard.totalPoints}) > 0`)
       .orderBy(desc(sql`SUM(${monthlyLeaderboard.totalPoints})`))
@@ -3595,7 +3712,8 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(weeklyLeaderboard.week, week),
         eq(weeklyLeaderboard.year, year),
-        gt(weeklyLeaderboard.totalPoints, 0)
+        gt(weeklyLeaderboard.totalPoints, 0),
+        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${weeklyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`
       ))
       .orderBy(desc(weeklyLeaderboard.totalPoints));
 
@@ -3642,7 +3760,10 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(topContributors)
       .leftJoin(users, eq(topContributors.userId, users.id))
-      .where(eq(topContributors.periodType, periodType))
+      .where(and(
+        eq(topContributors.periodType, periodType),
+        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${topContributors.userId} AND (u.status IN ('suspended', 'banned') OR u.hide_from_leaderboard = TRUE))`
+      ))
       .orderBy(desc(topContributors.achievedAt), desc(topContributors.totalPoints));
 
     const mapped = results.map(row => ({
@@ -3684,7 +3805,8 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(topContributors.periodType, periodType),
         eq(topContributors.period, period),
-        eq(topContributors.year, year)
+        eq(topContributors.year, year),
+        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${topContributors.userId} AND u.status IN ('suspended', 'banned'))`
       ))
       .orderBy(desc(topContributors.totalPoints));
 
@@ -3770,6 +3892,7 @@ export class DatabaseStorage implements IStorage {
         totalXP: users.totalXP
       })
       .from(users)
+      .where(notInArray(users.status, ['suspended', 'banned']))
       .orderBy(desc(users.totalXP))
       .limit(limit);
 
@@ -4208,7 +4331,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Screenshot admin operations
-  async getAllScreenshots(limit: number = 10, offset: number = 0): Promise<Array<{
+  async getAllScreenshots(limit: number = 10, offset: number = 0, includeAllUsers: boolean = false): Promise<Array<{
     id: number;
     title: string;
     description?: string | null;
@@ -4251,9 +4374,14 @@ export class DatabaseStorage implements IStorage {
         .leftJoin(users, eq(screenshots.userId, users.id))
         .leftJoin(games, eq(screenshots.gameId, games.id))
         .where(
-          or(
-            sql`${screenshots.gameId} IS NULL`,
-            sql`${games.is_approved} IS NULL OR ${games.is_approved} = true`
+          and(
+            or(
+              sql`${screenshots.gameId} IS NULL`,
+              sql`${games.is_approved} IS NULL OR ${games.is_approved} = true`
+            ),
+            includeAllUsers
+              ? undefined
+              : sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${screenshots.userId} AND u.status IN ('suspended', 'banned'))`
           )
         )
         .orderBy(desc(screenshots.createdAt), desc(screenshots.id)) // Stable pagination with tie-breaker
@@ -4959,7 +5087,7 @@ export class DatabaseStorage implements IStorage {
       .from(profileBorders)
       .where(and(eq(profileBorders.isActive, true), eq(profileBorders.availableInLootbox, true), eq(profileBorders.shape, 'circle')));
 
-    if (lootboxBorders.length > 0 && Math.random() < 0.03) {
+    if (lootboxBorders.length > 0 && false) { // profile borders temporarily disabled (images not loading)
       const randomBorder = lootboxBorders[Math.floor(Math.random() * lootboxBorders.length)];
       const alreadyHasBorder = await this.userHasUnlockedBorder(userId, randomBorder.id);
 
@@ -5100,7 +5228,7 @@ export class DatabaseStorage implements IStorage {
     return db
       .select()
       .from(assetRewards)
-      .where(eq(assetRewards.isActive, true))
+      .where(and(eq(assetRewards.isActive, true), ne(assetRewards.assetType, 'avatar_border')))
       .orderBy(assetRewards.rarity);
   }
 
@@ -5461,15 +5589,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserUnlockedNameTags(userId: number): Promise<NameTag[]> {
-    // Get user to check for admin role
-    const user = await this.getUser(userId);
-    const isAdmin = user?.role === 'admin' || user?.username === 'mod_tom' || user?.username === 'player1';
-
-    // If admin, they have all active name tags
-    if (isAdmin) {
-      return await db.select().from(nameTags).where(eq(nameTags.isActive, true));
-    }
-
     // Get user's unlocked name tags
     const unlocked = await db
       .select({ nameTag: nameTags })
@@ -5511,12 +5630,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async userHasUnlockedNameTag(userId: number, nameTagId: number): Promise<boolean> {
-    // Check if user is admin
-    const user = await this.getUser(userId);
-    if (user?.role === 'admin' || user?.username === 'mod_tom' || user?.username === 'player1') {
-      return true;
-    }
-
     // Check if it's a default tag (everyone has it)
     const [nameTag] = await db
       .select()
@@ -5858,5 +5971,134 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return result;
+  }
+
+  // ----- Push notifications -----
+
+  async upsertPushToken(input: InsertPushToken): Promise<PushToken> {
+    const now = new Date();
+    const [row] = await db
+      .insert(pushTokens)
+      .values({
+        userId: input.userId,
+        token: input.token,
+        platform: input.platform,
+        deviceModel: input.deviceModel ?? null,
+        appVersion: input.appVersion ?? null,
+      })
+      .onConflictDoUpdate({
+        target: pushTokens.token,
+        set: {
+          userId: input.userId,
+          platform: input.platform,
+          deviceModel: input.deviceModel ?? null,
+          appVersion: input.appVersion ?? null,
+          lastSeenAt: now,
+        },
+      })
+      .returning();
+    return row;
+  }
+
+  async deletePushToken(token: string): Promise<boolean> {
+    const rows = await db
+      .delete(pushTokens)
+      .where(eq(pushTokens.token, token))
+      .returning({ id: pushTokens.id });
+    return rows.length > 0;
+  }
+
+  async deletePushTokensByUser(userId: number): Promise<number> {
+    const rows = await db
+      .delete(pushTokens)
+      .where(eq(pushTokens.userId, userId))
+      .returning({ id: pushTokens.id });
+    return rows.length;
+  }
+
+  async getPushTokensByUserIds(userIds: number[]): Promise<PushToken[]> {
+    if (userIds.length === 0) return [];
+    return db.select().from(pushTokens).where(inArray(pushTokens.userId, userIds));
+  }
+
+  async getAllPushTokens(): Promise<PushToken[]> {
+    return db.select().from(pushTokens);
+  }
+
+  async getPushTokensByRole(role: string): Promise<PushToken[]> {
+    return db
+      .select({
+        id: pushTokens.id,
+        userId: pushTokens.userId,
+        token: pushTokens.token,
+        platform: pushTokens.platform,
+        deviceModel: pushTokens.deviceModel,
+        appVersion: pushTokens.appVersion,
+        createdAt: pushTokens.createdAt,
+        lastSeenAt: pushTokens.lastSeenAt,
+      })
+      .from(pushTokens)
+      .innerJoin(users, eq(pushTokens.userId, users.id))
+      .where(eq(users.role, role));
+  }
+
+  async getPushTokensForProUsers(): Promise<PushToken[]> {
+    return db
+      .select({
+        id: pushTokens.id,
+        userId: pushTokens.userId,
+        token: pushTokens.token,
+        platform: pushTokens.platform,
+        deviceModel: pushTokens.deviceModel,
+        appVersion: pushTokens.appVersion,
+        createdAt: pushTokens.createdAt,
+        lastSeenAt: pushTokens.lastSeenAt,
+      })
+      .from(pushTokens)
+      .innerJoin(users, eq(pushTokens.userId, users.id))
+      .where(eq(users.isPro, true));
+  }
+
+  async removeStalePushTokens(tokens: string[]): Promise<number> {
+    if (tokens.length === 0) return 0;
+    const rows = await db
+      .delete(pushTokens)
+      .where(inArray(pushTokens.token, tokens))
+      .returning({ id: pushTokens.id });
+    return rows.length;
+  }
+
+  async createPushBroadcast(input: {
+    sentByUserId: number;
+    title: string;
+    body: string;
+    actionUrl?: string | null;
+    audience: PushAudience;
+    recipientCount: number;
+    successCount: number;
+    failureCount: number;
+  }): Promise<PushBroadcast> {
+    const [row] = await db
+      .insert(pushBroadcasts)
+      .values({
+        sentByUserId: input.sentByUserId,
+        title: input.title,
+        body: input.body,
+        actionUrl: input.actionUrl ?? null,
+        audience: input.audience,
+        recipientCount: input.recipientCount,
+        successCount: input.successCount,
+        failureCount: input.failureCount,
+      })
+      .returning();
+    return row;
+  }
+
+  async getRecentPushBroadcasts(limit: number = 50): Promise<PushBroadcast[]> {
+    return db
+      .select()
+      .from(pushBroadcasts)
+      .orderBy(desc(pushBroadcasts.createdAt))
+      .limit(limit);
   }
 }

@@ -2,25 +2,35 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { ChevronLeft, Heart, MessageCircle, Share2, MoreVertical, User, Play, Pause, Flag, Check, Volume2, VolumeX, Trash2, X } from "lucide-react";
+import { MessageCircle, Trash2, ChevronDown, ChevronLeft, BarChart2, Gamepad2, Music, Download, X } from "lucide-react";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
+import { CustomAvatar } from "@/components/ui/custom-avatar";
+import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
+import { Link, useLocation } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import CommentSection from "@/components/clips/CommentSection";
 import ShareMenu from "@/components/clips/ShareMenu";
 import { useAuth } from "@/hooks/use-auth";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
-import { cn } from "@/lib/utils";
-import { ReportDialog } from "@/components/content/ReportDialog";
+
 import { AgeRestrictionDialog } from "@/components/content/AgeRestrictionDialog";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { VideoAdPlayer } from "@/components/ads/VideoAdPlayer";
 import { useReelAdTracker } from "@/hooks/use-ad-manager";
-import { useSignedUrl } from "@/hooks/use-signed-url";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface FullscreenReelsViewerProps {
   reels: ClipWithUser[];
@@ -31,22 +41,42 @@ interface FullscreenReelsViewerProps {
 export function FullscreenReelsViewer({ reels, initialIndex, onClose }: FullscreenReelsViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showComments, setShowComments] = useState(false);
+  const [isClosingComments, setIsClosingComments] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [ageRestrictionAccepted, setAgeRestrictionAccepted] = useState<Record<number, boolean>>({});
   const [showAgeRestrictionDialog, setShowAgeRestrictionDialog] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
+  const [isDownloading, setIsDownloading] = useState(false);
   const isAcceptingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const isSwiping = useRef(false);
+  const closeComments = (callback?: () => void) => {
+    setIsClosingComments(true);
+    setTimeout(() => {
+      setShowComments(false);
+      setIsClosingComments(false);
+      callback?.();
+    }, 420);
+  };
+  const videoAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
   const { isOpen: isJoinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
-  
-  const { showAd, isPro, onReelChange, onAdFinished, reset: resetAdTracker } = useReelAdTracker();
+
+  const { showAd, isPro, onReelChange, onAdFinished } = useReelAdTracker();
 
   const currentReel = reels[currentIndex];
-
-  const { signedUrl: avatarSignedUrl } = useSignedUrl(currentReel?.user?.avatarUrl);
 
   // Follow status for current user
   const { data: followStatus } = useQuery<{ following: boolean; requested: boolean }>({
@@ -56,7 +86,6 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
 
   const isFollowing = followStatus?.following || followStatus?.requested || false;
 
-  // Follow/unfollow mutation
   const followMutation = useMutation({
     mutationFn: async () => {
       if (isFollowing) {
@@ -73,56 +102,95 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       });
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update follow status",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to update follow status", variant: "destructive" });
     },
   });
 
   const handleFollow = () => {
     if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to follow users",
-        variant: "destructive",
-      });
+      toast({ title: "Authentication Required", description: "Please log in to follow users", variant: "destructive" });
       return;
     }
-    if (user.id === currentReel.user.id) {
-      return; // Don't allow following yourself
-    }
+    if (user.id === currentReel.user.id) return;
     followMutation.mutate();
   };
+
+  const handleDownload = async () => {
+    if (isDownloading || !currentReel) return;
+    setIsDownloading(true);
+    toast({ title: "⚡ Preparing your reel…", description: "Adding watermark & outro. First download may take ~30 s." });
+    const safeTitle = (currentReel.title || 'reel').replace(/[^a-z0-9]/gi, '_').slice(0, 60);
+    let done = false;
+    try {
+      const res = await fetch(`/api/clips/${currentReel.id}/download`, { credentials: 'include', headers: { Accept: 'video/mp4' } });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `${safeTitle}_gamefolio.mp4`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        done = true;
+        toast({ title: "Download complete!", description: "Saved with Gamefolio watermark.", variant: "gamefolioSuccess" as any });
+      }
+    } catch { /* fall through to fallback */ }
+    if (!done) {
+      try {
+        const fb = await fetch(`/api/clips/${currentReel.id}/download-url`, { credentials: 'include' });
+        if (!fb.ok) throw new Error('unavailable');
+        const { url: directUrl, filename } = await fb.json();
+        const a = document.createElement('a');
+        a.href = directUrl; a.download = filename || `${safeTitle}_gamefolio.mp4`; a.target = '_blank';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        toast({ title: "Download started!", description: "Your reel is downloading.", variant: "gamefolioSuccess" as any });
+      } catch {
+        toast({ title: "Download failed", description: "Please try again.", variant: "destructive" });
+      }
+    }
+    setIsDownloading(false);
+  };
+
+  const deleteReelMutation = useMutation({
+    mutationFn: async (reelId: number) => {
+      await apiRequest("DELETE", `/api/clips/${reelId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clips/latest'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reels/latest'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reels/trending'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reels'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clips/reels/trending'] });
+      if (currentReel?.user?.username) {
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${currentReel.user.username}/clips`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${currentReel.user.username}`] });
+      }
+      toast({ description: "Reel deleted successfully.", variant: "gamefolioSuccess" as any });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast({ title: "Delete failed", description: error.message || "Failed to delete reel.", variant: "destructive" });
+    },
+  });
 
   // Scroll to initial reel on mount
   useEffect(() => {
     if (containerRef.current) {
-      const itemHeight = containerRef.current.clientHeight;
-      const scrollPosition = initialIndex * itemHeight;
-      containerRef.current.scrollTop = scrollPosition;
+      containerRef.current.scrollTop = initialIndex * containerRef.current.clientHeight;
     }
   }, []);
 
-  // Track current reel based on scroll position and trigger ads every 5 reels
+  // Track current reel based on scroll
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
     const handleScroll = () => {
-      const itemHeight = container.clientHeight;
-      const scrollTop = container.scrollTop;
-      const newIndex = Math.round(scrollTop / itemHeight);
+      const newIndex = Math.round(container.scrollTop / container.clientHeight);
       if (newIndex !== currentIndex && newIndex >= 0 && newIndex < reels.length) {
         setCurrentIndex(newIndex);
-        if (!isPro) {
-          onReelChange(newIndex);
-        }
+        if (!isPro) onReelChange(newIndex);
       }
     };
-
-    container.addEventListener('scroll', handleScroll);
+    container.addEventListener('scroll', handleScroll, { passive: true });
     return () => container.removeEventListener('scroll', handleScroll);
   }, [currentIndex, reels.length, isPro, onReelChange]);
 
@@ -130,68 +198,60 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     const container = containerRef.current;
     if (!container) return;
-
-    const itemHeight = container.clientHeight;
-
-    switch (e.key) {
-      case 'ArrowUp':
-        e.preventDefault();
-        if (currentIndex > 0) {
-          container.scrollTo({ top: (currentIndex - 1) * itemHeight, behavior: 'smooth' });
-        }
-        break;
-      case 'ArrowDown':
-        e.preventDefault();
-        if (currentIndex < reels.length - 1) {
-          container.scrollTo({ top: (currentIndex + 1) * itemHeight, behavior: 'smooth' });
-        }
-        break;
-      case 'Escape':
-        onClose();
-        break;
+    const h = container.clientHeight;
+    if (e.key === 'ArrowUp' && currentIndex > 0) {
+      e.preventDefault();
+      container.scrollTo({ top: (currentIndex - 1) * h, behavior: 'smooth' });
+    } else if (e.key === 'ArrowDown' && currentIndex < reels.length - 1) {
+      e.preventDefault();
+      container.scrollTo({ top: (currentIndex + 1) * h, behavior: 'smooth' });
+    } else if (e.key === 'Escape') {
+      if (showComments) closeComments();
+      else onClose();
     }
-  }, [currentIndex, reels.length, onClose]);
+  }, [currentIndex, reels.length, onClose, showComments]);
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Check for age restriction when reel changes
+  // Age restriction check
   useEffect(() => {
     if (currentReel && currentReel.ageRestricted && !ageRestrictionAccepted[currentReel.id]) {
       setShowAgeRestrictionDialog(true);
     }
   }, [currentReel, ageRestrictionAccepted]);
 
-  // Auto-close age restriction dialog after acceptance
   useEffect(() => {
     if (currentReel && ageRestrictionAccepted[currentReel.id] && showAgeRestrictionDialog) {
-      const timer = setTimeout(() => {
+      const t = setTimeout(() => {
         setShowAgeRestrictionDialog(false);
-        setTimeout(() => {
-          isAcceptingRef.current = false;
-        }, 100);
+        setTimeout(() => { isAcceptingRef.current = false; }, 100);
       }, 100);
-      return () => clearTimeout(timer);
+      return () => clearTimeout(t);
     }
   }, [ageRestrictionAccepted, showAgeRestrictionDialog, currentReel]);
 
-  // Reset state when switching reels
+  // Reset on reel change
   useEffect(() => {
     setShowComments(false);
     setShowShare(false);
-    setIsPaused(false);
+    setIsPlaying(true);
   }, [currentIndex]);
 
   if (!currentReel) return null;
 
   return (
-    <div className="fixed inset-0 bg-black z-[60]">
-      {/* Ad overlay - shows every 5 reels for non-Pro users */}
+    <div
+      className="fixed inset-0 bg-black z-[9999] flex flex-col lg:flex-row"
+      style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+    >
+
+      {/* ── Ad overlay ── */}
       {showAd && (
         <div className="fixed inset-0 bg-black z-[70] flex items-center justify-center">
-          <VideoAdPlayer 
+          <VideoAdPlayer
             onAdComplete={onAdFinished}
             onAdError={onAdFinished}
             onAdSkipped={onAdFinished}
@@ -200,301 +260,470 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           />
         </div>
       )}
-      
-      {/* Top header bar - TikTok style */}
-      <div className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between p-3 md:p-4">
-        {/* Left controls - Pause/Play and Volume */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-white bg-black/40 hover:bg-black/60 w-10 h-10 p-0 rounded-lg"
-            onClick={() => setIsPaused(!isPaused)}
-          >
-            {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-white bg-black/40 hover:bg-black/60 w-10 h-10 p-0 rounded-lg"
-            onClick={() => setIsMuted(!isMuted)}
-          >
-            {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-          </Button>
-        </div>
 
-        {/* Right controls - Delete (for owner) and Close */}
-        <div className="flex items-center gap-2">
-          {user && currentReel && user.id === currentReel.userId && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-white bg-black/40 hover:bg-black/60 w-10 h-10 p-0 rounded-lg"
-              onClick={() => {
-                toast({
-                  description: "Delete functionality available in clip settings",
-                  variant: "default",
-                });
-              }}
-            >
-              <Trash2 className="h-5 w-5" />
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-white bg-black/40 hover:bg-black/60 w-10 h-10 p-0 rounded-lg"
-            onClick={onClose}
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Scrollable reels container */}
-      <div 
-        ref={containerRef}
-        className="h-[100dvh] w-full overflow-y-scroll overflow-x-hidden snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
-        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
+      {/* ── Video area — shrinks to 38% when comments open ── */}
+      <div
+        ref={videoAreaRef}
+        className="relative flex-shrink-0 overflow-hidden transition-[height,width] duration-300 ease-in-out lg:flex-shrink lg:h-full"
+        style={{ height: showComments ? '38%' : '100%', flex: showComments ? 'none' : '1' }}
+        onClick={() => { if (!showComments) setIsPlaying(p => !p); }}
       >
-        {reels.map((reel, index) => (
-          <div 
-            key={reel.id}
-            className="snap-start snap-always h-[100dvh] w-full flex items-center justify-center relative"
-            style={{ scrollSnapStop: 'always' }}
-          >
-            {/* Video player - full screen on mobile */}
-            <div className="relative w-full h-full md:max-w-lg lg:max-w-xl mx-auto pointer-events-none">
-              <div className="w-full h-full pointer-events-auto flex items-center justify-center">
+        {/* Scrollable video stack */}
+        <div
+          ref={containerRef}
+          className="absolute inset-0 overflow-y-scroll overflow-x-hidden snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain', pointerEvents: showComments ? 'none' : 'auto' }}
+          onTouchStart={(e) => {
+            touchStartYRef.current = e.touches[0].clientY;
+            isSwiping.current = false;
+          }}
+          onTouchMove={(e) => {
+            if (touchStartYRef.current === null) return;
+            const diff = touchStartYRef.current - e.touches[0].clientY;
+            if (Math.abs(diff) > 8) isSwiping.current = true;
+          }}
+          onTouchEnd={(e) => {
+            if (touchStartYRef.current === null) return;
+            const diff = touchStartYRef.current - e.changedTouches[0].clientY;
+            touchStartYRef.current = null;
+            const container = containerRef.current;
+            if (!container || !isSwiping.current) return;
+            const h = container.clientHeight;
+            if (diff > 40 && currentIndex < reels.length - 1) {
+              container.scrollTo({ top: (currentIndex + 1) * h, behavior: 'smooth' });
+            } else if (diff < -40 && currentIndex > 0) {
+              container.scrollTo({ top: (currentIndex - 1) * h, behavior: 'smooth' });
+            }
+          }}
+        >
+          {reels.map((reel, index) => (
+            <div
+              key={reel.id}
+              className="snap-start snap-always w-full relative flex-shrink-0"
+              style={{ scrollSnapStop: 'always', height: 'calc(100dvh - 64px - env(safe-area-inset-bottom, 0px))' }}
+            >
+              {/* Video */}
+              <div className="absolute inset-0 pointer-events-none">
                 {(!reel.ageRestricted || ageRestrictionAccepted[reel.id]) ? (
                   <VideoPlayer
                     videoUrl={reel.videoUrl}
                     thumbnailUrl={reel.thumbnailUrl || undefined}
-                    autoPlay={index === currentIndex}
+                    autoPlay={index === currentIndex && isPlaying}
                     className="w-full h-full"
-                    objectFit="cover"
+                    objectFit="contain"
                     clipId={reel.id}
                     disableAspectRatio={true}
                     hideControls={true}
-                    externalPaused={index === currentIndex ? isPaused : undefined}
-                    externalMuted={index === currentIndex ? isMuted : undefined}
-                    onPlayingChange={index === currentIndex ? (playing) => setIsPaused(!playing) : undefined}
-                    onMutedChange={index === currentIndex ? (muted) => setIsMuted(muted) : undefined}
+                    videoStyle={{ pointerEvents: 'none' }}
+                    externalPaused={!(index === currentIndex && isPlaying)}
                     onEnded={() => {
                       if (index < reels.length - 1 && containerRef.current) {
-                        const itemHeight = containerRef.current.clientHeight;
-                        containerRef.current.scrollTo({ top: (index + 1) * itemHeight, behavior: 'smooth' });
+                        const h = containerRef.current.clientHeight;
+                        containerRef.current.scrollTo({ top: (index + 1) * h, behavior: 'smooth' });
                       }
                     }}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-black/80">
-                    <div className="text-center text-white p-6">
-                      <p className="text-lg font-semibold mb-2">Age-Restricted Content</p>
-                      <p className="text-sm text-white/70">This reel has been marked as age-restricted</p>
-                    </div>
+                    <p className="text-white text-lg font-semibold">Age-Restricted Content</p>
                   </div>
                 )}
               </div>
 
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      {/* Fixed overlay content - positioned outside scroll container to prevent overlap during transitions */}
-      {currentReel && (
-        <div className="fixed inset-0 pointer-events-none z-30">
-          {/* Right side - Engagement buttons (TikTok-style) */}
-          <div className="absolute right-3 md:right-4 flex flex-col items-center gap-5 pointer-events-auto" style={{ bottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}>
-            {/* Fire/Reactions */}
-            <div className="flex flex-col items-center">
-              <FireButton
-                contentId={currentReel.id}
-                contentType="clip"
-                contentOwnerId={currentReel.userId}
-                initialCount={parseInt(currentReel._count?.reactions?.toString() || '0')}
-                size="lg"
-                showCount={false}
-                variant="vertical"
-              />
-            </div>
-
-            {/* Like/Heart */}
-            <div className="flex flex-col items-center">
-              <LikeButton
-                contentId={currentReel.id}
-                contentType="clip"
-                contentOwnerId={currentReel.userId}
-                initialLiked={false}
-                initialCount={parseInt(currentReel._count?.likes?.toString() || '0')}
-                size="lg"
-                showCount={true}
-                variant="vertical"
-              />
-            </div>
-
-            {/* Comments */}
-            <div className="flex flex-col items-center">
-              <button
-                className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/50 transition-colors"
-                onClick={() => {
-                  if (!user) {
-                    openDialog('comment');
-                  } else {
-                    setShowComments(true);
-                  }
-                }}
+        {/* Top header (absolute within video area) */}
+        {!showComments && (
+          <div
+            className="absolute top-0 left-0 right-0 z-[3] flex items-center justify-between px-4 pb-4 bg-gradient-to-b from-black/60 to-transparent"
+            style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <Button
+              variant="ghost" size="sm"
+              className="text-white hover:bg-white/20"
+              onClick={(e) => { e.stopPropagation(); onClose(); }}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            {user && currentReel && user.id === currentReel.userId && (
+              <Button
+                variant="ghost" size="sm"
+                className="text-white hover:bg-red-600/80 w-10 h-10 p-0 rounded-full"
+                onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
+                disabled={deleteReelMutation.isPending}
               >
-                <MessageCircle className="h-7 w-7" />
-              </button>
-              <span className="text-white text-xs mt-1 font-medium">
-                {currentReel._count?.comments || 0}
-              </span>
-            </div>
-
-            {/* Share */}
-            <div className="flex flex-col items-center">
-              <button
-                className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/50 transition-colors"
-                onClick={() => setShowShare(true)}
-              >
-                <Share2 className="h-6 w-6" />
-              </button>
-              <span className="text-white text-xs mt-1 font-medium">Share</span>
-            </div>
-          </div>
-
-          {/* Bottom left - User info and title */}
-          <div className="absolute left-3 md:left-4 right-20 md:right-24 pointer-events-auto" style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
-            {/* User row with avatar and username */}
-            <div className="flex items-center gap-2 mb-2">
-              <Link href={`/profile/${currentReel.user.username}`} onClick={onClose}>
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white/40 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0">
-                  <img
-                    src={avatarSignedUrl || currentReel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
-                    alt={currentReel.user.displayName}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </Link>
-              <Link href={`/profile/${currentReel.user.username}`} onClick={onClose}>
-                <span className="text-white font-semibold text-sm cursor-pointer hover:opacity-80">
-                  @{currentReel.user.username}
-                </span>
-              </Link>
-              {/* Inline Follow button */}
-              {user && user.id !== currentReel.user.id && (
-                <Button
-                  onClick={handleFollow}
-                  disabled={followMutation.isPending}
-                  size="sm"
-                  className={cn(
-                    "h-7 px-3 text-xs font-semibold rounded-md transition-colors ml-1",
-                    isFollowing 
-                      ? "bg-transparent border border-white/50 text-white hover:bg-white/10" 
-                      : "bg-[#00E676] text-black hover:bg-[#00C853]"
-                  )}
-                  data-testid="button-follow"
-                >
-                  {isFollowing ? "Following" : "Follow"}
-                </Button>
-              )}
-            </div>
-
-            {/* Title */}
-            <h3 className="text-white font-semibold text-base mb-1 leading-tight line-clamp-1 drop-shadow-lg">
-              {currentReel.title}
-            </h3>
-
-            {/* Description if available */}
-            {currentReel.description && (
-              <p className="text-white/90 text-sm mb-1.5 line-clamp-1 drop-shadow-md">
-                {currentReel.description}
-              </p>
+                <Trash2 className="h-5 w-5" />
+              </Button>
             )}
+          </div>
+        )}
 
-            {/* Game badge */}
-            {currentReel.game && (
-              <div className="mb-1.5">
-                <span className="text-[#00E676] text-sm font-medium drop-shadow-lg">{currentReel.game.name}</span>
+        {/* Engagement + user info overlay */}
+        {currentReel && (
+          <div className="absolute inset-0 z-[3] pointer-events-none">
+
+            {/* Right side engagement buttons — hidden when comments open, hidden on desktop (moved to right panel) */}
+            {!showComments && !isDesktop && (
+              <div
+                className="absolute right-3 flex flex-col items-center gap-3 pointer-events-auto z-[5]"
+                style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' }}
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Views */}
+                <div className="flex flex-col items-center gap-0.5">
+                  <BarChart2 className="h-6 w-6 text-white drop-shadow" />
+                  <span className="text-white text-[10px] font-semibold drop-shadow">
+                    {(() => {
+                      const v = currentReel.views || 0;
+                      if (v >= 1000000) return `${(v / 1000000).toFixed(1)}M`;
+                      if (v >= 1000) return `${(v / 1000).toFixed(1)}K`;
+                      return v.toString();
+                    })()}
+                  </span>
+                </div>
+
+                <LikeButton
+                  contentId={currentReel.id}
+                  contentType="clip"
+                  contentOwnerId={currentReel.userId}
+                  initialLiked={false}
+                  initialCount={parseInt(currentReel._count?.likes?.toString() || '0')}
+                  size="sm"
+                  showCount={true}
+                  variant="vertical"
+                />
+                <FireButton
+                  contentId={currentReel.id}
+                  contentType="clip"
+                  contentOwnerId={currentReel.userId}
+                  initialCount={parseInt(currentReel._count?.reactions?.toString() || '0')}
+                  size="sm"
+                  showCount={true}
+                  variant="vertical"
+                  clipRef={videoAreaRef}
+                />
+                <button
+                  className="flex flex-col items-center gap-0.5"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!user) { openDialog('comment'); }
+                    else { setShowComments(true); setIsPlaying(false); }
+                  }}
+                >
+                  <MessageCircle className="h-6 w-6 text-white drop-shadow" />
+                  <span className="text-white text-[10px] font-semibold drop-shadow">
+                    {currentReel._count?.comments || 0}
+                  </span>
+                </button>
+                <ShareLaunchIcon
+                  size={24}
+                  className="text-white drop-shadow"
+                  onClick={(e) => { e.stopPropagation(); setShowShare(true); }}
+                />
+                <button
+                  className="flex flex-col items-center gap-0.5"
+                  onClick={(e) => { e.stopPropagation(); handleDownload(); }}
+                  disabled={isDownloading}
+                >
+                  <Download className={`h-6 w-6 drop-shadow ${isDownloading ? 'text-white/40' : 'text-white'}`} />
+                  <span className={`text-[10px] font-semibold drop-shadow ${isDownloading ? 'text-white/40' : 'text-white'}`}>
+                    {isDownloading ? '…' : 'Save'}
+                  </span>
+                </button>
               </div>
             )}
 
-            {/* Audio/Original info */}
-            <div className="flex items-center gap-1.5 text-white/80 text-xs drop-shadow-md">
-              <span>Original audio</span>
-              <span>•</span>
-              <span>{currentReel.user.displayName || currentReel.user.username}</span>
-            </div>
-          </div>
+            {/* Bottom gradient overlay — hidden when comments open, hidden on desktop (moved to right panel) */}
+            {!showComments && !isDesktop && (
+              <div className="absolute bottom-0 left-0 right-0 z-[3] px-4 pb-8 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none">
+                <div className="pr-14">
+                  {/* User row */}
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Link
+                      href={`/profile/${currentReel.user.username}`}
+                      onClick={(e) => { e.stopPropagation(); onClose(); }}
+                      className="flex-shrink-0 pointer-events-auto"
+                    >
+                      <CustomAvatar user={currentReel.user as any} size="sm" showBorder={true} />
+                    </Link>
+                    <ProfileHoverCard username={currentReel.user.username}>
+                      <Link
+                        href={`/profile/${currentReel.user.username}`}
+                        onClick={(e) => { e.stopPropagation(); onClose(); }}
+                        className="no-underline flex-shrink-0 pointer-events-auto"
+                      >
+                        <span className="text-white font-bold text-[13px] drop-shadow leading-tight">
+                          @{currentReel.user.username}
+                        </span>
+                      </Link>
+                    </ProfileHoverCard>
+                    {user && user.id !== currentReel.user.id && !isFollowing && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleFollow(); }}
+                        disabled={followMutation.isPending}
+                        className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all pointer-events-auto"
+                        style={{ background: '#B7FF1A', color: '#000', border: '1px solid transparent' }}
+                      >
+                        {followMutation.isPending ? '…' : 'Follow'}
+                      </button>
+                    )}
+                  </div>
 
-          {/* Report button - subtle, bottom right corner */}
-          <div className="absolute right-3 md:right-4 pointer-events-auto" style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
-            <ReportDialog
-              contentType="clip"
-              contentId={currentReel.id}
-              contentTitle={currentReel.title}
-              contentAuthor={currentReel.user.username}
-              trigger={
-                <button className="w-8 h-8 rounded-full bg-transparent flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors">
-                  <MoreVertical className="h-4 w-4" />
-                </button>
-              }
-            />
-          </div>
-        </div>
-      )}
+                  {/* Title */}
+                  <p className="text-white font-bold text-[13px] drop-shadow mb-0.5 leading-snug line-clamp-1">
+                    {currentReel.title}
+                  </p>
 
-      {/* Navigation hints - desktop only */}
-      <div className="fixed bottom-2 md:bottom-4 left-1/2 transform -translate-x-1/2 text-white/30 text-xs text-center px-4 z-20 hidden md:block">
-        <p>Scroll or use arrow keys to navigate • ESC to close</p>
+                  {/* Description */}
+                  {currentReel.description && (
+                    <p className="text-white/75 text-[11px] drop-shadow leading-snug line-clamp-2 mb-1">
+                      {currentReel.description}
+                    </p>
+                  )}
+
+                  {/* Game */}
+                  {currentReel.game?.name && (
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
+                      <button
+                        className="pointer-events-auto"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const slug = currentReel.game!.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                          onClose();
+                          navigate(`/games/${slug}`);
+                        }}
+                      >
+                        <span className="text-[11px] font-semibold" style={{ color: '#B7FF1A' }}>
+                          {currentReel.game.name}
+                        </span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Original audio */}
+                  <div className="flex items-center gap-1">
+                    <Music className="h-2.5 w-2.5 text-white/60 flex-shrink-0" />
+                    <span className="text-white/60 text-[11px] truncate">
+                      Original audio · {currentReel.user.displayName || currentReel.user.username}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Comments overlay */}
-      {showComments && (
-        <div className="absolute inset-0 bg-black/80 z-10">
-          <div className="absolute bottom-0 left-0 right-0 bg-background rounded-t-2xl max-h-[80vh] md:max-h-[70vh] overflow-hidden">
-            <div className="p-3 md:p-4 border-b flex justify-between items-center">
-              <h3 className="font-semibold text-sm md:text-base">Comments</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowComments(false)}
-                className="h-8 w-8 p-0"
+      {/* ── Desktop right panel — shown only on desktop ── */}
+      {currentReel && isDesktop && (
+        <div
+          className="flex flex-col justify-between w-[340px] flex-shrink-0 h-full border-l border-white/10"
+          style={{ background: '#081017', paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Profile + info */}
+          <div className="flex flex-col gap-5 p-6 overflow-y-auto flex-1">
+            {/* Avatar + username + follow */}
+            <div className="flex items-center gap-3">
+              <Link
+                href={`/profile/${currentReel.user.username}`}
+                onClick={onClose}
+                className="flex-shrink-0"
               >
-                ✕
-              </Button>
+                <CustomAvatar user={currentReel.user as any} size="lg" showBorder={true} />
+              </Link>
+              <ProfileHoverCard username={currentReel.user.username}>
+                <div className="flex-1 min-w-0 cursor-default">
+                  <Link
+                    href={`/profile/${currentReel.user.username}`}
+                    onClick={onClose}
+                    className="no-underline"
+                  >
+                    <p className="text-white font-bold text-sm leading-tight truncate">
+                      {currentReel.user.displayName || currentReel.user.username}
+                    </p>
+                    <p className="text-white/50 text-xs truncate">@{currentReel.user.username}</p>
+                  </Link>
+                </div>
+              </ProfileHoverCard>
+              {user && user.id !== currentReel.user.id && !isFollowing && (
+                <button
+                  onClick={handleFollow}
+                  disabled={followMutation.isPending}
+                  className="text-xs font-bold px-3 py-1.5 rounded-full flex-shrink-0 transition-all"
+                  style={{ background: '#B7FF1A', color: '#000' }}
+                >
+                  {followMutation.isPending ? '…' : 'Follow'}
+                </button>
+              )}
             </div>
-            <div className="overflow-y-auto max-h-[calc(80vh-60px)] md:max-h-[calc(70vh-80px)]">
-              <CommentSection
-                clipId={currentReel.id}
-                currentUserId={user?.id}
-              />
+
+            {/* Divider */}
+            <div className="h-px w-full" style={{ background: 'rgba(255,255,255,0.07)' }} />
+
+            {/* Title */}
+            <div>
+              <p className="text-white font-bold text-base leading-snug mb-2">
+                {currentReel.title}
+              </p>
+              {currentReel.description && (
+                <p className="text-white/60 text-sm leading-relaxed">
+                  {currentReel.description}
+                </p>
+              )}
             </div>
+
+            {/* Game */}
+            {currentReel.game?.name && (
+              <div className="flex items-center gap-1.5">
+                <Gamepad2 className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#B7FF1A' }} />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const slug = currentReel.game!.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    onClose();
+                    navigate(`/games/${slug}`);
+                  }}
+                >
+                  <span className="text-sm font-semibold" style={{ color: '#B7FF1A' }}>
+                    {currentReel.game.name}
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {/* Original audio */}
+            <div className="flex items-center gap-1.5">
+              <Music className="h-3.5 w-3.5 text-white/40 flex-shrink-0" />
+              <span className="text-white/40 text-xs truncate">
+                Original audio · {currentReel.user.displayName || currentReel.user.username}
+              </span>
+            </div>
+          </div>
+
+          {/* Engagement buttons at bottom */}
+          <div className="flex items-center justify-around px-6 py-5 border-t border-white/10">
+            <div className="flex flex-col items-center gap-1">
+              <BarChart2 className="h-6 w-6 text-white/60" />
+              <span className="text-white/60 text-xs font-semibold">
+                {(() => {
+                  const v = currentReel.views || 0;
+                  if (v >= 1000000) return `${(v / 1000000).toFixed(1)}M`;
+                  if (v >= 1000) return `${(v / 1000).toFixed(1)}K`;
+                  return v.toString();
+                })()}
+              </span>
+            </div>
+            <LikeButton
+              contentId={currentReel.id}
+              contentType="clip"
+              contentOwnerId={currentReel.userId}
+              initialLiked={false}
+              initialCount={parseInt(currentReel._count?.likes?.toString() || '0')}
+              size="sm"
+              showCount={true}
+              variant="vertical"
+            />
+            <FireButton
+              contentId={currentReel.id}
+              contentType="clip"
+              contentOwnerId={currentReel.userId}
+              initialCount={parseInt(currentReel._count?.reactions?.toString() || '0')}
+              size="sm"
+              showCount={true}
+              variant="vertical"
+              clipRef={videoAreaRef}
+            />
+            <button
+              className="flex flex-col items-center gap-1"
+              onClick={() => {
+                if (!user) { openDialog('comment'); }
+                else { setShowComments(true); setIsPlaying(false); }
+              }}
+            >
+              <MessageCircle className="h-6 w-6 text-white/60" />
+              <span className="text-white/60 text-xs font-semibold">{currentReel._count?.comments || 0}</span>
+            </button>
+            <ShareLaunchIcon
+              size={24}
+              className="text-white/60"
+              onClick={() => setShowShare(true)}
+            />
+            <button
+              className="flex flex-col items-center gap-1"
+              onClick={handleDownload}
+              disabled={isDownloading}
+            >
+              <Download className={`h-6 w-6 ${isDownloading ? 'text-white/30' : 'text-white/60'}`} />
+              <span className={`text-xs font-semibold ${isDownloading ? 'text-white/30' : 'text-white/60'}`}>
+                {isDownloading ? '…' : 'Save'}
+              </span>
+            </button>
           </div>
         </div>
       )}
 
-      {/* Share overlay */}
-      {showShare && (
-        <div className="absolute inset-0 bg-black/80 z-10 flex items-center justify-center p-4">
-          <div className="bg-background rounded-2xl p-4 md:p-6 max-w-sm w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-semibold text-sm md:text-base">Share Reel</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowShare(false)}
-                className="h-8 w-8 p-0"
-              >
-                ✕
-              </Button>
-            </div>
-            <ShareMenu
+      {/* ── Comments panel — flex-1, pushes video up ── */}
+      {(showComments || isClosingComments) && currentReel && (
+        <div
+          className="flex-1 flex flex-col overflow-hidden"
+          style={{
+            background: '#0B1218',
+            borderRadius: '20px 20px 0 0',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            transform: isClosingComments ? 'translateY(100%)' : 'translateY(0)',
+            transition: 'transform 0.42s cubic-bezier(0.32, 0, 0.67, 0)',
+          }}
+        >
+          {/* Drag handle */}
+          <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+            <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
+          </div>
+
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            <h3 className="text-white font-bold text-base">
+              Comments{' '}
+              <span className="text-white/45 font-normal text-sm">{currentReel._count?.comments || 0}</span>
+            </h3>
+            <button
+              onClick={() => closeComments(() => setIsPlaying(true))}
+              className="w-8 h-8 flex items-center justify-center rounded-full"
+              style={{ background: 'rgba(255,255,255,0.08)' }}
+            >
+              <ChevronDown className="h-5 w-5 text-white/70" />
+            </button>
+          </div>
+
+          {/* Scrollable comments */}
+          <div className="flex-1 overflow-y-auto">
+            <CommentSection
               clipId={currentReel.id}
-              clipTitle={currentReel.title}
+              currentUserId={user?.id}
             />
+          </div>
+        </div>
+      )}
+
+      {/* ── Share overlay ── */}
+      {showShare && (
+        <div className="fixed inset-0 z-[4] bg-black/70 flex items-end justify-center p-0" onClick={() => setShowShare(false)}>
+          <div
+            className="bg-background rounded-t-2xl p-5 w-full max-w-lg"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.25rem)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <span className="font-semibold text-base">Share Reel</span>
+              <button onClick={() => setShowShare(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <ShareMenu clipId={currentReel.id} clipTitle={currentReel.title} />
           </div>
         </div>
       )}
@@ -505,27 +734,35 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           isOpen={showAgeRestrictionDialog}
           onAccept={() => {
             isAcceptingRef.current = true;
-            setAgeRestrictionAccepted(prev => ({
-              ...prev,
-              [currentReel.id]: true
-            }));
+            setAgeRestrictionAccepted(prev => ({ ...prev, [currentReel.id]: true }));
           }}
           onDecline={() => {
-            if (!isAcceptingRef.current) {
-              setShowAgeRestrictionDialog(false);
-              onClose();
-            }
+            if (!isAcceptingRef.current) { setShowAgeRestrictionDialog(false); onClose(); }
           }}
           contentType="reel"
         />
       )}
 
-      {/* Join Dialog for unauthenticated users */}
-      <JoinGamefolioDialog
-        open={isJoinDialogOpen}
-        onOpenChange={(open) => !open && closeDialog()}
-        actionType={actionType}
-      />
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete reel?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{currentReel?.title}". This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteReelMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => deleteReelMutation.mutate(currentReel.id)}
+              disabled={deleteReelMutation.isPending}
+            >
+              {deleteReelMutation.isPending ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

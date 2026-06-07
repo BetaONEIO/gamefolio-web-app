@@ -140,6 +140,11 @@ router.post('/auth/token/login', async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Incorrect username or password' });
     }
 
+    // Enforce two-factor authentication when enabled
+    if (user.twoFactorEnabled && user.twoFactorSecret) {
+      return res.status(200).json({ requires2FA: true, userId: user.id });
+    }
+
     // Update login time
     try {
       await storage.updateUserLoginTime(user.id, 0);
@@ -169,14 +174,14 @@ router.post('/auth/token/login', async (req: Request, res: Response) => {
     // Return tokens and user data
     const response = {
       ...tokens,
-      user: streakInfo ? {
+      user: (streakInfo && !streakInfo.isFirstLogin) ? {
         ...userWithoutPassword,
         streakInfo: {
           currentStreak: streakInfo.currentStreak,
           bonusAwarded: streakInfo.bonusAwarded,
           dailyXP: streakInfo.dailyXP,
           longestStreak: userToReturn.longestStreak || 0,
-          nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
+          nextMilestone: streakInfo.currentStreak % 5 === 0 ? streakInfo.currentStreak + 5 : streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
           message: streakInfo.message,
           isNewMilestone: streakInfo.isNewMilestone,
         },
@@ -255,231 +260,25 @@ router.post('/auth/token/refresh', async (req: Request, res: Response) => {
 });
 
 /**
- * Google OAuth token-based authentication
- * Returns JWT tokens for desktop apps instead of creating a session
+ * Google OAuth token-based authentication — REMOVED
+ * This endpoint previously trusted unverified client-supplied identity claims
+ * (email, uid) without verifying a Google/Firebase token, allowing account
+ * takeover by forging any email address. Use the session-based Google OAuth
+ * flow or the Apple-style verified token flow instead.
  */
-router.post('/auth/token/google', async (req: Request, res: Response) => {
-  try {
-    const { email, displayName, photoURL, uid } = req.body;
-
-    if (!email || !uid) {
-      return res.status(400).json({ message: 'Missing required Google auth data' });
-    }
-
-    // Check if user already exists by email
-    let user = await storage.getUserByEmail?.(email);
-
-    if (!user) {
-      // Create new user with Google data
-      const tempUsername = `temp_${uid.substring(0, 8)}_${Date.now()}`;
-      user = await storage.createUser({
-        username: tempUsername,
-        email: email.toLowerCase(),
-        displayName: displayName || email.split('@')[0],
-        password: '',
-        avatarUrl: photoURL || undefined,
-        emailVerified: true,
-        authProvider: 'google',
-        externalId: uid,
-        bio: '',
-      });
-
-      // Update login time and streak
-      try {
-        await storage.updateUserLoginTime(user.id, 0);
-        const streakInfo = await StreakService.updateLoginStreak(user.id);
-
-        const tokens = JWTService.generateTokenPair(user);
-        const { password: _, ...userWithoutPassword } = user;
-
-        return res.status(200).json({
-          ...tokens,
-          user: {
-            ...userWithoutPassword,
-            needsOnboarding: true,
-            isNewGoogleUser: true,
-            streakInfo: streakInfo ? {
-              currentStreak: streakInfo.currentStreak,
-              bonusAwarded: streakInfo.bonusAwarded,
-              dailyXP: streakInfo.dailyXP,
-              longestStreak: user.longestStreak || 0,
-              nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
-              message: streakInfo.message,
-              isNewMilestone: streakInfo.isNewMilestone,
-            } : undefined,
-          },
-        });
-      } catch (error) {
-        console.error('Error updating user login time or streak:', error);
-      }
-    }
-
-    // Existing user - check if they need onboarding
-    const needsOnboarding = !user.userType || user.username.startsWith('temp_');
-
-    // Update existing user's Google data if needed
-    if (!user.avatarUrl && photoURL) {
-      user = await storage.updateUser(user.id, {
-        avatarUrl: photoURL,
-        authProvider: 'google',
-        externalId: uid,
-      }) || user;
-    }
-
-    // Update login time and streak
-    try {
-      await storage.updateUserLoginTime(user.id, 0);
-      const streakInfo = await StreakService.updateLoginStreak(user.id);
-
-      const tokens = JWTService.generateTokenPair(user);
-      const { password: _, ...userWithoutPassword } = user;
-
-      return res.status(200).json({
-        ...tokens,
-        user: {
-          ...userWithoutPassword,
-          needsOnboarding,
-          streakInfo: streakInfo ? {
-            currentStreak: streakInfo.currentStreak,
-            bonusAwarded: streakInfo.bonusAwarded,
-            dailyXP: streakInfo.dailyXP,
-            longestStreak: user.longestStreak || 0,
-            nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
-            message: streakInfo.message,
-            isNewMilestone: streakInfo.isNewMilestone,
-          } : undefined,
-        },
-      });
-    } catch (error) {
-      console.error('Error updating user login time or streak:', error);
-    }
-
-    // Fallback response
-    const tokens = JWTService.generateTokenPair(user);
-    const { password: _, ...userWithoutPassword } = user;
-
-    return res.status(200).json({
-      ...tokens,
-      user: {
-        ...userWithoutPassword,
-        needsOnboarding,
-      },
-    });
-  } catch (error) {
-    console.error('Google token auth error:', error);
-    return res.status(500).json({ message: 'Google authentication failed' });
-  }
+router.post('/auth/token/google', (_req: Request, res: Response) => {
+  return res.status(410).json({ message: 'This endpoint has been removed. Use the standard Google OAuth login flow.' });
 });
 
 /**
- * Discord OAuth token-based authentication
- * Returns JWT tokens for desktop apps instead of creating a session
+ * Discord OAuth token-based authentication — REMOVED
+ * This endpoint previously trusted unverified client-supplied identity claims
+ * (email, id) without verifying a Discord access token, allowing account
+ * takeover by forging any email address. Use the standard Discord OAuth
+ * callback flow instead.
  */
-router.post('/auth/token/discord', async (req: Request, res: Response) => {
-  try {
-    const { id, username, discriminator, email, avatar } = req.body;
-
-    if (!id || !username || !email) {
-      return res.status(400).json({ message: 'Missing required Discord auth data' });
-    }
-
-    // Check if user already exists by email
-    let user = await storage.getUserByEmail?.(email);
-
-    if (!user) {
-      // Create new user with Discord data
-      const displayName = `${username}#${discriminator}`;
-      const tempUsername = `temp_${id.substring(0, 8)}_${Date.now()}`;
-      const avatarUrl = avatar ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.png` : undefined;
-
-      user = await storage.createUser({
-        username: tempUsername,
-        email: email.toLowerCase(),
-        displayName,
-        password: '',
-        avatarUrl,
-        emailVerified: true,
-        authProvider: 'discord',
-        externalId: id,
-        bio: '',
-      });
-
-      // Update login time and streak
-      try {
-        await storage.updateUserLoginTime(user.id, 0);
-        const streakInfo = await StreakService.updateLoginStreak(user.id);
-
-        const tokens = JWTService.generateTokenPair(user);
-        const { password: _, ...userWithoutPassword } = user;
-
-        return res.status(200).json({
-          ...tokens,
-          user: {
-            ...userWithoutPassword,
-            needsOnboarding: true,
-            isNewDiscordUser: true,
-            streakInfo: streakInfo ? {
-              currentStreak: streakInfo.currentStreak,
-              bonusAwarded: streakInfo.bonusAwarded,
-              dailyXP: streakInfo.dailyXP,
-              longestStreak: user.longestStreak || 0,
-              nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
-              message: streakInfo.message,
-              isNewMilestone: streakInfo.isNewMilestone,
-            } : undefined,
-          },
-        });
-      } catch (error) {
-        console.error('Error updating user login time or streak:', error);
-      }
-    }
-
-    // Existing user - check if they need onboarding
-    const needsOnboarding = !user.userType || user.username.startsWith('temp_');
-
-    // Update login time and streak
-    try {
-      await storage.updateUserLoginTime(user.id, 0);
-      const streakInfo = await StreakService.updateLoginStreak(user.id);
-
-      const tokens = JWTService.generateTokenPair(user);
-      const { password: _, ...userWithoutPassword } = user;
-
-      return res.status(200).json({
-        ...tokens,
-        user: {
-          ...userWithoutPassword,
-          needsOnboarding,
-          streakInfo: streakInfo ? {
-            currentStreak: streakInfo.currentStreak,
-            bonusAwarded: streakInfo.bonusAwarded,
-            dailyXP: streakInfo.dailyXP,
-            longestStreak: user.longestStreak || 0,
-            nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
-            message: streakInfo.message,
-            isNewMilestone: streakInfo.isNewMilestone,
-          } : undefined,
-        },
-      });
-    } catch (error) {
-      console.error('Error updating user login time or streak:', error);
-    }
-
-    // Fallback response
-    const tokens = JWTService.generateTokenPair(user);
-    const { password: _, ...userWithoutPassword } = user;
-
-    return res.status(200).json({
-      ...tokens,
-      user: {
-        ...userWithoutPassword,
-        needsOnboarding,
-      },
-    });
-  } catch (error) {
-    console.error('Discord token auth error:', error);
-    return res.status(500).json({ message: 'Discord authentication failed' });
-  }
+router.post('/auth/token/discord', (_req: Request, res: Response) => {
+  return res.status(410).json({ message: 'This endpoint has been removed. Use the standard Discord OAuth login flow.' });
 });
 
 /**
@@ -499,72 +298,115 @@ router.get('/health', (req, res) => {
 const RORK_APP_SCHEME = schemePrefix(DEFAULT_MOBILE_SCHEME);
 
 /**
- * Mobile Google OAuth endpoint
- * Receives Google auth data from mobile app (after Firebase Google Sign-In), creates/finds user, returns JWT tokens
- * The mobile app should use Firebase Google Sign-In and send the result here
+ * Mobile Google Sign-In endpoint.
+ *
+ * The native Capacitor client uses @capacitor-firebase/authentication to open
+ * the system Google account chooser. The plugin returns a Firebase ID token
+ * (JWT signed by Google/Firebase). We verify that token server-side with the
+ * Firebase Admin SDK before trusting any identity claims — this prevents
+ * account-takeover via forged request bodies.
+ *
+ * Flow:
+ *  1. Client calls FirebaseAuthentication.signInWithGoogle() → gets idToken
+ *  2. Client POSTs { idToken } here
+ *  3. Server verifies the token, extracts uid / email / name / picture
+ *  4. Find-or-create the Gamefolio user, issue a JWT pair, return it
  */
 router.post('/auth/mobile/google', async (req: Request, res: Response) => {
+  let verifyFirebaseIdToken: (token: string) => Promise<import('../services/firebase-admin').FirebaseTokenClaims>;
   try {
-    const { email, displayName, photoURL, uid } = req.body;
+    ({ verifyFirebaseIdToken } = await import('../services/firebase-admin'));
+  } catch {
+    return res.status(503).json({ success: false, message: 'Google sign-in is not configured on this server.' });
+  }
 
-    if (!email || !uid) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Missing required Google auth data'
-      });
+  try {
+    const { idToken } = req.body as { idToken?: string };
+
+    if (!idToken || typeof idToken !== 'string') {
+      return res.status(400).json({ success: false, message: 'Missing Firebase ID token' });
     }
 
-    // Check if user already exists by email
-    let user = await storage.getUserByEmail?.(email);
+    let claims;
+    try {
+      claims = await verifyFirebaseIdToken(idToken);
+    } catch (err) {
+      console.error('Firebase ID token verification failed:', err);
+      return res.status(401).json({ success: false, message: 'Invalid or expired Google credential' });
+    }
+
+    const { uid, email, email_verified, name, picture } = claims;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Google account did not provide an email address' });
+    }
+
+    const normalizedEmail = email.toLowerCase();
+
+    // 1. Try to find existing user by Firebase UID (authProvider='google', externalId=uid)
+    let user: any = null;
+    if (typeof storage.getUserByExternalId === 'function') {
+      user = await storage.getUserByExternalId(uid, 'google');
+    }
+
     let isNewUser = false;
 
+    // 2. Fall back to email lookup — only link if the account has no external provider
+    if (!user && email_verified && typeof storage.getUserByEmail === 'function') {
+      const byEmail = await storage.getUserByEmail(normalizedEmail);
+      if (byEmail) {
+        const existingProvider = byEmail.authProvider || 'local';
+        if (existingProvider === 'local' || existingProvider === 'google') {
+          user = (await storage.updateUser(byEmail.id, {
+            authProvider: 'google',
+            externalId: uid,
+            emailVerified: true,
+            ...(picture && !byEmail.avatarUrl ? { avatarUrl: picture } : {}),
+          })) || byEmail;
+        } else {
+          return res.status(409).json({
+            success: false,
+            message: `An account with this email is already linked to ${existingProvider}. Please sign in with ${existingProvider} instead.`,
+          });
+        }
+      }
+    }
+
+    // 3. Create a new user if no match found
     if (!user) {
       isNewUser = true;
-      // Create new user with Google data
       const timestamp = Date.now().toString().slice(-6);
-      const tempUsername = `temp_${uid.substring(0, 8)}_${timestamp}`;
-      
+      const tempUsername = `temp_${uid.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8)}_${timestamp}`.toLowerCase();
+      const displayName = name || normalizedEmail.split('@')[0];
+
       user = await storage.createUser({
-        username: tempUsername.toLowerCase(),
-        email: email.toLowerCase(),
-        displayName: displayName || email.split('@')[0],
-        password: '', // Empty password for OAuth users
-        avatarUrl: photoURL || '/attached_assets/gamefolio social logo 3d circle web.png',
+        username: tempUsername,
+        email: normalizedEmail,
+        displayName,
+        password: '',
+        avatarUrl: picture || '/attached_assets/gamefolio-logo-green.png',
         bannerUrl: '/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg',
         emailVerified: true,
         authProvider: 'google',
         externalId: uid,
         userType: null,
-        ageRange: null
+        ageRange: null,
       });
     }
 
-    // Check if user needs onboarding
     const needsOnboarding = !user.userType || user.username.startsWith('temp_');
 
-    // Update existing user's Google data if needed
-    if (!isNewUser && !user.avatarUrl && photoURL) {
-      user = await storage.updateUser(user.id, {
-        avatarUrl: photoURL,
-        authProvider: 'google',
-        externalId: uid
-      }) || user;
-    }
-
-    // Update login time and streak
     let streakInfo;
     try {
       await storage.updateUserLoginTime(user.id, 0);
       streakInfo = await StreakService.updateLoginStreak(user.id);
     } catch (error) {
-      console.error('Error updating user login time or streak:', error);
+      console.error('Error updating login time or streak:', error);
     }
 
-    // Generate JWT tokens
     const tokens = JWTService.generateTokenPair(user);
-    const { password: _, ...userWithoutPassword } = user;
+    const { password: _pw, ...userWithoutPassword } = user;
 
-    // Return JSON response with tokens - mobile app uses these directly
     return res.status(200).json({
       success: true,
       accessToken: tokens.accessToken,
@@ -573,7 +415,7 @@ router.post('/auth/mobile/google', async (req: Request, res: Response) => {
         ...userWithoutPassword,
         needsOnboarding,
         isNewGoogleUser: isNewUser,
-        ...(streakInfo && {
+        ...(streakInfo && !streakInfo.isFirstLogin && {
           streakInfo: {
             currentStreak: streakInfo.currentStreak,
             bonusAwarded: streakInfo.bonusAwarded,
@@ -581,18 +423,14 @@ router.post('/auth/mobile/google', async (req: Request, res: Response) => {
             longestStreak: user.longestStreak || 0,
             nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
             message: streakInfo.message,
-            isNewMilestone: streakInfo.isNewMilestone
-          }
-        })
-      }
+            isNewMilestone: streakInfo.isNewMilestone,
+          },
+        }),
+      },
     });
-
   } catch (error) {
     console.error('Mobile Google auth error:', error);
-    return res.status(500).json({ 
-      success: false,
-      message: 'Google authentication failed'
-    });
+    return res.status(500).json({ success: false, message: 'Google authentication failed' });
   }
 });
 
@@ -716,7 +554,7 @@ router.post('/auth/mobile/apple', async (req: Request, res: Response) => {
         email: tokenEmail || null,
         displayName,
         password: '',
-        avatarUrl: '/attached_assets/gamefolio social logo 3d circle web.png',
+        avatarUrl: '/attached_assets/gamefolio-logo-green.png',
         bannerUrl: '/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg',
         emailVerified: true,
         authProvider: 'apple',
@@ -748,7 +586,7 @@ router.post('/auth/mobile/apple', async (req: Request, res: Response) => {
         ...userWithoutPassword,
         needsOnboarding,
         isNewAppleUser: isNewUser,
-        ...(streakInfo && {
+        ...(streakInfo && !streakInfo.isFirstLogin && {
           streakInfo: {
             currentStreak: streakInfo.currentStreak,
             bonusAwarded: streakInfo.bonusAwarded,
@@ -899,7 +737,7 @@ router.get('/auth/mobile/discord/callback', async (req: Request, res: Response) 
       const tempUsername = `temp_${id.substring(0, 8)}_${timestamp}`;
       const avatarUrl = avatar 
         ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`
-        : '/attached_assets/gamefolio social logo 3d circle web.png';
+        : '/attached_assets/gamefolio-logo-green.png';
 
       user = await storage.createUser({
         username: tempUsername.toLowerCase(),
@@ -960,105 +798,14 @@ router.get('/auth/mobile/discord/callback', async (req: Request, res: Response) 
 });
 
 /**
- * Mobile Discord OAuth endpoint (alternative to callback)
- * Receives Discord auth data from mobile app, creates/finds user, returns JWT tokens
+ * Mobile Discord OAuth endpoint — REMOVED
+ * This endpoint previously trusted unverified client-supplied identity claims
+ * (email, id) without verifying a Discord access token, allowing account
+ * takeover by supplying any victim email address. Use the server-side Discord
+ * OAuth callback flow instead.
  */
-router.post('/auth/mobile/discord', async (req: Request, res: Response) => {
-  try {
-    const { id, username, discriminator, email, avatar } = req.body;
-
-    if (!id || !email) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Missing required Discord auth data'
-      });
-    }
-
-    // Check if user already exists by email
-    let user = await storage.getUserByEmail?.(email);
-    let isNewUser = false;
-
-    if (!user) {
-      isNewUser = true;
-      // Create new user with Discord data
-      const displayName = discriminator ? `${username}#${discriminator}` : username;
-      const timestamp = Date.now().toString().slice(-6);
-      const tempUsername = `temp_${id.substring(0, 8)}_${timestamp}`;
-      const avatarUrl = avatar 
-        ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`
-        : '/attached_assets/gamefolio social logo 3d circle web.png';
-
-      user = await storage.createUser({
-        username: tempUsername.toLowerCase(),
-        displayName,
-        email: email.toLowerCase(),
-        password: '', // Empty password for OAuth users
-        emailVerified: true,
-        avatarUrl,
-        bannerUrl: '/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg',
-        authProvider: 'discord',
-        externalId: id,
-        userType: null,
-        ageRange: null
-      });
-    }
-
-    // Check if user needs onboarding
-    const needsOnboarding = !user.userType || user.username.startsWith('temp_');
-
-    // Update existing user's Discord data if needed
-    if (!isNewUser && !user.avatarUrl && avatar) {
-      const avatarUrl = `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`;
-      user = await storage.updateUser(user.id, {
-        avatarUrl,
-        authProvider: 'discord',
-        externalId: id
-      }) || user;
-    }
-
-    // Update login time and streak
-    let streakInfo;
-    try {
-      await storage.updateUserLoginTime(user.id, 0);
-      streakInfo = await StreakService.updateLoginStreak(user.id);
-    } catch (error) {
-      console.error('Error updating user login time or streak:', error);
-    }
-
-    // Generate JWT tokens
-    const tokens = JWTService.generateTokenPair(user);
-    const { password: _, ...userWithoutPassword } = user;
-
-    // Return JSON response with tokens - mobile app uses these directly
-    return res.status(200).json({
-      success: true,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      user: {
-        ...userWithoutPassword,
-        needsOnboarding,
-        isNewDiscordUser: isNewUser,
-        ...(streakInfo && {
-          streakInfo: {
-            currentStreak: streakInfo.currentStreak,
-            bonusAwarded: streakInfo.bonusAwarded,
-            dailyXP: streakInfo.dailyXP,
-            longestStreak: user.longestStreak || 0,
-            nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
-            message: streakInfo.message,
-            isNewMilestone: streakInfo.isNewMilestone
-          }
-        })
-      }
-    });
-
-  } catch (error) {
-    console.error('Mobile Discord auth error:', error);
-    return res.status(500).json({ 
-      success: false,
-      message: 'Discord authentication failed'
-    });
-  }
+router.post('/auth/mobile/discord', (_req: Request, res: Response) => {
+  return res.status(410).json({ success: false, message: 'This endpoint has been removed. Use the standard Discord OAuth login flow.' });
 });
 
 /**
@@ -1184,7 +931,7 @@ router.get('/auth/mobile/xbox/callback', async (req: Request, res: Response) => 
       isNewUser = true;
       const timestamp = Date.now().toString().slice(-6);
       const tempUsername = `temp_xbox_${xuid.substring(0, 8)}_${timestamp}`;
-      const avatarUrl = gamerpic || '/attached_assets/gamefolio social logo 3d circle web.png';
+      const avatarUrl = gamerpic || '/attached_assets/gamefolio-logo-green.png';
 
       user = await storage.createUser({
         username: tempUsername.toLowerCase(),
