@@ -78,7 +78,9 @@ export async function syncXboxForUser(user: User): Promise<XboxSyncResult> {
     throw new PlatformSyncError('UPSTREAM', 502, `Xbox Live returned an error (code ${data.code}). Please try again later.`);
   }
 
-  const allTitles = data.titles || data.achievements || data.data || [];
+  // xbl.io wraps results in a "content" envelope: {"content":{"titles":[...]},"code":200}
+  // Fall back to top-level keys for any future API shape changes.
+  const allTitles = data?.content?.titles || data.titles || data.achievements || data.data || [];
   const achievements = allTitles.slice(0, 100);
 
   // Tally true totals across ALL games before slicing
