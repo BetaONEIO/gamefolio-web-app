@@ -57,11 +57,27 @@ export async function syncXboxForUser(user: User): Promise<XboxSyncResult> {
   });
 
   if (axiosResponse.status < 200 || axiosResponse.status >= 300) {
-    console.error('xbl.io achievements error:', axiosResponse.status, JSON.stringify(axiosResponse.data));
+    console.error('xbl.io achievements HTTP error:', axiosResponse.status, JSON.stringify(axiosResponse.data));
     throw new PlatformSyncError('UPSTREAM', 502, 'Failed to fetch achievements from Xbox Live');
   }
 
   const data = axiosResponse.data as any;
+
+  // xbl.io can return HTTP 200 with a body-level error code (e.g. 401 for auth
+  // failure or privacy restrictions, 429 for rate limiting).
+  if (data?.code && data.code !== 200 && !data.titles && !data.achievements && !data.data) {
+    console.error('xbl.io achievements body-level error:', data.code, JSON.stringify(data));
+    if (data.code === 429) {
+      throw new PlatformSyncError('RATE_LIMITED', 429, 'Xbox Live rate limit reached. Please try again later.');
+    }
+    if (data.code === 401 || data.code === 403) {
+      throw new PlatformSyncError('XBL_AUTH', 502,
+        'Xbox Live returned an authorisation error. This usually means the gamertag\'s privacy settings are blocking achievement access. ' +
+        'In the Xbox app or Xbox.com, go to Settings → Privacy & online safety → Xbox privacy → View details & customise → Game content → "Others can see your game and app history" and set it to Everyone.');
+    }
+    throw new PlatformSyncError('UPSTREAM', 502, `Xbox Live returned an error (code ${data.code}). Please try again later.`);
+  }
+
   const allTitles = data.titles || data.achievements || data.data || [];
   const achievements = allTitles.slice(0, 100);
 
