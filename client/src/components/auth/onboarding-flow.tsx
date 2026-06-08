@@ -28,7 +28,7 @@ import imgUnityLogo from "@assets/unity-logo_1780747173618.png";
 import imgIndieShirt from "@assets/gamefolio-shirt_1780747534126.png";
 import imgGamefolioCard from "@assets/image_1780751936689.png";
 import imgIndieSocket from "@assets/-1Plug_1780932573098.png";
-import imgIndiePlug from "@assets/image_1780930339894.png";
+import imgIndiePlug from "@assets/gf-plug_1780932928172.png";
 import imgBountyBg from "@assets/image_1780752103152.png";
 import imgGFBag from "@assets/image_1780752169383.png";
 import imgProgression from "@assets/image_1780755222420.png";
@@ -814,10 +814,10 @@ export default function OnboardingFlow({
               ) : selectedPath === 'indie' ? (
                 /* Indie Screen 2: INDIE connector plug design */
                 <>
-                  {/* Dark navy base with green radial glow to the right of the socket */}
-                  <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 64% 52%, rgba(120,200,0,0.28) 0%, rgba(60,120,0,0.10) 38%, transparent 65%), #0b1520' }} />
+                  {/* Dark navy base with green radial glow between socket and plug */}
+                  <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 55%, rgba(120,200,0,0.28) 0%, rgba(60,120,0,0.10) 38%, transparent 65%), #0b1520' }} />
                   <div className="absolute inset-x-0 bottom-0 h-20 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
-                  {/* INDIE socket — lower-center-left, cable exits bottom */}
+                  {/* INDIE socket — lower-left, cable exits bottom */}
                   <img
                     src={imgIndieSocket}
                     alt=""
@@ -826,9 +826,24 @@ export default function OnboardingFlow({
                     className="select-none absolute z-20"
                     style={{
                       width: 'clamp(300px, 78%, 435px)',
-                      bottom: '-2%',
+                      bottom: '-8%',
                       left: '-2%',
                       filter: 'drop-shadow(0 0 24px rgba(120,200,0,0.30))',
+                    }}
+                  />
+                  {/* Green plug — upper-right, angled toward socket */}
+                  <img
+                    src={imgIndiePlug}
+                    alt=""
+                    aria-hidden
+                    draggable={false}
+                    className="select-none absolute z-10"
+                    style={{
+                      width: 'clamp(220px, 60%, 350px)',
+                      top: '-4%',
+                      right: '-4%',
+                      transform: 'rotate(-28deg)',
+                      filter: 'drop-shadow(0 8px 36px rgba(150,220,0,0.50))',
                     }}
                   />
                 </>
