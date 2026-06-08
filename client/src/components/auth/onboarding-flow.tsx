@@ -31,7 +31,7 @@ import imgIndieSocket from "@assets/-1Plug_1780932573098.png";
 import imgIndiePlug from "@assets/gf-plug_1780932928172.png";
 import imgBountyBg from "@assets/image_1780752103152.png";
 import imgGFBag from "@assets/image_1780752169383.png";
-import imgLaunchButton from "@assets/button-launch_1780949208178.png";
+import imgLaunchButton from "@assets/LAUNCH-BUTTON_(1)_1780950145274.png";
 import imgHandPixel from "@assets/hand-pixel_1780949461463.png";
 import imgProgression from "@assets/image_1780755222420.png";
 import Cropper from "react-easy-crop";
