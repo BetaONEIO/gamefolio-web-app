@@ -892,9 +892,9 @@ export default function OnboardingFlow({
               {selectedPath === 'indie' ? (
                 <>
                   {/* Pixel hand pointing above the button */}
-                  <img src={imgHandPixel} alt="" aria-hidden draggable={false} className="select-none absolute z-20" style={{ bottom: 'clamp(160px, 32%, 220px)', left: '50%', transform: 'translateX(-50%)', width: 'clamp(100px, 28%, 160px)', height: 'auto', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }} />
+                  <img src={imgHandPixel} alt="" aria-hidden draggable={false} className="select-none absolute z-20" style={{ bottom: 'clamp(200px, 40%, 280px)', left: '50%', transform: 'translateX(-50%)', width: 'clamp(140px, 38%, 220px)', height: 'auto', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }} />
                   {/* Launch button at the bottom */}
-                  <img src={imgLaunchButton} alt="Launch button" draggable={false} className="select-none absolute z-10" style={{ bottom: '-4%', left: '50%', transform: 'translateX(-50%)', width: 'clamp(320px, 82%, 520px)', filter: 'drop-shadow(0 0 30px rgba(193,255,0,0.45))' }} />
+                  <img src={imgLaunchButton} alt="Launch button" draggable={false} className="select-none absolute z-10" style={{ bottom: '-6%', left: '50%', transform: 'translateX(-50%)', width: 'clamp(420px, 96%, 680px)', filter: 'drop-shadow(0 0 30px rgba(193,255,0,0.45))' }} />
                 </>
               ) : (
                 <img src={imgGFBag} alt="GF Token bag" draggable={false} className="ob-float relative z-10 select-none" style={{ height:'65%', width:'auto', objectFit:'contain', animationDuration:'4s', filter:'drop-shadow(0 0 40px rgba(193,255,0,0.35))' }} />
