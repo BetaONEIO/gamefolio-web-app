@@ -26,6 +26,7 @@ import imgPurplePotion from "@assets/purple-potion_1780747173612.png";
 import imgHeartPng from "@assets/heart-png_1780747173615.png";
 import imgUnityLogo from "@assets/unity-logo_1780747173618.png";
 import imgIndieShirt from "@assets/gamefolio-shirt_1780747534126.png";
+import imgIndieGame from "@assets/indie-game_1780953921840.png";
 import imgGamefolioCard from "@assets/image_1780751936689.png";
 import imgIndieSocket from "@assets/-1Plug_1780932573098.png";
 import imgIndiePlug from "@assets/gf-plug_1780932928172.png";
@@ -657,7 +658,7 @@ export default function OnboardingFlow({
         const i1 = selectedPath === 'streamer'
           ? { titleA: 'CONNECT YOUR', titleB: 'STREAMS', sub: 'Connect your streaming platforms and build a creator profile that showcases your best content.' }
           : selectedPath === 'indie'
-          ? { titleA: 'PROMOTE YOUR', titleB: 'GAME', sub: 'Create a game profile and showcase your indie title to the Gamefolio community.', img: imgIndieShirt, imgAlt: 'Indie game' }
+          ? { titleA: 'PROMOTE YOUR', titleB: 'GAME', sub: 'Create a game profile and showcase your indie title to the Gamefolio community.', img: imgIndieGame, imgAlt: 'Indie game cartridge' }
           : { titleA: 'BUILD YOUR', titleB: 'GAMEFOLIO', sub: 'Your gaming legacy, all in one place. Connect accounts and showcase your best moments.', img: imgGamefolioCard, imgAlt: 'Gamefolio profile card' };
         return (
           <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
@@ -717,7 +718,7 @@ export default function OnboardingFlow({
                 </>
               ) : (
                 <>
-                  <img src={(i1 as any).img} alt={(i1 as any).imgAlt} draggable={false} className="select-none absolute inset-0 w-full h-full" style={{ objectFit:'contain', objectPosition:'top center' }} />
+                  <img src={(i1 as any).img} alt={(i1 as any).imgAlt} draggable={false} className="select-none absolute inset-0 w-full h-full ob-float" style={{ objectFit:'contain', objectPosition:'top center', animationDuration:'4s' }} />
                   <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
                 </>
               )}
