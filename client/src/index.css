@@ -74,6 +74,22 @@
   animation: hand-point 1.2s ease-in-out infinite;
 }
 
+/* Corner swivel animations for onboarding decorations */
+@keyframes corner-swivel {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+}
+@keyframes corner-swivel-reverse {
+  0%, 100% { transform: rotate(6deg); }
+  50% { transform: rotate(-6deg); }
+}
+.corner-swivel {
+  animation: corner-swivel 3s ease-in-out infinite;
+}
+.corner-swivel-reverse {
+  animation: corner-swivel-reverse 3.5s ease-in-out infinite;
+}
+
 /* Custom animations for upload progress */
 @keyframes slide-right {
   0% {

@@ -33,6 +33,9 @@ import imgBountyBg from "@assets/image_1780752103152.png";
 import imgGFBag from "@assets/image_1780752169383.png";
 import imgLaunchButton from "@assets/LAUNCH-BUTTON_(1)_1780950145274.png";
 import imgHandPixel from "@assets/hand-pixel_1780949461463.png";
+import imgTrophy from "@assets/trophy_1780952760686.png";
+import imgCoin from "@assets/gamefolio-coin-1_1780952796461.png";
+import imgBountyBag from "@assets/bOUNTY-BAG_1780952808428.png";
 import imgProgression from "@assets/image_1780755222420.png";
 import Cropper from "react-easy-crop";
 import { useQuery } from "@tanstack/react-query";
@@ -891,6 +894,12 @@ export default function OnboardingFlow({
               <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
               {selectedPath === 'indie' ? (
                 <>
+                  {/* Corner decorations — trophy top-left */}
+                  <img src={imgTrophy} alt="" aria-hidden draggable={false} className="select-none absolute z-20 corner-swivel" style={{ top: '2%', left: '-4%', width: 'clamp(90px, 22%, 150px)', filter: 'drop-shadow(0 0 18px rgba(255,215,0,0.55))' }} />
+                  {/* Corner decorations — coin top-right */}
+                  <img src={imgCoin} alt="" aria-hidden draggable={false} className="select-none absolute z-20 corner-swivel-reverse" style={{ top: '4%', right: '-3%', width: 'clamp(80px, 20%, 140px)', filter: 'drop-shadow(0 0 18px rgba(193,255,0,0.55))' }} />
+                  {/* Corner decorations — bounty bag bottom-right */}
+                  <img src={imgBountyBag} alt="" aria-hidden draggable={false} className="select-none absolute z-20 corner-swivel" style={{ bottom: '8%', right: '-5%', width: 'clamp(100px, 24%, 160px)', filter: 'drop-shadow(0 0 20px rgba(193,255,0,0.50))' }} />
                   {/* Pixel hand pointing above the button */}
                   <img src={imgHandPixel} alt="" aria-hidden draggable={false} className="select-none absolute z-20 hand-point" style={{ bottom: 'clamp(120px, 22%, 180px)', left: '50%', transform: 'translateX(-50%)', width: 'clamp(180px, 50%, 280px)', height: 'auto', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }} />
                   {/* Launch button at the bottom */}
