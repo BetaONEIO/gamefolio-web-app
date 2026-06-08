@@ -31,6 +31,8 @@ import imgIndieSocket from "@assets/-1Plug_1780932573098.png";
 import imgIndiePlug from "@assets/gf-plug_1780932928172.png";
 import imgBountyBg from "@assets/image_1780752103152.png";
 import imgGFBag from "@assets/image_1780752169383.png";
+import imgLaunchButton from "@assets/button-launch_1780949208178.png";
+import imgHandPixel from "@assets/hand-pixel_1780949461463.png";
 import imgProgression from "@assets/image_1780755222420.png";
 import Cropper from "react-easy-crop";
 import { useQuery } from "@tanstack/react-query";
@@ -887,7 +889,16 @@ export default function OnboardingFlow({
             <div className="flex-none relative flex items-center justify-center overflow-hidden" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)' }}>
               <img src={imgBountyBg} alt="" aria-hidden draggable={false} className="absolute inset-0 w-full h-full object-cover select-none" style={{ opacity: 0.55 }} />
               <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
-              <img src={imgGFBag} alt="GF Token bag" draggable={false} className="ob-float relative z-10 select-none" style={{ height:'65%', width:'auto', objectFit:'contain', animationDuration:'4s', filter:'drop-shadow(0 0 40px rgba(193,255,0,0.35))' }} />
+              {selectedPath === 'indie' ? (
+                <>
+                  {/* Pixel hand pointing above the button */}
+                  <img src={imgHandPixel} alt="" aria-hidden draggable={false} className="select-none absolute z-20" style={{ bottom: 'clamp(100px, 22%, 150px)', left: '50%', transform: 'translateX(-50%)', width: 'clamp(60px, 18%, 100px)', height: 'auto', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }} />
+                  {/* Launch button at the bottom */}
+                  <img src={imgLaunchButton} alt="Launch button" draggable={false} className="select-none absolute z-10" style={{ bottom: '-2%', left: '50%', transform: 'translateX(-50%)', width: 'clamp(200px, 55%, 340px)', filter: 'drop-shadow(0 0 30px rgba(193,255,0,0.45))' }} />
+                </>
+              ) : (
+                <img src={imgGFBag} alt="GF Token bag" draggable={false} className="ob-float relative z-10 select-none" style={{ height:'65%', width:'auto', objectFit:'contain', animationDuration:'4s', filter:'drop-shadow(0 0 40px rgba(193,255,0,0.35))' }} />
+              )}
             </div>
             <div className="flex-shrink-0 px-6 pt-5 pb-6">
               <div className="flex items-center gap-2 justify-center mb-5">
