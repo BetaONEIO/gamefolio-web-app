@@ -892,7 +892,7 @@ export default function OnboardingFlow({
               {selectedPath === 'indie' ? (
                 <>
                   {/* Pixel hand pointing above the button */}
-                  <img src={imgHandPixel} alt="" aria-hidden draggable={false} className="select-none absolute z-20" style={{ bottom: 'clamp(200px, 40%, 280px)', left: '50%', transform: 'translateX(-50%)', width: 'clamp(140px, 38%, 220px)', height: 'auto', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }} />
+                  <img src={imgHandPixel} alt="" aria-hidden draggable={false} className="select-none absolute z-20 hand-point" style={{ bottom: 'clamp(240px, 48%, 340px)', left: '50%', transform: 'translateX(-50%)', width: 'clamp(180px, 50%, 280px)', height: 'auto', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }} />
                   {/* Launch button at the bottom */}
                   <img src={imgLaunchButton} alt="Launch button" draggable={false} className="select-none absolute z-10" style={{ bottom: '-6%', left: '50%', transform: 'translateX(-50%)', width: 'clamp(420px, 96%, 680px)', filter: 'drop-shadow(0 0 30px rgba(193,255,0,0.45))' }} />
                 </>

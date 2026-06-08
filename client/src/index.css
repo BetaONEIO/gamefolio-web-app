@@ -65,6 +65,15 @@
 }
 
 
+/* Hand pointing animation for onboarding */
+@keyframes hand-point {
+  0%, 100% { transform: translateX(-50%) translateY(0px); }
+  50% { transform: translateX(-50%) translateY(18px); }
+}
+.hand-point {
+  animation: hand-point 1.2s ease-in-out infinite;
+}
+
 /* Custom animations for upload progress */
 @keyframes slide-right {
   0% {
