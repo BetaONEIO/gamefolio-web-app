@@ -1,43 +1,42 @@
-import { createPublicClient, createWalletClient, http, parseEther, type Address, type Abi } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
+import { createPublicClient, http, parseEther, type Address, type Abi } from 'viem';
+import { ethers } from 'ethers';
 import { SKALE_BASE_MAINNET } from '../shared/contracts';
+import { decryptPrivateKey } from './wallet-crypto';
 
 const RPC_URL = SKALE_BASE_MAINNET.rpcUrls.default.http[0];
 
 const SFUEL_THRESHOLD = parseEther('0.01');
 const SFUEL_DISTRIBUTION_AMOUNT = parseEther('0.1');
 
-const publicClient = createPublicClient({
+export const publicClient = createPublicClient({
   chain: SKALE_BASE_MAINNET,
   transport: http(RPC_URL),
 });
 
-function getTreasuryWalletClient() {
-  const privateKey = process.env.TREASURY_PRIVATE_KEY;
-  if (!privateKey) throw new Error('TREASURY_PRIVATE_KEY not configured');
-  const formattedKey = privateKey.startsWith('0x') ? privateKey as `0x${string}` : `0x${privateKey}` as `0x${string}`;
-  const account = privateKeyToAccount(formattedKey);
-  return createWalletClient({
-    account,
-    chain: SKALE_BASE_MAINNET,
-    transport: http(RPC_URL),
-  });
+function getEthersProvider(): ethers.JsonRpcProvider {
+  return new ethers.JsonRpcProvider(RPC_URL);
 }
 
-async function ensureSFuel(address: Address): Promise<void> {
-  const balance = await publicClient.getBalance({ address });
+function getTreasurySigner(): ethers.Wallet {
+  const privateKey = process.env.TREASURY_PRIVATE_KEY;
+  if (!privateKey) throw new Error('TREASURY_PRIVATE_KEY not configured');
+  const trimmed = privateKey.trim();
+  const formatted = trimmed.startsWith('0x') ? trimmed : `0x${trimmed}`;
+  return new ethers.Wallet(formatted, getEthersProvider());
+}
+
+async function ensureSFuel(address: string): Promise<void> {
+  const balance = await publicClient.getBalance({ address: address as Address });
   if (balance >= SFUEL_THRESHOLD) return;
 
   console.log(`[sFUEL] Wallet ${address} has ${balance} sFUEL — distributing from treasury...`);
-  const treasuryClient = getTreasuryWalletClient();
-  const gasPrice = await publicClient.getGasPrice();
-  const hash = await treasuryClient.sendTransaction({
+  const treasurer = getTreasurySigner();
+  const tx = await treasurer.sendTransaction({
     to: address,
     value: SFUEL_DISTRIBUTION_AMOUNT,
-    gasPrice,
   });
-  await publicClient.waitForTransactionReceipt({ hash, timeout: 30_000 });
-  console.log(`[sFUEL] Distributed to ${address}. TX: ${hash}`);
+  await tx.wait();
+  console.log(`[sFUEL] Distributed to ${address}. TX: ${tx.hash}`);
 }
 
 export async function writeContractWithPoW({
@@ -53,33 +52,23 @@ export async function writeContractWithPoW({
   functionName: string;
   args: readonly unknown[];
 }): Promise<`0x${string}`> {
-  const { decryptPrivateKey } = await import('./wallet-crypto');
+  const rawKey = decryptPrivateKey(encryptedPrivateKey);
+  const formatted = rawKey.startsWith('0x') ? rawKey : `0x${rawKey}`;
 
-  const privateKey = decryptPrivateKey(encryptedPrivateKey);
-  const formattedKey = privateKey.startsWith('0x')
-    ? (privateKey as `0x${string}`)
-    : (`0x${privateKey}` as `0x${string}`);
-  const account = privateKeyToAccount(formattedKey);
+  const provider = getEthersProvider();
+  const wallet = new ethers.Wallet(formatted, provider);
 
-  await ensureSFuel(account.address);
+  await ensureSFuel(wallet.address);
 
-  const walletClient = createWalletClient({
-    account,
-    chain: SKALE_BASE_MAINNET,
-    transport: http(RPC_URL),
-  });
+  const contract = new ethers.Contract(contractAddress, abi as ethers.InterfaceAbi, wallet);
+  const tx = await contract[functionName](...args);
+  const receipt = await tx.wait();
 
-  const gasPrice = await publicClient.getGasPrice();
+  if (!receipt) {
+    throw new Error(`Transaction sent but no receipt received (hash: ${tx.hash})`);
+  }
 
-  const hash = await walletClient.writeContract({
-    address: contractAddress,
-    abi: abi as Abi,
-    functionName,
-    args: args as unknown[],
-    gasPrice,
-  });
-
-  return hash;
+  return receipt.hash as `0x${string}`;
 }
 
 export async function writeContractWithPoWFromRawKey({
@@ -95,30 +84,21 @@ export async function writeContractWithPoWFromRawKey({
   functionName: string;
   args: readonly unknown[];
 }): Promise<`0x${string}`> {
-  const formattedKey = privateKeyRaw.startsWith('0x')
-    ? (privateKeyRaw as `0x${string}`)
-    : (`0x${privateKeyRaw}` as `0x${string}`);
-  const account = privateKeyToAccount(formattedKey);
+  const trimmed = privateKeyRaw.trim();
+  const formatted = trimmed.startsWith('0x') ? trimmed : `0x${trimmed}`;
 
-  await ensureSFuel(account.address);
+  const provider = getEthersProvider();
+  const wallet = new ethers.Wallet(formatted, provider);
 
-  const walletClient = createWalletClient({
-    account,
-    chain: SKALE_BASE_MAINNET,
-    transport: http(RPC_URL),
-  });
+  await ensureSFuel(wallet.address);
 
-  const gasPrice = await publicClient.getGasPrice();
+  const contract = new ethers.Contract(contractAddress, abi as ethers.InterfaceAbi, wallet);
+  const tx = await contract[functionName](...args);
+  const receipt = await tx.wait();
 
-  const hash = await walletClient.writeContract({
-    address: contractAddress,
-    abi: abi as Abi,
-    functionName,
-    args: args as unknown[],
-    gasPrice,
-  });
+  if (!receipt) {
+    throw new Error(`Transaction sent but no receipt received (hash: ${tx.hash})`);
+  }
 
-  return hash;
+  return receipt.hash as `0x${string}`;
 }
-
-export { publicClient };

@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { getUncachableStripeClient, getStripeSecretKey } from '../stripeClient';
 import { transferGfTokens } from '../gf-token-service';
 import { EmailService } from '../email-service';
+import { notifyProPurchase } from '../telegram-notify';
 import Stripe from 'stripe';
 
 const router = Router();
@@ -217,6 +218,8 @@ router.post('/api/stripe/webhook',
                 nextRenewal
               ).catch(err => console.error('[GF Webhook] Failed to send renewal email:', err));
             }
+
+            notifyProPurchase(user, { kind: 'renewal', plan, source: 'Stripe' });
           } else {
             console.warn(`[GF Webhook] No user found for subscription: ${subscriptionId}`);
           }
