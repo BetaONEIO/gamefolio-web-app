@@ -826,8 +826,8 @@ export default function OnboardingFlow({
                     className="select-none absolute z-20"
                     style={{
                       width: 'clamp(300px, 78%, 435px)',
-                      bottom: '8%',
-                      left: '4%',
+                      bottom: '-2%',
+                      left: '-2%',
                       filter: 'drop-shadow(0 0 24px rgba(120,200,0,0.30))',
                     }}
                   />
