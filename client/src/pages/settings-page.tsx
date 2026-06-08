@@ -3964,6 +3964,19 @@ export default function SettingsPage() {
                     </Button>
                   </div>
 
+                  {/* Privacy settings info */}
+                  <div className="flex gap-2.5 rounded-xl border border-[#107C10]/20 bg-[#107C10]/5 px-4 py-3">
+                    <FaXbox className="w-4 h-4 text-[#107C10] shrink-0 mt-0.5" />
+                    <div className="text-xs text-slate-400 leading-relaxed">
+                      <span className="font-medium text-slate-300">Not seeing your achievements?</span>
+                      {" "}Your Xbox privacy settings may be blocking access. On Xbox.com or the Xbox app, go to{" "}
+                      <span className="text-slate-300">Settings → Privacy & online safety → Xbox privacy → View details & customise → Game content</span>
+                      {" "}and set{" "}
+                      <span className="text-slate-300">"Others can see your game and app history"</span>
+                      {" "}to <span className="text-[#107C10] font-medium">Everyone</span>, then sync again.
+                    </div>
+                  </div>
+
                   {/* Toggle Display on Profile */}
                   <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
                     <div>
