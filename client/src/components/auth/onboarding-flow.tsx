@@ -27,7 +27,7 @@ import imgHeartPng from "@assets/heart-png_1780747173615.png";
 import imgUnityLogo from "@assets/unity-logo_1780747173618.png";
 import imgIndieShirt from "@assets/gamefolio-shirt_1780747534126.png";
 import imgGamefolioCard from "@assets/image_1780751936689.png";
-import imgIndieSocket from "@assets/image_1780930326256.png";
+import imgIndieSocket from "@assets/-1Plug_1780932573098.png";
 import imgIndiePlug from "@assets/image_1780930339894.png";
 import imgBountyBg from "@assets/image_1780752103152.png";
 import imgGFBag from "@assets/image_1780752169383.png";
