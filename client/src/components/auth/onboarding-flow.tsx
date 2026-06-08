@@ -814,24 +814,10 @@ export default function OnboardingFlow({
               ) : selectedPath === 'indie' ? (
                 /* Indie Screen 2: INDIE connector plug design */
                 <>
-                  <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 62% 55%, rgba(150,220,0,0.22) 0%, rgba(80,140,0,0.08) 40%, transparent 70%), #071013' }} />
-                  <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
-                  {/* Green plug — upper right, angled toward socket */}
-                  <img
-                    src={imgIndiePlug}
-                    alt=""
-                    aria-hidden
-                    draggable={false}
-                    className="select-none absolute z-10"
-                    style={{
-                      width: 'clamp(190px, 50%, 270px)',
-                      top: '-2%',
-                      right: '-4%',
-                      transform: 'rotate(-28deg)',
-                      filter: 'drop-shadow(0 8px 36px rgba(150,220,0,0.50))',
-                    }}
-                  />
-                  {/* INDIE socket — lower left, partially cropped off edge */}
+                  {/* Dark navy base with green radial glow to the right of the socket */}
+                  <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 64% 52%, rgba(120,200,0,0.28) 0%, rgba(60,120,0,0.10) 38%, transparent 65%), #0b1520' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-20 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  {/* INDIE socket — lower-center-left, cable exits bottom */}
                   <img
                     src={imgIndieSocket}
                     alt=""
@@ -839,10 +825,10 @@ export default function OnboardingFlow({
                     draggable={false}
                     className="select-none absolute z-20"
                     style={{
-                      width: 'clamp(210px, 58%, 320px)',
-                      bottom: '-6%',
-                      left: '-6%',
-                      filter: 'drop-shadow(0 0 28px rgba(150,220,0,0.35))',
+                      width: 'clamp(200px, 52%, 290px)',
+                      bottom: '8%',
+                      left: '4%',
+                      filter: 'drop-shadow(0 0 24px rgba(120,200,0,0.30))',
                     }}
                   />
                 </>
