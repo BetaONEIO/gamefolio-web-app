@@ -11,6 +11,7 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage } from "./storage";
 import { LeaderboardService } from "./leaderboard-service";
+import { recordView } from "./view-rate-limiter";
 import { StreakService } from "./streak-service";
 import { PerformanceMilestoneService } from "./performance-milestone-service";
 import { CreatorMilestoneService } from "./creator-milestone-service";
@@ -7832,6 +7833,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Don't increment views for demo clips
       if (clipId >= 10000) {
         return res.json({ success: true, message: 'Demo clip views not tracked' });
+      }
+
+      // Rate-limit: same IP may only count once per clip per hour
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+      const isNewView = recordView('clip', clipId, ip);
+
+      if (!isNewView) {
+        return res.json({ success: true, message: 'View already counted recently' });
       }
 
       // Get the clip to find the owner, then increment — these are the minimum
