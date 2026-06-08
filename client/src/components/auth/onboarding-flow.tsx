@@ -718,7 +718,9 @@ export default function OnboardingFlow({
                 </>
               ) : (
                 <>
-                  <img src={(i1 as any).img} alt={(i1 as any).imgAlt} draggable={false} className="select-none absolute inset-0 w-full h-full ob-float" style={{ objectFit:'contain', objectPosition:'top center', animationDuration:'4s' }} />
+                  {/* Green glow from left side */}
+                  <div className="absolute left-0 top-0 bottom-0 w-40 pointer-events-none z-10" style={{ background: 'linear-gradient(to right, rgba(193,255,0,0.18), transparent)' }} />
+                  <img src={(i1 as any).img} alt={(i1 as any).imgAlt} draggable={false} className="select-none absolute inset-0 w-full h-full ob-float" style={{ objectFit:'contain', objectPosition:'center', animationDuration:'4s', paddingTop: '40px' }} />
                   <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
                 </>
               )}
