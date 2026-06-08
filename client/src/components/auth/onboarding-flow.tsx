@@ -27,6 +27,8 @@ import imgHeartPng from "@assets/heart-png_1780747173615.png";
 import imgUnityLogo from "@assets/unity-logo_1780747173618.png";
 import imgIndieShirt from "@assets/gamefolio-shirt_1780747534126.png";
 import imgGamefolioCard from "@assets/image_1780751936689.png";
+import imgIndieSocket from "@assets/image_1780930326256.png";
+import imgIndiePlug from "@assets/image_1780930339894.png";
 import imgBountyBg from "@assets/image_1780752103152.png";
 import imgGFBag from "@assets/image_1780752169383.png";
 import imgProgression from "@assets/image_1780755222420.png";
@@ -744,7 +746,7 @@ export default function OnboardingFlow({
         const i2 = selectedPath === 'streamer'
           ? { titleA: 'UPLOAD YOUR', titleB: 'STREAM CLIPS', sub: 'Turn your best moments into clips, highlights and reels that continue growing your audience long after your stream ends.' }
           : selectedPath === 'indie'
-          ? { titleA: 'CONNECT WITH', titleB: 'CREATORS', sub: 'Creators upload clips, reels, and screenshots to build community around your game.', img: imgGamefolioCard, imgAlt: 'Creator content' }
+          ? { titleA: 'CONNECT WITH', titleB: 'CREATORS', sub: 'Creators upload clips, reels, and screenshots to build community around your game.' }
           : { titleA: 'TRACK YOUR', titleB: 'PROGRESS', sub: 'Watch your skills grow. Every action earns XP and builds your legendary status.', img: imgProgression, imgAlt: 'Track progression' };
         return (
           <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
@@ -808,6 +810,41 @@ export default function OnboardingFlow({
                       ))}
                     </div>
                   </div>
+                </>
+              ) : selectedPath === 'indie' ? (
+                /* Indie Screen 2: INDIE connector plug design */
+                <>
+                  <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 62% 55%, rgba(150,220,0,0.22) 0%, rgba(80,140,0,0.08) 40%, transparent 70%), #071013' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  {/* Green plug — upper right, angled toward socket */}
+                  <img
+                    src={imgIndiePlug}
+                    alt=""
+                    aria-hidden
+                    draggable={false}
+                    className="select-none absolute z-10"
+                    style={{
+                      width: 'clamp(190px, 50%, 270px)',
+                      top: '-2%',
+                      right: '-4%',
+                      transform: 'rotate(-28deg)',
+                      filter: 'drop-shadow(0 8px 36px rgba(150,220,0,0.50))',
+                    }}
+                  />
+                  {/* INDIE socket — lower left, partially cropped off edge */}
+                  <img
+                    src={imgIndieSocket}
+                    alt=""
+                    aria-hidden
+                    draggable={false}
+                    className="select-none absolute z-20"
+                    style={{
+                      width: 'clamp(210px, 58%, 320px)',
+                      bottom: '-6%',
+                      left: '-6%',
+                      filter: 'drop-shadow(0 0 28px rgba(150,220,0,0.35))',
+                    }}
+                  />
                 </>
               ) : (
                 <>
