@@ -825,7 +825,7 @@ export default function OnboardingFlow({
                     draggable={false}
                     className="select-none absolute z-20"
                     style={{
-                      width: 'clamp(200px, 52%, 290px)',
+                      width: 'clamp(300px, 78%, 435px)',
                       bottom: '8%',
                       left: '4%',
                       filter: 'drop-shadow(0 0 24px rgba(120,200,0,0.30))',
