@@ -1105,6 +1105,20 @@ h1, h2, h3 {
   from { opacity: 0; transform: translateY(-6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+@keyframes ob-step-slide-in {
+  from { opacity: 0; transform: translateX(30px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes ob-step-slide-back {
+  from { opacity: 0; transform: translateX(-30px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.ob-step-content-forward {
+  animation: ob-step-slide-in 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+.ob-step-content-back {
+  animation: ob-step-slide-back 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
 @keyframes ob-step-glow {
   0%, 100% { box-shadow: 0 0 0px rgba(183,255,26,0); }
   50%       { box-shadow: 0 0 10px rgba(183,255,26,0.7); }
@@ -1146,7 +1160,7 @@ h1, h2, h3 {
 
 @media (prefers-reduced-motion: reduce) {
   .ob-logo, .ob-fade-up, .ob-fade-up-slow, .ob-cta, .ob-step-indicator, .ob-step-active-glow,
-  .ob-float, .ob-float-sm {
+  .ob-float, .ob-float-sm, .ob-step-content-forward, .ob-step-content-back {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

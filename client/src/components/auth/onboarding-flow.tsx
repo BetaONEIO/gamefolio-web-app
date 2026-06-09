@@ -254,6 +254,7 @@ export default function OnboardingFlow({
   onComplete,
 }: OnboardingFlowProps) {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(OnboardingStep.Welcome);
+  const [stepDirection, setStepDirection] = useState<'forward' | 'back'>('forward');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -420,12 +421,14 @@ export default function OnboardingFlow({
     }
 
     const next = getNextStep(currentStep);
+    setStepDirection('forward');
     setCurrentStep(next);
     if (next === OnboardingStep.Games) loadGames();
   };
 
   const goToPrevStep = () => {
     if (currentStep > OnboardingStep.Welcome) {
+      setStepDirection('back');
       setCurrentStep(getPrevStep(currentStep));
     }
   };
@@ -1720,7 +1723,7 @@ export default function OnboardingFlow({
       style={{ paddingBottom: 'calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)' }}
     >
       <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className={`flex-1 flex flex-col min-h-0 ${stepDirection === 'forward' ? 'ob-step-content-forward' : 'ob-step-content-back'}`} key={currentStep}>
         {renderStepContent()}
       </div>
     </div>
