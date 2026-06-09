@@ -25,7 +25,7 @@ import imgGoldStar from "@assets/gold-star_1780747173613.png";
 import imgPurplePotion from "@assets/purple-potion_1780747173612.png";
 import imgHeartPng from "@assets/heart-png_1780747173615.png";
 import imgUnityLogo from "@assets/unity-logo_1780747173618.png";
-import imgIndieShirt from "@assets/gamefolio-shirt_1780747534126.png";
+import imgIndieGamer from "@assets/Indie-block-gamer-cropped_1780995777073.png";
 import imgIndieGame from "@assets/indie-game_1780953921840.png";
 import imgGamefolioCard from "@assets/image_1780751936689.png";
 import imgIndieSocket from "@assets/-1Plug_1780932573098.png";
@@ -1139,7 +1139,7 @@ export default function OnboardingFlow({
                 <div className="relative z-10" style={{ width: '280px', height: '280px' }}>
                   {/* Shirt — floats centre */}
                   <div className="ob-float" style={{ position: 'absolute', top: '50%', left: '50%', animationDuration: '4s' }}>
-                    <img src={imgIndieShirt} alt="" draggable={false} style={{ transform: 'translate(-50%,-50%)', width: '315px', height: '315px', objectFit: 'contain' }} />
+                    <img src={imgIndieGamer} alt="" draggable={false} style={{ transform: 'translate(-50%,-50%)', width: '315px', height: '315px', objectFit: 'contain' }} />
                   </div>
                   {/* Gold Star — top-left */}
                   <div className="ob-float-sm" style={{ position: 'absolute', top: '-4px', left: '-4px', animationDuration: '3.5s', animationDelay: '0.4s' }}>
