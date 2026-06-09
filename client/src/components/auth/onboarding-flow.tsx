@@ -1139,7 +1139,7 @@ export default function OnboardingFlow({
                 <div className="relative z-10" style={{ width: '280px', height: '280px' }}>
                   {/* Shirt — floats centre */}
                   <div className="ob-float" style={{ position: 'absolute', top: '50%', left: '50%', animationDuration: '4s' }}>
-                    <img src={imgIndieGamer} alt="" draggable={false} style={{ transform: 'translate(-50%,-50%)', width: '410px', height: '410px', objectFit: 'contain' }} />
+                    <img src={imgIndieGamer} alt="" draggable={false} style={{ transform: 'translate(-50%,-50%) scale(1.3)', width: '315px', height: '315px', objectFit: 'contain' }} />
                   </div>
                   {/* Gold Star — top-left */}
                   <div className="ob-float-sm" style={{ position: 'absolute', top: '-4px', left: '-4px', animationDuration: '3.5s', animationDelay: '0.4s' }}>
