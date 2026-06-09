@@ -42,6 +42,19 @@ import imgClip4 from "@assets/image_1781038766375.png";
 import imgClip5 from "@assets/image_1781038791697.png";
 import imgClip6 from "@assets/image_1781038853639.png";
 import imgClip7 from "@assets/image_1781038871252.png";
+import imgClip8 from "@assets/image_1781039657354.png";
+import imgClip9 from "@assets/image_1781039672987.png";
+import imgClip10 from "@assets/image_1781039689447.png";
+import imgClip11 from "@assets/image_1781039704951.png";
+import imgClip12 from "@assets/image_1781039716359.png";
+import imgClip13 from "@assets/image_1781039725893.png";
+import imgClip14 from "@assets/image_1781039750176.png";
+import imgClip15 from "@assets/image_1781039760651.png";
+import imgClip16 from "@assets/image_1781039769261.png";
+import imgClip17 from "@assets/image_1781039781106.png";
+import imgClip18 from "@assets/image_1781039805674.png";
+import imgClip19 from "@assets/image_1781039837584.png";
+import imgClip20 from "@assets/image_1781039848401.png";
 import Cropper from "react-easy-crop";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -775,24 +788,27 @@ export default function OnboardingFlow({
                   <div className="absolute inset-x-0 top-0 h-12 pointer-events-none z-20" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
                   {/* Bottom fade for top marquee area */}
                   <div className="absolute inset-x-0 bottom-0 h-12 pointer-events-none z-20" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
-                  {/* 3 rows above the text */}
+                  {/* 3 rows above the text — each row uses its own exclusive clips */}
                   <div className="relative z-10 flex flex-col gap-2 w-full overflow-hidden" style={{ paddingTop: '8px' }}>
+                    {/* Row 1: clips 1-4 only */}
                     <div className="flex w-max ob-marquee-left">
-                      {[imgClip1, imgClip2, imgClip3, imgClip4, imgClip5, imgClip6, imgClip7, imgClip1, imgClip2, imgClip3, imgClip4, imgClip5, imgClip6, imgClip7].map((src, i) => (
+                      {[imgClip1, imgClip2, imgClip3, imgClip4, imgClip1, imgClip2, imgClip3, imgClip4].map((src, i) => (
                         <div key={i} className="flex-shrink-0 rounded-lg overflow-hidden mx-1.5" style={{ width: 'clamp(140px, 35vw, 200px)', height: 'clamp(90px, 22vw, 130px)', border:'1px solid rgba(255,255,255,0.08)' }}>
                           <img src={src} alt="" className="w-full h-full object-cover" draggable={false} />
                         </div>
                       ))}
                     </div>
+                    {/* Row 2: clips 5-8 only */}
                     <div className="flex w-max ob-marquee-right">
-                      {[imgClip4, imgClip5, imgClip6, imgClip7, imgClip1, imgClip2, imgClip3, imgClip4, imgClip5, imgClip6, imgClip7, imgClip1, imgClip2, imgClip3].map((src, i) => (
+                      {[imgClip5, imgClip6, imgClip7, imgClip8, imgClip5, imgClip6, imgClip7, imgClip8].map((src, i) => (
                         <div key={i} className="flex-shrink-0 rounded-lg overflow-hidden mx-1.5" style={{ width: 'clamp(140px, 35vw, 200px)', height: 'clamp(90px, 22vw, 130px)', border:'1px solid rgba(255,255,255,0.08)' }}>
                           <img src={src} alt="" className="w-full h-full object-cover" draggable={false} />
                         </div>
                       ))}
                     </div>
+                    {/* Row 3: clips 9-12 only */}
                     <div className="flex w-max ob-marquee-left" style={{ animationDelay: '-8s' }}>
-                      {[imgClip7, imgClip1, imgClip3, imgClip5, imgClip2, imgClip4, imgClip6, imgClip7, imgClip1, imgClip3, imgClip5, imgClip2, imgClip4, imgClip6].map((src, i) => (
+                      {[imgClip9, imgClip10, imgClip11, imgClip12, imgClip9, imgClip10, imgClip11, imgClip12].map((src, i) => (
                         <div key={i} className="flex-shrink-0 rounded-lg overflow-hidden mx-1.5" style={{ width: 'clamp(140px, 35vw, 200px)', height: 'clamp(90px, 22vw, 130px)', border:'1px solid rgba(255,255,255,0.08)' }}>
                           <img src={src} alt="" className="w-full h-full object-cover" draggable={false} />
                         </div>
@@ -865,22 +881,25 @@ export default function OnboardingFlow({
               <div className="relative flex-shrink-0 flex flex-col gap-2 w-full overflow-hidden -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013]" style={{ paddingBottom: '8px', marginTop: '-1px' }}>
                 {/* Top fade connecting to text area */}
                 <div className="absolute inset-x-0 top-0 h-10 pointer-events-none z-20" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
+                {/* Row 4: clips 13-16 only */}
                 <div className="flex w-max ob-marquee-right">
-                  {[imgClip4, imgClip5, imgClip6, imgClip7, imgClip1, imgClip2, imgClip3, imgClip4, imgClip5, imgClip6, imgClip7, imgClip1, imgClip2, imgClip3].map((src, i) => (
+                  {[imgClip13, imgClip14, imgClip15, imgClip16, imgClip13, imgClip14, imgClip15, imgClip16].map((src, i) => (
                     <div key={i} className="flex-shrink-0 rounded-lg overflow-hidden mx-1.5" style={{ width: 'clamp(140px, 35vw, 200px)', height: 'clamp(90px, 22vw, 130px)', border:'1px solid rgba(255,255,255,0.08)' }}>
                       <img src={src} alt="" className="w-full h-full object-cover" draggable={false} />
                     </div>
                   ))}
                 </div>
+                {/* Row 5: clips 17-20 only */}
                 <div className="flex w-max ob-marquee-left" style={{ animationDelay: '-5s' }}>
-                  {[imgClip2, imgClip6, imgClip1, imgClip4, imgClip7, imgClip3, imgClip5, imgClip2, imgClip6, imgClip1, imgClip4, imgClip7, imgClip3, imgClip5].map((src, i) => (
+                  {[imgClip17, imgClip18, imgClip19, imgClip20, imgClip17, imgClip18, imgClip19, imgClip20].map((src, i) => (
                     <div key={i} className="flex-shrink-0 rounded-lg overflow-hidden mx-1.5" style={{ width: 'clamp(140px, 35vw, 200px)', height: 'clamp(90px, 22vw, 130px)', border:'1px solid rgba(255,255,255,0.08)' }}>
                       <img src={src} alt="" className="w-full h-full object-cover" draggable={false} />
                     </div>
                   ))}
                 </div>
+                {/* Row 6: clips 1-4 — opposite direction to row 1, separated by text so never seen side-by-side */}
                 <div className="flex w-max ob-marquee-right" style={{ animationDelay: '-3s' }}>
-                  {[imgClip3, imgClip1, imgClip7, imgClip5, imgClip4, imgClip2, imgClip6, imgClip3, imgClip1, imgClip7, imgClip5, imgClip4, imgClip2, imgClip6].map((src, i) => (
+                  {[imgClip1, imgClip2, imgClip3, imgClip4, imgClip1, imgClip2, imgClip3, imgClip4].map((src, i) => (
                     <div key={i} className="flex-shrink-0 rounded-lg overflow-hidden mx-1.5" style={{ width: 'clamp(140px, 35vw, 200px)', height: 'clamp(90px, 22vw, 130px)', border:'1px solid rgba(255,255,255,0.08)' }}>
                       <img src={src} alt="" className="w-full h-full object-cover" draggable={false} />
                     </div>
