@@ -40,8 +40,18 @@ import {
   StopCircle,
   Pause,
   RotateCcw,
-  X
+  X,
+  Twitch,
+  Eye,
+  Clock
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
@@ -73,6 +83,20 @@ class UploadLimitError extends Error {
     this.name = "UploadLimitError";
     this.limits = limits;
   }
+}
+
+// A recent Twitch clip returned by GET /api/twitch/clips, already enriched
+// with our internal game id so it can prefill the upload form directly.
+interface TwitchClipItem {
+  id: string;
+  title: string;
+  thumbnailUrl: string;
+  duration: number;
+  viewCount: number;
+  createdAt: string;
+  gameId: number | null;
+  gameName: string | null;
+  gameImage: string | null;
 }
 
 // Define filter options
@@ -246,6 +270,98 @@ const UploadPage = () => {
 
   const userId = user?.id;
   const uploadSizeTipStorageKey = "gamefolio_upload_size_tip_dismissed";
+
+  // ── Twitch clip import ─────────────────────────────────────────────────
+  const twitchConnected = !!(user as any)?.twitchVerified;
+  const [showTwitchPicker, setShowTwitchPicker] = useState(false);
+  const [importingClipId, setImportingClipId] = useState<string | null>(null);
+  const { data: twitchClips, isLoading: twitchClipsLoading, error: twitchClipsError } = useQuery<TwitchClipItem[]>({
+    queryKey: ["/api/twitch/clips"],
+    queryFn: async () => {
+      const res = await fetch("/api/twitch/clips", { credentials: "include" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || "Failed to load your Twitch clips");
+      }
+      const body = await res.json();
+      return body.clips as TwitchClipItem[];
+    },
+    enabled: showTwitchPicker && twitchConnected,
+    staleTime: 60_000,
+  });
+
+  // Pull the selected Twitch clip's MP4 down through our proxy and feed it into
+  // the normal upload flow as if the user had picked the file themselves.
+  const importTwitchClip = async (clip: TwitchClipItem) => {
+    if (importingClipId) return;
+    setImportingClipId(clip.id);
+    try {
+      const res = await fetch(`/api/twitch/clips/file?clipId=${encodeURIComponent(clip.id)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Could not download this clip from Twitch");
+      const blob = await res.blob();
+      const importedFile = new File([blob], `twitch-clip-${clip.id}.mp4`, { type: "video/mp4" });
+
+      // Honour the user's tier size cap (same check as a manual file pick).
+      const maxSizeMB = uploadLimits?.maxClipSizeMB ?? 100;
+      if (importedFile.size > maxSizeMB * 1024 * 1024) {
+        toast({
+          title: "Clip too large",
+          description: `This clip is larger than your ${maxSizeMB}MB limit.${uploadLimits && !uploadLimits.isPro ? " Upgrade to Pro for larger uploads." : ""}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Reset video-editing state, mirroring handleFileChange.
+      setContentType("clips");
+      setFileError(null);
+      setVideoPreviewError(null);
+      setShowEditingTools(false);
+      setGeneratedThumbnails([]);
+      setThumbnailUrl("");
+      setVideoDuration(0);
+      setTrimStart(0);
+      setTrimEnd(0);
+      setReelZoom(1);
+      setReelPanX(0);
+      setReelPanY(0);
+      setIsReelAspectMismatch(false);
+      setVideoAspectRatio(0);
+      setFormatSuggestion(null);
+
+      setFile(importedFile);
+
+      // Prefill title + game from the clip's Twitch metadata.
+      const prefillTitle = (clip.title || "").slice(0, 100);
+      setTitle(prefillTitle);
+      titleRef.current = prefillTitle;
+      if (clip.gameId && clip.gameName) {
+        setSelectedGame({
+          id: clip.gameId,
+          name: clip.gameName,
+          imageUrl: clip.gameImage ?? null,
+          twitchId: null,
+          createdAt: new Date(),
+        });
+      }
+
+      setShowTwitchPicker(false);
+      toast({
+        title: "Clip imported from Twitch",
+        description: "Review the details below, then post it to your gamefolio.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Import failed",
+        description: err?.message || "Could not import this clip. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setImportingClipId(null);
+    }
+  };
 
   // Fetch upload limits (size + duration only — no count caps)
   const { data: uploadLimits, isLoading: limitsLoading } = useQuery<{
@@ -1330,7 +1446,24 @@ const UploadPage = () => {
                       </div>
                     )}
                   </div>
-                  
+
+                  {!file && twitchConnected && (
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="flex-1 h-px bg-border" />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowTwitchPicker(true)}
+                        className="text-[#9146FF] border-[#9146FF]/40 hover:bg-[#9146FF]/10"
+                      >
+                        <Twitch className="h-4 w-4 mr-2" />
+                        Import from Twitch
+                      </Button>
+                      <div className="flex-1 h-px bg-border" />
+                    </div>
+                  )}
+
                   {fileError && (
                     <Alert variant="gamefolioError" className="mt-2">
                       <AlertCircle className="h-4 w-4" />
@@ -2424,6 +2557,80 @@ const UploadPage = () => {
         onOpenChange={setShowProUpgrade}
         subtitle="Get unlimited uploads"
       />
+
+      {/* Twitch clip picker */}
+      <Dialog open={showTwitchPicker} onOpenChange={(o) => !importingClipId && setShowTwitchPicker(o)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Twitch className="h-5 w-5 text-[#9146FF]" />
+              Import a Twitch clip
+            </DialogTitle>
+            <DialogDescription>
+              Pick one of your recent Twitch clips. We'll load it into the upload form so you can review and post it.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="overflow-y-auto -mx-1 px-1">
+            {twitchClipsLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <div className="w-6 h-6 rounded-full border-2 border-t-transparent border-[#9146FF] animate-spin mb-3" />
+                Loading your clips…
+              </div>
+            ) : twitchClipsError ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">
+                {(twitchClipsError as Error).message || "Couldn't load your Twitch clips."}
+              </div>
+            ) : !twitchClips || twitchClips.length === 0 ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">
+                No clips found on your Twitch channel yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {twitchClips.map((clip) => (
+                  <button
+                    key={clip.id}
+                    type="button"
+                    disabled={!!importingClipId}
+                    onClick={() => importTwitchClip(clip)}
+                    className="group text-left rounded-lg border border-border overflow-hidden hover:border-[#9146FF] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <div className="relative aspect-video bg-muted">
+                      {clip.thumbnailUrl && (
+                        <img
+                          src={clip.thumbnailUrl}
+                          alt={clip.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      )}
+                      <span className="absolute bottom-1 right-1 flex items-center gap-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white">
+                        <Clock className="h-3 w-3" />
+                        {formatDuration(clip.duration)}
+                      </span>
+                      {importingClipId === clip.id && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                          <div className="w-6 h-6 rounded-full border-2 border-t-transparent border-white animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-2">
+                      <p className="text-sm font-medium line-clamp-2">{clip.title}</p>
+                      <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                        {clip.gameName && <span className="truncate">{clip.gameName}</span>}
+                        <span className="flex items-center gap-1 shrink-0">
+                          <Eye className="h-3 w-3" />
+                          {clip.viewCount.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Share Dialog for uploaded content */}
       <ShareDialog
