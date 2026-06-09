@@ -1158,9 +1158,24 @@ h1, h2, h3 {
 .ob-float      { animation: ob-float    4s ease-in-out infinite; }
 .ob-float-sm   { animation: ob-float-sm 3.5s ease-in-out infinite; }
 
+@keyframes marquee-scroll-left {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes marquee-scroll-right {
+  0%   { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+.ob-marquee-left {
+  animation: marquee-scroll-left 25s linear infinite;
+}
+.ob-marquee-right {
+  animation: marquee-scroll-right 25s linear infinite;
+}
 @media (prefers-reduced-motion: reduce) {
   .ob-logo, .ob-fade-up, .ob-fade-up-slow, .ob-cta, .ob-step-indicator, .ob-step-active-glow,
-  .ob-float, .ob-float-sm, .ob-step-content-forward, .ob-step-content-back {
+  .ob-float, .ob-float-sm, .ob-step-content-forward, .ob-step-content-back,
+  .ob-marquee-left, .ob-marquee-right {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

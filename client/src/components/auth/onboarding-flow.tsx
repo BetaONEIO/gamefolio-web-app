@@ -35,6 +35,13 @@ import imgGFBag from "@assets/image_1780752169383.png";
 import imgLaunchButton from "@assets/LAUNCH-BUTTON_(1)_1780950145274.png";
 import imgHandPixel from "@assets/hand-pixel_1780949461463.png";
 import imgProgression from "@assets/image_1780755222420.png";
+import imgClip1 from "@assets/image_1781038728553.png";
+import imgClip2 from "@assets/image_1781038744605.png";
+import imgClip3 from "@assets/image_1781038753104.png";
+import imgClip4 from "@assets/image_1781038766375.png";
+import imgClip5 from "@assets/image_1781038791697.png";
+import imgClip6 from "@assets/image_1781038853639.png";
+import imgClip7 from "@assets/image_1781038871252.png";
 import Cropper from "react-easy-crop";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -761,59 +768,33 @@ export default function OnboardingFlow({
             {/* Visual area */}
             <div className="flex-none relative flex items-center justify-center overflow-hidden" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)' }}>
               {selectedPath === 'streamer' ? (
-                /* Streamer Screen 2: Clip card mockup */
+                /* Streamer Screen 2: Scrolling clip marquees (3 above, 3 below) */
                 <>
                   <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(145,71,255,0.12) 0%, transparent 70%)' }} />
-                  <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
-                  <div className="relative z-10 w-full max-w-xs mx-auto px-4 flex flex-col gap-3">
-                    {/* Main clip card */}
-                    <div className="rounded-2xl overflow-hidden" style={{ background:'rgba(255,255,255,0.06)', border:'1.5px solid rgba(255,255,255,0.12)', boxShadow:'0 20px 60px rgba(0,0,0,0.5)' }}>
-                      {/* Thumbnail area */}
-                      <div className="relative flex items-center justify-center" style={{ height:'140px', background:'linear-gradient(135deg, rgba(145,71,255,0.2) 0%, rgba(0,0,0,0.6) 100%)' }}>
-                        {/* Play button */}
-                        <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background:'rgba(193,255,0,0.15)', border:'2px solid rgba(193,255,0,0.5)', backdropFilter:'blur(8px)' }}>
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="#c1ff00"><path d="M8 5v14l11-7z"/></svg>
+                  {/* Top fade */}
+                  <div className="absolute inset-x-0 top-0 h-12 pointer-events-none z-20" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
+                  {/* Bottom fade for top marquee area */}
+                  <div className="absolute inset-x-0 bottom-0 h-12 pointer-events-none z-20" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  {/* 3 rows above the text */}
+                  <div className="relative z-10 flex flex-col gap-2 w-full overflow-hidden" style={{ paddingTop: '8px' }}>
+                    <div className="flex w-max ob-marquee-left">
+                      {[imgClip1, imgClip2, imgClip3, imgClip4, imgClip5, imgClip6, imgClip7, imgClip1, imgClip2, imgClip3, imgClip4, imgClip5, imgClip6, imgClip7].map((src, i) => (
+                        <div key={i} className="flex-shrink-0 rounded-lg overflow-hidden mx-1.5" style={{ width: 'clamp(140px, 35vw, 200px)', height: 'clamp(90px, 22vw, 130px)', border:'1px solid rgba(255,255,255,0.08)' }}>
+                          <img src={src} alt="" className="w-full h-full object-cover" draggable={false} />
                         </div>
-                        {/* LIVE badge */}
-                        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-md" style={{ background:'rgba(239,68,68,0.9)' }}>
-                          <div className="w-1.5 h-1.5 rounded-full bg-white" style={{ animation:'pulse 1.5s infinite' }} />
-                          <span style={{ fontSize:'9px', color:'#fff', fontWeight:700, letterSpacing:'1px' }}>CLIP</span>
-                        </div>
-                        {/* Duration */}
-                        <div className="absolute bottom-3 right-3 px-1.5 py-0.5 rounded" style={{ background:'rgba(0,0,0,0.7)' }}>
-                          <span style={{ fontSize:'10px', color:'#fff', fontWeight:600 }}>2:47</span>
-                        </div>
-                      </div>
-                      {/* Card info */}
-                      <div className="px-3 py-2.5">
-                        <p style={{ fontSize:'12px', color:'#fff', fontWeight:600, fontFamily:"'Outfit',sans-serif", lineHeight:'16px' }}>My Best Stream Moments 🎮</p>
-                        <div className="flex items-center gap-3 mt-2">
-                          <span className="flex items-center gap-1" style={{ fontSize:'11px', color:'#64748b' }}>
-                            <Eye className="w-3 h-3" /><span>12.4K</span>
-                          </span>
-                          <span className="flex items-center gap-1" style={{ fontSize:'11px', color:'#64748b' }}>
-                            <Star className="w-3 h-3" /><span>892</span>
-                          </span>
-                          <span className="flex items-center gap-1" style={{ fontSize:'11px', color:'#64748b' }}>
-                            <Users className="w-3 h-3" /><span>47</span>
-                          </span>
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                    {/* Secondary smaller cards row */}
-                    <div className="flex gap-2">
-                      {[{ label:'Highlight', dur:'0:45', views:'3.1K' }, { label:'Reel', dur:'0:30', views:'8.7K' }].map(c => (
-                        <div key={c.label} className="flex-1 rounded-xl overflow-hidden" style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)' }}>
-                          <div className="relative flex items-center justify-center" style={{ height:'56px', background:'linear-gradient(135deg, rgba(193,255,0,0.08), rgba(0,0,0,0.4))' }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(193,255,0,0.6)"><path d="M8 5v14l11-7z"/></svg>
-                            <div className="absolute bottom-1 right-1.5 px-1 rounded" style={{ background:'rgba(0,0,0,0.6)' }}>
-                              <span style={{ fontSize:'8px', color:'#fff' }}>{c.dur}</span>
-                            </div>
-                          </div>
-                          <div className="px-2 py-1.5">
-                            <p style={{ fontSize:'9px', color:'#94a3b8', fontWeight:600 }}>{c.label}</p>
-                            <p style={{ fontSize:'9px', color:'#64748b' }}>{c.views} views</p>
-                          </div>
+                    <div className="flex w-max ob-marquee-right">
+                      {[imgClip4, imgClip5, imgClip6, imgClip7, imgClip1, imgClip2, imgClip3, imgClip4, imgClip5, imgClip6, imgClip7, imgClip1, imgClip2, imgClip3].map((src, i) => (
+                        <div key={i} className="flex-shrink-0 rounded-lg overflow-hidden mx-1.5" style={{ width: 'clamp(140px, 35vw, 200px)', height: 'clamp(90px, 22vw, 130px)', border:'1px solid rgba(255,255,255,0.08)' }}>
+                          <img src={src} alt="" className="w-full h-full object-cover" draggable={false} />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex w-max ob-marquee-left" style={{ animationDelay: '-8s' }}>
+                      {[imgClip7, imgClip1, imgClip3, imgClip5, imgClip2, imgClip4, imgClip6, imgClip7, imgClip1, imgClip3, imgClip5, imgClip2, imgClip4, imgClip6].map((src, i) => (
+                        <div key={i} className="flex-shrink-0 rounded-lg overflow-hidden mx-1.5" style={{ width: 'clamp(140px, 35vw, 200px)', height: 'clamp(90px, 22vw, 130px)', border:'1px solid rgba(255,255,255,0.08)' }}>
+                          <img src={src} alt="" className="w-full h-full object-cover" draggable={false} />
                         </div>
                       ))}
                     </div>
@@ -879,6 +860,34 @@ export default function OnboardingFlow({
                 </button>
               </div>
             </div>
+            {/* Streamer path: 3 marquee rows below the text */}
+            {selectedPath === 'streamer' && (
+              <div className="relative flex-shrink-0 flex flex-col gap-2 w-full overflow-hidden -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013]" style={{ paddingBottom: '8px', marginTop: '-1px' }}>
+                {/* Top fade connecting to text area */}
+                <div className="absolute inset-x-0 top-0 h-10 pointer-events-none z-20" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
+                <div className="flex w-max ob-marquee-right">
+                  {[imgClip4, imgClip5, imgClip6, imgClip7, imgClip1, imgClip2, imgClip3, imgClip4, imgClip5, imgClip6, imgClip7, imgClip1, imgClip2, imgClip3].map((src, i) => (
+                    <div key={i} className="flex-shrink-0 rounded-lg overflow-hidden mx-1.5" style={{ width: 'clamp(140px, 35vw, 200px)', height: 'clamp(90px, 22vw, 130px)', border:'1px solid rgba(255,255,255,0.08)' }}>
+                      <img src={src} alt="" className="w-full h-full object-cover" draggable={false} />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex w-max ob-marquee-left" style={{ animationDelay: '-5s' }}>
+                  {[imgClip2, imgClip6, imgClip1, imgClip4, imgClip7, imgClip3, imgClip5, imgClip2, imgClip6, imgClip1, imgClip4, imgClip7, imgClip3, imgClip5].map((src, i) => (
+                    <div key={i} className="flex-shrink-0 rounded-lg overflow-hidden mx-1.5" style={{ width: 'clamp(140px, 35vw, 200px)', height: 'clamp(90px, 22vw, 130px)', border:'1px solid rgba(255,255,255,0.08)' }}>
+                      <img src={src} alt="" className="w-full h-full object-cover" draggable={false} />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex w-max ob-marquee-right" style={{ animationDelay: '-3s' }}>
+                  {[imgClip3, imgClip1, imgClip7, imgClip5, imgClip4, imgClip2, imgClip6, imgClip3, imgClip1, imgClip7, imgClip5, imgClip4, imgClip2, imgClip6].map((src, i) => (
+                    <div key={i} className="flex-shrink-0 rounded-lg overflow-hidden mx-1.5" style={{ width: 'clamp(140px, 35vw, 200px)', height: 'clamp(90px, 22vw, 130px)', border:'1px solid rgba(255,255,255,0.08)' }}>
+                      <img src={src} alt="" className="w-full h-full object-cover" draggable={false} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         );
       }
