@@ -1271,7 +1271,7 @@ export default function OnboardingFlow({
             </div>
 
             {/* ── STATIC: carousel arrows ── */}
-            <div className="flex-shrink-0 relative z-20 flex items-center justify-center gap-6 pb-3">
+            <div className="flex-shrink-0 relative z-20 flex items-center justify-center gap-6 pb-6">
               <button
                 onClick={handlePathBack}
                 disabled={pathCardIndex === 0}
