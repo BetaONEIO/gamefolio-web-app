@@ -57,6 +57,10 @@ import imgClip19 from "@assets/image_1781039837584.png";
 import imgClip20 from "@assets/image_1781039848401.png";
 import imgHeadFF from "@assets/hat1_1781116412973.png";
 import imgHeadBubble from "@assets/bubblegum_(1)_1781116412966.png";
+import imgTwitch3D from "@assets/twitch_logo_1781121512398.png";
+import imgYoutube3D from "@assets/youtube-logo_1781121512394.png";
+import imgKick3D from "@assets/kick-logo_1781121512397.png";
+import imgRumble3D from "@assets/RUMBLE-LOGO_1781121512396.png";
 import Cropper from "react-easy-crop";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -690,55 +694,45 @@ export default function OnboardingFlow({
             {/* Visual area */}
             <div className="flex-none relative overflow-hidden flex items-center justify-center" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)' }}>
               {selectedPath === 'streamer' ? (
-                /* Streamer Screen 1: Platform icons flowing into Gamefolio */
+                /* Streamer Screen 1: Platform logos orbiting Gamefolio */
                 <>
-                  <img src={imgStreamer} alt="" aria-hidden draggable={false} className="absolute inset-0 w-full h-full select-none" style={{ objectFit:'cover', objectPosition:'top center', opacity: 0.18 }} />
-                  <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
-                  <div className="relative z-10 flex flex-col items-center gap-5 px-6">
-                    {/* Platform row */}
-                    <div className="flex items-center gap-3">
-                      {/* Twitch */}
-                      <div className="flex flex-col items-center gap-1.5">
-                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background:'rgba(145,71,255,0.15)', border:'1.5px solid rgba(145,71,255,0.35)' }}>
-                          <svg width="28" height="28" viewBox="0 0 24 24" fill="#9147ff"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+                  {/* Radial background glow */}
+                  <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 65% 65% at 50% 48%, rgba(193,255,0,0.10) 0%, rgba(145,71,255,0.08) 45%, transparent 72%)' }} />
+                  {/* Bottom fade */}
+                  <div className="absolute inset-x-0 bottom-0 h-20 pointer-events-none z-10" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  {/* Orbit system */}
+                  <div className="relative z-10 flex flex-col items-center" style={{ gap: '18px' }}>
+                    <div className="relative" style={{ width: '240px', height: '240px' }}>
+                      {/* Orbit track ring */}
+                      <div className="absolute rounded-full pointer-events-none" style={{ inset: '20px', border: '1px dashed rgba(193,255,0,0.20)' }} />
+                      {/* Gamefolio center logo */}
+                      <div className="absolute" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 2 }}>
+                        <div className="rounded-2xl flex items-center justify-center" style={{ width: '68px', height: '68px', background: 'rgba(193,255,0,0.12)', border: '2px solid rgba(193,255,0,0.50)', boxShadow: '0 0 32px rgba(193,255,0,0.32), 0 0 64px rgba(193,255,0,0.10)' }}>
+                          <GamefolioIcon className="w-10 h-10" glow={true} />
                         </div>
-                        <span style={{ fontSize:'10px', color:'#9147ff', fontFamily:"'Outfit',sans-serif", fontWeight:600, letterSpacing:'0.5px' }}>TWITCH</span>
                       </div>
-                      {/* YouTube */}
-                      <div className="flex flex-col items-center gap-1.5">
-                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background:'rgba(255,0,0,0.12)', border:'1.5px solid rgba(255,0,0,0.3)' }}>
-                          <svg width="28" height="28" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>
+                      {/* Orbiting platform logos */}
+                      {([
+                        { img: imgTwitch3D,  delay: '0s',  glow: 'rgba(145,71,255,0.75)' },
+                        { img: imgYoutube3D, delay: '-3s', glow: 'rgba(255,50,50,0.75)'  },
+                        { img: imgKick3D,    delay: '-6s', glow: 'rgba(83,252,26,0.75)'  },
+                        { img: imgRumble3D,  delay: '-9s', glow: 'rgba(140,230,0,0.75)'  },
+                      ] as const).map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="absolute ob-orbit-item"
+                          style={{ top: 'calc(50% - 30px)', left: 'calc(50% - 30px)', animationDelay: item.delay }}
+                        >
+                          <img
+                            src={item.img}
+                            alt=""
+                            draggable={false}
+                            style={{ width: '60px', height: '60px', objectFit: 'contain', mixBlendMode: 'screen', filter: `drop-shadow(0 0 10px ${item.glow})` }}
+                          />
                         </div>
-                        <span style={{ fontSize:'10px', color:'#ff4444', fontFamily:"'Outfit',sans-serif", fontWeight:600, letterSpacing:'0.5px' }}>YOUTUBE</span>
-                      </div>
-                      {/* Arrow */}
-                      <div className="flex items-center justify-center" style={{ paddingBottom:'20px' }}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#c1ff00" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      </div>
-                      {/* Gamefolio G */}
-                      <div className="flex flex-col items-center gap-1.5">
-                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background:'rgba(193,255,0,0.12)', border:'1.5px solid rgba(193,255,0,0.4)', boxShadow:'0 0 20px rgba(193,255,0,0.2)' }}>
-                          <GamefolioIcon className="w-8 h-8" glow={false} />
-                        </div>
-                        <span style={{ fontSize:'10px', color:'#c1ff00', fontFamily:"'Outfit',sans-serif", fontWeight:600, letterSpacing:'0.5px' }}>GAMEFOLIO</span>
-                      </div>
+                      ))}
                     </div>
-                    {/* Kick + Rumble row */}
-                    <div className="flex items-center gap-3">
-                      <div className="flex flex-col items-center gap-1.5">
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background:'rgba(83,252,26,0.1)', border:'1.5px solid rgba(83,252,26,0.25)' }}>
-                          <span style={{ fontSize:'14px', fontWeight:900, color:'#53fc1a', fontFamily:"'Space Grotesk',sans-serif" }}>K</span>
-                        </div>
-                        <span style={{ fontSize:'9px', color:'#53fc1a', fontFamily:"'Outfit',sans-serif", fontWeight:600, letterSpacing:'0.5px' }}>KICK</span>
-                      </div>
-                      <div className="flex flex-col items-center gap-1.5">
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background:'rgba(133,199,255,0.1)', border:'1.5px solid rgba(133,199,255,0.2)' }}>
-                          <span style={{ fontSize:'12px', fontWeight:900, color:'#85c7ff', fontFamily:"'Space Grotesk',sans-serif" }}>R</span>
-                        </div>
-                        <span style={{ fontSize:'9px', color:'#85c7ff', fontFamily:"'Outfit',sans-serif", fontWeight:600, letterSpacing:'0.5px' }}>RUMBLE</span>
-                      </div>
-                      <span style={{ fontSize:'11px', color:'rgba(255,255,255,0.35)', fontFamily:"'Outfit',sans-serif" }}>& more coming soon</span>
-                    </div>
+                    <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.28)', fontFamily: "'Outfit', sans-serif", letterSpacing: '0.5px' }}>& more coming soon</p>
                   </div>
                 </>
               ) : (

@@ -1172,6 +1172,16 @@ h1, h2, h3 {
 .ob-marquee-right {
   animation: marquee-scroll-right 25s linear infinite;
 }
+/* Platform logos orbiting Gamefolio on streamer Intro1 */
+@keyframes ob-orbit {
+  from { transform: rotate(0deg) translateX(100px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(100px) rotate(-360deg); }
+}
+.ob-orbit-item {
+  position: absolute;
+  animation: ob-orbit 12s linear infinite;
+}
+
 /* Spark burst — fully inset, never overflows its container */
 @keyframes ob-spark-rotate {
   from { transform: rotate(0deg); }
