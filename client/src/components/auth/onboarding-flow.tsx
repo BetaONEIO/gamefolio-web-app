@@ -1270,42 +1270,25 @@ export default function OnboardingFlow({
               </div>
             </div>
 
-            {/* ── STATIC: arrows + button — never move ── */}
-            <div className="flex-shrink-0 relative z-20 flex items-center justify-center gap-6 pb-3">
-              <button
-                onClick={handlePathBack}
-                disabled={pathCardIndex === 0}
-                className="text-white disabled:opacity-20 transition-opacity active:scale-90"
-              >
-                <ChevronLeft className="h-8 w-8" strokeWidth={2.5} />
-              </button>
-              <button
-                onClick={handlePathNext}
-                disabled={pathCardIndex === totalCards - 1}
-                className="text-white disabled:opacity-20 transition-opacity active:scale-90"
-              >
-                <ChevronRight className="h-8 w-8" strokeWidth={2.5} />
-              </button>
-            </div>
-
-            <div
-              className="flex-shrink-0 relative z-20 px-5 sm:px-6"
-              style={{ paddingBottom: 'calc(max(2rem, env(safe-area-inset-bottom, 0px)) + 1rem)' }}
-            >
-              <button
-                onClick={() => selectAndContinue(currentCard.id)}
-                className="w-full py-4 rounded-2xl font-black uppercase transition-all active:scale-[0.98] hover:brightness-105"
-                style={{
-                  fontFamily: "'Outfit', sans-serif",
-                  fontSize: '14px',
-                  letterSpacing: '2.8px',
-                  background: '#c1ff00',
-                  color: '#0a0f1c',
-                  boxShadow: '0 20px 40px rgba(193,255,0,0.3)',
-                }}
-              >
-                {currentCard.ctaLabel}
-              </button>
+            {/* ── STATIC: back icon + CTA button — matches intro screen layout ── */}
+            <div className="flex-shrink-0 relative z-20 px-6 pt-5 pb-6">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handlePathBack}
+                  className="flex-none flex items-center justify-center rounded-[18px]"
+                  style={{ width: '56px', height: '56px', border: '1.5px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}
+                  aria-label="Go back"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+                <button
+                  onClick={() => selectAndContinue(currentCard.id)}
+                  className="flex-1 rounded-[18px] py-4 uppercase font-black tracking-widest"
+                  style={{ background: '#c1ff00', boxShadow: '0 20px 40px rgba(193,255,0,0.30)', color: '#0a0f1c', fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: '14px', letterSpacing: '2.8px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
+                >
+                  {currentCard.ctaLabel}
+                </button>
+              </div>
             </div>
 
           </div>
