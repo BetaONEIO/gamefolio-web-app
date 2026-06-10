@@ -692,7 +692,7 @@ export default function OnboardingFlow({
         return (
           <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
             {/* Visual area */}
-            <div className="flex-none relative overflow-hidden flex items-center justify-center" style={{ height: selectedPath === 'streamer' ? 'clamp(360px, calc(100dvh - 270px), 520px)' : 'clamp(300px, calc(100dvh - 340px), 500px)' }}>
+            <div className="flex-1 min-h-0 relative overflow-hidden flex items-center justify-center">
               {selectedPath === 'streamer' ? (
                 /* Streamer Screen 1: Platform logos orbiting Gamefolio */
                 <>
