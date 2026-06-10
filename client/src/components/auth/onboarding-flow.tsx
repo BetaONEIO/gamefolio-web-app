@@ -707,7 +707,7 @@ export default function OnboardingFlow({
                       <div className="absolute rounded-full pointer-events-none" style={{ inset: '18px', border: '1px dashed rgba(193,255,0,0.20)' }} />
                       {/* Gamefolio center logo */}
                       <div className="absolute" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 2 }}>
-                        <div className="rounded-3xl flex items-center justify-center" style={{ width: '112px', height: '112px', background: 'rgba(193,255,0,0.13)', border: '2px solid rgba(193,255,0,0.55)', boxShadow: '0 0 50px rgba(193,255,0,0.42), 0 0 100px rgba(193,255,0,0.14)' }}>
+                        <div className="rounded-full flex items-center justify-center" style={{ width: '112px', height: '112px', background: 'rgba(193,255,0,0.13)', border: '2px solid rgba(193,255,0,0.55)', boxShadow: '0 0 50px rgba(193,255,0,0.42), 0 0 100px rgba(193,255,0,0.14)' }}>
                           <GamefolioIcon className="w-20 h-20" glow={true} />
                         </div>
                       </div>
