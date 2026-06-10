@@ -690,34 +690,55 @@ export default function OnboardingFlow({
             {/* Visual area */}
             <div className="flex-none relative overflow-hidden flex items-center justify-center" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)' }}>
               {selectedPath === 'streamer' ? (
-                /* Streamer Screen 1: Two gamer heads with animated spark */
+                /* Streamer Screen 1: Platform icons flowing into Gamefolio */
                 <>
-                  {/* Dark base */}
-                  <div className="absolute inset-0" style={{ background: '#071013' }} />
-                  {/* Animated spark burst behind the heads */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="ob-spark-ring" />
-                  </div>
-                  {/* Soft glow layers */}
-                  <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 70% 55% at 50% 58%, rgba(193,255,0,0.13) 0%, rgba(145,71,255,0.10) 45%, transparent 70%)' }} />
-                  {/* Bottom fade */}
-                  <div className="absolute inset-x-0 bottom-0 h-20 pointer-events-none z-10" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
-                  {/* The two heads */}
-                  <div className="relative z-10 flex items-end justify-center" style={{ gap: '0px', paddingBottom: '8px' }}>
-                    <img
-                      src={imgHeadFF}
-                      alt="Streamer"
-                      draggable={false}
-                      className="select-none"
-                      style={{ width: 'clamp(150px, 40vw, 210px)', filter: 'drop-shadow(0 12px 32px rgba(0,0,0,0.8)) drop-shadow(0 0 20px rgba(193,255,0,0.15))' }}
-                    />
-                    <img
-                      src={imgHeadBubble}
-                      alt="Streamer"
-                      draggable={false}
-                      className="select-none"
-                      style={{ width: 'clamp(150px, 40vw, 210px)', filter: 'drop-shadow(0 12px 32px rgba(0,0,0,0.8)) drop-shadow(0 0 20px rgba(236,72,153,0.20))' }}
-                    />
+                  <img src={imgStreamer} alt="" aria-hidden draggable={false} className="absolute inset-0 w-full h-full select-none" style={{ objectFit:'cover', objectPosition:'top center', opacity: 0.18 }} />
+                  <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  <div className="relative z-10 flex flex-col items-center gap-5 px-6">
+                    {/* Platform row */}
+                    <div className="flex items-center gap-3">
+                      {/* Twitch */}
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background:'rgba(145,71,255,0.15)', border:'1.5px solid rgba(145,71,255,0.35)' }}>
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="#9147ff"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+                        </div>
+                        <span style={{ fontSize:'10px', color:'#9147ff', fontFamily:"'Outfit',sans-serif", fontWeight:600, letterSpacing:'0.5px' }}>TWITCH</span>
+                      </div>
+                      {/* YouTube */}
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background:'rgba(255,0,0,0.12)', border:'1.5px solid rgba(255,0,0,0.3)' }}>
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>
+                        </div>
+                        <span style={{ fontSize:'10px', color:'#ff4444', fontFamily:"'Outfit',sans-serif", fontWeight:600, letterSpacing:'0.5px' }}>YOUTUBE</span>
+                      </div>
+                      {/* Arrow */}
+                      <div className="flex items-center justify-center" style={{ paddingBottom:'20px' }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#c1ff00" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </div>
+                      {/* Gamefolio G */}
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background:'rgba(193,255,0,0.12)', border:'1.5px solid rgba(193,255,0,0.4)', boxShadow:'0 0 20px rgba(193,255,0,0.2)' }}>
+                          <GamefolioIcon className="w-8 h-8" glow={false} />
+                        </div>
+                        <span style={{ fontSize:'10px', color:'#c1ff00', fontFamily:"'Outfit',sans-serif", fontWeight:600, letterSpacing:'0.5px' }}>GAMEFOLIO</span>
+                      </div>
+                    </div>
+                    {/* Kick + Rumble row */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background:'rgba(83,252,26,0.1)', border:'1.5px solid rgba(83,252,26,0.25)' }}>
+                          <span style={{ fontSize:'14px', fontWeight:900, color:'#53fc1a', fontFamily:"'Space Grotesk',sans-serif" }}>K</span>
+                        </div>
+                        <span style={{ fontSize:'9px', color:'#53fc1a', fontFamily:"'Outfit',sans-serif", fontWeight:600, letterSpacing:'0.5px' }}>KICK</span>
+                      </div>
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background:'rgba(133,199,255,0.1)', border:'1.5px solid rgba(133,199,255,0.2)' }}>
+                          <span style={{ fontSize:'12px', fontWeight:900, color:'#85c7ff', fontFamily:"'Space Grotesk',sans-serif" }}>R</span>
+                        </div>
+                        <span style={{ fontSize:'9px', color:'#85c7ff', fontFamily:"'Outfit',sans-serif", fontWeight:600, letterSpacing:'0.5px' }}>RUMBLE</span>
+                      </div>
+                      <span style={{ fontSize:'11px', color:'rgba(255,255,255,0.35)', fontFamily:"'Outfit',sans-serif" }}>& more coming soon</span>
+                    </div>
                   </div>
                 </>
               ) : (
@@ -1127,16 +1148,31 @@ export default function OnboardingFlow({
             title: 'STREAMER',
             ctaLabel: 'CONTINUE AS STREAMER',
             visual: (
-              <div className="relative flex items-center justify-center flex-shrink-0 w-full"
+              <div className="relative flex items-center justify-center flex-shrink-0 w-full overflow-hidden"
                 style={{ height: 'clamp(240px, calc(100dvh - 440px), 340px)' }}>
-                <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.4)' }} />
-                <img
-                  src={imgStreamer}
-                  alt="Streamer"
-                  draggable={false}
-                  className="ob-float relative z-10 select-none"
-                  style={{ width: 'min(95%, 280px)', height: 'auto', objectFit: 'contain', animationDuration: '4s', animationDelay: '0.3s' }}
-                />
+                {/* Spark ring */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="ob-spark-ring" />
+                </div>
+                {/* Soft glow */}
+                <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 70% 55% at 50% 58%, rgba(193,255,0,0.10) 0%, rgba(145,71,255,0.08) 45%, transparent 70%)' }} />
+                {/* Two heads */}
+                <div className="relative z-10 flex items-end justify-center" style={{ gap: '0px' }}>
+                  <img
+                    src={imgHeadFF}
+                    alt=""
+                    draggable={false}
+                    className="select-none ob-float"
+                    style={{ width: 'clamp(120px, 32vw, 175px)', animationDuration: '4s', animationDelay: '0.2s', filter: 'drop-shadow(0 10px 28px rgba(0,0,0,0.7)) drop-shadow(0 0 18px rgba(193,255,0,0.12))' }}
+                  />
+                  <img
+                    src={imgHeadBubble}
+                    alt=""
+                    draggable={false}
+                    className="select-none ob-float"
+                    style={{ width: 'clamp(120px, 32vw, 175px)', animationDuration: '4.5s', animationDelay: '0.5s', filter: 'drop-shadow(0 10px 28px rgba(0,0,0,0.7)) drop-shadow(0 0 18px rgba(236,72,153,0.16))' }}
+                  />
+                </div>
               </div>
             ),
           },
