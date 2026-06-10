@@ -916,7 +916,7 @@ export default function OnboardingFlow({
           : { titleA: 'EARN', titleB: 'REWARDS', sub: 'Complete daily bounties, join creator challenges, and earn GFT to unlock exclusive legendary gear.' };
         return (
           <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
-            <div className="flex-none relative flex items-center justify-center overflow-hidden" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)' }}>
+            <div className="flex-1 min-h-0 relative flex items-center justify-center overflow-hidden">
               <img src={imgBountyBg} alt="" aria-hidden draggable={false} className="absolute inset-0 w-full h-full object-cover select-none" style={{ opacity: 0.55 }} />
               <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
               <img src={imgGFBag} alt="GF Token bag" draggable={false} className="ob-float relative z-10 select-none" style={{ height:'85%', width:'auto', objectFit:'contain', animationDuration:'4s', filter:'drop-shadow(0 0 40px rgba(193,255,0,0.35))' }} />
@@ -933,7 +933,7 @@ export default function OnboardingFlow({
                 <button onClick={goToPrevStep} className="flex-none flex items-center justify-center rounded-[18px]" style={{ width:'56px', height:'56px', border:'1.5px solid rgba(255,255,255,0.15)', background:'rgba(255,255,255,0.06)', backdropFilter:'blur(8px)' }} aria-label="Go back">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
-                <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 uppercase font-black tracking-widest" style={{ background:'#c1ff00', boxShadow:'0 15px 35px rgba(193,255,0,0.4)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:900, fontSize:'14px', letterSpacing:'2.8px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
+                <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 uppercase font-black tracking-widest" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:900, fontSize:'14px', letterSpacing:'2.8px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
                   CONTINUE
                 </button>
               </div>
