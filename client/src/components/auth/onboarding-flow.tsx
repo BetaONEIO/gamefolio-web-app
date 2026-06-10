@@ -1148,7 +1148,7 @@ export default function OnboardingFlow({
             title: 'STREAMER',
             ctaLabel: 'CONTINUE AS STREAMER',
             visual: (
-              <div className="relative flex items-center justify-center flex-shrink-0 w-full overflow-hidden"
+              <div className="relative flex items-center justify-center flex-shrink-0 w-full overflow-x-hidden"
                 style={{ height: 'clamp(240px, calc(100dvh - 440px), 340px)' }}>
                 {/* Spark ring */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
