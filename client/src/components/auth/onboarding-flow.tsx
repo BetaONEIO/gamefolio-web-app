@@ -1270,8 +1270,26 @@ export default function OnboardingFlow({
               </div>
             </div>
 
+            {/* ── STATIC: carousel arrows ── */}
+            <div className="flex-shrink-0 relative z-20 flex items-center justify-center gap-6 pb-3">
+              <button
+                onClick={handlePathBack}
+                disabled={pathCardIndex === 0}
+                className="text-white disabled:opacity-20 transition-opacity active:scale-90"
+              >
+                <ChevronLeft className="h-8 w-8" strokeWidth={2.5} />
+              </button>
+              <button
+                onClick={handlePathNext}
+                disabled={pathCardIndex === totalCards - 1}
+                className="text-white disabled:opacity-20 transition-opacity active:scale-90"
+              >
+                <ChevronRight className="h-8 w-8" strokeWidth={2.5} />
+              </button>
+            </div>
+
             {/* ── STATIC: back icon + CTA button — matches intro screen layout ── */}
-            <div className="flex-shrink-0 relative z-20 px-6 pt-5 pb-6">
+            <div className="flex-shrink-0 relative z-20 px-6 pt-0 pb-6">
               <div className="flex items-center gap-3">
                 <button
                   onClick={handlePathBack}
