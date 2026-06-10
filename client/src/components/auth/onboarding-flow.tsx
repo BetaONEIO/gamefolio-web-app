@@ -1148,14 +1148,10 @@ export default function OnboardingFlow({
             title: 'STREAMER',
             ctaLabel: 'CONTINUE AS STREAMER',
             visual: (
-              <div className="relative flex items-center justify-center flex-shrink-0 w-full overflow-x-hidden"
-                style={{ height: 'clamp(240px, calc(100dvh - 440px), 340px)' }}>
-                {/* Spark ring */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="ob-spark-ring" />
-                </div>
-                {/* Soft glow */}
-                <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 70% 55% at 50% 58%, rgba(193,255,0,0.10) 0%, rgba(145,71,255,0.08) 45%, transparent 70%)' }} />
+              <div className="relative flex items-center justify-center flex-shrink-0 w-full"
+                style={{ height: 'clamp(240px, calc(100dvh - 440px), 340px)', overflowX: 'clip', overflowY: 'visible' }}>
+                {/* Spark burst — fully contained, no overflow */}
+                <div className="absolute inset-0 ob-spark-burst pointer-events-none" />
                 {/* Two heads */}
                 <div className="relative z-10 flex items-end justify-center" style={{ gap: '0px' }}>
                   <img

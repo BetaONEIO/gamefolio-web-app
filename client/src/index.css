@@ -1172,84 +1172,88 @@ h1, h2, h3 {
 .ob-marquee-right {
   animation: marquee-scroll-right 25s linear infinite;
 }
-/* Spark ring burst behind streamer heads */
+/* Spark burst — fully inset, never overflows its container */
 @keyframes ob-spark-rotate {
-  0%   { transform: rotate(0deg) scale(1); }
-  50%  { transform: rotate(180deg) scale(1.08); }
-  100% { transform: rotate(360deg) scale(1); }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 @keyframes ob-spark-pulse {
   0%, 100% { opacity: 0.55; }
   50%       { opacity: 1; }
 }
-.ob-spark-ring {
-  position: relative;
-  width: clamp(280px, 75vw, 420px);
-  height: clamp(280px, 75vw, 420px);
-  border-radius: 50%;
+.ob-spark-burst {
+  border-radius: 0;
+  background: radial-gradient(
+    ellipse 75% 80% at 50% 55%,
+    rgba(193,255,0,0.18) 0%,
+    rgba(145,71,255,0.14) 40%,
+    rgba(236,72,153,0.08) 65%,
+    transparent 85%
+  );
   animation: ob-spark-pulse 2.4s ease-in-out infinite;
-  background:
-    radial-gradient(ellipse 60% 60% at 50% 50%,
-      rgba(193,255,0,0.18) 0%,
-      rgba(145,71,255,0.14) 35%,
-      rgba(236,72,153,0.08) 60%,
-      transparent 75%);
 }
-.ob-spark-ring::before,
-.ob-spark-ring::after {
+.ob-spark-burst::before,
+.ob-spark-burst::after {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 50%;
   animation: ob-spark-rotate 6s linear infinite;
-}
-.ob-spark-ring::before {
   background: conic-gradient(
     from 0deg,
     transparent 0deg,
-    rgba(193,255,0,0.55) 18deg,
-    transparent 36deg,
-    transparent 90deg,
-    rgba(193,255,0,0.40) 108deg,
-    transparent 126deg,
-    transparent 180deg,
-    rgba(145,71,255,0.45) 198deg,
-    transparent 216deg,
-    transparent 270deg,
-    rgba(236,72,153,0.40) 288deg,
-    transparent 306deg,
+    rgba(193,255,0,0.60) 14deg,
+    transparent 28deg,
+    transparent 88deg,
+    rgba(193,255,0,0.45) 102deg,
+    transparent 116deg,
+    transparent 178deg,
+    rgba(145,71,255,0.50) 192deg,
+    transparent 206deg,
+    transparent 268deg,
+    rgba(236,72,153,0.45) 282deg,
+    transparent 296deg,
     transparent 360deg
   );
-  mask-image: radial-gradient(circle, transparent 38%, black 44%, black 50%, transparent 56%);
-  -webkit-mask-image: radial-gradient(circle, transparent 38%, black 44%, black 50%, transparent 56%);
+  mask-image: radial-gradient(
+    ellipse 48% 48% at 50% 50%,
+    transparent 0%,
+    transparent 58%,
+    black 68%,
+    transparent 80%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 48% 48% at 50% 50%,
+    transparent 0%,
+    transparent 58%,
+    black 68%,
+    transparent 80%
+  );
 }
-.ob-spark-ring::after {
+.ob-spark-burst::after {
+  animation-duration: 9s;
+  animation-direction: reverse;
+  opacity: 0.65;
   background: conic-gradient(
     from 45deg,
     transparent 0deg,
-    rgba(193,255,0,0.35) 10deg,
+    rgba(193,255,0,0.40) 10deg,
     transparent 20deg,
-    transparent 135deg,
-    rgba(236,72,153,0.30) 145deg,
-    transparent 155deg,
-    transparent 225deg,
-    rgba(145,71,255,0.35) 235deg,
-    transparent 245deg,
-    transparent 315deg,
-    rgba(193,255,0,0.25) 325deg,
-    transparent 335deg
+    transparent 133deg,
+    rgba(236,72,153,0.35) 143deg,
+    transparent 153deg,
+    transparent 223deg,
+    rgba(145,71,255,0.40) 233deg,
+    transparent 243deg,
+    transparent 313deg,
+    rgba(193,255,0,0.30) 323deg,
+    transparent 333deg
   );
-  mask-image: radial-gradient(circle, transparent 50%, black 56%, black 63%, transparent 70%);
-  -webkit-mask-image: radial-gradient(circle, transparent 50%, black 56%, black 63%, transparent 70%);
-  animation-duration: 9s;
-  animation-direction: reverse;
-  opacity: 0.7;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ob-logo, .ob-fade-up, .ob-fade-up-slow, .ob-cta, .ob-step-indicator, .ob-step-active-glow,
   .ob-float, .ob-float-sm, .ob-step-content-forward, .ob-step-content-back,
-  .ob-marquee-left, .ob-marquee-right, .ob-spark-ring, .ob-spark-ring::before, .ob-spark-ring::after {
+  .ob-marquee-left, .ob-marquee-right, .ob-spark-burst, .ob-spark-burst::before, .ob-spark-burst::after {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
