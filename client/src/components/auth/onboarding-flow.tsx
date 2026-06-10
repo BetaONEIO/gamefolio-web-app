@@ -775,7 +775,7 @@ export default function OnboardingFlow({
         return (
           <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
             {/* Visual area */}
-            <div className="flex-none relative flex items-center justify-center overflow-hidden" style={{ height: 'clamp(300px, calc(100dvh - 340px), 500px)' }}>
+            <div className="flex-1 min-h-0 relative flex items-center justify-center overflow-hidden">
               {selectedPath === 'streamer' ? (
                 /* Streamer Screen 2: Scrolling clip marquees (3 above, 3 below) */
                 <>
@@ -872,37 +872,6 @@ export default function OnboardingFlow({
                 </button>
               </div>
             </div>
-            {/* Streamer path: 3 marquee rows below the text */}
-            {selectedPath === 'streamer' && (
-              <div className="relative flex-shrink-0 flex flex-col gap-2 w-full overflow-hidden -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013]" style={{ paddingBottom: '8px', marginTop: '-1px' }}>
-                {/* Top fade connecting to text area */}
-                <div className="absolute inset-x-0 top-0 h-10 pointer-events-none z-20" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
-                {/* Row 4: clips 13-16 only */}
-                <div className="flex w-max ob-marquee-right">
-                  {[imgClip13, imgClip14, imgClip15, imgClip16, imgClip13, imgClip14, imgClip15, imgClip16].map((src, i) => (
-                    <div key={i} className="flex-shrink-0 rounded-lg overflow-hidden mx-1.5" style={{ width: 'clamp(140px, 35vw, 200px)', height: 'clamp(90px, 22vw, 130px)', border:'1px solid rgba(255,255,255,0.08)' }}>
-                      <img src={src} alt="" className="w-full h-full object-cover" draggable={false} />
-                    </div>
-                  ))}
-                </div>
-                {/* Row 5: clips 17-20 only */}
-                <div className="flex w-max ob-marquee-left" style={{ animationDelay: '-5s' }}>
-                  {[imgClip17, imgClip18, imgClip19, imgClip20, imgClip17, imgClip18, imgClip19, imgClip20].map((src, i) => (
-                    <div key={i} className="flex-shrink-0 rounded-lg overflow-hidden mx-1.5" style={{ width: 'clamp(140px, 35vw, 200px)', height: 'clamp(90px, 22vw, 130px)', border:'1px solid rgba(255,255,255,0.08)' }}>
-                      <img src={src} alt="" className="w-full h-full object-cover" draggable={false} />
-                    </div>
-                  ))}
-                </div>
-                {/* Row 6: clips 1-4 — opposite direction to row 1, separated by text so never seen side-by-side */}
-                <div className="flex w-max ob-marquee-right" style={{ animationDelay: '-3s' }}>
-                  {[imgClip1, imgClip2, imgClip3, imgClip4, imgClip1, imgClip2, imgClip3, imgClip4].map((src, i) => (
-                    <div key={i} className="flex-shrink-0 rounded-lg overflow-hidden mx-1.5" style={{ width: 'clamp(140px, 35vw, 200px)', height: 'clamp(90px, 22vw, 130px)', border:'1px solid rgba(255,255,255,0.08)' }}>
-                      <img src={src} alt="" className="w-full h-full object-cover" draggable={false} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         );
       }
