@@ -55,6 +55,8 @@ import imgClip17 from "@assets/image_1781039781106.png";
 import imgClip18 from "@assets/image_1781039805674.png";
 import imgClip19 from "@assets/image_1781039837584.png";
 import imgClip20 from "@assets/image_1781039848401.png";
+import imgHeadFF from "@assets/ff_1781115446640.png";
+import imgHeadBubble from "@assets/bubble_1781115477112.png";
 import Cropper from "react-easy-crop";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -788,6 +790,13 @@ export default function OnboardingFlow({
                   <div className="absolute inset-x-0 top-0 h-12 pointer-events-none z-20" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
                   {/* Bottom fade for top marquee area */}
                   <div className="absolute inset-x-0 bottom-0 h-12 pointer-events-none z-20" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  {/* Two gamer heads centred over the marquee */}
+                  <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
+                    <div className="flex items-end gap-0">
+                      <img src={imgHeadFF} alt="" draggable={false} className="select-none" style={{ width: 'clamp(130px, 34vw, 190px)', filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.7))' }} />
+                      <img src={imgHeadBubble} alt="" draggable={false} className="select-none" style={{ width: 'clamp(130px, 34vw, 190px)', filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.7))' }} />
+                    </div>
+                  </div>
                   {/* 3 rows above the text — each row uses its own exclusive clips */}
                   <div className="relative z-10 flex flex-col gap-2 w-full overflow-hidden" style={{ paddingTop: '8px' }}>
                     {/* Row 1: clips 1-4 only */}
