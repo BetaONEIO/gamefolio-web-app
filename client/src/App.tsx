@@ -125,6 +125,8 @@ const ContactPage = lazyWithRecovery(() => import("./pages/contact-page"));
 const HelpPage = lazyWithRecovery(() => import("./pages/HelpPage"));
 const LeaderboardEmbedPage = lazyWithRecovery(() => import("./pages/LeaderboardEmbedPage"));
 const StorePage = lazyWithRecovery(() => import("./pages/StorePage"));
+const StreamStudioPage = lazyWithRecovery(() => import("./pages/StreamStudioPage"));
+const LiveStreamPage = lazyWithRecovery(() => import("./pages/LiveStreamPage"));
 const WalletPage = lazyWithRecovery(() => import("./pages/WalletPage"));
 const StakingPage = lazyWithRecovery(() => import("./pages/StakingPage"));
 const StoragePage = lazyWithRecovery(() => import("./pages/StoragePage"));
@@ -462,6 +464,8 @@ function Router() {
 
           {/* Protected routes requiring authentication */}
           <Route path="/explore" component={ExplorePage} />
+          <Route path="/live/:username" component={LiveStreamPage} />
+          <ProtectedRoute path="/studio" component={StreamStudioPage} />
           <Route path="/games/:gameSlug" component={GamePage} />
           <Route path="/games/:gameId/clips" component={GameClipsPage} />
           <ProtectedRoute path="/hashtag/:hashtag" component={HashtagPage} />

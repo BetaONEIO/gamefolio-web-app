@@ -68,6 +68,7 @@ import quickSellRouter from "./routes/quick-sell";
 import adminNftSeedRouter from "./routes/admin-nft-seed";
 import adminWalletAuditRouter from "./routes/admin-wallet-audit";
 import { pushRouter, adminPushRouter } from "./routes/push";
+import streamsRouter from "./routes/streams";
 import { twitchApi } from "./services/twitch-api";
 import { VideoProcessor } from "./video-processor";
 import ffmpeg from "fluent-ffmpeg";
@@ -10946,6 +10947,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Push notifications (token register/unregister, self-test)
   app.use('/api/push', pushRouter);
+
+  // Mount live streaming routes (OBS → Cloudflare Stream, partner-gated)
+  app.use(streamsRouter);
 
   // Mount support routes
   app.use('/api/support', supportRouter);

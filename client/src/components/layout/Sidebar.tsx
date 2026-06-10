@@ -6,6 +6,7 @@ import {
   X,
   Check,
   Trash2,
+  Radio,
 } from "lucide-react";
 import { GamefolioStoreIcon } from "@/components/icons/GamefolioStoreIcon";
 import { GamefolioCollectionIcon } from "@/components/icons/GamefolioCollectionIcon";
@@ -238,6 +239,10 @@ const Sidebar = () => {
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: TrendingNavIcon, label: "Trending", href: "/trending" },
+
+    // Streamer Partners only — live broadcast studio
+    ...(user?.isPartner ? [{ icon: Radio, label: "Go Live", href: "/studio" }] : []),
+
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
     { icon: GamefolioStoreIcon, label: "Store", href: "/store" },
     { icon: GamefolioWalletIcon, label: "Wallet", href: "/wallet" },

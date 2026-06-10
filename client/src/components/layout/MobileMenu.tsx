@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Radio } from "lucide-react";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
@@ -255,8 +255,20 @@ const MobileMenu = () => {
                   <span className="font-medium">Trending</span>
                 </Link>
               </li>
+              {user?.isPartner && (
+                <li>
+                  <Link
+                    href="/studio"
+                    onClick={handleClose}
+                    className="flex items-center p-2 rounded-md hover:bg-primary hover:text-[#071013] transition-colors w-full text-left no-underline group"
+                  >
+                    <Radio className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                    <span className="font-medium">Go Live</span>
+                  </Link>
+                </li>
+              )}
               <li>
-                <Link 
+                <Link
                   href="/leaderboard"
                   onClick={handleClose}
                   className="flex items-center p-2 rounded-md hover:bg-primary hover:text-[#071013] transition-colors w-full text-left no-underline group"

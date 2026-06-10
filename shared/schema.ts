@@ -1765,3 +1765,33 @@ export const usedPaymentHashes = pgTable("used_payment_hashes", {
   itemId: text("item_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// Live streams — OBS → Cloudflare Stream ingest, gated to Streamer Partners (users.isPartner).
+// One live input per user. ingestUrl + streamKey are SECRETS, returned only to the owner.
+export const liveStreams = pgTable("live_streams", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().unique(),
+  provider: text("provider").default("cloudflare").notNull(), // isolated behind a provider service; swappable
+  liveInputId: text("live_input_id").notNull(),   // Cloudflare live input UID
+  playbackId: text("playback_id").notNull(),      // UID used for HLS/iframe playback (same as liveInputId for CF)
+  ingestUrl: text("ingest_url").notNull(),        // RTMPS ingest URL for OBS (SECRET-adjacent — owner only)
+  streamKey: text("stream_key").notNull(),        // OBS stream key (SECRET — owner only)
+  status: text("status").default("idle").notNull(), // "idle" | "live"
+  title: text("title"),
+  viewerCount: integer("viewer_count").default(0).notNull(),
+  startedAt: timestamp("started_at"),
+  lastLiveAt: timestamp("last_live_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  statusIdx: index("live_streams_status_idx").on(table.status),
+}));
+
+export const insertLiveStreamSchema = createInsertSchema(liveStreams).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type LiveStream = typeof liveStreams.$inferSelect;
+export type InsertLiveStream = z.infer<typeof insertLiveStreamSchema>;
