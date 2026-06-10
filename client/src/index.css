@@ -1174,8 +1174,8 @@ h1, h2, h3 {
 }
 /* Platform logos orbiting Gamefolio on streamer Intro1 */
 @keyframes ob-orbit {
-  from { transform: rotate(0deg) translateX(100px) rotate(0deg); }
-  to   { transform: rotate(360deg) translateX(100px) rotate(-360deg); }
+  from { transform: rotate(0deg) translateX(132px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(132px) rotate(-360deg); }
 }
 .ob-orbit-item {
   position: absolute;
