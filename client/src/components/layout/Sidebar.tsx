@@ -241,7 +241,7 @@ const Sidebar = () => {
     { icon: TrendingNavIcon, label: "Trending", href: "/trending" },
 
     // Streamer Partners only — live broadcast studio
-    ...(user?.isPartner ? [{ icon: Radio, label: "Go Live", href: "/studio" }] : []),
+    ...(user?.isPartner ? [{ icon: Radio, label: "Studio", href: "/studio" }] : []),
 
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
     { icon: GamefolioStoreIcon, label: "Store", href: "/store" },

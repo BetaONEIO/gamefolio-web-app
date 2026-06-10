@@ -79,7 +79,10 @@ export async function createLiveInput(name: string): Promise<LiveInput> {
     method: "POST",
     body: JSON.stringify({
       meta: { name },
-      recording: { mode: "automatic" }, // keep a VOD of each broadcast
+      // "automatic" is REQUIRED for live playback — with "off" Cloudflare accepts
+      // the ingest but never packages an HLS manifest (player shows "stream has
+      // not started"). It also keeps a VOD replay of each broadcast as a bonus.
+      recording: { mode: "automatic" },
     }),
   });
   return toLiveInput(result);
@@ -87,6 +90,24 @@ export async function createLiveInput(name: string): Promise<LiveInput> {
 
 export async function deleteLiveInput(liveInputId: string): Promise<void> {
   await cfFetch(`/stream/live_inputs/${liveInputId}`, { method: "DELETE" });
+}
+
+/**
+ * Real-time live/idle for a live input, read straight from Cloudflare — lets us
+ * reflect status without relying on the connect/disconnect webhook (which can't
+ * reach localhost in dev). Cloudflare reports `status.current.state` as
+ * "connected" while an encoder (OBS) is pushing a feed.
+ * Returns "live" | "idle", or null if the lookup failed.
+ */
+export async function getLiveInputStatus(
+  liveInputId: string,
+): Promise<"live" | "idle" | null> {
+  try {
+    const result = await cfFetch(`/stream/live_inputs/${liveInputId}`);
+    return result?.status?.current?.state === "connected" ? "live" : "idle";
+  } catch {
+    return null;
+  }
 }
 
 /** HLS manifest URL for a playback id (works in <video> on Safari/iOS natively). */

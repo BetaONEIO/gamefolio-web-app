@@ -2511,6 +2511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           level: u.level || 1,
           totalXP: u.totalXP || 0,
           isPro: u.isPro || false,
+          isPartner: u.isPartner || false,
           walletAddress: u.walletAddress || null,
           walletChain: u.walletChain || null,
           gfTokenBalance: u.gfTokenBalance || 0,

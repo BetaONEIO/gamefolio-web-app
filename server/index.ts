@@ -356,7 +356,9 @@ app.use((req, res, next) => {
     server.listen({
       port,
       host: "0.0.0.0",
-      reusePort: true,
+      // reusePort (SO_REUSEPORT) is unsupported on macOS — Node throws ENOTSUP.
+      // Keep it for production (Replit/Linux); skip it in local dev.
+      ...(process.env.NODE_ENV === "production" ? { reusePort: true } : {}),
     }, () => {
       log(`serving on port ${port}`);
 

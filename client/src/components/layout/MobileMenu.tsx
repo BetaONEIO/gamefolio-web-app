@@ -263,7 +263,7 @@ const MobileMenu = () => {
                     className="flex items-center p-2 rounded-md hover:bg-primary hover:text-[#071013] transition-colors w-full text-left no-underline group"
                   >
                     <Radio className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
-                    <span className="font-medium">Go Live</span>
+                    <span className="font-medium">Studio</span>
                   </Link>
                 </li>
               )}

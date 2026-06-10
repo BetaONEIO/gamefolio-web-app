@@ -9,11 +9,34 @@ import {
   isCloudflareStreamConfigured,
   createLiveInput,
   deleteLiveInput,
+  getLiveInputStatus,
   iframeUrl,
   hlsUrl,
 } from "../services/cloudflare-stream";
 
 const router = Router();
+
+/**
+ * Reconcile a stream row's stored status against Cloudflare's real-time state,
+ * persisting any change. This is the webhook-free path: the connect/disconnect
+ * webhook still works in production, but reading status on demand means the app
+ * reflects live/idle even when the webhook can't be delivered (e.g. localhost).
+ */
+async function withLiveStatus(row: LiveStream): Promise<LiveStream> {
+  if (!isCloudflareStreamConfigured()) return row;
+  const live = await getLiveInputStatus(row.liveInputId);
+  if (!live || live === row.status) return row;
+  const patch =
+    live === "live"
+      ? { status: "live", startedAt: row.startedAt ?? new Date(), lastLiveAt: new Date(), updatedAt: new Date() }
+      : { status: "idle", updatedAt: new Date() };
+  const [updated] = await db
+    .update(liveStreams)
+    .set(patch)
+    .where(eq(liveStreams.id, row.id))
+    .returning();
+  return updated ?? ({ ...row, ...patch } as LiveStream);
+}
 
 function userId(req: Request): number | undefined {
   return (req as any).user?.id;
@@ -195,7 +218,8 @@ router.get("/api/streams/me", hybridAuth, async (req: Request, res: Response) =>
     .from(liveStreams)
     .where(eq(liveStreams.userId, id))
     .limit(1);
-  return res.json(row ? ownerView(row) : null);
+  if (!row) return res.json(null);
+  return res.json(ownerView(await withLiveStatus(row)));
 });
 
 /** Update broadcast title. */
@@ -259,7 +283,7 @@ router.get("/api/streams/u/:username", async (req: Request, res: Response) => {
     .limit(1);
   if (!row) return res.status(404).json({ error: "This user has no stream." });
   return res.json(
-    publicView(row, {
+    publicView(await withLiveStatus(row), {
       username: user.username,
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,

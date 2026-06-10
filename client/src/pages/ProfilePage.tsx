@@ -78,6 +78,7 @@ import { ModeratorIcon } from "@/components/ui/moderator-icon";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { PartnerBadge } from "@/components/ui/partner-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
+import { ProfileLiveStream } from "@/components/profile/ProfileLiveStream";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { useProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
 import { BannerLightbox, useBannerLightbox } from "@/components/ui/banner-lightbox";
@@ -2881,6 +2882,8 @@ const ProfilePage = () => {
               <PartnerBadge isPartner={(profile as any).isPartner} size="lg" />
             </div>
             <span className="text-sm font-normal" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.6)' }}>@{profile.username}</span>
+            {/* Live stream embed — renders only while the user is broadcasting */}
+            <ProfileLiveStream username={profile.username} />
             {/* User type badges on their own line */}
             {profile.userType && profile.showUserType !== false && (
               <div className="flex items-center gap-2 flex-wrap mt-3 mb-2">
