@@ -1089,7 +1089,7 @@ export default function OnboardingFlow({
           {
             id: 'gamer' as UserPath,
             title: 'GAMER',
-            ctaLabel: 'Get Started',
+            ctaLabel: 'CONTINUE AS GAMER',
             visual: (
               <div className="relative flex items-end justify-center flex-shrink-0 w-full"
                 style={{ height: 'clamp(300px, calc(100dvh - 380px), 460px)' }}>
@@ -1109,7 +1109,7 @@ export default function OnboardingFlow({
           {
             id: 'streamer' as UserPath,
             title: 'STREAMER',
-            ctaLabel: 'Get Started',
+            ctaLabel: 'CONTINUE AS STREAMER',
             visual: (
               <div className="relative flex items-center justify-center flex-shrink-0 w-full"
                 style={{ height: 'clamp(240px, calc(100dvh - 440px), 340px)', overflowX: 'clip', overflowY: 'visible' }}>
@@ -1138,7 +1138,7 @@ export default function OnboardingFlow({
           {
             id: 'indie' as UserPath,
             title: 'INDIE GAME',
-            ctaLabel: 'Get Started',
+            ctaLabel: 'CONTINUE AS INDIE',
             visual: (
               <div className="relative flex items-center justify-center flex-shrink-0 w-full"
                 style={{ height: 'clamp(240px, calc(100dvh - 440px), 340px)' }}>
@@ -1226,24 +1226,6 @@ export default function OnboardingFlow({
               <div className="w-16" />
             </div>
 
-            {/* ── STATIC: carousel arrows above sliding area ── */}
-            <div className="flex-shrink-0 relative z-20 flex items-center justify-center gap-6 py-2">
-              <button
-                onClick={handlePathBack}
-                disabled={pathCardIndex === 0}
-                className="text-white disabled:opacity-20 transition-opacity active:scale-90"
-              >
-                <ChevronLeft className="h-8 w-8" strokeWidth={2.5} />
-              </button>
-              <button
-                onClick={handlePathNext}
-                disabled={pathCardIndex === totalCards - 1}
-                className="text-white disabled:opacity-20 transition-opacity active:scale-90"
-              >
-                <ChevronRight className="h-8 w-8" strokeWidth={2.5} />
-              </button>
-            </div>
-
             {/* ── SLIDING: only title + visual move ── */}
             <div className="flex-1 min-h-0 relative" style={{ overflowX: 'clip' }}>
               <div
@@ -1288,6 +1270,24 @@ export default function OnboardingFlow({
               </div>
             </div>
 
+            {/* ── STATIC: carousel arrows ── */}
+            <div className="flex-shrink-0 relative z-20 flex items-center justify-center gap-6 pb-3">
+              <button
+                onClick={handlePathBack}
+                disabled={pathCardIndex === 0}
+                className="text-white disabled:opacity-20 transition-opacity active:scale-90"
+              >
+                <ChevronLeft className="h-8 w-8" strokeWidth={2.5} />
+              </button>
+              <button
+                onClick={handlePathNext}
+                disabled={pathCardIndex === totalCards - 1}
+                className="text-white disabled:opacity-20 transition-opacity active:scale-90"
+              >
+                <ChevronRight className="h-8 w-8" strokeWidth={2.5} />
+              </button>
+            </div>
+
             {/* ── STATIC: back icon + CTA button — matches intro screen layout ── */}
             <div className="flex-shrink-0 relative z-20 px-6 pt-0 pb-6">
               <div className="flex items-center gap-3">
@@ -1301,8 +1301,8 @@ export default function OnboardingFlow({
                 </button>
                 <button
                   onClick={() => selectAndContinue(currentCard.id)}
-                  className="flex-1 rounded-[18px] py-4 font-bold text-base"
-                  style={{ background: '#c1ff00', boxShadow: '0 20px 40px rgba(193,255,0,0.30)', color: '#0a0f1c', fontFamily: "'Outfit',sans-serif", borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
+                  className="flex-1 rounded-[18px] py-4 uppercase font-black tracking-widest"
+                  style={{ background: '#c1ff00', boxShadow: '0 20px 40px rgba(193,255,0,0.30)', color: '#0a0f1c', fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: '14px', letterSpacing: '2.8px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
                 >
                   {currentCard.ctaLabel}
                 </button>
