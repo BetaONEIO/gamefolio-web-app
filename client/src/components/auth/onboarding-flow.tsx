@@ -1200,16 +1200,16 @@ export default function OnboardingFlow({
             }}
           >
             {/* Full-screen per-card backgrounds */}
-            <div className="fixed inset-0 pointer-events-none transition-opacity duration-500 z-0"
-                 style={{ opacity: pathCardIndex === 0 ? 1 : 0 }}>
-              <div className="absolute w-72 h-72 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.18)', top: '20%', left: '-15%' }} />
-              <div className="absolute w-64 h-64 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.15)', top: '35%', right: '-15%' }} />
+            <div className="absolute inset-x-0 top-0 pointer-events-none transition-opacity duration-500 z-0"
+                 style={{ opacity: pathCardIndex === 0 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
+              <div className="absolute w-72 h-72 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.18)', top: '20%', left: '5%' }} />
+              <div className="absolute w-64 h-64 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.15)', top: '35%', right: '5%' }} />
               <div className="absolute w-56 h-56 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.12)', bottom: '20%', left: '10%' }} />
             </div>
-            <div className="fixed inset-0 ob-spark-burst pointer-events-none transition-opacity duration-500 z-0"
-                 style={{ opacity: pathCardIndex === 1 ? 1 : 0 }} />
-            <div className="fixed inset-0 pointer-events-none transition-opacity duration-500 z-0 flex items-center justify-center"
-                 style={{ opacity: pathCardIndex === 2 ? 1 : 0 }}>
+            <div className="absolute inset-x-0 top-0 ob-spark-burst pointer-events-none transition-opacity duration-500 z-0"
+                 style={{ opacity: pathCardIndex === 1 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }} />
+            <div className="absolute inset-x-0 top-0 pointer-events-none transition-opacity duration-500 z-0 flex items-center justify-center"
+                 style={{ opacity: pathCardIndex === 2 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
               <div className="w-72 h-72 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.18)' }} />
             </div>
             {/* ── STATIC: back + dots — never move ── */}
