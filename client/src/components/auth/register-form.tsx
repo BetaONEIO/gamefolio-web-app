@@ -420,7 +420,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <div className="space-y-2">
         <Label className="text-foreground">Date of Birth</Label>
-        <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+        <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen} modal={false}>
           <PopoverTrigger asChild>
             <Button
               type="button"
@@ -438,11 +438,10 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-auto p-0 bg-background border border-input shadow-lg"
+            className="w-[min(340px,calc(100vw-2rem))] p-0 bg-background border border-input shadow-lg"
             align="start"
             side="bottom"
             sideOffset={4}
-            avoidCollisions={false}
           >
             <Calendar
               mode="single"
