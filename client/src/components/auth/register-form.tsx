@@ -452,11 +452,20 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
               }}
               disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
               defaultMonth={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : new Date(2000, 0)}
+              captionLayout="dropdown-buttons"
+              fromYear={1900}
+              toYear={new Date().getFullYear()}
               initialFocus
               className="w-full"
               classNames={{
                 months: "w-full",
                 month: "w-full space-y-3",
+                caption: "flex justify-center pt-1 relative items-center gap-1",
+                caption_dropdowns: "flex gap-1",
+                dropdown: "bg-background border border-input text-foreground text-sm rounded-md px-2 py-1 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary",
+                dropdown_month: "",
+                dropdown_year: "",
+                vhidden: "hidden",
                 table: "w-full border-collapse",
                 head_row: "flex w-full",
                 head_cell: "text-muted-foreground font-normal text-[0.8rem] flex-1 text-center",
