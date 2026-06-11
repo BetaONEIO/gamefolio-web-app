@@ -344,6 +344,8 @@ function toPublicUser(user: any): Record<string, unknown> {
     kickVerified: user.kickVerified,
     liveEnabled: user.liveEnabled,
     showLiveOverlay: user.showLiveOverlay,
+    twitchShowOnProfile: user.twitchShowOnProfile ?? true,
+    kickShowOnProfile: user.kickShowOnProfile ?? true,
     accentColor: user.accentColor,
     primaryColor: user.primaryColor,
     backgroundColor: user.backgroundColor,
@@ -1746,6 +1748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         twitchChannelId: twitchUser.id,
         twitchVerified: true,
         twitchAccessToken: accessToken,
+        twitchShowOnProfile: true,
       });
 
       res.redirect("/settings?tab=platforms&twitch_connected=1");
@@ -1807,7 +1810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/user/streamer-settings", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
-      const { isStreamer, streamPlatform, liveEnabled } = req.body;
+      const { isStreamer, streamPlatform, liveEnabled, twitchShowOnProfile, kickShowOnProfile } = req.body;
       const ALLOWED_PLATFORMS = ["twitch", "kick"];
       if (streamPlatform !== undefined && !ALLOWED_PLATFORMS.includes(streamPlatform)) {
         return res.status(400).json({ message: "Invalid streamPlatform value" });
@@ -1816,6 +1819,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isStreamer !== undefined) update.isStreamer = Boolean(isStreamer);
       if (streamPlatform !== undefined) update.streamPlatform = streamPlatform;
       if (liveEnabled !== undefined) update.liveEnabled = Boolean(liveEnabled);
+      if (twitchShowOnProfile !== undefined) update.twitchShowOnProfile = Boolean(twitchShowOnProfile);
+      if (kickShowOnProfile !== undefined) update.kickShowOnProfile = Boolean(kickShowOnProfile);
       const updated = await storage.updateUser((req.user as any).id, update);
       res.json(updated);
     } catch (err) {
@@ -2576,6 +2581,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           kickId: u.kickId || null,
           showLiveOverlay: u.showLiveOverlay || false,
           liveEnabled: u.liveEnabled || false,
+          twitchShowOnProfile: u.twitchShowOnProfile ?? true,
+          kickShowOnProfile: u.kickShowOnProfile ?? true,
           referralCode: u.referralCode || null,
           referredBy: u.referredBy || null,
         });
@@ -2645,6 +2652,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       kickChannelName: u.kickChannelName || null,
       kickVerified: u.kickVerified || false,
       liveEnabled: u.liveEnabled || false,
+      twitchShowOnProfile: u.twitchShowOnProfile ?? true,
+      kickShowOnProfile: u.kickShowOnProfile ?? true,
     });
   });
 

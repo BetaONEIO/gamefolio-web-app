@@ -52,6 +52,11 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
       return response.json();
     },
     enabled: !!actualUserId,
+    // The global default is staleTime: Infinity, which froze this section for
+    // the whole session. The server now returns a rotating, freshness-weighted
+    // mix, so re-pull on every mount to actually surface new clips per visit.
+    staleTime: 1000 * 60 * 5,
+    refetchOnMount: 'always',
   });
 
   // Filter clips based on selected content type

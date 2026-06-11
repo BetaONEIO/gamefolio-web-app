@@ -160,6 +160,7 @@ router.get('/auth/kick/callback', async (req: Request, res: Response) => {
       kickChannelName: channelName,
       kickId,
       kickVerified: true,
+      kickShowOnProfile: true,
     }).where(eq(users.id, userId));
 
     return res.redirect('/settings/profile?tab=streamer&kick_connected=true');
@@ -295,6 +296,7 @@ router.get('/auth/twitch-stream/callback', async (req: Request, res: Response) =
       twitchChannelName: channelName,
       twitchUserId,
       twitchVerified: true,
+      twitchShowOnProfile: true,
     }).where(eq(users.id, userId));
 
     return res.redirect('/settings/profile?tab=streamer&twitch_connected=true');
