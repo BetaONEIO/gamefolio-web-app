@@ -763,7 +763,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleStreamerSettingsSave = async (patch: { isStreamer?: boolean; streamPlatform?: string; liveEnabled?: boolean }) => {
+  const handleStreamerSettingsSave = async (patch: { isStreamer?: boolean; streamPlatform?: string; liveEnabled?: boolean; twitchShowOnProfile?: boolean; kickShowOnProfile?: boolean }) => {
     setSavingStreamerSettings(true);
     try {
       await apiRequest("PATCH", "/api/user/streamer-settings", patch);
@@ -4248,43 +4248,8 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                {/* Platform Selector */}
-                <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
-                  <div>
-                    <div className="text-sm font-medium text-slate-200">Streaming Platform</div>
-                    <div className="text-xs text-slate-400 mt-0.5">Choose which platform to connect</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleStreamerSettingsSave({ streamPlatform: "twitch" })}
-                      disabled={savingStreamerSettings}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                        (user as any)?.streamPlatform !== "kick"
-                          ? "border-[#9146FF]/60 bg-[#9146FF]/15 text-[#9146FF]"
-                          : "border-slate-700 text-slate-400 hover:border-slate-500"
-                      }`}
-                    >
-                      <SiTwitch className="w-3.5 h-3.5" />
-                      Twitch
-                    </button>
-                    <button
-                      onClick={() => handleStreamerSettingsSave({ streamPlatform: "kick" })}
-                      disabled={savingStreamerSettings}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                        (user as any)?.streamPlatform === "kick"
-                          ? "border-[#53FC18]/60 bg-[#53FC18]/10 text-[#53FC18]"
-                          : "border-slate-700 text-slate-400 hover:border-slate-500"
-                      }`}
-                    >
-                      <SiKick className="w-3.5 h-3.5" />
-                      Kick
-                    </button>
-                  </div>
-                </div>
-
                 {/* Twitch Connection */}
-                {(user as any)?.streamPlatform !== "kick" && (
-                  <>
+                <>
                     {(user as any)?.twitchVerified ? (
                       <div className="rounded-xl border border-[#9146FF]/30 bg-[#9146FF]/5 px-4 py-3 space-y-3">
                         <div className="flex items-center gap-3">
@@ -4311,6 +4276,17 @@ export default function SettingsPage() {
                             {disconnectingTwitch ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlink className="w-4 h-4" />}
                             Disconnect
                           </Button>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-[#9146FF]/15 pt-3">
+                          <div>
+                            <div className="text-sm font-medium text-slate-200">Show on profile</div>
+                            <div className="text-xs text-slate-400 mt-0.5">Embed your Twitch stream on your profile</div>
+                          </div>
+                          <Switch
+                            checked={(user as any)?.twitchShowOnProfile ?? true}
+                            disabled={savingStreamerSettings}
+                            onCheckedChange={(val) => handleStreamerSettingsSave({ twitchShowOnProfile: val })}
+                          />
                         </div>
                       </div>
                     ) : oauthConfig?.twitch === false ? (
@@ -4347,12 +4323,10 @@ export default function SettingsPage() {
                         </div>
                       </div>
                     )}
-                  </>
-                )}
+                </>
 
                 {/* Kick Connection */}
-                {(user as any)?.streamPlatform === "kick" && (
-                  <>
+                <>
                     {(user as any)?.kickVerified ? (
                       <div className="rounded-xl border border-[#53FC18]/20 bg-[#53FC18]/5 px-4 py-3 space-y-3">
                         <div className="flex items-center gap-3">
@@ -4379,6 +4353,17 @@ export default function SettingsPage() {
                             {disconnectingKick ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlink className="w-4 h-4" />}
                             Disconnect
                           </Button>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-[#53FC18]/15 pt-3">
+                          <div>
+                            <div className="text-sm font-medium text-slate-200">Show on profile</div>
+                            <div className="text-xs text-slate-400 mt-0.5">Embed your Kick stream on your profile</div>
+                          </div>
+                          <Switch
+                            checked={(user as any)?.kickShowOnProfile ?? true}
+                            disabled={savingStreamerSettings}
+                            onCheckedChange={(val) => handleStreamerSettingsSave({ kickShowOnProfile: val })}
+                          />
                         </div>
                       </div>
                     ) : oauthConfig?.kick === false ? (
@@ -4415,8 +4400,7 @@ export default function SettingsPage() {
                         </div>
                       </div>
                     )}
-                  </>
-                )}
+                </>
 
                 {/* LIVE Badge Toggle */}
                 <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">

@@ -85,6 +85,8 @@ export const users = pgTable("users", {
   rumbleId: text("rumble_id"),              // Rumble user ID (set when OAuth-connected)
   rumbleVerified: boolean("rumble_verified").default(false), // Connected via OAuth
   showLiveOverlay: boolean("show_live_overlay").default(false), // Show LIVE badge on avatar
+  twitchShowOnProfile: boolean("twitch_show_on_profile").default(true), // Embed Twitch stream on profile
+  kickShowOnProfile: boolean("kick_show_on_profile").default(true),     // Embed Kick stream on profile
   ageRange: text("age_range"), // Age range: 13-17, 18-24, 25-34, 35-44, 45-54, 55+
   // Authentication provider fields
   authProvider: text("auth_provider").default("local"), // "local", "google", "discord", "steam", "apple"
