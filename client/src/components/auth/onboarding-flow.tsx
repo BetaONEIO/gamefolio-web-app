@@ -1098,9 +1098,6 @@ export default function OnboardingFlow({
             visual: (
               <div className="relative flex items-end justify-center flex-shrink-0 w-full"
                 style={{ height: 'clamp(300px, calc(100dvh - 380px), 460px)' }}>
-                <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '-5%', left: '-10%' }} />
-                <div className="absolute w-56 h-56 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '15%', right: '-10%' }} />
-                <div className="absolute w-48 h-48 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', bottom: '-5%', left: '15%' }} />
                 <img
                   src={imgMacCat}
                   alt="Gaming cat"
@@ -1117,9 +1114,7 @@ export default function OnboardingFlow({
             ctaLabel: 'Continue as Streamer',
             visual: (
               <div className="relative flex items-center justify-center flex-shrink-0 w-full"
-                style={{ height: 'clamp(240px, calc(100dvh - 440px), 340px)', overflowX: 'clip', overflowY: 'visible' }}>
-                {/* Spark burst — fully contained, no overflow */}
-                <div className="absolute inset-0 ob-spark-burst pointer-events-none" />
+                style={{ height: 'clamp(240px, calc(100dvh - 440px), 340px)' }}>
                 {/* Two heads */}
                 <div className="relative z-10 flex items-end justify-center" style={{ gap: '0px' }}>
                   <img
@@ -1147,7 +1142,6 @@ export default function OnboardingFlow({
             visual: (
               <div className="relative flex items-center justify-center flex-shrink-0 w-full"
                 style={{ height: 'clamp(240px, calc(100dvh - 440px), 340px)' }}>
-                <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)' }} />
                 <div className="relative z-10" style={{ width: '280px', height: '280px' }}>
                   {/* Shirt — floats centre */}
                   <div className="ob-float" style={{ position: 'absolute', top: '50%', left: '50%', animationDuration: '4s' }}>
@@ -1238,7 +1232,20 @@ export default function OnboardingFlow({
                 style={{ transform: `translateX(-${pathCardIndex * 100}%)`, transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1)' }}
               >
                 {pathCards.map((card) => (
-                  <div key={card.id} className="w-full h-full flex-shrink-0 flex flex-col">
+                  <div key={card.id} className="w-full h-full flex-shrink-0 flex flex-col relative">
+                  {card.id === 'streamer' && <div className="absolute inset-0 ob-spark-burst pointer-events-none" />}
+                  {card.id === 'gamer' && (
+                    <div className="absolute inset-0 pointer-events-none">
+                      <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '15%', left: '-10%' }} />
+                      <div className="absolute w-56 h-56 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '30%', right: '-10%' }} />
+                      <div className="absolute w-48 h-48 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', bottom: '20%', left: '15%' }} />
+                    </div>
+                  )}
+                  {card.id === 'indie' && (
+                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                      <div className="w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)' }} />
+                    </div>
+                  )}
 
                     {/* Title */}
                     <div className="flex-shrink-0 text-center px-5 sm:px-6 mt-2">
