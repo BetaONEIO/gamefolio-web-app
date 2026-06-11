@@ -671,11 +671,12 @@ export default function OnboardingFlow({
                 Your gaming identity, all in one place.
               </p>
             </div>
-            <div className="ob-cta flex-shrink-0 px-6 pt-5 pb-6" style={{ animationDelay: '1400ms' }}>
+            <div className="flex-shrink-0 px-6 pt-5 pb-6 relative z-10">
               <button
+                type="button"
                 onClick={goToNextStep}
-                className="w-full rounded-[18px] py-4 font-bold flex items-center justify-center gap-2"
-                style={{ background: '#c1ff00', boxShadow: '0 20px 40px rgba(193,255,0,0.30)', color: '#0a0f1c', fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: '15px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
+                className="w-full rounded-[18px] py-4 font-bold flex items-center justify-center gap-2 cursor-pointer"
+                style={{ background: '#c1ff00', boxShadow: '0 20px 40px rgba(193,255,0,0.30)', color: '#0a0f1c', fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: '15px' }}
               >
                 Get started <ArrowRight className="h-4 w-4" />
               </button>
