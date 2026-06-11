@@ -1117,20 +1117,20 @@ export default function OnboardingFlow({
               <div className="relative flex items-center justify-center flex-shrink-0 w-full"
                 style={{ height: 'clamp(240px, calc(100dvh - 440px), 340px)' }}>
                 {/* Two heads */}
-                <div className="relative z-10 flex items-end justify-center" style={{ gap: '0px' }}>
+                <div className="relative z-10 flex items-end justify-center w-full">
                   <img
                     src={imgHeadFF}
                     alt=""
                     draggable={false}
                     className="select-none ob-float"
-                    style={{ width: 'clamp(156px, 41.6vw, 228px)', animationDuration: '4s', animationDelay: '0.2s', filter: 'drop-shadow(0 10px 28px rgba(0,0,0,0.7)) drop-shadow(0 0 18px rgba(193,255,0,0.12))' }}
+                    style={{ width: '44%', maxWidth: '210px', animationDuration: '4s', animationDelay: '0.2s', filter: 'drop-shadow(0 10px 28px rgba(0,0,0,0.7)) drop-shadow(0 0 18px rgba(193,255,0,0.12))' }}
                   />
                   <img
                     src={imgHeadBubble}
                     alt=""
                     draggable={false}
                     className="select-none ob-float"
-                    style={{ width: 'clamp(156px, 41.6vw, 228px)', animationDuration: '4.5s', animationDelay: '0.5s', filter: 'drop-shadow(0 10px 28px rgba(0,0,0,0.7)) drop-shadow(0 0 18px rgba(236,72,153,0.16))' }}
+                    style={{ width: '44%', maxWidth: '210px', animationDuration: '4.5s', animationDelay: '0.5s', filter: 'drop-shadow(0 10px 28px rgba(0,0,0,0.7)) drop-shadow(0 0 18px rgba(236,72,153,0.16))' }}
                   />
                 </div>
               </div>
