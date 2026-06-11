@@ -671,13 +671,14 @@ export default function OnboardingFlow({
                 Your gaming identity, all in one place.
               </p>
             </div>
-            <div className="ob-cta" style={{ animationDelay: '1400ms' }}>
-              <Button
+            <div className="ob-cta flex-shrink-0 px-6 pt-5 pb-6" style={{ animationDelay: '1400ms' }}>
+              <button
                 onClick={goToNextStep}
-                className="w-full bg-primary hover:bg-primary/90 text-[#071013] text-base font-bold py-6 rounded-xl justify-center"
+                className="w-full rounded-[18px] py-4 font-bold flex items-center justify-center gap-2"
+                style={{ background: '#c1ff00', boxShadow: '0 20px 40px rgba(193,255,0,0.30)', color: '#0a0f1c', fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: '15px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
               >
-                Get Started <ArrowRight className="h-5 w-5 ml-2" />
-              </Button>
+                Get started <ArrowRight className="h-4 w-4" />
+              </button>
             </div>
           </div>
         );
@@ -756,8 +757,8 @@ export default function OnboardingFlow({
                 <button onClick={goToPrevStep} className="flex-none flex items-center justify-center rounded-[18px]" style={{ width:'56px', height:'56px', border:'1.5px solid rgba(255,255,255,0.15)', background:'rgba(255,255,255,0.06)', backdropFilter:'blur(8px)' }} aria-label="Go back">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
-                <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 uppercase font-black tracking-widest" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:900, fontSize:'14px', letterSpacing:'2.8px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
-                  CONTINUE
+                <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 font-bold" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:'15px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
+                  Continue
                 </button>
               </div>
             </div>
@@ -867,8 +868,8 @@ export default function OnboardingFlow({
                 <button onClick={goToPrevStep} className="flex-none flex items-center justify-center rounded-[18px]" style={{ width:'56px', height:'56px', border:'1.5px solid rgba(255,255,255,0.15)', background:'rgba(255,255,255,0.06)', backdropFilter:'blur(8px)' }} aria-label="Go back">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
-                <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 uppercase font-black tracking-widest" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:900, fontSize:'14px', letterSpacing:'2.8px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
-                  CONTINUE
+                <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 font-bold" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:'15px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
+                  Continue
                 </button>
               </div>
             </div>
@@ -902,8 +903,8 @@ export default function OnboardingFlow({
                 <button onClick={goToPrevStep} className="flex-none flex items-center justify-center rounded-[18px]" style={{ width:'56px', height:'56px', border:'1.5px solid rgba(255,255,255,0.15)', background:'rgba(255,255,255,0.06)', backdropFilter:'blur(8px)' }} aria-label="Go back">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
-                <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 uppercase font-black tracking-widest" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:900, fontSize:'14px', letterSpacing:'2.8px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
-                  CONTINUE
+                <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 font-bold" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:'15px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
+                  Continue
                 </button>
               </div>
             </div>
@@ -1089,7 +1090,7 @@ export default function OnboardingFlow({
           {
             id: 'gamer' as UserPath,
             title: 'GAMER',
-            ctaLabel: 'CONTINUE AS GAMER',
+            ctaLabel: 'Continue as Gamer',
             visual: (
               <div className="relative flex items-end justify-center flex-shrink-0 w-full"
                 style={{ height: 'clamp(300px, calc(100dvh - 380px), 460px)' }}>
@@ -1109,7 +1110,7 @@ export default function OnboardingFlow({
           {
             id: 'streamer' as UserPath,
             title: 'STREAMER',
-            ctaLabel: 'CONTINUE AS STREAMER',
+            ctaLabel: 'Continue as Streamer',
             visual: (
               <div className="relative flex items-center justify-center flex-shrink-0 w-full"
                 style={{ height: 'clamp(240px, calc(100dvh - 440px), 340px)', overflowX: 'clip', overflowY: 'visible' }}>
@@ -1138,7 +1139,7 @@ export default function OnboardingFlow({
           {
             id: 'indie' as UserPath,
             title: 'INDIE GAME',
-            ctaLabel: 'CONTINUE AS INDIE',
+            ctaLabel: 'Continue as Indie',
             visual: (
               <div className="relative flex items-center justify-center flex-shrink-0 w-full"
                 style={{ height: 'clamp(240px, calc(100dvh - 440px), 340px)' }}>
@@ -1301,8 +1302,8 @@ export default function OnboardingFlow({
                 </button>
                 <button
                   onClick={() => selectAndContinue(currentCard.id)}
-                  className="flex-1 rounded-[18px] py-4 uppercase font-black tracking-widest"
-                  style={{ background: '#c1ff00', boxShadow: '0 20px 40px rgba(193,255,0,0.30)', color: '#0a0f1c', fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: '14px', letterSpacing: '2.8px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
+                  className="flex-1 rounded-[18px] py-4 font-bold"
+                  style={{ background: '#c1ff00', boxShadow: '0 20px 40px rgba(193,255,0,0.30)', color: '#0a0f1c', fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: '15px', borderBottom: '3.333px solid rgba(0,0,0,0.1)' }}
                 >
                   {currentCard.ctaLabel}
                 </button>
