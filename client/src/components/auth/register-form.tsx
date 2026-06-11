@@ -461,6 +461,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                 months: "w-full",
                 month: "w-full space-y-3",
                 caption: "flex justify-center pt-1 relative items-center gap-1",
+                caption_label: "hidden",
                 caption_dropdowns: "flex gap-1",
                 dropdown: "bg-background border border-input text-foreground text-sm rounded-md px-2 py-1 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary",
                 dropdown_month: "",
