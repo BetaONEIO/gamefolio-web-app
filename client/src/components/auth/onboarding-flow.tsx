@@ -1187,7 +1187,7 @@ export default function OnboardingFlow({
 
         return (
           <div
-            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#0a0f1c]"
+            className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#0a0f1c] relative"
             style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
             onTouchStart={(e) => { pathTouchStartX.current = e.touches[0].clientX; }}
             onTouchEnd={(e) => {
@@ -1198,6 +1198,19 @@ export default function OnboardingFlow({
               pathTouchStartX.current = null;
             }}
           >
+            {/* Full-screen per-card backgrounds */}
+            <div className="absolute inset-0 pointer-events-none transition-opacity duration-500 z-0"
+                 style={{ opacity: pathCardIndex === 0 ? 1 : 0 }}>
+              <div className="absolute w-72 h-72 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.18)', top: '20%', left: '-15%' }} />
+              <div className="absolute w-64 h-64 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.15)', top: '35%', right: '-15%' }} />
+              <div className="absolute w-56 h-56 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.12)', bottom: '20%', left: '10%' }} />
+            </div>
+            <div className="absolute inset-0 ob-spark-burst pointer-events-none transition-opacity duration-500 z-0"
+                 style={{ opacity: pathCardIndex === 1 ? 1 : 0 }} />
+            <div className="absolute inset-0 pointer-events-none transition-opacity duration-500 z-0 flex items-center justify-center"
+                 style={{ opacity: pathCardIndex === 2 ? 1 : 0 }}>
+              <div className="w-72 h-72 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.18)' }} />
+            </div>
             {/* ── STATIC: back + dots — never move ── */}
             <div className="flex-shrink-0 flex items-center justify-between px-5 sm:px-6 pt-4 pb-1 relative z-20">
               <button
@@ -1226,26 +1239,13 @@ export default function OnboardingFlow({
             </div>
 
             {/* ── SLIDING: only title + visual move ── */}
-            <div className="flex-1 min-h-0 relative" style={{ overflowX: 'clip' }}>
+            <div className="flex-1 min-h-0 relative z-10" style={{ overflowX: 'clip' }}>
               <div
                 className="flex h-full"
                 style={{ transform: `translateX(-${pathCardIndex * 100}%)`, transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1)' }}
               >
                 {pathCards.map((card) => (
-                  <div key={card.id} className="w-full h-full flex-shrink-0 flex flex-col relative">
-                  {card.id === 'streamer' && <div className="absolute inset-0 ob-spark-burst pointer-events-none" />}
-                  {card.id === 'gamer' && (
-                    <div className="absolute inset-0 pointer-events-none">
-                      <div className="absolute w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '15%', left: '-10%' }} />
-                      <div className="absolute w-56 h-56 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', top: '30%', right: '-10%' }} />
-                      <div className="absolute w-48 h-48 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)', bottom: '20%', left: '15%' }} />
-                    </div>
-                  )}
-                  {card.id === 'indie' && (
-                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                      <div className="w-64 h-64 rounded-full blur-[60px]" style={{ background: 'rgba(193,255,0,0.2)' }} />
-                    </div>
-                  )}
+                  <div key={card.id} className="w-full h-full flex-shrink-0 flex flex-col">
 
                     {/* Title */}
                     <div className="flex-shrink-0 text-center px-5 sm:px-6 mt-2">
