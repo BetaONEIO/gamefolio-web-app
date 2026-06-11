@@ -691,16 +691,18 @@ export default function OnboardingFlow({
           ? { titleA: 'PROMOTE YOUR', titleB: 'GAME', sub: 'Create a game profile and showcase your indie title to the Gamefolio community.', img: imgIndieGame, imgAlt: 'Indie game cartridge' }
           : { titleA: 'BUILD YOUR', titleB: 'GAMEFOLIO', sub: 'Your gaming legacy, all in one place. Connect accounts and showcase your best moments.', img: imgGamefolioCard, imgAlt: 'Gamefolio profile card' };
         return (
-          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
+          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
             {/* Visual area */}
-            <div className="flex-1 min-h-0 relative overflow-hidden flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
               {selectedPath === 'streamer' ? (
                 /* Streamer Screen 1: Platform logos orbiting Gamefolio */
                 <>
                   {/* Radial background glow */}
                   <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 65% 65% at 50% 48%, rgba(193,255,0,0.10) 0%, rgba(145,71,255,0.08) 45%, transparent 72%)' }} />
+                  {/* Top fade */}
+                  <div className="absolute inset-x-0 top-0 h-24 pointer-events-none z-10" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
                   {/* Bottom fade */}
-                  <div className="absolute inset-x-0 bottom-0 h-20 pointer-events-none z-10" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-10" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
                   {/* Orbit system */}
                   <div className="relative z-10 flex flex-col items-center" style={{ gap: '16px' }}>
                     <div className="relative" style={{ width: '300px', height: '300px' }}>
@@ -741,11 +743,12 @@ export default function OnboardingFlow({
                   {/* Green/white radiant gradient behind center of image */}
                   <div className="absolute inset-0 pointer-events-none z-0" style={{ background: 'radial-gradient(circle at 50% 45%, rgba(193,255,0,0.22) 0%, rgba(255,255,255,0.06) 25%, transparent 55%)' }} />
                   <img src={(i1 as any).img} alt={(i1 as any).imgAlt} draggable={false} className="select-none absolute inset-0 w-full h-full ob-float z-10" style={{ objectFit:'contain', objectPosition:'center', animationDuration:'4s', paddingTop: '40px' }} />
-                  <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none z-10" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 top-0 h-24 pointer-events-none z-10" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-10" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
                 </>
               )}
             </div>
-            <div className="flex-shrink-0 px-6 pt-5 pb-6">
+            <div className="mt-auto flex-shrink-0 relative z-10 px-6 pt-5 pb-6">
               <div className="flex items-center gap-2 justify-center mb-5">
                 {[0,1,2].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===0?'20px':'6px', height:'6px', background: i===0?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===0?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
               </div>
@@ -774,17 +777,17 @@ export default function OnboardingFlow({
           ? { titleA: 'CONNECT WITH', titleB: 'CREATORS', sub: 'Creators upload clips, reels, and screenshots to build community around your game.' }
           : { titleA: 'TRACK YOUR', titleB: 'PROGRESS', sub: 'Watch your skills grow. Every action earns XP and builds your legendary status.', img: imgProgression, imgAlt: 'Track progression' };
         return (
-          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
+          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
             {/* Visual area */}
-            <div className="flex-1 min-h-0 relative flex items-center justify-center overflow-hidden">
+            <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
               {selectedPath === 'streamer' ? (
                 /* Streamer Screen 2: Scrolling clip marquees (3 above, 3 below) */
                 <>
                   <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(145,71,255,0.12) 0%, transparent 70%)' }} />
                   {/* Top fade */}
-                  <div className="absolute inset-x-0 top-0 h-12 pointer-events-none z-20" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
-                  {/* Bottom fade for top marquee area */}
-                  <div className="absolute inset-x-0 bottom-0 h-12 pointer-events-none z-20" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 top-0 h-20 pointer-events-none z-20" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
+                  {/* Bottom fade */}
+                  <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-20" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
                   {/* 3 rows above the text — each row uses its own exclusive clips */}
                   <div className="relative z-10 flex flex-col gap-2 w-full overflow-hidden" style={{ paddingTop: '8px' }}>
                     {/* Row 1: clips 1-4 only */}
@@ -856,7 +859,7 @@ export default function OnboardingFlow({
                 </>
               )}
             </div>
-            <div className="flex-shrink-0 px-6 pt-5 pb-6">
+            <div className="mt-auto flex-shrink-0 relative z-10 px-6 pt-5 pb-6">
               <div className="flex items-center gap-2 justify-center mb-5">
                 {[0,1,2].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===1?'20px':'6px', height:'6px', background: i===1?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===1?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
               </div>
@@ -885,13 +888,14 @@ export default function OnboardingFlow({
           ? { titleA: 'LAUNCH', titleB: 'BOUNTIES', sub: 'Run creator campaigns, offer game keys, and reward players with bounty challenges.' }
           : { titleA: 'EARN', titleB: 'REWARDS', sub: 'Complete daily bounties, join creator challenges, and earn GFT to unlock exclusive legendary gear.' };
         return (
-          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
-            <div className="flex-1 min-h-0 relative flex items-center justify-center overflow-hidden">
+          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
+            <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
               <img src={imgBountyBg} alt="" aria-hidden draggable={false} className="absolute inset-0 w-full h-full object-cover select-none" style={{ opacity: 0.55 }} />
-              <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+              <div className="absolute inset-x-0 top-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
+              <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
               <img src={imgGFBag} alt="GF Token bag" draggable={false} className="ob-float relative z-10 select-none" style={{ height:'85%', width:'auto', objectFit:'contain', animationDuration:'4s', filter:'drop-shadow(0 0 40px rgba(193,255,0,0.35))' }} />
             </div>
-            <div className="flex-shrink-0 px-6 pt-5 pb-6">
+            <div className="mt-auto flex-shrink-0 relative z-10 px-6 pt-5 pb-6">
               <div className="flex items-center gap-2 justify-center mb-5">
                 {[0,1,2].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===2?'20px':'6px', height:'6px', background: i===2?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===2?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
               </div>
