@@ -694,7 +694,7 @@ export default function OnboardingFlow({
         return (
           <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
             {/* Visual area */}
-            <div className="flex-1 min-h-0 relative flex items-center justify-center">
+            <div className="flex-1 min-h-[280px] sm:min-h-[380px] relative flex items-center justify-center">
               {selectedPath === 'streamer' ? (
                 /* Streamer Screen 1: Platform logos orbiting Gamefolio */
                 <>
@@ -780,7 +780,7 @@ export default function OnboardingFlow({
         return (
           <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
             {/* Visual area */}
-            <div className="flex-1 min-h-0 relative flex items-center justify-center">
+            <div className="flex-1 min-h-[280px] sm:min-h-[380px] relative flex items-center justify-center">
               {selectedPath === 'streamer' ? (
                 /* Streamer Screen 2: Scrolling clip marquees (3 above, 3 below) */
                 <>
@@ -890,7 +890,7 @@ export default function OnboardingFlow({
           : { titleA: 'EARN', titleB: 'REWARDS', sub: 'Complete daily bounties, join creator challenges, and earn GFT to unlock exclusive legendary gear.' };
         return (
           <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
-            <div className="flex-1 min-h-0 relative flex items-center justify-center">
+            <div className="flex-1 min-h-[280px] sm:min-h-[380px] relative flex items-center justify-center">
               <img src={imgBountyBg} alt="" aria-hidden draggable={false} className="absolute inset-0 w-full h-full object-cover select-none" style={{ opacity: 0.55 }} />
               <div className="absolute inset-x-0 top-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
               <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
@@ -1142,11 +1142,11 @@ export default function OnboardingFlow({
             ctaLabel: 'Continue as Indie',
             visual: (
               <div className="relative flex items-center justify-center flex-shrink-0 w-full"
-                style={{ height: 'clamp(240px, calc(100dvh - 440px), 340px)' }}>
-                <div className="relative z-10" style={{ width: '280px', height: '280px' }}>
+                style={{ height: 'clamp(240px, calc(100dvh - 440px), 420px)' }}>
+                <div className="relative z-10" style={{ width: 'clamp(260px, 38vw, 400px)', height: 'clamp(260px, 38vw, 400px)' }}>
                   {/* Shirt — floats centre */}
                   <div className="ob-float" style={{ position: 'absolute', top: '50%', left: '50%', animationDuration: '4s' }}>
-                    <img src={imgIndieGamer} alt="" draggable={false} style={{ transform: 'translate(-50%,-50%) scale(1.3)', width: '315px', height: '315px', objectFit: 'contain' }} />
+                    <img src={imgIndieGamer} alt="" draggable={false} style={{ transform: 'translate(-50%,-50%) scale(1.3)', width: 'clamp(280px, 36vw, 480px)', height: 'clamp(280px, 36vw, 480px)', objectFit: 'contain' }} />
                   </div>
                   {/* Gold Star — top-left */}
                   <div className="ob-float-sm" style={{ position: 'absolute', top: '-4px', left: '-4px', animationDuration: '3.5s', animationDelay: '0.4s' }}>
