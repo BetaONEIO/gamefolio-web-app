@@ -3,17 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { GoogleAuthButton } from "./GoogleAuthButton";
 import { DiscordAuthButton } from "./DiscordAuthButton";
 import { PasswordRequirementsDisplay } from "@/components/ui/password-requirements";
 import { FieldError, FieldStatus } from "@/components/ui/field-error";
-import { CalendarIcon, X } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { X } from "lucide-react";
 
 interface RegisterFormProps {
   onSuccess: () => void;
@@ -40,7 +37,6 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   const [usernameTimer, setUsernameTimer] = useState<NodeJS.Timeout | null>(null);
   const usernameAbortRef = useRef<AbortController | null>(null);
   const checkedUsernameRef = useRef<string>("");
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [emailValid, setEmailValid] = useState<boolean | null>(null);
   const [passwordRequirements, setPasswordRequirements] = useState({
     length: false,
@@ -420,69 +416,80 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <div className="space-y-2">
         <Label className="text-foreground">Date of Birth</Label>
-        <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen} modal={false}>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isLoading}
-              className={cn(
-                "w-full justify-start text-left font-normal bg-background border-input hover:bg-accent/50",
-                !formData.dateOfBirth && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {formData.dateOfBirth
-                ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
-                : "Select your date of birth"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="w-[min(340px,calc(100vw-2rem))] p-0 bg-background border border-input shadow-lg"
-            align="start"
-            side="bottom"
-            sideOffset={4}
-          >
-            <Calendar
-              mode="single"
-              selected={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : undefined}
-              onSelect={(date) => {
-                if (date) {
-                  const yyyy = date.getFullYear();
-                  const mm = String(date.getMonth() + 1).padStart(2, "0");
-                  const dd = String(date.getDate()).padStart(2, "0");
-                  setFormData((prev) => ({ ...prev, dateOfBirth: `${yyyy}-${mm}-${dd}` }));
-                  setFieldErrors((prev) => ({ ...prev, dateOfBirth: undefined }));
-                }
-                setDatePickerOpen(false);
-              }}
-              disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-              defaultMonth={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : new Date(2000, 0)}
-              captionLayout="dropdown-buttons"
-              fromYear={1900}
-              toYear={new Date().getFullYear()}
-              initialFocus
-              className="w-full"
-              classNames={{
-                months: "w-full",
-                month: "w-full space-y-3",
-                caption: "flex justify-center pt-1 relative items-center gap-1",
-                caption_label: "hidden",
-                caption_dropdowns: "flex gap-1",
-                dropdown: "bg-background border border-input text-foreground text-sm rounded-md px-2 py-1 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary",
-                dropdown_month: "",
-                dropdown_year: "",
-                vhidden: "hidden",
-                table: "w-full border-collapse",
-                head_row: "flex w-full",
-                head_cell: "text-muted-foreground font-normal text-[0.8rem] flex-1 text-center",
-                row: "flex w-full mt-2",
-                cell: "flex-1 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                day: "w-full h-9 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors",
-              }}
-            />
-          </PopoverContent>
-        </Popover>
+        {(() => {
+          const parts = formData.dateOfBirth ? formData.dateOfBirth.split("-") : ["", "", ""];
+          const selYear = parts[0] || "";
+          const selMonth = parts[1] || "";
+          const selDay = parts[2] || "";
+          const currentYear = new Date().getFullYear();
+          const years = Array.from({ length: currentYear - 1900 + 1 }, (_, i) => currentYear - i);
+          const months = [
+            { value: "01", label: "January" }, { value: "02", label: "February" },
+            { value: "03", label: "March" }, { value: "04", label: "April" },
+            { value: "05", label: "May" }, { value: "06", label: "June" },
+            { value: "07", label: "July" }, { value: "08", label: "August" },
+            { value: "09", label: "September" }, { value: "10", label: "October" },
+            { value: "11", label: "November" }, { value: "12", label: "December" },
+          ];
+          const daysInMonth = selYear && selMonth
+            ? new Date(parseInt(selYear), parseInt(selMonth), 0).getDate()
+            : 31;
+          const days = Array.from({ length: daysInMonth }, (_, i) => String(i + 1).padStart(2, "0"));
+
+          const updateDob = (y: string, m: string, d: string) => {
+            if (y && m && d) {
+              setFormData((prev) => ({ ...prev, dateOfBirth: `${y}-${m}-${d}` }));
+              setFieldErrors((prev) => ({ ...prev, dateOfBirth: undefined }));
+            } else {
+              setFormData((prev) => ({ ...prev, dateOfBirth: "" }));
+            }
+          };
+
+          return (
+            <div className="grid grid-cols-3 gap-2">
+              <Select
+                value={selDay}
+                onValueChange={(d) => updateDob(selYear, selMonth, d)}
+                disabled={isLoading}
+              >
+                <SelectTrigger className="bg-background border-input">
+                  <SelectValue placeholder="Day" />
+                </SelectTrigger>
+                <SelectContent>
+                  {days.map((d) => <SelectItem key={d} value={d}>{parseInt(d)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select
+                value={selMonth}
+                onValueChange={(m) => {
+                  const maxDay = new Date(parseInt(selYear || "2000"), parseInt(m), 0).getDate();
+                  const clampedDay = selDay && parseInt(selDay) > maxDay ? String(maxDay).padStart(2, "0") : selDay;
+                  updateDob(selYear, m, clampedDay);
+                }}
+                disabled={isLoading}
+              >
+                <SelectTrigger className="bg-background border-input">
+                  <SelectValue placeholder="Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select
+                value={selYear}
+                onValueChange={(y) => updateDob(y, selMonth, selDay)}
+                disabled={isLoading}
+              >
+                <SelectTrigger className="bg-background border-input">
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          );
+        })()}
         <p className="text-xs text-muted-foreground">You must be at least 13 years old to sign up</p>
         <FieldError error={fieldErrors.dateOfBirth} />
       </div>
