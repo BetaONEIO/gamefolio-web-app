@@ -266,10 +266,7 @@ const MobileMenu = () => {
                   <span className="font-medium">Leaderboard</span>
                 </Link>
               </li>
-              {/* Crypto/wallet/NFT surfaces are hidden on native builds (App
-                  Store / Play financial compliance). See lib/crypto-features.ts. */}
-              {CRYPTO_FEATURES_ENABLED && (
-                <>
+              {/* Store stays on native (crypto-free cosmetics catalogue). */}
               <li>
                 <Link
                   href="/store"
@@ -280,6 +277,10 @@ const MobileMenu = () => {
                   <span className="font-medium">Store</span>
                 </Link>
               </li>
+              {/* Wallet/Collection are pure crypto — hidden on native builds (App
+                  Store / Play financial compliance). See lib/crypto-features.ts. */}
+              {CRYPTO_FEATURES_ENABLED && (
+                <>
               <li>
                 <Link
                   href="/wallet"

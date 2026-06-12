@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { CRYPTO_FEATURES_ENABLED } from "@/lib/crypto-features";
 import { useMobile } from "@/hooks/use-mobile";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -3543,13 +3542,11 @@ export default function SettingsPage() {
                             })}
                           </div>
 
-                          {CRYPTO_FEATURES_ENABLED && (
                           <Link href="/store">
                             <p className="text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer mt-2 text-center">
                               Browse more verification badges in our store
                             </p>
                           </Link>
-                          )}
 
                         </div>
                       )}

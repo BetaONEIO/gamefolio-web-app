@@ -241,10 +241,12 @@ const Sidebar = () => {
     { icon: TrendingNavIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
 
-    // Crypto/wallet/NFT surfaces are hidden on native builds (App Store / Play
-    // financial compliance) — kept on web. See lib/crypto-features.ts.
+    // Store stays on native but renders a crypto-free cosmetics catalogue.
+    { icon: GamefolioStoreIcon, label: "Store", href: "/store" },
+
+    // Wallet/Collection are pure crypto surfaces — hidden on native builds (App
+    // Store / Play financial compliance), kept on web. See lib/crypto-features.ts.
     ...(CRYPTO_FEATURES_ENABLED ? [
-      { icon: GamefolioStoreIcon, label: "Store", href: "/store" },
       { icon: GamefolioWalletIcon, label: "Wallet", href: "/wallet" },
       { icon: GamefolioCollectionIcon, label: "Collection", href: "/collection" },
     ] : []),

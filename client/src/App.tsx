@@ -126,6 +126,7 @@ const ContactPage = lazyWithRecovery(() => import("./pages/contact-page"));
 const HelpPage = lazyWithRecovery(() => import("./pages/HelpPage"));
 const LeaderboardEmbedPage = lazyWithRecovery(() => import("./pages/LeaderboardEmbedPage"));
 const StorePage = lazyWithRecovery(() => import("./pages/StorePage"));
+const MobileStorePage = lazyWithRecovery(() => import("./pages/MobileStorePage"));
 const WalletPage = lazyWithRecovery(() => import("./pages/WalletPage"));
 const StakingPage = lazyWithRecovery(() => import("./pages/StakingPage"));
 const StoragePage = lazyWithRecovery(() => import("./pages/StoragePage"));
@@ -509,7 +510,8 @@ function Router() {
           <Route path="/help" component={HelpPage} />
           <Route path="/invite" component={InvitePage} />
           <Route path="/register" component={RegisterPage} />
-          <Route path="/store" component={CRYPTO_FEATURES_ENABLED ? StorePage : CryptoDisabledRedirect} />
+          {/* Native gets a read-only, crypto-free cosmetics catalogue; web gets the full store. */}
+          <Route path="/store" component={CRYPTO_FEATURES_ENABLED ? StorePage : MobileStorePage} />
           <Route path="/mint-nft" component={CRYPTO_FEATURES_ENABLED ? MintNFTPage : CryptoDisabledRedirect} />
           <Route path="/nft/:id" component={CRYPTO_FEATURES_ENABLED ? NFTDetailsPage : CryptoDisabledRedirect} />
           <Route path="/wallet" component={CRYPTO_FEATURES_ENABLED ? WalletPage : CryptoDisabledRedirect} />
