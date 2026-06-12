@@ -1,10 +1,14 @@
-import { type ElementType } from "react";
+import { type ElementType, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { useEffect, useRef } from "react";
 import { Upload, Video, Image, Film } from "lucide-react";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
+import { useMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/use-auth";
+import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
+import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreenshotsViewer";
 
 interface RecentUpload {
   id: number;
@@ -31,7 +35,19 @@ const CONTENT_ICONS: Record<string, ElementType> = {
 export function ActivityScrollBanner() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { openClipDialog } = useClipDialog();
-  const [, setLocation] = useLocation();
+  const isMobile = useMobile();
+  const { user } = useAuth();
+
+  // Screenshots open in the same lightbox/viewer overlay the home feed uses —
+  // NOT via navigation. Navigating to a screenshot URL was unreliable inside the
+  // native (Capacitor) webview (route/encoding mismatches landed on a 404), so we
+  // fetch the screenshot by id and render the proven overlay directly, mirroring
+  // how clips use openClipDialog.
+  const [selectedScreenshotId, setSelectedScreenshotId] = useState<number | null>(null);
+  const { data: selectedScreenshot } = useQuery<any>({
+    queryKey: [`/api/screenshots/${selectedScreenshotId}`],
+    enabled: selectedScreenshotId != null,
+  });
 
   const { data: recentUploads = [] } = useQuery<RecentUpload[]>({
     queryKey: ["/api/recent-uploads"],
@@ -62,53 +78,69 @@ export function ActivityScrollBanner() {
   const duplicatedUploads = [...recentUploads, ...recentUploads];
 
   return (
-    <div className="bg-[#B7FF1A] border-b border-[#A2F000] overflow-hidden py-2 pointer-events-none">
-      <div
-        ref={scrollRef}
-        className="flex gap-8 whitespace-nowrap overflow-hidden"
-        style={{ scrollBehavior: "auto" }}
-      >
-        {duplicatedUploads.map((upload, index) => {
-          const Icon = CONTENT_ICONS[upload.contentType] || Upload;
-          const label = CONTENT_LABELS[upload.contentType] || 'just uploaded content';
+    <>
+      <div className="bg-[#B7FF1A] border-b border-[#A2F000] overflow-hidden py-2 pointer-events-none">
+        <div
+          ref={scrollRef}
+          className="flex gap-8 whitespace-nowrap overflow-hidden"
+          style={{ scrollBehavior: "auto" }}
+        >
+          {duplicatedUploads.map((upload, index) => {
+            const Icon = CONTENT_ICONS[upload.contentType] || Upload;
+            const label = CONTENT_LABELS[upload.contentType] || 'just uploaded content';
 
-          return (
-            <div
-              key={`${upload.id}-${upload.contentType}-${index}`}
-              className="inline-flex items-center gap-2 text-sm font-medium pointer-events-auto"
-              style={{ color: '#071013' }}
-            >
-              <Icon className="h-4 w-4" />
-              <Link
-                href={`/profile/${upload.username}`}
-                className="font-semibold hover:underline"
+            return (
+              <div
+                key={`${upload.id}-${upload.contentType}-${index}`}
+                className="inline-flex items-center gap-2 text-sm font-medium pointer-events-auto"
                 style={{ color: '#071013' }}
               >
-                {upload.displayName || upload.username}
-              </Link>
-              <span>{label}</span>
-              <button
-                onClick={() => {
-                  if (upload.contentType === 'screenshot') {
-                    // Canonical client-side route — ProfilePage opens the
-                    // screenshot lightbox from the :screenshotId param. The old
-                    // /view/screenshot/:id path relied on a server redirect that
-                    // never runs for in-app SPA navigation, so on native it fell
-                    // through to /:username and 404'd as user "view".
-                    setLocation(`/@${upload.username}/screenshots/${upload.id}`);
-                  } else {
-                    openClipDialog(upload.id);
-                  }
-                }}
-                className="hover:underline cursor-pointer font-semibold bg-transparent border-none p-0"
-                style={{ color: '#071013' }}
-              >
-                "{upload.title}"
-              </button>
-            </div>
-          );
-        })}
+                <Icon className="h-4 w-4" />
+                <Link
+                  href={`/profile/${upload.username}`}
+                  className="font-semibold hover:underline"
+                  style={{ color: '#071013' }}
+                >
+                  {upload.displayName || upload.username}
+                </Link>
+                <span>{label}</span>
+                <button
+                  onClick={() => {
+                    if (upload.contentType === 'screenshot') {
+                      setSelectedScreenshotId(upload.id);
+                    } else {
+                      openClipDialog(upload.id);
+                    }
+                  }}
+                  className="hover:underline cursor-pointer font-semibold bg-transparent border-none p-0"
+                  style={{ color: '#071013' }}
+                >
+                  "{upload.title}"
+                </button>
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
+
+      {/* Screenshot overlay — same components the home feed uses, opened by
+          fetching the screenshot by id. No navigation, so it works on native. */}
+      {selectedScreenshot && (
+        isMobile ? (
+          <MobileScreenshotsViewer
+            screenshots={[selectedScreenshot]}
+            startId={selectedScreenshot.id}
+            onBack={() => setSelectedScreenshotId(null)}
+          />
+        ) : (
+          <ScreenshotLightbox
+            screenshot={selectedScreenshot}
+            onClose={() => setSelectedScreenshotId(null)}
+            currentUserId={user?.id}
+            screenshots={[selectedScreenshot]}
+          />
+        )
+      )}
+    </>
   );
 }
