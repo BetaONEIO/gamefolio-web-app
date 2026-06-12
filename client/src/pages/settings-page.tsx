@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video, Code, Eye, Coffee, Scroll } from "lucide-react";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -71,6 +71,20 @@ const EMOJI_CATEGORIES = [
     label: "Objects",
     emojis: ["💻","🖥️","🖨️","⌨️","🖱️","📱","📷","🎥","📡","🔭","🔬","💡","🔋","🔌","🧲","💾","💿","📀","🎵","🎶","🎸","🥁","🎺","🎷","🎻","🎤","🎧","📻","📺","🎬"],
   },
+];
+
+// Gamer "tag" options shown in Profile & Appearance so users can change the
+// type assigned during onboarding. Excludes "streamer" — that's controlled by
+// the dedicated live-streaming toggle further down the page. Ids/labels mirror
+// the onboarding flow (client/src/components/auth/onboarding-flow.tsx).
+const GAMER_TAG_OPTIONS = [
+  { id: "gamer", label: "Gamer", icon: Gamepad2 },
+  { id: "professional_gamer", label: "Pro Gamer", icon: Trophy },
+  { id: "content_creator", label: "Content Creator", icon: Upload },
+  { id: "indie_developer", label: "Indie Developer", icon: Code },
+  { id: "viewer", label: "Viewer", icon: Eye },
+  { id: "filthy_casual", label: "Filthy Casual", icon: Coffee },
+  { id: "doom_scroller", label: "Doom Scroller", icon: Scroll },
 ];
 
 const FONT_OPTIONS = [
@@ -944,6 +958,25 @@ export default function SettingsPage() {
   const { primary: initPrimaryType, isStreamer: initIsStreamer } = parseUserType(user?.userType);
   const [primaryUserType, setPrimaryUserType] = useState<string>(initPrimaryType);
   const [isStreamingEnabled, setIsStreamingEnabled] = useState<boolean>(initIsStreamer);
+
+  // Gamer tag selection (excludes the "streamer" tag — handled by its own toggle).
+  // Stored as a comma-separated string in primaryUserType; capped at 2 to match
+  // the onboarding flow. Only recognised option ids count toward the selection —
+  // legacy/foreign values (e.g. Title-Case data from older accounts) are ignored
+  // so they can never lock the grid, and are normalised away the moment the user
+  // edits their tags.
+  const KNOWN_GAMER_TAG_IDS = GAMER_TAG_OPTIONS.map(o => o.id);
+  const selectedGamerTags = primaryUserType
+    .split(',')
+    .map(t => t.trim())
+    .filter(t => KNOWN_GAMER_TAG_IDS.includes(t));
+  const toggleGamerTag = (id: string) => {
+    if (selectedGamerTags.includes(id)) {
+      setPrimaryUserType(selectedGamerTags.filter(t => t !== id).join(','));
+    } else if (selectedGamerTags.length < 2) {
+      setPrimaryUserType([...selectedGamerTags, id].join(','));
+    }
+  };
   const [streamPlatform, setStreamPlatform] = useState<string>((user as any)?.streamPlatform || 'twitch');
   const [streamChannelName, setStreamChannelName] = useState<string>((user as any)?.streamChannelName || '');
   const [showLiveOverlay, setShowLiveOverlay] = useState<boolean>((user as any)?.showLiveOverlay || false);
@@ -2602,6 +2635,49 @@ export default function SettingsPage() {
                     placeholder="Tell people about yourself..."
                     rows={3}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Gamer Tag</Label>
+                    <span className="text-xs text-muted-foreground">
+                      {selectedGamerTags.length}/2 selected
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Change the tag you picked during onboarding. Choose up to two — they
+                    appear on your profile.
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {GAMER_TAG_OPTIONS.map((opt) => {
+                      const isSelected = selectedGamerTags.includes(opt.id);
+                      const atMax = selectedGamerTags.length >= 2 && !isSelected;
+                      const Icon = opt.icon;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => toggleGamerTag(opt.id)}
+                          disabled={atMax}
+                          aria-pressed={isSelected}
+                          data-testid={`gamer-tag-${opt.id}`}
+                          className={`relative flex items-center gap-2 rounded-lg border p-3 text-sm transition-all ${
+                            isSelected
+                              ? 'border-primary bg-primary/10 text-foreground'
+                              : atMax
+                                ? 'border-border opacity-40 cursor-not-allowed'
+                                : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <Icon className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{opt.label}</span>
+                          {isSelected && (
+                            <Check className="h-3.5 w-3.5 ml-auto text-primary shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </CardContent>
             </Card>
