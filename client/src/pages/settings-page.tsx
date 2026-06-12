@@ -971,11 +971,14 @@ export default function SettingsPage() {
     .map(t => t.trim())
     .filter(t => KNOWN_GAMER_TAG_IDS.includes(t));
   const toggleGamerTag = (id: string) => {
-    if (selectedGamerTags.includes(id)) {
-      setPrimaryUserType(selectedGamerTags.filter(t => t !== id).join(','));
-    } else if (selectedGamerTags.length < 2) {
-      setPrimaryUserType([...selectedGamerTags, id].join(','));
-    }
+    const next = selectedGamerTags.includes(id)
+      ? selectedGamerTags.filter(t => t !== id)
+      : selectedGamerTags.length < 2
+        ? [...selectedGamerTags, id]
+        : selectedGamerTags;
+    // Persist in canonical GAMER_TAG_OPTIONS order so the saved string is
+    // deterministic regardless of the order the user clicked the chips.
+    setPrimaryUserType(KNOWN_GAMER_TAG_IDS.filter(t => next.includes(t)).join(','));
   };
   const [streamPlatform, setStreamPlatform] = useState<string>((user as any)?.streamPlatform || 'twitch');
   const [streamChannelName, setStreamChannelName] = useState<string>((user as any)?.streamChannelName || '');
