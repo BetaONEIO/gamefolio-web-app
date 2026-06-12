@@ -12,6 +12,7 @@ import { SequenceConnect } from "@0xsequence/connect";
 import { sequenceConfig } from "@/lib/sequence-config";
 import { WalletProvider, NoWalletProvider } from "@/hooks/use-wallet";
 import { CrossmintProvider } from "@/hooks/use-crossmint";
+import { CRYPTO_FEATURES_ENABLED } from "@/lib/crypto-features";
 import { RevenueCatProvider } from "@/hooks/use-revenuecat";
 import { LevelTrackerProvider } from "@/hooks/use-level-tracker";
 import { DailyStreakProvider } from "@/hooks/use-daily-streak";
@@ -159,6 +160,16 @@ function AuthRedirect() {
     window.history.replaceState({}, '', '/');
   }, [openModal]);
   
+  return null;
+}
+
+// On native (Capacitor) builds, crypto/wallet/NFT/staking routes are disabled
+// for App Store / Play financial compliance. Any deep link to one bounces home.
+function CryptoDisabledRedirect() {
+  const [, setLocation] = useLocation();
+  React.useEffect(() => {
+    setLocation("/");
+  }, [setLocation]);
   return null;
 }
 
@@ -498,19 +509,19 @@ function Router() {
           <Route path="/help" component={HelpPage} />
           <Route path="/invite" component={InvitePage} />
           <Route path="/register" component={RegisterPage} />
-          <Route path="/store" component={StorePage} />
-          <Route path="/mint-nft" component={MintNFTPage} />
-          <Route path="/nft/:id" component={NFTDetailsPage} />
-          <Route path="/wallet" component={WalletPage} />
-          <Route path="/staking" component={StakingPage} />
+          <Route path="/store" component={CRYPTO_FEATURES_ENABLED ? StorePage : CryptoDisabledRedirect} />
+          <Route path="/mint-nft" component={CRYPTO_FEATURES_ENABLED ? MintNFTPage : CryptoDisabledRedirect} />
+          <Route path="/nft/:id" component={CRYPTO_FEATURES_ENABLED ? NFTDetailsPage : CryptoDisabledRedirect} />
+          <Route path="/wallet" component={CRYPTO_FEATURES_ENABLED ? WalletPage : CryptoDisabledRedirect} />
+          <Route path="/staking" component={CRYPTO_FEATURES_ENABLED ? StakingPage : CryptoDisabledRedirect} />
           <Route path="/storage" component={StoragePage} />
-          <Route path="/watchlist" component={WatchlistPage} />
+          <Route path="/watchlist" component={CRYPTO_FEATURES_ENABLED ? WatchlistPage : CryptoDisabledRedirect} />
           <Route path="/battles" component={UserBattlesPage} />
           <Route path="/user-battles" component={UserBattlesPage} />
           <ProtectedRoute path="/level-tracker" component={LevelTrackerPage} />
-          <ProtectedRoute path="/collection" component={CollectionPage} />
+          <ProtectedRoute path="/collection" component={CRYPTO_FEATURES_ENABLED ? CollectionPage : CryptoDisabledRedirect} />
           <Route path="/leaderboard/embed" component={LeaderboardEmbedPage} />
-          <Route path="/debug/wallet" component={DebugWalletPage} />
+          <Route path="/debug/wallet" component={CRYPTO_FEATURES_ENABLED ? DebugWalletPage : CryptoDisabledRedirect} />
 
           {/* Public view routes for shareable content */}
           <Route path="/view/screenshot/:id" component={ViewContentPage} />
@@ -543,7 +554,7 @@ function App() {
               <AuthProvider>
                 <RevenueCatProvider>
                   <LevelTrackerProvider>
-                      {sequenceConfig ? (
+                      {sequenceConfig && CRYPTO_FEATURES_ENABLED ? (
                       <SequenceConnect config={sequenceConfig}>
                         <WalletProvider>
                           <CrossmintProvider>

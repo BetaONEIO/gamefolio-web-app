@@ -31,6 +31,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { CRYPTO_FEATURES_ENABLED } from "@/lib/crypto-features";
 import { useState } from "react";
 
 interface TwitchGame {
@@ -239,9 +240,14 @@ const Sidebar = () => {
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: TrendingNavIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
-    { icon: GamefolioStoreIcon, label: "Store", href: "/store" },
-    { icon: GamefolioWalletIcon, label: "Wallet", href: "/wallet" },
-    { icon: GamefolioCollectionIcon, label: "Collection", href: "/collection" },
+
+    // Crypto/wallet/NFT surfaces are hidden on native builds (App Store / Play
+    // financial compliance) — kept on web. See lib/crypto-features.ts.
+    ...(CRYPTO_FEATURES_ENABLED ? [
+      { icon: GamefolioStoreIcon, label: "Store", href: "/store" },
+      { icon: GamefolioWalletIcon, label: "Wallet", href: "/wallet" },
+      { icon: GamefolioCollectionIcon, label: "Collection", href: "/collection" },
+    ] : []),
 
     // Only show Messages link if user has messaging enabled - default to true for demo user
     ...(user && user.messagingEnabled !== false ? [{ icon: GamefolioMessagesIcon, label: "Messages", href: "/messages" }] : []),

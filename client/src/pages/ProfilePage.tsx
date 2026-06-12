@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, Link, useLocation } from "wouter";
+import { CRYPTO_FEATURES_ENABLED } from "@/lib/crypto-features";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { openExternal } from "@/lib/platform";
@@ -2929,8 +2930,10 @@ const ProfilePage = () => {
 
           {/* Profile Info Card — stats only, Collection button on top-right border */}
           <div className="relative mx-4 mt-2 mb-1">
-            {/* Collection button pinned to top-right border of the card */}
-            <button 
+            {/* Collection button pinned to top-right border of the card.
+                Hidden on native builds (crypto/NFT surfaces disabled). */}
+            {CRYPTO_FEATURES_ENABLED && (
+            <button
               onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
               className="absolute -top-3 -right-1 z-10 px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
               style={{ 
@@ -2966,6 +2969,7 @@ const ProfilePage = () => {
               }}>
                 <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>{isGothicTheme ? '👻 Collection' : 'Collection'}</span>
             </button>
+            )}
 
             {/* Stats card container */}
             <div
@@ -3323,8 +3327,10 @@ const ProfilePage = () => {
 
             {/* Profile Info Card — stats only, Collection button on top-right border */}
             <div className="relative mt-4 max-w-xl">
-              {/* Collection button pinned to top-right border */}
-              <button 
+              {/* Collection button pinned to top-right border.
+                  Hidden on native builds (crypto/NFT surfaces disabled). */}
+              {CRYPTO_FEATURES_ENABLED && (
+              <button
                 onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
                 className="absolute -top-3 -right-1 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
                 style={{ 
@@ -3360,6 +3366,7 @@ const ProfilePage = () => {
                 }}>
                   <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>{isGothicTheme ? '👻 Collection' : 'Collection'}</span>
               </button>
+              )}
 
             {/* Stats card */}
             <div
