@@ -90,7 +90,12 @@ export function ActivityScrollBanner() {
               <button
                 onClick={() => {
                   if (upload.contentType === 'screenshot') {
-                    setLocation(`/view/screenshot/${upload.id}`);
+                    // Canonical client-side route — ProfilePage opens the
+                    // screenshot lightbox from the :screenshotId param. The old
+                    // /view/screenshot/:id path relied on a server redirect that
+                    // never runs for in-app SPA navigation, so on native it fell
+                    // through to /:username and 404'd as user "view".
+                    setLocation(`/@${upload.username}/screenshots/${upload.id}`);
                   } else {
                     openClipDialog(upload.id);
                   }
