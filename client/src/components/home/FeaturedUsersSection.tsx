@@ -66,19 +66,21 @@ const STYLES = `
     animation-play-state: paused;
   }
 
-  /* ── Border fire spin ──────────────────────── */
-  @keyframes border-fire-spin {
-    0%   { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+  /* flicker: border opacity stutters like a flame */
+  @keyframes fire-flicker {
+    0%,100% { opacity: 1;    filter: blur(0.6px) brightness(1);   }
+    15%      { opacity: 0.80; filter: blur(0.8px) brightness(0.9); }
+    30%      { opacity: 0.95; filter: blur(0.5px) brightness(1.1); }
+    50%      { opacity: 0.72; filter: blur(1.0px) brightness(0.85);}
+    65%      { opacity: 0.92; filter: blur(0.6px) brightness(1.05);}
+    80%      { opacity: 0.78; filter: blur(0.9px) brightness(0.88);}
   }
 
-  /* flicker: the conic arc shifts opacity */
-  @keyframes fire-flicker {
-    0%,100% { opacity: 1; }
-    20%      { opacity: 0.82; }
-    45%      { opacity: 0.95; }
-    65%      { opacity: 0.75; }
-    80%      { opacity: 0.92; }
+  @keyframes fire-flicker-slow {
+    0%,100% { opacity: 0.55; filter: blur(2.5px) brightness(1);   }
+    25%      { opacity: 0.40; filter: blur(3.0px) brightness(0.8); }
+    55%      { opacity: 0.60; filter: blur(2.0px) brightness(1.1); }
+    75%      { opacity: 0.45; filter: blur(2.8px) brightness(0.85);}
   }
 
   /* card glow pulses green */
@@ -123,64 +125,46 @@ const STYLES = `
     animation: green-glow-pulse 2.6s ease-in-out infinite;
   }
 
-  /* spinning conic that forms the fire border */
+  /* static gradient border — flickers in place, no spin */
   .fire-card-border {
     position: absolute;
     inset: -3px;
     border-radius: 19px;
-    background: conic-gradient(
-      from 0deg,
-      transparent        0deg,
-      transparent        40deg,
-      #1a3d00           50deg,
-      #4aff00           62deg,
-      #B7FF1A           72deg,
-      #e8ffaa           80deg,
-      #ffffff           84deg,
-      #B7FF1A           88deg,
-      #4aff00           96deg,
-      #1a3d00           108deg,
-      transparent        125deg,
-      transparent        175deg,
-      #1a3d00           185deg,
-      #4aff00           195deg,
-      #B7FF1A           204deg,
-      #e8ffaa           210deg,
-      #ffffff           213deg,
-      #B7FF1A           216deg,
-      #4aff00           224deg,
-      #1a3d00           234deg,
-      transparent        250deg,
-      transparent        360deg
+    background: linear-gradient(
+      180deg,
+      #4aff00 0%,
+      #B7FF1A 12%,
+      #e8ffaa 18%,
+      #B7FF1A 25%,
+      #1a3d00 38%,
+      #1a3d00 62%,
+      #B7FF1A 75%,
+      #e8ffaa 82%,
+      #B7FF1A 88%,
+      #4aff00 100%
     );
-    animation: border-fire-spin 2.4s linear infinite, fire-flicker 1.8s ease-in-out infinite;
+    animation: fire-flicker 1.8s ease-in-out infinite;
     z-index: 0;
     pointer-events: none;
-    filter: blur(0.6px);
   }
 
-  /* second, slower arc for depth */
+  /* outer soft glow halo — flickers slower for depth */
   .fire-card-border-2 {
     position: absolute;
-    inset: -5px;
-    border-radius: 21px;
-    background: conic-gradient(
-      from 180deg,
-      transparent  0deg,
-      transparent  55deg,
-      #0d2200      65deg,
-      #33cc00      80deg,
-      #B7FF1A      90deg,
-      #33cc00      100deg,
-      #0d2200      115deg,
-      transparent  135deg,
-      transparent  360deg
+    inset: -6px;
+    border-radius: 22px;
+    background: linear-gradient(
+      180deg,
+      #33cc00 0%,
+      #B7FF1A 20%,
+      transparent 45%,
+      transparent 55%,
+      #B7FF1A 80%,
+      #33cc00 100%
     );
-    animation: border-fire-spin 3.8s linear infinite reverse, fire-flicker 2.2s ease-in-out infinite 0.5s;
+    animation: fire-flicker-slow 2.4s ease-in-out infinite 0.5s;
     z-index: 0;
     pointer-events: none;
-    filter: blur(2.5px);
-    opacity: 0.6;
   }
 
   /* inner mask so border shows only as a ring */
