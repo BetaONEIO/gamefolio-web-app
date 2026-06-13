@@ -26,7 +26,7 @@ import jwt from "jsonwebtoken";
 import { eq, sql, desc, inArray, and } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
-import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory } from "@shared/schema";
+import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes } from "@shared/schema";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -3133,6 +3133,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error fetching hero slide settings:", err);
       res.status(500).json({ message: "Error fetching settings" });
+    }
+  });
+
+  // ── Community Activity Carousel Data ───────────────────────────────────────
+  app.get("/api/hero-carousel", async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 5, 20);
+
+      // 1. Trending Clip — most popular by views
+      let trendingClip: any = null;
+      const trendingClipResult = await db.execute(sql`
+        SELECT * FROM clips
+        WHERE (video_type = 'clip' OR video_type IS NULL)
+        ORDER BY views DESC
+        LIMIT 1
+      `);
+      if (trendingClipResult.length > 0) {
+        const c = trendingClipResult[0] as any;
+        const [u] = await db.select({
+          id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl,
+        }).from(users).where(eq(users.id, c.user_id)).limit(1);
+        const [g] = c.game_id ? await db.select({ name: games.name, imageUrl: games.imageUrl }).from(games).where(eq(games.id, c.game_id)).limit(1) : [null];
+        const likeCountResult = await db.execute(sql`SELECT COUNT(*)::int as count FROM likes WHERE clip_id = ${c.id}`);
+        trendingClip = {
+          id: c.id, title: c.title, thumbnailUrl: c.thumbnail_url, views: c.views,
+          likes: Number((likeCountResult[0] as any)?.count || 0),
+          creator: u ? { username: u.username, displayName: u.displayName, avatarUrl: u.avatarUrl } : null,
+          game: g ? { name: g.name, imageUrl: g.imageUrl } : null,
+        };
+      }
+
+      // 2. Top Gamefolios — top 3 leaderboard entries
+      const leaderboardEntries = await LeaderboardService.getAllTimeLeaderboard(limit);
+      const topGamefolios = leaderboardEntries.slice(0, 3).map((entry: any) => ({
+        userId: entry.userId,
+        username: entry.user?.username,
+        displayName: entry.user?.displayName,
+        avatarUrl: entry.user?.avatarUrl,
+        level: entry.user?.level,
+        xp: entry.user?.totalXP,
+        rank: entry.rank,
+      }));
+
+      // 3. Trending Game — most clips + views
+      let trendingGame: any = null;
+      const trendingGameResult = await db.execute(sql`
+        SELECT game_id, COUNT(*)::int as clip_count, COALESCE(SUM(views), 0)::int as total_views
+        FROM clips
+        WHERE game_id IS NOT NULL AND (video_type = 'clip' OR video_type IS NULL)
+        GROUP BY game_id
+        ORDER BY total_views DESC
+        LIMIT 1
+      `);
+      if (trendingGameResult.length > 0) {
+        const tg = trendingGameResult[0] as any;
+        const [g] = await db.select({
+          id: games.id, name: games.name, imageUrl: games.imageUrl,
+        }).from(games).where(eq(games.id, tg.game_id)).limit(1);
+        const creatorCountResult = await db.execute(sql`SELECT COUNT(DISTINCT user_id)::int as value FROM clips WHERE game_id = ${tg.game_id}`);
+        if (g) {
+          trendingGame = {
+            id: g.id, name: g.name, imageUrl: g.imageUrl,
+            clips: Number(tg.clip_count || 0), creators: Number((creatorCountResult[0] as any)?.value || 0), views: Number(tg.total_views || 0),
+          };
+        }
+      }
+
+      // 4. Live Right Now — users with liveEnabled
+      const liveRows = await db
+        .select({
+          id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl,
+          streamPlatform: users.streamPlatform, twitchChannelName: users.twitchChannelName,
+          kickChannelName: users.kickChannelName, rumbleChannelName: users.rumbleChannelName,
+        })
+        .from(users)
+        .where(and(eq(users.liveEnabled, true), eq(users.status, "active")))
+        .limit(3);
+      const liveStreams = liveRows.map((u: any) => ({
+        userId: u.id, username: u.username, displayName: u.displayName, avatarUrl: u.avatarUrl,
+        platform: u.streamPlatform,
+        channelUrl: u.streamPlatform === 'twitch' ? `https://twitch.tv/${u.twitchChannelName}`
+          : u.streamPlatform === 'kick' ? `https://kick.com/${u.kickChannelName}`
+          : u.streamPlatform === 'rumble' ? `https://rumble.com/${u.rumbleChannelName}`
+          : null,
+      }));
+
+      // 5. Creator Spotlight — top performer by clips + views
+      let creatorSpotlight: any = null;
+      const creatorResult = await db.execute(sql`
+        SELECT user_id, COUNT(*)::int as clip_count, COALESCE(SUM(views), 0)::int as total_views
+        FROM clips
+        WHERE video_type = 'clip' OR video_type IS NULL
+        GROUP BY user_id
+        ORDER BY total_views DESC
+        LIMIT 1
+      `);
+      if (creatorResult.length > 0) {
+        const cr = creatorResult[0] as any;
+        const [u] = await db.select({
+          id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl,
+          level: users.level, totalXP: users.totalXP,
+        }).from(users).where(eq(users.id, cr.user_id)).limit(1);
+        if (u) {
+          creatorSpotlight = {
+            userId: u.id, username: u.username, displayName: u.displayName, avatarUrl: u.avatarUrl,
+            level: u.level, clips: Number(cr.clip_count || 0), views: Number(cr.total_views || 0),
+          };
+        }
+      }
+
+      // 6. Community Milestones
+      const totalClipsResult = await db.execute(sql`SELECT COUNT(*)::int as value FROM clips`);
+      const totalCreatorsResult = await db.execute(sql`SELECT COUNT(*)::int as value FROM users WHERE status = 'active'`);
+      const totalProfilesResult = await db.execute(sql`SELECT COUNT(*)::int as value FROM users WHERE status = 'active'`);
+      const communityMilestone = {
+        totalClips: Number((totalClipsResult[0] as any)?.value || 0),
+        totalCreators: Number((totalCreatorsResult[0] as any)?.value || 0),
+        totalProfiles: Number((totalProfilesResult[0] as any)?.value || 0),
+      };
+
+      // 7. Discover Something New — random clip
+      let discover: any = null;
+      const discoverResult = await db.execute(sql`
+        SELECT id, title, thumbnail_url, user_id, game_id
+        FROM clips
+        WHERE video_type = 'clip' OR video_type IS NULL
+        ORDER BY RANDOM()
+        LIMIT 1
+      `);
+      if (discoverResult.length > 0) {
+        const dc = discoverResult[0] as any;
+        const [u] = await db.select({
+          id: users.id, username: users.username, displayName: users.displayName,
+        }).from(users).where(eq(users.id, dc.user_id)).limit(1);
+        const [g] = dc.game_id ? await db.select({ name: games.name }).from(games).where(eq(games.id, dc.game_id)).limit(1) : [null];
+        discover = {
+          id: dc.id, title: dc.title, thumbnailUrl: dc.thumbnail_url,
+          creator: u ? { username: u.username, displayName: u.displayName } : null,
+          game: g ? { name: g.name } : null,
+        };
+      }
+
+      res.json({
+        trendingClip,
+        topGamefolios,
+        trendingGame,
+        liveStreams,
+        creatorSpotlight,
+        communityMilestone,
+        discover,
+      });
+    } catch (err: any) {
+      console.error("Error fetching hero carousel:", err?.message || err, err?.stack || "");
+      res.status(500).json({ message: "Error fetching hero carousel data", error: err?.message || String(err) });
     }
   });
 

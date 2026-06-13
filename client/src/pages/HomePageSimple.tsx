@@ -7,9 +7,6 @@ import { ClipWithUser, Game } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { ChevronRight, Video, Plus, ChevronLeft } from "lucide-react";
-import BannerImage from "@assets/Untitled (1920 x 1080 px).png";
-import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
-import LootboxBanner from "@assets/lootbox-banner-1_1770362095039.png";
 import { useLocation, Link } from "wouter";
 import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { LatestReelsCarousel } from "@/components/clips/LatestReelsCarousel";
@@ -21,13 +18,12 @@ import { Camera } from "lucide-react";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
 import { ProUpgradeDialog } from "@/components/ProUpgradeDialog";
 import { LazySection } from "@/components/ui/lazy-section";
-import { openExternal } from "@/lib/platform";
-import { useAuthModal } from "@/hooks/use-auth-modal";
 import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
 import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
 import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
 import { Trophy } from "lucide-react";
+import CommunityCarousel from "@/components/home/CommunityCarousel";
 
 interface TrendingContentCarouselProps {
   clips: ClipWithUser[] | undefined;
@@ -174,311 +170,6 @@ const POPULAR_GAMES = [
   { id: 'csgo', name: 'CS:GO' },
   { id: 'minecraft', name: 'Minecraft' },
 ];
-
-const HERO_SLIDES = [
-  {
-    type: 'overlay' as const,
-    backgroundImage: ForzaGif,
-    overlay: 'linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8))',
-    showContent: true,
-  },
-  {
-    type: 'lootbox' as const,
-    backgroundImage: LootboxBanner,
-    overlay: 'linear-gradient(to right, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%)',
-    showContent: true,
-  },
-  {
-    type: 'overlay' as const,
-    backgroundImage: BannerImage,
-    overlay: 'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7))',
-    showContent: true,
-  },
-];
-
-const SLIDE_INTERVAL = 5000;
-
-interface DbHeroSlide {
-  id: number;
-  title: string;
-  subtitle: string | null;
-  buttonText: string | null;
-  buttonLink: string | null;
-  imageUrl: string;
-  displayOrder: number;
-  isActive: boolean;
-  visibility: string;
-  textAlign: string;
-}
-
-interface HeroBannerSlideshowProps {
-  heroText: { title: string; subtitle: string; buttonText?: string; buttonUrl?: string } | null;
-  user: any;
-  userHasContent: boolean | undefined;
-  setLocation: (path: string) => void;
-  dbSlides?: DbHeroSlide[];
-  slideIntervalMs?: number;
-}
-
-const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSlides, slideIntervalMs }: HeroBannerSlideshowProps) => {
-  const { openModal } = useAuthModal();
-  // Filter out Pro slides for users who are already Pro
-  const visibleDbSlides = dbSlides?.filter(slide =>
-    !(slide.buttonLink === '/pro' && (user as any)?.isPro)
-  );
-  const useDbSlides = visibleDbSlides && visibleDbSlides.length > 0;
-  const slidesCount = useDbSlides ? visibleDbSlides.length : HERO_SLIDES.length;
-  const interval = slideIntervalMs || SLIDE_INTERVAL;
-
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const touchStartX = useRef<number | null>(null);
-  const touchEndX = useRef<number | null>(null);
-  const autoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const sectionRef = useRef<HTMLElement>(null);
-
-  const goToSlide = useCallback((index: number) => {
-    setCurrentSlide(index);
-    if (autoTimerRef.current) clearInterval(autoTimerRef.current);
-    autoTimerRef.current = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slidesCount);
-    }, interval);
-  }, [slidesCount, interval]);
-
-  const goNext = useCallback(() => {
-    goToSlide((currentSlide + 1) % slidesCount);
-  }, [currentSlide, goToSlide, slidesCount]);
-
-  const goPrev = useCallback(() => {
-    goToSlide((currentSlide - 1 + slidesCount) % slidesCount);
-  }, [currentSlide, goToSlide, slidesCount]);
-
-  useEffect(() => {
-    setCurrentSlide(0);
-    if (autoTimerRef.current) clearInterval(autoTimerRef.current);
-    autoTimerRef.current = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slidesCount);
-    }, interval);
-    return () => { if (autoTimerRef.current) clearInterval(autoTimerRef.current); };
-  }, [slidesCount, interval]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') goPrev();
-      else if (e.key === 'ArrowRight') goNext();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goNext, goPrev]);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchEndX.current = null;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    touchEndX.current = e.touches[0].clientX;
-  };
-
-  const handleTouchEnd = () => {
-    if (touchStartX.current === null || touchEndX.current === null) return;
-    const diff = touchStartX.current - touchEndX.current;
-    const minSwipeDistance = 50;
-    if (Math.abs(diff) >= minSwipeDistance) {
-      if (diff > 0) goNext();
-      else goPrev();
-    }
-    touchStartX.current = null;
-    touchEndX.current = null;
-  };
-
-  return (
-    <section
-      ref={sectionRef}
-      className="relative overflow-hidden -mx-2 md:-mx-6 -mt-2 md:-mt-4"
-      tabIndex={0}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      <div className="relative h-[300px] sm:h-[350px] md:h-[500px]">
-        {useDbSlides ? (
-          visibleDbSlides.map((slide, index) => {
-            const isLootboxSlide = slide.buttonLink === '/lootbox';
-            const isProSlide = slide.buttonLink === '/pro';
-            const effectiveAlign = isLootboxSlide ? 'center' : slide.textAlign;
-            return (
-            <div
-              key={slide.id}
-              className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
-              style={{
-                backgroundImage: `url(${slide.imageUrl})`,
-                opacity: currentSlide === index ? 1 : 0,
-                zIndex: currentSlide === index ? 1 : 0,
-              }}
-            >
-              <div className={`absolute inset-0 ${effectiveAlign === 'left' ? 'bg-gradient-to-r from-black/80 via-black/40 to-transparent' : effectiveAlign === 'right' ? 'bg-gradient-to-l from-black/80 via-black/40 to-transparent' : 'bg-gradient-to-t from-black/70 via-black/50 to-black/30'}`} />
-              <div className={`relative flex ${effectiveAlign === 'right' ? 'items-center justify-end' : effectiveAlign === 'left' ? 'items-center justify-start' : 'items-center justify-center'} h-full`}>
-                <div className={`${effectiveAlign === 'center' ? 'text-center' : effectiveAlign === 'right' ? 'text-right' : 'text-left'} text-white px-8 sm:px-14 md:px-24 ${effectiveAlign === 'center' ? 'max-w-4xl' : 'max-w-lg'}`}>
-                  <h1 className="text-2xl sm:text-3xl md:text-6xl font-bold mb-3 sm:mb-4 leading-tight">
-                    {slide.title.split('\n').map((line, idx) => (
-                      <span key={idx}>
-                        {idx > 0 && <span className="block text-primary">{line}</span>}
-                        {idx === 0 && line}
-                      </span>
-                    ))}
-                  </h1>
-                  {slide.subtitle && (
-                    <p className={`text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl ${effectiveAlign === 'center' ? 'mx-auto' : ''} leading-relaxed`}>
-                      {slide.subtitle}
-                    </p>
-                  )}
-                  {slide.buttonText && slide.buttonLink && (
-                    <Button 
-                      className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground border-0"
-                      style={isProSlide ? {
-                        background: 'linear-gradient(90deg, #B7FF1A, #FFE500, #AAFF00, #FFE500, #B7FF1A)',
-                        backgroundSize: '300% 100%',
-                        animation: 'gradient-shift 3s ease infinite',
-                        color: '#071013',
-                      } : undefined}
-                      onClick={() => {
-                        if (slide.buttonLink === '/lootbox') {
-                          window.dispatchEvent(new CustomEvent('open-lootbox'));
-                        } else if (slide.buttonLink === '/pro') {
-                          window.dispatchEvent(new CustomEvent('open-pro-upgrade'));
-                        } else if (slide.buttonLink?.startsWith('http')) {
-                          void openExternal(slide.buttonLink);
-                        } else {
-                          if (!user) {
-                            openModal('login');
-                          } else {
-                            setLocation(slide.buttonLink || '/');
-                          }
-                        }
-                      }}
-                    >
-                      {slide.buttonText}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-            );
-          })
-        ) : (
-          HERO_SLIDES.map((slide, index) => (
-            <div
-              key={index}
-              className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
-              style={{
-                backgroundImage: slide.overlay
-                  ? `${slide.overlay}, url(${slide.backgroundImage})`
-                  : `url(${slide.backgroundImage})`,
-                opacity: currentSlide === index ? 1 : 0,
-                zIndex: currentSlide === index ? 1 : 0,
-              }}
-            >
-              {slide.type === 'lootbox' && (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center text-white px-6 sm:px-10 md:px-16 flex flex-col items-center justify-center h-full max-w-lg">
-                    <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-4 sm:mb-6 leading-tight drop-shadow-lg">
-                      Claim your<br />Daily Lootbox
-                    </h2>
-                    <Button 
-                      className="w-full sm:w-fit px-8 py-3 sm:py-4 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
-                      onClick={() => {
-                        if (user) {
-                          window.dispatchEvent(new CustomEvent('open-lootbox'));
-                        } else {
-                          setLocation('/auth');
-                        }
-                      }}
-                    >
-                      Claim
-                    </Button>
-                  </div>
-                </div>
-              )}
-              {slide.showContent && slide.type !== 'lootbox' && (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center text-white px-4 sm:px-6 max-w-4xl">
-                    {heroText ? (
-                      <>
-                        <h1 className="text-2xl sm:text-3xl md:text-6xl font-bold mb-3 sm:mb-4 leading-tight">
-                          {heroText.title.split('\n').map((line, idx) => (
-                            <span key={idx}>
-                              {idx > 0 && <span className="block text-primary">{line}</span>}
-                              {idx === 0 && line}
-                            </span>
-                          ))}
-                        </h1>
-                        <p className="text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-2">
-                          {heroText.subtitle}
-                        </p>
-                        {heroText.buttonText && heroText.buttonUrl ? (
-                          <Button 
-                            className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-                            onClick={() => {
-                              if (heroText.buttonUrl?.startsWith('http')) {
-                                void openExternal(heroText.buttonUrl);
-                              } else {
-                                setLocation(heroText.buttonUrl || '/');
-                              }
-                            }}
-                            data-testid="button-custom-hero"
-                          >
-                            {heroText.buttonText}
-                          </Button>
-                        ) : !user ? (
-                          <Button 
-                            className="w-fit px-8 py-3 sm:py-4 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
-                            onClick={() => setLocation('/auth')}
-                            data-testid="button-join-community"
-                          >
-                            Join Community
-                          </Button>
-                        ) : !userHasContent && (
-                          <Button 
-                            className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-                            onClick={() => setLocation('/upload')}
-                            data-testid="button-start-building"
-                          >
-                            Start Building Now
-                          </Button>
-                        )}
-                      </>
-                    ) : (
-                      <div className="space-y-4">
-                        <Skeleton className="h-12 sm:h-16 md:h-24 w-full max-w-2xl mx-auto bg-white/10" />
-                        <Skeleton className="h-6 sm:h-8 w-3/4 max-w-xl mx-auto bg-white/10" />
-                        <Skeleton className="h-12 w-40 mx-auto bg-white/10" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))
-        )}
-
-        {/* Slide Indicators */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-          {Array.from({ length: slidesCount }).map((_, index) => (
-            <button
-              key={index}
-              onClick={() => goToSlide(index)}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                currentSlide === index
-                  ? 'w-6 bg-primary'
-                  : 'w-2 bg-white/40 hover:bg-white/60'
-              }`}
-            />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
 
 const HomePage = () => {
   const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
@@ -637,17 +328,8 @@ const HomePage = () => {
         </div>
       )}
       
-      {/* Hero Slideshow Section - wait for DB slides before rendering to prevent fallback flash */}
-      {!isLoadingDbSlides && dbHeroSlides && dbHeroSlides.length > 0 && (
-        <HeroBannerSlideshow 
-          heroText={heroText}
-          user={user}
-          userHasContent={userHasContent}
-          setLocation={setLocation}
-          dbSlides={dbHeroSlides}
-          slideIntervalMs={slideIntervalMs}
-        />
-      )}
+      {/* Community Activity Carousel */}
+      <CommunityCarousel />
 
       {/* Ecosystem Activity Rail */}
       <EcosystemActivityRail />
