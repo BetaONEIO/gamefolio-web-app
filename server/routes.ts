@@ -3546,6 +3546,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const signed = await supabaseStorage.convertToSignedUrl(userData.avatarUrl, 3600);
             if (signed) userData.avatarUrl = signed;
           }
+          if (userData.hideBanner) {
+            userData.bannerUrl = null;
+          }
           if (userData.bannerUrl && userData.bannerUrl.includes('supabase.co/storage')) {
             const signed = await supabaseStorage.convertToSignedUrl(userData.bannerUrl, 3600);
             if (signed) userData.bannerUrl = signed;
