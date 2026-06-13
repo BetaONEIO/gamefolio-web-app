@@ -3147,6 +3147,209 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/hero-carousel - Dynamic community data for the homepage hero carousel
+  app.get("/api/hero-carousel", async (_req: Request, res: Response) => {
+    try {
+      const { supabaseStorage } = await import('./supabase-storage');
+
+      const signUrl = async (url: string | null | undefined): Promise<string | null> => {
+        if (!url) return null;
+        if (!url.includes('supabase.co')) return url;
+        return (await supabaseStorage.convertToSignedUrl(url, 3600)) ?? url;
+      };
+
+      const [
+        trendingClipRows,
+        leaderboardEntries,
+        trendingGameRows,
+        liveNowRows,
+        spotlightRows,
+        milestoneRows,
+        discoverRows,
+      ] = await Promise.all([
+        // 1. Trending clip — highest views, non-age-restricted clips
+        db.execute(sql`
+          SELECT c.id, c.title, c.thumbnail_url, c.views,
+                 u.username, u.display_name, u.avatar_url, u.is_pro, u.is_partner,
+                 g.name as game_name, g.image_url as game_image_url
+          FROM clips c
+          JOIN users u ON c.user_id = u.id
+          LEFT JOIN games g ON c.game_id = g.id
+          WHERE c.age_restricted = false AND c.video_type = 'clip' AND c.thumbnail_url IS NOT NULL
+          ORDER BY c.views DESC NULLS LAST
+          LIMIT 1
+        `),
+        // 2. Top gamefolios — all-time leaderboard top 3
+        LeaderboardService.getAllTimeLeaderboard(3),
+        // 3. Trending game — most clips uploaded in last 30 days
+        db.execute(sql`
+          SELECT g.id, g.name, g.image_url, COUNT(c.id)::int as clip_count
+          FROM clips c
+          JOIN games g ON c.game_id = g.id
+          WHERE c.created_at > NOW() - INTERVAL '30 days'
+          GROUP BY g.id, g.name, g.image_url
+          ORDER BY clip_count DESC
+          LIMIT 1
+        `),
+        // 4. Live right now — active streamers with live enabled
+        db.execute(sql`
+          SELECT id, username, display_name, avatar_url, stream_platform,
+                 twitch_channel_name, kick_channel_name, is_pro, is_partner
+          FROM users
+          WHERE live_enabled = true AND is_streamer = true AND status = 'active'
+          ORDER BY RANDOM()
+          LIMIT 4
+        `),
+        // 5. Creator spotlight — highest total XP user
+        db.execute(sql`
+          SELECT u.id, u.username, u.display_name, u.avatar_url, u.total_xp, u.level,
+                 u.is_pro, u.is_partner,
+                 COUNT(c.id)::int as clip_count
+          FROM users u
+          LEFT JOIN clips c ON c.user_id = u.id
+          WHERE u.status = 'active' AND u.hide_from_leaderboard = false
+          GROUP BY u.id
+          ORDER BY u.total_xp DESC NULLS LAST
+          LIMIT 1
+        `),
+        // 6. Community milestone — aggregate platform stats
+        db.execute(sql`
+          SELECT
+            (SELECT COUNT(*)::int FROM users WHERE status = 'active') as total_users,
+            (SELECT COUNT(*)::int FROM clips) as total_clips,
+            (SELECT COUNT(*)::int FROM screenshots) as total_screenshots,
+            (SELECT COALESCE(SUM(views), 0)::bigint FROM clips) as total_views
+        `),
+        // 7. Discover something new — random recent content with a thumbnail
+        db.execute(sql`
+          SELECT content_type, id, title, image_url, views FROM (
+            (SELECT 'clip' as content_type, id, title, thumbnail_url as image_url, views
+             FROM clips
+             WHERE age_restricted = false AND thumbnail_url IS NOT NULL
+             ORDER BY created_at DESC LIMIT 20)
+            UNION ALL
+            (SELECT 'screenshot' as content_type, id, title, thumbnail_url as image_url, views
+             FROM screenshots
+             WHERE age_restricted = false AND thumbnail_url IS NOT NULL
+             ORDER BY created_at DESC LIMIT 20)
+          ) sub
+          ORDER BY RANDOM()
+          LIMIT 1
+        `),
+      ]);
+
+      const slides: any[] = [];
+
+      // 1. Trending Clip
+      const tc = (trendingClipRows as any[])[0];
+      if (tc) {
+        slides.push({
+          type: 'trending_clip',
+          clipId: tc.id,
+          title: tc.title,
+          thumbnailUrl: await signUrl(tc.thumbnail_url),
+          views: tc.views ?? 0,
+          username: tc.username,
+          displayName: tc.display_name,
+          avatarUrl: await signUrl(tc.avatar_url),
+          gameName: tc.game_name ?? null,
+          gameImageUrl: await signUrl(tc.game_image_url),
+        });
+      }
+
+      // 2. Top Gamefolios
+      const topGamefolios = await Promise.all(
+        leaderboardEntries.slice(0, 3).map(async (entry: any) => ({
+          rank: entry.rank,
+          username: entry.user?.username,
+          displayName: entry.user?.displayName,
+          avatarUrl: await signUrl(entry.user?.avatarUrl),
+          totalPoints: entry.totalPoints ?? 0,
+          level: entry.user?.level ?? 1,
+          isPro: entry.user?.isPro ?? false,
+        }))
+      );
+      if (topGamefolios.length > 0) {
+        slides.push({ type: 'top_gamefolios', entries: topGamefolios });
+      }
+
+      // 3. Trending Game
+      const tg = (trendingGameRows as any[])[0];
+      if (tg) {
+        slides.push({
+          type: 'trending_game',
+          gameId: tg.id,
+          gameName: tg.name,
+          gameImageUrl: await signUrl(tg.image_url),
+          clipCount: tg.clip_count ?? 0,
+        });
+      }
+
+      // 4. Live Right Now
+      const liveUsers = await Promise.all(
+        (liveNowRows as any[]).map(async (u: any) => ({
+          id: u.id,
+          username: u.username,
+          displayName: u.display_name,
+          avatarUrl: await signUrl(u.avatar_url),
+          streamPlatform: u.stream_platform,
+          channelName: u.twitch_channel_name || u.kick_channel_name,
+          isPro: u.is_pro,
+        }))
+      );
+      if (liveUsers.length > 0) {
+        slides.push({ type: 'live_now', streamers: liveUsers });
+      }
+
+      // 5. Creator Spotlight
+      const sp = (spotlightRows as any[])[0];
+      if (sp) {
+        slides.push({
+          type: 'creator_spotlight',
+          userId: sp.id,
+          username: sp.username,
+          displayName: sp.display_name,
+          avatarUrl: await signUrl(sp.avatar_url),
+          totalXP: Math.round(Number(sp.total_xp ?? 0)),
+          level: sp.level ?? 1,
+          clipCount: sp.clip_count ?? 0,
+          isPro: sp.is_pro,
+          isPartner: sp.is_partner,
+        });
+      }
+
+      // 6. Community Milestone
+      const ms = (milestoneRows as any[])[0];
+      if (ms) {
+        slides.push({
+          type: 'community_milestone',
+          totalUsers: ms.total_users ?? 0,
+          totalClips: ms.total_clips ?? 0,
+          totalScreenshots: ms.total_screenshots ?? 0,
+          totalViews: Number(ms.total_views ?? 0),
+        });
+      }
+
+      // 7. Discover Something New
+      const disc = (discoverRows as any[])[0];
+      if (disc) {
+        slides.push({
+          type: 'discover_new',
+          contentType: disc.content_type,
+          contentId: disc.id,
+          title: disc.title,
+          imageUrl: await signUrl(disc.image_url),
+          views: disc.views ?? 0,
+        });
+      }
+
+      res.json(slides);
+    } catch (err) {
+      console.error('[hero-carousel] Error:', err);
+      res.status(500).json({ message: 'Failed to load carousel data' });
+    }
+  });
+
   // Helper to sign all Supabase URLs in clip objects (thumbnails, videos, avatars)
   // Short-lived in-memory cache for trending feeds (DB query + signed URLs).
   // Keyed by route+normalized-params+user. Bounded LRU so user-controlled
