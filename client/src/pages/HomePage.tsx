@@ -880,9 +880,9 @@ const HomePage = () => {
       {user && <RecommendedForYou userId={user.id} />}
       
       {/* Trending Gamefolios Section */}
-      {/* <section className="mt-16 px-0">
+      <section className="mt-16 px-0">
         <FeaturedUsersSection />
-      </section> */}
+      </section>
 
       {/* Trending Games Section */}
       <section className="mt-16 px-0">

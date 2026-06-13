@@ -87,6 +87,82 @@ function NeonBackground() {
         .ng-b2 { animation: ng-float2 11s ease-in-out infinite, ng-pulse 6s ease-in-out infinite; }
         .ng-b3 { animation: ng-float3 14s ease-in-out infinite, ng-pulse 5s ease-in-out infinite; }
         .ng-line-el { position: absolute; height: 1px; width: 120px; animation: ng-line 7s linear infinite; }
+
+        @keyframes cc-spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes cc-shimmer {
+          0% { transform: translateX(-120%) skewX(-15deg); }
+          100% { transform: translateX(220%) skewX(-15deg); }
+        }
+        @keyframes cc-sparkle-1 {
+          0%,100% { transform: translate(0,0) scale(0); opacity: 0; }
+          20% { opacity: 1; transform: translate(-8px,-14px) scale(1); }
+          80% { opacity: 0.6; transform: translate(-12px,-28px) scale(0.6); }
+        }
+        @keyframes cc-sparkle-2 {
+          0%,100% { transform: translate(0,0) scale(0); opacity: 0; }
+          30% { opacity: 1; transform: translate(10px,-18px) scale(1); }
+          85% { opacity: 0.5; transform: translate(16px,-34px) scale(0.5); }
+        }
+        @keyframes cc-sparkle-3 {
+          0%,100% { transform: translate(0,0) scale(0); opacity: 0; }
+          25% { opacity: 1; transform: translate(-6px,12px) scale(0.9); }
+          75% { opacity: 0.4; transform: translate(-10px,26px) scale(0.4); }
+        }
+        @keyframes cc-sparkle-4 {
+          0%,100% { transform: translate(0,0) scale(0); opacity: 0; }
+          35% { opacity: 1; transform: translate(8px,14px) scale(1); }
+          80% { opacity: 0.5; transform: translate(14px,28px) scale(0.45); }
+        }
+        .cc-border-spin::before {
+          content: '';
+          position: absolute;
+          inset: -2px;
+          border-radius: 18px;
+          background: conic-gradient(from var(--cc-angle, 0deg), transparent 60%, #B7FF1A 75%, #ffffff 82%, #B7FF1A 90%, transparent 100%);
+          animation: cc-spin 3.5s linear infinite;
+          z-index: -1;
+        }
+        .cc-border-spin::after {
+          content: '';
+          position: absolute;
+          inset: 1px;
+          border-radius: 15px;
+          background: rgba(11,19,25,0.92);
+          z-index: -1;
+        }
+        .cc-shimmer-el {
+          position: absolute;
+          inset: 0;
+          border-radius: 16px;
+          overflow: hidden;
+          pointer-events: none;
+          z-index: 3;
+        }
+        .cc-shimmer-el::after {
+          content: '';
+          position: absolute;
+          top: 0; bottom: 0;
+          width: 40%;
+          background: linear-gradient(90deg, transparent, rgba(183,255,26,0.12), rgba(255,255,255,0.08), transparent);
+          animation: cc-shimmer 4s ease-in-out infinite;
+        }
+        .cc-sparkle {
+          position: absolute;
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: #B7FF1A;
+          box-shadow: 0 0 6px 2px rgba(183,255,26,0.7);
+          pointer-events: none;
+          z-index: 4;
+        }
+        .cc-sparkle-1 { animation: cc-sparkle-1 2.2s ease-out infinite; bottom: 20%; left: 10%; }
+        .cc-sparkle-2 { animation: cc-sparkle-2 2.8s ease-out infinite 0.6s; bottom: 30%; right: 10%; }
+        .cc-sparkle-3 { animation: cc-sparkle-3 3s ease-out infinite 1.1s; top: 25%; left: 8%; }
+        .cc-sparkle-4 { animation: cc-sparkle-4 2.5s ease-out infinite 1.7s; top: 20%; right: 8%; }
       `}</style>
       <div className="ng-blob ng-b1" style={{ width:300, height:200, background:'rgba(183,255,26,0.12)', top:'10%', left:'5%' }} />
       <div className="ng-blob ng-b2" style={{ width:200, height:200, background:'rgba(183,255,26,0.08)', top:'40%', right:'10%', animationDelay:'2s' }} />
@@ -121,19 +197,25 @@ function CreatorCard({ entry, period }: { entry: TrendingEntry; period: Period }
   return (
     <Link href={`/profile/${user.username}`}>
       <div
-        className="flex-shrink-0 cursor-pointer transition-all duration-200 hover:scale-[1.025] hover:-translate-y-1 hover:shadow-2xl relative overflow-hidden"
+        className="flex-shrink-0 cursor-pointer transition-all duration-200 hover:scale-[1.03] hover:-translate-y-1.5 hover:shadow-2xl relative cc-border-spin"
         style={{
           width: 190,
           height: 340,
           borderRadius: 16,
-          background: 'rgba(11,19,25,0.85)',
-          border: '1px solid rgba(183,255,26,0.12)',
+          background: 'rgba(11,19,25,0.92)',
           backdropFilter: 'blur(8px)',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+          boxShadow: '0 4px 32px rgba(0,0,0,0.6), 0 0 16px rgba(183,255,26,0.08)',
         }}
       >
+        {/* Shimmer sweep */}
+        <div className="cc-shimmer-el" />
+        {/* Sparkle particles */}
+        <div className="cc-sparkle cc-sparkle-1" />
+        <div className="cc-sparkle cc-sparkle-2" />
+        <div className="cc-sparkle cc-sparkle-3" />
+        <div className="cc-sparkle cc-sparkle-4" />
         {/* Banner */}
         <div className="relative flex-shrink-0" style={{ height: 90, borderRadius: '16px 16px 0 0', overflow: 'hidden' }}>
           {hasBanner ? (
