@@ -1144,11 +1144,11 @@ export default function OnboardingFlow({
             ctaLabel: 'Continue as Indie',
             visual: (
               <div className="relative flex items-center justify-center flex-shrink-0 w-full"
-                style={{ height: 'clamp(200px, calc(100dvh - 467px), 280px)' }}>
-                <div className="relative z-10" style={{ width: 'clamp(200px, 30vw, 280px)', height: 'clamp(200px, 30vw, 280px)', transform: isMobile ? 'scale(1.2)' : undefined }}>
+                style={{ height: isMobile ? 'clamp(240px, calc(100dvh - 467px), 336px)' : 'clamp(200px, calc(100dvh - 467px), 280px)' }}>
+                <div className="relative z-10" style={{ width: isMobile ? 'clamp(240px, 36vw, 336px)' : 'clamp(200px, 30vw, 280px)', height: isMobile ? 'clamp(240px, 36vw, 336px)' : 'clamp(200px, 30vw, 280px)' }}>
                   {/* Shirt — floats centre */}
                   <div className="ob-float" style={{ position: 'absolute', top: '50%', left: '50%', animationDuration: '4s' }}>
-                    <img src={imgIndieGamer} alt="" draggable={false} style={{ transform: 'translate(-50%,-50%) scale(1.3)', width: 'clamp(220px, 30vw, 360px)', height: 'clamp(220px, 30vw, 360px)', objectFit: 'contain' }} />
+                    <img src={imgIndieGamer} alt="" draggable={false} style={{ transform: 'translate(-50%,-50%) scale(1.3)', width: isMobile ? 'clamp(264px, 36vw, 432px)' : 'clamp(220px, 30vw, 360px)', height: isMobile ? 'clamp(264px, 36vw, 432px)' : 'clamp(220px, 30vw, 360px)', objectFit: 'contain' }} />
                   </div>
                   {/* Gold Star — top-left */}
                   <div className="ob-float-sm" style={{ position: 'absolute', top: '-4px', left: '-4px', animationDuration: '3.5s', animationDelay: '0.4s' }}>
