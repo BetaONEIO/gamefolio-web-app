@@ -312,14 +312,14 @@ const FeaturedUsersSection = () => {
       {/* Animated background wrapper */}
       <div
         className="relative rounded-2xl overflow-hidden"
-        style={{ background: 'rgba(8,14,19,0.6)', border: '1px solid rgba(183,255,26,0.08)', padding: '20px 20px 20px 20px' }}
+        style={{ background: 'rgba(8,14,19,0.6)', border: '1px solid rgba(183,255,26,0.08)', padding: '20px' }}
       >
         <NeonBackground />
 
-        {/* Scroll container */}
+        {/* Grid layout */}
         <div
-          className="flex gap-4 overflow-x-auto relative"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', zIndex: 1 }}
+          className="relative grid gap-4"
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', zIndex: 1 }}
         >
           {isLoading
             ? Array(7).fill(0).map((_, i) => <CardSkeleton key={i} />)
@@ -328,7 +328,7 @@ const FeaturedUsersSection = () => {
               ))
           }
           {!isLoading && validEntries.length === 0 && (
-            <div className="flex items-center justify-center w-full py-12 text-white/30 text-sm">
+            <div className="col-span-full flex items-center justify-center py-12 text-white/30 text-sm">
               No data for this period yet.
             </div>
           )}
