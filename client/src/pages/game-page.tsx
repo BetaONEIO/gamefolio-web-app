@@ -480,7 +480,7 @@ const GamePage = () => {
 
   const totalViews = useMemo(() => allClips.reduce((acc: number, c: any) => acc + (c.views || 0), 0), [allClips]);
 
-  const canCreateBounty = !!user && (user.isAdmin || (user as any).userType === "indie");
+  const canCreateBounty = !!user && (user.isAdmin || (user as any).userType === "indie" || (user as any).userType === "indie_developer");
 
   const handleUploadClose = () => {
     setShowUploadDialog(false);
