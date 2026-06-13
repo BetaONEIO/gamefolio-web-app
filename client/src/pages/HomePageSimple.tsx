@@ -27,6 +27,7 @@ import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
 import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
 import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
+import HomeCarousel from "@/components/home/HomeCarousel";
 import { Trophy } from "lucide-react";
 
 interface TrendingContentCarouselProps {
@@ -637,17 +638,8 @@ const HomePage = () => {
         </div>
       )}
       
-      {/* Hero Slideshow Section - wait for DB slides before rendering to prevent fallback flash */}
-      {!isLoadingDbSlides && dbHeroSlides && dbHeroSlides.length > 0 && (
-        <HeroBannerSlideshow 
-          heroText={heroText}
-          user={user}
-          userHasContent={userHasContent}
-          setLocation={setLocation}
-          dbSlides={dbHeroSlides}
-          slideIntervalMs={slideIntervalMs}
-        />
-      )}
+      {/* Hero Banner — dynamic community-driven carousel */}
+      <HomeCarousel />
 
       {/* Ecosystem Activity Rail */}
       {/* <EcosystemActivityRail /> */}

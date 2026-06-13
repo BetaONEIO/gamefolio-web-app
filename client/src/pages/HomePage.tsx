@@ -11,9 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClipWithUser, Game } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
-import { ChevronRight, ChevronLeft, Video, Plus, Camera, Image, Eye } from "lucide-react";
-import BannerImage from "@assets/Untitled (1920 x 1080 px).png";
-import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
+import { ChevronRight, Video, Plus, Camera, Image, Eye } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
@@ -37,17 +35,6 @@ const POPULAR_GAMES = [
   { id: 'minecraft', name: 'Minecraft' },
 ];
 
-interface HeroSlide {
-  id: number;
-  title: string;
-  subtitle: string | null;
-  buttonText: string | null;
-  buttonLink: string | null;
-  imageUrl: string;
-  displayOrder: number;
-  isActive: boolean;
-}
-
 const HomePage = () => {
   const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [selectedGameFilter, setSelectedGameFilter] = useState<string | null>(null);
@@ -55,10 +42,6 @@ const HomePage = () => {
   const [reelsViewer, setReelsViewer] = useState<number | null>(null);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
-  
-  // Hero carousel state
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const slideTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
   // Refs for grab scroll behavior
   const trendingGamesRef = useRef<HTMLDivElement>(null);
@@ -70,59 +53,6 @@ const HomePage = () => {
   const { openClipDialog } = useClipDialog();
   const isMobile = useMobile();
   const { toast } = useToast();
-
-  const { data: heroSlides } = useQuery<HeroSlide[]>({
-    queryKey: ["/api/hero-slides"],
-    staleTime: 10000,
-    refetchOnWindowFocus: true,
-  });
-
-  const { data: heroSettings } = useQuery<{ intervalSeconds: number }>({
-    queryKey: ["/api/hero-slides/settings"],
-    staleTime: 30000,
-  });
-
-  const slideIntervalMs = (heroSettings?.intervalSeconds || 6) * 1000;
-
-  const activeSlides = useMemo(() => {
-    if (!heroSlides || heroSlides.length === 0) return null;
-    return heroSlides;
-  }, [heroSlides]);
-
-  const resetSlideTimer = useCallback(() => {
-    if (slideTimerRef.current) clearInterval(slideTimerRef.current);
-    if (activeSlides && activeSlides.length > 1) {
-      slideTimerRef.current = setInterval(() => {
-        setCurrentSlide((prev) => (prev + 1) % activeSlides.length);
-      }, slideIntervalMs);
-    }
-  }, [activeSlides, slideIntervalMs]);
-
-  useEffect(() => {
-    resetSlideTimer();
-    return () => { if (slideTimerRef.current) clearInterval(slideTimerRef.current); };
-  }, [resetSlideTimer]);
-
-  useEffect(() => {
-    if (activeSlides && currentSlide >= activeSlides.length) {
-      setCurrentSlide(0);
-    }
-  }, [activeSlides, currentSlide]);
-
-  const goToSlide = useCallback((idx: number) => {
-    setCurrentSlide(idx);
-    resetSlideTimer();
-  }, [resetSlideTimer]);
-
-  const nextSlide = useCallback(() => {
-    if (!activeSlides) return;
-    goToSlide((currentSlide + 1) % activeSlides.length);
-  }, [activeSlides, currentSlide, goToSlide]);
-
-  const prevSlide = useCallback(() => {
-    if (!activeSlides) return;
-    goToSlide((currentSlide - 1 + activeSlides.length) % activeSlides.length);
-  }, [activeSlides, currentSlide, goToSlide]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -456,7 +386,7 @@ const HomePage = () => {
   return (
     <>
     <div className="space-y-16 max-w-none px-4 md:px-6 py-4 md:py-6">
-      {/* Hero Banner Carousel - Full width with negative margin to compensate for parent padding */}
+      {/* Hero Banner Carousel — original admin-managed slides */}
       <section className="mb-10 -mx-4 md:-mx-6 -mt-4 md:-mt-6">
         <div className="relative overflow-hidden">
           <div className="w-full bg-black relative min-h-[350px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px] border-b-2 border-primary">
