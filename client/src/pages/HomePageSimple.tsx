@@ -327,22 +327,6 @@ const HomePage = () => {
         </div>
       )}
       
-      {/* Trending Gamefolios */}
-      <LazySection minHeight="260px" rootMargin="200px">
-        <section className="px-4 sm:px-6 md:px-8 pb-10">
-          <div className="flex justify-between items-center mb-5">
-            <div className="flex items-center gap-2">
-              <Trophy className="w-5 h-5" style={{ color: '#B7FF1A' }} />
-              <h2 className="text-xl font-semibold text-foreground">Trending Gamefolios</h2>
-            </div>
-            <Link href="/explore" className="text-primary text-sm font-medium hover:underline flex items-center">
-              View all <ChevronRight className="h-4 w-4 ml-1" />
-            </Link>
-          </div>
-          <FeaturedUsersSection />
-        </section>
-      </LazySection>
-
       {/* Ecosystem Activity Rail */}
       <EcosystemActivityRail />
       
@@ -353,6 +337,13 @@ const HomePage = () => {
           <RecommendedForYou userId={userId} />
         </LazySection>
       )}
+
+      {/* Trending Gamefolios - below Recommended for You */}
+      <LazySection minHeight="260px" rootMargin="200px">
+        <section className="px-4 sm:px-6 md:px-8 pb-10">
+          <FeaturedUsersSection />
+        </section>
+      </LazySection>
       
       {/* Latest Clips Section */}
       <LazySection minHeight="400px" rootMargin="200px">
