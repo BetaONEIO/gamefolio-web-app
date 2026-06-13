@@ -5806,6 +5806,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Download screenshot with Gamefolio watermark
+  app.get("/api/screenshots/:id/download", optionalHybridAuth, async (req, res) => {
+    try {
+      const screenshotId = parseInt(req.params.id);
+      if (isNaN(screenshotId)) {
+        return res.status(400).json({ error: "Invalid screenshot ID" });
+      }
+
+      const screenshot = await storage.getScreenshot(screenshotId);
+      if (!screenshot) {
+        return res.status(404).json({ error: "Screenshot not found" });
+      }
+
+      if (!(await checkMediaOwnerAccess(screenshot.userId, req, res))) return;
+
+      // Resolve the image URL — sign if it's a Supabase storage path
+      let imageUrl: string = screenshot.imageUrl || "";
+      if (!imageUrl) {
+        return res.status(404).json({ error: "Screenshot image not found" });
+      }
+
+      // Sign Supabase URLs if needed
+      if (imageUrl.includes("supabase") && !imageUrl.includes("token=")) {
+        try {
+          const pathMatch = imageUrl.match(/\/storage\/v1\/object\/(?:public|authenticated)\/([^?]+)/);
+          if (pathMatch) {
+            const { data: signed } = await supabaseAdmin.storage
+              .from("gamefolio-media")
+              .createSignedUrl(pathMatch[1].replace(/^gamefolio-media\//, ""), 300);
+            if (signed?.signedUrl) imageUrl = signed.signedUrl;
+          }
+        } catch (_) {}
+      }
+
+      // Fetch the screenshot image
+      const imgResponse = await fetch(imageUrl);
+      if (!imgResponse.ok) {
+        return res.status(502).json({ error: "Failed to fetch screenshot image" });
+      }
+      const imgBuffer = Buffer.from(await imgResponse.arrayBuffer());
+
+      // Load logo watermark
+      const path = await import("path");
+      const logoPath = path.resolve("client/src/assets/gamefolio-logo-white.png");
+      const { width: imgW = 1920, height: imgH = 1080 } = await sharp(imgBuffer).metadata();
+
+      // Scale logo to ~18% of image width, positioned bottom-right with 2.5% padding
+      const logoTargetW = Math.round(imgW * 0.18);
+      const logoBuffer = await sharp(logoPath)
+        .resize(logoTargetW, undefined, { fit: "inside" })
+        .ensureAlpha()
+        .modulate({ brightness: 1 })
+        .composite([{
+          input: Buffer.from([255, 255, 255, 160]),
+          raw: { width: 1, height: 1, channels: 4 },
+          tile: true,
+          blend: "dest-in",
+        }])
+        .png()
+        .toBuffer();
+
+      const { width: logoW = logoTargetW, height: logoH = 60 } = await sharp(logoBuffer).metadata();
+      const padding = Math.round(imgW * 0.025);
+      const left = imgW - logoW - padding;
+      const top = imgH - logoH - padding;
+
+      const watermarked = await sharp(imgBuffer)
+        .composite([{ input: logoBuffer, left, top, blend: "over" }])
+        .png()
+        .toBuffer();
+
+      const safeTitle = (screenshot.title || "screenshot").replace(/[^a-z0-9]/gi, "_").slice(0, 60);
+      res.set({
+        "Content-Type": "image/png",
+        "Content-Disposition": `attachment; filename="${safeTitle}_gamefolio.png"`,
+        "Cache-Control": "no-store",
+      });
+      res.send(watermarked);
+    } catch (err: any) {
+      console.error("Screenshot watermark download error:", err);
+      res.status(500).json({ error: "Failed to generate watermarked screenshot" });
+    }
+  });
+
   // Get screenshot by shareCode
   app.get("/api/screenshots/share/:shareCode", async (req, res) => {
     try {

@@ -152,8 +152,6 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
   );
 };
 
-// ─── CommunityCarousel ────────────────────────────────────────────────────────
-
 interface CarouselSlide {
   type: 'trending_clip' | 'top_gamefolios' | 'trending_game' | 'live_now' | 'creator_spotlight' | 'community_milestone' | 'discover_new';
   [key: string]: any;
@@ -212,7 +210,6 @@ const CommunityCarousel = ({ slides, isLoading }: { slides: CarouselSlide[]; isL
 
   const renderSlide = (slide: CarouselSlide) => {
     switch (slide.type) {
-
       case 'trending_clip':
         return (
           <div
@@ -255,7 +252,7 @@ const CommunityCarousel = ({ slides, isLoading }: { slides: CarouselSlide[]; isL
                     {entry.avatarUrl ? (
                       <img src={entry.avatarUrl} alt={entry.username} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
                     ) : (
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 font-bold" style={{ background: '#B7FF18', color: '#071013' }}>
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm" style={{ background: '#B7FF18', color: '#071013' }}>
                         {(entry.displayName || entry.username || 'U').charAt(0).toUpperCase()}
                       </div>
                     )}
@@ -496,8 +493,6 @@ const CommunityCarousel = ({ slides, isLoading }: { slides: CarouselSlide[]; isL
 };
 
 const HomePage = () => {
-  const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
-  const [selectedGameFilter, setSelectedGameFilter] = useState<string | null>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
   const isMobile = useMobile();
   const [, setLocation] = useLocation();
@@ -505,36 +500,41 @@ const HomePage = () => {
   const [screenshotsDragging, setScreenshotsDragging] = useState(false);
   const [screenshotsDragStart, setScreenshotsDragStart] = useState(0);
   const [screenshotsScrollStart, setScreenshotsScrollStart] = useState(0);
-  
-  // Get current user from auth context
+
   const { user } = useAuth();
   const userId = user?.id;
 
-  // Query latest clips for the homepage section — newest uploaded first
+  // Community carousel data
+  const { data: carouselSlides = [], isLoading: isLoadingCarousel } = useQuery<CarouselSlide[]>({
+    queryKey: ['/api/hero-carousel'],
+    queryFn: async () => {
+      const response = await fetch('/api/hero-carousel');
+      if (!response.ok) throw new Error('Failed to fetch carousel data');
+      return response.json();
+    },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  // Query latest clips — newest uploaded first
   const { data: trendingClipsData, isLoading: isLoadingTrendingClips } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/clips/latest'],
     queryFn: async () => {
       const response = await fetch('/api/clips/latest?limit=20', { credentials: 'include' });
-      if (!response.ok) {
-        throw new Error('Failed to fetch latest clips');
-      }
+      if (!response.ok) throw new Error('Failed to fetch latest clips');
       return response.json();
     }
   });
 
-  // Ensure trendingClipsData is an array and filter out reels
-  const trendingClips = Array.isArray(trendingClipsData) 
+  const trendingClips = Array.isArray(trendingClipsData)
     ? trendingClipsData.filter(clip => clip.videoType !== 'reel')
     : [];
 
-  // Query latest reels (9:16 aspect ratio) - newest uploaded reels
   const { data: latestReels, isLoading: isLoadingReels } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/reels/latest'],
     queryFn: async () => {
       const response = await fetch('/api/reels/latest?limit=12');
-      if (!response.ok) {
-        throw new Error('Failed to fetch latest reels');
-      }
+      if (!response.ok) throw new Error('Failed to fetch latest reels');
       return response.json();
     }
   });
@@ -543,34 +543,20 @@ const HomePage = () => {
     queryKey: ['/api/screenshots/latest'],
     queryFn: async () => {
       const response = await fetch('/api/screenshots/latest?limit=12', { credentials: 'include' });
-      if (!response.ok) {
-        throw new Error('Failed to fetch latest screenshots');
-      }
+      if (!response.ok) throw new Error('Failed to fetch latest screenshots');
       return response.json();
     }
   });
 
-  const { data: carouselSlides = [], isLoading: isLoadingCarousel } = useQuery<CarouselSlide[]>({
-    queryKey: ['/api/hero-carousel'],
-    queryFn: async () => {
-      const response = await fetch('/api/hero-carousel', { credentials: 'include' });
-      if (!response.ok) throw new Error('Failed to fetch carousel');
-      return response.json();
-    },
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
-  });
-
-
   return (
     <div className="pb-16 md:pb-8 hide-scrollbar">
-      {/* Email Verification Banner - Only for authenticated users */}
+      {/* Email Verification Banner */}
       {user && (
         <div className="mx-2 sm:mx-4 md:mx-6 mb-0">
           <EmailVerificationBanner />
         </div>
       )}
-      
+
       {/* Community Carousel */}
       <CommunityCarousel slides={carouselSlides} isLoading={isLoadingCarousel} />
 
