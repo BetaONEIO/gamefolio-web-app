@@ -201,8 +201,9 @@ const STYLES = `
 
 function CreatorCard({ entry, period }: { entry: TrendingEntry; period: Period }) {
   const { user } = entry;
+  const [bannerError, setBannerError] = useState(false);
   const borderColor = user.avatarBorderColor || user.accentColor || '#B7FF1A';
-  const hasBanner = !!user.bannerUrl;
+  const hasBanner = !!user.bannerUrl && !bannerError;
   const cardBg = (user.backgroundColor && user.backgroundColor !== '#0B1319' && user.backgroundColor !== '#000000')
     ? user.backgroundColor
     : null;
@@ -260,7 +261,7 @@ function CreatorCard({ entry, period }: { entry: TrendingEntry; period: Period }
             {/* Banner */}
             {hasBanner && (
               <div className="relative flex-shrink-0 mx-2 mt-1 rounded-lg overflow-hidden" style={{ height: 70 }}>
-                <img src={user.bannerUrl!} alt="" className="w-full h-full object-cover" />
+                <img src={user.bannerUrl!} alt="" className="w-full h-full object-cover" onError={() => setBannerError(true)} />
                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(11,19,25,0.2) 0%, rgba(11,19,25,0.55) 100%)' }} />
               </div>
             )}
