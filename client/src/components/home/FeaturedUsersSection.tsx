@@ -228,9 +228,9 @@ function CreatorCard({ entry, period }: { entry: TrendingEntry; period: Period }
                 { icon: Upload,     label: 'FOLLOWING', value: entry.followingCount ?? 0 },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex flex-col items-center gap-0.5">
-                  <Icon className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.5)' }} />
-                  <span className="text-white text-xs font-bold leading-tight">{fmt(value)}</span>
-                  <span className="text-white/30 text-[9px] font-semibold tracking-wide">{label}</span>
+                  <Icon className="w-2.5 h-2.5" style={{ color: 'rgba(255,255,255,0.5)' }} />
+                  <span className="text-white text-[10px] font-bold leading-tight">{fmt(value)}</span>
+                  <span className="text-white/30 text-[7px] font-semibold tracking-wide">{label}</span>
                 </div>
               ))}
             </div>
