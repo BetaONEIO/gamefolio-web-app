@@ -185,16 +185,20 @@ function CreatorCard({ entry, period }: { entry: TrendingEntry; period: Period }
               </div>
             </div>
 
-            {/* Banner */}
-            {hasBanner && (
-              <div className="relative flex-shrink-0 mx-2 mt-1 rounded-lg overflow-hidden" style={{ height: 70 }}>
-                <img src={user.bannerUrl!} alt="" className="w-full h-full object-cover" onError={() => setBannerError(true)} />
-                <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(11,19,25,0.2) 0%, rgba(11,19,25,0.55) 100%)' }} />
-              </div>
-            )}
+            {/* Banner — always reserves same height so layout never shifts */}
+            <div className="relative flex-shrink-0 mx-2 mt-1 rounded-lg overflow-hidden" style={{ height: 70 }}>
+              {hasBanner ? (
+                <>
+                  <img src={user.bannerUrl!} alt="" className="w-full h-full object-cover" onError={() => setBannerError(true)} />
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(11,19,25,0.2) 0%, rgba(11,19,25,0.55) 100%)' }} />
+                </>
+              ) : (
+                <div className="w-full h-full" style={{ background: 'rgba(255,255,255,0.03)' }} />
+              )}
+            </div>
 
             {/* Avatar */}
-            <div className="flex justify-center flex-shrink-0" style={{ marginTop: hasBanner ? -20 : 8, position: 'relative', zIndex: 2 }}>
+            <div className="flex justify-center flex-shrink-0" style={{ marginTop: -20, position: 'relative', zIndex: 2 }}>
               <div
                 className="rounded-full overflow-hidden flex-shrink-0"
                 style={{ width: 56, height: 56, border: `2.5px solid ${borderColor}`, boxShadow: `0 0 14px ${borderColor}88` }}
