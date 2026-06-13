@@ -12,6 +12,7 @@ import { SequenceConnect } from "@0xsequence/connect";
 import { sequenceConfig } from "@/lib/sequence-config";
 import { WalletProvider, NoWalletProvider } from "@/hooks/use-wallet";
 import { CrossmintProvider } from "@/hooks/use-crossmint";
+import { CRYPTO_FEATURES_ENABLED } from "@/lib/crypto-features";
 import { RevenueCatProvider } from "@/hooks/use-revenuecat";
 import { LevelTrackerProvider } from "@/hooks/use-level-tracker";
 import { DailyStreakProvider } from "@/hooks/use-daily-streak";
@@ -26,6 +27,7 @@ import { AdminProtectedRoute } from "@/components/auth/admin-protected-route";
 import { OnboardingGuard } from "@/components/auth/onboarding-guard";
 import { PageTransition } from "@/components/ui/page-transition";
 import { BannerSettings } from "@shared/schema";
+import { WebPlatformRedirect } from "@/components/WebPlatformRedirect";
 
 // Layout components
 import Header from "./components/layout/Header";
@@ -161,6 +163,7 @@ function AuthRedirect() {
   
   return null;
 }
+
 
 function MainLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useMobile();
@@ -498,19 +501,57 @@ function Router() {
           <Route path="/help" component={HelpPage} />
           <Route path="/invite" component={InvitePage} />
           <Route path="/register" component={RegisterPage} />
-          <Route path="/store" component={StorePage} />
-          <Route path="/mint-nft" component={MintNFTPage} />
-          <Route path="/nft/:id" component={NFTDetailsPage} />
-          <Route path="/wallet" component={WalletPage} />
-          <Route path="/staking" component={StakingPage} />
+          {/* Web3 routes: full feature on web; branded redirect to app.gamefolio.com on native. */}
+          <Route path="/store" component={CRYPTO_FEATURES_ENABLED ? StorePage : () => (
+            <WebPlatformRedirect
+              title="Gamefolio Store"
+              description="Browse and purchase cosmetics, borders, name tags, and exclusive items. The full store is available on our web platform."
+            />
+          )} />
+          <Route path="/mint-nft" component={CRYPTO_FEATURES_ENABLED ? MintNFTPage : () => (
+            <WebPlatformRedirect
+              title="Mint Your NFT"
+              description="Create and mint unique NFTs on the SKALE network. NFT minting is available on the Gamefolio web platform."
+            />
+          )} />
+          <Route path="/nft/:id" component={CRYPTO_FEATURES_ENABLED ? NFTDetailsPage : () => (
+            <WebPlatformRedirect
+              title="NFT Collectibles"
+              description="View, trade, and manage your NFT collection. Access the full NFT marketplace on the Gamefolio web platform."
+            />
+          )} />
+          <Route path="/wallet" component={CRYPTO_FEATURES_ENABLED ? WalletPage : () => (
+            <WebPlatformRedirect
+              title="Your Wallet"
+              description="Manage your GFT token balance, transactions, and wallet settings securely on the Gamefolio web platform."
+            />
+          )} />
+          <Route path="/staking" component={CRYPTO_FEATURES_ENABLED ? StakingPage : () => (
+            <WebPlatformRedirect
+              title="GFT Staking"
+              description="Stake your GFT tokens to earn rewards and boost your creator status. Staking is available on the Gamefolio web platform."
+            />
+          )} />
           <Route path="/storage" component={StoragePage} />
-          <Route path="/watchlist" component={WatchlistPage} />
+          <Route path="/watchlist" component={CRYPTO_FEATURES_ENABLED ? WatchlistPage : () => (
+            <WebPlatformRedirect
+              title="NFT Watchlist"
+              description="Track your favourite NFTs and monitor floor prices. Your watchlist is available on the Gamefolio web platform."
+            />
+          )} />
           <Route path="/battles" component={UserBattlesPage} />
           <Route path="/user-battles" component={UserBattlesPage} />
           <ProtectedRoute path="/level-tracker" component={LevelTrackerPage} />
-          <ProtectedRoute path="/collection" component={CollectionPage} />
+          <ProtectedRoute path="/collection" component={CRYPTO_FEATURES_ENABLED ? CollectionPage : () => (
+            <WebPlatformRedirect
+              title="Your NFT Collection"
+              description="View and manage your digital collectibles. Your full NFT collection is available on the Gamefolio web platform."
+            />
+          )} />
           <Route path="/leaderboard/embed" component={LeaderboardEmbedPage} />
-          <Route path="/debug/wallet" component={DebugWalletPage} />
+          <Route path="/debug/wallet" component={CRYPTO_FEATURES_ENABLED ? DebugWalletPage : () => (
+            <WebPlatformRedirect title="Wallet" />
+          )} />
 
           {/* Public view routes for shareable content */}
           <Route path="/view/screenshot/:id" component={ViewContentPage} />
@@ -543,7 +584,7 @@ function App() {
               <AuthProvider>
                 <RevenueCatProvider>
                   <LevelTrackerProvider>
-                      {sequenceConfig ? (
+                      {sequenceConfig && CRYPTO_FEATURES_ENABLED ? (
                       <SequenceConnect config={sequenceConfig}>
                         <WalletProvider>
                           <CrossmintProvider>

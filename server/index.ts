@@ -43,6 +43,7 @@ import gfCheckoutRoutes from './routes/gf-checkout';
 import proSubscriptionRoutes from './routes/pro-subscription';
 import gfWebhookRoutes from './routes/gf-webhook';
 import gfStakingRoutes from './routes/gf-staking';
+import { blockCryptoOnNative } from './middleware/block-crypto-on-native';
 import storeRoutes from './routes/store';
 import gamefolioPurchaseRoutes from './routes/gamefolio-purchases';
 import revenuecatRoutes from './routes/revenuecat';
@@ -141,6 +142,11 @@ app.use(gfWebhookRoutes);
 // Configure body parser with larger limits to support file uploads
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ extended: false, limit: '500mb' }));
+
+// Refuse crypto/wallet/NFT/staking endpoints for native (Capacitor) clients —
+// the mobile apps ship without crypto features for App Store / Play financial
+// compliance. Web requests (no X-GF-Platform header) pass through untouched.
+app.use(blockCryptoOnNative);
 
 // All referenced /attached_assets/* files live under client/public/
 // attached_assets/ and ship via the SPA build to dist/public/attached_assets/,

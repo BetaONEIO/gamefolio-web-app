@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link, useLocation } from "wouter";
+import { CRYPTO_FEATURES_ENABLED } from "@/lib/crypto-features";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
@@ -265,8 +266,9 @@ const MobileMenu = () => {
                   <span className="font-medium">Leaderboard</span>
                 </Link>
               </li>
+              {/* Store stays on native (crypto-free cosmetics catalogue). */}
               <li>
-                <Link 
+                <Link
                   href="/store"
                   onClick={handleClose}
                   className="flex items-center p-2 rounded-md hover:bg-primary hover:text-[#071013] transition-colors w-full text-left no-underline group"
@@ -275,8 +277,12 @@ const MobileMenu = () => {
                   <span className="font-medium">Store</span>
                 </Link>
               </li>
+              {/* Wallet/Collection are pure crypto — hidden on native builds (App
+                  Store / Play financial compliance). See lib/crypto-features.ts. */}
+              {CRYPTO_FEATURES_ENABLED && (
+                <>
               <li>
-                <Link 
+                <Link
                   href="/wallet"
                   onClick={handleClose}
                   className="flex items-center p-2 rounded-md hover:bg-primary hover:text-[#071013] transition-colors w-full text-left no-underline group"
@@ -286,7 +292,7 @@ const MobileMenu = () => {
                 </Link>
               </li>
               <li>
-                <Link 
+                <Link
                   href="/collection"
                   onClick={handleClose}
                   className="flex items-center p-2 rounded-md hover:bg-primary hover:text-[#071013] transition-colors w-full text-left no-underline group"
@@ -295,6 +301,8 @@ const MobileMenu = () => {
                   <span className="font-medium">Collection</span>
                 </Link>
               </li>
+                </>
+              )}
               {user && user.messagingEnabled !== false && (
                 <li>
                   <Link 

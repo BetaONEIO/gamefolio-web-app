@@ -1433,13 +1433,6 @@ export default function OnboardingFlow({
                   Get a blockchain wallet to store GF Tokens, collect NFTs, and unlock exclusive features.
                 </p>
 
-                <div className="flex items-center gap-2 mb-6 px-3 py-2.5 rounded-lg bg-primary/10 border border-primary/30">
-                  <span className="text-xl">🎁</span>
-                  <p className="text-sm text-primary font-medium">
-                    Create a wallet now and receive <span className="font-bold">100 GFT tokens free!</span>
-                  </p>
-                </div>
-                
                 <button
                   onClick={handleCreateWalletClick}
                   disabled={isCreatingAnyWallet}
