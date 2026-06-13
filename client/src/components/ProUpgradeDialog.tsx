@@ -18,6 +18,15 @@ import { isNative } from "@/lib/platform";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 import ProOnboardingScreen from "@/components/pro/ProOnboardingScreen";
 
+interface StripePricing {
+  currency: string;
+  monthly: number;
+  yearly: number;
+  formattedMonthly: string;
+  formattedYearly: string;
+  country: string;
+}
+
 interface ProUpgradeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -252,6 +261,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   const [checkoutPaymentIntentId, setCheckoutPaymentIntentId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [stripePricing, setStripePricing] = useState<StripePricing | null>(null);
   const scrollContainerRef = useCallback((node: HTMLDivElement | null) => {
     if (node) {
       node.scrollTop = 0;
@@ -313,6 +323,15 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     }
   }, [open]);
 
+  // Fetch localized Stripe pricing when dialog opens on web
+  useEffect(() => {
+    if (!open || isNative || stripePricing) return;
+    fetch("/api/stripe/pricing", { credentials: "include" })
+      .then((res) => res.json())
+      .then((data: StripePricing) => setStripePricing(data))
+      .catch(() => {/* silently fall back to RevenueCat prices */});
+  }, [open, isNative, stripePricing]);
+
   useEffect(() => {
     if (step === "checkout") {
       loadStripeInstance();
@@ -325,7 +344,9 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       return;
     }
 
-    if (!selectedPackage || purchasing) return;
+    // On native we need a RevenueCat package selected; on web we use Stripe pricing
+    if (isNative && (!selectedPackage || purchasing)) return;
+    if (!isNative && purchasing) return;
 
     // On native (iOS/Android) Apple/Google require all digital subscription
     // purchases to flow through the platform's IAP. RevenueCat handles that;
@@ -354,7 +375,10 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     setPurchaseInProgress(true);
     try {
       await loadStripeInstance();
-      const res = await apiRequest("POST", "/api/stripe/create-pro-subscription", { plan: billingPeriod });
+      const res = await apiRequest("POST", "/api/stripe/create-pro-subscription", {
+        plan: billingPeriod,
+        currency: stripePricing?.currency,
+      });
       const data = await res.json();
       setCheckoutClientSecret(data.clientSecret);
       setCheckoutPaymentIntentId(data.paymentIntentId);
@@ -367,7 +391,11 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   };
 
   const checkoutPlanLabel = billingPeriod === "yearly" ? "Yearly" : "Monthly";
-  const checkoutPriceFormatted = selectedPackage ? formatPrice(selectedPackage) : "";
+  const checkoutPriceFormatted = isNative
+    ? (selectedPackage ? formatPrice(selectedPackage) : "")
+    : (billingPeriod === "yearly"
+        ? (stripePricing?.formattedYearly ?? (selectedPackage ? formatPrice(selectedPackage) : ""))
+        : (stripePricing?.formattedMonthly ?? (selectedPackage ? formatPrice(selectedPackage) : "")));
   const checkoutPeriodLabel = billingPeriod === "yearly" ? "per year" : "per month";
 
   if (isPro && step !== "success" && !purchaseInProgress) {
@@ -394,16 +422,55 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     );
   }
 
-  const buttonDisabled = !onAuthRequired && (!isInitialized || isLoading || purchasing || !selectedPackage || checkoutLoading);
+  // On web, the button is enabled once Stripe pricing is loaded (no RevenueCat package needed).
+  // On native, we wait for RevenueCat to initialize and a package to be selected.
+  const buttonDisabled = purchasing || checkoutLoading || (
+    isNative
+      ? (!isInitialized || isLoading || !selectedPackage)
+      : (!onAuthRequired && !stripePricing)
+  );
 
   const planSelector = (compact: boolean = false) => {
-    const yearlyPerMonth = yearlyPkg ? formatCurrency(getPriceAmount(yearlyPkg) / 12, getCurrency(yearlyPkg)) : null;
-    const yearlyTotal = yearlyPkg ? formatPrice(yearlyPkg) : null;
-    const monthlyPrice = monthlyPkg ? formatPrice(monthlyPkg) : null;
+    // On native: use RevenueCat prices. On web: prefer Stripe localized prices.
+    const useStripePrices = !isNative && !!stripePricing;
+
+    const yearlyTotal = useStripePrices
+      ? stripePricing!.formattedYearly
+      : (yearlyPkg ? formatPrice(yearlyPkg) : null);
+
+    const yearlyPerMonth = useStripePrices
+      ? (() => {
+          const amt = stripePricing!.yearly / 100 / 12;
+          return new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: stripePricing!.currency.toUpperCase(),
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }).format(amt);
+        })()
+      : (yearlyPkg ? formatCurrency(getPriceAmount(yearlyPkg) / 12, getCurrency(yearlyPkg)) : null);
+
+    const monthlyPrice = useStripePrices
+      ? stripePricing!.formattedMonthly
+      : (monthlyPkg ? formatPrice(monthlyPkg) : null);
+
+    // Savings badge (works for both sources)
+    const displaySavings = useStripePrices
+      ? (() => {
+          const monthly = stripePricing!.monthly / 100;
+          const yearlyPerM = stripePricing!.yearly / 100 / 12;
+          const s = Math.round((1 - yearlyPerM / monthly) * 100);
+          return s > 0 ? s : 0;
+        })()
+      : savings;
+
+    // Show plan buttons when we have Stripe prices (web) or RevenueCat packages (native)
+    const showYearly = useStripePrices || !!yearlyPkg;
+    const showMonthly = useStripePrices || !!monthlyPkg;
 
     return (
       <div className="flex flex-col gap-2">
-        {yearlyPkg && (
+        {showYearly && (
           <button
             type="button"
             onClick={() => setBillingPeriod("yearly")}
@@ -413,9 +480,9 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                 : "border-[#1B2A33] bg-[#0B1218] hover:border-[#22313A]"
             }`}
           >
-            {savings > 0 && (
+            {displaySavings > 0 && (
               <div className="absolute -top-2.5 right-3 bg-[#B7FF1A] text-[#071013] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
-                Save {savings}%
+                Save {displaySavings}%
               </div>
             )}
             <div className="flex items-center justify-between">
@@ -440,7 +507,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
           </button>
         )}
 
-        {monthlyPkg && (
+        {showMonthly && (
           <button
             type="button"
             onClick={() => setBillingPeriod("monthly")}
@@ -472,7 +539,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
           </button>
         )}
 
-        {!monthlyPkg && !yearlyPkg && packages && packages.length > 0 && (
+        {!showMonthly && !showYearly && packages && packages.length > 0 && (
           <div className="w-full rounded-xl border-2 border-[#B7FF1A] bg-[#B7FF1A0d] p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">

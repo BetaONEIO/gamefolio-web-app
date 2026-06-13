@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import https from 'https';
 import { getUncachableStripeClient, getStripePublishableKey } from '../stripeClient';
 import { db } from '../db';
 import { users } from '@shared/schema';
@@ -10,30 +11,149 @@ import { notifyProPurchase } from '../telegram-notify';
 
 const router = Router();
 
-const cachedPriceIds: { monthly: string | null; yearly: string | null } = {
-  monthly: null,
-  yearly: null,
+// ─── Currency / pricing table ──────────────────────────────────────────────
+// All amounts are in minor units (pence / cents / etc.)
+
+interface RegionalPrice {
+  currency: string;
+  monthly: number;  // minor units
+  yearly: number;   // minor units
+  symbol: string;   // display prefix
+}
+
+const CURRENCY_TABLE: Record<string, RegionalPrice> = {
+  USD: { currency: 'usd', monthly: 399, yearly: 3999, symbol: '$' },
+  EUR: { currency: 'eur', monthly: 349, yearly: 3499, symbol: '€' },
+  GBP: { currency: 'gbp', monthly: 299, yearly: 2999, symbol: '£' },
+  AUD: { currency: 'aud', monthly: 599, yearly: 5999, symbol: 'A$' },
+  CAD: { currency: 'cad', monthly: 499, yearly: 4999, symbol: 'CA$' },
 };
 
-async function getOrCreatePriceId(stripe: any, plan: 'monthly' | 'yearly'): Promise<string> {
-  if (plan === 'monthly' && cachedPriceIds.monthly) return cachedPriceIds.monthly;
-  if (plan === 'yearly' && cachedPriceIds.yearly) return cachedPriceIds.yearly;
+// ISO 3166-1 alpha-2 → currency key
+const COUNTRY_TO_CURRENCY: Record<string, keyof typeof CURRENCY_TABLE> = {
+  US: 'USD',
+  // Euro zone
+  AT: 'EUR', BE: 'EUR', HR: 'EUR', CY: 'EUR', EE: 'EUR', FI: 'EUR',
+  FR: 'EUR', DE: 'EUR', GR: 'EUR', IE: 'EUR', IT: 'EUR', LV: 'EUR',
+  LT: 'EUR', LU: 'EUR', MT: 'EUR', NL: 'EUR', PT: 'EUR', SK: 'EUR',
+  SI: 'EUR', ES: 'EUR',
+  GB: 'GBP',
+  AU: 'AUD',
+  CA: 'CAD',
+};
 
-  const envPriceId = plan === 'monthly'
-    ? process.env.STRIPE_PRO_MONTHLY_PRICE_ID
-    : process.env.STRIPE_PRO_YEARLY_PRICE_ID;
+function getPriceForCountry(countryCode: string | null): RegionalPrice & { country: string } {
+  const key = countryCode ? COUNTRY_TO_CURRENCY[countryCode.toUpperCase()] ?? null : null;
+  const price = key ? CURRENCY_TABLE[key] : CURRENCY_TABLE['GBP'];
+  return { ...price, country: countryCode ?? 'unknown' };
+}
 
-  if (envPriceId) {
-    try {
-      await stripe.prices.retrieve(envPriceId);
-      if (plan === 'monthly') cachedPriceIds.monthly = envPriceId;
-      else cachedPriceIds.yearly = envPriceId;
-      return envPriceId;
-    } catch (e: any) {
-      console.warn(`Configured price ID ${envPriceId} not found in connected Stripe account. Auto-provisioning...`);
+function formatMinorUnits(minor: number, symbol: string): string {
+  const formatted = (minor / 100).toFixed(2).replace(/\.00$/, '');
+  return `${symbol}${formatted}`;
+}
+
+// ─── IP → country detection ───────────────────────────────────────────────
+
+// Small in-process cache: ip → { country, ts }
+const ipCountryCache = new Map<string, { country: string; ts: number }>();
+const IP_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function getClientIp(req: Request): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    const first = Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0];
+    return first.trim();
+  }
+  return req.socket?.remoteAddress ?? '';
+}
+
+function fetchCountryFromIpApi(ip: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    // Skip private/loopback IPs
+    if (!ip || ip === '::1' || ip.startsWith('127.') || ip.startsWith('192.168.') ||
+        ip.startsWith('10.') || ip.startsWith('172.')) {
+      return resolve(null);
+    }
+    const url = `https://ip-api.com/json/${encodeURIComponent(ip)}?fields=countryCode`;
+    const httpReq = https.get(url, { timeout: 2000 }, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          resolve(json.countryCode || null);
+        } catch {
+          resolve(null);
+        }
+      });
+    });
+    httpReq.on('error', () => resolve(null));
+    httpReq.on('timeout', () => { httpReq.destroy(); resolve(null); });
+  });
+}
+
+async function getCountryFromRequest(req: Request): Promise<string | null> {
+  // 1. CDN-injected headers (Cloudflare, Vercel, AWS CloudFront, Fastly)
+  const cdnCountry =
+    (req.headers['cf-ipcountry'] as string) ||
+    (req.headers['x-vercel-ip-country'] as string) ||
+    (req.headers['x-country-code'] as string) ||
+    (req.headers['cloudfront-viewer-country'] as string);
+  if (cdnCountry && cdnCountry !== 'XX') return cdnCountry.toUpperCase();
+
+  // 2. IP lookup via ip-api.com with in-memory cache
+  const ip = getClientIp(req);
+  if (!ip) return null;
+
+  const cached = ipCountryCache.get(ip);
+  if (cached && Date.now() - cached.ts < IP_CACHE_TTL_MS) {
+    return cached.country;
+  }
+
+  const country = await fetchCountryFromIpApi(ip);
+  if (country) {
+    ipCountryCache.set(ip, { country, ts: Date.now() });
+    // Prune cache when it grows large
+    if (ipCountryCache.size > 5000) {
+      const oldest = [...ipCountryCache.entries()].sort((a, b) => a[1].ts - b[1].ts)[0];
+      ipCountryCache.delete(oldest[0]);
+    }
+  }
+  return country;
+}
+
+// ─── Stripe price cache ───────────────────────────────────────────────────
+// Key: "monthly|usd", "yearly|gbp", etc.
+const cachedPriceIds = new Map<string, string>();
+
+async function getOrCreatePriceId(
+  stripe: any,
+  plan: 'monthly' | 'yearly',
+  currency: string
+): Promise<string> {
+  const cacheKey = `${plan}|${currency}`;
+  const hit = cachedPriceIds.get(cacheKey);
+  if (hit) return hit;
+
+  // Check env vars (legacy GBP-only path)
+  if (currency === 'gbp') {
+    const envPriceId = plan === 'monthly'
+      ? process.env.STRIPE_PRO_MONTHLY_PRICE_ID
+      : process.env.STRIPE_PRO_YEARLY_PRICE_ID;
+
+    if (envPriceId) {
+      try {
+        await stripe.prices.retrieve(envPriceId);
+        cachedPriceIds.set(cacheKey, envPriceId);
+        return envPriceId;
+      } catch {
+        console.warn(`Configured price ID ${envPriceId} not found in Stripe. Auto-provisioning...`);
+      }
     }
   }
 
+  // Find or create the Gamefolio Pro product
   const existingProducts = await stripe.products.list({ limit: 100 });
   let product = existingProducts.data.find((p: any) => p.name === 'Gamefolio Pro' && p.active);
 
@@ -46,14 +166,16 @@ async function getOrCreatePriceId(stripe: any, plan: 'monthly' | 'yearly'): Prom
     console.log(`✅ Created Stripe product: ${product.id}`);
   }
 
-  const existingPrices = await stripe.prices.list({ product: product.id, active: true, limit: 100 });
-
-  const targetAmount = plan === 'monthly' ? 299 : 3000;
+  const regionalPrice = Object.values(CURRENCY_TABLE).find(p => p.currency === currency);
+  const targetAmount = plan === 'monthly'
+    ? (regionalPrice?.monthly ?? CURRENCY_TABLE.GBP.monthly)
+    : (regionalPrice?.yearly ?? CURRENCY_TABLE.GBP.yearly);
   const targetInterval = plan === 'monthly' ? 'month' : 'year';
 
+  const existingPrices = await stripe.prices.list({ product: product.id, active: true, limit: 100 });
   let price = existingPrices.data.find((p: any) =>
     p.unit_amount === targetAmount &&
-    p.currency === 'gbp' &&
+    p.currency === currency &&
     p.recurring?.interval === targetInterval
   );
 
@@ -61,19 +183,53 @@ async function getOrCreatePriceId(stripe: any, plan: 'monthly' | 'yearly'): Prom
     price = await stripe.prices.create({
       product: product.id,
       unit_amount: targetAmount,
-      currency: 'gbp',
+      currency,
       recurring: { interval: targetInterval },
-      metadata: { plan, app: 'gamefolio' },
+      metadata: { plan, app: 'gamefolio', currency },
     });
-    console.log(`✅ Created Stripe price for ${plan}: ${price.id} (£${targetAmount / 100}/${targetInterval})`);
+    console.log(`✅ Created Stripe price for ${plan}/${currency}: ${price.id}`);
   }
 
-  if (plan === 'monthly') cachedPriceIds.monthly = price.id;
-  else cachedPriceIds.yearly = price.id;
-
-  console.log(`📌 Using Stripe price for ${plan}: ${price.id}`);
+  cachedPriceIds.set(cacheKey, price.id);
+  console.log(`📌 Using Stripe price for ${plan}/${currency}: ${price.id}`);
   return price.id;
 }
+
+// ─── Allowed currencies (server-side validation) ──────────────────────────
+const ALLOWED_CURRENCIES = new Set(Object.values(CURRENCY_TABLE).map(p => p.currency));
+
+// ─── Routes ───────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/stripe/pricing
+ * Public — returns localized price info based on caller's IP / CDN headers.
+ */
+router.get('/api/stripe/pricing', async (req: Request, res: Response) => {
+  try {
+    const country = await getCountryFromRequest(req);
+    const regional = getPriceForCountry(country);
+
+    return res.json({
+      currency: regional.currency,
+      monthly: regional.monthly,
+      yearly: regional.yearly,
+      formattedMonthly: formatMinorUnits(regional.monthly, regional.symbol),
+      formattedYearly: formatMinorUnits(regional.yearly, regional.symbol),
+      country: regional.country,
+    });
+  } catch (error: any) {
+    console.error('Pricing endpoint error:', error);
+    const fallback = CURRENCY_TABLE.GBP;
+    return res.json({
+      currency: fallback.currency,
+      monthly: fallback.monthly,
+      yearly: fallback.yearly,
+      formattedMonthly: formatMinorUnits(fallback.monthly, fallback.symbol),
+      formattedYearly: formatMinorUnits(fallback.yearly, fallback.symbol),
+      country: 'unknown',
+    });
+  }
+});
 
 router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Request, res: Response) => {
   try {
@@ -82,10 +238,15 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { plan } = req.body;
+    const { plan, currency: requestedCurrency } = req.body;
     if (!plan || !['monthly', 'yearly'].includes(plan)) {
       return res.status(400).json({ error: 'Invalid plan. Must be "monthly" or "yearly".' });
     }
+
+    // Validate currency; fall back to gbp if not in the allowed set
+    const currency = requestedCurrency && ALLOWED_CURRENCIES.has(requestedCurrency)
+      ? requestedCurrency
+      : 'gbp';
 
     const [user] = await db.select().from(users).where(eq(users.id, userId));
     if (!user) {
@@ -129,17 +290,17 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
       }
     }
 
-    const priceId = await getOrCreatePriceId(stripe, plan);
-    const amount = plan === 'monthly' ? 299 : 3000;
+    const priceId = await getOrCreatePriceId(stripe, plan, currency);
+
+    const regionalPrice = Object.values(CURRENCY_TABLE).find(p => p.currency === currency) ?? CURRENCY_TABLE.GBP;
+    const amount = plan === 'monthly' ? regionalPrice.monthly : regionalPrice.yearly;
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
-      currency: 'gbp',
+      currency,
       customer: customerId,
       setup_future_usage: 'off_session',
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      automatic_payment_methods: { enabled: true },
       metadata: {
         userId: String(userId),
         plan,
@@ -192,7 +353,7 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
       try {
         const existingSub = await stripe.subscriptions.retrieve(currentUser.stripeSubscriptionId);
         if (existingSub.status === 'active' || existingSub.status === 'trialing') {
-          console.log(`ℹ️ confirm-pro-subscription called for user ${userId} who already has active sub ${currentUser.stripeSubscriptionId} — returning success without creating duplicate`);
+          console.log(`ℹ️ confirm-pro-subscription: user ${userId} already has active sub ${currentUser.stripeSubscriptionId}`);
           return res.json({ success: true, isPro: true, subscriptionId: currentUser.stripeSubscriptionId });
         }
       } catch {
@@ -200,8 +361,7 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
       }
     }
 
-    // Also check Stripe directly: look for any existing active subscription on this customer
-    // where the payment_intent metadata matches, to catch race conditions
+    // Also check Stripe directly to catch race conditions
     const customerId = paymentIntent.customer as string;
     const existingSubscriptions = await stripe.subscriptions.list({
       customer: customerId,
@@ -212,7 +372,7 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
       (s: any) => s.metadata?.paymentIntentId === paymentIntentId
     );
     if (alreadyLinked) {
-      console.log(`ℹ️ confirm-pro-subscription: found existing sub ${alreadyLinked.id} linked to PI ${paymentIntentId} — skipping duplicate creation`);
+      console.log(`ℹ️ confirm-pro-subscription: found existing sub ${alreadyLinked.id} linked to PI ${paymentIntentId}`);
       await db.update(users).set({
         isPro: true,
         stripeCustomerId: customerId,
@@ -240,7 +400,7 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
 
     const activeStatuses = ['active', 'trialing'];
     if (!activeStatuses.includes(subscription.status)) {
-      console.warn(`⚠️ Subscription ${subscription.id} created with non-active status: ${subscription.status} — not granting Pro to user ${userId}`);
+      console.warn(`⚠️ Subscription ${subscription.id} created with non-active status: ${subscription.status}`);
       return res.status(402).json({
         error: 'Subscription is not active',
         status: subscription.status,
