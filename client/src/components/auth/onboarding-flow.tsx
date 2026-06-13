@@ -673,7 +673,10 @@ export default function OnboardingFlow({
                 Your gaming identity, all in one place.
               </p>
             </div>
-            <div className="flex-shrink-0 px-6 pt-0 pb-6 relative z-10">
+            <div
+              className="flex-shrink-0 px-6 pt-0 pb-6 relative z-10"
+              style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}
+            >
               <button
                 type="button"
                 onClick={goToNextStep}
