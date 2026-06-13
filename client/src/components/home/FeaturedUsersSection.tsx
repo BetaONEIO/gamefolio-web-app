@@ -23,6 +23,10 @@ interface TrendingEntry {
     avatarBorderColor: string | null;
     accentColor: string | null;
     level?: number | null;
+    backgroundColor?: string | null;
+    profileBackgroundType?: string | null;
+    profileBackgroundTheme?: string | null;
+    profileBackgroundGradient?: boolean | null;
   };
 }
 
@@ -198,16 +202,15 @@ function CreatorCard({ entry, period }: { entry: TrendingEntry; period: Period }
   const { user } = entry;
   const borderColor = user.avatarBorderColor || user.accentColor || '#B7FF1A';
   const hasBanner = !!user.bannerUrl;
+  const cardBg = (user.backgroundColor && user.backgroundColor !== '#0B1319' && user.backgroundColor !== '#000000')
+    ? user.backgroundColor
+    : null;
 
   return (
     <Link href={`/profile/${user.username}`}>
       <div
         className="flex-shrink-0 cursor-pointer transition-transform duration-200 hover:scale-[1.03] hover:-translate-y-2 fire-card"
-        style={{
-          width: 190,
-          height: 340,
-          borderRadius: 16,
-        }}
+        style={{ width: 190, height: 340, borderRadius: 16 }}
       >
         {/* Fire border layers */}
         <div className="fire-card-border-2" />
@@ -220,95 +223,108 @@ function CreatorCard({ entry, period }: { entry: TrendingEntry; period: Period }
         <div className="fire-ember fire-ember-3" />
         <div className="fire-ember fire-ember-4" />
 
-        {/* Card content — sits above the border layers */}
+        {/* Card content */}
         <div
-          className="absolute inset-[3px] rounded-[13px] overflow-hidden flex flex-col"
-          style={{ zIndex: 2, background: 'rgba(11,19,25,0.95)', backdropFilter: 'blur(8px)' }}
+          className="absolute inset-[3px] rounded-[13px] overflow-hidden"
+          style={{ zIndex: 2, background: cardBg ?? 'rgba(11,19,25,0.95)', backdropFilter: 'blur(8px)' }}
         >
-          {/* Rank + points badges — always visible at top */}
-          <div className="relative flex-shrink-0 flex items-center justify-between px-2 pt-2">
+          {/* Dark gradient overlay so text stays readable on coloured backgrounds */}
+          {cardBg && (
             <div
-              className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full"
-              style={{ background: 'rgba(0,0,0,0.65)', color: entry.rank <= 3 ? ['#FFD700','#C0C0C0','#CD7F32'][entry.rank - 1] : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)' }}
-            >
-              #{entry.rank}
-            </div>
-            <div
-              className="flex items-center gap-0.5 text-[11px] font-bold px-2 py-0.5 rounded-full"
-              style={{ background: 'rgba(0,0,0,0.65)', color: '#B7FF1A', border: '1px solid rgba(183,255,26,0.3)', backdropFilter: 'blur(4px)' }}
-            >
-              <Zap className="w-3 h-3" />
-              {fmt(entry.totalPoints)}
-            </div>
-          </div>
-
-          {/* Banner — only when the user has one */}
-          {hasBanner && (
-            <div className="relative flex-shrink-0 mx-2 mt-1 rounded-lg overflow-hidden" style={{ height: 70 }}>
-              <img src={user.bannerUrl!} alt="" className="w-full h-full object-cover" />
-              <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(11,19,25,0.2) 0%, rgba(11,19,25,0.55) 100%)' }} />
-            </div>
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0.82) 100%)', borderRadius: 'inherit' }}
+            />
           )}
 
-          {/* Avatar */}
-          <div className="flex justify-center" style={{ marginTop: hasBanner ? -20 : 8, zIndex: 3, flexShrink: 0 }}>
-            <div
-              className="rounded-full overflow-hidden"
-              style={{ width: 56, height: 56, border: `2.5px solid ${borderColor}`, boxShadow: `0 0 14px ${borderColor}88`, flexShrink: 0 }}
-            >
-              {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.displayName || user.username} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-xl font-bold" style={{ background: `${borderColor}22`, color: borderColor }}>
-                  {(user.displayName || user.username).charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
-          </div>
+          {/* All card content sits above the overlay */}
+          <div className="relative flex flex-col h-full" style={{ zIndex: 3 }}>
 
-          {/* Name */}
-          <div className="text-center px-3 mt-2 flex-shrink-0">
-            <p className="text-white text-sm font-bold truncate leading-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              {user.displayName || user.username}
-            </p>
-            <p className="text-white/40 text-[11px] truncate mt-0.5">@{user.username}</p>
-          </div>
-
-          {/* Stats */}
-          <div
-            className="mx-3 mt-3 flex-shrink-0 grid grid-cols-3 gap-1 rounded-xl py-2"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
-          >
-            {[
-              { icon: Video, label: 'CLIPS', value: entry.clipsCount },
-              { icon: Film,  label: 'REELS', value: entry.reelsCount },
-              { icon: Image, label: 'SHOTS', value: entry.screenshotsCount },
-            ].map(({ icon: Icon, label, value }) => (
-              <div key={label} className="flex flex-col items-center gap-0.5">
-                <Icon className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.5)' }} />
-                <span className="text-white text-xs font-bold leading-tight">{fmt(value)}</span>
-                <span className="text-white/30 text-[9px] font-semibold tracking-wide">{label}</span>
+            {/* Rank + points badges */}
+            <div className="flex-shrink-0 flex items-center justify-between px-2 pt-2">
+              <div
+                className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full"
+                style={{ background: 'rgba(0,0,0,0.65)', color: entry.rank <= 3 ? (['#FFD700','#C0C0C0','#CD7F32'] as const)[entry.rank - 1] : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)' }}
+              >
+                #{entry.rank}
               </div>
-            ))}
-          </div>
-
-          {/* Followers */}
-          <div className="mx-3 mt-1.5 flex items-center justify-center gap-1.5 flex-shrink-0">
-            <Users className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.4)' }} />
-            <span className="text-white/50 text-xs font-medium">{fmt(entry.followersCount)} followers</span>
-          </div>
-
-          <div className="flex-1" />
-
-          {/* CTA Button */}
-          <div className="px-3 pb-3 flex-shrink-0">
-            <div
-              className="w-full rounded-xl py-2.5 flex items-center justify-center gap-1.5 text-xs font-bold"
-              style={{ background: '#B7FF1A', color: '#0B1319', boxShadow: '0 0 12px rgba(183,255,26,0.4)', letterSpacing: '0.01em' }}
-            >
-              <Upload className="w-3 h-3" />
-              {ctaLabel(entry, period)}
+              <div
+                className="flex items-center gap-0.5 text-[11px] font-bold px-2 py-0.5 rounded-full"
+                style={{ background: 'rgba(0,0,0,0.65)', color: '#B7FF1A', border: '1px solid rgba(183,255,26,0.3)', backdropFilter: 'blur(4px)' }}
+              >
+                <Zap className="w-3 h-3" />
+                {fmt(entry.totalPoints)}
+              </div>
             </div>
+
+            {/* Banner */}
+            {hasBanner && (
+              <div className="relative flex-shrink-0 mx-2 mt-1 rounded-lg overflow-hidden" style={{ height: 70 }}>
+                <img src={user.bannerUrl!} alt="" className="w-full h-full object-cover" />
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(11,19,25,0.2) 0%, rgba(11,19,25,0.55) 100%)' }} />
+              </div>
+            )}
+
+            {/* Avatar */}
+            <div className="flex justify-center flex-shrink-0" style={{ marginTop: hasBanner ? -20 : 8 }}>
+              <div
+                className="rounded-full overflow-hidden flex-shrink-0"
+                style={{ width: 56, height: 56, border: `2.5px solid ${borderColor}`, boxShadow: `0 0 14px ${borderColor}88` }}
+              >
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.displayName || user.username} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xl font-bold" style={{ background: `${borderColor}22`, color: borderColor }}>
+                    {(user.displayName || user.username).charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Name */}
+            <div className="text-center px-3 mt-2 flex-shrink-0">
+              <p className="text-white text-sm font-bold truncate leading-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                {user.displayName || user.username}
+              </p>
+              <p className="text-white/40 text-[11px] truncate mt-0.5">@{user.username}</p>
+            </div>
+
+            {/* Stats */}
+            <div
+              className="mx-3 mt-3 flex-shrink-0 grid grid-cols-3 gap-1 rounded-xl py-2"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              {[
+                { icon: Video, label: 'CLIPS', value: entry.clipsCount },
+                { icon: Film,  label: 'REELS', value: entry.reelsCount },
+                { icon: Image, label: 'SHOTS', value: entry.screenshotsCount },
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="flex flex-col items-center gap-0.5">
+                  <Icon className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.5)' }} />
+                  <span className="text-white text-xs font-bold leading-tight">{fmt(value)}</span>
+                  <span className="text-white/30 text-[9px] font-semibold tracking-wide">{label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Followers */}
+            <div className="mx-3 mt-1.5 flex items-center justify-center gap-1.5 flex-shrink-0">
+              <Users className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.4)' }} />
+              <span className="text-white/50 text-xs font-medium">{fmt(entry.followersCount)} followers</span>
+            </div>
+
+            <div className="flex-1" />
+
+            {/* CTA Button */}
+            <div className="px-3 pb-3 flex-shrink-0">
+              <div
+                className="w-full rounded-xl py-2.5 flex items-center justify-center gap-1.5 text-xs font-bold"
+                style={{ background: '#B7FF1A', color: '#0B1319', boxShadow: '0 0 12px rgba(183,255,26,0.4)', letterSpacing: '0.01em' }}
+              >
+                <Upload className="w-3 h-3" />
+                {ctaLabel(entry, period)}
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
