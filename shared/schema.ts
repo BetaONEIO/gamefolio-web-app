@@ -1757,6 +1757,35 @@ export type InsertAdminAlert = typeof adminAlerts.$inferInsert;
 
 export type XpSetting = typeof xpSettings.$inferSelect;
 
+export const gameBounties = pgTable("game_bounties", {
+  id: serial("id").primaryKey(),
+  gameId: integer("game_id").notNull(),
+  createdByUserId: integer("created_by_user_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  rewardType: text("reward_type").notNull().default("game_key"),
+  rewardValue: text("reward_value"),
+  keyCount: integer("key_count").default(0),
+  creatorSlots: integer("creator_slots").default(10),
+  difficulty: text("difficulty").default("medium"),
+  endDate: timestamp("end_date"),
+  status: text("status").default("active"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const gameBountyAcceptances = pgTable("game_bounty_acceptances", {
+  id: serial("id").primaryKey(),
+  bountyId: integer("bounty_id").notNull(),
+  userId: integer("user_id").notNull(),
+  status: text("status").default("active"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertGameBountySchema = createInsertSchema(gameBounties).omit({ id: true, createdAt: true });
+export type GameBounty = typeof gameBounties.$inferSelect;
+export type InsertGameBounty = z.infer<typeof insertGameBountySchema>;
+export type GameBountyAcceptance = typeof gameBountyAcceptances.$inferSelect;
+
 export const usedPaymentHashes = pgTable("used_payment_hashes", {
   id: serial("id").primaryKey(),
   txHash: text("tx_hash").notNull().unique(),
