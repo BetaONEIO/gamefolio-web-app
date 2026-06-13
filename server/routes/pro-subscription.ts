@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import https from 'https';
 import { getUncachableStripeClient, getStripePublishableKey } from '../stripeClient';
 import { db } from '../db';
 import { users } from '@shared/schema';
@@ -30,8 +29,9 @@ const CURRENCY_TABLE: Record<string, RegionalPrice> = {
 };
 
 // ISO 3166-1 alpha-2 → currency key
+// CA uses USD per regional pricing spec (US/CA share the same tier)
 const COUNTRY_TO_CURRENCY: Record<string, keyof typeof CURRENCY_TABLE> = {
-  US: 'USD',
+  US: 'USD', CA: 'USD',
   // Euro zone
   AT: 'EUR', BE: 'EUR', HR: 'EUR', CY: 'EUR', EE: 'EUR', FI: 'EUR',
   FR: 'EUR', DE: 'EUR', GR: 'EUR', IE: 'EUR', IT: 'EUR', LV: 'EUR',
@@ -39,7 +39,6 @@ const COUNTRY_TO_CURRENCY: Record<string, keyof typeof CURRENCY_TABLE> = {
   SI: 'EUR', ES: 'EUR',
   GB: 'GBP',
   AU: 'AUD',
-  CA: 'CAD',
 };
 
 function getPriceForCountry(countryCode: string | null): RegionalPrice & { country: string } {
@@ -54,73 +53,28 @@ function formatMinorUnits(minor: number, symbol: string): string {
 }
 
 // ─── IP → country detection ───────────────────────────────────────────────
+// Detection is performed entirely in-process using HTTP headers injected by
+// the CDN / reverse-proxy layer.  No outbound network calls are made.
+//
+// Header precedence:
+//   CF-IPCountry        — Cloudflare (all plans)
+//   X-Vercel-IP-Country — Vercel Edge Network
+//   CloudFront-Viewer-Country — AWS CloudFront
+//   X-Country-Code      — generic CDN / load-balancer convention
+//
+// When none of these headers are present (local dev, bare Node server) the
+// function returns null and callers fall back to the default currency (GBP).
 
-// Small in-process cache: ip → { country, ts }
-const ipCountryCache = new Map<string, { country: string; ts: number }>();
-const IP_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-
-function getClientIp(req: Request): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) {
-    const first = Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0];
-    return first.trim();
-  }
-  return req.socket?.remoteAddress ?? '';
-}
-
-function fetchCountryFromIpApi(ip: string): Promise<string | null> {
-  return new Promise((resolve) => {
-    // Skip private/loopback IPs
-    if (!ip || ip === '::1' || ip.startsWith('127.') || ip.startsWith('192.168.') ||
-        ip.startsWith('10.') || ip.startsWith('172.')) {
-      return resolve(null);
-    }
-    const url = `https://ip-api.com/json/${encodeURIComponent(ip)}?fields=countryCode`;
-    const httpReq = https.get(url, { timeout: 2000 }, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          resolve(json.countryCode || null);
-        } catch {
-          resolve(null);
-        }
-      });
-    });
-    httpReq.on('error', () => resolve(null));
-    httpReq.on('timeout', () => { httpReq.destroy(); resolve(null); });
-  });
-}
-
-async function getCountryFromRequest(req: Request): Promise<string | null> {
-  // 1. CDN-injected headers (Cloudflare, Vercel, AWS CloudFront, Fastly)
+function getCountryFromRequest(req: Request): string | null {
   const cdnCountry =
     (req.headers['cf-ipcountry'] as string) ||
     (req.headers['x-vercel-ip-country'] as string) ||
-    (req.headers['x-country-code'] as string) ||
-    (req.headers['cloudfront-viewer-country'] as string);
+    (req.headers['cloudfront-viewer-country'] as string) ||
+    (req.headers['x-country-code'] as string);
+
+  // 'XX' is Cloudflare's sentinel for "country unknown"
   if (cdnCountry && cdnCountry !== 'XX') return cdnCountry.toUpperCase();
-
-  // 2. IP lookup via ip-api.com with in-memory cache
-  const ip = getClientIp(req);
-  if (!ip) return null;
-
-  const cached = ipCountryCache.get(ip);
-  if (cached && Date.now() - cached.ts < IP_CACHE_TTL_MS) {
-    return cached.country;
-  }
-
-  const country = await fetchCountryFromIpApi(ip);
-  if (country) {
-    ipCountryCache.set(ip, { country, ts: Date.now() });
-    // Prune cache when it grows large
-    if (ipCountryCache.size > 5000) {
-      const oldest = [...ipCountryCache.entries()].sort((a, b) => a[1].ts - b[1].ts)[0];
-      ipCountryCache.delete(oldest[0]);
-    }
-  }
-  return country;
+  return null;
 }
 
 // ─── Stripe price cache ───────────────────────────────────────────────────
@@ -204,9 +158,9 @@ const ALLOWED_CURRENCIES = new Set(Object.values(CURRENCY_TABLE).map(p => p.curr
  * GET /api/stripe/pricing
  * Public — returns localized price info based on caller's IP / CDN headers.
  */
-router.get('/api/stripe/pricing', async (req: Request, res: Response) => {
+router.get('/api/stripe/pricing', (req: Request, res: Response) => {
   try {
-    const country = await getCountryFromRequest(req);
+    const country = getCountryFromRequest(req);
     const regional = getPriceForCountry(country);
 
     return res.json({
