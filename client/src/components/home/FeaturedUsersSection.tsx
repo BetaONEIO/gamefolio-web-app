@@ -25,9 +25,11 @@ interface TrendingEntry {
     accentColor: string | null;
     level?: number | null;
     backgroundColor?: string | null;
+    primaryColor?: string | null;
     profileBackgroundType?: string | null;
     profileBackgroundTheme?: string | null;
     profileBackgroundGradient?: boolean | null;
+    profileBackgroundImageUrl?: string | null;
   };
 }
 
@@ -199,14 +201,64 @@ const STYLES = `
   .fire-ember-4 { bottom: 15%; right: 35%; animation: ember-4 2.0s ease-out infinite 1.9s; }
 `;
 
+function isLightHex(hex: string): boolean {
+  const h = hex.replace('#', '');
+  if (h.length !== 6) return false;
+  const r = parseInt(h.substring(0, 2), 16) / 255;
+  const g = parseInt(h.substring(2, 4), 16) / 255;
+  const b = parseInt(h.substring(4, 6), 16) / 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 0.5;
+}
+
+function getCardTheme(user: TrendingEntry['user']): { style: React.CSSProperties; isLight: boolean; hasCustomBg: boolean } {
+  const bg = (user.backgroundColor || '#0B1319').toLowerCase();
+  const accent = (user.accentColor || '#B7FF1A').toLowerCase();
+  const primary = user.primaryColor || '#071013';
+  const isLight = isLightHex(bg);
+
+  // Named theme detection — mirrors ProfilePage.tsx
+  const isNeo       = !isLight && accent === '#00ff41';
+  const isBlocks    = !isLight && accent === '#b7ff1a' && bg === '#1a1a1a';
+  const isForest    = !isLight && accent === '#b7ff1a' && bg === '#0a2f1f';
+
+  const isDefault = bg === '#0b1319' || bg === '#121f2b' || bg === '#000000';
+
+  // Custom background image takes priority
+  if (user.profileBackgroundImageUrl) {
+    return {
+      style: {
+        backgroundImage: `url(${user.profileBackgroundImageUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: '50% 30%',
+      },
+      isLight: false,
+      hasCustomBg: true,
+    };
+  }
+
+  if (isBlocks) return { style: { background: '#87ceeb' }, isLight: true, hasCustomBg: true };
+  if (isNeo)    return { style: { background: '#000800' }, isLight: false, hasCustomBg: true };
+
+  if (isDefault) return { style: { background: 'rgba(11,19,25,0.95)' }, isLight: false, hasCustomBg: false };
+
+  // Gradient (default for all non-default themes)
+  if (user.profileBackgroundGradient !== false && !isLight) {
+    return {
+      style: { background: `linear-gradient(180deg, ${primary} 0%, ${bg} 55%, ${bg} 100%)` },
+      isLight: false,
+      hasCustomBg: true,
+    };
+  }
+
+  return { style: { backgroundColor: bg }, isLight, hasCustomBg: true };
+}
+
 function CreatorCard({ entry, period }: { entry: TrendingEntry; period: Period }) {
   const { user } = entry;
   const [bannerError, setBannerError] = useState(false);
   const borderColor = user.avatarBorderColor || user.accentColor || '#B7FF1A';
   const hasBanner = !!user.bannerUrl && !bannerError;
-  const cardBg = (user.backgroundColor && user.backgroundColor !== '#0B1319' && user.backgroundColor !== '#000000')
-    ? user.backgroundColor
-    : null;
+  const theme = getCardTheme(user);
 
   return (
     <Link href={`/profile/${user.username}`}>
@@ -228,13 +280,18 @@ function CreatorCard({ entry, period }: { entry: TrendingEntry; period: Period }
         {/* Card content */}
         <div
           className="absolute inset-[3px] rounded-[13px] overflow-hidden"
-          style={{ zIndex: 2, background: cardBg ?? 'rgba(11,19,25,0.95)', backdropFilter: 'blur(8px)' }}
+          style={{ zIndex: 2, ...theme.style, backdropFilter: theme.hasCustomBg ? undefined : 'blur(8px)' }}
         >
-          {/* Dark gradient overlay so text stays readable on coloured backgrounds */}
-          {cardBg && (
+          {/* Readability overlay for any non-default background */}
+          {theme.hasCustomBg && (
             <div
               className="absolute inset-0 pointer-events-none"
-              style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0.82) 100%)', borderRadius: 'inherit' }}
+              style={{
+                background: theme.isLight
+                  ? 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.45) 55%, rgba(0,0,0,0.72) 100%)'
+                  : 'linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.50) 55%, rgba(0,0,0,0.80) 100%)',
+                borderRadius: 'inherit',
+              }}
             />
           )}
 
