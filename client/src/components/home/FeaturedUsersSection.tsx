@@ -373,12 +373,7 @@ const FeaturedUsersSection = () => {
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-2">
           <GamefolioTrendingIcon className="w-5 h-5 text-primary" />
-          <h2
-            className="text-xl font-bold tracking-wide uppercase"
-            style={{ color: '#B7FF1A', fontFamily: "'Space Grotesk', sans-serif", letterSpacing: '0.05em', textShadow: '0 0 16px rgba(183,255,26,0.5)' }}
-          >
-            Trending Gamefolios
-          </h2>
+          <h2 className="text-xl sm:text-2xl font-bold">Trending Gamefolios</h2>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 rounded-lg p-1" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
