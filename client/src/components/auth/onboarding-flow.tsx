@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -285,6 +286,7 @@ export default function OnboardingFlow({
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const isMobile = useMobile();
 
   // Core form state
   const [formUsername, setFormUsername] = useState(username.startsWith('temp_') ? '' : username);
@@ -1146,7 +1148,7 @@ export default function OnboardingFlow({
                 <div className="relative z-10" style={{ width: 'clamp(200px, 30vw, 280px)', height: 'clamp(200px, 30vw, 280px)' }}>
                   {/* Shirt — floats centre */}
                   <div className="ob-float" style={{ position: 'absolute', top: '50%', left: '50%', animationDuration: '4s' }}>
-                    <img src={imgIndieGamer} alt="" draggable={false} style={{ transform: 'translate(-50%,-50%) scale(1.3)', width: 'clamp(220px, 30vw, 360px)', height: 'clamp(220px, 30vw, 360px)', objectFit: 'contain' }} />
+                    <img src={imgIndieGamer} alt="" draggable={false} style={{ transform: `translate(-50%,-50%) scale(${isMobile ? 1.56 : 1.3})`, width: isMobile ? 'clamp(264px, 30vw, 432px)' : 'clamp(220px, 30vw, 360px)', height: isMobile ? 'clamp(264px, 30vw, 432px)' : 'clamp(220px, 30vw, 360px)', objectFit: 'contain' }} />
                   </div>
                   {/* Gold Star — top-left */}
                   <div className="ob-float-sm" style={{ position: 'absolute', top: '-4px', left: '-4px', animationDuration: '3.5s', animationDelay: '0.4s' }}>
