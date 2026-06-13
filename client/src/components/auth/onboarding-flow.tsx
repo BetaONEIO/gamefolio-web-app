@@ -706,13 +706,13 @@ export default function OnboardingFlow({
                   <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-10" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
                   {/* Orbit system */}
                   <div className="relative z-10 flex flex-col items-center" style={{ gap: '16px' }}>
-                    <div className="relative" style={{ width: '300px', height: '300px' }}>
+                    <div className="relative" style={{ width: '270px', height: '270px' }}>
                       {/* Orbit track ring */}
-                      <div className="absolute rounded-full pointer-events-none" style={{ inset: '18px', border: '1px dashed rgba(193,255,0,0.20)' }} />
+                      <div className="absolute rounded-full pointer-events-none" style={{ inset: '16px', border: '1px dashed rgba(193,255,0,0.20)' }} />
                       {/* Gamefolio center logo */}
                       <div className="absolute" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 2 }}>
-                        <div className="rounded-full flex items-center justify-center" style={{ width: '112px', height: '112px', background: 'rgba(193,255,0,0.13)', border: '2px solid rgba(193,255,0,0.55)', boxShadow: '0 0 50px rgba(193,255,0,0.42), 0 0 100px rgba(193,255,0,0.14)' }}>
-                          <GamefolioIcon className="w-20 h-20" glow={true} />
+                        <div className="rounded-full flex items-center justify-center" style={{ width: '100px', height: '100px', background: 'rgba(193,255,0,0.13)', border: '2px solid rgba(193,255,0,0.55)', boxShadow: '0 0 50px rgba(193,255,0,0.42), 0 0 100px rgba(193,255,0,0.14)' }}>
+                          <GamefolioIcon style={{ width: '72px', height: '72px' }} glow={true} />
                         </div>
                       </div>
                       {/* Orbiting platform logos */}
@@ -725,13 +725,13 @@ export default function OnboardingFlow({
                         <div
                           key={idx}
                           className="absolute ob-orbit-item"
-                          style={{ top: 'calc(50% - 38px)', left: 'calc(50% - 38px)', animationDelay: item.delay }}
+                          style={{ top: 'calc(50% - 34px)', left: 'calc(50% - 34px)', animationDelay: item.delay }}
                         >
                           <img
                             src={item.img}
                             alt=""
                             draggable={false}
-                            style={{ width: '76px', height: '76px', objectFit: 'contain', mixBlendMode: 'screen', filter: `drop-shadow(0 0 12px ${item.glow})` }}
+                            style={{ width: '68px', height: '68px', objectFit: 'contain', mixBlendMode: 'screen', filter: `drop-shadow(0 0 11px ${item.glow})` }}
                           />
                         </div>
                       ))}
