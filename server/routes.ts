@@ -4927,19 +4927,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Probe outro for audio stream — cached outros generated before audio support may lack it
+      // ── Step 3: Download outro to a local temp file so FFmpeg reads reliably ──
+      // ffprobe/ffmpeg on remote signed URLs can fail or hang; a local file is always safe.
+      let outroLocalPath: string | null = null;
       let outroHasAudio = false;
       if (outroSignedUrl) {
-        const outroProbe = await new Promise<any>((resolve) => {
-          (ffmpeg as any).ffprobe(outroSignedUrl, (err: any, data: any) => resolve(err ? null : data));
-        });
-        if (outroProbe?.streams) {
-          outroHasAudio = outroProbe.streams.some((s: any) => s.codec_type === 'audio');
+        try {
+          const outroResp = await fetch(outroSignedUrl);
+          if (outroResp.ok) {
+            const { VideoProcessor } = await import('./video-processor');
+            await (VideoProcessor as any).ensureDirectories();
+            const outroTmpPath = path.join(process.cwd(), 'temp', `outro_dl_${clipId}_${Date.now()}.mp4`);
+            const outroBuf = Buffer.from(await outroResp.arrayBuffer());
+            await (await import('fs/promises')).writeFile(outroTmpPath, outroBuf);
+            outroLocalPath = outroTmpPath;
+            console.log(`[outro] Downloaded outro to temp file (${Math.round(outroBuf.length / 1024)} KB)`);
+
+            // Probe the local file for audio
+            const outroProbe = await new Promise<any>((resolve) => {
+              (ffmpeg as any).ffprobe(outroTmpPath, (err: any, data: any) => resolve(err ? null : data));
+            });
+            if (outroProbe?.streams) {
+              outroHasAudio = outroProbe.streams.some((s: any) => s.codec_type === 'audio');
+            }
+            console.log(`[outro] outroHasAudio=${outroHasAudio}`);
+          } else {
+            console.warn(`[outro] Could not download outro (${outroResp.status}) — skipping`);
+          }
+        } catch (dlErr: any) {
+          console.warn('[outro] Failed to download outro to temp — skipping:', dlErr?.message);
+          outroLocalPath = null;
         }
       }
 
-      // Audio concat is only safe when BOTH the clip AND the outro have audio streams
-      const concatWithAudio = clipHasAudio && outroHasAudio;
+      // Clean up the outro temp file after the response ends
+      const cleanupOutroTemp = () => {
+        if (outroLocalPath) {
+          import('fs/promises').then(fsp => fsp.unlink(outroLocalPath!).catch(() => {}));
+        }
+      };
+      res.on('finish', cleanupOutroTemp);
+      res.on('close', cleanupOutroTemp);
+
+      // ── Build audio concat filters ───────────────────────────────────────
+      // When the clip has audio but the outro doesn't, fill the outro segment
+      // with generated silence so the clip audio is never silenced.
+      const concatWithAudio = clipHasAudio;  // always include audio track when clip has one
 
       // ── Build watermark filters ──────────────────────────────────────────
       const sgFont = path.join(process.cwd(), 'server', 'assets', 'fonts', 'SpaceGrotesk-Bold.ttf');
@@ -4971,16 +5004,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `scale=${clipW}:${clipH}:force_original_aspect_ratio=decrease,` +
         `pad=${clipW}:${clipH}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=fps=30`;
 
-      if (logoExists && outroSignedUrl) {
+      if (logoExists && outroLocalPath) {
         // Watermark + outro concat
-        // Inputs: 0=clip, 1=logo, 2=outro (outro has audio baked in)
-        const audioFilters = concatWithAudio ? [
-          '[clip_wm]setsar=1,fps=fps=30[clip_n]',
-          `[2:v]${outroScaleFilter}[outro_n]`,
-          '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
-          '[2:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
-          '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
-        ] : [
+        // Inputs: 0=clip, 1=logo, 2=outro (local file)
+        // Audio strategy: if clip has audio, always output audio.
+        //   - if outro also has audio → resample both and concat
+        //   - if outro has no audio  → use anullsrc silence for the outro segment
+        const audioFilters = concatWithAudio ? (
+          outroHasAudio ? [
+            '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+            `[2:v]${outroScaleFilter}[outro_n]`,
+            '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
+            '[2:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
+            '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
+          ] : [
+            '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+            `[2:v]${outroScaleFilter}[outro_n]`,
+            '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
+            'anullsrc=r=44100:cl=stereo,atrim=duration=4,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
+            '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
+          ]
+        ) : [
           '[clip_wm]setsar=1,fps=fps=30[clip_n]',
           `[2:v]${outroScaleFilter}[outro_n]`,
           '[clip_n][outro_n]concat=n=2:v=1:a=0[outv]',
@@ -4991,7 +5035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const command = (ffmpeg as any)()
           .input(freshUrl)
           .input(logoPath)
-          .input(outroSignedUrl)
+          .input(outroLocalPath)
           .complexFilter([
             '[1:v]scale=-1:72[logo]',
             '[0:v][logo]overlay=x=W-w-20:y=H-h-102[wl]',
@@ -5009,7 +5053,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         command.pipe(res, { end: true });
 
       } else if (logoExists) {
-        // Watermark only (existing behaviour)
+        // Watermark only (no outro available)
         const command = (ffmpeg as any)()
           .input(freshUrl)
           .input(logoPath)
@@ -5028,16 +5072,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         command.pipe(res, { end: true });
 
-      } else if (outroSignedUrl) {
+      } else if (outroLocalPath) {
         // Text watermark + outro concat (no logo)
-        // Inputs: 0=clip, 1=outro (outro has audio baked in)
-        const audioFilters2 = concatWithAudio ? [
-          '[clip_wm]setsar=1,fps=fps=30[clip_n]',
-          `[1:v]${outroScaleFilter}[outro_n]`,
-          '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
-          '[1:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
-          '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
-        ] : [
+        // Inputs: 0=clip, 1=outro (local file)
+        const audioFilters2 = concatWithAudio ? (
+          outroHasAudio ? [
+            '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+            `[1:v]${outroScaleFilter}[outro_n]`,
+            '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
+            '[1:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
+            '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
+          ] : [
+            '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+            `[1:v]${outroScaleFilter}[outro_n]`,
+            '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
+            'anullsrc=r=44100:cl=stereo,atrim=duration=4,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
+            '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
+          ]
+        ) : [
           '[clip_wm]setsar=1,fps=fps=30[clip_n]',
           `[1:v]${outroScaleFilter}[outro_n]`,
           '[clip_n][outro_n]concat=n=2:v=1:a=0[outv]',
@@ -5047,7 +5099,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : ['-map', '[outv]', '-c:v', 'libx264', '-an', ...outroBaseOpts];
         const command = (ffmpeg as any)()
           .input(freshUrl)
-          .input(outroSignedUrl)
+          .input(outroLocalPath)
           .complexFilter([
             `[0:v]${line1Filter}[wl]`,
             `[wl]${line2Filter}[clip_wm]`,
