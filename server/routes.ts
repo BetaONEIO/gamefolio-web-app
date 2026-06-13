@@ -2090,8 +2090,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Login route
   app.post("/api/login", (req, res, next) => {
-    // Special handling for demo account (always allow login with "demo" username)
-    if (req.body.username === "demo" || req.body.username === "Demo") {
+    // Special handling for demo account (allow login with "demo" username).
+    // Gated to non-production: the demo account is an in-memory admin-role user
+    // (id 999) with no password check, so it must never be reachable on prod.
+    // In production this falls through to normal auth and fails as expected.
+    if (process.env.NODE_ENV !== "production" && (req.body.username === "demo" || req.body.username === "Demo")) {
       const demoUser = getDemoUser();
       req.login(demoUser, (err) => {
         if (err) {
