@@ -662,7 +662,7 @@ export default function OnboardingFlow({
       case OnboardingStep.Welcome:
         return (
           <div className="flex flex-col flex-1 min-h-0">
-            <div className="flex-1 flex flex-col items-center justify-center text-center px-2">
+            <div className="my-auto flex flex-col items-center text-center px-2">
               <div className="ob-logo mb-8">
                 <GamefolioIcon glow={true} className="w-32 h-32 md:w-40 md:h-40" />
               </div>
@@ -673,7 +673,7 @@ export default function OnboardingFlow({
                 Your gaming identity, all in one place.
               </p>
             </div>
-            <div className="flex-shrink-0 px-6 pt-5 pb-6 relative z-10">
+            <div className="flex-shrink-0 px-6 pt-0 pb-6 relative z-10">
               <button
                 type="button"
                 onClick={goToNextStep}
