@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Zap, Video, Film, Image, Users, Upload } from "lucide-react";
+import { Zap, Upload, Users, TrendingUp } from "lucide-react";
 import { GamefolioTrendingIcon } from "@/components/icons/GamefolioTrendingIcon";
 
 interface TrendingEntry {
@@ -14,6 +14,7 @@ interface TrendingEntry {
   reelsCount: number;
   screenshotsCount: number;
   followersCount: number;
+  followingCount?: number;
   user: {
     id: number;
     username: string;
@@ -265,7 +266,7 @@ function CreatorCard({ entry, period }: { entry: TrendingEntry; period: Period }
             )}
 
             {/* Avatar */}
-            <div className="flex justify-center flex-shrink-0" style={{ marginTop: hasBanner ? -20 : 8 }}>
+            <div className="flex justify-center flex-shrink-0" style={{ marginTop: hasBanner ? -20 : 8, position: 'relative', zIndex: 2 }}>
               <div
                 className="rounded-full overflow-hidden flex-shrink-0"
                 style={{ width: 56, height: 56, border: `2.5px solid ${borderColor}`, boxShadow: `0 0 14px ${borderColor}88` }}
@@ -294,9 +295,9 @@ function CreatorCard({ entry, period }: { entry: TrendingEntry; period: Period }
               style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
             >
               {[
-                { icon: Video, label: 'CLIPS', value: entry.clipsCount },
-                { icon: Film,  label: 'REELS', value: entry.reelsCount },
-                { icon: Image, label: 'SHOTS', value: entry.screenshotsCount },
+                { icon: TrendingUp, label: 'UPLOADS', value: entry.clipsCount + entry.reelsCount + entry.screenshotsCount },
+                { icon: Users,      label: 'FOLLOWERS', value: entry.followersCount },
+                { icon: Upload,     label: 'FOLLOWING', value: entry.followingCount ?? 0 },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex flex-col items-center gap-0.5">
                   <Icon className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.5)' }} />
@@ -304,12 +305,6 @@ function CreatorCard({ entry, period }: { entry: TrendingEntry; period: Period }
                   <span className="text-white/30 text-[9px] font-semibold tracking-wide">{label}</span>
                 </div>
               ))}
-            </div>
-
-            {/* Followers */}
-            <div className="mx-3 mt-1.5 flex items-center justify-center gap-1.5 flex-shrink-0">
-              <Users className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.4)' }} />
-              <span className="text-white/50 text-xs font-medium">{fmt(entry.followersCount)} followers</span>
             </div>
 
             <div className="flex-1" />

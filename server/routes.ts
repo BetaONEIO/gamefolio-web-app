@@ -3523,10 +3523,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(inArray(follows.followingId, userIds))
         .groupBy(follows.followingId);
 
+      // Batch: following count per user (who these users follow)
+      const followingRows = await db
+        .select({ userId: follows.followerId, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+        .from(follows)
+        .where(inArray(follows.followerId, userIds))
+        .groupBy(follows.followerId);
+
       const clipsMap: Record<number, number> = Object.fromEntries(clipRows.map(r => [r.userId, r.count]));
       const reelsMap: Record<number, number> = Object.fromEntries(reelRows.map(r => [r.userId, r.count]));
       const ssMap: Record<number, number> = Object.fromEntries(ssRows.map(r => [r.userId, r.count]));
       const followerMap: Record<number, number> = Object.fromEntries(followerRows.map(r => [r.userId, r.count]));
+      const followingMap: Record<number, number> = Object.fromEntries(followingRows.map(r => [r.userId, r.count]));
 
       const enriched = await Promise.all(
         leaderboardData.map(async (entry, index) => {
@@ -3552,6 +3560,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             reelsCount: reelsMap[entry.userId] || 0,
             screenshotsCount: ssMap[entry.userId] || 0,
             followersCount: followerMap[entry.userId] || 0,
+            followingCount: followingMap[entry.userId] || 0,
           };
         })
       );
