@@ -712,7 +712,7 @@ export default function OnboardingFlow({
                       {/* Gamefolio center logo */}
                       <div className="absolute" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 2 }}>
                         <div className="rounded-full flex items-center justify-center" style={{ width: '100px', height: '100px', background: 'rgba(193,255,0,0.13)', border: '2px solid rgba(193,255,0,0.55)', boxShadow: '0 0 50px rgba(193,255,0,0.42), 0 0 100px rgba(193,255,0,0.14)' }}>
-                          <GamefolioIcon style={{ width: '72px', height: '72px' }} glow={true} />
+                          <GamefolioIcon className="w-[72px] h-[72px]" glow={true} />
                         </div>
                       </div>
                       {/* Orbiting platform logos */}
