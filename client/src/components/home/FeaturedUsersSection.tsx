@@ -59,7 +59,7 @@ const STYLES = `
   .fire-carousel-track {
     display: flex;
     gap: 16px;
-    animation: fire-scroll 28s linear infinite;
+    animation: fire-scroll 60s linear infinite;
     width: max-content;
   }
   .fire-carousel-track:hover {
@@ -225,29 +225,16 @@ function CreatorCard({ entry, period }: { entry: TrendingEntry; period: Period }
           className="absolute inset-[3px] rounded-[13px] overflow-hidden flex flex-col"
           style={{ zIndex: 2, background: 'rgba(11,19,25,0.95)', backdropFilter: 'blur(8px)' }}
         >
-          {/* Banner */}
-          <div className="relative flex-shrink-0" style={{ height: 90, borderRadius: '13px 13px 0 0', overflow: 'hidden' }}>
-            {hasBanner ? (
-              <img src={user.bannerUrl!} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <div
-                className="w-full h-full"
-                style={{ background: `linear-gradient(135deg, #0B1319 0%, ${borderColor}22 50%, #0B1319 100%)` }}
-              />
-            )}
-            <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(11,19,25,0.3) 0%, rgba(11,19,25,0.6) 100%)' }} />
-
-            {/* Rank badge */}
+          {/* Rank + points badges — always visible at top */}
+          <div className="relative flex-shrink-0 flex items-center justify-between px-2 pt-2">
             <div
-              className="absolute top-2 left-2 flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full"
+              className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full"
               style={{ background: 'rgba(0,0,0,0.65)', color: entry.rank <= 3 ? ['#FFD700','#C0C0C0','#CD7F32'][entry.rank - 1] : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)' }}
             >
               #{entry.rank}
             </div>
-
-            {/* Points badge */}
             <div
-              className="absolute top-2 right-2 flex items-center gap-0.5 text-[11px] font-bold px-2 py-0.5 rounded-full"
+              className="flex items-center gap-0.5 text-[11px] font-bold px-2 py-0.5 rounded-full"
               style={{ background: 'rgba(0,0,0,0.65)', color: '#B7FF1A', border: '1px solid rgba(183,255,26,0.3)', backdropFilter: 'blur(4px)' }}
             >
               <Zap className="w-3 h-3" />
@@ -255,8 +242,16 @@ function CreatorCard({ entry, period }: { entry: TrendingEntry; period: Period }
             </div>
           </div>
 
+          {/* Banner — only when the user has one */}
+          {hasBanner && (
+            <div className="relative flex-shrink-0 mx-2 mt-1 rounded-lg overflow-hidden" style={{ height: 70 }}>
+              <img src={user.bannerUrl!} alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(11,19,25,0.2) 0%, rgba(11,19,25,0.55) 100%)' }} />
+            </div>
+          )}
+
           {/* Avatar */}
-          <div className="flex justify-center" style={{ marginTop: -28, zIndex: 3, flexShrink: 0 }}>
+          <div className="flex justify-center" style={{ marginTop: hasBanner ? -20 : 8, zIndex: 3, flexShrink: 0 }}>
             <div
               className="rounded-full overflow-hidden"
               style={{ width: 56, height: 56, border: `2.5px solid ${borderColor}`, boxShadow: `0 0 14px ${borderColor}88`, flexShrink: 0 }}
