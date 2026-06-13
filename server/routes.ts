@@ -5847,6 +5847,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const imgBuffer = Buffer.from(await imgResponse.arrayBuffer());
 
+      // Fetch username and game name for text overlay
+      const [screenshotUser, screenshotGame] = await Promise.all([
+        storage.getUser(screenshot.userId),
+        screenshot.gameId ? storage.getGame(screenshot.gameId) : Promise.resolve(null),
+      ]);
+      const usernameLabel = `@${screenshotUser?.username || "gamefolio"}`;
+      const gameLabel = screenshotGame?.name || "gamefolio.gg";
+
       // Load logo watermark
       const path = await import("path");
       const logoPath = path.resolve("client/src/assets/gamefolio-logo-white.png");
@@ -5872,8 +5880,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const left = imgW - logoW - padding;
       const top = imgH - logoH - padding;
 
+      // Build SVG text overlay — bottom-left, matching clip watermark style
+      const fontSize = Math.max(24, Math.round(imgW * 0.028));
+      const lineGap = Math.round(fontSize * 1.35);
+      const textPad = padding;
+      const textY1 = imgH - textPad - lineGap;
+      const textY2 = imgH - textPad;
+
+      // Escape XML special chars
+      const xmlEsc = (s: string) =>
+        s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+      const svgOverlay = `<svg xmlns="http://www.w3.org/2000/svg" width="${imgW}" height="${imgH}">
+        <defs>
+          <filter id="shadow">
+            <feDropShadow dx="1" dy="1" stdDeviation="3" flood-color="#000" flood-opacity="0.8"/>
+          </filter>
+        </defs>
+        <text x="${textPad}" y="${textY1}" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="bold"
+          fill="#B7FF18" filter="url(#shadow)">${xmlEsc(usernameLabel)}</text>
+        <text x="${textPad}" y="${textY2}" font-family="Arial, sans-serif" font-size="${Math.round(fontSize * 0.82)}"
+          fill="white" filter="url(#shadow)">${xmlEsc(gameLabel)}</text>
+      </svg>`;
+
       const watermarked = await sharp(imgBuffer)
-        .composite([{ input: logoBuffer, left, top, blend: "over" }])
+        .composite([
+          { input: logoBuffer, left, top, blend: "over" },
+          { input: Buffer.from(svgOverlay), blend: "over" },
+        ])
         .png()
         .toBuffer();
 
