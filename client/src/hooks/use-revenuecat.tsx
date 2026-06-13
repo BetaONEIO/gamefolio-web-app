@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode, useRef } from "react";
 import { Purchases, CustomerInfo, Offerings, Package, Offering } from "@revenuecat/purchases-js";
-import { useAuth } from "./use-auth";
+import { AuthContext } from "./use-auth";
 import { useToast } from "./use-toast";
 import { queryClient } from "@/lib/queryClient";
 
@@ -30,7 +30,8 @@ function getRevenueCatApiKey(): string | null {
 }
 
 export function RevenueCatProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const auth = useContext(AuthContext);
+  const user = auth?.user ?? null;
   const { toast } = useToast();
   const purchasesRef = useRef<Purchases | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
