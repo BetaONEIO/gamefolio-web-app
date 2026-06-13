@@ -73,132 +73,13 @@ const STYLES = `
     animation-play-state: paused;
   }
 
-  /* flicker: border opacity stutters like a flame */
-  @keyframes fire-flicker {
-    0%,100% { opacity: 1;    filter: blur(0.6px) brightness(1);   }
-    15%      { opacity: 0.80; filter: blur(0.8px) brightness(0.9); }
-    30%      { opacity: 0.95; filter: blur(0.5px) brightness(1.1); }
-    50%      { opacity: 0.72; filter: blur(1.0px) brightness(0.85);}
-    65%      { opacity: 0.92; filter: blur(0.6px) brightness(1.05);}
-    80%      { opacity: 0.78; filter: blur(0.9px) brightness(0.88);}
-  }
-
-  @keyframes fire-flicker-slow {
-    0%,100% { opacity: 0.55; filter: blur(2.5px) brightness(1);   }
-    25%      { opacity: 0.40; filter: blur(3.0px) brightness(0.8); }
-    55%      { opacity: 0.60; filter: blur(2.0px) brightness(1.1); }
-    75%      { opacity: 0.45; filter: blur(2.8px) brightness(0.85);}
-  }
-
-  /* card glow pulses green */
-  @keyframes green-glow-pulse {
-    0%,100% {
-      box-shadow:
-        0 0 0 2px rgba(183,255,26,0.0),
-        0 0 14px 3px rgba(183,255,26,0.25),
-        0 0 40px 8px rgba(183,255,26,0.10),
-        0 4px 32px rgba(0,0,0,0.7);
-    }
-    50% {
-      box-shadow:
-        0 0 0 2px rgba(183,255,26,0.0),
-        0 0 24px 6px rgba(183,255,26,0.50),
-        0 0 60px 16px rgba(183,255,26,0.20),
-        0 4px 32px rgba(0,0,0,0.7);
-    }
-  }
-
-  /* ── ember particles ─────────────────────── */
-  @keyframes ember-1 {
-    0%   { transform: translate(0,0) scale(1); opacity: 0.9; }
-    100% { transform: translate(-10px,-55px) scale(0); opacity: 0; }
-  }
-  @keyframes ember-2 {
-    0%   { transform: translate(0,0) scale(1); opacity: 0.8; }
-    100% { transform: translate(8px,-65px) scale(0); opacity: 0; }
-  }
-  @keyframes ember-3 {
-    0%   { transform: translate(0,0) scale(1); opacity: 0.7; }
-    100% { transform: translate(4px,-50px) scale(0); opacity: 0; }
-  }
-  @keyframes ember-4 {
-    0%   { transform: translate(0,0) scale(1); opacity: 0.85; }
-    100% { transform: translate(-6px,-60px) scale(0); opacity: 0; }
-  }
-
-  /* ── assembled fire-card ─────────────────── */
+  /* ── card — static border, no animation ─── */
   .fire-card {
     position: relative;
-    animation: green-glow-pulse 2.6s ease-in-out infinite;
+    border: 2px solid rgba(183,255,26,0.55);
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
   }
-
-  /* static gradient border — flickers in place, no spin */
-  .fire-card-border {
-    position: absolute;
-    inset: -3px;
-    border-radius: 19px;
-    background: linear-gradient(
-      180deg,
-      #4aff00 0%,
-      #B7FF1A 12%,
-      #e8ffaa 18%,
-      #B7FF1A 25%,
-      #1a3d00 38%,
-      #1a3d00 62%,
-      #B7FF1A 75%,
-      #e8ffaa 82%,
-      #B7FF1A 88%,
-      #4aff00 100%
-    );
-    animation: fire-flicker 1.8s ease-in-out infinite;
-    z-index: 0;
-    pointer-events: none;
-  }
-
-  /* outer soft glow halo — flickers slower for depth */
-  .fire-card-border-2 {
-    position: absolute;
-    inset: -6px;
-    border-radius: 22px;
-    background: linear-gradient(
-      180deg,
-      #33cc00 0%,
-      #B7FF1A 20%,
-      transparent 45%,
-      transparent 55%,
-      #B7FF1A 80%,
-      #33cc00 100%
-    );
-    animation: fire-flicker-slow 2.4s ease-in-out infinite 0.5s;
-    z-index: 0;
-    pointer-events: none;
-  }
-
-  /* inner mask so border shows only as a ring */
-  .fire-card-inner {
-    position: absolute;
-    inset: 2px;
-    border-radius: 14px;
-    background: rgba(11,19,25,0.96);
-    z-index: 1;
-    pointer-events: none;
-  }
-
-  /* ember dots */
-  .fire-ember {
-    position: absolute;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: #B7FF1A;
-    box-shadow: 0 0 6px 2px rgba(183,255,26,0.8);
-    pointer-events: none;
-    z-index: 8;
-  }
-  .fire-ember-1 { bottom: 12%; left: 15%; animation: ember-1 1.9s ease-out infinite 0.1s; }
-  .fire-ember-2 { bottom: 18%; right: 14%; animation: ember-2 2.3s ease-out infinite 0.7s; }
-  .fire-ember-3 { bottom: 8%;  left: 48%; animation: ember-3 1.6s ease-out infinite 1.3s; }
-  .fire-ember-4 { bottom: 15%; right: 35%; animation: ember-4 2.0s ease-out infinite 1.9s; }
 `;
 
 function isLightHex(hex: string): boolean {
@@ -266,17 +147,6 @@ function CreatorCard({ entry, period }: { entry: TrendingEntry; period: Period }
         className="flex-shrink-0 cursor-pointer transition-transform duration-200 hover:scale-[1.03] hover:-translate-y-2 fire-card"
         style={{ width: 190, height: 340, borderRadius: 16 }}
       >
-        {/* Fire border layers */}
-        <div className="fire-card-border-2" />
-        <div className="fire-card-border" />
-        <div className="fire-card-inner" />
-
-        {/* Ember particles */}
-        <div className="fire-ember fire-ember-1" />
-        <div className="fire-ember fire-ember-2" />
-        <div className="fire-ember fire-ember-3" />
-        <div className="fire-ember fire-ember-4" />
-
         {/* Card content */}
         <div
           className="absolute inset-[3px] rounded-[13px] overflow-hidden"
