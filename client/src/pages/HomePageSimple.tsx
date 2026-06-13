@@ -1,12 +1,15 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import VideoClipCard from "@/components/clips/VideoClipCard";
 
 import { Button } from "@/components/ui/button";
-import { ClipWithUser } from "@shared/schema";
+import { ClipWithUser, Game } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
-import { ChevronRight, Video, Plus, ChevronLeft, Trophy, Camera } from "lucide-react";
+import { ChevronRight, Video, Plus, ChevronLeft } from "lucide-react";
+import BannerImage from "@assets/Untitled (1920 x 1080 px).png";
+import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
+import LootboxBanner from "@assets/lootbox-banner-1_1770362095039.png";
 import { useLocation, Link } from "wouter";
 import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { LatestReelsCarousel } from "@/components/clips/LatestReelsCarousel";
@@ -14,8 +17,18 @@ import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
 import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreenshotsViewer";
 import { useMobile } from "@/hooks/use-mobile";
+import { Camera } from "lucide-react";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
+import { ProUpgradeDialog } from "@/components/ProUpgradeDialog";
 import { LazySection } from "@/components/ui/lazy-section";
+import { openExternal } from "@/lib/platform";
+import { useAuthModal } from "@/hooks/use-auth-modal";
+import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
+import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
+import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
+import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
+import HomeCarousel from "@/components/home/HomeCarousel";
+import { Trophy } from "lucide-react";
 
 interface TrendingContentCarouselProps {
   clips: ClipWithUser[] | undefined;
@@ -152,347 +165,325 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
   );
 };
 
-interface CarouselSlide {
-  type: 'trending_clip' | 'top_gamefolios' | 'trending_game' | 'live_now' | 'creator_spotlight' | 'community_milestone' | 'discover_new';
-  [key: string]: any;
+// Popular games for filtering by name instead of using IDs
+const POPULAR_GAMES = [
+  { id: 'all', name: 'All Games' },
+  { id: 'league-of-legends', name: 'League of Legends' },
+  { id: 'fortnite', name: 'Fortnite' },
+  { id: 'call-of-duty', name: 'Call of Duty' },
+  { id: 'valorant', name: 'Valorant' },
+  { id: 'csgo', name: 'CS:GO' },
+  { id: 'minecraft', name: 'Minecraft' },
+];
+
+const HERO_SLIDES = [
+  {
+    type: 'overlay' as const,
+    backgroundImage: ForzaGif,
+    overlay: 'linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8))',
+    showContent: true,
+  },
+  {
+    type: 'lootbox' as const,
+    backgroundImage: LootboxBanner,
+    overlay: 'linear-gradient(to right, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%)',
+    showContent: true,
+  },
+  {
+    type: 'overlay' as const,
+    backgroundImage: BannerImage,
+    overlay: 'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7))',
+    showContent: true,
+  },
+];
+
+const SLIDE_INTERVAL = 5000;
+
+interface DbHeroSlide {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  buttonText: string | null;
+  buttonLink: string | null;
+  imageUrl: string;
+  displayOrder: number;
+  isActive: boolean;
+  visibility: string;
+  textAlign: string;
 }
 
-const CAROUSEL_INTERVAL = 6000;
+interface HeroBannerSlideshowProps {
+  heroText: { title: string; subtitle: string; buttonText?: string; buttonUrl?: string } | null;
+  user: any;
+  userHasContent: boolean | undefined;
+  setLocation: (path: string) => void;
+  dbSlides?: DbHeroSlide[];
+  slideIntervalMs?: number;
+}
 
-const CommunityCarousel = ({ slides, isLoading }: { slides: CarouselSlide[]; isLoading: boolean }) => {
-  const [, setLocation] = useLocation();
+const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSlides, slideIntervalMs }: HeroBannerSlideshowProps) => {
+  const { openModal } = useAuthModal();
+  // Filter out Pro slides for users who are already Pro
+  const visibleDbSlides = dbSlides?.filter(slide =>
+    !(slide.buttonLink === '/pro' && (user as any)?.isPro)
+  );
+  const useDbSlides = visibleDbSlides && visibleDbSlides.length > 0;
+  const slidesCount = useDbSlides ? visibleDbSlides.length : HERO_SLIDES.length;
+  const interval = slideIntervalMs || SLIDE_INTERVAL;
+
   const [currentSlide, setCurrentSlide] = useState(0);
-  const autoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
-  const count = slides.length;
+  const autoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sectionRef = useRef<HTMLElement>(null);
 
-  const goToSlide = useCallback((idx: number) => {
-    setCurrentSlide(idx);
+  const goToSlide = useCallback((index: number) => {
+    setCurrentSlide(index);
     if (autoTimerRef.current) clearInterval(autoTimerRef.current);
-    if (count > 1) {
-      autoTimerRef.current = setInterval(() => setCurrentSlide(p => (p + 1) % count), CAROUSEL_INTERVAL);
-    }
-  }, [count]);
+    autoTimerRef.current = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slidesCount);
+    }, interval);
+  }, [slidesCount, interval]);
 
-  const goNext = useCallback(() => goToSlide((currentSlide + 1) % count), [currentSlide, goToSlide, count]);
-  const goPrev = useCallback(() => goToSlide((currentSlide - 1 + count) % count), [currentSlide, goToSlide, count]);
+  const goNext = useCallback(() => {
+    goToSlide((currentSlide + 1) % slidesCount);
+  }, [currentSlide, goToSlide, slidesCount]);
+
+  const goPrev = useCallback(() => {
+    goToSlide((currentSlide - 1 + slidesCount) % slidesCount);
+  }, [currentSlide, goToSlide, slidesCount]);
 
   useEffect(() => {
     setCurrentSlide(0);
     if (autoTimerRef.current) clearInterval(autoTimerRef.current);
-    if (count > 1) {
-      autoTimerRef.current = setInterval(() => setCurrentSlide(p => (p + 1) % count), CAROUSEL_INTERVAL);
-    }
+    autoTimerRef.current = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slidesCount);
+    }, interval);
     return () => { if (autoTimerRef.current) clearInterval(autoTimerRef.current); };
-  }, [count]);
+  }, [slidesCount, interval]);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') goPrev();
       else if (e.key === 'ArrowRight') goNext();
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [goNext, goPrev]);
 
-  const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; touchEndX.current = null; };
-  const handleTouchMove = (e: React.TouchEvent) => { touchEndX.current = e.touches[0].clientX; };
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchEndX.current = null;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
   const handleTouchEnd = () => {
     if (touchStartX.current === null || touchEndX.current === null) return;
     const diff = touchStartX.current - touchEndX.current;
-    if (Math.abs(diff) >= 50) diff > 0 ? goNext() : goPrev();
-    touchStartX.current = null; touchEndX.current = null;
-  };
-
-  const formatViews = (n: number) =>
-    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : String(n);
-
-  const renderSlide = (slide: CarouselSlide) => {
-    switch (slide.type) {
-      case 'trending_clip':
-        return (
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: slide.thumbnailUrl ? `url(${slide.thumbnailUrl})` : undefined, backgroundColor: '#0B1319' }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20" />
-            <div className="relative h-full flex flex-col justify-end px-6 sm:px-12 md:px-16 pb-12 sm:pb-14">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#B7FF18' }}>
-                <span className="w-2 h-2 rounded-full animate-pulse inline-block" style={{ background: '#B7FF18' }} />
-                Trending Right Now
-              </span>
-              <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-2 leading-tight line-clamp-2">{slide.title}</h2>
-              <p className="text-white/70 text-sm mb-4">@{slide.username} · {(slide.views ?? 0).toLocaleString()} views{slide.gameName ? ` · ${slide.gameName}` : ''}</p>
-              <Button className="w-fit px-6 py-2 h-auto font-semibold text-sm" style={{ background: '#B7FF18', color: '#071013' }} onClick={() => setLocation(`/clips/${slide.clipId}`)}>
-                Watch Now
-              </Button>
-            </div>
-          </div>
-        );
-
-      case 'top_gamefolios':
-        return (
-          <div className="absolute inset-0 flex flex-col" style={{ background: 'linear-gradient(135deg, #071013 0%, #0B2232 50%, #071013 100%)' }}>
-            <div className="h-full flex flex-col justify-center px-6 sm:px-12 md:px-16 py-8">
-              <div className="flex items-center gap-2 mb-2">
-                <Trophy className="w-4 h-4" style={{ color: '#B7FF18' }} />
-                <span className="font-bold uppercase tracking-widest text-xs" style={{ color: '#B7FF18' }}>Leaderboard</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-5">Top Gamefolios</h2>
-              <div className="flex flex-col sm:flex-row gap-3">
-                {(slide.entries as any[]).map((entry: any, idx: number) => (
-                  <button
-                    key={entry.username}
-                    onClick={() => setLocation(`/profile/${entry.username}`)}
-                    className="flex items-center gap-3 rounded-xl px-4 py-3 text-left flex-1 hover:opacity-90 transition-opacity"
-                    style={{ background: 'rgba(183,255,24,0.08)', border: '1px solid rgba(183,255,24,0.2)' }}
-                  >
-                    <span className="text-2xl font-black w-8 flex-shrink-0" style={{ color: idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : '#CD7F32' }}>#{idx + 1}</span>
-                    {entry.avatarUrl ? (
-                      <img src={entry.avatarUrl} alt={entry.username} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm" style={{ background: '#B7FF18', color: '#071013' }}>
-                        {(entry.displayName || entry.username || 'U').charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="font-semibold text-white text-sm truncate">{entry.displayName || entry.username}</p>
-                      <p className="text-xs" style={{ color: '#B7FF18' }}>{(entry.totalPoints ?? 0).toLocaleString()} XP</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <button className="mt-5 text-sm font-medium hover:underline underline-offset-2 text-left" style={{ color: '#B7FF18' }} onClick={() => setLocation('/leaderboard')}>
-                View full leaderboard →
-              </button>
-            </div>
-          </div>
-        );
-
-      case 'trending_game':
-        return (
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: slide.gameImageUrl ? `url(${slide.gameImageUrl})` : undefined, backgroundColor: '#0B1319' }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/20" />
-            <div className="relative h-full flex flex-col justify-center px-6 sm:px-12 md:px-16">
-              <span className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#B7FF18' }}>🎮 Trending Game</span>
-              <h2 className="text-3xl sm:text-4xl md:text-6xl font-black text-white mb-3 leading-tight">{slide.gameName}</h2>
-              <p className="text-white/70 text-sm mb-5">{(slide.clipCount ?? 0).toLocaleString()} clips this month</p>
-              <Button
-                className="w-fit px-6 py-2 h-auto font-semibold text-sm"
-                style={{ background: '#B7FF18', color: '#071013' }}
-                onClick={() => setLocation(`/games/${String(slide.gameName).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`)}
-              >
-                Explore Game
-              </Button>
-            </div>
-          </div>
-        );
-
-      case 'live_now':
-        return (
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #1a0505 0%, #0B1319 70%)' }}>
-            <div className="h-full flex flex-col justify-center px-6 sm:px-12 md:px-16 py-8">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-2.5 h-2.5 rounded-full animate-pulse flex-shrink-0" style={{ background: '#ff4444' }} />
-                <span className="font-bold uppercase tracking-widest text-xs text-red-400">Live Right Now</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-5">Catch them live</h2>
-              <div className="flex flex-wrap gap-3">
-                {(slide.streamers as any[]).slice(0, 4).map((streamer: any) => (
-                  <button
-                    key={streamer.username}
-                    onClick={() => setLocation(`/profile/${streamer.username}`)}
-                    className="flex items-center gap-2 rounded-full px-3 py-2 hover:opacity-90 transition-opacity"
-                    style={{ background: 'rgba(255,68,68,0.15)', border: '1px solid rgba(255,68,68,0.35)' }}
-                  >
-                    {streamer.avatarUrl ? (
-                      <img src={streamer.avatarUrl} alt={streamer.username} className="w-8 h-8 rounded-full object-cover ring-2 ring-red-500" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-red-900 flex items-center justify-center text-white text-xs font-bold ring-2 ring-red-500">
-                        {(streamer.displayName || streamer.username || 'U').charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <span className="text-white text-sm font-medium">@{streamer.username}</span>
-                    {streamer.streamPlatform && (
-                      <span className="text-xs font-bold text-red-400 uppercase">{streamer.streamPlatform}</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'creator_spotlight':
-        return (
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #071013 0%, #0d1f2d 100%)' }}>
-            <div className="h-full flex flex-col justify-center px-6 sm:px-12 md:px-16 py-8">
-              <span className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: '#B7FF18' }}>⭐ Creator Spotlight</span>
-              <div className="flex items-center gap-4 sm:gap-6">
-                {slide.avatarUrl ? (
-                  <img
-                    src={slide.avatarUrl}
-                    alt={slide.username}
-                    className="w-20 h-20 sm:w-28 sm:h-28 rounded-full object-cover flex-shrink-0"
-                    style={{ boxShadow: '0 0 0 4px #B7FF18' }}
-                  />
-                ) : (
-                  <div
-                    className="w-20 h-20 sm:w-28 sm:h-28 rounded-full flex items-center justify-center flex-shrink-0 text-3xl font-black"
-                    style={{ background: '#B7FF18', color: '#071013', boxShadow: '0 0 0 4px rgba(183,255,24,0.3)' }}
-                  >
-                    {(slide.displayName || slide.username || 'U').charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div>
-                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-1 leading-tight">{slide.displayName || slide.username}</h2>
-                  <p className="text-white/60 text-sm mb-3">@{slide.username} · Level {slide.level}</p>
-                  <div className="flex gap-5 mb-4">
-                    <div>
-                      <p className="text-xl font-bold" style={{ color: '#B7FF18' }}>{(slide.totalXP ?? 0).toLocaleString()}</p>
-                      <p className="text-white/50 text-xs">Total XP</p>
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold text-white">{slide.clipCount ?? 0}</p>
-                      <p className="text-white/50 text-xs">Clips</p>
-                    </div>
-                  </div>
-                  <Button
-                    className="w-fit px-5 py-2 h-auto font-semibold text-sm"
-                    style={{ background: '#B7FF18', color: '#071013' }}
-                    onClick={() => setLocation(`/profile/${slide.username}`)}
-                  >
-                    View Profile
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'community_milestone':
-        return (
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #071013 0%, #0B2232 50%, #071013 100%)' }}>
-            <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, #B7FF18 0%, transparent 50%), radial-gradient(circle at 80% 50%, #B7FF18 0%, transparent 50%)' }} />
-            <div className="relative h-full flex flex-col justify-center px-6 sm:px-12 md:px-16">
-              <span className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#B7FF18' }}>🏆 Community</span>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6">The numbers don't lie</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { label: 'Gamers', value: (slide.totalUsers ?? 0).toLocaleString() },
-                  { label: 'Clips', value: (slide.totalClips ?? 0).toLocaleString() },
-                  { label: 'Screenshots', value: (slide.totalScreenshots ?? 0).toLocaleString() },
-                  { label: 'Views', value: formatViews(Number(slide.totalViews ?? 0)) },
-                ].map(stat => (
-                  <div key={stat.label} className="rounded-xl p-3 sm:p-4 text-center" style={{ background: 'rgba(183,255,24,0.08)', border: '1px solid rgba(183,255,24,0.2)' }}>
-                    <p className="text-xl sm:text-3xl font-black" style={{ color: '#B7FF18' }}>{stat.value}</p>
-                    <p className="text-white/60 text-xs mt-1">{stat.label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'discover_new':
-        return (
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: slide.imageUrl ? `url(${slide.imageUrl})` : undefined, backgroundColor: '#0B1319' }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
-            <div className="relative h-full flex flex-col justify-end px-6 sm:px-12 md:px-16 pb-12 sm:pb-14">
-              <span className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#B7FF18' }}>✨ Discover Something New</span>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2 leading-tight line-clamp-2">{slide.title}</h2>
-              <p className="text-white/60 text-sm mb-4">{(slide.views ?? 0).toLocaleString()} views</p>
-              <Button
-                className="w-fit px-6 py-2 h-auto font-semibold text-sm"
-                style={{ background: '#B7FF18', color: '#071013' }}
-                onClick={() => setLocation(slide.contentType === 'clip' ? `/clips/${slide.contentId}` : `/screenshots/${slide.contentId}`)}
-              >
-                Check It Out
-              </Button>
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
+    const minSwipeDistance = 50;
+    if (Math.abs(diff) >= minSwipeDistance) {
+      if (diff > 0) goNext();
+      else goPrev();
     }
+    touchStartX.current = null;
+    touchEndX.current = null;
   };
-
-  if (isLoading) {
-    return (
-      <div
-        className="relative -mx-2 md:-mx-6 -mt-2 md:-mt-4 h-[300px] sm:h-[360px] md:h-[480px] animate-pulse"
-        style={{ background: 'linear-gradient(135deg, #071013 0%, #0B2232 100%)' }}
-      />
-    );
-  }
-
-  if (!slides.length) return null;
 
   return (
     <section
+      ref={sectionRef}
       className="relative overflow-hidden -mx-2 md:-mx-6 -mt-2 md:-mt-4"
       tabIndex={0}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <div className="relative h-[300px] sm:h-[360px] md:h-[480px]">
-        {slides.map((slide, index) => (
-          <div
-            key={`${slide.type}-${index}`}
-            className="absolute inset-0 transition-opacity duration-700 ease-in-out"
-            style={{ opacity: currentSlide === index ? 1 : 0, zIndex: currentSlide === index ? 1 : 0 }}
-          >
-            {renderSlide(slide)}
-          </div>
-        ))}
-
-        {count > 1 && (
-          <>
-            <button
-              onClick={goPrev}
-              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/80 text-white p-2 rounded-full transition-colors hidden sm:flex items-center justify-center"
+      <div className="relative h-[300px] sm:h-[350px] md:h-[500px]">
+        {useDbSlides ? (
+          visibleDbSlides.map((slide, index) => {
+            const isLootboxSlide = slide.buttonLink === '/lootbox';
+            const isProSlide = slide.buttonLink === '/pro';
+            const effectiveAlign = isLootboxSlide ? 'center' : slide.textAlign;
+            return (
+            <div
+              key={slide.id}
+              className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
+              style={{
+                backgroundImage: `url(${slide.imageUrl})`,
+                opacity: currentSlide === index ? 1 : 0,
+                zIndex: currentSlide === index ? 1 : 0,
+              }}
             >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              onClick={goNext}
-              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/80 text-white p-2 rounded-full transition-colors hidden sm:flex items-center justify-center"
+              <div className={`absolute inset-0 ${effectiveAlign === 'left' ? 'bg-gradient-to-r from-black/80 via-black/40 to-transparent' : effectiveAlign === 'right' ? 'bg-gradient-to-l from-black/80 via-black/40 to-transparent' : 'bg-gradient-to-t from-black/70 via-black/50 to-black/30'}`} />
+              <div className={`relative flex ${effectiveAlign === 'right' ? 'items-center justify-end' : effectiveAlign === 'left' ? 'items-center justify-start' : 'items-center justify-center'} h-full`}>
+                <div className={`${effectiveAlign === 'center' ? 'text-center' : effectiveAlign === 'right' ? 'text-right' : 'text-left'} text-white px-8 sm:px-14 md:px-24 ${effectiveAlign === 'center' ? 'max-w-4xl' : 'max-w-lg'}`}>
+                  <h1 className="text-2xl sm:text-3xl md:text-6xl font-bold mb-3 sm:mb-4 leading-tight">
+                    {slide.title.split('\n').map((line, idx) => (
+                      <span key={idx}>
+                        {idx > 0 && <span className="block text-primary">{line}</span>}
+                        {idx === 0 && line}
+                      </span>
+                    ))}
+                  </h1>
+                  {slide.subtitle && (
+                    <p className={`text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl ${effectiveAlign === 'center' ? 'mx-auto' : ''} leading-relaxed`}>
+                      {slide.subtitle}
+                    </p>
+                  )}
+                  {slide.buttonText && slide.buttonLink && (
+                    <Button 
+                      className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground border-0"
+                      style={isProSlide ? {
+                        background: 'linear-gradient(90deg, #B7FF1A, #FFE500, #AAFF00, #FFE500, #B7FF1A)',
+                        backgroundSize: '300% 100%',
+                        animation: 'gradient-shift 3s ease infinite',
+                        color: '#071013',
+                      } : undefined}
+                      onClick={() => {
+                        if (slide.buttonLink === '/lootbox') {
+                          window.dispatchEvent(new CustomEvent('open-lootbox'));
+                        } else if (slide.buttonLink === '/pro') {
+                          window.dispatchEvent(new CustomEvent('open-pro-upgrade'));
+                        } else if (slide.buttonLink?.startsWith('http')) {
+                          void openExternal(slide.buttonLink);
+                        } else {
+                          if (!user) {
+                            openModal('login');
+                          } else {
+                            setLocation(slide.buttonLink || '/');
+                          }
+                        }
+                      }}
+                    >
+                      {slide.buttonText}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+            );
+          })
+        ) : (
+          HERO_SLIDES.map((slide, index) => (
+            <div
+              key={index}
+              className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
+              style={{
+                backgroundImage: slide.overlay
+                  ? `${slide.overlay}, url(${slide.backgroundImage})`
+                  : `url(${slide.backgroundImage})`,
+                opacity: currentSlide === index ? 1 : 0,
+                zIndex: currentSlide === index ? 1 : 0,
+              }}
             >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </>
+              {slide.type === 'lootbox' && (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center text-white px-6 sm:px-10 md:px-16 flex flex-col items-center justify-center h-full max-w-lg">
+                    <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-4 sm:mb-6 leading-tight drop-shadow-lg">
+                      Claim your<br />Daily Lootbox
+                    </h2>
+                    <Button 
+                      className="w-full sm:w-fit px-8 py-3 sm:py-4 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
+                      onClick={() => {
+                        if (user) {
+                          window.dispatchEvent(new CustomEvent('open-lootbox'));
+                        } else {
+                          setLocation('/auth');
+                        }
+                      }}
+                    >
+                      Claim
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {slide.showContent && slide.type !== 'lootbox' && (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center text-white px-4 sm:px-6 max-w-4xl">
+                    {heroText ? (
+                      <>
+                        <h1 className="text-2xl sm:text-3xl md:text-6xl font-bold mb-3 sm:mb-4 leading-tight">
+                          {heroText.title.split('\n').map((line, idx) => (
+                            <span key={idx}>
+                              {idx > 0 && <span className="block text-primary">{line}</span>}
+                              {idx === 0 && line}
+                            </span>
+                          ))}
+                        </h1>
+                        <p className="text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-2">
+                          {heroText.subtitle}
+                        </p>
+                        {heroText.buttonText && heroText.buttonUrl ? (
+                          <Button 
+                            className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                            onClick={() => {
+                              if (heroText.buttonUrl?.startsWith('http')) {
+                                void openExternal(heroText.buttonUrl);
+                              } else {
+                                setLocation(heroText.buttonUrl || '/');
+                              }
+                            }}
+                            data-testid="button-custom-hero"
+                          >
+                            {heroText.buttonText}
+                          </Button>
+                        ) : !user ? (
+                          <Button 
+                            className="w-fit px-8 py-3 sm:py-4 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
+                            onClick={() => setLocation('/auth')}
+                            data-testid="button-join-community"
+                          >
+                            Join Community
+                          </Button>
+                        ) : !userHasContent && (
+                          <Button 
+                            className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                            onClick={() => setLocation('/upload')}
+                            data-testid="button-start-building"
+                          >
+                            Start Building Now
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      <div className="space-y-4">
+                        <Skeleton className="h-12 sm:h-16 md:h-24 w-full max-w-2xl mx-auto bg-white/10" />
+                        <Skeleton className="h-6 sm:h-8 w-3/4 max-w-xl mx-auto bg-white/10" />
+                        <Skeleton className="h-12 w-40 mx-auto bg-white/10" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))
         )}
 
-        {count > 1 && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-            {slides.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => goToSlide(index)}
-                className="h-1.5 rounded-full transition-all duration-300"
-                style={currentSlide === index
-                  ? { background: '#B7FF18', width: '24px' }
-                  : { background: 'rgba(255,255,255,0.4)', width: '6px' }
-                }
-              />
-            ))}
-          </div>
-        )}
+        {/* Slide Indicators */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+          {Array.from({ length: slidesCount }).map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToSlide(index)}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                currentSlide === index
+                  ? 'w-6 bg-primary'
+                  : 'w-2 bg-white/40 hover:bg-white/60'
+              }`}
+            />
+          ))}
+        </div>
       </div>
     </section>
   );
 };
 
 const HomePage = () => {
+  const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
+  const [selectedGameFilter, setSelectedGameFilter] = useState<string | null>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
   const isMobile = useMobile();
   const [, setLocation] = useLocation();
@@ -500,41 +491,36 @@ const HomePage = () => {
   const [screenshotsDragging, setScreenshotsDragging] = useState(false);
   const [screenshotsDragStart, setScreenshotsDragStart] = useState(0);
   const [screenshotsScrollStart, setScreenshotsScrollStart] = useState(0);
-
+  
+  // Get current user from auth context
   const { user } = useAuth();
   const userId = user?.id;
 
-  // Community carousel data
-  const { data: carouselSlides = [], isLoading: isLoadingCarousel } = useQuery<CarouselSlide[]>({
-    queryKey: ['/api/hero-carousel'],
-    queryFn: async () => {
-      const response = await fetch('/api/hero-carousel');
-      if (!response.ok) throw new Error('Failed to fetch carousel data');
-      return response.json();
-    },
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
-  });
-
-  // Query latest clips — newest uploaded first
+  // Query latest clips for the homepage section — newest uploaded first
   const { data: trendingClipsData, isLoading: isLoadingTrendingClips } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/clips/latest'],
     queryFn: async () => {
       const response = await fetch('/api/clips/latest?limit=20', { credentials: 'include' });
-      if (!response.ok) throw new Error('Failed to fetch latest clips');
+      if (!response.ok) {
+        throw new Error('Failed to fetch latest clips');
+      }
       return response.json();
     }
   });
 
-  const trendingClips = Array.isArray(trendingClipsData)
+  // Ensure trendingClipsData is an array and filter out reels
+  const trendingClips = Array.isArray(trendingClipsData) 
     ? trendingClipsData.filter(clip => clip.videoType !== 'reel')
     : [];
 
+  // Query latest reels (9:16 aspect ratio) - newest uploaded reels
   const { data: latestReels, isLoading: isLoadingReels } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/reels/latest'],
     queryFn: async () => {
       const response = await fetch('/api/reels/latest?limit=12');
-      if (!response.ok) throw new Error('Failed to fetch latest reels');
+      if (!response.ok) {
+        throw new Error('Failed to fetch latest reels');
+      }
       return response.json();
     }
   });
@@ -543,22 +529,128 @@ const HomePage = () => {
     queryKey: ['/api/screenshots/latest'],
     queryFn: async () => {
       const response = await fetch('/api/screenshots/latest?limit=12', { credentials: 'include' });
-      if (!response.ok) throw new Error('Failed to fetch latest screenshots');
+      if (!response.ok) {
+        throw new Error('Failed to fetch latest screenshots');
+      }
       return response.json();
     }
   });
 
+  // Query to check if user has uploaded any content (clips or screenshots)
+  const { data: userHasContent, isLoading: isLoadingUserContent } = useQuery<boolean>({
+    queryKey: ['/api/user/has-content', userId],
+    queryFn: async () => {
+      if (!userId) return false;
+      const response = await fetch(`/api/user/${userId}/content-check`);
+      if (!response.ok) {
+        return false; // If endpoint doesn't exist or fails, assume no content
+      }
+      const data = await response.json();
+      return data.hasContent || false;
+    },
+    enabled: !!userId, // Only run query if user is logged in
+  });
+
+  const { data: dbHeroSlides, isLoading: isLoadingDbSlides } = useQuery<DbHeroSlide[]>({
+    queryKey: ["/api/hero-slides"],
+    queryFn: async () => {
+      const response = await fetch('/api/hero-slides');
+      if (!response.ok) {
+        throw new Error('Failed to fetch hero slides');
+      }
+      return response.json();
+    },
+    staleTime: 10000,
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: heroSlideSettings } = useQuery<{ intervalSeconds: number }>({
+    queryKey: ["/api/hero-slides/settings"],
+    queryFn: async () => {
+      const response = await fetch('/api/hero-slides/settings');
+      if (!response.ok) {
+        throw new Error('Failed to fetch hero slide settings');
+      }
+      return response.json();
+    },
+    staleTime: 30000,
+  });
+
+  const slideIntervalMs = (heroSlideSettings?.intervalSeconds || 6) * 1000;
+
+  // Query to get custom hero text
+  const { data: experiencedHeroText, isLoading: isLoadingExperiencedText } = useQuery<{ 
+    title: string; 
+    subtitle: string; 
+    buttonText?: string; 
+    buttonUrl?: string; 
+    targetAudience?: string; 
+  }>({
+    queryKey: ['/api/hero-text/experienced'],
+    queryFn: async () => {
+      const response = await fetch('/api/hero-text/experienced');
+      if (!response.ok) {
+        throw new Error('Failed to fetch hero text');
+      }
+      return response.json();
+    },
+    enabled: !!userId || !user, // Always fetch to check target audience
+  });
+
+  // Determine which hero text to display based on user authentication status
+  const guestHeroText = {
+    title: "Discover Amazing\nGaming Moments",
+    subtitle: "Join the gaming community to upload, discover, and share epic gaming clips. Connect with fellow gamers worldwide."
+  };
+
+  const defaultHeroText = {
+    title: "Share Your Gaming\nMoments",
+    subtitle: "Upload, discover, and share epic gaming clips with the community. Build your gaming portfolio and connect with fellow gamers."
+  };
+
+  // Handle hero text logic based on target audience
+  const isStillLoading = isLoadingUserContent || isLoadingExperiencedText;
+  
+  const heroText = isStillLoading 
+    ? null // Show loading state while determining user status or fetching text
+    : experiencedHeroText && experiencedHeroText.targetAudience
+    ? (() => {
+        const target = experiencedHeroText.targetAudience;
+        // Check if custom text matches current user state
+        if (target === 'all_users') return experiencedHeroText;
+        if (target === 'new_users' && user && !userHasContent) return experiencedHeroText;
+        if (target === 'existing_users' && user) return experiencedHeroText;
+        if (target === 'experienced_users' && user && userHasContent) return experiencedHeroText;
+        // If custom text doesn't match, use default
+        return !user ? guestHeroText : defaultHeroText;
+      })()
+    : !user
+    ? guestHeroText 
+    : defaultHeroText;
+
+
   return (
     <div className="pb-16 md:pb-8 hide-scrollbar">
-      {/* Email Verification Banner */}
+      {/* Email Verification Banner - Only for authenticated users */}
       {user && (
         <div className="mx-2 sm:mx-4 md:mx-6 mb-0">
           <EmailVerificationBanner />
         </div>
       )}
-
-      {/* Community Carousel */}
-      <CommunityCarousel slides={carouselSlides} isLoading={isLoadingCarousel} />
+      
+      {/* Hero Banner — original HeroBannerSlideshow */}
+      {/* Community Carousel commented out */}
+      {/* <HomeCarousel /> */}
+      {!isLoadingDbSlides && dbHeroSlides && dbHeroSlides.length > 0 && (
+        <HeroBannerSlideshow
+          heroText={heroText}
+          user={user}
+          userHasContent={userHasContent}
+          setLocation={setLocation}
+          dbSlides={dbHeroSlides}
+          slideIntervalMs={slideIntervalMs}
+        />
+      )}
 
       {/* Ecosystem Activity Rail */}
       {/* <EcosystemActivityRail /> */}
