@@ -127,11 +127,11 @@ const HomePage = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const proPayment = params.get("pro_payment");
-    const paymentIntentId = params.get("pi");
+    const sessionId = params.get("session_id");
     const plan = params.get("plan");
 
-    if (proPayment === "success" && paymentIntentId && plan) {
-      apiRequest("POST", "/api/stripe/confirm-pro-subscription", { paymentIntentId, plan })
+    if (proPayment === "success" && sessionId && plan) {
+      apiRequest("POST", "/api/stripe/confirm-pro-subscription", { sessionId, plan })
         .then(() => {
           globalQueryClient.invalidateQueries({ queryKey: ["/api/user"] });
           toast({

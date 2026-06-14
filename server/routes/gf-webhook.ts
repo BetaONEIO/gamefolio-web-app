@@ -7,6 +7,7 @@ import { getUncachableStripeClient, getStripeSecretKey } from '../stripeClient';
 import { transferGfTokens } from '../gf-token-service';
 import { EmailService } from '../email-service';
 import { notifyProPurchase } from '../telegram-notify';
+import { provisionProSubscription } from './pro-subscription';
 import Stripe from 'stripe';
 
 const router = Router();
@@ -157,15 +158,39 @@ router.post('/api/stripe/webhook',
 
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
-      
+
       if (session.metadata?.gfAmount) {
         try {
           await processGfOrderDelivery(
-            session.id, 
+            session.id,
             typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id
           );
         } catch (error) {
           console.error('[GF Webhook] Error processing order delivery:', error);
+        }
+      }
+
+      // Pro subscription checkout — backstop for the client-side confirm call.
+      // Idempotent: safe even if the client already provisioned this session.
+      if (session.metadata?.type === 'pro_subscription' && session.metadata?.userId) {
+        try {
+          const userId = parseInt(session.metadata.userId, 10);
+          const plan: 'monthly' | 'yearly' = session.metadata.plan === 'yearly' ? 'yearly' : 'monthly';
+          const subscriptionId = typeof session.subscription === 'string'
+            ? session.subscription
+            : session.subscription?.id;
+          const customerId = typeof session.customer === 'string'
+            ? session.customer
+            : session.customer?.id;
+
+          if (userId && subscriptionId && customerId) {
+            await provisionProSubscription({ userId, plan, customerId, subscriptionId });
+            console.log(`[GF Webhook] Provisioned Pro for user ${userId} via checkout.session.completed`);
+          } else {
+            console.warn('[GF Webhook] pro_subscription session missing user/subscription/customer ids');
+          }
+        } catch (error) {
+          console.error('[GF Webhook] Error provisioning Pro subscription:', error);
         }
       }
     }
