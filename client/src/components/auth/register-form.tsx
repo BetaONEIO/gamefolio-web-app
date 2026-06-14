@@ -499,6 +499,8 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
               classNames={{
                 months: "w-full",
                 month: "w-full space-y-3",
+                caption: "hidden",
+                nav: "hidden",
                 table: "w-full border-collapse",
                 head_row: "flex w-full",
                 head_cell: "text-muted-foreground font-normal text-[0.8rem] flex-1 text-center",
