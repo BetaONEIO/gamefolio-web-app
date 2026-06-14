@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { GoogleAuthButton } from "./GoogleAuthButton";
@@ -447,36 +446,28 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
         {datePickerOpen && (
           <div className="mt-1 rounded-md border border-input bg-background shadow-lg w-full">
             <div className="flex gap-2 px-3 pt-3">
-              <Select
-                value={String(calendarMonth.getMonth())}
-                onValueChange={(v) =>
-                  setCalendarMonth((prev) => new Date(prev.getFullYear(), Number(v), 1))
+              <select
+                value={calendarMonth.getMonth()}
+                onChange={(e) =>
+                  setCalendarMonth((prev) => new Date(prev.getFullYear(), Number(e.target.value), 1))
                 }
+                className="flex-1 h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               >
-                <SelectTrigger className="flex-1 h-8 text-sm bg-background border-input">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="max-h-60" style={{ zIndex: 300000 }}>
-                  {MONTHS.map((m, i) => (
-                    <SelectItem key={i} value={String(i)}>{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={String(calendarMonth.getFullYear())}
-                onValueChange={(v) =>
-                  setCalendarMonth((prev) => new Date(Number(v), prev.getMonth(), 1))
+                {MONTHS.map((m, i) => (
+                  <option key={i} value={i}>{m}</option>
+                ))}
+              </select>
+              <select
+                value={calendarMonth.getFullYear()}
+                onChange={(e) =>
+                  setCalendarMonth((prev) => new Date(Number(e.target.value), prev.getMonth(), 1))
                 }
+                className="w-24 h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               >
-                <SelectTrigger className="w-24 h-8 text-sm bg-background border-input">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="max-h-60" style={{ zIndex: 300000 }}>
-                  {YEARS.map((y) => (
-                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {YEARS.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
             </div>
             <Calendar
               mode="single"
