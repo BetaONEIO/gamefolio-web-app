@@ -4716,6 +4716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const thumbnailWithPlayButton = await addPlayButtonOverlay(fullClip.thumbnailUrl);
         res.setHeader('Content-Type', 'image/jpeg');
         res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day (signed URLs)
+        res.setHeader('Access-Control-Allow-Origin', '*');
         console.log(`✅ OG thumbnail with play button generated for ${identifier}`);
         return res.send(thumbnailWithPlayButton);
       } catch (overlayErr) {
@@ -4784,6 +4785,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Type', 'video/mp4');
       res.setHeader('Accept-Ranges', 'bytes');
       res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.setHeader('Access-Control-Allow-Origin', '*');
 
       const contentLength = videoResponse.headers.get('content-length');
       const contentRange = videoResponse.headers.get('content-range');
@@ -4836,10 +4838,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const contentType = imgResponse.headers.get('content-type') || 'image/jpeg';
-      const buffer = Buffer.from(await imgResponse.arrayBuffer());
+      const rawBuffer = Buffer.from(await imgResponse.arrayBuffer());
 
-      res.setHeader('Content-Type', contentType);
+      // Resize to the standard 1200×630 OG image size for consistent social cards
+      let buffer: Buffer;
+      try {
+        buffer = await sharp(rawBuffer, { failOn: 'none' })
+          .resize(1200, 630, { fit: 'cover', position: 'center' })
+          .jpeg({ quality: 90 })
+          .toBuffer();
+      } catch {
+        buffer = rawBuffer;
+      }
+
+      res.setHeader('Content-Type', 'image/jpeg');
       res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day cache for bots
+      res.setHeader('Access-Control-Allow-Origin', '*');
       return res.send(buffer);
     } catch (error) {
       console.error('Error serving OG screenshot image:', error);
