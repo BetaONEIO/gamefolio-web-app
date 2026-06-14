@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { GoogleAuthButton } from "./GoogleAuthButton";
@@ -14,6 +15,13 @@ import { FieldError, FieldStatus } from "@/components/ui/field-error";
 import { CalendarIcon, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+
+const MONTHS = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December"
+];
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: CURRENT_YEAR - 1900 + 1 }, (_, i) => CURRENT_YEAR - i);
 
 interface RegisterFormProps {
   onSuccess: () => void;
@@ -41,6 +49,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   const usernameAbortRef = useRef<AbortController | null>(null);
   const checkedUsernameRef = useRef<string>("");
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date(2000, 0));
   const [emailValid, setEmailValid] = useState<boolean | null>(null);
   const [passwordRequirements, setPasswordRequirements] = useState({
     length: false,
@@ -437,9 +446,43 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
         </Button>
         {datePickerOpen && (
           <div className="mt-1 rounded-md border border-input bg-background shadow-lg w-full">
+            <div className="flex gap-2 px-3 pt-3">
+              <Select
+                value={String(calendarMonth.getMonth())}
+                onValueChange={(v) =>
+                  setCalendarMonth((prev) => new Date(prev.getFullYear(), Number(v), 1))
+                }
+              >
+                <SelectTrigger className="flex-1 h-8 text-sm bg-background border-input">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {MONTHS.map((m, i) => (
+                    <SelectItem key={i} value={String(i)}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={String(calendarMonth.getFullYear())}
+                onValueChange={(v) =>
+                  setCalendarMonth((prev) => new Date(Number(v), prev.getMonth(), 1))
+                }
+              >
+                <SelectTrigger className="w-24 h-8 text-sm bg-background border-input">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {YEARS.map((y) => (
+                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Calendar
               mode="single"
               selected={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : undefined}
+              month={calendarMonth}
+              onMonthChange={setCalendarMonth}
               onSelect={(date) => {
                 if (date) {
                   const yyyy = date.getFullYear();
@@ -451,10 +494,6 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                 setDatePickerOpen(false);
               }}
               disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-              defaultMonth={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : new Date(2000, 0)}
-              captionLayout="dropdown"
-              fromYear={1900}
-              toYear={new Date().getFullYear()}
               initialFocus
               className="w-full"
               classNames={{
