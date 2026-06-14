@@ -3824,9 +3824,10 @@ const ProfilePage = () => {
               {showPlayer && (
                 isLive ? (
                   <div className="flex flex-col lg:flex-row" style={{ height: 'auto' }}>
-                    {/* Player — 16:9 aspect ratio */}
+                    {/* Player — min 400px on mobile so Twitch/Kick consent dialog fits;
+                        16:9 aspect-ratio trick on desktop. */}
                     <div className="relative w-full lg:w-[65%] flex-none">
-                      <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                      <div className="relative w-full min-h-[400px] lg:min-h-0 lg:[padding-bottom:56.25%]">
                         <iframe
                           key={`player-live-${platform}-${channel}`}
                           src={playerSrc}
@@ -3834,11 +3835,12 @@ const ProfilePage = () => {
                           allowFullScreen
                           allow="autoplay; fullscreen"
                           title={`${channel}'s stream`}
+                          {...{ scrolling: 'yes' } as any}
                         />
                       </div>
                     </div>
-                    {/* Chat */}
-                    <div className="w-full lg:w-[35%] border-t lg:border-t-0 lg:border-l border-border" style={{ height: '300px' }}>
+                    {/* Chat — hidden on mobile, shown on desktop */}
+                    <div className="hidden lg:block w-full lg:w-[35%] border-t lg:border-t-0 lg:border-l border-border" style={{ height: '300px' }}>
                       <iframe
                         key={`chat-live-${platform}-${channel}`}
                         src={chatSrc}
@@ -3848,17 +3850,37 @@ const ProfilePage = () => {
                     </div>
                   </div>
                 ) : (
-                  /* Offline — greyed out player, no chat */
-                  <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-                    <div className="absolute inset-0 bg-black/40 z-10 pointer-events-none" />
-                    <iframe
-                      key={`player-offline-${platform}-${channel}`}
-                      src={playerSrc}
-                      className="absolute inset-0 w-full h-full opacity-60 grayscale"
-                      allowFullScreen
-                      title={`${channel}'s stream`}
-                    />
-                  </div>
+                  /* Offline — mobile: CTA button (avoids loading iframe cookie wall);
+                     desktop: greyed-out player preview */
+                  <>
+                    {/* Mobile CTA */}
+                    <div className="flex lg:hidden flex-col items-center gap-3 py-6 px-4">
+                      <p className="text-sm text-muted-foreground text-center">
+                        {channel} is currently offline.
+                      </p>
+                      <a
+                        href={isKick ? `https://kick.com/${channel}` : `https://www.twitch.tv/${channel}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-black"
+                        style={{ background: isKick ? '#53fc18' : '#9147ff' }}
+                      >
+                        Watch on {isKick ? 'Kick' : 'Twitch'}
+                      </a>
+                    </div>
+                    {/* Desktop greyed-out player */}
+                    <div className="hidden lg:block relative w-full" style={{ paddingBottom: '56.25%' }}>
+                      <div className="absolute inset-0 bg-black/40 z-10 pointer-events-none" />
+                      <iframe
+                        key={`player-offline-${platform}-${channel}`}
+                        src={playerSrc}
+                        className="absolute inset-0 w-full h-full opacity-60 grayscale"
+                        allowFullScreen
+                        title={`${channel}'s stream`}
+                        {...{ scrolling: 'yes' } as any}
+                      />
+                    </div>
+                  </>
                 )
               )}
             </div>
