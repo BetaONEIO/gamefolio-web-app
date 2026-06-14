@@ -456,7 +456,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                 <SelectTrigger className="flex-1 h-8 text-sm bg-background border-input">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="max-h-60">
+                <SelectContent className="max-h-60" style={{ zIndex: 300000 }}>
                   {MONTHS.map((m, i) => (
                     <SelectItem key={i} value={String(i)}>{m}</SelectItem>
                   ))}
@@ -471,7 +471,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                 <SelectTrigger className="w-24 h-8 text-sm bg-background border-input">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="max-h-60">
+                <SelectContent className="max-h-60" style={{ zIndex: 300000 }}>
                   {YEARS.map((y) => (
                     <SelectItem key={y} value={String(y)}>{y}</SelectItem>
                   ))}
