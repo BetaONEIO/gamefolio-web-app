@@ -62,8 +62,7 @@ function InlineSelect({ value, onChange, options, className }: {
       {open && (
         <ul
           ref={listRef}
-          className="absolute left-0 right-0 top-full mt-1 z-10 max-h-48 overflow-y-auto rounded-md border border-input bg-[#0b1319] shadow-xl py-1"
-          style={{ scrollbarWidth: "thin" }}
+          className="absolute left-0 right-0 top-full mt-1 z-10 max-h-48 overflow-y-auto rounded-md border border-input bg-[#0b1319] shadow-xl py-1 gf-scrollbar"
         >
           {options.map((opt) => (
             <li
