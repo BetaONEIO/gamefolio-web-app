@@ -452,6 +452,9 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
               }}
               disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
               defaultMonth={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : new Date(2000, 0)}
+              captionLayout="dropdown"
+              fromYear={1900}
+              toYear={new Date().getFullYear()}
               initialFocus
               className="w-full"
               classNames={{
