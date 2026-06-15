@@ -275,8 +275,9 @@ router.get('/api/stripe/pro-pricing', async (req: Request, res: Response) => {
         (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
         req.ip ||
         '';
+      console.log('[pro-pricing] cf-ipcountry absent. clientIp=%s xff=%s reqIp=%s', clientIp, req.headers['x-forwarded-for'], req.ip);
       localCurrency = await getCurrencyFromIp(clientIp);
-      // ipapi.co already maps country→currency; skip the COUNTRY_CURRENCY table
+      console.log('[pro-pricing] ipapi.co returned currency=%s for ip=%s', localCurrency, clientIp);
     }
 
     if (!localCurrency || localCurrency.toUpperCase() === 'GBP') {

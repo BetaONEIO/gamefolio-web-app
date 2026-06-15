@@ -279,7 +279,14 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled && data?.currency) {
-          setWebPricing({ currency: data.currency, monthly: data.monthly, yearly: data.yearly });
+          setWebPricing({
+            currency: data.currency,
+            monthly: data.monthly,
+            yearly: data.yearly,
+            localCurrency: data.localCurrency,
+            localMonthly: data.localMonthly,
+            localYearly: data.localYearly,
+          });
         }
       } catch {
         // Non-fatal: button stays disabled until pricing resolves.
