@@ -5025,10 +5025,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         '-movflags', 'frag_keyframe+empty_moov+default_base_moof', '-threads', '0',
       ];
 
-      // Scale outro to clip's exact dimensions, letter/pillarbox to preserve aspect ratio
+      // Scale outro to fill clip's exact dimensions — crop excess to avoid black bars
       const outroScaleFilter =
-        `scale=${clipW}:${clipH}:force_original_aspect_ratio=decrease,` +
-        `pad=${clipW}:${clipH}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=fps=30`;
+        `scale=${clipW}:${clipH}:force_original_aspect_ratio=increase,` +
+        `crop=${clipW}:${clipH},setsar=1,fps=fps=30`;
 
       if (logoExists && outroSignedUrl) {
         // Watermark + outro concat
