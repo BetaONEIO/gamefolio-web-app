@@ -6,6 +6,7 @@ import { eq, desc, and } from 'drizzle-orm';
 import { getUncachableStripeClient, getStripePublishableKey } from '../stripeClient';
 import { hybridAuth } from '../middleware/hybrid-auth';
 import { getTreasuryBalance, getTreasuryAddress, transferGfTokens } from '../gf-token-service';
+import { detectLocalCurrency, getGbpRates } from '../services/currency-service';
 
 const SKALE_NEBULA_TESTNET_CHAIN_ID = 1187947933;
 
@@ -21,6 +22,26 @@ const checkoutSchema = z.object({
     .min(MIN_GBP_AMOUNT, { message: `Minimum purchase is £${MIN_GBP_AMOUNT}` })
     .max(MAX_GBP_AMOUNT, { message: `Maximum purchase is £${MAX_GBP_AMOUNT}` })
     .transform((val) => Math.round(val * 100) / 100),
+});
+
+// Returns the GBP rate plus an approximate local-currency conversion for display.
+// The actual Stripe charge is always in GBP; local currency is display-only.
+router.get('/api/gft-pricing', async (req: Request, res: Response) => {
+  const base = { gbpRate: GF_PRICE_GBP };
+  try {
+    const localCurrency = await detectLocalCurrency(req as any);
+    if (!localCurrency || localCurrency.toUpperCase() === 'GBP') {
+      return res.json(base);
+    }
+    const rates = await getGbpRates();
+    const exchangeRate = rates?.[localCurrency.toUpperCase()];
+    if (!exchangeRate) return res.json(base);
+    const localRate = Math.round(GF_PRICE_GBP * exchangeRate * 100000) / 100000;
+    return res.json({ ...base, localCurrency, localRate, exchangeRate });
+  } catch (err) {
+    console.warn('[gft-pricing] localisation error:', err);
+    return res.json(base);
+  }
 });
 
 router.post('/api/gf/checkout', hybridAuth, async (req: Request, res: Response) => {
