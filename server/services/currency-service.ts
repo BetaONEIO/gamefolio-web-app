@@ -46,8 +46,20 @@ export async function getGbpRates(): Promise<Record<string, number> | null> {
 const ipCurrencyCache = new Map<string, { currency: string; cachedAt: number }>();
 const IP_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+function isPrivateIp(ip: string): boolean {
+  if (!ip) return true;
+  if (ip === '127.0.0.1' || ip === '::1' || ip === 'localhost') return true;
+  if (ip.startsWith('10.')) return true;
+  if (ip.startsWith('192.168.')) return true;
+  if (ip.startsWith('::ffff:10.') || ip.startsWith('::ffff:192.168.')) return true;
+  // 172.16.0.0/12 → 172.16.x.x – 172.31.x.x
+  const m = ip.match(/^172\.(\d{1,3})\./);
+  if (m && parseInt(m[1], 10) >= 16 && parseInt(m[1], 10) <= 31) return true;
+  return false;
+}
+
 export async function getCurrencyFromIp(ip: string): Promise<string | null> {
-  if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('10.') || ip.startsWith('192.168.')) {
+  if (isPrivateIp(ip)) {
     return null;
   }
   const cached = ipCurrencyCache.get(ip);
@@ -78,12 +90,24 @@ export async function detectLocalCurrency(req: { headers: Record<string, string 
   }
 
   if (!cfCountry) {
-    const clientIp =
-      (req.headers['cf-connecting-ip'] as string) ||
-      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-      req.ip ||
-      '';
-    return getCurrencyFromIp(clientIp);
+    // Build a candidate list: cf-connecting-ip, all XFF entries, req.ip.
+    // Walk through them and use the first non-private IP that resolves.
+    // This handles reverse-proxy setups (e.g. Replit) that prepend their
+    // own internal IP to X-Forwarded-For, putting the real client IP
+    // further along the list.
+    const cfConnectingIp = (req.headers['cf-connecting-ip'] as string | undefined)?.trim() ?? '';
+    const xffHeader = (req.headers['x-forwarded-for'] as string | undefined) ?? '';
+    const xffIps = xffHeader.split(',').map(s => s.trim()).filter(Boolean);
+    const reqIp = req.ip ?? '';
+
+    const candidates = [cfConnectingIp, ...xffIps, reqIp].filter(Boolean);
+
+    for (const ip of candidates) {
+      if (!isPrivateIp(ip)) {
+        const currency = await getCurrencyFromIp(ip);
+        if (currency) return currency;
+      }
+    }
   }
 
   return null;

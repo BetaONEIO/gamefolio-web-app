@@ -30,6 +30,8 @@ router.get('/api/gft-pricing', async (req: Request, res: Response) => {
   const base = { gbpRate: GF_PRICE_GBP };
   try {
     const localCurrency = await detectLocalCurrency(req as any);
+    console.log('[gft-pricing] xff=%s detected=%s', req.headers['x-forwarded-for'], localCurrency ?? 'GBP');
+
     if (!localCurrency || localCurrency.toUpperCase() === 'GBP') {
       return res.json(base);
     }
