@@ -92,7 +92,6 @@ import { cn } from "@/lib/utils";
 import NotFound from "./not-found";
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET, NFT_CONTRACT_ADDRESS } from "@shared/contracts";
-import { OutroPanel } from "@/components/profile/OutroPanel";
 
 const GameSelectionDialog = React.lazy(() => import("@/components/games/GameSelectionDialog"));
 const CommentSection = React.lazy(() => import("@/components/clips/CommentSection"));
@@ -5173,9 +5172,6 @@ const ProfilePage = () => {
                   </div>
                 </div>
 
-                {isOwnProfile && (
-                  <OutroPanel />
-                )}
               </div>
             </div>
           </TabsContent>

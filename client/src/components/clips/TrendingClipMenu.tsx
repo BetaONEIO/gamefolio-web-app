@@ -237,11 +237,6 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
           variant: "gamefolioSuccess",
         });
       } else {
-        toast({
-          title: "⚡ Preparing your clip…",
-          description: "Adding watermark & outro. First download may take ~30 s.",
-        });
-
         let downloadedViaWatermark = false;
         try {
           const response = await fetch(`/api/clips/${clip.id}/download`, {

@@ -118,7 +118,6 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const handleDownload = async () => {
     if (isDownloading || !currentReel) return;
     setIsDownloading(true);
-    toast({ title: "⚡ Preparing your reel…", description: "Adding watermark & outro. First download may take ~30 s." });
     const safeTitle = (currentReel.title || 'reel').replace(/[^a-z0-9]/gi, '_').slice(0, 60);
     let done = false;
     try {
