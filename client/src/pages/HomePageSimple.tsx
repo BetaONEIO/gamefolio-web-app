@@ -19,7 +19,7 @@ import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreensh
 import { useMobile } from "@/hooks/use-mobile";
 import { Camera } from "lucide-react";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
-import { ProUpgradeDialog } from "@/components/ProUpgradeDialog";
+import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { LazySection } from "@/components/ui/lazy-section";
 import { openExternal } from "@/lib/platform";
 import { useAuthModal } from "@/hooks/use-auth-modal";
