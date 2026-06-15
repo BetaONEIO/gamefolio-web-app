@@ -13709,6 +13709,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       let isCancelled = false;
+      // Currency + amount of the live Stripe subscription, so the manage
+      // screen shows what the user is actually billed (region-dependent).
+      let subscriptionCurrency: string | null = null;
+      let subscriptionAmount: number | null = null;
       const hasActiveEndDate = user.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date();
 
       if (!user.isPro && hasActiveEndDate) {
@@ -13725,23 +13729,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 status: 'active',
                 limit: 10,
               });
-              const matchingSub = subs.data.find((s: any) => 
+              const matchingSub = subs.data.find((s: any) =>
                 s.metadata?.userId === String(user.id) || s.metadata?.plan
               ) || subs.data[0];
               if (matchingSub?.cancel_at_period_end) {
                 isCancelled = true;
+              }
+              // Base (GBP) price as a fallback. All Pro prices use 2-decimal
+              // currencies, so /100 is safe here.
+              const item = matchingSub?.items?.data?.[0];
+              if (item?.price?.unit_amount != null) {
+                subscriptionCurrency = item.price.currency;
+                subscriptionAmount = item.price.unit_amount / 100;
+              }
+              // Prefer the presentment (local) amount the customer is actually
+              // billed under Adaptive Pricing — read from the latest invoice.
+              try {
+                const latestInvoiceId = typeof matchingSub?.latest_invoice === 'string'
+                  ? matchingSub.latest_invoice
+                  : matchingSub?.latest_invoice?.id;
+                if (latestInvoiceId) {
+                  const invoice: any = await stripe.invoices.retrieve(latestInvoiceId);
+                  const pd = invoice?.presentment_details;
+                  if (pd?.presentment_amount != null && pd?.presentment_currency) {
+                    subscriptionCurrency = pd.presentment_currency;
+                    subscriptionAmount = pd.presentment_amount / 100;
+                  }
+                }
+              } catch (invErr) {
+                // Non-fatal — fall back to the base price captured above.
               }
             }
           }
         } catch (e) {}
       }
 
-      res.json({ 
+      res.json({
         isPro: user.isPro || false,
         userId: user.id,
         isCancelled,
         proSubscriptionEndDate: user.proSubscriptionEndDate,
         proSubscriptionType: user.proSubscriptionType,
+        subscriptionCurrency,
+        subscriptionAmount,
       });
     } catch (error) {
       console.error("Error getting subscription status:", error);
