@@ -207,18 +207,16 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     const displayCurrency = hasLocal ? webPricing.localCurrency! : webPricing.currency;
     const displayMonthly  = hasLocal ? webPricing.localMonthly!  : webPricing.monthly;
     const displayYearly   = hasLocal ? webPricing.localYearly!   : webPricing.yearly;
-    const prefix = hasLocal ? "~" : "";
-
     return {
       monthlyView: {
         amount: displayMonthly,
-        formatted: prefix + formatCurrency(displayMonthly, displayCurrency),
-        perMonthFormatted: prefix + formatCurrency(displayMonthly, displayCurrency),
+        formatted: formatCurrency(displayMonthly, displayCurrency),
+        perMonthFormatted: formatCurrency(displayMonthly, displayCurrency),
       },
       yearlyView: {
         amount: displayYearly,
-        formatted: prefix + formatCurrency(displayYearly, displayCurrency),
-        perMonthFormatted: prefix + formatCurrency(displayYearly / 12, displayCurrency),
+        formatted: formatCurrency(displayYearly, displayCurrency),
+        perMonthFormatted: formatCurrency(displayYearly / 12, displayCurrency),
       },
     };
   }, [monthlyPkg, yearlyPkg, webPricing]);
