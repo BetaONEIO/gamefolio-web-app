@@ -394,9 +394,9 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                 : "border-[#1B2A33] bg-[#0B1218] hover:border-[#22313A]"
             }`}
           >
-            {displaySavings > 0 && (
+            {savings > 0 && (
               <div className="absolute -top-2.5 right-3 bg-[#B7FF1A] text-[#071013] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
-                Save {displaySavings}%
+                Save {savings}%
               </div>
             )}
             <div className="flex items-center justify-between">
