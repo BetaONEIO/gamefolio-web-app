@@ -37,6 +37,59 @@ const cachedPriceIds: { monthly: string | null; yearly: string | null } = {
   yearly: null,
 };
 
+// ---------------------------------------------------------------------------
+// Local-currency approximation for the paywall.
+// We use the Cloudflare `cf-ipcountry` header (available in production) to
+// detect the visitor's country, map it to a currency, then apply a live GBP
+// exchange rate fetched from open.er-api.com (free, no key required).
+// Rates are cached for 1 hour to avoid hammering the external API.
+// All failures fall back silently to the raw GBP price.
+// ---------------------------------------------------------------------------
+const COUNTRY_CURRENCY: Record<string, string> = {
+  // Americas
+  US: 'USD', CA: 'CAD', BR: 'BRL', MX: 'MXN', AR: 'ARS', CL: 'CLP',
+  CO: 'COP', PE: 'PEN', UY: 'UYU', VE: 'VES',
+  // Europe – Eurozone
+  DE: 'EUR', FR: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR', BE: 'EUR',
+  PT: 'EUR', AT: 'EUR', IE: 'EUR', FI: 'EUR', GR: 'EUR', LU: 'EUR',
+  SK: 'EUR', SI: 'EUR', EE: 'EUR', LV: 'EUR', LT: 'EUR', CY: 'EUR', MT: 'EUR',
+  // Europe – non-EUR
+  CH: 'CHF', SE: 'SEK', NO: 'NOK', DK: 'DKK', PL: 'PLN', CZ: 'CZK',
+  HU: 'HUF', RO: 'RON', BG: 'BGN', HR: 'EUR', RS: 'RSD', UA: 'UAH',
+  TR: 'TRY', IS: 'ISK',
+  // Asia-Pacific
+  AU: 'AUD', NZ: 'NZD', JP: 'JPY', CN: 'CNY', KR: 'KRW', IN: 'INR',
+  SG: 'SGD', HK: 'HKD', TW: 'TWD', TH: 'THB', MY: 'MYR', ID: 'IDR',
+  PH: 'PHP', VN: 'VND', PK: 'PKR', BD: 'BDT', LK: 'LKR',
+  // Middle East & Africa
+  AE: 'AED', SA: 'SAR', IL: 'ILS', QA: 'QAR', KW: 'KWD', BH: 'BHD',
+  OM: 'OMR', JO: 'JOD', EG: 'EGP', NG: 'NGN', KE: 'KES', ZA: 'ZAR',
+  GH: 'GHS', MA: 'MAD', TZ: 'TZS', ET: 'ETB',
+  // Other
+  RU: 'RUB', MK: 'MKD',
+};
+
+let ratesCache: { rates: Record<string, number>; fetchedAt: number } | null = null;
+const RATES_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+async function getGbpRates(): Promise<Record<string, number> | null> {
+  const now = Date.now();
+  if (ratesCache && now - ratesCache.fetchedAt < RATES_TTL_MS) {
+    return ratesCache.rates;
+  }
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/GBP');
+    const data: any = await res.json();
+    if (data?.result === 'success' && data.rates) {
+      ratesCache = { rates: data.rates, fetchedAt: now };
+      return data.rates;
+    }
+  } catch (err) {
+    console.warn('Exchange-rate fetch failed:', err);
+  }
+  return ratesCache?.rates ?? null; // serve stale if fresh fetch fails
+}
+
 async function getOrCreatePriceId(
   stripe: any,
   plan: 'monthly' | 'yearly'
@@ -159,15 +212,46 @@ export async function provisionProSubscription(opts: {
   return { lootboxReward };
 }
 
-// Public pricing endpoint — lets the paywall show the base (GBP) price before
-// checkout. The exact local converted amount is shown inside Stripe's checkout
-// (Adaptive Pricing has no pre-checkout preview API).
-router.get('/api/stripe/pro-pricing', (_req: Request, res: Response) => {
-  res.json({
+// Public pricing endpoint — returns the base GBP price plus an approximate
+// local-currency conversion when we can detect the visitor's country.
+// Detection uses the Cloudflare `cf-ipcountry` header (present in production).
+// In dev/staging where the header is absent we fall back to plain GBP.
+router.get('/api/stripe/pro-pricing', async (req: Request, res: Response) => {
+  const base = {
     currency: BASE_CURRENCY,
     monthly: BASE_PRICE.monthly / 100,
     yearly: BASE_PRICE.yearly / 100,
-  });
+  };
+
+  try {
+    // Cloudflare sets this header to the 2-letter ISO country code of the
+    // visitor's IP.  "T1" / "XX" means Tor/unknown — treat as GBP.
+    const countryCode = (req.headers['cf-ipcountry'] as string | undefined)
+      ?.toUpperCase()
+      ?.trim();
+
+    if (!countryCode || countryCode === 'GB' || countryCode === 'T1' || countryCode === 'XX') {
+      return res.json(base);
+    }
+
+    const localCurrency = COUNTRY_CURRENCY[countryCode];
+    if (!localCurrency || localCurrency.toUpperCase() === 'GBP') {
+      return res.json(base);
+    }
+
+    const rates = await getGbpRates();
+    const rate = rates?.[localCurrency.toUpperCase()];
+    if (!rate) return res.json(base);
+
+    // Round to 2 d.p. — Stripe/Intl will handle display rounding
+    const localMonthly = Math.round(base.monthly * rate * 100) / 100;
+    const localYearly  = Math.round(base.yearly  * rate * 100) / 100;
+
+    return res.json({ ...base, localCurrency, localMonthly, localYearly });
+  } catch (err) {
+    console.warn('pro-pricing localisation error:', err);
+    return res.json(base);
+  }
 });
 
 router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Request, res: Response) => {

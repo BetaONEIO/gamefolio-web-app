@@ -111,13 +111,20 @@ function formatCurrency(amount: number, currency: string): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(amount);
 }
 
-// Base (GBP) price shown on the web paywall. The local converted amount is
-// presented inside Stripe's embedded checkout via Adaptive Pricing. On native,
-// prices come from the store via RevenueCat instead.
+// Pricing returned by /api/stripe/pro-pricing.
+// `currency` / `monthly` / `yearly` are always present (GBP base).
+// When the server can detect the visitor's country via the Cloudflare
+// cf-ipcountry header it also returns an approximate local-currency conversion
+// (`localCurrency`, `localMonthly`, `localYearly`).  The paywall shows the
+// local price (with a "~" prefix) so international users aren't put off by £.
+// The exact amount is always confirmed inside Stripe's embedded checkout.
 interface WebPricing {
   currency: string;
   monthly: number;
   yearly: number;
+  localCurrency?: string;
+  localMonthly?: number;
+  localYearly?: number;
 }
 
 interface PlanView {
@@ -192,17 +199,26 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       };
     }
     if (!webPricing) return { monthlyView: null, yearlyView: null };
-    const c = webPricing.currency;
+
+    // If the server detected the visitor's country and provided a local-currency
+    // approximation, show that instead of GBP. Use a "~" prefix so users know
+    // the paywall price is an estimate; the exact amount is shown at checkout.
+    const hasLocal = !!(webPricing.localCurrency && webPricing.localMonthly != null && webPricing.localYearly != null);
+    const displayCurrency = hasLocal ? webPricing.localCurrency! : webPricing.currency;
+    const displayMonthly  = hasLocal ? webPricing.localMonthly!  : webPricing.monthly;
+    const displayYearly   = hasLocal ? webPricing.localYearly!   : webPricing.yearly;
+    const prefix = hasLocal ? "~" : "";
+
     return {
       monthlyView: {
-        amount: webPricing.monthly,
-        formatted: formatCurrency(webPricing.monthly, c),
-        perMonthFormatted: formatCurrency(webPricing.monthly, c),
+        amount: displayMonthly,
+        formatted: prefix + formatCurrency(displayMonthly, displayCurrency),
+        perMonthFormatted: prefix + formatCurrency(displayMonthly, displayCurrency),
       },
       yearlyView: {
-        amount: webPricing.yearly,
-        formatted: formatCurrency(webPricing.yearly, c),
-        perMonthFormatted: formatCurrency(webPricing.yearly / 12, c),
+        amount: displayYearly,
+        formatted: prefix + formatCurrency(displayYearly, displayCurrency),
+        perMonthFormatted: prefix + formatCurrency(displayYearly / 12, displayCurrency),
       },
     };
   }, [monthlyPkg, yearlyPkg, webPricing]);
@@ -473,7 +489,9 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
         {!isNative && (monthlyView || yearlyView) && (
           <p className="text-[#B8C0AE] text-[10px] text-center mt-0.5">
-            Shown in GBP — you'll be charged in your local currency at checkout.
+            {webPricing?.localCurrency
+              ? "Approximate local price · Exact amount confirmed at checkout"
+              : "Shown in GBP · Your local currency shown at checkout"}
           </p>
         )}
       </div>
