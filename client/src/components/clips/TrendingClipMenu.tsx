@@ -366,6 +366,20 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
           pinMutation.mutate();
         }}
       />
+      {!isScreenshot && (
+        <MenuItem
+          icon={
+            isDownloading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )
+          }
+          label={isDownloading ? "Downloading…" : `Download ${Noun}`}
+          disabled={isDownloading}
+          onClick={handleDownload}
+        />
+      )}
       <MenuDivider />
       <MenuItem
         icon={<Trash2 className="h-4 w-4" />}
