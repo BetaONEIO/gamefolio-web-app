@@ -535,8 +535,8 @@ export class VideoProcessor {
 
   /**
    * Generate a personalised outro video: dark background → logo fade+glow → @username fade-in.
-   * Always outputs 1080×1080 at 4 seconds; the download route scales it to match the clip.
-   * format parameter is kept for API compatibility but no longer affects canvas dimensions.
+   * Landscape/default: 1080×1080 square (fill-cropped to 16:9 at download time).
+   * Portrait: 1080×1920 (9:16, fills portrait/reel clips natively).
    * Returns the raw MP4 buffer (caller uploads to storage).
    */
   static async generateOutroVideo(username: string, userId: number, format: 'portrait' | 'landscape' = 'landscape'): Promise<Buffer> {
@@ -558,8 +558,8 @@ export class VideoProcessor {
       try { accessSync(audioPath); return true; } catch { return false; }
     })();
 
-    // Square canvas — download route scales to clip dimensions via letter/pillarbox
-    const canvasSize = '1080x1080';
+    // Portrait (reels): 9:16 canvas; landscape/default: square (fill-cropped at download time)
+    const canvasSize = format === 'portrait' ? '1080x1920' : '1080x1080';
     // Timing: logo fades in at 0.3 s over 0.8 s (fully visible at 1.1 s)
     //         username fades in at 1.1 s (0.8 s after logo starts) over 0.8 s
     const logoFadeStart = 0.3;

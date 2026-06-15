@@ -4964,21 +4964,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const clipOwner = await storage.getUser(clip.userId!);
         if (clipOwner) {
-          let cachedPath = clipOwner.outroVideoPath ?? clipOwner.outroVideoPathPortrait ?? null;
+          // Select the right cached path by orientation:
+          //   portrait clips  → outroVideoPathPortrait (9:16 canvas)
+          //   landscape clips → outroVideoPath         (square, fill-cropped to 16:9)
+          let cachedPath = clipIsPortrait
+            ? (clipOwner.outroVideoPathPortrait ?? null)
+            : (clipOwner.outroVideoPath ?? null);
 
           if (!cachedPath) {
-            console.log(`[outro] No cached outro for user ${clip.userId} — auto-generating`);
+            console.log(`[outro] No cached ${outroFormat} outro for user ${clip.userId} — auto-generating`);
             const { VideoProcessor } = await import('./video-processor');
-            const buffer = await VideoProcessor.generateOutroVideo(clipOwner.username, clip.userId!);
-            const storagePath = `outros/${clip.userId}.mp4`;
+            const buffer = await VideoProcessor.generateOutroVideo(clipOwner.username, clip.userId!, outroFormat);
+            const storagePath = `outros/${clip.userId}_${outroFormat}.mp4`;
             await supabaseStorage.uploadBufferToFixedPath(buffer, storagePath, 'video/mp4');
-            await db.update(users).set({ outroVideoPath: storagePath }).where(eq(users.id, clip.userId!));
+            if (clipIsPortrait) {
+              await db.update(users).set({ outroVideoPathPortrait: storagePath }).where(eq(users.id, clip.userId!));
+            } else {
+              await db.update(users).set({ outroVideoPath: storagePath }).where(eq(users.id, clip.userId!));
+            }
             cachedPath = storagePath;
-            console.log(`[outro] Auto-generated and cached outro for user ${clip.userId}`);
+            console.log(`[outro] Auto-generated and cached ${outroFormat} outro for user ${clip.userId}`);
           }
 
           outroSignedUrl = await supabaseStorage.getSignedUrl(cachedPath, 3600);
-          console.log(`[outro] Using outro for user ${clip.userId}`);
+          console.log(`[outro] Using ${outroFormat} outro for user ${clip.userId}`);
         } else {
           console.warn(`[outro] Could not find clip owner (userId=${clip.userId})`);
         }
