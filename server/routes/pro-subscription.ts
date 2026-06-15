@@ -90,6 +90,36 @@ async function getGbpRates(): Promise<Record<string, number> | null> {
   return ratesCache?.rates ?? null; // serve stale if fresh fetch fails
 }
 
+// Fallback IP-to-currency lookup used when cf-ipcountry is absent (dev/staging).
+// Results are cached per-IP for 24 hours to stay well within ipapi.co's free tier.
+const ipCurrencyCache = new Map<string, { currency: string; cachedAt: number }>();
+const IP_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+async function getCurrencyFromIp(ip: string): Promise<string | null> {
+  // Skip private / loopback addresses
+  if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('10.') || ip.startsWith('192.168.')) {
+    return null;
+  }
+  const cached = ipCurrencyCache.get(ip);
+  if (cached && Date.now() - cached.cachedAt < IP_CACHE_TTL_MS) {
+    return cached.currency;
+  }
+  try {
+    const res = await fetch(`https://ipapi.co/${ip}/json/`, {
+      headers: { 'User-Agent': 'gamefolio-app/1.0' },
+    });
+    const data: any = await res.json();
+    const currency: string = data?.currency;
+    if (currency && /^[A-Z]{3}$/.test(currency)) {
+      ipCurrencyCache.set(ip, { currency, cachedAt: Date.now() });
+      return currency;
+    }
+  } catch (err) {
+    console.warn('IP currency lookup failed:', err);
+  }
+  return null;
+}
+
 async function getOrCreatePriceId(
   stripe: any,
   plan: 'monthly' | 'yearly'
@@ -214,8 +244,9 @@ export async function provisionProSubscription(opts: {
 
 // Public pricing endpoint — returns the base GBP price plus an approximate
 // local-currency conversion when we can detect the visitor's country.
-// Detection uses the Cloudflare `cf-ipcountry` header (present in production).
-// In dev/staging where the header is absent we fall back to plain GBP.
+// Detection: (1) Cloudflare cf-ipcountry header (production), or
+//            (2) ipapi.co IP lookup (dev/staging fallback, per-IP 24-hr cache).
+// Falls back silently to plain GBP on any failure or unknown country.
 router.get('/api/stripe/pro-pricing', async (req: Request, res: Response) => {
   const base = {
     currency: BASE_CURRENCY,
@@ -224,26 +255,39 @@ router.get('/api/stripe/pro-pricing', async (req: Request, res: Response) => {
   };
 
   try {
-    // Cloudflare sets this header to the 2-letter ISO country code of the
-    // visitor's IP.  "T1" / "XX" means Tor/unknown — treat as GBP.
-    const countryCode = (req.headers['cf-ipcountry'] as string | undefined)
-      ?.toUpperCase()
-      ?.trim();
+    // ── 1. Detect country ────────────────────────────────────────────────────
+    // Primary: Cloudflare injects cf-ipcountry on the production deployment.
+    // Fallback: direct IP lookup via ipapi.co for dev/staging environments
+    //           where the Cloudflare header is not present.
 
-    if (!countryCode || countryCode === 'GB' || countryCode === 'T1' || countryCode === 'XX') {
-      return res.json(base);
+    let localCurrency: string | null = null;
+
+    const cfCountry = (req.headers['cf-ipcountry'] as string | undefined)
+      ?.toUpperCase().trim();
+
+    if (cfCountry && cfCountry !== 'GB' && cfCountry !== 'T1' && cfCountry !== 'XX') {
+      localCurrency = COUNTRY_CURRENCY[cfCountry] ?? null;
+    } else if (!cfCountry) {
+      // No Cloudflare header — dev/staging path. Derive currency directly
+      // from ipapi.co using the real client IP.
+      const clientIp =
+        (req.headers['cf-connecting-ip'] as string) ||
+        (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+        req.ip ||
+        '';
+      localCurrency = await getCurrencyFromIp(clientIp);
+      // ipapi.co already maps country→currency; skip the COUNTRY_CURRENCY table
     }
 
-    const localCurrency = COUNTRY_CURRENCY[countryCode];
     if (!localCurrency || localCurrency.toUpperCase() === 'GBP') {
       return res.json(base);
     }
 
+    // ── 2. Apply exchange rate ───────────────────────────────────────────────
     const rates = await getGbpRates();
     const rate = rates?.[localCurrency.toUpperCase()];
     if (!rate) return res.json(base);
 
-    // Round to 2 d.p. — Stripe/Intl will handle display rounding
     const localMonthly = Math.round(base.monthly * rate * 100) / 100;
     const localYearly  = Math.round(base.yearly  * rate * 100) / 100;
 
