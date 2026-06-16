@@ -1687,7 +1687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const state = randomBytes(16).toString("hex");
     (req.session as any).twitchOAuthState = state;
     (req.session as any).twitchOAuthUserId = (req.user as any).id;
-    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/twitch/callback`;
+    const redirectUri = `${process.env.APP_BASE_URL || `${req.protocol}://${req.get("host")}`}/api/auth/twitch/callback`;
     const url = new URL("https://id.twitch.tv/oauth2/authorize");
     url.searchParams.set("client_id", clientId);
     url.searchParams.set("redirect_uri", redirectUri);
@@ -1712,7 +1712,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const clientId = process.env.TWITCH_CLIENT_ID!;
     const clientSecret = process.env.TWITCH_CLIENT_SECRET!;
-    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/twitch/callback`;
+    const redirectUri = `${process.env.APP_BASE_URL || `${req.protocol}://${req.get("host")}`}/api/auth/twitch/callback`;
 
     try {
       // Exchange code for access token
