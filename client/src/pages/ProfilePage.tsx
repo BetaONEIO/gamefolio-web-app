@@ -1215,13 +1215,10 @@ const ProfilePage = () => {
   // Memoize banner style to prevent unnecessary re-renders
   const resolvedBannerUrl = bannerSignedUrl || profile?.bannerUrl;
   const bannerStyle = useMemo(() => ({
-    backgroundImage: resolvedBannerUrl 
-      ? `url(${resolvedBannerUrl})` 
-      : `linear-gradient(135deg, ${profile?.primaryColor || '#0B1218'}, ${profile?.accentColor || '#B7FF1A'}, transparent)`,
-    backgroundColor: resolvedBannerUrl ? 'transparent' : (profile?.primaryColor || '#0B1218'),
+    backgroundImage: resolvedBannerUrl ? `url(${resolvedBannerUrl})` : 'none',
+    backgroundColor: profile?.primaryColor || '#0B1218',
     backgroundSize: 'cover',
     backgroundPosition: 'center',
-    boxShadow: 'inset 0 -10px 20px rgba(0, 0, 0, 0.2)',
   }), [resolvedBannerUrl, profile?.primaryColor, profile?.accentColor]);
 
   // DISABLED: Profile-scoped theme colors - now using global theme system
@@ -2211,8 +2208,6 @@ const ProfilePage = () => {
         </>
         )}
 
-        {/* Bottom fade — merges banner into page background */}
-        <div className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none" style={{ background: `linear-gradient(to bottom, transparent, ${backgroundColor})` }} />
       </div>
 
       {/* Zombie theme animations */}
