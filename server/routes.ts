@@ -1747,12 +1747,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUser(userId, {
         twitchChannelName: twitchUser.login,
         twitchChannelId: twitchUser.id,
+        twitchUserId: twitchUser.id,
+        streamPlatform: 'twitch',
+        streamChannelName: twitchUser.login,
         twitchVerified: true,
         twitchAccessToken: accessToken,
         twitchShowOnProfile: true,
       });
 
-      res.redirect("/settings?tab=platforms&twitch_connected=1");
+      res.redirect("/settings/profile?tab=streamer&twitch_connected=true");
     } catch (err: any) {
       console.error("Twitch callback error:", err);
       res.redirect(`/settings?tab=platforms&twitch_error=${encodeURIComponent(err.message || "connection_failed")}`);
@@ -1766,6 +1769,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUser((req.user as any).id, {
         twitchChannelName: null,
         twitchChannelId: null,
+        twitchUserId: null,
+        streamChannelName: null,
         twitchVerified: false,
         twitchAccessToken: null,
       });
@@ -1789,6 +1794,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUser((req.user as any).id, {
         kickChannelName: null,
         kickChannelId: null,
+        kickId: null,
+        streamChannelName: null,
         kickVerified: false,
         kickAccessToken: null,
       });

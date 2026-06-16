@@ -771,7 +771,7 @@ export default function SettingsPage() {
   const handleTwitchDisconnect = async () => {
     setDisconnectingTwitch(true);
     try {
-      await apiRequest("POST", "/api/auth/twitch/disconnect");
+      await apiRequest("POST", "/api/auth/twitch-stream/disconnect");
       await refreshUser();
       toast({ title: "Twitch disconnected", description: "Your Twitch channel has been unlinked.", duration: 3000 });
     } catch {
@@ -4441,7 +4441,7 @@ export default function SettingsPage() {
                           <Button
                             size="sm"
                             onClick={() => {
-                              const url = "/api/auth/twitch/connect";
+                              const url = "/api/auth/twitch-stream/connect";
                               if (isNative) void openExternal(`${API_BASE}${url}`);
                               else window.location.href = url;
                             }}
