@@ -2847,7 +2847,7 @@ export default function SettingsPage() {
                                   {theme.name === 'Mayhem' && <>
                                     <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)', opacity:0.92 }} />
                                     <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.04) 8px, rgba(255,255,255,0.04) 9px)' }} />
-                                    <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', fontSize:'22px', pointerEvents:'none', lineHeight:1, userSelect:'none', filter:'drop-shadow(0 0 6px #fff)' }}>⚡</div>
+                                    <img src="/attached_assets/MayhemLogo_1781627968574.png" alt="Mayhem" style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', width:'52px', height:'52px', objectFit:'contain', pointerEvents:'none', borderRadius:'6px', filter:'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }} />
                                   </>}
                                   {theme.name === 'Bat' && <>
                                     <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #1a0030 0%, #0a0010 100%)' }} />
