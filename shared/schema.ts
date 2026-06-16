@@ -33,6 +33,7 @@ export const users = pgTable("users", {
   hideBanner: boolean("hide_banner").default(false),
   statsGlassEffect: boolean("stats_glass_effect").default(false),
   profileBackgroundGradient: boolean("profile_background_gradient").default(true),
+  profileBackgroundGradientCss: text("profile_background_gradient_css"),
   layoutStyle: text("layout_style").default("grid"), // grid, masonry, classic
   // Platform connections
   steamUsername: text("steam_username"),

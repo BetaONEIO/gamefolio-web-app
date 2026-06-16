@@ -1881,6 +1881,11 @@ const ProfilePage = () => {
         backgroundColor: '#0a2f1f',
         position: 'relative',
         zIndex: 1
+      } : (profile as any).profileBackgroundGradientCss ? {
+        background: (profile as any).profileBackgroundGradientCss,
+        backgroundAttachment: 'fixed',
+        position: 'relative',
+        zIndex: 1
       } : (profile as any).profileBackgroundGradient !== false ? {
         background: isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
         backgroundAttachment: 'fixed',
