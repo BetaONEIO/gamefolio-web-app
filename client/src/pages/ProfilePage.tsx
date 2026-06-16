@@ -270,6 +270,12 @@ const ProfilePage = () => {
   const profileThemeScopeRef = useRef<HTMLDivElement>(null);
   const neoCanvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Bat theme cursor-following state
+  const batCursorRef = useRef({ x: typeof window !== 'undefined' ? window.innerWidth / 2 : 400, y: 200 });
+  const batFollowerRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const batFollowerPositionsRef = useRef<{x: number, y: number}[]>([]);
+  const batRafRef = useRef<number | null>(null);
+
   // Screenshot lightbox state
   const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null);
   const [hasLikedScreenshot, setHasLikedScreenshot] = useState(false);
@@ -1154,6 +1160,58 @@ const ProfilePage = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [activeTab]);
 
+  // Bat theme cursor-following animation
+  useEffect(() => {
+    const accent = profile?.accentColor?.toLowerCase();
+    const bg = profile?.backgroundColor?.toLowerCase();
+    const isBat = accent === '#ff8c00' && (bg === '#111111' || bg === '#0a0010');
+    if (!isBat) return;
+
+    const COUNT = 5;
+    if (batFollowerPositionsRef.current.length === 0) {
+      batFollowerPositionsRef.current = Array.from({ length: COUNT }, (_, i) => ({
+        x: (window.innerWidth / (COUNT + 1)) * (i + 1),
+        y: 120 + i * 30,
+      }));
+    }
+
+    const onMouseMove = (e: MouseEvent) => {
+      batCursorRef.current = { x: e.clientX, y: e.clientY };
+    };
+    window.addEventListener('mousemove', onMouseMove);
+
+    const speeds   = [0.016, 0.024, 0.010, 0.019, 0.013];
+    const offsets  = [
+      { x:  0,  y:  0 },
+      { x: 38,  y: -22 },
+      { x: -32, y: 18 },
+      { x: 58,  y: 14 },
+      { x: -48, y: -28 },
+    ];
+
+    const animate = () => {
+      const cx = batCursorRef.current.x;
+      const cy = batCursorRef.current.y;
+      batFollowerPositionsRef.current.forEach((pos, i) => {
+        pos.x += (cx + offsets[i].x - pos.x) * speeds[i];
+        pos.y += (cy + offsets[i].y - pos.y) * speeds[i];
+        const el = batFollowerRefs.current[i];
+        if (el) {
+          el.style.left = `${pos.x}px`;
+          el.style.top  = `${pos.y}px`;
+        }
+      });
+      batRafRef.current = requestAnimationFrame(animate);
+    };
+    batRafRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      if (batRafRef.current) cancelAnimationFrame(batRafRef.current);
+      batRafRef.current = null;
+    };
+  }, [profile?.accentColor, profile?.backgroundColor]);
+
   // Memoize banner style to prevent unnecessary re-renders
   const resolvedBannerUrl = bannerSignedUrl || profile?.bannerUrl;
   const bannerStyle = useMemo(() => ({
@@ -1964,13 +2022,70 @@ const ProfilePage = () => {
               95%  { transform: translate(-2vw, -50px) rotate(-22deg) scaleX(1); opacity: 0.75; }
               100% { transform: translate(-4vw, -90px) rotate(-26deg) scaleX(1); opacity: 0; }
             }
+            @keyframes batFly6 {
+              0%   { transform: translate(0px, -55px) rotate(5deg) scaleX(1); opacity: 0; }
+              9%   { opacity: 0.8; }
+              36%  { transform: translate(-7vw, 90px) rotate(-10deg) scaleX(-1); opacity: 0.8; }
+              50%  { transform: translate(-7.5vw, 105px) rotate(-14deg) scaleX(-1) scale(0.87); opacity: 0.8; }
+              64%  { transform: translate(-7.5vw, 105px) rotate(-12deg) scaleX(-1) scale(0.87); opacity: 0.8; }
+              79%  { transform: translate(-3vw, 40px) rotate(8deg) scaleX(1); opacity: 0.8; }
+              92%  { transform: translate(4vw, -60px) rotate(18deg) scaleX(1); opacity: 0.8; }
+              100% { transform: translate(6vw, -100px) rotate(22deg) scaleX(1); opacity: 0; }
+            }
+            @keyframes batFly7 {
+              0%   { transform: translate(0px, -45px) rotate(-22deg) scaleX(-1); opacity: 0; }
+              11%  { opacity: 0.7; }
+              39%  { transform: translate(9vw, 180px) rotate(12deg) scaleX(1); opacity: 0.7; }
+              53%  { transform: translate(9.5vw, 196px) rotate(16deg) scaleX(1) scale(0.83); opacity: 0.7; }
+              66%  { transform: translate(9.5vw, 196px) rotate(14deg) scaleX(1) scale(0.83); opacity: 0.7; }
+              81%  { transform: translate(5vw, 90px) rotate(-4deg) scaleX(-1); opacity: 0.7; }
+              94%  { transform: translate(-1vw, -55px) rotate(-20deg) scaleX(-1); opacity: 0.7; }
+              100% { transform: translate(-3vw, -95px) rotate(-24deg) scaleX(-1); opacity: 0; }
+            }
+            @keyframes batFly8 {
+              0%   { transform: translate(0px, -65px) rotate(14deg) scaleX(1); opacity: 0; }
+              7%   { opacity: 0.65; }
+              34%  { transform: translate(-9vw, 140px) rotate(-8deg) scaleX(-1); opacity: 0.65; }
+              49%  { transform: translate(-9.5vw, 158px) rotate(-12deg) scaleX(-1) scale(0.9); opacity: 0.65; }
+              61%  { transform: translate(-9.5vw, 158px) rotate(-10deg) scaleX(-1) scale(0.9); opacity: 0.65; }
+              77%  { transform: translate(-4vw, 70px) rotate(6deg) scaleX(1); opacity: 0.65; }
+              91%  { transform: translate(5vw, -55px) rotate(24deg) scaleX(1); opacity: 0.65; }
+              100% { transform: translate(7vw, -100px) rotate(28deg) scaleX(1); opacity: 0; }
+            }
+            @keyframes batFlap {
+              0%, 100% { transform: translate(-50%, -50%) scaleY(1); }
+              50%       { transform: translate(-50%, -50%) scaleY(0.85) scaleX(1.08); }
+            }
           `}</style>
+
+          {/* Ambient CSS-animated bats */}
           <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 2 }}>
             <div style={{ position:'absolute', top:'5%', left:'20%', fontSize:'28px', animation:'batFly1 7s ease-in-out infinite', animationDelay:'0s' }}>🦇</div>
             <div style={{ position:'absolute', top:'3%', left:'70%', fontSize:'22px', animation:'batFly2 8.5s ease-in-out infinite', animationDelay:'1.8s' }}>🦇</div>
             <div style={{ position:'absolute', top:'8%', left:'45%', fontSize:'18px', animation:'batFly3 9s ease-in-out infinite', animationDelay:'3.5s' }}>🦇</div>
             <div style={{ position:'absolute', top:'2%', left:'55%', fontSize:'24px', animation:'batFly4 7.8s ease-in-out infinite', animationDelay:'5.2s' }}>🦇</div>
             <div style={{ position:'absolute', top:'6%', left:'30%', fontSize:'16px', animation:'batFly5 10s ease-in-out infinite', animationDelay:'2.3s' }}>🦇</div>
+            <div style={{ position:'absolute', top:'4%', left:'60%', fontSize:'20px', animation:'batFly6 8.2s ease-in-out infinite', animationDelay:'4.1s' }}>🦇</div>
+            <div style={{ position:'absolute', top:'1%', left:'15%', fontSize:'14px', animation:'batFly7 11s ease-in-out infinite', animationDelay:'6.7s' }}>🦇</div>
+            <div style={{ position:'absolute', top:'7%', left:'82%', fontSize:'26px', animation:'batFly8 7.4s ease-in-out infinite', animationDelay:'0.9s' }}>🦇</div>
+          </div>
+
+          {/* Cursor-following bats */}
+          <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 3 }}>
+            {([28, 20, 16, 24, 18] as const).map((size, i) => (
+              <div
+                key={`bat-follow-${i}`}
+                ref={el => { batFollowerRefs.current[i] = el; }}
+                style={{
+                  position: 'absolute',
+                  fontSize: `${size}px`,
+                  transform: 'translate(-50%, -50%)',
+                  animation: `batFlap ${0.35 + i * 0.04}s ease-in-out infinite`,
+                  animationDelay: `${i * 0.06}s`,
+                  opacity: 0.9,
+                }}
+              >🦇</div>
+            ))}
           </div>
         </>
       )}
