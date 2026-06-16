@@ -51,7 +51,7 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
       className="cursor-pointer group"
     >
       {/* 16:9 Thumbnail */}
-      <div className="relative aspect-video overflow-hidden rounded-xl bg-[#0B1218]">
+      <div className="relative aspect-video overflow-hidden rounded-xl bg-[#0B1218] transition-transform duration-300 group-hover:-translate-y-1.5 group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.55)]">
         <div className="absolute inset-0 flex items-center justify-center bg-[#0B1218] z-0">
           <Play className="h-10 w-10 text-gray-600" />
         </div>
@@ -73,7 +73,7 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
         <LazyImage
           src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
           alt={clip.title}
-          className="w-full h-full transition-transform duration-300 group-hover:scale-105 object-contain"
+          className="w-full h-full object-contain"
           placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%230B1218'/%3e%3c/svg%3e"
           showLoadingSpinner={false}
           rootMargin="400px"
