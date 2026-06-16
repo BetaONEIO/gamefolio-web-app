@@ -1455,9 +1455,10 @@ const ProfilePage = () => {
   const isForestTheme = !isLightBackground && accentColor?.toLowerCase() === '#b7ff1a' && backgroundColor?.toLowerCase() === '#0a2f1f';
   const isWatermelonTheme = accentColor?.toLowerCase() === '#b7ff1a' && backgroundColor?.toLowerCase() === '#ff4d6d';
   const isElectricTheme = !isLightBackground && accentColor?.toLowerCase() === '#ffe033' && backgroundColor?.toLowerCase() === '#1a1200';
-  const isBatTheme = !isLightBackground && accentColor?.toLowerCase() === '#ff8c00' && backgroundColor?.toLowerCase() === '#0a0010';
+  const isBatTheme = !isLightBackground && accentColor?.toLowerCase() === '#ff8c00' && (backgroundColor?.toLowerCase() === '#111111' || backgroundColor?.toLowerCase() === '#0a0010');
+  const isMayhemTheme = !isLightBackground && accentColor?.toLowerCase() === '#00dfff' && backgroundColor?.toLowerCase() === '#0d0d0d';
 
-  const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isBatTheme && !isLightBackground;
+  const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isBatTheme && !isMayhemTheme && !isLightBackground;
 
   const platformBtnStyle = isWatermelonTheme
     ? { backgroundColor: '#ffb3c1', color: '#0d1a12', border: '3px solid #1d3932', borderRadius: '9999px' }
@@ -1508,7 +1509,7 @@ const ProfilePage = () => {
     facebook:    { backgroundColor: '#1877F2', color: '#ffffff', border: '1px solid #1877F2', borderRadius: '9999px' },
   };
 
-  const isNamedTheme = isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme || isBatTheme || isLightBackground;
+  const isNamedTheme = isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme || isBatTheme || isMayhemTheme || isLightBackground;
 
   const avatarThemeColor = isWatermelonTheme ? '#ff6b6b'
     : isCartoonTheme ? '#ff6b35'
@@ -1883,7 +1884,7 @@ const ProfilePage = () => {
         position: 'relative',
         zIndex: 1
       } : isBatTheme ? {
-        background: 'linear-gradient(180deg, #1a0030 0%, #0a0010 100%)',
+        background: 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)',
         backgroundAttachment: 'fixed',
         position: 'relative',
         zIndex: 1
@@ -3086,6 +3087,12 @@ const ProfilePage = () => {
                 background: 'rgba(15,2,38,0.92)',
                 border: '1px solid #c27aff55',
                 boxShadow: '0 0 20px #c27aff22, 0 0 40px #c27aff11',
+              } : isMayhemTheme ? {
+                background: '#000000',
+                border: '1px solid rgba(0,223,255,0.2)',
+              } : isBatTheme ? {
+                background: '#000000',
+                border: '1px solid rgba(255,140,0,0.2)',
               } : {
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.1)',
@@ -3477,6 +3484,12 @@ const ProfilePage = () => {
                 } : isForestTheme ? {
                   background: '#e8d5b7',
                   border: '1px solid #c4a88266',
+                } : isMayhemTheme ? {
+                  background: '#000000',
+                  border: '1px solid rgba(0,223,255,0.2)',
+                } : isBatTheme ? {
+                  background: '#000000',
+                  border: '1px solid rgba(255,140,0,0.2)',
                 } : {
                   background: 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.1)',

@@ -407,15 +407,15 @@ const PRESET_THEMES = [
     accentColor: "#00DFFF",
     gradientTopColor: "#0d0d0d",
     primaryColor: "#0d0d0d",
-    profileBackgroundGradientCss: "linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)",
+    profileBackgroundGradientCss: "repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(255,255,255,0.04) 12px, rgba(255,255,255,0.04) 13px), linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)",
     proOnly: true
   },
   {
     name: "Bat",
-    backgroundColor: "#0a0010",
+    backgroundColor: "#111111",
     accentColor: "#ff8c00",
-    gradientTopColor: "#1a0030",
-    primaryColor: "#1a0030",
+    gradientTopColor: "#2a2a2a",
+    primaryColor: "#2a2a2a",
     proOnly: true
   }
 ];
@@ -2850,7 +2850,7 @@ export default function SettingsPage() {
                                     <img src="/attached_assets/MayhemLogo_1781627968574.png" alt="Mayhem" style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', width:'52px', height:'52px', objectFit:'contain', pointerEvents:'none', borderRadius:'6px', filter:'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }} />
                                   </>}
                                   {theme.name === 'Bat' && <>
-                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #1a0030 0%, #0a0010 100%)' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' }} />
                                     <div style={{ position:'absolute', top:'12%', right:'22%', width:'22px', height:'22px', borderRadius:'50%', background:'radial-gradient(circle, #fffde7 60%, #ffe08244 100%)', pointerEvents:'none', boxShadow:'0 0 10px 3px #ffe08255' }} />
                                     <div style={{ position:'absolute', top:'18%', left:'14%', fontSize:'13px', color:'#222', pointerEvents:'none', lineHeight:1, userSelect:'none', filter:'drop-shadow(0 0 1px #ff8c0066)' }}>🦇</div>
                                     <div style={{ position:'absolute', top:'50%', left:'55%', fontSize:'10px', color:'#222', pointerEvents:'none', lineHeight:1, userSelect:'none', transform:'scaleX(-1)', filter:'drop-shadow(0 0 1px #ff8c0055)' }}>🦇</div>
@@ -5277,6 +5277,14 @@ export default function SettingsPage() {
           borderRadius: '16px',
           background: 'rgba(255,237,212,0.7)',
           border: `1px solid ${accent}44`,
+        } : isMayhem ? {
+          borderRadius: '12px',
+          background: '#000000',
+          border: '1px solid rgba(0,223,255,0.25)',
+        } : isBat ? {
+          borderRadius: '12px',
+          background: '#000000',
+          border: '1px solid rgba(255,140,0,0.25)',
         } : {
           borderRadius: '12px',
           background: `${topColor}cc`,
@@ -5351,7 +5359,7 @@ export default function SettingsPage() {
               `}</style>
               <div
                 className="rounded-2xl overflow-hidden relative"
-                style={{ background: isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #1a0030 0%, #0a0010 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)` }}
+                style={{ background: isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)` }}
               >
                 {/* ── Zombie layers ── */}
                 {isZombie && <>
@@ -5414,7 +5422,7 @@ export default function SettingsPage() {
                   <div style={{ position:'absolute', top:'6%', left:'12%', width:3, height:3, borderRadius:'50%', background:'#ffffffcc', pointerEvents:'none', boxShadow:'0 0 4px #fff8' }} />
                   <div style={{ position:'absolute', top:'14%', left:'28%', width:2, height:2, borderRadius:'50%', background:'#ffffffaa', pointerEvents:'none' }} />
                   <div style={{ position:'absolute', top:'8%', left:'55%', width:2, height:2, borderRadius:'50%', background:'#ffffff88', pointerEvents:'none' }} />
-                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(26,0,48,0.0) 0%, rgba(10,0,16,0.45) 100%)' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(42,42,42,0.0) 0%, rgba(0,0,0,0.45) 100%)' }} />
                 </>}
 
                 {/* ── Watermelon seeds ── */}
