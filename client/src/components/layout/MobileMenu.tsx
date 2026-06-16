@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link, useLocation } from "wouter";
-import { CRYPTO_FEATURES_ENABLED } from "@/lib/crypto-features";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
@@ -277,10 +276,9 @@ const MobileMenu = () => {
                   <span className="font-medium">Store</span>
                 </Link>
               </li>
-              {/* Wallet/Collection are pure crypto — hidden on native builds (App
-                  Store / Play financial compliance). See lib/crypto-features.ts. */}
-              {CRYPTO_FEATURES_ENABLED && (
-                <>
+              {/* Wallet stays on native too — the /wallet route renders a
+                  redirect-to-web card (App Store / Play financial compliance),
+                  same pattern as Store. */}
               <li>
                 <Link
                   href="/wallet"
@@ -291,6 +289,8 @@ const MobileMenu = () => {
                   <span className="font-medium">Wallet</span>
                 </Link>
               </li>
+              {/* Collection renders read-only on native (browse only;
+                  transactions are web-only). See MintedNftDetailScreen. */}
               <li>
                 <Link
                   href="/collection"
@@ -301,8 +301,6 @@ const MobileMenu = () => {
                   <span className="font-medium">Collection</span>
                 </Link>
               </li>
-                </>
-              )}
               {user && user.messagingEnabled !== false && (
                 <li>
                   <Link 

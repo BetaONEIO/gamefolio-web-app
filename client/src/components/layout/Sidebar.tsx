@@ -31,7 +31,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { CRYPTO_FEATURES_ENABLED } from "@/lib/crypto-features";
 import { useState } from "react";
 
 interface TwitchGame {
@@ -244,12 +243,13 @@ const Sidebar = () => {
     // Store stays on native but renders a crypto-free cosmetics catalogue.
     { icon: GamefolioStoreIcon, label: "Store", href: "/store" },
 
-    // Wallet/Collection are pure crypto surfaces — hidden on native builds (App
-    // Store / Play financial compliance), kept on web. See lib/crypto-features.ts.
-    ...(CRYPTO_FEATURES_ENABLED ? [
-      { icon: GamefolioWalletIcon, label: "Wallet", href: "/wallet" },
-      { icon: GamefolioCollectionIcon, label: "Collection", href: "/collection" },
-    ] : []),
+    // Wallet stays on native too — the /wallet route renders a redirect-to-web
+    // card (App Store / Play financial compliance), same pattern as Store.
+    { icon: GamefolioWalletIcon, label: "Wallet", href: "/wallet" },
+
+    // Collection renders read-only on native (browse only); transaction actions
+    // like Quick Sell are web-only. See MintedNftDetailScreen.
+    { icon: GamefolioCollectionIcon, label: "Collection", href: "/collection" },
 
     // Only show Messages link if user has messaging enabled - default to true for demo user
     ...(user && user.messagingEnabled !== false ? [{ icon: GamefolioMessagesIcon, label: "Messages", href: "/messages" }] : []),

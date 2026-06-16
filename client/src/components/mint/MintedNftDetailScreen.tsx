@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { nativeShare, openExternal } from "@/lib/platform";
+import { nativeShare, openExternal, isNative } from "@/lib/platform";
 
 interface NftAttribute {
   trait_type: string;
@@ -144,7 +144,9 @@ export default function MintedNftDetailScreen({
     },
   });
 
-  if (showQuickSell && !sold) {
+  // QuickSellScreen calls wagmi hooks at render — never mount it on native,
+  // where the wallet provider tree isn't present. Selling is web-only.
+  if (showQuickSell && !sold && !isNative) {
     return (
       <QuickSellScreen
         nft={nft}
@@ -490,7 +492,7 @@ export default function MintedNftDetailScreen({
                     {isListedOnMarketplace ? 'Listed on Marketplace' : 'Sold'}
                   </span>
                 </button>
-              ) : isOwner ? (
+              ) : isOwner && !isNative ? (
                 <>
                   <button
                     onClick={() => setShowQuickSell(true)}
@@ -512,7 +514,9 @@ export default function MintedNftDetailScreen({
                   disabled
                   className="h-[52px] rounded-xl bg-[#1B2A33] flex items-center justify-center gap-2 cursor-not-allowed opacity-50"
                 >
-                  <span className="text-sm font-bold text-[#B8C0AE] leading-5">Quick Sell</span>
+                  <span className="text-sm font-bold text-[#B8C0AE] leading-5">
+                    {isOwner && isNative ? "Sell on Web" : "Quick Sell"}
+                  </span>
                 </button>
               )}
             </div>

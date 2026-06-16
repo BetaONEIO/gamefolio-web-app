@@ -551,12 +551,10 @@ function Router() {
           <Route path="/battles" component={UserBattlesPage} />
           <Route path="/user-battles" component={UserBattlesPage} />
           <ProtectedRoute path="/level-tracker" component={LevelTrackerPage} />
-          <ProtectedRoute path="/collection" component={WALLET_UI_ENABLED ? CollectionPage : () => (
-            <WebPlatformRedirect
-              title="Your NFT Collection"
-              description="View and manage your digital collectibles. Your full NFT collection is available on the Gamefolio web platform."
-            />
-          )} />
+          {/* Collection renders on native too (browse-only): the page is server-
+              sourced and uses no wallet provider at render time. Transaction
+              actions (Quick Sell) are disabled on native — see MintedNftDetailScreen. */}
+          <ProtectedRoute path="/collection" component={CollectionPage} />
           <Route path="/leaderboard/embed" component={LeaderboardEmbedPage} />
           <Route path="/debug/wallet" component={WALLET_UI_ENABLED ? DebugWalletPage : () => (
             <WebPlatformRedirect title="Wallet" />
