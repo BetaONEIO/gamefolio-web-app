@@ -2502,13 +2502,13 @@ const ProfilePage = () => {
             0%   { background-position: 0 0; }
             100% { background-position: -26px 26px; }
           }
-          @keyframes mayhemSweep {
-            0%   { transform: rotate(15deg) translateX(-200vw); }
-            100% { transform: rotate(15deg) translateX(200vw); }
-          }
           @keyframes mayhemGlowPulse {
             0%,100% { opacity: 0.55; }
             50%     { opacity: 1; }
+          }
+          @keyframes mayhemRipple {
+            0%   { transform: translate(-50%, -50%) scale(0.1); opacity: 0.7; }
+            100% { transform: translate(-50%, -50%) scale(6);   opacity: 0; }
           }
           .mayhem-stripes-cyan {
             position: fixed; inset: 0; pointer-events: none; z-index: 0;
@@ -2534,23 +2534,17 @@ const ProfilePage = () => {
             background-size: 25px 25px;
             animation: mayhemStripeReverse 3.5s linear infinite;
           }
-          .mayhem-sweep {
+          .mayhem-ripple {
             position: fixed;
-            top: -50vh; left: -50vw;
-            width: 200vw; height: 200vh;
+            top: 50vh; left: 50vw;
+            width: 300px; height: 300px;
+            border-radius: 50%;
             pointer-events: none; z-index: 0;
-            background: linear-gradient(
-              90deg,
-              transparent 42%,
-              rgba(0,223,255,0.03) 46%,
-              rgba(155,48,255,0.45) 49%,
-              rgba(0,223,255,0.6) 50%,
-              rgba(155,48,255,0.45) 51%,
-              rgba(0,223,255,0.03) 54%,
-              transparent 58%
-            );
-            animation: mayhemSweep 6s ease-in-out infinite;
+            animation: mayhemRipple 4s ease-out infinite;
           }
+          .mayhem-ripple-1 { border: 2px solid rgba(0,223,255,0.5);   animation-delay: 0s; }
+          .mayhem-ripple-2 { border: 2px solid rgba(155,48,255,0.45); animation-delay: 1.33s; }
+          .mayhem-ripple-3 { border: 2px solid rgba(255,0,128,0.45);  animation-delay: 2.66s; }
           .mayhem-glow {
             position: fixed; inset: 0; pointer-events: none; z-index: 0;
             background:
@@ -2563,7 +2557,9 @@ const ProfilePage = () => {
       )}
       {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-stripes-cyan" />}
       {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-stripes-pink" />}
-      {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-sweep" />}
+      {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-ripple mayhem-ripple-1" />}
+      {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-ripple mayhem-ripple-2" />}
+      {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-ripple mayhem-ripple-3" />}
       {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-glow" />}
 
       {/* NEO / Matrix theme */}
