@@ -10201,6 +10201,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const badge = await storage.getVerificationBadge(user.selectedVerificationBadgeId);
+
+      // Suppress the Pro-only verified badge for non-Pro users (handles legacy selections)
+      if (badge && badge.name?.toLowerCase() === 'verified128' && !(user as any).isPro) {
+        return res.json({ verificationBadge: null });
+      }
+
       if (badge && badge.imageUrl && badge.imageUrl.includes('supabase.co/storage')) {
         const signed = await supabaseStorage.convertToSignedUrl(badge.imageUrl, 3600);
         if (signed) {
