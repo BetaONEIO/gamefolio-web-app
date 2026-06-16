@@ -3769,13 +3769,13 @@ const ProfilePage = () => {
             || (profile?.kickVerified ? profile?.streamChannelName : null);
 
           // Each connected platform is shown independently based on its
-          // "Show on profile" toggle (default on). Both, one, or neither.
+          // "Show on profile" toggle (default on). Only shown when live.
           const panels: Array<{ platform: 'twitch' | 'kick'; channel: string; isLive: boolean }> = [];
-          if (((profile as any)?.twitchShowOnProfile ?? true) && twitchChannel) {
-            panels.push({ platform: 'twitch', channel: twitchChannel, isLive: profileLiveStatus?.twitchLive ?? false });
+          if (((profile as any)?.twitchShowOnProfile ?? true) && twitchChannel && (profileLiveStatus?.twitchLive ?? false)) {
+            panels.push({ platform: 'twitch', channel: twitchChannel, isLive: true });
           }
-          if (((profile as any)?.kickShowOnProfile ?? true) && kickChannel) {
-            panels.push({ platform: 'kick', channel: kickChannel, isLive: profileLiveStatus?.kickLive ?? false });
+          if (((profile as any)?.kickShowOnProfile ?? true) && kickChannel && (profileLiveStatus?.kickLive ?? false)) {
+            panels.push({ platform: 'kick', channel: kickChannel, isLive: true });
           }
           if (panels.length === 0) return null;
 
