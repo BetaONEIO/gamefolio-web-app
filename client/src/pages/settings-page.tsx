@@ -4337,7 +4337,7 @@ export default function SettingsPage() {
                             onClick={() => {
                               const url = "/api/auth/twitch/connect";
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else window.location.href = url;
+                              else (window.top ?? window).location.href = url;
                             }}
                             className="gap-1.5 bg-[#9146FF] hover:bg-[#7d3ce8] text-white border-0"
                           >
@@ -4583,7 +4583,7 @@ export default function SettingsPage() {
                               setConnectingTwitch(true);
                               const url = '/api/auth/twitch-stream/connect';
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else window.location.href = url;
+                              else (window.top ?? window).location.href = url;
                             }}
                           >
                             {connectingTwitch ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
