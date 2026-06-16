@@ -1455,8 +1455,9 @@ const ProfilePage = () => {
   const isForestTheme = !isLightBackground && accentColor?.toLowerCase() === '#b7ff1a' && backgroundColor?.toLowerCase() === '#0a2f1f';
   const isWatermelonTheme = accentColor?.toLowerCase() === '#b7ff1a' && backgroundColor?.toLowerCase() === '#ff4d6d';
   const isElectricTheme = !isLightBackground && accentColor?.toLowerCase() === '#ffe033' && backgroundColor?.toLowerCase() === '#1a1200';
+  const isBatTheme = !isLightBackground && accentColor?.toLowerCase() === '#ff8c00' && backgroundColor?.toLowerCase() === '#0a0010';
 
-  const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isLightBackground;
+  const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isBatTheme && !isLightBackground;
 
   const platformBtnStyle = isWatermelonTheme
     ? { backgroundColor: '#ffb3c1', color: '#0d1a12', border: '3px solid #1d3932', borderRadius: '9999px' }
@@ -1507,7 +1508,7 @@ const ProfilePage = () => {
     facebook:    { backgroundColor: '#1877F2', color: '#ffffff', border: '1px solid #1877F2', borderRadius: '9999px' },
   };
 
-  const isNamedTheme = isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme || isLightBackground;
+  const isNamedTheme = isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme || isBatTheme || isLightBackground;
 
   const avatarThemeColor = isWatermelonTheme ? '#ff6b6b'
     : isCartoonTheme ? '#ff6b35'
@@ -1881,6 +1882,11 @@ const ProfilePage = () => {
         backgroundColor: '#0a2f1f',
         position: 'relative',
         zIndex: 1
+      } : isBatTheme ? {
+        background: 'linear-gradient(180deg, #1a0030 0%, #0a0010 100%)',
+        backgroundAttachment: 'fixed',
+        position: 'relative',
+        zIndex: 1
       } : (profile as any).profileBackgroundGradientCss ? {
         background: (profile as any).profileBackgroundGradientCss,
         backgroundAttachment: 'fixed',
@@ -1901,6 +1907,71 @@ const ProfilePage = () => {
       {/* Dark overlay for background image readability */}
       {profileBackgroundImageUrl && (
         <div className="fixed inset-0 bg-black/50 pointer-events-none" style={{ zIndex: 0 }} />
+      )}
+
+      {/* Bat theme animated overlay */}
+      {isBatTheme && (
+        <>
+          <style>{`
+            @keyframes batFly1 {
+              0%   { transform: translate(0vw, -80px) rotate(-15deg) scaleX(1); opacity: 0; }
+              8%   { opacity: 1; }
+              35%  { transform: translate(-3vw, 120px) rotate(8deg) scaleX(-1); opacity: 1; }
+              48%  { transform: translate(-3.5vw, 140px) rotate(12deg) scaleX(-1) scale(0.85); opacity: 1; }
+              60%  { transform: translate(-3.5vw, 140px) rotate(10deg) scaleX(-1) scale(0.85); opacity: 1; }
+              78%  { transform: translate(-1vw, 60px) rotate(-8deg) scaleX(1); opacity: 1; }
+              92%  { transform: translate(2vw, -70px) rotate(-20deg) scaleX(1); opacity: 1; }
+              100% { transform: translate(3vw, -120px) rotate(-25deg) scaleX(1); opacity: 0; }
+            }
+            @keyframes batFly2 {
+              0%   { transform: translate(0px, -60px) rotate(10deg) scaleX(1); opacity: 0; }
+              10%  { opacity: 1; }
+              40%  { transform: translate(4vw, 80px) rotate(-6deg) scaleX(1); opacity: 1; }
+              52%  { transform: translate(4.5vw, 95px) rotate(-10deg) scaleX(1) scale(0.9); opacity: 1; }
+              65%  { transform: translate(4.5vw, 95px) rotate(-8deg) scaleX(1) scale(0.9); opacity: 1; }
+              80%  { transform: translate(2vw, 30px) rotate(12deg) scaleX(-1); opacity: 1; }
+              93%  { transform: translate(-2vw, -80px) rotate(18deg) scaleX(-1); opacity: 1; }
+              100% { transform: translate(-4vw, -130px) rotate(22deg) scaleX(-1); opacity: 0; }
+            }
+            @keyframes batFly3 {
+              0%   { transform: translate(0px, -50px) rotate(-5deg) scaleX(-1); opacity: 0; }
+              12%  { opacity: 0.9; }
+              38%  { transform: translate(6vw, 200px) rotate(15deg) scaleX(1); opacity: 0.9; }
+              50%  { transform: translate(6.5vw, 220px) rotate(20deg) scaleX(1) scale(0.8); opacity: 0.9; }
+              63%  { transform: translate(6.5vw, 220px) rotate(18deg) scaleX(1) scale(0.8); opacity: 0.9; }
+              80%  { transform: translate(3vw, 120px) rotate(-5deg) scaleX(-1); opacity: 0.9; }
+              93%  { transform: translate(-3vw, -60px) rotate(-18deg) scaleX(-1); opacity: 0.9; }
+              100% { transform: translate(-5vw, -110px) rotate(-22deg) scaleX(-1); opacity: 0; }
+            }
+            @keyframes batFly4 {
+              0%   { transform: translate(0px, -70px) rotate(20deg) scaleX(1); opacity: 0; }
+              6%   { opacity: 0.85; }
+              32%  { transform: translate(-5vw, 160px) rotate(-12deg) scaleX(-1); opacity: 0.85; }
+              46%  { transform: translate(-5.5vw, 180px) rotate(-16deg) scaleX(-1) scale(0.88); opacity: 0.85; }
+              58%  { transform: translate(-5.5vw, 180px) rotate(-14deg) scaleX(-1) scale(0.88); opacity: 0.85; }
+              75%  { transform: translate(-2vw, 80px) rotate(5deg) scaleX(1); opacity: 0.85; }
+              90%  { transform: translate(3vw, -65px) rotate(22deg) scaleX(1); opacity: 0.85; }
+              100% { transform: translate(5vw, -110px) rotate(25deg) scaleX(1); opacity: 0; }
+            }
+            @keyframes batFly5 {
+              0%   { transform: translate(0px, -40px) rotate(-18deg) scaleX(1); opacity: 0; }
+              15%  { opacity: 0.75; }
+              42%  { transform: translate(8vw, 250px) rotate(8deg) scaleX(-1); opacity: 0.75; }
+              55%  { transform: translate(8.5vw, 268px) rotate(14deg) scaleX(-1) scale(0.82); opacity: 0.75; }
+              68%  { transform: translate(8.5vw, 268px) rotate(12deg) scaleX(-1) scale(0.82); opacity: 0.75; }
+              82%  { transform: translate(4vw, 150px) rotate(-6deg) scaleX(1); opacity: 0.75; }
+              95%  { transform: translate(-2vw, -50px) rotate(-22deg) scaleX(1); opacity: 0.75; }
+              100% { transform: translate(-4vw, -90px) rotate(-26deg) scaleX(1); opacity: 0; }
+            }
+          `}</style>
+          <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 2 }}>
+            <div style={{ position:'absolute', top:'5%', left:'20%', fontSize:'28px', animation:'batFly1 7s ease-in-out infinite', animationDelay:'0s' }}>🦇</div>
+            <div style={{ position:'absolute', top:'3%', left:'70%', fontSize:'22px', animation:'batFly2 8.5s ease-in-out infinite', animationDelay:'1.8s' }}>🦇</div>
+            <div style={{ position:'absolute', top:'8%', left:'45%', fontSize:'18px', animation:'batFly3 9s ease-in-out infinite', animationDelay:'3.5s' }}>🦇</div>
+            <div style={{ position:'absolute', top:'2%', left:'55%', fontSize:'24px', animation:'batFly4 7.8s ease-in-out infinite', animationDelay:'5.2s' }}>🦇</div>
+            <div style={{ position:'absolute', top:'6%', left:'30%', fontSize:'16px', animation:'batFly5 10s ease-in-out infinite', animationDelay:'2.3s' }}>🦇</div>
+          </div>
+        </>
       )}
       {/* Birthday Banner */}
       {(() => {

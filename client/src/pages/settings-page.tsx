@@ -400,6 +400,23 @@ const PRESET_THEMES = [
     gradientTopColor: "#ffedd4",
     primaryColor: "#ffedd4",
     proOnly: true
+  },
+  {
+    name: "Mayhem",
+    backgroundColor: "#0d0d0d",
+    accentColor: "#00DFFF",
+    gradientTopColor: "#0d0d0d",
+    primaryColor: "#0d0d0d",
+    profileBackgroundGradientCss: "linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)",
+    proOnly: true
+  },
+  {
+    name: "Bat",
+    backgroundColor: "#0a0010",
+    accentColor: "#ff8c00",
+    gradientTopColor: "#1a0030",
+    primaryColor: "#1a0030",
+    proOnly: true
   }
 ];
 
@@ -847,6 +864,7 @@ export default function SettingsPage() {
     hideBanner: (user as any)?.hideBanner || false,
     statsGlassEffect: (user as any)?.statsGlassEffect || false,
     profileBackgroundGradient: (user as any)?.profileBackgroundGradient !== false,
+    profileBackgroundGradientCss: (user as any)?.profileBackgroundGradientCss || "",
     profileFont: (user as any)?.profileFont || "default",
     profileFontEffect: (user as any)?.profileFontEffect || "none",
     profileFontAnimation: (user as any)?.profileFontAnimation || "none",
@@ -1759,7 +1777,8 @@ export default function SettingsPage() {
       ...prev,
       accentColor: theme.accentColor,
       backgroundColor: theme.backgroundColor,
-      ...(theme.primaryColor ? { primaryColor: theme.primaryColor } : {})
+      ...(theme.primaryColor ? { primaryColor: theme.primaryColor } : {}),
+      profileBackgroundGradientCss: (theme as any).profileBackgroundGradientCss || ""
     }));
     setAvatarBorderColor(theme.accentColor);
   };
@@ -1781,7 +1800,7 @@ export default function SettingsPage() {
   const bgRgb = user?.backgroundColor ? hexToRgb(user.backgroundColor) : null;
   const accentRgb = user?.accentColor ? hexToRgb(user.accentColor) : null;
 
-  const NAMED_THEME_NAMES = ['Zombie', 'Cyberpunk', 'NEO', 'Blocks', 'Watermelon', 'Forest', 'Gothic', 'Mac', 'Cartoon'];
+  const NAMED_THEME_NAMES = ['Zombie', 'Cyberpunk', 'NEO', 'Blocks', 'Watermelon', 'Forest', 'Gothic', 'Mac', 'Cartoon', 'Bat'];
   const isNamedThemeActive = PRESET_THEMES.some(t =>
     NAMED_THEME_NAMES.includes(t.name) &&
     profileData.accentColor === t.accentColor &&
@@ -2824,6 +2843,18 @@ export default function SettingsPage() {
                                     <div style={{ position:'absolute', top:'12%', right:'22%', fontSize:'9px', color:'#ff2056dd', pointerEvents:'none', lineHeight:1, userSelect:'none' }}>♥</div>
                                     <div style={{ position:'absolute', bottom:'22%', left:'38%', fontSize:'11px', color:'#ff205699', pointerEvents:'none', lineHeight:1, userSelect:'none' }}>♥</div>
                                     <div style={{ position:'absolute', bottom:'15%', right:'14%', fontSize:'8px', color:'#ff2056bb', pointerEvents:'none', lineHeight:1, userSelect:'none' }}>♥</div>
+                                  </>}
+                                  {theme.name === 'Mayhem' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)', opacity:0.92 }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.04) 8px, rgba(255,255,255,0.04) 9px)' }} />
+                                    <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', fontSize:'22px', pointerEvents:'none', lineHeight:1, userSelect:'none', filter:'drop-shadow(0 0 6px #fff)' }}>⚡</div>
+                                  </>}
+                                  {theme.name === 'Bat' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #1a0030 0%, #0a0010 100%)' }} />
+                                    <div style={{ position:'absolute', top:'12%', right:'22%', width:'22px', height:'22px', borderRadius:'50%', background:'radial-gradient(circle, #fffde7 60%, #ffe08244 100%)', pointerEvents:'none', boxShadow:'0 0 10px 3px #ffe08255' }} />
+                                    <div style={{ position:'absolute', top:'18%', left:'14%', fontSize:'13px', color:'#222', pointerEvents:'none', lineHeight:1, userSelect:'none', filter:'drop-shadow(0 0 1px #ff8c0066)' }}>🦇</div>
+                                    <div style={{ position:'absolute', top:'50%', left:'55%', fontSize:'10px', color:'#222', pointerEvents:'none', lineHeight:1, userSelect:'none', transform:'scaleX(-1)', filter:'drop-shadow(0 0 1px #ff8c0055)' }}>🦇</div>
+                                    <div style={{ position:'absolute', bottom:'25%', left:'30%', fontSize:'8px', color:'#222', pointerEvents:'none', lineHeight:1, userSelect:'none', filter:'drop-shadow(0 0 1px #ff8c0044)' }}>🦇</div>
                                   </>}
                                   {/* ── Badges ── */}
                                   {isActive && (
@@ -5132,6 +5163,8 @@ export default function SettingsPage() {
         const isMac         = tn === 'Mac';
         const isBubbleTea   = tn === 'Bubble Tea';
         const isCutesyPink  = tn === 'Cutesy Pink';
+        const isMayhem      = tn === 'Mayhem';
+        const isBat         = tn === 'Bat';
         const isLight       = isMac || isCartoon || isIce || isBubbleTea || isWatermelon;
 
         const themeFont =
@@ -5318,7 +5351,7 @@ export default function SettingsPage() {
               `}</style>
               <div
                 className="rounded-2xl overflow-hidden relative"
-                style={{ background: `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)` }}
+                style={{ background: isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #1a0030 0%, #0a0010 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)` }}
               >
                 {/* ── Zombie layers ── */}
                 {isZombie && <>
@@ -5367,6 +5400,21 @@ export default function SettingsPage() {
 
                 {/* ── Gothic vignette ── */}
                 {isGothic && <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 80% 80% at 50% 40%, rgba(194,122,255,0.08) 0%, rgba(30,5,58,0.6) 100%)' }} />}
+
+                {/* ── Mayhem layers ── */}
+                {isMayhem && <>
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(255,255,255,0.04) 12px, rgba(255,255,255,0.04) 13px)' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 60% 60% at 30% 30%, rgba(0,223,255,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 50% at 75% 70%, rgba(255,0,128,0.15) 0%, transparent 60%)' }} />
+                </>}
+
+                {/* ── Bat moon & stars ── */}
+                {isBat && <>
+                  <div style={{ position:'absolute', top:'10%', right:'18%', width:28, height:28, borderRadius:'50%', background:'radial-gradient(circle, #fffde7 60%, #ffe08244 100%)', pointerEvents:'none', boxShadow:'0 0 14px 5px #ffe08244' }} />
+                  <div style={{ position:'absolute', top:'6%', left:'12%', width:3, height:3, borderRadius:'50%', background:'#ffffffcc', pointerEvents:'none', boxShadow:'0 0 4px #fff8' }} />
+                  <div style={{ position:'absolute', top:'14%', left:'28%', width:2, height:2, borderRadius:'50%', background:'#ffffffaa', pointerEvents:'none' }} />
+                  <div style={{ position:'absolute', top:'8%', left:'55%', width:2, height:2, borderRadius:'50%', background:'#ffffff88', pointerEvents:'none' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(26,0,48,0.0) 0%, rgba(10,0,16,0.45) 100%)' }} />
+                </>}
 
                 {/* ── Watermelon seeds ── */}
                 {isWatermelon && <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'radial-gradient(ellipse 6px 10px at center, #1d3932 100%, transparent 100%)', backgroundSize:'40px 50px', backgroundPosition:'10px 15px, 30px 35px', opacity:0.12 }} />}
