@@ -639,7 +639,7 @@ export class VideoProcessor {
     });
   }
 
-  static async getVideoInfo(videoPath: string): Promise<{ duration: number; width: number; height: number }> {
+  static async getVideoInfo(videoPath: string): Promise<{ duration: number; width: number; height: number; videoCodec: string; audioCodec: string | null }> {
     return new Promise((resolve, reject) => {
       ffmpeg.ffprobe(videoPath, (error: any, metadata: any) => {
         if (error) {
@@ -653,12 +653,29 @@ export class VideoProcessor {
           return;
         }
 
+        const audioStream = metadata.streams.find((stream: any) => stream.codec_type === 'audio');
+
         resolve({
           duration: metadata.format?.duration || 0,
           width: videoStream.width || 0,
-          height: videoStream.height || 0
+          height: videoStream.height || 0,
+          videoCodec: (videoStream.codec_name || '').toLowerCase(),
+          audioCodec: audioStream ? (audioStream.codec_name || '').toLowerCase() : null
         });
       });
     });
+  }
+
+  /**
+   * Returns true when the file can be played as-is by a standard HTML <video>
+   * element across browsers / WebViews. Anything else (HEVC/H.265, 10-bit,
+   * ProRes, exotic audio, etc.) must be re-encoded to H.264 + AAC before it is
+   * served, otherwise it will fail to play for viewers — the same way it fails
+   * to preview at upload time.
+   */
+  static isBrowserPlayable(videoCodec: string, audioCodec: string | null): boolean {
+    const videoOk = videoCodec === 'h264';
+    const audioOk = audioCodec === null || audioCodec === 'aac' || audioCodec === 'mp3';
+    return videoOk && audioOk;
   }
 }
