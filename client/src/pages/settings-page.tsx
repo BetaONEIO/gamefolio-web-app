@@ -5356,6 +5356,12 @@ export default function SettingsPage() {
 
                 /* Gothic */
                 @keyframes gothicPulse { 0%,100%{box-shadow:0 0 15px #c27aff44,0 0 30px #c27aff22} 50%{box-shadow:0 0 25px #c27aff88,0 0 50px #c27aff33} }
+
+                /* Mayhem */
+                @keyframes mayhemStripeFlow { 0%{background-position:0 0} 100%{background-position:26px 26px} }
+                @keyframes mayhemStripeReverse { 0%{background-position:0 0} 100%{background-position:-26px 26px} }
+                @keyframes mayhemSweep { 0%{transform:rotate(15deg) translateX(-300%)} 100%{transform:rotate(15deg) translateX(300%)} }
+                @keyframes mayhemGlowPulse { 0%,100%{opacity:0.6} 50%{opacity:1} }
               `}</style>
               <div
                 className="rounded-2xl overflow-hidden relative"
@@ -5411,8 +5417,10 @@ export default function SettingsPage() {
 
                 {/* ── Mayhem layers ── */}
                 {isMayhem && <>
-                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(255,255,255,0.04) 12px, rgba(255,255,255,0.04) 13px)' }} />
-                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 60% 60% at 30% 30%, rgba(0,223,255,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 50% at 75% 70%, rgba(255,0,128,0.15) 0%, transparent 60%)' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'repeating-linear-gradient(45deg, transparent, transparent 11px, rgba(0,223,255,0.12) 11px, rgba(0,223,255,0.12) 12px)', backgroundSize:'17px 17px', animation:'mayhemStripeFlow 2.5s linear infinite' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'repeating-linear-gradient(-45deg, transparent, transparent 17px, rgba(255,0,128,0.07) 17px, rgba(255,0,128,0.07) 18px)', backgroundSize:'25px 25px', animation:'mayhemStripeReverse 3.5s linear infinite' }} />
+                  <div style={{ position:'absolute', top:'-50%', left:'-50%', width:'200%', height:'200%', pointerEvents:'none', background:'linear-gradient(90deg, transparent 42%, rgba(0,223,255,0.04) 46%, rgba(155,48,255,0.5) 49%, rgba(0,223,255,0.7) 50%, rgba(155,48,255,0.5) 51%, rgba(0,223,255,0.04) 54%, transparent 58%)', animation:'mayhemSweep 5s ease-in-out infinite' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 60% 60% at 30% 30%, rgba(0,223,255,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 50% at 75% 70%, rgba(255,0,128,0.15) 0%, transparent 60%)', animation:'mayhemGlowPulse 3s ease-in-out infinite' }} />
                   <img src="/attached_assets/MayhemLogo_1781627968574.png" alt="" style={{ position:'absolute', top:12, right:14, width:56, height:56, objectFit:'contain', pointerEvents:'none', opacity:0.92, filter:'drop-shadow(0 2px 10px rgba(0,0,0,0.6))' }} />
                 </>}
 

@@ -2490,6 +2490,82 @@ const ProfilePage = () => {
       {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-rgb-blue" />}
       {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-glitch-lines" />}
       {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-interference" />}
+
+      {/* Mayhem theme animated lines */}
+      {isMayhemTheme && (
+        <style>{`
+          @keyframes mayhemStripeFlow {
+            0%   { background-position: 0 0; }
+            100% { background-position: 26px 26px; }
+          }
+          @keyframes mayhemStripeReverse {
+            0%   { background-position: 0 0; }
+            100% { background-position: -26px 26px; }
+          }
+          @keyframes mayhemSweep {
+            0%   { transform: rotate(15deg) translateX(-200vw); }
+            100% { transform: rotate(15deg) translateX(200vw); }
+          }
+          @keyframes mayhemGlowPulse {
+            0%,100% { opacity: 0.55; }
+            50%     { opacity: 1; }
+          }
+          .mayhem-stripes-cyan {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background-image: repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 11px,
+              rgba(0,223,255,0.1) 11px,
+              rgba(0,223,255,0.1) 12px
+            );
+            background-size: 17px 17px;
+            animation: mayhemStripeFlow 2.5s linear infinite;
+          }
+          .mayhem-stripes-pink {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background-image: repeating-linear-gradient(
+              -45deg,
+              transparent,
+              transparent 17px,
+              rgba(255,0,128,0.06) 17px,
+              rgba(255,0,128,0.06) 18px
+            );
+            background-size: 25px 25px;
+            animation: mayhemStripeReverse 3.5s linear infinite;
+          }
+          .mayhem-sweep {
+            position: fixed;
+            top: -50vh; left: -50vw;
+            width: 200vw; height: 200vh;
+            pointer-events: none; z-index: 0;
+            background: linear-gradient(
+              90deg,
+              transparent 42%,
+              rgba(0,223,255,0.03) 46%,
+              rgba(155,48,255,0.45) 49%,
+              rgba(0,223,255,0.6) 50%,
+              rgba(155,48,255,0.45) 51%,
+              rgba(0,223,255,0.03) 54%,
+              transparent 58%
+            );
+            animation: mayhemSweep 6s ease-in-out infinite;
+          }
+          .mayhem-glow {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background:
+              radial-gradient(ellipse 55% 40% at 20% 25%, rgba(0,223,255,0.14) 0%, transparent 60%),
+              radial-gradient(ellipse 45% 50% at 80% 72%, rgba(255,0,128,0.11) 0%, transparent 55%),
+              radial-gradient(ellipse 35% 35% at 55% 48%, rgba(155,48,255,0.09) 0%, transparent 50%);
+            animation: mayhemGlowPulse 4s ease-in-out infinite;
+          }
+        `}</style>
+      )}
+      {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-stripes-cyan" />}
+      {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-stripes-pink" />}
+      {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-sweep" />}
+      {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-glow" />}
+
       {/* NEO / Matrix theme */}
       {isNeoTheme && (
         <style>{`
