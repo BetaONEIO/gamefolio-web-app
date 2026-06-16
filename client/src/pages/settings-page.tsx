@@ -1300,10 +1300,20 @@ export default function SettingsPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
+    const sendToOpenerAndClose = (type: string, payload?: Record<string, string>) => {
+      if (window.opener) {
+        window.opener.postMessage({ type, ...payload }, window.location.origin);
+        window.close();
+        return true;
+      }
+      return false;
+    };
     if (params.get('kick_connected') === 'true') {
-      refreshUser();
-      toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
-      window.history.replaceState({}, '', window.location.pathname);
+      if (!sendToOpenerAndClose('kick_connected')) {
+        refreshUser();
+        toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     } else if (params.get('kick_error')) {
       const errMap: Record<string, string> = {
         access_denied: 'You cancelled the Kick authorisation.',
@@ -1313,12 +1323,16 @@ export default function SettingsPage() {
         auth_failed: 'Kick authentication failed. Please try again.',
         no_channel: 'No Kick channel found on your account.',
       };
-      toast({ title: "Kick connection failed", description: errMap[params.get('kick_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
-      window.history.replaceState({}, '', window.location.pathname);
+      if (!sendToOpenerAndClose('kick_error', { error: params.get('kick_error')! })) {
+        toast({ title: "Kick connection failed", description: errMap[params.get('kick_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     } else if (params.get('twitch_connected') === 'true') {
-      refreshUser();
-      toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked.", duration: 4000 });
-      window.history.replaceState({}, '', window.location.pathname);
+      if (!sendToOpenerAndClose('twitch_connected')) {
+        refreshUser();
+        toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked.", duration: 4000 });
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     } else if (params.get('twitch_error')) {
       const errMap: Record<string, string> = {
         access_denied: 'You cancelled the Twitch authorisation.',
@@ -1327,8 +1341,10 @@ export default function SettingsPage() {
         auth_failed: 'Twitch authentication failed. Please try again.',
         no_user: 'No Twitch user found on your account.',
       };
-      toast({ title: "Twitch connection failed", description: errMap[params.get('twitch_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
-      window.history.replaceState({}, '', window.location.pathname);
+      if (!sendToOpenerAndClose('twitch_error', { error: params.get('twitch_error')! })) {
+        toast({ title: "Twitch connection failed", description: errMap[params.get('twitch_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     } else if (params.get('rumble_connected') === 'true') {
       refreshUser();
       toast({ title: "Rumble connected!", description: "Your Rumble channel has been verified and linked.", duration: 4000 });
@@ -1453,33 +1469,87 @@ export default function SettingsPage() {
   }, [(user as any)?.selectedVerificationBadgeId, pendingVerificationBadgeId]);
   
 
-  // Handle OAuth callback URL params (Twitch/Kick)
+  // Handle OAuth callback URL params (Twitch/Kick) — also handles popup tab case
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const twitchConnected = params.get("twitch_connected");
     const twitchError = params.get("twitch_error");
     const kickConnected = params.get("kick_connected");
     const kickError = params.get("kick_error");
+    const sendToOpenerAndClose = (type: string, payload?: Record<string, string>) => {
+      if (window.opener) {
+        window.opener.postMessage({ type, ...payload }, window.location.origin);
+        window.close();
+        return true;
+      }
+      return false;
+    };
     if (twitchConnected) {
-      refreshUser();
-      toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked.", duration: 4000 });
-      window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
+      if (!sendToOpenerAndClose('twitch_connected')) {
+        refreshUser();
+        toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked.", duration: 4000 });
+        window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
+      }
     }
     if (twitchError) {
-      const msg = twitchError === "not_configured" ? "Twitch OAuth is not configured." : twitchError === "invalid_state" ? "OAuth state mismatch — please try again." : twitchError;
-      toast({ title: "Twitch connection failed", description: msg, variant: "destructive", duration: 5000 });
-      window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
+      if (!sendToOpenerAndClose('twitch_error', { error: twitchError })) {
+        const msg = twitchError === "not_configured" ? "Twitch OAuth is not configured." : twitchError === "invalid_state" ? "OAuth state mismatch — please try again." : twitchError;
+        toast({ title: "Twitch connection failed", description: msg, variant: "destructive", duration: 5000 });
+        window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
+      }
     }
     if (kickConnected) {
-      refreshUser();
-      toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
-      window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
+      if (!sendToOpenerAndClose('kick_connected')) {
+        refreshUser();
+        toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
+        window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
+      }
     }
     if (kickError) {
-      const msg = kickError === "not_configured" ? "Kick OAuth is not configured." : kickError === "invalid_state" ? "OAuth state mismatch — please try again." : kickError;
-      toast({ title: "Kick connection failed", description: msg, variant: "destructive", duration: 5000 });
-      window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
+      if (!sendToOpenerAndClose('kick_error', { error: kickError })) {
+        const msg = kickError === "not_configured" ? "Kick OAuth is not configured." : kickError === "invalid_state" ? "OAuth state mismatch — please try again." : kickError;
+        toast({ title: "Kick connection failed", description: msg, variant: "destructive", duration: 5000 });
+        window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
+      }
     }
+  }, []);
+
+  // Listen for OAuth results posted back from a popup tab
+  useEffect(() => {
+    const twitchErrMap: Record<string, string> = {
+      access_denied: 'You cancelled the Twitch authorisation.',
+      invalid_state: 'Invalid OAuth state. Please try again.',
+      not_configured: 'Twitch OAuth is not configured on this server.',
+      auth_failed: 'Twitch authentication failed. Please try again.',
+      no_user: 'No Twitch user found on your account.',
+    };
+    const kickErrMap: Record<string, string> = {
+      access_denied: 'You cancelled the Kick authorisation.',
+      redirect_uri_mismatch: 'Redirect URI mismatch — check the Kick developer dashboard.',
+      invalid_state: 'Invalid OAuth state. Please try again.',
+      not_configured: 'Kick OAuth is not configured on this server.',
+      auth_failed: 'Kick authentication failed. Please try again.',
+      no_channel: 'No Kick channel found on your account.',
+    };
+    const handler = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      const { type, error } = e.data ?? {};
+      if (type === 'twitch_connected') {
+        refreshUser();
+        setConnectingTwitch(false);
+        toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked.", duration: 4000 });
+      } else if (type === 'twitch_error') {
+        setConnectingTwitch(false);
+        toast({ title: "Twitch connection failed", description: twitchErrMap[error] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+      } else if (type === 'kick_connected') {
+        refreshUser();
+        toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
+      } else if (type === 'kick_error') {
+        toast({ title: "Kick connection failed", description: kickErrMap[error] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
   }, []);
 
   const updateProfileMutation = useMutation({
@@ -4337,7 +4407,7 @@ export default function SettingsPage() {
                             onClick={() => {
                               const url = "/api/auth/twitch/connect";
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else (window.top ?? window).location.href = url;
+                              else window.open(url, '_blank', 'noopener=no');
                             }}
                             className="gap-1.5 bg-[#9146FF] hover:bg-[#7d3ce8] text-white border-0"
                           >
@@ -4583,7 +4653,7 @@ export default function SettingsPage() {
                               setConnectingTwitch(true);
                               const url = '/api/auth/twitch-stream/connect';
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else (window.top ?? window).location.href = url;
+                              else window.open(url, '_blank', 'noopener=no');
                             }}
                           >
                             {connectingTwitch ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
