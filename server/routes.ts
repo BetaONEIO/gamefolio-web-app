@@ -10109,6 +10109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...unlockedBadges,
       ];
       
+      const isUserPro = !!(req.user as any).isPro;
       const hiddenBadgeNames = ['moderator', 'moderator icon', 'pro user'];
       const filteredBadges = mergedBadges
         .filter(b => {
@@ -10118,7 +10119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .map(b => {
           if (b.name.toLowerCase() === 'verified128') {
-            return { ...b, name: 'Pro' };
+            return { ...b, name: 'Verified', requiresPro: true, proLocked: !isUserPro };
           }
           return b;
         });
@@ -10155,11 +10156,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Invalid verification badge" });
         }
         
-        // Default badges are available to everyone
+        // Default badges are available to everyone except the verified badge which requires Pro
         // Moderator badges are available to moderators and admins
         const isModeratorBadge = badge.name?.toLowerCase().includes('moderator');
         const userIsModerator = req.user.role === 'moderator' || req.user.role === 'admin';
-        
+        const isVerifiedBadge = badge.name?.toLowerCase() === 'verified128';
+
+        if (isVerifiedBadge && !(req.user as any).isPro) {
+          return res.status(403).json({ message: "The Verified badge is a Gamefolio Pro exclusive. Upgrade to Pro to use it!" });
+        }
+
         if (!badge.isDefault && !(isModeratorBadge && userIsModerator)) {
           const hasUnlocked = await storage.userHasUnlockedVerificationBadge(req.user.id, badgeId);
           if (!hasUnlocked) {

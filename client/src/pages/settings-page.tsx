@@ -3508,31 +3508,51 @@ export default function SettingsPage() {
                           )}
 
                           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                            {userVerificationBadges.map((badge: VerificationBadge) => {
+                            {userVerificationBadges.map((badge: VerificationBadge & { requiresPro?: boolean; proLocked?: boolean }) => {
                               const displayBadgeId = pendingVerificationBadgeId !== undefined ? pendingVerificationBadgeId : (user as any)?.selectedVerificationBadgeId;
                               const isSelected = displayBadgeId === badge.id;
+                              const isProLocked = !!(badge as any).proLocked;
                               return (
                                 <button
                                   key={badge.id}
                                   type="button"
-                                  onClick={() => setPendingVerificationBadgeId(badge.id)}
+                                  onClick={() => {
+                                    if (isProLocked) {
+                                      setShowProUpgradeDialog(true);
+                                    } else {
+                                      setPendingVerificationBadgeId(badge.id);
+                                    }
+                                  }}
                                   className={`
                                     relative p-3 rounded-lg transition-all transform hover:scale-105 flex flex-col items-center
-                                    ${isSelected 
-                                      ? 'ring-2 ring-primary bg-primary/20' 
-                                      : 'border border-border hover:border-primary/50'}
+                                    ${isProLocked
+                                      ? 'border border-border opacity-60 cursor-pointer'
+                                      : isSelected 
+                                        ? 'ring-2 ring-primary bg-primary/20' 
+                                        : 'border border-border hover:border-primary/50'}
                                   `}
                                 >
                                   <NameTagImage
                                     imageUrl={badge.imageUrl}
                                     alt={badge.name}
-                                    className="w-10 h-10 object-contain"
+                                    className={`w-10 h-10 object-contain ${isProLocked ? 'opacity-50' : ''}`}
                                   />
                                   <p className="text-xs text-center mt-1 truncate w-full">{badge.name}</p>
-                                  {badge.isDefault && (
+                                  {(badge as any).requiresPro ? (
+                                    <span className="text-[10px] text-yellow-400 font-medium flex items-center gap-0.5">
+                                      <Crown className="h-2.5 w-2.5" />Pro
+                                    </span>
+                                  ) : badge.isDefault ? (
                                     <span className="text-[10px] text-primary font-medium">Free</span>
+                                  ) : null}
+                                  {isProLocked && (
+                                    <div className="absolute inset-0 flex items-center justify-center rounded-lg">
+                                      <div className="bg-black/60 rounded-full p-1">
+                                        <Lock className="h-3.5 w-3.5 text-yellow-400" />
+                                      </div>
+                                    </div>
                                   )}
-                                  {isSelected && (
+                                  {isSelected && !isProLocked && (
                                     <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
                                       <Check className="h-2.5 w-2.5" />
                                     </div>
