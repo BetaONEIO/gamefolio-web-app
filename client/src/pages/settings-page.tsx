@@ -5405,6 +5405,7 @@ export default function SettingsPage() {
                 {isMayhem && <>
                   <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(255,255,255,0.04) 12px, rgba(255,255,255,0.04) 13px)' }} />
                   <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 60% 60% at 30% 30%, rgba(0,223,255,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 50% at 75% 70%, rgba(255,0,128,0.15) 0%, transparent 60%)' }} />
+                  <img src="/attached_assets/MayhemLogo_1781627968574.png" alt="" style={{ position:'absolute', top:12, right:14, width:56, height:56, objectFit:'contain', pointerEvents:'none', opacity:0.92, filter:'drop-shadow(0 2px 10px rgba(0,0,0,0.6))' }} />
                 </>}
 
                 {/* ── Bat moon & stars ── */}
