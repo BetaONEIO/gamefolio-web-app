@@ -1009,13 +1009,13 @@ export default function SettingsPage() {
   const toggleGamerTag = (id: string) => {
     if (id === 'streamer') {
       // At cap and trying to add — block it
-      if (!isStreamingEnabled && selectedGamerTags.length >= 2) return;
+      if (!isStreamingEnabled && selectedGamerTags.length >= 3) return;
       setIsStreamingEnabled(v => !v);
       return;
     }
     const next = selectedGamerTags.includes(id)
       ? selectedGamerTags.filter(t => t !== id)
-      : selectedGamerTags.length < 2
+      : selectedGamerTags.length < 3
         ? [...selectedGamerTags, id]
         : selectedGamerTags;
     // Persist in canonical GAMER_TAG_OPTIONS order (excluding streamer, tracked separately).
@@ -2686,17 +2686,17 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-between">
                     <Label>Gamer Tag</Label>
                     <span className="text-xs text-muted-foreground">
-                      {selectedGamerTags.length}/2 selected
+                      {selectedGamerTags.length}/3 selected
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Change the tag you picked during onboarding. Choose up to two — they
+                    Change the tag you picked during onboarding. Choose up to three — they
                     appear on your profile.
                   </p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {GAMER_TAG_OPTIONS.map((opt) => {
                       const isSelected = selectedGamerTags.includes(opt.id);
-                      const atMax = selectedGamerTags.length >= 2 && !isSelected;
+                      const atMax = selectedGamerTags.length >= 3 && !isSelected;
                       const Icon = opt.icon;
                       return (
                         <button
