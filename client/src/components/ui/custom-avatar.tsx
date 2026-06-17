@@ -343,7 +343,7 @@ export const CustomAvatar = ({
   onNftClick,
   onClick
 }: CustomAvatarProps) => {
-  const borderColor = themeColor || 'hsl(var(--primary))';
+  const borderColor = themeColor || user?.accentColor || 'hsl(var(--primary))';
   const safeDisplayName = user?.displayName || user?.username || "?";
   const clipId = useMemo(() => `avatar-clip-${user?.id || 'default'}-${Math.random().toString(36).substr(2, 6)}`, [user?.id]);
 
