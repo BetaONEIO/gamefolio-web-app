@@ -323,7 +323,7 @@ const Sidebar = () => {
                         <span>Followers</span>
                       </button>
                       <button
-                        onClick={() => { setLocation(`/profile/${user.username}/following`); setMyGamefolioExpanded(false); }}
+                        onClick={() => { setLocation(`/profile/${user.username}/followers?tab=following`); setMyGamefolioExpanded(false); }}
                         className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors"
                       >
                         <Users className="h-3.5 w-3.5 shrink-0" />

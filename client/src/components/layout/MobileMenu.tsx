@@ -245,7 +245,7 @@ const MobileMenu = () => {
                 </button>
                 <span className="text-muted-foreground text-xs">·</span>
                 <button
-                  onClick={() => { setLocation(`/profile/${user.username}/following`); handleClose(); }}
+                  onClick={() => { setLocation(`/profile/${user.username}/followers?tab=following`); handleClose(); }}
                   className="flex items-center gap-1 hover:opacity-75 transition-opacity"
                 >
                   <span className="font-black text-sm">{followingCount.toLocaleString()}</span>

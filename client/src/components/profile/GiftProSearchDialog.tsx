@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Gift, Search, X, Star } from "lucide-react";
+import { Gift, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import {
@@ -133,12 +133,6 @@ export function GiftProSearchDialog({ open, onOpenChange, initialUsername }: Gif
                     <p className="text-sm font-semibold truncate">{selectedUser.displayName || selectedUser.username}</p>
                     <p className="text-xs text-muted-foreground truncate">@{selectedUser.username}</p>
                   </div>
-                  {selectedUser.isPro && (
-                    <span className="flex items-center gap-0.5 text-xs font-bold text-yellow-500">
-                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                      PRO
-                    </span>
-                  )}
                   <button
                     onClick={handleClearUser}
                     className="flex-shrink-0 p-0.5 rounded hover:bg-secondary transition-colors"

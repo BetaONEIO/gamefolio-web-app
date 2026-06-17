@@ -205,11 +205,12 @@ export default function FollowersPage() {
   const [, setLocation] = useLocation();
   const username = params.username;
 
-  // Initialise from URL path — but never re-derive from location after mount
-  // so that tab switches don't cause a component remount.
-  const [activeTab, setActiveTab] = useState<"followers" | "following">(() =>
-    window.location.pathname.endsWith("/following") ? "following" : "followers"
-  );
+  // Read tab from ?tab=following query param only on first mount.
+  // Never update URL when switching — avoids wouter seeing a path change and remounting.
+  const [activeTab, setActiveTab] = useState<"followers" | "following">(() => {
+    const p = new URLSearchParams(window.location.search);
+    return p.get("tab") === "following" ? "following" : "followers";
+  });
 
   const { data: profile, isLoading: profileLoading } = useQuery<{
     id: number;
@@ -231,10 +232,7 @@ export default function FollowersPage() {
   });
 
   const handleTabChange = (tab: string) => {
-    const next = tab as "followers" | "following";
-    setActiveTab(next);
-    // Silently update the browser URL without triggering a router remount
-    window.history.replaceState(null, "", `/profile/${username}/${next}`);
+    setActiveTab(tab as "followers" | "following");
   };
 
   return (

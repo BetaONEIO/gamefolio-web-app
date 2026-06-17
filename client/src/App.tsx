@@ -567,9 +567,8 @@ function Router() {
           <Route path="/view/screenshot/:id" component={ViewContentPage} />
           <Route path="/view/:id" component={ViewContentPage} />
 
-          {/* Followers / following full-page views */}
+          {/* Followers / following full-page view (single route, tab via ?tab=following) */}
           <Route path="/profile/:username/followers" component={FollowersPage} />
-          <Route path="/profile/:username/following" component={FollowersPage} />
 
           {/* Custom profile link route - matches gamefolio.gg/username pattern */}
           {/* General profile routes - MUST be at bottom after all specific routes */}
