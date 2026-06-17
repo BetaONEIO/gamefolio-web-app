@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
-  ArrowLeft, Search, UserPlus, UserCheck, Gift, Users,
+  ArrowLeft, Search, UserPlus, UserCheck, Gift, Users, MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -95,6 +95,15 @@ function FollowUserRow({ user }: { user: FollowUser }) {
               ) : (
                 <><UserPlus className="h-3 w-3 mr-1" />Follow</>
               )}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 w-8 p-0 border-border text-muted-foreground hover:text-foreground hover:bg-secondary"
+              onClick={() => setLocation(`/messages?user=${user.username}`)}
+              title={`Message @${user.username}`}
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
             </Button>
             {!user.selectedVerificationBadgeId && (
               <Button
