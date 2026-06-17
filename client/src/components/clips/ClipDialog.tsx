@@ -713,11 +713,8 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               clip.videoType === 'reel' && isMobile ? (
                 // TikTok-style mobile fullscreen layout for reels only
                 <div
-                  className="w-full h-full flex items-center justify-center bg-black relative transition-all duration-300 ease-out"
-                  style={{
-                    paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
-                    ...(showComments ? { transform: 'translateY(-8px) scale(0.97)', transformOrigin: 'center top' } : {}),
-                  }}
+                  className="absolute inset-0 bg-black"
+                  style={showComments ? { transform: 'translateY(-8px) scale(0.97)', transformOrigin: 'center top' } : undefined}
                 >
                   <VideoPlayer 
                     videoUrl={clip.videoUrl} 
