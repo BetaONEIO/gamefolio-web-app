@@ -483,6 +483,7 @@ video:focus {
   html,
   body {
     overscroll-behavior-y: none;
+    background-color: #081017;
   }
 
   body {
