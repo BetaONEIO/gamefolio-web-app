@@ -152,10 +152,10 @@ const MobileMenu = () => {
 
   const displayGames = favoriteGames;
 
-  // Close menu when clicking outside
+  // Close menu when clicking outside (but not when a sub-dialog is open)
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
-      if (isOpen && !isClosing && e.target instanceof HTMLElement) {
+      if (isOpen && !isClosing && !showGiftProDialog && e.target instanceof HTMLElement) {
         const menuContainer = document.getElementById('mobile-menu-container');
         if (menuContainer && !menuContainer.contains(e.target)) {
           handleClose();
@@ -165,7 +165,7 @@ const MobileMenu = () => {
 
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [isOpen, isClosing, handleClose]);
+  }, [isOpen, isClosing, showGiftProDialog, handleClose]);
 
   // Disable body scroll when menu is open
   useEffect(() => {
