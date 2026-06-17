@@ -26,6 +26,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Game } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { FollowListModal } from "@/components/profile/FollowListModal";
+import { GiftProSearchDialog } from "@/components/profile/GiftProSearchDialog";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,9 +58,6 @@ const Sidebar = () => {
   const [myGamefolioExpanded, setMyGamefolioExpanded] = useState(false);
   const [followListModal, setFollowListModal] = useState<{ type: 'followers' | 'following'; userId: number } | null>(null);
   const [showGiftProDialog, setShowGiftProDialog] = useState(false);
-  const [giftProUsername, setGiftProUsername] = useState('');
-  const [giftProPlan, setGiftProPlan] = useState<'monthly' | 'yearly'>('monthly');
-  const [giftProLoading, setGiftProLoading] = useState(false);
 
   // Maximum number of games a user can have
   const MAX_GAMES = 25;
@@ -107,20 +105,6 @@ const Sidebar = () => {
   });
   const followerCount = (ownProfileData as any)?._count?.followers ?? 0;
   const followingCount = (ownProfileData as any)?._count?.following ?? 0;
-
-  const handleGiftPro = async () => {
-    setGiftProLoading(true);
-    try {
-      const res = await apiRequest('POST', '/api/pro/gift-checkout', { recipientUsername: giftProUsername, plan: giftProPlan });
-      const data = await res.json();
-      if (data.url) { window.location.href = data.url; }
-      else { toast({ title: 'Error', description: data.error || 'Failed to start checkout', variant: 'destructive' }); }
-    } catch {
-      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' });
-    } finally {
-      setGiftProLoading(false);
-    }
-  };
 
   // Search for games to add
   const { data: searchResults } = useQuery<TwitchGame[]>({
@@ -785,51 +769,7 @@ const Sidebar = () => {
         />
       )}
 
-      {/* Gift Pro Dialog */}
-      <Dialog open={showGiftProDialog} onOpenChange={setShowGiftProDialog}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Gift className="h-5 w-5 text-primary" />
-              Gift Pro to a Friend
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Their username</label>
-              <Input
-                placeholder="@username"
-                value={giftProUsername}
-                onChange={(e) => setGiftProUsername(e.target.value.replace('@', ''))}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Plan</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setGiftProPlan('monthly')}
-                  className={cn("p-3 rounded-lg border text-sm transition-colors text-left", giftProPlan === 'monthly' ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-secondary")}
-                >
-                  <div className="font-bold">Monthly</div>
-                  <div className="text-xs text-muted-foreground">£2.99 / month</div>
-                </button>
-                <button
-                  onClick={() => setGiftProPlan('yearly')}
-                  className={cn("p-3 rounded-lg border text-sm transition-colors text-left", giftProPlan === 'yearly' ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-secondary")}
-                >
-                  <div className="font-bold">Yearly</div>
-                  <div className="text-xs text-muted-foreground">£30 / year</div>
-                </button>
-              </div>
-            </div>
-            <Button onClick={handleGiftPro} disabled={!giftProUsername.trim() || giftProLoading} className="w-full">
-              {giftProLoading
-                ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                : 'Gift Pro →'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <GiftProSearchDialog open={showGiftProDialog} onOpenChange={setShowGiftProDialog} />
 
       {/* Remove Game Confirmation Dialog */}
       <AlertDialog open={!!gameToRemove} onOpenChange={() => setGameToRemove(null)}>

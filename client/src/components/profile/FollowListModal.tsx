@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { User } from "@shared/schema";
-import { UserPlus, UserCheck, Gift } from "lucide-react";
+import { UserPlus, UserCheck, Gift, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface FollowListModalProps {
@@ -194,6 +194,8 @@ function FollowUserRow({ user, onClose }: { user: FollowUser; onClose: () => voi
 }
 
 export function FollowListModal({ open, onClose, type, userId, profileUsername }: FollowListModalProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: [`/api/users/${userId}/${type}`],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -201,17 +203,46 @@ export function FollowListModal({ open, onClose, type, userId, profileUsername }
     staleTime: 30000,
   });
 
+  const filteredUsers = searchQuery.trim()
+    ? users.filter((u) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          u.username.toLowerCase().includes(q) ||
+          (u.displayName ?? "").toLowerCase().includes(q)
+        );
+      })
+    : users;
+
   const title = type === "followers" ? "Followers" : "Following";
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); setSearchQuery(""); } }}>
       <DialogContent className="max-w-sm w-full p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-4 py-3 border-b">
           <DialogTitle className="text-base">
             {profileUsername ? `@${profileUsername}'s ` : ""}{title}
+            {users.length > 0 && (
+              <span className="ml-1.5 text-sm font-normal text-muted-foreground">({users.length})</span>
+            )}
           </DialogTitle>
         </DialogHeader>
-        <div className="max-h-[60vh] overflow-y-auto">
+
+        {/* Search bar */}
+        {!isLoading && users.length > 0 && (
+          <div className="px-3 py-2 border-b">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <input
+                className="w-full rounded-md border border-border bg-background pl-8 pr-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder={`Search ${title.toLowerCase()}…`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="max-h-[55vh] overflow-y-auto">
           {isLoading ? (
             <div className="p-4 space-y-3">
               {[1, 2, 3].map((i) => (
@@ -228,8 +259,12 @@ export function FollowListModal({ open, onClose, type, userId, profileUsername }
             <div className="p-8 text-center text-muted-foreground text-sm">
               {type === "followers" ? "No followers yet" : "Not following anyone yet"}
             </div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground text-sm">
+              No results for "{searchQuery}"
+            </div>
           ) : (
-            users.map((user) => (
+            filteredUsers.map((user) => (
               <FollowUserRow key={user.id} user={user} onClose={onClose} />
             ))
           )}
