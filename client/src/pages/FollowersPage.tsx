@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+import { ProBadge } from "@/components/ui/pro-badge";
 import { apiRequest, getQueryFn, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -24,7 +24,7 @@ interface FollowUser {
   activeProfilePicType?: string | null;
   accentColor?: string | null;
   selectedBorderId?: number | null;
-  isPro?: boolean | null;
+  selectedVerificationBadgeId?: number | null;
 }
 
 function FollowUserRow({ user }: { user: FollowUser }) {
@@ -70,14 +70,12 @@ function FollowUserRow({ user }: { user: FollowUser }) {
           className="flex-1 min-w-0 text-left"
           onClick={() => setLocation(`/profile/${user.username}`)}
         >
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             <p className="font-semibold text-sm truncate">
               {user.displayName || user.username}
             </p>
-            {user.isPro && (
-              <Badge className="h-4 px-1 text-[10px] bg-gradient-to-r from-yellow-400 to-orange-500 text-black border-0 flex-shrink-0">
-                PRO
-              </Badge>
+            {user.selectedVerificationBadgeId && (
+              <ProBadge selectedVerificationBadgeId={user.selectedVerificationBadgeId} size="sm" />
             )}
           </div>
           <p className="text-xs text-muted-foreground truncate">@{user.username}</p>
@@ -98,7 +96,7 @@ function FollowUserRow({ user }: { user: FollowUser }) {
                 <><UserPlus className="h-3 w-3 mr-1" />Follow</>
               )}
             </Button>
-            {!user.isPro && (
+            {!user.selectedVerificationBadgeId && (
               <Button
                 size="sm"
                 variant="outline"
@@ -152,7 +150,6 @@ function UserList({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Search */}
       <div className="px-4 py-3 border-b border-border/50">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -165,7 +162,6 @@ function UserList({
         </div>
       </div>
 
-      {/* List */}
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="p-4 space-y-4">
@@ -206,10 +202,14 @@ function UserList({
 
 export default function FollowersPage() {
   const params = useParams<{ username: string }>();
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const username = params.username;
 
-  const activeTab = location.endsWith("/following") ? "following" : "followers";
+  // Initialise from URL path — but never re-derive from location after mount
+  // so that tab switches don't cause a component remount.
+  const [activeTab, setActiveTab] = useState<"followers" | "following">(() =>
+    window.location.pathname.endsWith("/following") ? "following" : "followers"
+  );
 
   const { data: profile, isLoading: profileLoading } = useQuery<{
     id: number;
@@ -221,6 +221,7 @@ export default function FollowersPage() {
     activeProfilePicType?: string | null;
     accentColor?: string | null;
     selectedBorderId?: number | null;
+    selectedVerificationBadgeId?: number | null;
     _count?: { followers: number; following: number };
   }>({
     queryKey: [`/api/users/${username}`],
@@ -230,7 +231,10 @@ export default function FollowersPage() {
   });
 
   const handleTabChange = (tab: string) => {
-    setLocation(`/profile/${username}/${tab}`);
+    const next = tab as "followers" | "following";
+    setActiveTab(next);
+    // Silently update the browser URL without triggering a router remount
+    window.history.replaceState(null, "", `/profile/${username}/${next}`);
   };
 
   return (
@@ -257,9 +261,14 @@ export default function FollowersPage() {
               <>
                 <CustomAvatar user={profile as any} size="sm" borderIntensity="subtle" />
                 <div className="min-w-0">
-                  <p className="font-semibold text-sm truncate">
-                    {profile.displayName || profile.username}
-                  </p>
+                  <div className="flex items-center gap-1">
+                    <p className="font-semibold text-sm truncate">
+                      {profile.displayName || profile.username}
+                    </p>
+                    {profile.selectedVerificationBadgeId && (
+                      <ProBadge selectedVerificationBadgeId={profile.selectedVerificationBadgeId} size="sm" />
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">@{profile.username}</p>
                 </div>
               </>
