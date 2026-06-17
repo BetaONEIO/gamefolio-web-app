@@ -53,6 +53,7 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [showGreenPopup, setShowGreenPopup] = useState(false);
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
+  const [followedBack, setFollowedBack] = useState<Set<number>>(new Set());
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   
@@ -176,13 +177,28 @@ export function NotificationBell() {
       return { previous };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
+      // Use setQueryData instead of invalidateQueries to avoid a refetch race
+      // that would temporarily restore stale notifications.
+      queryClient.setQueryData(['/api/notifications'], []);
+      queryClient.setQueryData(['/api/notifications/unread-count'], 0);
     },
     onError: (_err, _vars, context: any) => {
       queryClient.setQueryData(['/api/notifications'], context?.previous);
       queryClient.setQueryData(['/api/notifications/unread-count'], (context?.previous as any[])?.filter((n: any) => !n.isRead).length ?? 0);
       toast({ title: "Failed to clear notifications", variant: "destructive" });
+    },
+  });
+
+  // Follow back from a follow notification
+  const followBackMutation = useMutation({
+    mutationFn: async ({ username }: { username: string; notifId: number }) => {
+      await apiRequest("POST", `/api/users/${username}/follow`);
+    },
+    onSuccess: (_data, { notifId }) => {
+      setFollowedBack((prev) => new Set(prev).add(notifId));
+    },
+    onError: () => {
+      toast({ title: "Failed to follow back", variant: "destructive" });
     },
   });
 
@@ -393,6 +409,35 @@ export function NotificationBell() {
                         {notification.message}
                       </p>
                       
+                      {/* Show Follow Back button for follow notifications */}
+                      {notification.type === 'follow' && notification.fromUser && (
+                        <div className="mb-2">
+                          {followedBack.has(notification.id) ? (
+                            <Button size="sm" variant="outline" disabled className="h-7 px-3 text-xs">
+                              <UserCheck className="h-3 w-3 mr-1" />
+                              Following
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                followBackMutation.mutate({
+                                  username: notification.fromUser!.username,
+                                  notifId: notification.id,
+                                });
+                              }}
+                              disabled={followBackMutation.isPending}
+                              className="h-7 px-3 text-xs bg-primary hover:bg-primary/90"
+                            >
+                              <UserPlus className="h-3 w-3 mr-1" />
+                              Follow Back
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
                       {/* Show approve/reject buttons for unread follow requests only */}
                       {notification.type === 'follow_request' && !notification.isRead && (
                         <div className="flex gap-2 mb-2">
