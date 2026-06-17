@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Gift, Users } from "lucide-react";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
@@ -23,6 +23,8 @@ import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Game } from "@shared/schema";
+import { FollowListModal } from "@/components/profile/FollowListModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const LEVEL_THRESHOLDS = [
   { level: 1,  xpRequired: 0 },
@@ -124,6 +126,38 @@ const MobileMenu = () => {
     }, 280);
   }, [close]);
 
+  const [followListModal, setFollowListModal] = useState<{ type: 'followers' | 'following'; userId: number } | null>(null);
+  const [showGiftProDialog, setShowGiftProDialog] = useState(false);
+  const [giftProUsername, setGiftProUsername] = useState('');
+  const [giftProPlan, setGiftProPlan] = useState<'monthly' | 'yearly'>('monthly');
+  const [giftProLoading, setGiftProLoading] = useState(false);
+
+  const { data: ownProfileData } = useQuery({
+    queryKey: [`/api/users/${user?.username}`],
+    queryFn: async () => {
+      if (!user?.username) return null;
+      const res = await apiRequest('GET', `/api/users/${user.username}`);
+      return res.json();
+    },
+    enabled: !!user?.username,
+  });
+  const followerCount = (ownProfileData as any)?._count?.followers ?? 0;
+  const followingCount = (ownProfileData as any)?._count?.following ?? 0;
+
+  const handleGiftPro = async () => {
+    setGiftProLoading(true);
+    try {
+      const res = await apiRequest('POST', '/api/pro/gift-checkout', { recipientUsername: giftProUsername, plan: giftProPlan });
+      const data = await res.json();
+      if (data.url) { window.location.href = data.url; }
+      else { alert(data.error || 'Failed to start checkout'); }
+    } catch {
+      alert('Something went wrong');
+    } finally {
+      setGiftProLoading(false);
+    }
+  };
+
   const { data: favoriteGames } = useQuery<Game[]>({
     queryKey: [`/api/users/${user?.id}/favorites`],
     queryFn: async () => {
@@ -219,6 +253,31 @@ const MobileMenu = () => {
               </div>
               {/* Level Progress Bar */}
               <LevelProgressBar level={user.level || 1} totalXP={user.totalXP || 0} />
+              {/* Followers / Following / Gift Pro */}
+              <div className="flex items-center gap-3 mt-3 flex-wrap">
+                <button
+                  onClick={() => setFollowListModal({ type: 'followers', userId: user.id })}
+                  className="flex items-center gap-1 hover:opacity-75 transition-opacity"
+                >
+                  <span className="font-black text-sm">{followerCount.toLocaleString()}</span>
+                  <span className="text-xs text-muted-foreground">Followers</span>
+                </button>
+                <span className="text-muted-foreground text-xs">·</span>
+                <button
+                  onClick={() => setFollowListModal({ type: 'following', userId: user.id })}
+                  className="flex items-center gap-1 hover:opacity-75 transition-opacity"
+                >
+                  <span className="font-black text-sm">{followingCount.toLocaleString()}</span>
+                  <span className="text-xs text-muted-foreground">Following</span>
+                </button>
+                <button
+                  onClick={() => setShowGiftProDialog(true)}
+                  className="ml-auto flex items-center gap-1 text-xs text-primary font-medium hover:opacity-75 transition-opacity"
+                >
+                  <Gift className="h-3.5 w-3.5" />
+                  Gift Pro
+                </button>
+              </div>
             </div>
           )}
 
@@ -440,6 +499,67 @@ const MobileMenu = () => {
           </div>
         </div>
       </div>
+
+      {/* Follow List Modal */}
+      {followListModal && (
+        <FollowListModal
+          open={!!followListModal}
+          onClose={() => setFollowListModal(null)}
+          type={followListModal.type}
+          userId={followListModal.userId}
+        />
+      )}
+
+      {/* Gift Pro Dialog */}
+      <Dialog open={showGiftProDialog} onOpenChange={setShowGiftProDialog}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5 text-primary" />
+              Gift Pro to a Friend
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Their username</label>
+              <input
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="@username"
+                value={giftProUsername}
+                onChange={(e) => setGiftProUsername(e.target.value.replace('@', ''))}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Plan</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setGiftProPlan('monthly')}
+                  className={`p-3 rounded-lg border text-sm transition-colors text-left ${giftProPlan === 'monthly' ? 'border-primary bg-primary/10 text-primary' : 'border-border'}`}
+                >
+                  <div className="font-bold">Monthly</div>
+                  <div className="text-xs text-muted-foreground">£2.99 / month</div>
+                </button>
+                <button
+                  onClick={() => setGiftProPlan('yearly')}
+                  className={`p-3 rounded-lg border text-sm transition-colors text-left ${giftProPlan === 'yearly' ? 'border-primary bg-primary/10 text-primary' : 'border-border'}`}
+                >
+                  <div className="font-bold">Yearly</div>
+                  <div className="text-xs text-muted-foreground">£30 / year</div>
+                </button>
+              </div>
+            </div>
+            <Button
+              onClick={handleGiftPro}
+              disabled={!giftProUsername.trim() || giftProLoading}
+              className="w-full"
+            >
+              {giftProLoading
+                ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                : 'Gift Pro →'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

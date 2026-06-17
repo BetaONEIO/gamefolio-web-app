@@ -3194,25 +3194,6 @@ const ProfilePage = () => {
             </div>
           )}
 
-          {/* Followers / Following pill row — mobile */}
-          <div className="flex items-center gap-3 mx-4 mt-2 mb-1">
-            <button
-              onClick={() => setFollowListModal({ type: 'followers', userId: profile.id })}
-              className="flex items-center gap-1 hover:opacity-80 transition-opacity"
-            >
-              <span className="font-black text-sm" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.followers || 0).toLocaleString()}</span>
-              <span className="text-xs font-medium" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.55)' }}>Followers</span>
-            </button>
-            <span style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.2)' }}>·</span>
-            <button
-              onClick={() => setFollowListModal({ type: 'following', userId: profile.id })}
-              className="flex items-center gap-1 hover:opacity-80 transition-opacity"
-            >
-              <span className="font-black text-sm" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.following || 0).toLocaleString()}</span>
-              <span className="text-xs font-medium" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.55)' }}>Following</span>
-            </button>
-          </div>
-
           {/* Profile Info Card — stats only, Collection button on top-right border */}
           <div className="relative mx-4 mt-2 mb-1">
             {/* Collection button pinned to top-right border of the card.
@@ -3631,25 +3612,6 @@ const ProfilePage = () => {
                 <ExpandableBio bio={profile.bio} style={{ color: isLightBackground ? '#1d293d' : undefined }} />
               </p>
             )}
-
-            {/* Followers / Following pill row — desktop */}
-            <div className="flex items-center gap-3 mt-2 mb-1">
-              <button
-                onClick={() => setFollowListModal({ type: 'followers', userId: profile.id })}
-                className="flex items-center gap-1 hover:opacity-80 transition-opacity"
-              >
-                <span className="font-black text-sm" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.followers || 0).toLocaleString()}</span>
-                <span className="text-xs font-medium" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.55)' }}>Followers</span>
-              </button>
-              <span style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.2)' }}>·</span>
-              <button
-                onClick={() => setFollowListModal({ type: 'following', userId: profile.id })}
-                className="flex items-center gap-1 hover:opacity-80 transition-opacity"
-              >
-                <span className="font-black text-sm" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.following || 0).toLocaleString()}</span>
-                <span className="text-xs font-medium" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.55)' }}>Following</span>
-              </button>
-            </div>
 
             {/* Profile Info Card — stats only, Collection button on top-right border */}
             <div className="relative mt-4 max-w-xl">
