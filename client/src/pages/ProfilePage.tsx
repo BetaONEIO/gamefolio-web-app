@@ -3379,10 +3379,10 @@ const ProfilePage = () => {
           {/* Platform tags and Social Links — below the stats card */}
           {profileSectionTab === 'stats' && <div className={`flex flex-wrap gap-1.5 mb-4 mt-4 pl-4 pr-8 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''}`}>
             {profile.steamUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('steam')}>
+              <a href={`https://steamcommunity.com/id/${profile.steamUsername}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity" style={getBtnStyle('steam')}>
                 <SiSteam className="w-2.5 h-2.5" />
                 <span>{profile.steamUsername}</span>
-              </div>
+              </a>
             )}
             {profile.nintendoUsername && (
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('nintendo')}>
@@ -3391,16 +3391,16 @@ const ProfilePage = () => {
               </div>
             )}
             {profile.xboxUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('xbox')}>
+              <a href={`https://account.xbox.com/en-US/profile?gamertag=${encodeURIComponent(profile.xboxUsername)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity" style={getBtnStyle('xbox')}>
                 <FaXbox className="w-2.5 h-2.5" />
                 <span>{profile.xboxUsername}</span>
-              </div>
+              </a>
             )}
             {profile.playstationUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('playstation')}>
+              <a href={`https://psnprofiles.com/${profile.playstationUsername}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity" style={getBtnStyle('playstation')}>
                 <SiPlaystation className="w-2.5 h-2.5" />
                 <span>{profile.playstationUsername}</span>
-              </div>
+              </a>
             )}
             {profile.epicUsername && (
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('epic')}>
@@ -3716,22 +3716,22 @@ const ProfilePage = () => {
             {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.rumbleUsername || profile.instagramUsername || profile.facebookUsername) && (
               <div className={`flex flex-wrap gap-2 mt-4 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''}`}>
                 {profile.steamUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('steam')}>
+                  <a href={`https://steamcommunity.com/id/${profile.steamUsername}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity" style={getBtnStyle('steam')}>
                     <SiSteam className="w-3 h-3" />
                     <span>{profile.steamUsername}</span>
-                  </div>
+                  </a>
                 )}
                 {profile.xboxUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('xbox')}>
+                  <a href={`https://account.xbox.com/en-US/profile?gamertag=${encodeURIComponent(profile.xboxUsername)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity" style={getBtnStyle('xbox')}>
                     <FaXbox className="w-3 h-3" />
                     <span>{profile.xboxUsername}</span>
-                  </div>
+                  </a>
                 )}
                 {profile.playstationUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('playstation')}>
+                  <a href={`https://psnprofiles.com/${profile.playstationUsername}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity" style={getBtnStyle('playstation')}>
                     <SiPlaystation className="w-3 h-3" />
                     <span>{profile.playstationUsername}</span>
-                  </div>
+                  </a>
                 )}
                 {profile.discordUsername && (
                   <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('discord')}>

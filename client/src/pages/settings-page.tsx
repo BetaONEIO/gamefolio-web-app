@@ -473,11 +473,27 @@ function getPlatformUrl(key: PlatformKey, username: string): string | null {
   if (!u) return null;
   switch (key) {
     case 'steamUsername': return `steamcommunity.com/id/${u}`;
+    case 'xboxUsername': return `account.xbox.com/en-US/profile?gamertag=${encodeURIComponent(u)}`;
     case 'playstationUsername': return `psnprofiles.com/${u}`;
     case 'twitterUsername': return `x.com/${u}`;
     case 'youtubeUsername': return `youtube.com/@${u}`;
     case 'rumbleUsername': return `rumble.com/user/${u}`;
     default: return null;
+  }
+}
+
+function getPlatformMaxLength(key: PlatformKey): number {
+  switch (key) {
+    case 'steamUsername': return 32;
+    case 'xboxUsername': return 15;
+    case 'playstationUsername': return 16;
+    case 'discordUsername': return 32;
+    case 'epicUsername': return 16;
+    case 'nintendoUsername': return 10;
+    case 'twitterUsername': return 15;
+    case 'youtubeUsername': return 30;
+    case 'rumbleUsername': return 50;
+    default: return 50;
   }
 }
 
@@ -489,6 +505,11 @@ function validatePlatformInput(key: PlatformKey, username: string): string | nul
       if (u.length < 2) return 'Must be at least 2 characters';
       if (u.length > 32) return 'Must be 32 characters or fewer';
       if (!/^[a-zA-Z0-9_-]+$/.test(u)) return 'Only letters, numbers, _ and - allowed';
+      return null;
+    case 'xboxUsername':
+      if (u.length < 1) return 'Must be at least 1 character';
+      if (u.length > 15) return 'Must be 15 characters or fewer';
+      if (!/^[a-zA-Z0-9 ]+$/.test(u)) return 'Only letters, numbers and spaces allowed';
       return null;
     case 'playstationUsername':
       if (u.length < 3) return 'Must be at least 3 characters';
@@ -3996,6 +4017,7 @@ export default function SettingsPage() {
                                   value={platformHandle}
                                   onChange={(e) => setPlatformHandle(sanitizePlatformInput(platform.key, e.target.value))}
                                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPlatform(); } }}
+                                  maxLength={getPlatformMaxLength(platform.key)}
                                   autoFocus
                                   className={platformHandle.trim() && validatePlatformInput(platform.key, platformHandle) ? 'border-red-500 focus-visible:ring-red-500' : ''}
                                 />
