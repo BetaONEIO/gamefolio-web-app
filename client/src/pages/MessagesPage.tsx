@@ -92,6 +92,29 @@ interface Conversation {
   unreadCount: number;
 }
 
+function formatConvTime(createdAt: any): string {
+  try {
+    const d = new Date(createdAt);
+    if (isNaN(d.getTime())) return '';
+    const ms = Date.now() - d.getTime();
+    const absMs = Math.abs(ms);
+    const m = Math.floor(absMs / 60000);
+    if (m < 1) return 'now';
+    if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h`;
+    const days = Math.floor(h / 24);
+    if (days < 7) return `${days}d`;
+    const weeks = Math.floor(days / 7);
+    if (weeks < 5) return `${weeks}w`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months}mo`;
+    return `${Math.floor(days / 365)}y`;
+  } catch {
+    return '';
+  }
+}
+
 const MessagesPage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -652,8 +675,8 @@ const MessagesPage: React.FC = () => {
         </div>
 
         {/* Conversations List */}
-        <ScrollArea className="flex-1">
-          <div className="p-2 w-full">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="p-2">
             {loadingConversations ? (
               <div className="space-y-2">
                 {[...Array(5)].map((_, i) => (
@@ -691,7 +714,7 @@ const MessagesPage: React.FC = () => {
                   return (
                     <div
                       key={conversation.userId}
-                      className={`relative group flex items-center gap-3 px-3 py-3.5 rounded-xl cursor-pointer transition-colors ${
+                      className={`relative group flex items-center gap-3 px-3 py-3.5 rounded-xl cursor-pointer transition-colors w-full overflow-hidden ${
                         selectedConversation === conversation.userId
                           ? "bg-primary/10 border border-primary/20"
                           : "hover:bg-muted/60 active:bg-muted"
@@ -712,36 +735,22 @@ const MessagesPage: React.FC = () => {
                         ) : (
                           <SignedAvatar url={avatarUrl} fallback={displayName.charAt(0).toUpperCase()} className="h-12 w-12 flex-shrink-0" />
                         )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                        <div className="flex-1 min-w-0 w-0">
+                          <div className="flex items-center gap-1 w-full">
                             <p className={`font-semibold truncate text-[15px] flex-1 min-w-0 ${conversation.unreadCount > 0 ? 'text-foreground' : 'text-foreground/90'}`}>{displayName}</p>
-                            {conversation.lastMessage?.createdAt && (() => {
-                              try {
-                                const d = new Date(conversation.lastMessage.createdAt);
-                                if (isNaN(d.getTime())) return null;
-                                return (
-                                  <span className="text-[11px] text-muted-foreground flex-shrink-0 whitespace-nowrap">
-                                    {formatDistanceToNow(d, { addSuffix: false })
-                                      .replace('less than a minute', 'now')
-                                      .replace('about ', '')
-                                      .replace(/(\d+) minutes?/, '$1m')
-                                      .replace(/(\d+) hours?/, '$1h')
-                                      .replace(/(\d+) days?/, '$1d')
-                                      .replace(/(\d+) weeks?/, '$1w')
-                                      .replace(/(\d+) months?/, '$1mo')
-                                      .replace(/(\d+) years?/, '$1y')}
-                                  </span>
-                                );
-                              } catch { return null; }
-                            })()}
+                            {conversation.lastMessage?.createdAt && formatConvTime(conversation.lastMessage.createdAt) && (
+                              <span className="text-[11px] text-muted-foreground flex-shrink-0 whitespace-nowrap ml-1">
+                                {formatConvTime(conversation.lastMessage.createdAt)}
+                              </span>
+                            )}
                           </div>
-                          <div className={`flex items-center gap-1 mt-0.5 ${conversation.unreadCount > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                          <div className={`flex items-center gap-1 mt-0.5 w-full min-w-0 ${conversation.unreadCount > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                             {conversation.lastMessage?.senderId === user?.id && (
                               conversation.lastMessage?.isRead
                                 ? <CheckCheck className="h-3 w-3 flex-shrink-0 text-primary" />
                                 : <Check className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
                             )}
-                            <p className="text-sm truncate flex-1 min-w-0">{conversation.lastMessage?.content || "No messages yet"}</p>
+                            <p className="text-sm truncate min-w-0 flex-1">{conversation.lastMessage?.content || "No messages yet"}</p>
                           </div>
                         </div>
                         {conversation.unreadCount > 0 && (
@@ -792,7 +801,7 @@ const MessagesPage: React.FC = () => {
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Chat Area */}
