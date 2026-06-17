@@ -634,7 +634,7 @@ const MessagesPage: React.FC = () => {
   return (
     <VerificationGuard requireEmailVerification={true} requireOnboarding={false}>
       <div
-        className={`flex bg-background md:pb-0 ${!showMobileConversationList && selectedConversation ? 'pb-0' : 'pb-16'}`}
+        className="flex bg-background pb-16 md:pb-0"
         style={{
           height: 'calc(var(--visual-viewport-height, 100dvh) - 80px)',
           paddingBottom: keyboardHeight > 50 ? 0 : undefined,
