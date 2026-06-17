@@ -496,7 +496,7 @@ const MessagesPage: React.FC = () => {
 
   if (isNewConversationOpen) {
     return (
-      <div className="flex flex-col h-[calc(100vh-80px)] bg-background">
+      <div className="flex flex-col h-[calc(100dvh-80px)] pb-16 md:pb-0 bg-background">
         {/* New Conversation Header */}
         <div className="flex items-center justify-between p-4 border-b bg-card">
           <div className="flex items-center gap-3">
@@ -594,7 +594,7 @@ const MessagesPage: React.FC = () => {
 
   return (
     <VerificationGuard requireEmailVerification={true} requireOnboarding={false}>
-      <div className="flex h-[calc(100vh-80px)] bg-background">
+      <div className="flex h-[calc(100dvh-80px)] pb-16 md:pb-0 bg-background">
       {/* Conversations Sidebar */}
       <div className={`
         ${showMobileConversationList || !selectedConversation ? 'flex' : 'hidden'} 
