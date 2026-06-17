@@ -591,7 +591,24 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 // Video/Reel processing endpoint (called after TUS upload completes)
 router.post('/process-video', hybridFullAccess, async (req, res) => {
   try {
-    const { uploadResult, title, description, gameId, tags, videoType = 'clip', ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd } = req.body;
+    const { uploadResult, title, description, gameId, tags, videoType = 'clip', ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd, source } = req.body;
+
+    // Clips fetched from Twitch count against a daily import allowance
+    // (free: 2/day, Pro: 10/day). Gate before any expensive processing; the
+    // counter is incremented only after the clip is successfully created.
+    const isTwitchImport = source === 'twitch';
+    if (isTwitchImport) {
+      const importLimits = await storage.getImportLimits(req.user!.id);
+      if (!importLimits.canImport) {
+        return res.status(429).json({
+          error: 'Daily Twitch import limit reached',
+          message: importLimits.isPro
+            ? `You've imported all ${importLimits.maxImportsPerDay} Twitch clips for today. Your limit refreshes tomorrow.`
+            : `You've imported your ${importLimits.maxImportsPerDay} Twitch clips for today. Pro members can import up to 10 a day — and your limit refreshes tomorrow.`,
+          limits: importLimits,
+        });
+      }
+    }
 
     console.log('🔞 Age Restriction Backend Debug:', {
       ageRestricted,
@@ -962,6 +979,12 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
 
     // Create the clip
     const clip = await storage.createClip(validatedClipData);
+
+    // Count this against the user's daily Twitch import allowance (post-time,
+    // so fetching/previewing a clip without posting it never burns quota).
+    if (isTwitchImport) {
+      await storage.incrementDailyImportCount(req.user!.id);
+    }
 
     // Award upload points to the user
     await LeaderboardService.awardPoints(

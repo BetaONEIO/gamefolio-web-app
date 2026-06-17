@@ -66,7 +66,14 @@ export interface TwitchClip {
 // as "clip not importable" rather than a hard error.
 export function deriveClipMp4Url(thumbnailUrl: string | null | undefined): string {
   if (!thumbnailUrl) return '';
-  const idx = thumbnailUrl.indexOf('-preview');
+  // The strip-and-append trick only holds on the legacy clips CDN, where the
+  // thumbnail and MP4 are co-located. Twitch's newer thumbnail host
+  // (static-cdn.jtvnw.net) decouples them, so deriving there yields a dead URL —
+  // treat those clips as "not importable" instead of handing back a 404 link.
+  if (!thumbnailUrl.includes('clips-media-assets2.twitch.tv')) return '';
+  // Use lastIndexOf: the "-preview-<WxH>.jpg" segment is always the tail, so this
+  // can't be fooled by an earlier "-preview" substring in the path or clip slug.
+  const idx = thumbnailUrl.lastIndexOf('-preview');
   if (idx === -1) return '';
   return thumbnailUrl.slice(0, idx) + '.mp4';
 }

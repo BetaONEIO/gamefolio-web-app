@@ -1882,7 +1882,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Clip not found or not importable" });
       }
 
-      const upstream = await fetch(clip.mp4Url);
+      const upstream = await fetch(clip.mp4Url, { signal: AbortSignal.timeout(15000) });
       if (!upstream.ok || !upstream.body) {
         console.warn(`Twitch clip MP4 fetch failed ${upstream.status} for ${clipId}`);
         return res.status(502).json({ message: "Could not download clip from Twitch" });
@@ -1897,6 +1897,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       console.error("Twitch clip file proxy error:", err);
       res.status(500).json({ message: "Failed to download Twitch clip" });
+    }
+  });
+
+  // Daily Twitch-clip import allowance (free: 2/day, Pro: 10/day). Counted only
+  // when an imported clip is successfully posted (see /api/upload/process-video).
+  // The Upload page reads this to show "imported X of N today" + a Pro upsell.
+  app.get("/api/twitch/import-limits", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const limits = await storage.getImportLimits((req.user as any).id);
+      res.json(limits);
+    } catch (err) {
+      console.error("Twitch import-limits error:", err);
+      res.status(500).json({ message: "Failed to load import limits" });
     }
   });
 

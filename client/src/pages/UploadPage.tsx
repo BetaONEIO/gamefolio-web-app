@@ -62,7 +62,7 @@ import { ShareDialog } from "@/components/shared/ShareDialog";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { XPGainedDialog } from "@/components/gamification/XPGainedDialog";
 import { ToastAction } from "@/components/ui/toast";
-import type { UploadLimits } from "@shared/schema";
+import type { UploadLimits, ImportLimits } from "@shared/schema";
 
 // Shape of the structured payload the server returns from /api/upload/* and
 // /api/screenshots/upload when an upload is rejected for a tier limit.
@@ -275,6 +275,29 @@ const UploadPage = () => {
   const twitchConnected = !!(user as any)?.twitchVerified;
   const [showTwitchPicker, setShowTwitchPicker] = useState(false);
   const [importingClipId, setImportingClipId] = useState<string | null>(null);
+  // Tracks whether the currently-staged file came from Twitch (and which clip),
+  // so the post is tagged source:"twitch" and counts against the daily allowance.
+  // Cleared whenever the user picks/clears a file manually.
+  const [twitchSourceClipId, setTwitchSourceClipId] = useState<string | null>(null);
+  // Dismissable "did you know" promo, only shown to users without Twitch linked.
+  const [twitchPromoDismissed, setTwitchPromoDismissed] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem("gf-twitch-import-promo-dismissed") === "1"
+  );
+  const dismissTwitchPromo = () => {
+    localStorage.setItem("gf-twitch-import-promo-dismissed", "1");
+    setTwitchPromoDismissed(true);
+  };
+  // Daily Twitch import allowance (free: 2/day, Pro: 10/day) for the picker UI.
+  const { data: importLimits } = useQuery<ImportLimits>({
+    queryKey: ["/api/twitch/import-limits"],
+    queryFn: async () => {
+      const res = await fetch("/api/twitch/import-limits", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load import limits");
+      return res.json();
+    },
+    enabled: twitchConnected,
+    staleTime: 30_000,
+  });
   const { data: twitchClips, isLoading: twitchClipsLoading, error: twitchClipsError } = useQuery<TwitchClipItem[]>({
     queryKey: ["/api/twitch/clips"],
     queryFn: async () => {
@@ -332,6 +355,7 @@ const UploadPage = () => {
       setFormatSuggestion(null);
 
       setFile(importedFile);
+      setTwitchSourceClipId(clip.id);
 
       // Prefill title + game from the clip's Twitch metadata.
       const prefillTitle = (clip.title || "").slice(0, 100);
@@ -547,7 +571,9 @@ const UploadPage = () => {
     
     // Then set the new file - this will trigger videoSrc recreation via useMemo
     setFile(selectedFile);
-    
+    // Manually-picked file is not a Twitch import — don't count it against quota.
+    setTwitchSourceClipId(null);
+
     console.log('File state updated successfully, video preview should be visible');
   };
 
@@ -823,6 +849,9 @@ const UploadPage = () => {
             ageRestricted,
             trimStart: Math.round(trimStart),
             trimEnd: Math.round(trimEnd),
+            // Tag Twitch-imported clips so the server counts them against the
+            // daily import allowance (free: 2/day, Pro: 10/day).
+            ...(twitchSourceClipId ? { source: 'twitch', twitchClipId: twitchSourceClipId } : {}),
           };
           
           console.log('🔞 Age Restriction Debug - Sending to backend:', {
@@ -876,6 +905,11 @@ const UploadPage = () => {
       queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
       queryClient.invalidateQueries({ queryKey: ["/api/clips/latest"] });
       queryClient.invalidateQueries({ queryKey: ["/api/reels/latest"] });
+      // Refresh the Twitch import counter if this post used the daily allowance.
+      if (twitchSourceClipId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/twitch/import-limits"] });
+        setTwitchSourceClipId(null);
+      }
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/clips`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/upload/limits'] });
@@ -1125,6 +1159,31 @@ const UploadPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {!twitchConnected && !twitchPromoDismissed && (
+                <div className="relative mb-6 rounded-lg border border-[#9146FF]/40 bg-[#9146FF]/10 p-4 pr-10">
+                  <button
+                    type="button"
+                    onClick={dismissTwitchPromo}
+                    aria-label="Dismiss"
+                    className="absolute right-2 top-2 rounded-md p-1 text-muted-foreground hover:bg-[#9146FF]/20 hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <div className="flex items-start gap-3">
+                    <Twitch className="h-5 w-5 shrink-0 text-[#9146FF] mt-0.5" />
+                    <div className="space-y-1 text-sm">
+                      <p className="font-semibold text-foreground">Did you know you can upload straight from Twitch?</p>
+                      <p className="text-muted-foreground">
+                        Connect your Twitch account to fetch your recent clips and post them here in a couple of taps —
+                        no downloading and re-uploading. Free members can import 2 clips a day, Pro members up to 10.
+                      </p>
+                      <p className="text-muted-foreground">
+                        Set it up in <span className="font-medium text-foreground">Profile &amp; Appearance → Platforms → Twitch</span>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -2570,6 +2629,24 @@ const UploadPage = () => {
               Pick one of your recent Twitch clips. We'll load it into the upload form so you can review and post it.
             </DialogDescription>
           </DialogHeader>
+
+          {importLimits && (
+            <div
+              className={`rounded-md border px-3 py-2 text-xs ${
+                importLimits.canImport
+                  ? "border-border bg-muted/50 text-muted-foreground"
+                  : "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+              }`}
+            >
+              You've imported{" "}
+              <span className="font-semibold">{importLimits.importsUsedToday}</span> of{" "}
+              <span className="font-semibold">{importLimits.maxImportsPerDay}</span> Twitch clips today —{" "}
+              {importLimits.canImport ? "this refreshes tomorrow." : "your limit refreshes tomorrow."}
+              {!importLimits.isPro && (
+                <> Pro members can import up to 10 a day.</>
+              )}
+            </div>
+          )}
 
           <div className="overflow-y-auto -mx-1 px-1">
             {twitchClipsLoading ? (

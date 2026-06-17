@@ -1265,6 +1265,26 @@ export const insertUserDailyFiresSchema = createInsertSchema(userDailyFires).omi
   updatedAt: true,
 });
 
+// Daily Twitch-clip import limit: counts clips fetched from Twitch and
+// successfully posted. Free users: 2/day, Pro users: 10/day. Reset is by UTC day.
+export const userDailyImports = pgTable("user_daily_imports", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  importDate: text("import_date").notNull(), // YYYY-MM-DD format in UTC
+  importsCount: integer("imports_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueUserDate: unique().on(table.userId, table.importDate),
+}));
+
+// Schema for inserting daily import record
+export const insertUserDailyImportsSchema = createInsertSchema(userDailyImports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Schema for inserting pro lootbox grant
 export const insertProLootboxGrantSchema = createInsertSchema(proLootboxGrants).omit({
   id: true,
@@ -1485,6 +1505,8 @@ export type InsertProLootboxGrant = z.infer<typeof insertProLootboxGrantSchema>;
 // Types for daily fire tracking
 export type UserDailyFires = typeof userDailyFires.$inferSelect;
 export type InsertUserDailyFires = z.infer<typeof insertUserDailyFiresSchema>;
+export type UserDailyImports = typeof userDailyImports.$inferSelect;
+export type InsertUserDailyImports = z.infer<typeof insertUserDailyImportsSchema>;
 
 // Fire limits configuration type
 export interface FireLimits {
@@ -1492,6 +1514,14 @@ export interface FireLimits {
   maxFiresPerDay: number;
   firesUsedToday: number;
   canFire: boolean;
+}
+
+// Twitch clip import limits configuration type
+export interface ImportLimits {
+  isPro: boolean;
+  maxImportsPerDay: number;
+  importsUsedToday: number;
+  canImport: boolean;
 }
 
 // Upload limits configuration type
