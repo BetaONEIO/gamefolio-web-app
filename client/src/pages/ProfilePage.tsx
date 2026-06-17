@@ -3140,26 +3140,14 @@ const ProfilePage = () => {
                 size="lg" 
               />
               <PartnerBadge isPartner={(profile as any).isPartner} size="lg" />
+              {(profile as any).isPro && (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide" style={{ background: `linear-gradient(135deg, ${accentColor || '#f59e0b'} 0%, ${accentColor ? accentColor + 'cc' : '#f97316'} 100%)`, color: '#fff', boxShadow: `0 0 8px ${accentColor || '#f59e0b'}66` }}>
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                  PRO
+                </span>
+              )}
             </div>
             <span className="text-sm font-normal" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.6)' }}>@{profile.username}</span>
-            {/* Followers / Following quick stats */}
-            <div className="flex items-center gap-2 mt-1.5">
-              <button
-                className="flex items-center gap-1 hover:opacity-75 transition-opacity"
-                onClick={() => setFollowListModal({ type: 'followers', userId: profile.id })}
-              >
-                <span className="font-bold text-sm" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.followers || 0)}</span>
-                <span className="text-xs" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.55)' }}>followers</span>
-              </button>
-              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>·</span>
-              <button
-                className="flex items-center gap-1 hover:opacity-75 transition-opacity"
-                onClick={() => setFollowListModal({ type: 'following', userId: profile.id })}
-              >
-                <span className="font-bold text-sm" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.following || 0)}</span>
-                <span className="text-xs" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.55)' }}>following</span>
-              </button>
-            </div>
             {/* User type badges on their own line */}
             {profile.userType && profile.showUserType !== false && (
               <div className="flex items-center gap-2 flex-wrap mt-3 mb-2">
@@ -3205,6 +3193,25 @@ const ProfilePage = () => {
               </p>
             </div>
           )}
+
+          {/* Followers / Following pill row — mobile */}
+          <div className="flex items-center gap-3 mx-4 mt-2 mb-1">
+            <button
+              onClick={() => setFollowListModal({ type: 'followers', userId: profile.id })}
+              className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+            >
+              <span className="font-black text-sm" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.followers || 0).toLocaleString()}</span>
+              <span className="text-xs font-medium" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.55)' }}>Followers</span>
+            </button>
+            <span style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.2)' }}>·</span>
+            <button
+              onClick={() => setFollowListModal({ type: 'following', userId: profile.id })}
+              className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+            >
+              <span className="font-black text-sm" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.following || 0).toLocaleString()}</span>
+              <span className="text-xs font-medium" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.55)' }}>Following</span>
+            </button>
+          </div>
 
           {/* Profile Info Card — stats only, Collection button on top-right border */}
           <div className="relative mx-4 mt-2 mb-1">
@@ -3577,6 +3584,12 @@ const ProfilePage = () => {
                 size="xl" 
               />
               <PartnerBadge isPartner={(profile as any).isPartner} size="xl" />
+              {(profile as any).isPro && (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide" style={{ background: `linear-gradient(135deg, ${accentColor || '#f59e0b'} 0%, ${accentColor ? accentColor + 'cc' : '#f97316'} 100%)`, color: '#fff', boxShadow: `0 0 8px ${accentColor || '#f59e0b'}66` }}>
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+                  PRO
+                </span>
+              )}
               {profile.userType && profile.showUserType !== false && (() => {
                 const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
                 const displayTypes = userTypes.slice(0, 2);
@@ -3612,31 +3625,31 @@ const ProfilePage = () => {
             {/* Username */}
             <span className="text-base font-normal mt-1" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.7)' }}>@{profile.username}</span>
 
-            {/* Followers / Following quick stats */}
-            <div className="flex items-center gap-3 mt-2">
-              <button
-                className="flex items-center gap-1.5 hover:opacity-75 transition-opacity"
-                onClick={() => setFollowListModal({ type: 'followers', userId: profile.id })}
-              >
-                <span className="font-bold text-base" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.followers || 0)}</span>
-                <span className="text-sm" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.55)' }}>followers</span>
-              </button>
-              <span className="text-sm" style={{ color: 'rgba(255,255,255,0.25)' }}>·</span>
-              <button
-                className="flex items-center gap-1.5 hover:opacity-75 transition-opacity"
-                onClick={() => setFollowListModal({ type: 'following', userId: profile.id })}
-              >
-                <span className="font-bold text-base" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.following || 0)}</span>
-                <span className="text-sm" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.55)' }}>following</span>
-              </button>
-            </div>
-
             {/* Bio — below the streamer badge, outside the card */}
             {profile.bio && (
               <p className={`text-sm max-w-md mt-2 ${isLightBackground ? '' : 'text-slate-300'}`} style={{ color: isLightBackground ? '#1d293d' : undefined }}>
                 <ExpandableBio bio={profile.bio} style={{ color: isLightBackground ? '#1d293d' : undefined }} />
               </p>
             )}
+
+            {/* Followers / Following pill row — desktop */}
+            <div className="flex items-center gap-3 mt-2 mb-1">
+              <button
+                onClick={() => setFollowListModal({ type: 'followers', userId: profile.id })}
+                className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+              >
+                <span className="font-black text-sm" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.followers || 0).toLocaleString()}</span>
+                <span className="text-xs font-medium" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.55)' }}>Followers</span>
+              </button>
+              <span style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.2)' }}>·</span>
+              <button
+                onClick={() => setFollowListModal({ type: 'following', userId: profile.id })}
+                className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+              >
+                <span className="font-black text-sm" style={{ color: isLightBackground ? '#1d293d' : '#ffffff' }}>{Number(profile._count?.following || 0).toLocaleString()}</span>
+                <span className="text-xs font-medium" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.55)' }}>Following</span>
+              </button>
+            </div>
 
             {/* Profile Info Card — stats only, Collection button on top-right border */}
             <div className="relative mt-4 max-w-xl">
