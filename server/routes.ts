@@ -2699,6 +2699,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   })();
 
+  // Public endpoint — look up a user by referral code for the invite landing page
+  app.get("/api/invite/:code", async (req, res) => {
+    try {
+      const code = (req.params.code as string).trim().toUpperCase();
+      const user = await storage.getUserByReferralCode(code);
+      if (!user) return res.status(404).json({ message: "Invite not found" });
+      return res.json({
+        username: user.username,
+        displayName: user.displayName || null,
+        avatarUrl: user.avatarUrl || null,
+        referralCode: user.referralCode,
+      });
+    } catch (error) {
+      console.error("Error fetching invite:", error);
+      return res.status(500).json({ message: "Failed to fetch invite" });
+    }
+  });
+
   app.get("/api/user/referral-stats", authMiddleware, async (req, res) => {
     try {
       const userId = (req.user as any).id;
@@ -2709,7 +2727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         referralCount: stats.referralCount,
         totalXpEarned: stats.totalXpEarned,
         referralCodeCustomized: stats.referralCodeCustomized,
-        referralLink: stats.referralCode ? `${appUrl}/auth?ref=${stats.referralCode}` : null,
+        referralLink: stats.referralCode ? `${appUrl}/invite/${stats.referralCode}` : null,
       });
     } catch (error) {
       console.error('Error fetching referral stats:', error);

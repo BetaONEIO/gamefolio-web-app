@@ -121,6 +121,7 @@ const LatestReelsPage = lazyWithRecovery(() => import("./pages/LatestReelsPage")
 const LatestClipsPage = lazyWithRecovery(() => import("./pages/LatestClipsPage"));
 const LatestScreenshotsPage = lazyWithRecovery(() => import("@/pages/LatestScreenshotsPage"));
 const InvitePage = lazyWithRecovery(() => import("./pages/InvitePage"));
+const ReferralInvitePage = lazyWithRecovery(() => import("./pages/ReferralInvitePage"));
 const RegisterPage = lazyWithRecovery(() => import("./pages/RegisterPage"));
 const NotificationsPage = lazyWithRecovery(() => import("./pages/NotificationsPage"));
 const FollowersPage = lazyWithRecovery(() => import("./pages/FollowersPage"));
@@ -511,6 +512,7 @@ function Router() {
           <Route path="/privacy" component={PrivacyPage} />
           <Route path="/contact" component={ContactPage} />
           <Route path="/help" component={HelpPage} />
+          <Route path="/invite/:code" component={ReferralInvitePage} />
           <Route path="/invite" component={InvitePage} />
           <Route path="/register" component={RegisterPage} />
           {/* Web3 routes: full feature on web; branded redirect to app.gamefolio.com on native. */}
