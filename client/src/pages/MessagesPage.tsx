@@ -735,13 +735,13 @@ const MessagesPage: React.FC = () => {
                               </span>
                             )}
                           </div>
-                          <div className={`flex items-center gap-1 mt-0.5 ${conversation.unreadCount > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                          <div className={`flex items-center gap-1 mt-0.5 overflow-hidden ${conversation.unreadCount > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                             {conversation.lastMessage?.senderId === user?.id && (
                               conversation.lastMessage?.isRead
                                 ? <CheckCheck className="h-3 w-3 flex-shrink-0 text-primary" />
                                 : <Check className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
                             )}
-                            <p className="text-sm truncate">{conversation.lastMessage?.content || "No messages yet"}</p>
+                            <p className="text-sm truncate min-w-0">{conversation.lastMessage?.content || "No messages yet"}</p>
                           </div>
                         </div>
                         {conversation.unreadCount > 0 && (
@@ -803,7 +803,7 @@ const MessagesPage: React.FC = () => {
         {selectedConversation ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b bg-card">
+            <div className="p-4 border-b border-border bg-[#0B1218]">
               <div className="flex items-center gap-3">
                 {/* Mobile Back Button */}
                 <Button
@@ -1198,7 +1198,7 @@ const MessagesPage: React.FC = () => {
 
             {/* Message Input */}
             <div
-              className="px-3 py-3 border-t bg-card"
+              className="px-3 py-3 border-t border-border bg-[#0B1218]"
               style={{ paddingBottom: keyboardHeight > 50 ? '12px' : undefined }}
             >
               <form onSubmit={handleSendMessage}>

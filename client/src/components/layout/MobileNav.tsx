@@ -131,9 +131,6 @@ const MobileNav = () => {
         </div>
       </div>
 
-      {/* Solid fill that covers the safe-area zone below the nav on all platforms */}
-      <div className="fixed left-0 right-0 bottom-0 bg-[#0B1218] z-[68]" style={{ height: 'calc(env(safe-area-inset-bottom, 0px) + 2px)' }} />
-
       <nav ref={navRef} className="fixed bottom-0 left-0 right-0 bg-[#0B1218] border-t border-border z-[70] safe-area-bottom">
         <div className="flex justify-around py-3">
           {navItems.map((item) => {
