@@ -719,7 +719,17 @@ const MessagesPage: React.FC = () => {
                               <span className="text-[11px] text-muted-foreground shrink-0 whitespace-nowrap pl-1">
                                 {(() => {
                                   try {
-                                    return formatDistanceToNow(new Date(conversation.lastMessage.createdAt), { addSuffix: false });
+                                    const ms = Date.now() - new Date(conversation.lastMessage.createdAt).getTime();
+                                    const m = Math.floor(ms / 60000);
+                                    if (m < 1) return 'now';
+                                    if (m < 60) return `${m}m`;
+                                    const h = Math.floor(m / 60);
+                                    if (h < 24) return `${h}h`;
+                                    const d = Math.floor(h / 24);
+                                    if (d < 7) return `${d}d`;
+                                    if (d < 30) return `${Math.floor(d / 7)}w`;
+                                    if (d < 365) return `${Math.floor(d / 30)}mo`;
+                                    return `${Math.floor(d / 365)}y`;
                                   } catch { return ''; }
                                 })()}
                               </span>
