@@ -36,7 +36,6 @@ import {
   UserMinus,
   UserCheck,
   AlertTriangle,
-  Trash2,
   Play,
   Pause,
   Volume2,
@@ -616,25 +615,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               View all
             </Link>
           )}
-          {/* Delete button - only show for clip owner, not on mobile (shown in overlay for clips) */}
-          {isOwnClip && clip && (!isMobile || clip.videoType === 'reel') && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowDeleteConfirm(true);
-              }}
-              className={cn(
-                "rounded-sm opacity-70 ring-offset-background transition-all hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 group/trash",
-                isMobile 
-                  ? "p-3 bg-black/30 backdrop-blur-sm hover:bg-black/50"
-                  : "p-2"
-              )}
-              title="Delete clip"
-            >
-              <Trash2 className={cn("text-white group-hover/trash:text-red-500 transition-colors", isMobile ? "h-6 w-6" : "h-5 w-5")} />
-              <span className="sr-only">Delete</span>
-            </button>
-          )}
           {/* Volume toggle - only for mobile clips (not reels, reels have their own) */}
           {isMobile && clip && clip.videoType !== 'reel' && (
             <button
@@ -1013,14 +993,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       className="absolute right-3 flex flex-col items-center space-y-5 z-50 pointer-events-auto"
                       style={{ bottom: showComments ? '0.75rem' : '2rem' }}
                     >
-                      {isOwnClip && !showComments && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
-                          className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 flex items-center justify-center"
-                        >
-                          <Trash2 className="h-5 w-5 text-white hover:text-red-500 transition-colors" />
-                        </button>
-                      )}
                       <FireButton
                         contentId={clip.id}
                         contentType="clip"
