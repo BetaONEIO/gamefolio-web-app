@@ -620,7 +620,7 @@ const MessagesPage: React.FC = () => {
       {/* Conversations Sidebar */}
       <div className={`
         ${showMobileConversationList || !selectedConversation ? 'flex' : 'hidden'} 
-        md:flex w-full md:w-[420px] border-r bg-card flex-col
+        md:flex w-full md:w-[420px] border-r bg-card flex-col overflow-x-hidden
       `}>
         {/* Header */}
         <div className="p-4 border-b">
@@ -653,7 +653,7 @@ const MessagesPage: React.FC = () => {
 
         {/* Conversations List */}
         <ScrollArea className="flex-1">
-          <div className="p-2">
+          <div className="p-2 w-full">
             {loadingConversations ? (
               <div className="space-y-2">
                 {[...Array(5)].map((_, i) => (
@@ -712,29 +712,28 @@ const MessagesPage: React.FC = () => {
                         ) : (
                           <SignedAvatar url={avatarUrl} fallback={displayName.charAt(0).toUpperCase()} className="h-12 w-12 flex-shrink-0" />
                         )}
-                        <div className="flex-1 min-w-0 overflow-hidden">
-                          <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
                             <p className={`font-semibold truncate text-[15px] flex-1 min-w-0 ${conversation.unreadCount > 0 ? 'text-foreground' : 'text-foreground/90'}`}>{displayName}</p>
-                            {conversation.lastMessage && (
-                              <span className="text-[11px] text-muted-foreground flex-shrink-0 whitespace-nowrap ml-1">
-                                {(() => {
-                                  try {
-                                    const ms = Date.now() - new Date(conversation.lastMessage.createdAt).getTime();
-                                    if (isNaN(ms)) return '';
-                                    const m = Math.floor(ms / 60000);
-                                    if (m < 1) return 'now';
-                                    if (m < 60) return `${m}m`;
-                                    const h = Math.floor(m / 60);
-                                    if (h < 24) return `${h}h`;
-                                    const d = Math.floor(h / 24);
-                                    if (d < 7) return `${d}d`;
-                                    if (d < 30) return `${Math.floor(d / 7)}w`;
-                                    if (d < 365) return `${Math.floor(d / 30)}mo`;
-                                    return `${Math.floor(d / 365)}y`;
-                                  } catch { return ''; }
-                                })()}
-                              </span>
-                            )}
+                            {conversation.lastMessage?.createdAt && (() => {
+                              try {
+                                const d = new Date(conversation.lastMessage.createdAt);
+                                if (isNaN(d.getTime())) return null;
+                                return (
+                                  <span className="text-[11px] text-muted-foreground flex-shrink-0 whitespace-nowrap">
+                                    {formatDistanceToNow(d, { addSuffix: false })
+                                      .replace('less than a minute', 'now')
+                                      .replace('about ', '')
+                                      .replace(/(\d+) minutes?/, '$1m')
+                                      .replace(/(\d+) hours?/, '$1h')
+                                      .replace(/(\d+) days?/, '$1d')
+                                      .replace(/(\d+) weeks?/, '$1w')
+                                      .replace(/(\d+) months?/, '$1mo')
+                                      .replace(/(\d+) years?/, '$1y')}
+                                  </span>
+                                );
+                              } catch { return null; }
+                            })()}
                           </div>
                           <div className={`flex items-center gap-1 mt-0.5 ${conversation.unreadCount > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                             {conversation.lastMessage?.senderId === user?.id && (
