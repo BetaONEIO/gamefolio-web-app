@@ -350,4 +350,89 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
   }
 });
 
+// ---------------------------------------------------------------------------
+// Gift Pro — create a one-time hosted checkout so one user can give Pro to
+// another. No Stripe subscription is created; the webhook grants a timed Pro
+// period directly when payment succeeds.
+// ---------------------------------------------------------------------------
+export async function grantGiftPro(opts: {
+  recipientId: number;
+  plan: 'monthly' | 'yearly';
+}): Promise<void> {
+  const { recipientId, plan } = opts;
+
+  await db.update(users).set({
+    isPro: true,
+    proSubscriptionType: plan,
+    proSubscriptionStartDate: new Date(),
+    proSubscriptionEndDate: plan === 'yearly'
+      ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    updatedAt: new Date(),
+  }).where(eq(users.id, recipientId));
+
+  const [recipient] = await db.select().from(users).where(eq(users.id, recipientId));
+  if (recipient?.email) {
+    EmailService.sendProWelcomeEmail(
+      recipient.email,
+      recipient.username || recipient.displayName || 'Gamer',
+      plan,
+    ).catch(err => console.error('Failed to send Pro gift welcome email:', err));
+  }
+}
+
+router.post('/api/pro/gift-checkout', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const gifterId = (req as any).user?.id;
+    if (!gifterId) return res.status(401).json({ error: 'Authentication required' });
+
+    const { recipientUsername, plan } = req.body;
+    if (!['monthly', 'yearly'].includes(plan)) {
+      return res.status(400).json({ error: 'Invalid plan. Must be "monthly" or "yearly".' });
+    }
+    if (!recipientUsername) {
+      return res.status(400).json({ error: 'recipientUsername is required' });
+    }
+
+    const recipient = await storage.getUserByUsername(recipientUsername);
+    if (!recipient) return res.status(404).json({ error: 'User not found' });
+    if (recipient.isPro) return res.status(409).json({ error: 'User already has Pro' });
+
+    const amount = BASE_PRICE[plan as 'monthly' | 'yearly'];
+    const stripe = await getUncachableStripeClient();
+
+    const origin = (req.headers.origin as string) || 'https://app.gamefolio.com';
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: [
+        {
+          price_data: {
+            currency: BASE_CURRENCY,
+            unit_amount: amount,
+            product_data: {
+              name: `Gamefolio Pro Gift (${plan === 'yearly' ? '1 year' : '1 month'})`,
+              description: `Gift a Pro subscription to @${recipientUsername}`,
+            },
+          },
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        type: 'gift_pro',
+        gifter_user_id: String(gifterId),
+        gift_for_user_id: String(recipient.id),
+        gift_for_username: recipientUsername,
+        plan,
+      },
+      success_url: `${origin}/profile/${recipientUsername}?gift_success=1`,
+      cancel_url: `${origin}/profile/${recipientUsername}`,
+    });
+
+    return res.json({ url: session.url });
+  } catch (error: any) {
+    console.error('Gift pro checkout error:', error);
+    return res.status(500).json({ error: 'Failed to create gift checkout', message: error.message });
+  }
+});
+
 export default router;
