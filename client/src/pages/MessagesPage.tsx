@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useKeyboardHeight } from "@/hooks/use-keyboard-height";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CustomInput } from "@/components/ui/custom-input";
@@ -94,6 +95,7 @@ interface Conversation {
 const MessagesPage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const keyboardHeight = useKeyboardHeight();
 
   const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
   const [selectedUserInfo, setSelectedUserInfo] = useState<any>(null);
@@ -106,6 +108,7 @@ const MessagesPage: React.FC = () => {
   const [processedUrlParam, setProcessedUrlParam] = useState<string | null>(null);
   const [showMobileConversationList, setShowMobileConversationList] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const conversationsQuery = useQuery({
     queryKey: ["/api/messages/conversations"],
@@ -410,13 +413,20 @@ const MessagesPage: React.FC = () => {
     }
   }, [userSearchQuery]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Scroll to bottom when keyboard opens so latest message stays visible
+  useEffect(() => {
+    if (keyboardHeight > 50 && selectedConversation) {
+      setTimeout(() => scrollToBottom("smooth"), 100);
+    }
+  }, [keyboardHeight, selectedConversation]);
 
   // Check if conversation exists but we have messages (conversation might have been deleted)
   useEffect(() => {
@@ -496,7 +506,13 @@ const MessagesPage: React.FC = () => {
 
   if (isNewConversationOpen) {
     return (
-      <div className="flex flex-col h-[calc(100dvh-80px)] pb-16 md:pb-0 bg-background">
+      <div
+        className="flex flex-col bg-background pb-16 md:pb-0"
+        style={{
+          height: 'calc(var(--visual-viewport-height, 100dvh) - 80px)',
+          paddingBottom: keyboardHeight > 50 ? 0 : undefined,
+        }}
+      >
         {/* New Conversation Header */}
         <div className="flex items-center justify-between p-4 border-b bg-card">
           <div className="flex items-center gap-3">
@@ -594,7 +610,13 @@ const MessagesPage: React.FC = () => {
 
   return (
     <VerificationGuard requireEmailVerification={true} requireOnboarding={false}>
-      <div className="flex h-[calc(100dvh-80px)] pb-16 md:pb-0 bg-background">
+      <div
+        className="flex bg-background pb-16 md:pb-0"
+        style={{
+          height: 'calc(var(--visual-viewport-height, 100dvh) - 80px)',
+          paddingBottom: keyboardHeight > 50 ? 0 : undefined,
+        }}
+      >
       {/* Conversations Sidebar */}
       <div className={`
         ${showMobileConversationList || !selectedConversation ? 'flex' : 'hidden'} 
@@ -669,57 +691,51 @@ const MessagesPage: React.FC = () => {
                   return (
                     <div
                       key={conversation.userId}
-                      className={`relative group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                      className={`relative group flex items-center gap-3 px-3 py-3.5 rounded-xl cursor-pointer transition-colors ${
                         selectedConversation === conversation.userId
                           ? "bg-primary/10 border border-primary/20"
-                          : "hover:bg-muted"
+                          : "hover:bg-muted/60 active:bg-muted"
                       }`}
                     >
                       <div
                         className="flex items-center gap-3 flex-1 min-w-0"
                         onClick={() => {
                           setSelectedConversation(conversation.userId);
-                          setSelectedUserInfo(null); // Clear stored user info for existing conversations
-                          setShowMobileConversationList(false); // Hide conversation list on mobile when chat is selected
+                          setSelectedUserInfo(null);
+                          setShowMobileConversationList(false);
                         }}
                       >
                         {useNftAvatar ? (
-                          <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40">
+                          <div className="h-12 w-12 flex-shrink-0 rounded-xl overflow-hidden border border-[#B7FF1A]/40">
                             <img src={convUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                           </div>
                         ) : (
-                          <SignedAvatar url={avatarUrl} fallback={displayName.charAt(0).toUpperCase()} className="h-10 w-10" />
+                          <SignedAvatar url={avatarUrl} fallback={displayName.charAt(0).toUpperCase()} className="h-12 w-12 flex-shrink-0" />
                         )}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <p className={`font-medium truncate ${conversation.unreadCount > 0 ? 'text-primary' : ''}`}>{displayName}</p>
-                            {conversation.lastMessage && conversation.lastMessage.createdAt && (
-                              <span className="text-xs text-muted-foreground">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <p className={`font-semibold truncate text-[15px] ${conversation.unreadCount > 0 ? 'text-foreground' : 'text-foreground/90'}`}>{displayName}</p>
+                            {conversation.lastMessage?.createdAt && (
+                              <span className="text-[11px] text-muted-foreground flex-shrink-0">
                                 {(() => {
                                   try {
-                                    return formatDistanceToNow(new Date(conversation.lastMessage.createdAt), { addSuffix: true });
-                                  } catch {
-                                    return 'Recently';
-                                  }
+                                    return formatDistanceToNow(new Date(conversation.lastMessage.createdAt), { addSuffix: false });
+                                  } catch { return ''; }
                                 })()}
                               </span>
                             )}
                           </div>
-                          <p className={`text-sm truncate flex items-center gap-1 ${conversation.unreadCount > 0 ? 'text-white font-bold' : 'text-muted-foreground'}`}>
+                          <div className={`flex items-center gap-1 mt-0.5 ${conversation.unreadCount > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                             {conversation.lastMessage?.senderId === user?.id && (
-                              <CornerDownRight className="h-3 w-3 flex-shrink-0 text-primary" />
+                              conversation.lastMessage?.isRead
+                                ? <CheckCheck className="h-3 w-3 flex-shrink-0 text-primary" />
+                                : <Check className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
                             )}
-                            <span className="truncate">{conversation.lastMessage?.content || "No messages yet"}</span>
-                            {conversation.lastMessage?.senderId === user?.id && conversation.lastMessage?.isRead && (
-                              <CheckCheck className="h-3 w-3 flex-shrink-0 text-blue-400" />
-                            )}
-                            {conversation.lastMessage?.senderId === user?.id && !conversation.lastMessage?.isRead && (
-                              <Check className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
-                            )}
-                          </p>
+                            <p className="text-sm truncate">{conversation.lastMessage?.content || "No messages yet"}</p>
+                          </div>
                         </div>
                         {conversation.unreadCount > 0 && (
-                          <div className="bg-primary text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                          <div className="bg-primary text-primary-foreground text-xs font-bold rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5 flex-shrink-0">
                             {conversation.unreadCount}
                           </div>
                         )}
@@ -1171,11 +1187,12 @@ const MessagesPage: React.FC = () => {
             </ScrollArea>
 
             {/* Message Input */}
-            <div className="px-4 py-3 border-t bg-card">
-              <form
-                onSubmit={handleSendMessage}
-              >
-                <div className="flex gap-2">
+            <div
+              className="px-3 py-3 border-t bg-card safe-area-bottom"
+              style={{ paddingBottom: keyboardHeight > 50 ? '12px' : undefined }}
+            >
+              <form onSubmit={handleSendMessage}>
+                <div className="flex gap-2 items-center">
                   {(() => {
                     const isBlocked = blockedUsers.some(
                       (blockedUser: any) => blockedUser.id === selectedConversation || blockedUser.userId === selectedConversation
@@ -1183,9 +1200,9 @@ const MessagesPage: React.FC = () => {
 
                     if (isBlocked) {
                       return (
-                        <div className="flex-1 text-center p-4 text-gray-500">
-                          <Shield className="h-6 w-6 mx-auto mb-2" />
-                          <p>Cannot send messages to blocked user</p>
+                        <div className="flex-1 text-center py-3 text-muted-foreground">
+                          <Shield className="h-5 w-5 mx-auto mb-1" />
+                          <p className="text-sm">Cannot message a blocked user</p>
                         </div>
                       );
                     }
@@ -1193,19 +1210,22 @@ const MessagesPage: React.FC = () => {
                     return (
                       <>
                         <Input
+                          ref={inputRef}
                           value={newMessage}
                           onChange={(e) => setNewMessage(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e as any); } }}
                           placeholder="Type a message..."
-                          className="flex-1"
+                          className="flex-1 h-11 text-[16px] bg-muted/50 border-border/60 rounded-full px-4"
                           disabled={sendMessageMutation.isPending}
+                          autoComplete="off"
                         />
                         <Button
                           type="submit"
                           disabled={!newMessage.trim() || sendMessageMutation.isPending}
-                          className="bg-primary hover:bg-primary text-white px-4"
+                          className="h-11 w-11 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground flex-shrink-0 p-0"
                         >
                           {sendMessageMutation.isPending ? (
-                            <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                            <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full" />
                           ) : (
                             <Send className="h-4 w-4" />
                           )}
