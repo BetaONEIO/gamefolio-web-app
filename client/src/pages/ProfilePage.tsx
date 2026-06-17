@@ -70,7 +70,6 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
-import { FollowListModal } from "@/components/profile/FollowListModal";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
 import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreenshotsViewer";
@@ -298,7 +297,6 @@ const ProfilePage = () => {
   
   // Profile section tab state (stats/bio vs collection)
   const [profileSectionTab, setProfileSectionTab] = useState<'stats' | 'collection'>('stats');
-  const [followListModal, setFollowListModal] = useState<{ type: 'followers' | 'following'; userId: number } | null>(null);
   const [expandedStreams, setExpandedStreams] = useState<Record<string, boolean>>({});
   const [selectedProfileNft, setSelectedProfileNft] = useState<OwnedNft | null>(null);
 
@@ -3301,7 +3299,7 @@ const ProfilePage = () => {
                         <div
                           key={stat.label}
                           className="flex flex-1 items-center"
-                          onClick={stat.label !== 'Uploads' ? () => setFollowListModal({ type: stat.label.toLowerCase() as 'followers' | 'following', userId: profile.id }) : undefined}
+                          onClick={stat.label !== 'Uploads' ? () => setLocation(`/profile/${profile.username}/${stat.label.toLowerCase()}`) : undefined}
                           style={stat.label !== 'Uploads' ? { cursor: 'pointer' } : undefined}
                         >
                           <div className="flex flex-col items-center gap-1 flex-1 py-1">
@@ -3324,7 +3322,7 @@ const ProfilePage = () => {
                         <div
                           key={stat.label}
                           className="flex flex-1 items-center"
-                          onClick={stat.label !== 'Uploads' ? () => setFollowListModal({ type: stat.label.toLowerCase() as 'followers' | 'following', userId: profile.id }) : undefined}
+                          onClick={stat.label !== 'Uploads' ? () => setLocation(`/profile/${profile.username}/${stat.label.toLowerCase()}`) : undefined}
                           style={stat.label !== 'Uploads' ? { cursor: 'pointer' } : undefined}
                         >
                           <div className="flex flex-col items-center gap-1 flex-1 py-1">
@@ -3343,11 +3341,11 @@ const ProfilePage = () => {
                       <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
                       <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: '#B7FF1A', letterSpacing: '0.8px' }}>UPLOADS</span>
                     </div>
-                    <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`} onClick={() => setFollowListModal({ type: 'followers', userId: profile.id })}>
+                    <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/followers`)}>
                       <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : isBlocksTheme ? '#3b82f6' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.followers || 0)}</span>
                       <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: '#B7FF1A', letterSpacing: '0.8px' }}>FOLLOWERS</span>
                     </div>
-                    <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`} onClick={() => setFollowListModal({ type: 'following', userId: profile.id })}>
+                    <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/following`)}>
                       <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
                       <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#B7FF1A', color: '#1a1a1a', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: '#B7FF1A', letterSpacing: '0.8px' }}>FOLLOWING</span>
                     </div>
@@ -3708,11 +3706,11 @@ const ProfilePage = () => {
                         <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
                         <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>Uploads</span>
                       </div>
-                      <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`} onClick={() => setFollowListModal({ type: 'followers', userId: profile.id })}>
+                      <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/followers`)}>
                         <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : isBlocksTheme ? '#3b82f6' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{Number(profile._count?.followers || 0)}</span>
                         <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>Followers</span>
                       </div>
-                      <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`} onClick={() => setFollowListModal({ type: 'following', userId: profile.id })}>
+                      <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/following`)}>
                         <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
                         <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#B7FF1A', color: '#1a1a1a', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>Following</span>
                       </div>
@@ -5451,7 +5449,7 @@ const ProfilePage = () => {
                     <Button 
                       variant="outline" 
                       className="flex items-center gap-2"
-                      onClick={() => setFollowListModal({ type: 'followers', userId: profile.id })}
+                      onClick={() => setLocation(`/profile/${profile.username}/followers`)}
                     >
                       <Users className="h-4 w-4" />
                       {(profile as any)?._count?.followers || 0} Followers
@@ -5459,7 +5457,7 @@ const ProfilePage = () => {
                     <Button 
                       variant="outline" 
                       className="flex items-center gap-2"
-                      onClick={() => setFollowListModal({ type: 'following', userId: profile.id })}
+                      onClick={() => setLocation(`/profile/${profile.username}/following`)}
                     >
                       <Users className="h-4 w-4" />
                       Following {(profile as any)?._count?.following || 0}
@@ -5676,16 +5674,6 @@ const ProfilePage = () => {
         </React.Suspense>
       )}
 
-      {/* Followers / Following list modal */}
-      {followListModal && (
-        <FollowListModal
-          open={!!followListModal}
-          onClose={() => setFollowListModal(null)}
-          type={followListModal.type}
-          userId={followListModal.userId}
-          profileUsername={profile?.username}
-        />
-      )}
 
       {/* Name Tag Detail Dialog - matches Store page design */}
       <NameTagDetailDialog

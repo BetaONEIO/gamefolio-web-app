@@ -23,7 +23,6 @@ import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Game } from "@shared/schema";
-import { FollowListModal } from "@/components/profile/FollowListModal";
 import { GiftProSearchDialog } from "@/components/profile/GiftProSearchDialog";
 
 const LEVEL_THRESHOLDS = [
@@ -126,7 +125,6 @@ const MobileMenu = () => {
     }, 280);
   }, [close]);
 
-  const [followListModal, setFollowListModal] = useState<{ type: 'followers' | 'following'; userId: number } | null>(null);
   const [showGiftProDialog, setShowGiftProDialog] = useState(false);
 
   const { data: ownProfileData } = useQuery({
@@ -239,7 +237,7 @@ const MobileMenu = () => {
               {/* Followers / Following / Gift Pro */}
               <div className="flex items-center gap-3 mt-3 flex-wrap">
                 <button
-                  onClick={() => setFollowListModal({ type: 'followers', userId: user.id })}
+                  onClick={() => { setLocation(`/profile/${user.username}/followers`); handleClose(); }}
                   className="flex items-center gap-1 hover:opacity-75 transition-opacity"
                 >
                   <span className="font-black text-sm">{followerCount.toLocaleString()}</span>
@@ -247,7 +245,7 @@ const MobileMenu = () => {
                 </button>
                 <span className="text-muted-foreground text-xs">·</span>
                 <button
-                  onClick={() => setFollowListModal({ type: 'following', userId: user.id })}
+                  onClick={() => { setLocation(`/profile/${user.username}/following`); handleClose(); }}
                   className="flex items-center gap-1 hover:opacity-75 transition-opacity"
                 >
                   <span className="font-black text-sm">{followingCount.toLocaleString()}</span>
@@ -483,15 +481,7 @@ const MobileMenu = () => {
         </div>
       </div>
 
-      {/* Follow List Modal */}
-      {followListModal && (
-        <FollowListModal
-          open={!!followListModal}
-          onClose={() => setFollowListModal(null)}
-          type={followListModal.type}
-          userId={followListModal.userId}
-        />
-      )}
+
 
       <GiftProSearchDialog open={showGiftProDialog} onOpenChange={setShowGiftProDialog} />
     </div>

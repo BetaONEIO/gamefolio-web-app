@@ -25,7 +25,6 @@ import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Game } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
-import { FollowListModal } from "@/components/profile/FollowListModal";
 import { GiftProSearchDialog } from "@/components/profile/GiftProSearchDialog";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { Button } from "@/components/ui/button";
@@ -56,7 +55,6 @@ const Sidebar = () => {
   const [hoveredGameId, setHoveredGameId] = useState<number | null>(null);
   const [gameToRemove, setGameToRemove] = useState<{ id: number; name: string } | null>(null);
   const [myGamefolioExpanded, setMyGamefolioExpanded] = useState(false);
-  const [followListModal, setFollowListModal] = useState<{ type: 'followers' | 'following'; userId: number } | null>(null);
   const [showGiftProDialog, setShowGiftProDialog] = useState(false);
 
   // Maximum number of games a user can have
@@ -317,7 +315,7 @@ const Sidebar = () => {
                         </div>
                       </Link>
                       <button
-                        onClick={() => setFollowListModal({ type: 'followers', userId: user.id })}
+                        onClick={() => { setLocation(`/profile/${user.username}/followers`); setMyGamefolioExpanded(false); }}
                         className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors"
                       >
                         <Users className="h-3.5 w-3.5 shrink-0" />
@@ -325,7 +323,7 @@ const Sidebar = () => {
                         <span>Followers</span>
                       </button>
                       <button
-                        onClick={() => setFollowListModal({ type: 'following', userId: user.id })}
+                        onClick={() => { setLocation(`/profile/${user.username}/following`); setMyGamefolioExpanded(false); }}
                         className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors"
                       >
                         <Users className="h-3.5 w-3.5 shrink-0" />
@@ -758,16 +756,6 @@ const Sidebar = () => {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Follow List Modal */}
-      {followListModal && (
-        <FollowListModal
-          open={!!followListModal}
-          onClose={() => setFollowListModal(null)}
-          type={followListModal.type}
-          userId={followListModal.userId}
-        />
-      )}
 
       <GiftProSearchDialog open={showGiftProDialog} onOpenChange={setShowGiftProDialog} />
 

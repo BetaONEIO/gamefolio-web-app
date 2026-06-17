@@ -123,6 +123,7 @@ const LatestScreenshotsPage = lazyWithRecovery(() => import("@/pages/LatestScree
 const InvitePage = lazyWithRecovery(() => import("./pages/InvitePage"));
 const RegisterPage = lazyWithRecovery(() => import("./pages/RegisterPage"));
 const NotificationsPage = lazyWithRecovery(() => import("./pages/NotificationsPage"));
+const FollowersPage = lazyWithRecovery(() => import("./pages/FollowersPage"));
 const NotFound = lazyWithRecovery(() => import("@/pages/not-found"));
 const AdminPage = lazyWithRecovery(() => import("./pages/AdminPage"));
 const AdminContentFilter = lazyWithRecovery(() => import("./pages/AdminContentFilter"));
@@ -565,6 +566,10 @@ function Router() {
           {/* Public view routes for shareable content */}
           <Route path="/view/screenshot/:id" component={ViewContentPage} />
           <Route path="/view/:id" component={ViewContentPage} />
+
+          {/* Followers / following full-page views */}
+          <Route path="/profile/:username/followers" component={FollowersPage} />
+          <Route path="/profile/:username/following" component={FollowersPage} />
 
           {/* Custom profile link route - matches gamefolio.gg/username pattern */}
           {/* General profile routes - MUST be at bottom after all specific routes */}
