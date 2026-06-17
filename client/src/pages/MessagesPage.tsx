@@ -611,7 +611,7 @@ const MessagesPage: React.FC = () => {
   return (
     <VerificationGuard requireEmailVerification={true} requireOnboarding={false}>
       <div
-        className="flex bg-background pb-16 md:pb-0"
+        className={`flex bg-background md:pb-0 ${!showMobileConversationList && selectedConversation ? 'pb-0' : 'pb-16'}`}
         style={{
           height: 'calc(var(--visual-viewport-height, 100dvh) - 80px)',
           paddingBottom: keyboardHeight > 50 ? 0 : undefined,
@@ -712,14 +712,15 @@ const MessagesPage: React.FC = () => {
                         ) : (
                           <SignedAvatar url={avatarUrl} fallback={displayName.charAt(0).toUpperCase()} className="h-12 w-12 flex-shrink-0" />
                         )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-baseline justify-between gap-2 overflow-hidden">
-                            <p className={`font-semibold truncate text-[15px] min-w-0 ${conversation.unreadCount > 0 ? 'text-foreground' : 'text-foreground/90'}`}>{displayName}</p>
-                            {conversation.lastMessage?.createdAt && (
-                              <span className="text-[11px] text-muted-foreground shrink-0 whitespace-nowrap pl-1">
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className={`font-semibold truncate text-[15px] flex-1 min-w-0 ${conversation.unreadCount > 0 ? 'text-foreground' : 'text-foreground/90'}`}>{displayName}</p>
+                            {conversation.lastMessage && (
+                              <span className="text-[11px] text-muted-foreground flex-shrink-0 whitespace-nowrap ml-1">
                                 {(() => {
                                   try {
                                     const ms = Date.now() - new Date(conversation.lastMessage.createdAt).getTime();
+                                    if (isNaN(ms)) return '';
                                     const m = Math.floor(ms / 60000);
                                     if (m < 1) return 'now';
                                     if (m < 60) return `${m}m`;
@@ -735,13 +736,13 @@ const MessagesPage: React.FC = () => {
                               </span>
                             )}
                           </div>
-                          <div className={`flex items-center gap-1 mt-0.5 overflow-hidden ${conversation.unreadCount > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                          <div className={`flex items-center gap-1 mt-0.5 ${conversation.unreadCount > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                             {conversation.lastMessage?.senderId === user?.id && (
                               conversation.lastMessage?.isRead
                                 ? <CheckCheck className="h-3 w-3 flex-shrink-0 text-primary" />
                                 : <Check className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
                             )}
-                            <p className="text-sm truncate min-w-0">{conversation.lastMessage?.content || "No messages yet"}</p>
+                            <p className="text-sm truncate flex-1 min-w-0">{conversation.lastMessage?.content || "No messages yet"}</p>
                           </div>
                         </div>
                         {conversation.unreadCount > 0 && (
