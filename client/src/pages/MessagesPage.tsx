@@ -713,10 +713,10 @@ const MessagesPage: React.FC = () => {
                           <SignedAvatar url={avatarUrl} fallback={displayName.charAt(0).toUpperCase()} className="h-12 w-12 flex-shrink-0" />
                         )}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-baseline justify-between gap-2">
-                            <p className={`font-semibold truncate text-[15px] ${conversation.unreadCount > 0 ? 'text-foreground' : 'text-foreground/90'}`}>{displayName}</p>
+                          <div className="flex items-baseline justify-between gap-2 overflow-hidden">
+                            <p className={`font-semibold truncate text-[15px] min-w-0 ${conversation.unreadCount > 0 ? 'text-foreground' : 'text-foreground/90'}`}>{displayName}</p>
                             {conversation.lastMessage?.createdAt && (
-                              <span className="text-[11px] text-muted-foreground flex-shrink-0">
+                              <span className="text-[11px] text-muted-foreground shrink-0 whitespace-nowrap pl-1">
                                 {(() => {
                                   try {
                                     return formatDistanceToNow(new Date(conversation.lastMessage.createdAt), { addSuffix: false });
@@ -1188,7 +1188,7 @@ const MessagesPage: React.FC = () => {
 
             {/* Message Input */}
             <div
-              className="px-3 py-3 border-t bg-card safe-area-bottom"
+              className="px-3 py-3 border-t bg-card"
               style={{ paddingBottom: keyboardHeight > 50 ? '12px' : undefined }}
             >
               <form onSubmit={handleSendMessage}>
