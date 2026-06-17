@@ -165,8 +165,18 @@ const InlineSvgBorder: React.FC<{
           .replace(/stroke\s*:\s*currentColor/gi, `stroke: ${color}`)
           .replace(/stroke-width\s*=\s*["']\d+["']/gi, `stroke-width="2"`)
           .replace(/stroke-width\s*:\s*\d+/gi, `stroke-width: 2`);
-        
-        setSvgContent(colorized);
+
+        // Force the SVG to fill its container via inline style so it cannot be
+        // overridden by ancestor CSS rules (e.g. Button's [&_svg]:size-4).
+        const finalSvg = colorized.replace(/<svg([^>]*)>/i, (_m, attrs) => {
+          const cleaned = attrs
+            .replace(/\s+width\s*=\s*["'][^"']*["']/gi, '')
+            .replace(/\s+height\s*=\s*["'][^"']*["']/gi, '')
+            .replace(/\s+style\s*=\s*["'][^"']*["']/gi, '');
+          return `<svg${cleaned} width="100%" height="100%" style="width:100%;height:100%;display:block">`;
+        });
+
+        setSvgContent(finalSvg);
       })
       .catch(err => console.error('Failed to load SVG:', err));
   }, [svgUrl, signedUrl, color]);
