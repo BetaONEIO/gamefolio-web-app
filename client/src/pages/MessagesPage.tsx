@@ -645,10 +645,18 @@ const MessagesPage: React.FC = () => {
                 ))}
               </div>
             ) : filteredConversations.length === 0 ? (
-              <div className="text-center py-8">
+              <div className="text-center py-8 px-4">
                 <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground">No conversations yet</p>
-                <p className="text-sm text-muted-foreground">Start a new conversation</p>
+                <p className="text-muted-foreground font-medium mb-1">No conversations yet</p>
+                <p className="text-sm text-muted-foreground mb-4">Find someone to chat with</p>
+                <Button
+                  size="sm"
+                  onClick={() => setIsNewConversationOpen(true)}
+                  className="bg-primary hover:bg-primary/90 text-white gap-2"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Start a conversation
+                </Button>
               </div>
             ) : (
               <div className="space-y-1">
@@ -1097,7 +1105,7 @@ const MessagesPage: React.FC = () => {
                         <div
                           className={`rounded-lg px-4 py-2 relative group ${
                             isMine
-                              ? "bg-primary text-white"
+                              ? "bg-card border border-border/60 shadow-md text-foreground"
                               : "bg-muted"
                           }`}
                         >
@@ -1213,8 +1221,15 @@ const MessagesPage: React.FC = () => {
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
             <div className="text-center">
               <MessageSquare className="h-16 w-16 mx-auto mb-4 opacity-50" />
-              <h2 className="text-xl font-semibold mb-2">Select a conversation</h2>
-              <p>Choose a conversation from the sidebar to start messaging</p>
+              <h2 className="text-xl font-semibold mb-2">Your Messages</h2>
+              <p className="mb-4">Select a conversation or start a new one</p>
+              <Button
+                onClick={() => setIsNewConversationOpen(true)}
+                className="bg-primary hover:bg-primary/90 text-white gap-2"
+              >
+                <UserPlus className="h-4 w-4" />
+                New Message
+              </Button>
             </div>
           </div>
         )}
