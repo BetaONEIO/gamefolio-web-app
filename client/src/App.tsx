@@ -122,6 +122,7 @@ const LatestClipsPage = lazyWithRecovery(() => import("./pages/LatestClipsPage")
 const LatestScreenshotsPage = lazyWithRecovery(() => import("@/pages/LatestScreenshotsPage"));
 const InvitePage = lazyWithRecovery(() => import("./pages/InvitePage"));
 const RegisterPage = lazyWithRecovery(() => import("./pages/RegisterPage"));
+const NotificationsPage = lazyWithRecovery(() => import("./pages/NotificationsPage"));
 const NotFound = lazyWithRecovery(() => import("@/pages/not-found"));
 const AdminPage = lazyWithRecovery(() => import("./pages/AdminPage"));
 const AdminContentFilter = lazyWithRecovery(() => import("./pages/AdminContentFilter"));
@@ -488,6 +489,7 @@ function Router() {
           <Route path="/browse/games/categories" component={GameCategoriesPage} />
           <Route path="/leaderboard" component={LeaderboardPage} />
           <ProtectedRoute path="/messages" component={MessagesPage} />
+          <ProtectedRoute path="/notifications" component={NotificationsPage} />
           <Route path="/latest-reels" component={LatestReelsPage} />
           <Route path="/latest-clips" component={LatestClipsPage} />
           <Route path="/latest-screenshots" component={LatestScreenshotsPage} />
