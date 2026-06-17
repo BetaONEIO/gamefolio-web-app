@@ -74,13 +74,12 @@ const EMOJI_CATEGORIES = [
 ];
 
 // Gamer "tag" options shown in Profile & Appearance so users can change the
-// type assigned during onboarding. Excludes "streamer" — that's controlled by
-// the dedicated live-streaming toggle further down the page. Ids/labels mirror
-// the onboarding flow (client/src/components/auth/onboarding-flow.tsx).
+// type assigned during onboarding. Ids/labels mirror the onboarding flow.
 const GAMER_TAG_OPTIONS = [
   { id: "gamer", label: "Gamer", icon: Gamepad2 },
   { id: "professional_gamer", label: "Pro Gamer", icon: Trophy },
   { id: "content_creator", label: "Content Creator", icon: Upload },
+  { id: "streamer", label: "Streamer", icon: Video },
   { id: "indie_developer", label: "Indie Developer", icon: Code },
   { id: "viewer", label: "Viewer", icon: Eye },
   { id: "filthy_casual", label: "Filthy Casual", icon: Coffee },
@@ -998,26 +997,29 @@ export default function SettingsPage() {
   const [primaryUserType, setPrimaryUserType] = useState<string>(initPrimaryType);
   const [isStreamingEnabled, setIsStreamingEnabled] = useState<boolean>(initIsStreamer);
 
-  // Gamer tag selection (excludes the "streamer" tag — handled by its own toggle).
-  // Stored as a comma-separated string in primaryUserType; capped at 2 to match
-  // the onboarding flow. Only recognised option ids count toward the selection —
-  // legacy/foreign values (e.g. Title-Case data from older accounts) are ignored
-  // so they can never lock the grid, and are normalised away the moment the user
-  // edits their tags.
+  // Gamer tag selection. Capped at 2 to match the onboarding flow. "streamer"
+  // is stored separately in isStreamingEnabled but displayed in this grid so
+  // the user can pick it from one place. Only recognised option ids count toward
+  // the selection — legacy/foreign values are ignored and normalised on save.
   const KNOWN_GAMER_TAG_IDS = GAMER_TAG_OPTIONS.map(o => o.id);
-  const selectedGamerTags = primaryUserType
-    .split(',')
-    .map(t => t.trim())
-    .filter(t => KNOWN_GAMER_TAG_IDS.includes(t));
+  const selectedGamerTags = [
+    ...primaryUserType.split(',').map(t => t.trim()).filter(t => KNOWN_GAMER_TAG_IDS.includes(t) && t !== 'streamer'),
+    ...(isStreamingEnabled ? ['streamer'] : []),
+  ];
   const toggleGamerTag = (id: string) => {
+    if (id === 'streamer') {
+      // At cap and trying to add — block it
+      if (!isStreamingEnabled && selectedGamerTags.length >= 2) return;
+      setIsStreamingEnabled(v => !v);
+      return;
+    }
     const next = selectedGamerTags.includes(id)
       ? selectedGamerTags.filter(t => t !== id)
       : selectedGamerTags.length < 2
         ? [...selectedGamerTags, id]
         : selectedGamerTags;
-    // Persist in canonical GAMER_TAG_OPTIONS order so the saved string is
-    // deterministic regardless of the order the user clicked the chips.
-    setPrimaryUserType(KNOWN_GAMER_TAG_IDS.filter(t => next.includes(t)).join(','));
+    // Persist in canonical GAMER_TAG_OPTIONS order (excluding streamer, tracked separately).
+    setPrimaryUserType(KNOWN_GAMER_TAG_IDS.filter(t => t !== 'streamer' && next.includes(t)).join(','));
   };
   const [streamPlatform, setStreamPlatform] = useState<string>((user as any)?.streamPlatform || 'twitch');
   const [streamChannelName, setStreamChannelName] = useState<string>((user as any)?.streamChannelName || '');
