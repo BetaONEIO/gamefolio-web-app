@@ -638,7 +638,7 @@ const Header = () => {
                         data-testid="button-manage-pro"
                       >
                         <ManageProIcon className="mr-2 h-4 w-4 text-yellow-500" />
-                        <span>Manage Pro Subscription</span>
+                        <span>Manage Pro</span>
                       </DropdownMenuItem>
                     )}
 
