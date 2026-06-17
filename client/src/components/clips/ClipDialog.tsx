@@ -568,9 +568,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           className={cn(
             "fixed left-[50%] top-[50%] z-[9999] grid w-full translate-x-[-50%] translate-y-[-50%] border shadow-lg sm:rounded-lg",
             "p-0 text-foreground clip-dialog-content",
-            !isMobile && effectiveType === 'reel' ? "bg-black" : "bg-background",
+            (effectiveType === 'reel' || (isMobile && effectiveType === 'reel')) ? "bg-black" : "bg-background",
             isMobile && effectiveType === 'reel'
-              ? "w-screen h-[calc(100dvh-64px)] max-w-none max-h-none overflow-hidden top-0 translate-y-0" // Leave space for footer on mobile reels, use dvh for dynamic viewport
+              ? "w-screen h-[calc(100dvh-64px)] max-w-none max-h-none overflow-hidden top-0 translate-y-0 border-0 shadow-none rounded-none grid-rows-[1fr]" // Leave space for footer on mobile reels, use dvh for dynamic viewport
               : isMobile 
                 ? "w-screen h-[100dvh] max-w-none max-h-none overflow-hidden top-0 translate-y-0 border-0 rounded-none" // Full screen, no border/radius on mobile clips
                 : "max-w-5xl w-[90%] max-h-[90vh] h-[88vh] overflow-hidden grid-rows-[1fr]" // Desktop size
