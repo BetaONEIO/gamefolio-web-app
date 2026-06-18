@@ -4025,12 +4025,7 @@ const ProfilePage = () => {
                     variant="outline"
                     size="default"
                     className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg px-6 py-3 text-base"
-                    style={{
-                      borderColor: accentColor || 'hsl(var(--primary))',
-                      color: accentColor || 'hsl(var(--primary))',
-                      backgroundColor: 'transparent',
-                      ...(isCyberpunkTheme && { boxShadow: `0 0 10px ${accentColor}44`, fontFamily: "'Orbitron', sans-serif" }),
-                    }}
+                    style={userTagStyle}
                   >
                     <MessageSquare className="mr-2 h-5 w-5" /> Message
                   </Button>
