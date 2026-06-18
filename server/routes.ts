@@ -8684,17 +8684,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If user is not private, follow immediately
       await storage.createFollow({followerId, followingId});
-      await NotificationService.createFollowNotification(followingId, followerId);
 
-      // Award follow_received XP to the person being followed
-      await LeaderboardService.awardCustomPoints(
-        followingId,
-        'follow_received',
-        50,
-        `Received a new follower`
-      );
-
+      // Respond immediately — notification + XP are fire-and-forget
       res.json({ status: 'following', message: 'User followed successfully' });
+
+      // Background side-effects (don't block the response)
+      NotificationService.createFollowNotification(followingId, followerId).catch(() => {});
+      LeaderboardService.awardCustomPoints(followingId, 'follow_received', 50, 'Received a new follower').catch(() => {});
     } catch (err) {
       console.error("Error following user:", err);
       return res.status(500).json({ message: "Error following user" });

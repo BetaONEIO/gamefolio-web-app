@@ -972,19 +972,19 @@ const TrendingPage: React.FC = () => {
 
   // Fetch follow status when screenshot is selected
   const { data: followStatus } = useQuery({
-    queryKey: ['/api/follow/status', selectedScreenshot?.user?.id],
+    queryKey: ['/api/users', selectedScreenshot?.user?.username, 'follow-status'],
     queryFn: async () => {
-      const response = await fetch(`/api/follow/status/${selectedScreenshot?.user?.id}`);
-      if (!response.ok) return { following: false };
+      const response = await fetch(`/api/users/${selectedScreenshot?.user?.username}/follow-status`, { credentials: 'include' });
+      if (!response.ok) return { following: false, requested: false };
       return response.json();
     },
-    enabled: !!selectedScreenshot && !!user && selectedScreenshot.user.id !== user.id,
+    enabled: !!selectedScreenshot?.user?.username && !!user && selectedScreenshot.user.id !== user.id,
   });
 
   // Sync follow status from server
   useEffect(() => {
     if (followStatus) {
-      setIsFollowingAuthor(followStatus.following);
+      setIsFollowingAuthor(followStatus.following || followStatus.requested || false);
     }
   }, [followStatus]);
 
@@ -1010,15 +1010,26 @@ const TrendingPage: React.FC = () => {
 
   // Follow/unfollow mutation
   const followMutation = useMutation({
-    mutationFn: async (targetUserId: number) => {
-      const response = await apiRequest('POST', `/api/follow/${targetUserId}`);
-      return response;
+    mutationFn: async (targetUsername: string) => {
+      if (isFollowingAuthor) {
+        await apiRequest('DELETE', `/api/users/${targetUsername}/follow`);
+        return { following: false };
+      } else {
+        const data = await apiRequest('POST', `/api/users/${targetUsername}/follow`);
+        return { following: data.status === 'following' };
+      }
+    },
+    onMutate: () => {
+      // Optimistic update — flip immediately so UI feels instant
+      setIsFollowingAuthor(prev => !prev);
     },
     onSuccess: (data) => {
       setIsFollowingAuthor(data.following);
-      queryClient.invalidateQueries({ queryKey: ['/api/follow/status', selectedScreenshot?.user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users', selectedScreenshot?.user?.username, 'follow-status'] });
     },
     onError: (error: Error) => {
+      // Roll back on failure
+      setIsFollowingAuthor(prev => !prev);
       toast({
         title: "Action failed",
         description: error.message || "Failed to update follow status",
