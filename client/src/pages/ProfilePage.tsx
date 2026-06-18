@@ -3532,12 +3532,21 @@ const ProfilePage = () => {
                 <span>{profile.epicUsername}</span>
               </div>
             )}
-            {profile.discordUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('discord')}>
-                <SiDiscord className="w-2.5 h-2.5" />
-                <span>{profile.discordUsername}</span>
-              </div>
-            )}
+            {profile.discordUsername && (() => {
+              const raw = profile.discordUsername!;
+              const url = raw.startsWith('http') ? raw : raw.includes('discord.gg') ? `https://${raw}` : raw.includes('/') ? `https://discord.gg/${raw.split('/').pop()}` : null;
+              const Tag = url ? 'a' : 'div';
+              return (
+                <Tag
+                  {...(url ? { href: url, target: '_blank', rel: 'noopener noreferrer' } : {})}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
+                  style={getBtnStyle('discord')}
+                >
+                  <SiDiscord className="w-2.5 h-2.5" />
+                  <span>{raw}</span>
+                </Tag>
+              );
+            })()}
             {profile.twitterUsername && (
               <a 
                 href={`https://twitter.com/${profile.twitterUsername}`}
@@ -3847,12 +3856,21 @@ const ProfilePage = () => {
                     <span>{profile.playstationUsername}</span>
                   </a>
                 )}
-                {profile.discordUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('discord')}>
-                    <SiDiscord className="w-3 h-3" />
-                    <span>{profile.discordUsername}</span>
-                  </div>
-                )}
+                {profile.discordUsername && (() => {
+                  const raw = profile.discordUsername!;
+                  const url = raw.startsWith('http') ? raw : raw.includes('discord.gg') ? `https://${raw}` : raw.includes('/') ? `https://discord.gg/${raw.split('/').pop()}` : null;
+                  const Tag = url ? 'a' : 'div';
+                  return (
+                    <Tag
+                      {...(url ? { href: url, target: '_blank', rel: 'noopener noreferrer' } : {})}
+                      className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
+                      style={getBtnStyle('discord')}
+                    >
+                      <SiDiscord className="w-3 h-3" />
+                      <span>{raw}</span>
+                    </Tag>
+                  );
+                })()}
                 {profile.epicUsername && (
                   <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('epic')}>
                     <SiEpicgames className="w-3 h-3" />
