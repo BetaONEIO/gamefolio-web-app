@@ -3545,7 +3545,7 @@ const ProfilePage = () => {
         {/* Desktop Layout - Vertical stacked on left */}
         <div className="hidden md:flex flex-row pb-4 relative max-w-[90%] mx-auto" style={{ marginTop: '-112px' }}>
           {/* Left side - Profile info stacked vertically */}
-          <div className="flex flex-col flex-shrink-0 w-[520px]">
+          <div className="flex flex-col flex-shrink-0 w-[416px]">
             {/* Profile Picture positioned to overlap banner - explicit dimensions to ensure circular glow renders correctly */}
             <div className="relative flex-shrink-0 mb-4 h-56 w-56">
               {/* Circular glow - only show when NO SVG border is selected and no overlay is open */}
