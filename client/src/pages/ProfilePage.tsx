@@ -3660,16 +3660,20 @@ const ProfilePage = () => {
             {/* Display Name and Badges */}
             <div className="flex items-center gap-2 flex-nowrap mt-8">
               <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: isMacTheme ? 'none' : profileTextShadow, color: isWatermelonTheme ? '#ffffff' : isMacTheme ? '#1a1a1a' : isLightBackground ? accentColor : profileFontColor, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.displayName}</h1>
-              <VerificationBadge
-                isVerified={!!verificationBadgeData?.verificationBadge}
-                badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
-                badgeName={verificationBadgeData?.verificationBadge?.name}
-                size="xl"
-              />
-              <ModeratorBadge 
-                isModerator={(profile.role === "moderator" || profile.role === "admin") && !verificationBadgeData?.verificationBadge} 
-                size="xl" 
-              />
+              <span className="flex-shrink-0 inline-flex">
+                <VerificationBadge
+                  isVerified={!!verificationBadgeData?.verificationBadge}
+                  badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
+                  badgeName={verificationBadgeData?.verificationBadge?.name}
+                  size="xl"
+                />
+              </span>
+              <span className="flex-shrink-0 inline-flex">
+                <ModeratorBadge 
+                  isModerator={(profile.role === "moderator" || profile.role === "admin") && !verificationBadgeData?.verificationBadge} 
+                  size="xl" 
+                />
+              </span>
               {profile.userType && profile.showUserType !== false && (() => {
                 const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
                 return userTypes.map((type, index) => {
