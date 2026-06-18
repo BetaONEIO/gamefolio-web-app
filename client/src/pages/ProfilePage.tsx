@@ -5753,7 +5753,7 @@ const ProfilePage = () => {
         <img
           src={sipGifPath}
           className="fixed z-[60] pointer-events-none hidden md:block"
-          style={{ right: 0, bottom: 0, width: 528, objectFit: 'contain', filter: 'drop-shadow(0 0 18px rgba(255,255,255,0.71)) drop-shadow(0 0 45px rgba(255,255,255,0.45))' }}
+          style={{ right: 0, bottom: 0, width: 528, objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.4)) drop-shadow(0 0 25px rgba(255,255,255,0.22))' }}
           alt=""
         />
       </>,
