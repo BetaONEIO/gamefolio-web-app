@@ -3658,7 +3658,7 @@ const ProfilePage = () => {
             </div>
 
             {/* Display Name and Badges */}
-            <div className="flex items-center gap-2 flex-wrap mt-8">
+            <div className="flex items-center gap-2 flex-nowrap mt-8">
               <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: isMacTheme ? 'none' : profileTextShadow, color: isWatermelonTheme ? '#ffffff' : isMacTheme ? '#1a1a1a' : isLightBackground ? accentColor : profileFontColor, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
@@ -3670,7 +3670,6 @@ const ProfilePage = () => {
                 isModerator={(profile.role === "moderator" || profile.role === "admin") && !verificationBadgeData?.verificationBadge} 
                 size="xl" 
               />
-              <ProBadge selectedVerificationBadgeId={profile.selectedVerificationBadgeId} size="xl" />
               {profile.userType && profile.showUserType !== false && (() => {
                 const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
                 return userTypes.map((type, index) => {
