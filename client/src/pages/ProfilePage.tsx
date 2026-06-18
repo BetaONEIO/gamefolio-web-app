@@ -51,7 +51,8 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  Camera
+  Camera,
+  Shield
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -85,6 +86,7 @@ import { BannerLightbox, useBannerLightbox } from "@/components/ui/banner-lightb
 
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { useSignedUrl } from "@/hooks/use-signed-url";
+import { useBlockedUsers } from "@/hooks/use-blocked-users";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { formatDistance } from "date-fns";
@@ -251,6 +253,7 @@ const ProfilePage = () => {
   const { lightboxData, openLightbox, closeLightbox } = useProfilePictureLightbox();
   const { lightboxData: bannerLightboxData, openLightbox: openBannerLightbox, closeLightbox: closeBannerLightbox } = useBannerLightbox();
   const isOwnProfile = currentUser?.username === username;
+  const { isBlocked: isUserBlocked } = useBlockedUsers();
 
   // Mac the cat easter egg: discovering /mac grants a one-time 5,000 XP bonus.
   const isMacProfile = username?.toLowerCase() === "mac";
@@ -1484,6 +1487,28 @@ const ProfilePage = () => {
 
   if (!profile) {
     return <NotFound />;
+  }
+
+  if (!isOwnProfile && currentUser && isUserBlocked(profile.id)) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-secondary/20">
+        <div className="max-w-md w-full text-center space-y-6">
+          <img src="/attached_assets/Gamefolio logo copy.png" alt="Gamefolio" className="h-12 w-auto drop-shadow-lg mx-auto" />
+          <div className="flex justify-center">
+            <div className="h-20 w-20 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <Shield className="h-10 w-10 text-red-500" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold">@{username} is blocked</h1>
+            <p className="text-muted-foreground">You've blocked this user. Unblock them to view their profile and content.</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button onClick={() => setLocation("/")} variant="outline">Go Home</Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const accentColor = profile.accentColor || '#B7FF1A';

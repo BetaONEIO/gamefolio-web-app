@@ -167,6 +167,10 @@ const MessagesPage: React.FC = () => {
     refetchInterval: 5000,
   });
 
+  const isConvoBlocked = selectedConversation != null && Array.isArray(blockedUsers) && blockedUsers.some(
+    (blockedUser: any) => blockedUser.id === selectedConversation || blockedUser.userId === selectedConversation
+  );
+
   // Search users mutation
   const searchUsersMutation = useMutation({
     mutationFn: async (query: string) => {
@@ -916,39 +920,27 @@ const MessagesPage: React.FC = () => {
                             blocked.id === selectedConversation || blocked.userId === selectedConversation
                           );
 
-                          console.log(`Main view - User ${selectedConversation} blocked status:`, isBlocked);
-
                           if (isBlocked) {
                             return (
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-2 px-3 py-1 bg-red-100 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-md">
-                                  <Shield className="h-4 w-4 text-red-600" />
-                                  <span className="text-sm font-medium text-red-700 dark:text-red-400">User Blocked</span>
-                                </div>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-primary border-primary hover:bg-primary dark:hover:bg-primary/20"
-                                  onClick={() => handleUnblockUser(selectedConversation)}
-                                  disabled={unblockUserMutation.isPending}
-                                >
-                                  <UserCheck className="h-4 w-4 mr-2" />
-                                  {unblockUserMutation.isPending ? "Unblocking..." : "Unblock"}
-                                </Button>
-                              </div>
+                              <button
+                                className="p-1.5 rounded-md text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                                title={unblockUserMutation.isPending ? "Unblocking..." : "Unblock user"}
+                                onClick={() => handleUnblockUser(selectedConversation)}
+                                disabled={unblockUserMutation.isPending}
+                              >
+                                <ShieldOff className="h-4 w-4" />
+                              </button>
                             );
                           } else {
                             return (
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-red-600 border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                  <button
+                                    className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                                    title="Block user"
                                   >
-                                    <Shield className="h-4 w-4 mr-2" />
-                                    Block
-                                  </Button>
+                                    <Shield className="h-4 w-4" />
+                                  </button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent className="bg-navy border-navy-light">
                                   <AlertDialogHeader>
@@ -1021,39 +1013,27 @@ const MessagesPage: React.FC = () => {
                           blocked.id === conversation.userId || blocked.userId === conversation.userId
                         );
 
-                        console.log(`User ${conversation.userId} blocked status:`, isBlocked, "Blocked users:", blockedUsers);
-
                         if (isBlocked) {
                           return (
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-2 px-3 py-1 bg-red-100 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-md">
-                                <Shield className="h-4 w-4 text-red-600" />
-                                <span className="text-sm font-medium text-red-700 dark:text-red-400">User Blocked</span>
-                              </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-primary border-primary hover:bg-primary dark:hover:bg-primary/20"
-                                onClick={() => handleUnblockUser(conversation.userId)}
-                                disabled={unblockUserMutation.isPending}
-                              >
-                                <UserCheck className="h-4 w-4 mr-2" />
-                                {unblockUserMutation.isPending ? "Unblocking..." : "Unblock"}
-                              </Button>
-                            </div>
+                            <button
+                              className="p-1.5 rounded-md text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                              title={unblockUserMutation.isPending ? "Unblocking..." : "Unblock user"}
+                              onClick={() => handleUnblockUser(conversation.userId)}
+                              disabled={unblockUserMutation.isPending}
+                            >
+                              <ShieldOff className="h-4 w-4" />
+                            </button>
                           );
                         } else {
                           return (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-red-600 border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                <button
+                                  className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                                  title="Block user"
                                 >
-                                  <Shield className="h-4 w-4 mr-2" />
-                                  Block
-                                </Button>
+                                  <Shield className="h-4 w-4" />
+                                </button>
                               </AlertDialogTrigger>
                               <AlertDialogContent className="bg-navy border-navy-light">
                                 <AlertDialogHeader>
@@ -1087,7 +1067,7 @@ const MessagesPage: React.FC = () => {
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 px-4 py-4 pr-5">
+            <ScrollArea className={`flex-1 px-4 py-4 pr-5 transition-opacity ${isConvoBlocked ? 'opacity-30 pointer-events-none select-none' : ''}`}>
               {loadingMessages ? (
                 <div className="space-y-4">
                   {[...Array(5)].map((_, i) => (
@@ -1213,15 +1193,20 @@ const MessagesPage: React.FC = () => {
               <form onSubmit={handleSendMessage}>
                 <div className="flex gap-2 items-center">
                   {(() => {
-                    const isBlocked = blockedUsers.some(
-                      (blockedUser: any) => blockedUser.id === selectedConversation || blockedUser.userId === selectedConversation
-                    );
-
-                    if (isBlocked) {
+                    if (isConvoBlocked) {
                       return (
-                        <div className="flex-1 text-center py-3 text-muted-foreground">
-                          <Shield className="h-5 w-5 mx-auto mb-1" />
-                          <p className="text-sm">Cannot message a blocked user</p>
+                        <div className="flex-1 flex items-center gap-3 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20">
+                          <Shield className="h-4 w-4 text-red-500 flex-shrink-0" />
+                          <p className="text-sm text-muted-foreground flex-1">You've blocked this user</p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-shrink-0 h-8 text-xs border-red-500/30 text-red-400 hover:bg-red-500/10"
+                            onClick={() => selectedConversation && handleUnblockUser(selectedConversation)}
+                            disabled={unblockUserMutation.isPending}
+                          >
+                            {unblockUserMutation.isPending ? "..." : "Unblock"}
+                          </Button>
                         </div>
                       );
                     }
