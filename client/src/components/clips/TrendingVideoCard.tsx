@@ -76,7 +76,7 @@ const TrendingVideoCard = ({ clip }: TrendingVideoCardProps) => {
         />
 
         {/* Hover play */}
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20 pointer-events-none">
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20 pointer-events-none">
           <div className="bg-primary/90 rounded-full p-3 transform scale-90 group-hover:scale-100 transition-transform duration-300">
             <Play className="h-6 w-6 text-white fill-white" />
           </div>

@@ -121,7 +121,10 @@ const LatestReelsPage = lazyWithRecovery(() => import("./pages/LatestReelsPage")
 const LatestClipsPage = lazyWithRecovery(() => import("./pages/LatestClipsPage"));
 const LatestScreenshotsPage = lazyWithRecovery(() => import("@/pages/LatestScreenshotsPage"));
 const InvitePage = lazyWithRecovery(() => import("./pages/InvitePage"));
+const ReferralInvitePage = lazyWithRecovery(() => import("./pages/ReferralInvitePage"));
 const RegisterPage = lazyWithRecovery(() => import("./pages/RegisterPage"));
+const NotificationsPage = lazyWithRecovery(() => import("./pages/NotificationsPage"));
+const FollowersPage = lazyWithRecovery(() => import("./pages/FollowersPage"));
 const NotFound = lazyWithRecovery(() => import("@/pages/not-found"));
 const AdminPage = lazyWithRecovery(() => import("./pages/AdminPage"));
 const AdminContentFilter = lazyWithRecovery(() => import("./pages/AdminContentFilter"));
@@ -362,10 +365,6 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
-      {/* Simple green gradient effect */}
-      <div className="fixed top-0 right-0 w-full h-full bg-gradient-to-br from-transparent via-transparent to-primary/5 pointer-events-none"></div>
-      <div className="fixed bottom-0 left-0 w-full h-full bg-gradient-to-tr from-transparent via-transparent to-primary/5 pointer-events-none"></div>
-
       <Header />
 
       {/* Activity Scroll Banner - Only show on home page */}
@@ -415,7 +414,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
         <main
           ref={mainScrollRef}
-          className={`flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide ${!isMobile ? 'ml-64' : ''}`}
+          className={`flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide bg-background ${!isMobile ? 'ml-64' : ''}`}
           style={{
             ...(isMobile && keyboardHeight > 0 ? { paddingBottom: `${keyboardHeight}px` } : {}),
             overflowAnchor: 'none',
@@ -488,6 +487,7 @@ function Router() {
           <Route path="/browse/games/categories" component={GameCategoriesPage} />
           <Route path="/leaderboard" component={LeaderboardPage} />
           <ProtectedRoute path="/messages" component={MessagesPage} />
+          <ProtectedRoute path="/notifications" component={NotificationsPage} />
           <Route path="/latest-reels" component={LatestReelsPage} />
           <Route path="/latest-clips" component={LatestClipsPage} />
           <Route path="/latest-screenshots" component={LatestScreenshotsPage} />
@@ -508,6 +508,7 @@ function Router() {
           <Route path="/privacy" component={PrivacyPage} />
           <Route path="/contact" component={ContactPage} />
           <Route path="/help" component={HelpPage} />
+          <Route path="/invite/:code" component={ReferralInvitePage} />
           <Route path="/invite" component={InvitePage} />
           <Route path="/register" component={RegisterPage} />
           {/* Web3 routes: full feature on web; branded redirect to app.gamefolio.com on native. */}
@@ -563,6 +564,9 @@ function Router() {
           {/* Public view routes for shareable content */}
           <Route path="/view/screenshot/:id" component={ViewContentPage} />
           <Route path="/view/:id" component={ViewContentPage} />
+
+          {/* Followers / following full-page view (single route, tab via ?tab=following) */}
+          <Route path="/profile/:username/followers" component={FollowersPage} />
 
           {/* Custom profile link route - matches gamefolio.gg/username pattern */}
           {/* General profile routes - MUST be at bottom after all specific routes */}

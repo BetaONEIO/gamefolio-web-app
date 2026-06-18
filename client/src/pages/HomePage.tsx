@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClipWithUser, Game } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
+import { useBlockedUsers } from "@/hooks/use-blocked-users";
 import { ChevronRight, ChevronLeft, Video, Plus, Camera, Image, Eye } from "lucide-react";
 import BannerImage from "@assets/Untitled (1920 x 1080 px).png";
 import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
@@ -67,6 +68,7 @@ const HomePage = () => {
   // Get current user from auth context
   const { user } = useAuth();
   const userId = user?.id;
+  const { blockedUserIds } = useBlockedUsers();
   const { openClipDialog } = useClipDialog();
   const isMobile = useMobile();
   const { toast } = useToast();
@@ -333,7 +335,7 @@ const HomePage = () => {
   });
 
   // Latest screenshots — sorted newest first
-  const { data: latestScreenshots, isLoading: isLoadingLatestScreenshots } = useQuery<any[]>({
+  const { data: latestScreenshotsRaw, isLoading: isLoadingLatestScreenshots } = useQuery<any[]>({
     queryKey: ['/api/screenshots/latest'],
     queryFn: async () => {
       const response = await fetch('/api/screenshots/latest?limit=20', { credentials: 'include' });
@@ -368,29 +370,35 @@ const HomePage = () => {
     gcTime: 0,
   });
 
-  // Latest clips (already sorted newest first by the backend)
-  const latestClips = latestClipsRaw ?? [];
+  // Filter screenshots from blocked users
+  const latestScreenshots = useMemo(() =>
+    (latestScreenshotsRaw ?? []).filter((s: any) => !blockedUserIds.has(s.userId)),
+    [latestScreenshotsRaw, blockedUserIds]
+  );
 
-  // Latest reels (already sorted newest first by the backend)
-  const latestReels = latestReelsRaw ?? [];
-  
+  // Latest clips (already sorted newest first by the backend), with blocked users filtered out
+  const latestClips = useMemo(() =>
+    (latestClipsRaw ?? []).filter(c => !blockedUserIds.has(c.userId)),
+    [latestClipsRaw, blockedUserIds]
+  );
+
+  // Latest reels (already sorted newest first by the backend), with blocked users filtered out
+  const latestReels = useMemo(() =>
+    (latestReelsRaw ?? []).filter(c => !blockedUserIds.has(c.userId)),
+    [latestReelsRaw, blockedUserIds]
+  );
+
   // Filter user clips by game name instead of ID
   const filteredClips = useMemo(() => {
     if (!userClips) return [];
+    const nonBlocked = userClips.filter(clip => !blockedUserIds.has(clip.userId));
     
     if (selectedGameFilter && selectedGameFilter !== 'all') {
-      // Filter by game name - convert both to lowercase and slugified format for comparison
-      return userClips.filter(clip => {
-        // Get the game name from clip data
+      return nonBlocked.filter(clip => {
         const gameName = clip.game?.name || '';
-        
-        // Convert to lowercase slug format (replace spaces and special chars with dashes)
         const gameSlug = gameName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        
-        // Compare with selected filter
         return gameSlug.includes(selectedGameFilter) || 
                selectedGameFilter.includes(gameSlug) ||
-               // Special case for Minecraft
                (selectedGameFilter === 'minecraft' && 
                 (gameName.toLowerCase().includes('minecraft') || 
                  clip.gameId === 7 || 
@@ -398,16 +406,16 @@ const HomePage = () => {
       });
     }
     
-    return userClips;
-  }, [userClips, selectedGameFilter]);
+    return nonBlocked;
+  }, [userClips, selectedGameFilter, blockedUserIds]);
 
   const popularClips = useMemo(() => {
     if (!userClips) return [];
-    // Sort by most views
-    return [...userClips].sort((a, b) => 
-      (b.views || 0) - (a.views || 0)
-    ).slice(0, 4);
-  }, [userClips]);
+    return [...userClips]
+      .filter(c => !blockedUserIds.has(c.userId))
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .slice(0, 4);
+  }, [userClips, blockedUserIds]);
   
   const isLoadingClips = isLoadingLatestClips || isLoadingLatestReels;
 

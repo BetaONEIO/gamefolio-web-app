@@ -86,7 +86,7 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
         />
 
         {/* Hover play overlay */}
-        <div className="absolute inset-0 z-20 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center pointer-events-none">
           <div className="bg-primary/90 rounded-full p-3 transform scale-90 group-hover:scale-100 transition-transform duration-300 backdrop-blur-sm">
             <Play className="h-6 w-6 text-white fill-white" />
           </div>

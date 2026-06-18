@@ -1215,12 +1215,12 @@ export default function OnboardingFlow({
         const toggleUserType = (typeId: string) => {
           if (userTypes.includes(typeId)) {
             setUserTypes(userTypes.filter(t => t !== typeId));
-          } else if (userTypes.length < 2) {
+          } else if (userTypes.length < 3) {
             setUserTypes([...userTypes, typeId]);
           } else {
             toast({
               title: "Maximum reached",
-              description: "You can only select up to 2 options. Deselect one first.",
+              description: "You can only select up to 3 options. Deselect one first.",
               variant: "default",
               duration: 2500,
             });
@@ -1241,7 +1241,7 @@ export default function OnboardingFlow({
               </Tooltip>
             </div>
             <p className="text-gray-300 mb-6">
-              Select up to 2 that best describe you - this helps us customize your experience on Gamefolio
+              Select up to 3 that best describe you - this helps us customize your experience on Gamefolio
             </p>
             
             <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1257,7 +1257,7 @@ export default function OnboardingFlow({
               ].map((type) => {
                 const IconComponent = type.icon;
                 const isSelected = userTypes.includes(type.id);
-                const isLocked = !isSelected && userTypes.length >= 2;
+                const isLocked = !isSelected && userTypes.length >= 3;
                 
                 return (
                   <button

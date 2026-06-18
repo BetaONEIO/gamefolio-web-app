@@ -309,7 +309,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     thumbnailUrl={reel.thumbnailUrl || undefined}
                     autoPlay={index === currentIndex && isPlaying}
                     className="w-full h-full"
-                    objectFit="contain"
+                    objectFit="cover"
                     clipId={reel.id}
                     disableAspectRatio={true}
                     hideControls={true}

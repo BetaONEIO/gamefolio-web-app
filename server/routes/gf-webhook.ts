@@ -7,7 +7,7 @@ import { getUncachableStripeClient, getStripeSecretKey } from '../stripeClient';
 import { transferGfTokens } from '../gf-token-service';
 import { EmailService } from '../email-service';
 import { notifyProPurchase } from '../telegram-notify';
-import { provisionProSubscription } from './pro-subscription';
+import { provisionProSubscription, grantGiftPro } from './pro-subscription';
 import Stripe from 'stripe';
 
 const router = Router();
@@ -167,6 +167,18 @@ router.post('/api/stripe/webhook',
           );
         } catch (error) {
           console.error('[GF Webhook] Error processing order delivery:', error);
+        }
+      }
+
+      // Gift Pro — one-time hosted checkout that grants Pro to a recipient.
+      if (session.metadata?.type === 'gift_pro' && session.metadata?.gift_for_user_id) {
+        try {
+          const recipientId = parseInt(session.metadata.gift_for_user_id, 10);
+          const plan: 'monthly' | 'yearly' = session.metadata.plan === 'yearly' ? 'yearly' : 'monthly';
+          await grantGiftPro({ recipientId, plan });
+          console.log(`[GF Webhook] Granted Gift Pro (${plan}) to user ${recipientId} from user ${session.metadata.gifter_user_id}`);
+        } catch (error) {
+          console.error('[GF Webhook] Error processing gift_pro:', error);
         }
       }
 

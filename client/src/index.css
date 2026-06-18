@@ -483,12 +483,13 @@ video:focus {
   html,
   body {
     overscroll-behavior-y: none;
+    background-color: #0B1218;
   }
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
     font-family: 'Space Grotesk', sans-serif;
-    background-color: #081017 !important;
+    background-color: #0B1218 !important;
   }
 
   /* Prevent iOS auto-zoom on input focus (triggers when font-size < 16px) */

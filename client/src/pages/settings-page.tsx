@@ -74,13 +74,12 @@ const EMOJI_CATEGORIES = [
 ];
 
 // Gamer "tag" options shown in Profile & Appearance so users can change the
-// type assigned during onboarding. Excludes "streamer" — that's controlled by
-// the dedicated live-streaming toggle further down the page. Ids/labels mirror
-// the onboarding flow (client/src/components/auth/onboarding-flow.tsx).
+// type assigned during onboarding. Ids/labels mirror the onboarding flow.
 const GAMER_TAG_OPTIONS = [
   { id: "gamer", label: "Gamer", icon: Gamepad2 },
   { id: "professional_gamer", label: "Pro Gamer", icon: Trophy },
   { id: "content_creator", label: "Content Creator", icon: Upload },
+  { id: "streamer", label: "Streamer", icon: Video },
   { id: "indie_developer", label: "Indie Developer", icon: Code },
   { id: "viewer", label: "Viewer", icon: Eye },
   { id: "filthy_casual", label: "Filthy Casual", icon: Coffee },
@@ -473,11 +472,27 @@ function getPlatformUrl(key: PlatformKey, username: string): string | null {
   if (!u) return null;
   switch (key) {
     case 'steamUsername': return `steamcommunity.com/id/${u}`;
+    case 'xboxUsername': return `account.xbox.com/en-US/profile?gamertag=${encodeURIComponent(u)}`;
     case 'playstationUsername': return `psnprofiles.com/${u}`;
     case 'twitterUsername': return `x.com/${u}`;
     case 'youtubeUsername': return `youtube.com/@${u}`;
     case 'rumbleUsername': return `rumble.com/user/${u}`;
     default: return null;
+  }
+}
+
+function getPlatformMaxLength(key: PlatformKey): number {
+  switch (key) {
+    case 'steamUsername': return 32;
+    case 'xboxUsername': return 15;
+    case 'playstationUsername': return 16;
+    case 'discordUsername': return 32;
+    case 'epicUsername': return 16;
+    case 'nintendoUsername': return 10;
+    case 'twitterUsername': return 15;
+    case 'youtubeUsername': return 30;
+    case 'rumbleUsername': return 50;
+    default: return 50;
   }
 }
 
@@ -489,6 +504,11 @@ function validatePlatformInput(key: PlatformKey, username: string): string | nul
       if (u.length < 2) return 'Must be at least 2 characters';
       if (u.length > 32) return 'Must be 32 characters or fewer';
       if (!/^[a-zA-Z0-9_-]+$/.test(u)) return 'Only letters, numbers, _ and - allowed';
+      return null;
+    case 'xboxUsername':
+      if (u.length < 1) return 'Must be at least 1 character';
+      if (u.length > 15) return 'Must be 15 characters or fewer';
+      if (!/^[a-zA-Z0-9 ]+$/.test(u)) return 'Only letters, numbers and spaces allowed';
       return null;
     case 'playstationUsername':
       if (u.length < 3) return 'Must be at least 3 characters';
@@ -977,26 +997,29 @@ export default function SettingsPage() {
   const [primaryUserType, setPrimaryUserType] = useState<string>(initPrimaryType);
   const [isStreamingEnabled, setIsStreamingEnabled] = useState<boolean>(initIsStreamer);
 
-  // Gamer tag selection (excludes the "streamer" tag — handled by its own toggle).
-  // Stored as a comma-separated string in primaryUserType; capped at 2 to match
-  // the onboarding flow. Only recognised option ids count toward the selection —
-  // legacy/foreign values (e.g. Title-Case data from older accounts) are ignored
-  // so they can never lock the grid, and are normalised away the moment the user
-  // edits their tags.
+  // Gamer tag selection. Capped at 2 to match the onboarding flow. "streamer"
+  // is stored separately in isStreamingEnabled but displayed in this grid so
+  // the user can pick it from one place. Only recognised option ids count toward
+  // the selection — legacy/foreign values are ignored and normalised on save.
   const KNOWN_GAMER_TAG_IDS = GAMER_TAG_OPTIONS.map(o => o.id);
-  const selectedGamerTags = primaryUserType
-    .split(',')
-    .map(t => t.trim())
-    .filter(t => KNOWN_GAMER_TAG_IDS.includes(t));
+  const selectedGamerTags = [
+    ...primaryUserType.split(',').map(t => t.trim()).filter(t => KNOWN_GAMER_TAG_IDS.includes(t) && t !== 'streamer'),
+    ...(isStreamingEnabled ? ['streamer'] : []),
+  ];
   const toggleGamerTag = (id: string) => {
+    if (id === 'streamer') {
+      // At cap and trying to add — block it
+      if (!isStreamingEnabled && selectedGamerTags.length >= 3) return;
+      setIsStreamingEnabled(v => !v);
+      return;
+    }
     const next = selectedGamerTags.includes(id)
       ? selectedGamerTags.filter(t => t !== id)
-      : selectedGamerTags.length < 2
+      : selectedGamerTags.length < 3
         ? [...selectedGamerTags, id]
         : selectedGamerTags;
-    // Persist in canonical GAMER_TAG_OPTIONS order so the saved string is
-    // deterministic regardless of the order the user clicked the chips.
-    setPrimaryUserType(KNOWN_GAMER_TAG_IDS.filter(t => next.includes(t)).join(','));
+    // Persist in canonical GAMER_TAG_OPTIONS order (excluding streamer, tracked separately).
+    setPrimaryUserType(KNOWN_GAMER_TAG_IDS.filter(t => t !== 'streamer' && next.includes(t)).join(','));
   };
   const [streamPlatform, setStreamPlatform] = useState<string>((user as any)?.streamPlatform || 'twitch');
   const [streamChannelName, setStreamChannelName] = useState<string>((user as any)?.streamChannelName || '');
@@ -2663,17 +2686,17 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-between">
                     <Label>Gamer Tag</Label>
                     <span className="text-xs text-muted-foreground">
-                      {selectedGamerTags.length}/2 selected
+                      {selectedGamerTags.length}/3 selected
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Change the tag you picked during onboarding. Choose up to two — they
+                    Change the tag you picked during onboarding. Choose up to three — they
                     appear on your profile.
                   </p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {GAMER_TAG_OPTIONS.map((opt) => {
                       const isSelected = selectedGamerTags.includes(opt.id);
-                      const atMax = selectedGamerTags.length >= 2 && !isSelected;
+                      const atMax = selectedGamerTags.length >= 3 && !isSelected;
                       const Icon = opt.icon;
                       return (
                         <button
@@ -3996,6 +4019,7 @@ export default function SettingsPage() {
                                   value={platformHandle}
                                   onChange={(e) => setPlatformHandle(sanitizePlatformInput(platform.key, e.target.value))}
                                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPlatform(); } }}
+                                  maxLength={getPlatformMaxLength(platform.key)}
                                   autoFocus
                                   className={platformHandle.trim() && validatePlatformInput(platform.key, platformHandle) ? 'border-red-500 focus-visible:ring-red-500' : ''}
                                 />

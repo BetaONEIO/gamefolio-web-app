@@ -2699,6 +2699,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   })();
 
+  // Public endpoint — look up a user by referral code for the invite landing page
+  app.get("/api/invite/:code", async (req, res) => {
+    try {
+      const code = (req.params.code as string).trim().toUpperCase();
+      const user = await storage.getUserByReferralCode(code);
+      if (!user) return res.status(404).json({ message: "Invite not found" });
+      return res.json({
+        username: user.username,
+        displayName: user.displayName || null,
+        avatarUrl: user.avatarUrl || null,
+        referralCode: user.referralCode,
+      });
+    } catch (error) {
+      console.error("Error fetching invite:", error);
+      return res.status(500).json({ message: "Failed to fetch invite" });
+    }
+  });
+
   app.get("/api/user/referral-stats", authMiddleware, async (req, res) => {
     try {
       const userId = (req.user as any).id;
@@ -2709,7 +2727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         referralCount: stats.referralCount,
         totalXpEarned: stats.totalXpEarned,
         referralCodeCustomized: stats.referralCodeCustomized,
-        referralLink: stats.referralCode ? `${appUrl}/auth?ref=${stats.referralCode}` : null,
+        referralLink: stats.referralCode ? `${appUrl}/invite/${stats.referralCode}` : null,
       });
     } catch (error) {
       console.error('Error fetching referral stats:', error);
@@ -8666,17 +8684,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If user is not private, follow immediately
       await storage.createFollow({followerId, followingId});
-      await NotificationService.createFollowNotification(followingId, followerId);
 
-      // Award follow_received XP to the person being followed
-      await LeaderboardService.awardCustomPoints(
-        followingId,
-        'follow_received',
-        50,
-        `Received a new follower`
-      );
-
+      // Respond immediately — notification + XP are fire-and-forget
       res.json({ status: 'following', message: 'User followed successfully' });
+
+      // Background side-effects (don't block the response)
+      NotificationService.createFollowNotification(followingId, followerId).catch(() => {});
+      LeaderboardService.awardCustomPoints(followingId, 'follow_received', 50, 'Received a new follower').catch(() => {});
     } catch (err) {
       console.error("Error following user:", err);
       return res.status(500).json({ message: "Error following user" });
