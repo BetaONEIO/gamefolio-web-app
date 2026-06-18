@@ -5749,7 +5749,7 @@ const ProfilePage = () => {
         <img
           src={sipGifPath}
           className="fixed z-[75] pointer-events-none md:hidden"
-          style={{ right: 0, bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))', width: 120, objectFit: 'contain' }}
+          style={{ right: 0, bottom: 'calc(3.5rem - 18px + env(safe-area-inset-bottom, 0px))', width: 120, objectFit: 'contain' }}
           alt=""
         />
         {/* Desktop: pinned to bottom-right corner of viewport */}
