@@ -34,6 +34,8 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
     isCancelled: boolean;
     proSubscriptionEndDate: string | null;
     proSubscriptionType: string | null;
+    subscriptionCurrency: string | null;
+    subscriptionAmount: number | null;
   }>({
     queryKey: ["/api/subscription/status"],
     queryFn: async () => {
@@ -50,7 +52,13 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
   const subscriptionType = user?.proSubscriptionType || "monthly";
   const isYearly = subscriptionType?.toLowerCase().includes("year");
   const planLabel = isYearly ? "Pro Annual Plan" : "Pro Monthly Plan";
-  const priceLabel = isYearly ? "£30.00 / year" : "£2.99 / month";
+  // Prefer the real billed currency/amount from Stripe; fall back to the
+  // historical GBP labels when the live subscription price isn't available.
+  const subAmount = subscriptionStatus?.subscriptionAmount;
+  const subCurrency = subscriptionStatus?.subscriptionCurrency;
+  const priceLabel = (subAmount != null && subCurrency)
+    ? `${new Intl.NumberFormat("en-US", { style: "currency", currency: subCurrency.toUpperCase() }).format(subAmount)} / ${isYearly ? "year" : "month"}`
+    : (isYearly ? "£30.00 / year" : "£2.99 / month");
 
   const rawEndDate = subscriptionStatus?.proSubscriptionEndDate
     || proEntitlement?.expirationDate

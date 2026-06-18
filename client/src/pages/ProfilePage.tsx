@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
+const sipGifPath = '/attached_assets/Sip-Transparent_1781777014668.gif';
 import { useParams, Link, useLocation } from "wouter";
+import { CRYPTO_FEATURES_ENABLED } from "@/lib/crypto-features";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { openExternal } from "@/lib/platform";
@@ -50,7 +53,8 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  Camera
+  Camera,
+  Shield
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -77,6 +81,7 @@ import { FireButton } from "@/components/engagement/FireButton";
 import { ModeratorIcon } from "@/components/ui/moderator-icon";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { PartnerBadge } from "@/components/ui/partner-badge";
+import { ProBadge } from "@/components/ui/pro-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { useProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
@@ -84,6 +89,7 @@ import { BannerLightbox, useBannerLightbox } from "@/components/ui/banner-lightb
 
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { useSignedUrl } from "@/hooks/use-signed-url";
+import { useBlockedUsers } from "@/hooks/use-blocked-users";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { formatDistance } from "date-fns";
@@ -91,7 +97,6 @@ import { cn } from "@/lib/utils";
 import NotFound from "./not-found";
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET, NFT_CONTRACT_ADDRESS } from "@shared/contracts";
-import { OutroPanel } from "@/components/profile/OutroPanel";
 
 const GameSelectionDialog = React.lazy(() => import("@/components/games/GameSelectionDialog"));
 const CommentSection = React.lazy(() => import("@/components/clips/CommentSection"));
@@ -251,6 +256,7 @@ const ProfilePage = () => {
   const { lightboxData, openLightbox, closeLightbox } = useProfilePictureLightbox();
   const { lightboxData: bannerLightboxData, openLightbox: openBannerLightbox, closeLightbox: closeBannerLightbox } = useBannerLightbox();
   const isOwnProfile = currentUser?.username === username;
+  const { isBlocked: isUserBlocked } = useBlockedUsers();
 
   // Mac the cat easter egg: discovering /mac grants a one-time 5,000 XP bonus.
   const isMacProfile = username?.toLowerCase() === "mac";
@@ -269,6 +275,12 @@ const ProfilePage = () => {
   // Profile theme scope ref for dynamic styling
   const profileThemeScopeRef = useRef<HTMLDivElement>(null);
   const neoCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Bat theme cursor-following state
+  const batCursorRef = useRef({ x: typeof window !== 'undefined' ? window.innerWidth / 2 : 400, y: 200 });
+  const batFollowerRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const batFollowerPositionsRef = useRef<{x: number, y: number}[]>([]);
+  const batRafRef = useRef<number | null>(null);
 
   // Screenshot lightbox state
   const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null);
@@ -291,7 +303,7 @@ const ProfilePage = () => {
   
   // Profile section tab state (stats/bio vs collection)
   const [profileSectionTab, setProfileSectionTab] = useState<'stats' | 'collection'>('stats');
-  const [streamExpanded, setStreamExpanded] = useState(false);
+  const [expandedStreams, setExpandedStreams] = useState<Record<string, boolean>>({});
   const [selectedProfileNft, setSelectedProfileNft] = useState<OwnedNft | null>(null);
 
   // Screenshot action handlers
@@ -1154,16 +1166,65 @@ const ProfilePage = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [activeTab]);
 
+  // Bat theme cursor-following animation
+  useEffect(() => {
+    const accent = profile?.accentColor?.toLowerCase();
+    const bg = profile?.backgroundColor?.toLowerCase();
+    const isBat = accent === '#ff8c00' && (bg === '#111111' || bg === '#0a0010');
+    if (!isBat) return;
+
+    const COUNT = 5;
+    if (batFollowerPositionsRef.current.length === 0) {
+      batFollowerPositionsRef.current = Array.from({ length: COUNT }, (_, i) => ({
+        x: (window.innerWidth / (COUNT + 1)) * (i + 1),
+        y: 120 + i * 30,
+      }));
+    }
+
+    const onMouseMove = (e: MouseEvent) => {
+      batCursorRef.current = { x: e.clientX, y: e.clientY };
+    };
+    window.addEventListener('mousemove', onMouseMove);
+
+    const speeds   = [0.016, 0.024, 0.010, 0.019, 0.013];
+    const offsets  = [
+      { x:  0,  y:  0 },
+      { x: 38,  y: -22 },
+      { x: -32, y: 18 },
+      { x: 58,  y: 14 },
+      { x: -48, y: -28 },
+    ];
+
+    const animate = () => {
+      const cx = batCursorRef.current.x;
+      const cy = batCursorRef.current.y;
+      batFollowerPositionsRef.current.forEach((pos, i) => {
+        pos.x += (cx + offsets[i].x - pos.x) * speeds[i];
+        pos.y += (cy + offsets[i].y - pos.y) * speeds[i];
+        const el = batFollowerRefs.current[i];
+        if (el) {
+          el.style.left = `${pos.x}px`;
+          el.style.top  = `${pos.y}px`;
+        }
+      });
+      batRafRef.current = requestAnimationFrame(animate);
+    };
+    batRafRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      if (batRafRef.current) cancelAnimationFrame(batRafRef.current);
+      batRafRef.current = null;
+    };
+  }, [profile?.accentColor, profile?.backgroundColor]);
+
   // Memoize banner style to prevent unnecessary re-renders
   const resolvedBannerUrl = bannerSignedUrl || profile?.bannerUrl;
   const bannerStyle = useMemo(() => ({
-    backgroundImage: resolvedBannerUrl 
-      ? `url(${resolvedBannerUrl})` 
-      : `linear-gradient(135deg, ${profile?.primaryColor || '#0B1218'}, ${profile?.accentColor || '#B7FF1A'}, transparent)`,
-    backgroundColor: resolvedBannerUrl ? 'transparent' : (profile?.primaryColor || '#0B1218'),
+    backgroundImage: resolvedBannerUrl ? `url(${resolvedBannerUrl})` : 'none',
+    backgroundColor: profile?.primaryColor || '#0B1218',
     backgroundSize: 'cover',
     backgroundPosition: 'center',
-    boxShadow: 'inset 0 -10px 20px rgba(0, 0, 0, 0.2)',
   }), [resolvedBannerUrl, profile?.primaryColor, profile?.accentColor]);
 
   // DISABLED: Profile-scoped theme colors - now using global theme system
@@ -1431,7 +1492,32 @@ const ProfilePage = () => {
     return <NotFound />;
   }
 
-  const accentColor = profile.accentColor || '#B7FF1A';
+  if (!isOwnProfile && currentUser && isUserBlocked(profile.id)) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-secondary/20">
+        <div className="max-w-md w-full text-center space-y-6">
+          <img src="/attached_assets/Gamefolio logo copy.png" alt="Gamefolio" className="h-12 w-auto drop-shadow-lg mx-auto" />
+          <div className="flex justify-center">
+            <div className="h-20 w-20 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <Shield className="h-10 w-10 text-red-500" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold">@{username} is blocked</h1>
+            <p className="text-muted-foreground">You've blocked this user. Unblock them to view their profile and content.</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button onClick={() => setLocation("/")} variant="outline">Go Home</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const _rawAccent = profile.accentColor || '#B7FF1A';
+  const accentColor = /^#[0-9a-fA-F]{3}$/.test(_rawAccent)
+    ? `#${_rawAccent[1]}${_rawAccent[1]}${_rawAccent[2]}${_rawAccent[2]}${_rawAccent[3]}${_rawAccent[3]}`
+    : _rawAccent;
   const backgroundColor = profile.backgroundColor || '#121F2B';
   const cardColor = profile.cardColor || '#1E3A8A';
 
@@ -1455,8 +1541,75 @@ const ProfilePage = () => {
   const isForestTheme = !isLightBackground && accentColor?.toLowerCase() === '#b7ff1a' && backgroundColor?.toLowerCase() === '#0a2f1f';
   const isWatermelonTheme = accentColor?.toLowerCase() === '#b7ff1a' && backgroundColor?.toLowerCase() === '#ff4d6d';
   const isElectricTheme = !isLightBackground && accentColor?.toLowerCase() === '#ffe033' && backgroundColor?.toLowerCase() === '#1a1200';
+  const isBatTheme = !isLightBackground && accentColor?.toLowerCase() === '#ff8c00' && (backgroundColor?.toLowerCase() === '#111111' || backgroundColor?.toLowerCase() === '#0a0010');
+  const isMayhemTheme = !isLightBackground && accentColor?.toLowerCase() === '#00dfff';
 
-  const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isLightBackground;
+  const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isBatTheme && !isMayhemTheme && !isLightBackground;
+
+  const userTagStyle: React.CSSProperties = isLightBackground ? {
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    color: '#ff2056',
+    border: '0.556px solid #fda5d5',
+    boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+  } : isMayhemTheme ? {
+    background: 'linear-gradient(135deg, #00DFFF 0%, #9B30E8 50%, #FF0069 100%)',
+    color: '#ffffff',
+    border: '1px solid rgba(0,223,255,0.5)',
+    boxShadow: '0 0 10px rgba(0,223,255,0.3)',
+  } : isCyberpunkTheme ? {
+    backgroundColor: '#00b8db',
+    color: '#020617',
+    border: '1px solid #00d3f2',
+    fontFamily: "'Orbitron', sans-serif",
+  } : isNeoTheme ? {
+    backgroundColor: '#003300',
+    color: '#00ff41',
+    border: '1px solid rgba(0,255,65,0.47)',
+  } : isZombieTheme ? {
+    backgroundColor: 'rgba(154,230,0,0.9)',
+    color: '#3c6300',
+    border: '1px solid rgba(154,230,0,0.4)',
+  } : isBlocksTheme ? {
+    backgroundColor: '#B7FF1A',
+    color: '#1a1a1a',
+    border: '3px solid #1a1a1a',
+    fontFamily: "'Press Start 2P', monospace",
+    boxShadow: '3px 3px 0 #000',
+    fontSize: '6px',
+  } : isForestTheme ? {
+    backgroundColor: '#1d3932',
+    color: '#e8d5b7',
+    border: '1px solid rgba(164,118,66,0.4)',
+  } : isGothicTheme ? {
+    background: 'linear-gradient(135deg, #3d0070 0%, #1e053a 100%)',
+    color: '#c27aff',
+    border: '1px solid rgba(194,122,255,0.33)',
+    boxShadow: '0 0 8px rgba(194,122,255,0.13)',
+  } : isCartoonTheme ? {
+    background: 'linear-gradient(135deg, #ff5e5e 0%, #ff7a5e 100%)',
+    color: '#ffffff',
+    border: '3px solid #1d1d1f',
+    boxShadow: '3px 3px 0 #1d1d1f',
+    fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif",
+    fontWeight: '800',
+  } : isWatermelonTheme ? {
+    backgroundColor: '#1d3932',
+    color: '#ffb3c1',
+    border: '3px solid #1d3932',
+  } : isElectricTheme ? {
+    backgroundColor: '#ffe033',
+    color: '#1a1200',
+    border: '1px solid rgba(255,224,51,0.4)',
+  } : isBatTheme ? {
+    backgroundColor: '#ff8c00',
+    color: '#000000',
+    border: '1px solid rgba(255,140,0,0.4)',
+  } : {
+    backgroundColor: accentColor,
+    color: '#000000',
+    border: `1px solid ${accentColor}`,
+    boxShadow: `0 0 8px ${accentColor}44`,
+  };
 
   const platformBtnStyle = isWatermelonTheme
     ? { backgroundColor: '#ffb3c1', color: '#0d1a12', border: '3px solid #1d3932', borderRadius: '9999px' }
@@ -1480,6 +1633,8 @@ const ProfilePage = () => {
               ? { backgroundColor: 'rgba(20,2,50,0.85)', color: '#c27aff', border: '1px solid #c27aff44', borderRadius: '9999px', boxShadow: '0 0 8px #c27aff22' }
               : isElectricTheme
               ? { backgroundColor: 'rgba(20,15,0,0.9)', color: '#ffe033', border: '1px solid #ffe03366', borderRadius: '9999px', boxShadow: '0 0 8px #ffe03333', fontFamily: "'Bangers', 'Impact', cursive", letterSpacing: '1px' }
+              : isMayhemTheme
+              ? { backgroundColor: 'rgba(0,6,18,0.9)', color: '#00DFFF', border: '1px solid #00DFFF55', fontFamily: "'Orbitron', sans-serif", fontSize: '0.6rem', letterSpacing: '0.8px', borderRadius: '2px' }
               : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
 
   const socialOutlineStyle = isWatermelonTheme
@@ -1490,7 +1645,7 @@ const ProfilePage = () => {
     ? platformBtnStyle
     : isLightBackground
     ? { backgroundColor: 'rgba(255,255,255,0.9)', color: '#000000', border: '1.5px solid rgba(0,0,0,0.5)', borderRadius: '9999px' }
-    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme)
+    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme || isMayhemTheme)
       ? platformBtnStyle
       : { backgroundColor: '#ffffff', color: '#000000', border: '1.5px solid #000000', borderRadius: '9999px' };
 
@@ -1507,7 +1662,7 @@ const ProfilePage = () => {
     facebook:    { backgroundColor: '#1877F2', color: '#ffffff', border: '1px solid #1877F2', borderRadius: '9999px' },
   };
 
-  const isNamedTheme = isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme || isLightBackground;
+  const isNamedTheme = isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme || isBatTheme || isMayhemTheme || isLightBackground;
 
   const avatarThemeColor = isWatermelonTheme ? '#ff6b6b'
     : isCartoonTheme ? '#ff6b35'
@@ -1614,6 +1769,12 @@ const ProfilePage = () => {
     borderRadius: '9999px',
     padding: '4px 8px',
     boxShadow: '0 0 18px #ffe03333, 0 0 4px #fff5 inset',
+  } : isMayhemTheme ? {
+    background: 'rgba(2,1,20,0.92)',
+    border: '1px solid rgba(255,0,105,0.4)',
+    borderRadius: '9999px',
+    padding: '4px 8px',
+    boxShadow: '0 0 18px rgba(0,223,255,0.18), 0 0 30px rgba(255,0,105,0.1)',
   } : undefined;
 
   const blocksTabColors: Record<string, string> = {
@@ -1881,8 +2042,20 @@ const ProfilePage = () => {
         backgroundColor: '#0a2f1f',
         position: 'relative',
         zIndex: 1
+      } : isBatTheme ? {
+        background: 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)',
+        backgroundAttachment: 'fixed',
+        position: 'relative',
+        zIndex: 1
+      } : (profile as any).profileBackgroundGradientCss ? {
+        background: (profile as any).profileBackgroundGradientCss,
+        backgroundAttachment: 'fixed',
+        position: 'relative',
+        zIndex: 1
       } : (profile as any).profileBackgroundGradient !== false ? {
-        background: isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
+        background: isMayhemTheme
+          ? 'linear-gradient(to top right, #00DFFF 0%, #9B30E8 48%, #FF0069 100%)'
+          : isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
         backgroundAttachment: 'fixed',
         position: 'relative',
         zIndex: 1
@@ -1896,6 +2069,128 @@ const ProfilePage = () => {
       {/* Dark overlay for background image readability */}
       {profileBackgroundImageUrl && (
         <div className="fixed inset-0 bg-black/50 pointer-events-none" style={{ zIndex: 0 }} />
+      )}
+
+      {/* Bat theme animated overlay */}
+      {isBatTheme && (
+        <>
+          <style>{`
+            @keyframes batFly1 {
+              0%   { transform: translate(0vw, -80px) rotate(-15deg) scaleX(1); opacity: 0; }
+              8%   { opacity: 1; }
+              35%  { transform: translate(-3vw, 120px) rotate(8deg) scaleX(-1); opacity: 1; }
+              48%  { transform: translate(-3.5vw, 140px) rotate(12deg) scaleX(-1) scale(0.85); opacity: 1; }
+              60%  { transform: translate(-3.5vw, 140px) rotate(10deg) scaleX(-1) scale(0.85); opacity: 1; }
+              78%  { transform: translate(-1vw, 60px) rotate(-8deg) scaleX(1); opacity: 1; }
+              92%  { transform: translate(2vw, -70px) rotate(-20deg) scaleX(1); opacity: 1; }
+              100% { transform: translate(3vw, -120px) rotate(-25deg) scaleX(1); opacity: 0; }
+            }
+            @keyframes batFly2 {
+              0%   { transform: translate(0px, -60px) rotate(10deg) scaleX(1); opacity: 0; }
+              10%  { opacity: 1; }
+              40%  { transform: translate(4vw, 80px) rotate(-6deg) scaleX(1); opacity: 1; }
+              52%  { transform: translate(4.5vw, 95px) rotate(-10deg) scaleX(1) scale(0.9); opacity: 1; }
+              65%  { transform: translate(4.5vw, 95px) rotate(-8deg) scaleX(1) scale(0.9); opacity: 1; }
+              80%  { transform: translate(2vw, 30px) rotate(12deg) scaleX(-1); opacity: 1; }
+              93%  { transform: translate(-2vw, -80px) rotate(18deg) scaleX(-1); opacity: 1; }
+              100% { transform: translate(-4vw, -130px) rotate(22deg) scaleX(-1); opacity: 0; }
+            }
+            @keyframes batFly3 {
+              0%   { transform: translate(0px, -50px) rotate(-5deg) scaleX(-1); opacity: 0; }
+              12%  { opacity: 0.9; }
+              38%  { transform: translate(6vw, 200px) rotate(15deg) scaleX(1); opacity: 0.9; }
+              50%  { transform: translate(6.5vw, 220px) rotate(20deg) scaleX(1) scale(0.8); opacity: 0.9; }
+              63%  { transform: translate(6.5vw, 220px) rotate(18deg) scaleX(1) scale(0.8); opacity: 0.9; }
+              80%  { transform: translate(3vw, 120px) rotate(-5deg) scaleX(-1); opacity: 0.9; }
+              93%  { transform: translate(-3vw, -60px) rotate(-18deg) scaleX(-1); opacity: 0.9; }
+              100% { transform: translate(-5vw, -110px) rotate(-22deg) scaleX(-1); opacity: 0; }
+            }
+            @keyframes batFly4 {
+              0%   { transform: translate(0px, -70px) rotate(20deg) scaleX(1); opacity: 0; }
+              6%   { opacity: 0.85; }
+              32%  { transform: translate(-5vw, 160px) rotate(-12deg) scaleX(-1); opacity: 0.85; }
+              46%  { transform: translate(-5.5vw, 180px) rotate(-16deg) scaleX(-1) scale(0.88); opacity: 0.85; }
+              58%  { transform: translate(-5.5vw, 180px) rotate(-14deg) scaleX(-1) scale(0.88); opacity: 0.85; }
+              75%  { transform: translate(-2vw, 80px) rotate(5deg) scaleX(1); opacity: 0.85; }
+              90%  { transform: translate(3vw, -65px) rotate(22deg) scaleX(1); opacity: 0.85; }
+              100% { transform: translate(5vw, -110px) rotate(25deg) scaleX(1); opacity: 0; }
+            }
+            @keyframes batFly5 {
+              0%   { transform: translate(0px, -40px) rotate(-18deg) scaleX(1); opacity: 0; }
+              15%  { opacity: 0.75; }
+              42%  { transform: translate(8vw, 250px) rotate(8deg) scaleX(-1); opacity: 0.75; }
+              55%  { transform: translate(8.5vw, 268px) rotate(14deg) scaleX(-1) scale(0.82); opacity: 0.75; }
+              68%  { transform: translate(8.5vw, 268px) rotate(12deg) scaleX(-1) scale(0.82); opacity: 0.75; }
+              82%  { transform: translate(4vw, 150px) rotate(-6deg) scaleX(1); opacity: 0.75; }
+              95%  { transform: translate(-2vw, -50px) rotate(-22deg) scaleX(1); opacity: 0.75; }
+              100% { transform: translate(-4vw, -90px) rotate(-26deg) scaleX(1); opacity: 0; }
+            }
+            @keyframes batFly6 {
+              0%   { transform: translate(0px, -55px) rotate(5deg) scaleX(1); opacity: 0; }
+              9%   { opacity: 0.8; }
+              36%  { transform: translate(-7vw, 90px) rotate(-10deg) scaleX(-1); opacity: 0.8; }
+              50%  { transform: translate(-7.5vw, 105px) rotate(-14deg) scaleX(-1) scale(0.87); opacity: 0.8; }
+              64%  { transform: translate(-7.5vw, 105px) rotate(-12deg) scaleX(-1) scale(0.87); opacity: 0.8; }
+              79%  { transform: translate(-3vw, 40px) rotate(8deg) scaleX(1); opacity: 0.8; }
+              92%  { transform: translate(4vw, -60px) rotate(18deg) scaleX(1); opacity: 0.8; }
+              100% { transform: translate(6vw, -100px) rotate(22deg) scaleX(1); opacity: 0; }
+            }
+            @keyframes batFly7 {
+              0%   { transform: translate(0px, -45px) rotate(-22deg) scaleX(-1); opacity: 0; }
+              11%  { opacity: 0.7; }
+              39%  { transform: translate(9vw, 180px) rotate(12deg) scaleX(1); opacity: 0.7; }
+              53%  { transform: translate(9.5vw, 196px) rotate(16deg) scaleX(1) scale(0.83); opacity: 0.7; }
+              66%  { transform: translate(9.5vw, 196px) rotate(14deg) scaleX(1) scale(0.83); opacity: 0.7; }
+              81%  { transform: translate(5vw, 90px) rotate(-4deg) scaleX(-1); opacity: 0.7; }
+              94%  { transform: translate(-1vw, -55px) rotate(-20deg) scaleX(-1); opacity: 0.7; }
+              100% { transform: translate(-3vw, -95px) rotate(-24deg) scaleX(-1); opacity: 0; }
+            }
+            @keyframes batFly8 {
+              0%   { transform: translate(0px, -65px) rotate(14deg) scaleX(1); opacity: 0; }
+              7%   { opacity: 0.65; }
+              34%  { transform: translate(-9vw, 140px) rotate(-8deg) scaleX(-1); opacity: 0.65; }
+              49%  { transform: translate(-9.5vw, 158px) rotate(-12deg) scaleX(-1) scale(0.9); opacity: 0.65; }
+              61%  { transform: translate(-9.5vw, 158px) rotate(-10deg) scaleX(-1) scale(0.9); opacity: 0.65; }
+              77%  { transform: translate(-4vw, 70px) rotate(6deg) scaleX(1); opacity: 0.65; }
+              91%  { transform: translate(5vw, -55px) rotate(24deg) scaleX(1); opacity: 0.65; }
+              100% { transform: translate(7vw, -100px) rotate(28deg) scaleX(1); opacity: 0; }
+            }
+            @keyframes batFlap {
+              0%, 100% { transform: translate(-50%, -50%) scaleY(1); }
+              50%       { transform: translate(-50%, -50%) scaleY(0.85) scaleX(1.08); }
+            }
+          `}</style>
+
+          {/* Ambient CSS-animated bats */}
+          <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 2 }}>
+            <div style={{ position:'absolute', top:'5%', left:'20%', fontSize:'28px', animation:'batFly1 7s ease-in-out infinite', animationDelay:'0s' }}>🦇</div>
+            <div style={{ position:'absolute', top:'3%', left:'70%', fontSize:'22px', animation:'batFly2 8.5s ease-in-out infinite', animationDelay:'1.8s' }}>🦇</div>
+            <div style={{ position:'absolute', top:'8%', left:'45%', fontSize:'18px', animation:'batFly3 9s ease-in-out infinite', animationDelay:'3.5s' }}>🦇</div>
+            <div style={{ position:'absolute', top:'2%', left:'55%', fontSize:'24px', animation:'batFly4 7.8s ease-in-out infinite', animationDelay:'5.2s' }}>🦇</div>
+            <div style={{ position:'absolute', top:'6%', left:'30%', fontSize:'16px', animation:'batFly5 10s ease-in-out infinite', animationDelay:'2.3s' }}>🦇</div>
+            <div style={{ position:'absolute', top:'4%', left:'60%', fontSize:'20px', animation:'batFly6 8.2s ease-in-out infinite', animationDelay:'4.1s' }}>🦇</div>
+            <div style={{ position:'absolute', top:'1%', left:'15%', fontSize:'14px', animation:'batFly7 11s ease-in-out infinite', animationDelay:'6.7s' }}>🦇</div>
+            <div style={{ position:'absolute', top:'7%', left:'82%', fontSize:'26px', animation:'batFly8 7.4s ease-in-out infinite', animationDelay:'0.9s' }}>🦇</div>
+          </div>
+
+          {/* Cursor-following bats */}
+          <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 3 }}>
+            {([28, 20, 16, 24, 18] as const).map((size, i) => (
+              <div
+                key={`bat-follow-${i}`}
+                ref={el => { batFollowerRefs.current[i] = el; }}
+                style={{
+                  position: 'absolute',
+                  fontSize: `${size}px`,
+                  transform: 'translate(-50%, -50%)',
+                  animation: `batFlap ${0.35 + i * 0.04}s ease-in-out infinite`,
+                  animationDelay: `${i * 0.06}s`,
+                  opacity: 0.9,
+                }}
+              >🦇</div>
+            ))}
+          </div>
+        </>
       )}
       {/* Birthday Banner */}
       {(() => {
@@ -2019,8 +2314,6 @@ const ProfilePage = () => {
         </>
         )}
 
-        {/* Bottom fade — merges banner into page background */}
-        <div className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none" style={{ background: `linear-gradient(to bottom, transparent, ${backgroundColor})` }} />
       </div>
 
       {/* Zombie theme animations */}
@@ -2303,6 +2596,95 @@ const ProfilePage = () => {
       {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-rgb-blue" />}
       {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-glitch-lines" />}
       {isCyberpunkTheme && !profileBackgroundImageUrl && <div className="cyber-interference" />}
+
+      {/* Mayhem theme animated lines */}
+      {isMayhemTheme && (
+        <style>{`
+          @keyframes mayhemStripeFlow {
+            0%   { background-position: 0 0; }
+            100% { background-position: 26px 26px; }
+          }
+          @keyframes mayhemStripeReverse {
+            0%   { background-position: 0 0; }
+            100% { background-position: -26px 26px; }
+          }
+          @keyframes mayhemGlowPulse {
+            0%,100% { opacity: 0.55; }
+            50%     { opacity: 1; }
+          }
+          @keyframes mayhemRipple {
+            0%   { transform: translate(-50%, -50%) scale(0.1); opacity: 0.7; }
+            100% { transform: translate(-50%, -50%) scale(6);   opacity: 0; }
+          }
+          .mayhem-stripes-cyan {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background-image: repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 11px,
+              rgba(0,223,255,0.1) 11px,
+              rgba(0,223,255,0.1) 12px
+            );
+            background-size: 17px 17px;
+            animation: mayhemStripeFlow 2.5s linear infinite;
+          }
+          .mayhem-stripes-pink {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background-image: repeating-linear-gradient(
+              -45deg,
+              transparent,
+              transparent 17px,
+              rgba(255,0,128,0.06) 17px,
+              rgba(255,0,128,0.06) 18px
+            );
+            background-size: 25px 25px;
+            animation: mayhemStripeReverse 3.5s linear infinite;
+          }
+          .mayhem-ripple {
+            position: fixed;
+            top: 50vh; left: 50vw;
+            width: 300px; height: 300px;
+            border-radius: 50%;
+            pointer-events: none; z-index: 0;
+            animation: mayhemRipple 4s ease-out infinite;
+          }
+          .mayhem-ripple-1 { border: 2px solid rgba(0,223,255,0.5);   animation-delay: 0s; }
+          .mayhem-ripple-2 { border: 2px solid rgba(155,48,255,0.45); animation-delay: 1.33s; }
+          .mayhem-ripple-3 { border: 2px solid rgba(255,0,128,0.45);  animation-delay: 2.66s; }
+          .mayhem-glow {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background:
+              radial-gradient(ellipse 55% 40% at 20% 25%, rgba(0,223,255,0.14) 0%, transparent 60%),
+              radial-gradient(ellipse 45% 50% at 80% 72%, rgba(255,0,128,0.11) 0%, transparent 55%),
+              radial-gradient(ellipse 35% 35% at 55% 48%, rgba(155,48,255,0.09) 0%, transparent 50%);
+            animation: mayhemGlowPulse 4s ease-in-out infinite;
+          }
+          @keyframes mayhemBorderGlow {
+            0%,100% { box-shadow: 0 0 12px #00DFFF66, 0 0 32px #00DFFF22; border-color: #00c8e8; }
+            50%      { box-shadow: 0 0 14px #FF006977, 0 0 36px #FF006922; border-color: #FF0069; }
+          }
+          .mayhem-stats-card {
+            position: relative;
+            animation: mayhemBorderGlow 4s ease-in-out infinite;
+          }
+          .mayhem-stats-card::before, .mayhem-stats-card::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            pointer-events: none;
+          }
+          .mayhem-stats-card::before { top: -1px; left: -1px; border-top: 1.667px solid #ffffff88; border-left: 1.667px solid #ffffff88; }
+          .mayhem-stats-card::after  { bottom: -1px; right: -1px; border-bottom: 1.667px solid #ffffff88; border-right: 1.667px solid #ffffff88; }
+        `}</style>
+      )}
+      {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-stripes-cyan" />}
+      {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-stripes-pink" />}
+      {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-ripple mayhem-ripple-1" />}
+      {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-ripple mayhem-ripple-2" />}
+      {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-ripple mayhem-ripple-3" />}
+      {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-glow" />}
+
       {/* NEO / Matrix theme */}
       {isNeoTheme && (
         <style>{`
@@ -2897,16 +3279,7 @@ const ProfilePage = () => {
                         key={`${type}-${index}`}
                         variant="outline" 
                         className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px]"
-                        style={isLightBackground ? {
-                          backgroundColor: 'rgba(255,255,255,0.6)',
-                          color: '#ff2056',
-                          border: '0.556px solid #fda5d5',
-                          boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
-                        } : {
-                          backgroundColor: `${accentColor}1a`,
-                          color: accentColor,
-                          borderColor: `${accentColor}66`,
-                        }}
+                        style={userTagStyle}
                       >
                         <IconComponent className="w-3 h-3 mr-1.5" />
                         {config.label}
@@ -2929,13 +3302,19 @@ const ProfilePage = () => {
 
           {/* Profile Info Card — stats only, Collection button on top-right border */}
           <div className="relative mx-4 mt-2 mb-1">
-            {/* Collection button pinned to top-right border of the card */}
-            <button 
+            {/* Stats card container */}
+            <div
+              className="relative mt-4 rounded-lg transition-all duration-300"
+              style={{ width: '100%', maxWidth: '600px' }}
+            >
+            {/* Collection button — straddles the top border of the stats card (half on, half off). Hidden on native builds. */}
+            {CRYPTO_FEATURES_ENABLED && (
+            <button
               onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-              className="absolute -top-3 -right-1 z-10 px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
+              className="absolute -top-[14px] right-2 z-10 px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
               style={{ 
                 background: profileSectionTab === 'collection'
-                  ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : '#0B1218')
+                  ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : isMayhemTheme ? 'rgba(2,1,20,0.95)' : '#0B1218')
                   : isWatermelonTheme
                     ? '#ffb3c1'
                     : isLightBackground
@@ -2954,27 +3333,24 @@ const ProfilePage = () => {
                                   ? 'linear-gradient(135deg, #3d0070 0%, #1e053a 100%)'
                                   : isCartoonTheme
                                     ? (profileSectionTab === 'collection' ? '#fffaec' : 'linear-gradient(135deg, #ff5e5e 0%, #ff7a5e 100%)')
-                                    : '#B7FF1A',
-                color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : '#0f172b',
-                border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #B7FF1A' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : undefined,
+                                    : isMayhemTheme
+                                      ? 'linear-gradient(135deg, #00DFFF 0%, #9B30E8 50%, #FF0069 100%)'
+                                      : '#B7FF1A',
+                color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : isMayhemTheme ? '#00DFFF' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : isMayhemTheme ? '#ffffff' : '#0f172b',
+                border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #B7FF1A' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : isMayhemTheme ? '1px solid rgba(255,0,105,0.5)' : undefined,
                 fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : isGothicTheme ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" : isCartoonTheme ? "'Bricolage Grotesque', 'Arial Black', sans-serif" : undefined,
                 letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : isNeoTheme ? '1.5px' : isBlocksTheme ? '0.5px' : isGothicTheme ? '1.5px' : isCartoonTheme ? '-0.5px' : undefined,
                 fontWeight: isCyberpunkTheme ? '900' : isNeoTheme ? '700' : isBlocksTheme ? '400' : isCartoonTheme ? '800' : undefined,
                 fontSize: isBlocksTheme ? '0.5rem' : isCartoonTheme ? '0.7rem' : undefined,
                 borderRadius: isBlocksTheme ? '4px' : undefined,
-                boxShadow: isBlocksTheme ? '4px 4px 0 #000' : isGothicTheme ? '0 0 14px #c27aff33' : isCartoonTheme ? '3px 3px 0 #1d1d1f' : undefined,
+                boxShadow: isBlocksTheme ? '4px 4px 0 #000' : isGothicTheme ? '0 0 14px #c27aff33' : isCartoonTheme ? '3px 3px 0 #1d1d1f' : isMayhemTheme ? '0 0 12px rgba(255,0,105,0.4)' : undefined,
               }}>
                 <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>{isGothicTheme ? '👻 Collection' : 'Collection'}</span>
             </button>
-
-            {/* Stats card container */}
-            <div
-              className="relative mt-4 rounded-lg transition-all duration-300"
-              style={{ width: '100%', maxWidth: '600px' }}
-            >
+            )}
 
             <div 
-              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''}`}
+              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''} ${isMayhemTheme ? 'mayhem-stats-card' : ''}`}
               style={isWatermelonTheme ? {
                 background: '#ffb3c1',
               } : isCartoonTheme ? {
@@ -3007,6 +3383,12 @@ const ProfilePage = () => {
                 background: 'rgba(15,2,38,0.92)',
                 border: '1px solid #c27aff55',
                 boxShadow: '0 0 20px #c27aff22, 0 0 40px #c27aff11',
+              } : isBatTheme ? {
+                background: '#000000',
+                border: '1px solid rgba(255,140,0,0.2)',
+              } : isMayhemTheme ? {
+                background: '#020617',
+                border: '1px solid #00c8e8',
               } : {
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.1)',
@@ -3022,7 +3404,12 @@ const ProfilePage = () => {
                         { value: Number(profile._count?.followers || 0), label: 'Followers', color: '#e74c3c' },
                         { value: Number(profile._count?.following || 0), label: 'Following', color: '#27ae60' },
                       ].map((stat, i, arr) => (
-                        <div key={stat.label} className="flex flex-1 items-center">
+                        <div
+                          key={stat.label}
+                          className="flex flex-1 items-center"
+                          onClick={stat.label !== 'Uploads' ? () => setLocation(`/profile/${profile.username}/${stat.label.toLowerCase()}`) : undefined}
+                          style={stat.label !== 'Uploads' ? { cursor: 'pointer' } : undefined}
+                        >
                           <div className="flex flex-col items-center gap-1 flex-1 py-1">
                             <span style={{ color: stat.color, fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: 800, fontSize: '1.6rem', letterSpacing: '-0.9px', lineHeight: 1 }}>{stat.value}</span>
                             <span style={{ color: 'rgba(0,0,0,0.4)', fontSize: '10px', letterSpacing: '2.2px', fontWeight: 800, textTransform: 'uppercase' as const, fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif" }}>{stat.label}</span>
@@ -3040,7 +3427,12 @@ const ProfilePage = () => {
                         { value: Number(profile._count?.followers || 0), label: 'Followers' },
                         { value: Number(profile._count?.following || 0), label: 'Following' },
                       ].map((stat, i, arr) => (
-                        <div key={stat.label} className="flex flex-1 items-center">
+                        <div
+                          key={stat.label}
+                          className="flex flex-1 items-center"
+                          onClick={stat.label !== 'Uploads' ? () => setLocation(`/profile/${profile.username}/${stat.label.toLowerCase()}`) : undefined}
+                          style={stat.label !== 'Uploads' ? { cursor: 'pointer' } : undefined}
+                        >
                           <div className="flex flex-col items-center gap-1 flex-1 py-1">
                             <span style={{ color: '#ffffff', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>{stat.value}</span>
                             <span style={{ color: '#c27aff', fontSize: '8px', letterSpacing: '1.2px', fontWeight: 700, textTransform: 'uppercase' as const, fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }}>{stat.label}</span>
@@ -3055,15 +3447,15 @@ const ProfilePage = () => {
                   <div className="flex mt-1" style={isWatermelonTheme ? { gap: 0 } : { gap: '1.5rem' }}>
                     <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
                       <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: '#B7FF1A', letterSpacing: '0.8px' }}>UPLOADS</span>
+                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isMacTheme ? { color: '#0066ff', letterSpacing: '0.8px' } : isLightBackground ? { color: '#6b7280', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>UPLOADS</span>
                     </div>
-                    <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
+                    <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/followers`)}>
                       <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : isBlocksTheme ? '#3b82f6' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.followers || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: '#B7FF1A', letterSpacing: '0.8px' }}>FOLLOWERS</span>
+                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isMacTheme ? { color: '#0066ff', letterSpacing: '0.8px' } : isLightBackground ? { color: '#6b7280', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>FOLLOWERS</span>
                     </div>
-                    <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
+                    <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/followers?tab=following`)}>
                       <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#B7FF1A', color: '#1a1a1a', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: '#B7FF1A', letterSpacing: '0.8px' }}>FOLLOWING</span>
+                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isMacTheme ? { color: '#0066ff', letterSpacing: '0.8px' } : isLightBackground ? { color: '#6b7280', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#B7FF1A', color: '#1a1a1a', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>FOLLOWING</span>
                     </div>
                   </div>
                   )}
@@ -3111,10 +3503,10 @@ const ProfilePage = () => {
           {/* Platform tags and Social Links — below the stats card */}
           {profileSectionTab === 'stats' && <div className={`flex flex-wrap gap-1.5 mb-4 mt-4 pl-4 pr-8 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''}`}>
             {profile.steamUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('steam')}>
+              <a href={`https://steamcommunity.com/id/${profile.steamUsername}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity" style={getBtnStyle('steam')}>
                 <SiSteam className="w-2.5 h-2.5" />
                 <span>{profile.steamUsername}</span>
-              </div>
+              </a>
             )}
             {profile.nintendoUsername && (
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('nintendo')}>
@@ -3123,16 +3515,16 @@ const ProfilePage = () => {
               </div>
             )}
             {profile.xboxUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('xbox')}>
+              <a href={`https://account.xbox.com/en-US/profile?gamertag=${encodeURIComponent(profile.xboxUsername)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity" style={getBtnStyle('xbox')}>
                 <FaXbox className="w-2.5 h-2.5" />
                 <span>{profile.xboxUsername}</span>
-              </div>
+              </a>
             )}
             {profile.playstationUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('playstation')}>
+              <a href={`https://psnprofiles.com/${profile.playstationUsername}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity" style={getBtnStyle('playstation')}>
                 <SiPlaystation className="w-2.5 h-2.5" />
                 <span>{profile.playstationUsername}</span>
-              </div>
+              </a>
             )}
             {profile.epicUsername && (
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('epic')}>
@@ -3140,12 +3532,21 @@ const ProfilePage = () => {
                 <span>{profile.epicUsername}</span>
               </div>
             )}
-            {profile.discordUsername && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium" style={getBtnStyle('discord')}>
-                <SiDiscord className="w-2.5 h-2.5" />
-                <span>{profile.discordUsername}</span>
-              </div>
-            )}
+            {profile.discordUsername && (() => {
+              const raw = profile.discordUsername!;
+              const url = raw.startsWith('http') ? raw : raw.includes('discord.gg') ? `https://${raw}` : raw.includes('/') ? `https://discord.gg/${raw.split('/').pop()}` : null;
+              const Tag = url ? 'a' : 'div';
+              return (
+                <Tag
+                  {...(url ? { href: url, target: '_blank', rel: 'noopener noreferrer' } : {})}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity"
+                  style={getBtnStyle('discord')}
+                >
+                  <SiDiscord className="w-2.5 h-2.5" />
+                  <span>{raw}</span>
+                </Tag>
+              );
+            })()}
             {profile.twitterUsername && (
               <a 
                 href={`https://twitter.com/${profile.twitterUsername}`}
@@ -3213,7 +3614,7 @@ const ProfilePage = () => {
         {/* Desktop Layout - Vertical stacked on left */}
         <div className="hidden md:flex flex-row pb-4 relative max-w-[90%] mx-auto" style={{ marginTop: '-112px' }}>
           {/* Left side - Profile info stacked vertically */}
-          <div className="flex flex-col">
+          <div className="flex flex-col flex-shrink-0 w-[416px]">
             {/* Profile Picture positioned to overlap banner - explicit dimensions to ensure circular glow renders correctly */}
             <div className="relative flex-shrink-0 mb-4 h-56 w-56">
               {/* Circular glow - only show when NO SVG border is selected and no overlay is open */}
@@ -3266,44 +3667,36 @@ const ProfilePage = () => {
             </div>
 
             {/* Display Name and Badges */}
-            <div className="flex items-center gap-2 flex-wrap mt-8">
+            <div className="flex items-center gap-2 flex-nowrap mt-8">
               <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: isMacTheme ? 'none' : profileTextShadow, color: isWatermelonTheme ? '#ffffff' : isMacTheme ? '#1a1a1a' : isLightBackground ? accentColor : profileFontColor, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.displayName}</h1>
-              <VerificationBadge
-                isVerified={!!verificationBadgeData?.verificationBadge}
-                badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
-                badgeName={verificationBadgeData?.verificationBadge?.name}
-                size="xl"
-              />
-              <ModeratorBadge 
-                isModerator={(profile.role === "moderator" || profile.role === "admin") && !verificationBadgeData?.verificationBadge} 
-                size="xl" 
-              />
-              <PartnerBadge isPartner={(profile as any).isPartner} size="xl" />
+              <span className="flex-shrink-0 inline-flex">
+                <VerificationBadge
+                  isVerified={!!verificationBadgeData?.verificationBadge}
+                  badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
+                  badgeName={verificationBadgeData?.verificationBadge?.name}
+                  size="xl"
+                />
+              </span>
+              <span className="flex-shrink-0 inline-flex">
+                <ModeratorBadge 
+                  isModerator={(profile.role === "moderator" || profile.role === "admin") && !verificationBadgeData?.verificationBadge} 
+                  size="xl" 
+                />
+              </span>
               {profile.userType && profile.showUserType !== false && (() => {
                 const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
-                const displayTypes = userTypes.slice(0, 2);
-                
-                return displayTypes.map((type, index) => {
+                return userTypes.map((type, index) => {
                   const config = userTypeConfig[type];
                   if (!config) return null;
                   const IconComponent = config.icon;
                   return (
-                    <Badge 
+                    <Badge
                       key={`${type}-${index}`}
-                      variant="outline" 
-                      className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px]"
-                      style={isLightBackground ? {
-                        backgroundColor: 'rgba(255,255,255,0.6)',
-                        color: '#ff2056',
-                        border: '0.556px solid #fda5d5',
-                        boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
-                      } : {
-                        backgroundColor: `${accentColor}1a`,
-                        color: accentColor,
-                        borderColor: `${accentColor}66`,
-                      }}
+                      variant="outline"
+                      className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px] whitespace-nowrap flex-shrink-0"
+                      style={userTagStyle}
                     >
-                      <IconComponent className="w-3 h-3 mr-1.5" />
+                      <IconComponent className="w-3 h-3 mr-1.5 flex-shrink-0" />
                       {config.label}
                     </Badge>
                   );
@@ -3322,96 +3715,103 @@ const ProfilePage = () => {
             )}
 
             {/* Profile Info Card — stats only, Collection button on top-right border */}
-            <div className="relative mt-4 max-w-xl">
-              {/* Collection button pinned to top-right border */}
-              <button 
+            <div className="relative mt-4">
+
+            {/* Stats card */}
+            <div
+              className="relative mt-4 rounded-lg transition-all duration-300"
+            >
+              {/* Collection button — straddles the top border of the stats card (half on, half off). Hidden on native builds. */}
+              {CRYPTO_FEATURES_ENABLED && (
+              <button
                 onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-                className="absolute -top-3 -right-1 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
+                className="absolute -top-[14px] right-2 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
                 style={{ 
                   background: profileSectionTab === 'collection'
-                    ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : isCartoonTheme ? '#fffaec' : '#0B1218')
-                    : isWatermelonTheme
-                      ? '#ffb3c1'
-                      : isLightBackground
-                        ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
-                        : isZombieTheme
-                          ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
-                          : isCyberpunkTheme
-                            ? 'rgba(2,6,23,0.9)'
-                            : isNeoTheme
-                              ? 'linear-gradient(180deg, #003300 0%, #001400 100%)'
-                              : isBlocksTheme
-                                ? '#B7FF1A'
-                                : isForestTheme
-                                  ? '#1d3932'
-                                  : isGothicTheme
-                                    ? 'linear-gradient(135deg, #3d0070 0%, #1e053a 100%)'
-                                    : isCartoonTheme
-                                      ? 'linear-gradient(135deg, #ff5e5e 0%, #ff7a5e 100%)'
-                                      : '#B7FF1A',
-                  color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : '#0f172b',
-                  border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #B7FF1A' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : undefined,
+                    ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : isCartoonTheme ? '#fffaec' : isMayhemTheme ? 'rgba(2,1,20,0.95)' : '#0B1218')
+                    : isWatermelonTheme ? '#ffb3c1'
+                    : isLightBackground ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
+                    : isZombieTheme ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
+                    : isCyberpunkTheme ? 'rgba(2,6,23,0.9)'
+                    : isNeoTheme ? 'linear-gradient(180deg, #003300 0%, #001400 100%)'
+                    : isBlocksTheme ? '#B7FF1A'
+                    : isForestTheme ? '#1d3932'
+                    : isGothicTheme ? 'linear-gradient(135deg, #3d0070 0%, #1e053a 100%)'
+                    : isCartoonTheme ? 'linear-gradient(135deg, #ff5e5e 0%, #ff7a5e 100%)'
+                    : isMayhemTheme ? 'linear-gradient(135deg, #00DFFF 0%, #9B30E8 50%, #FF0069 100%)'
+                    : '#B7FF1A',
+                  color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : isMayhemTheme ? '#00DFFF' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : isMayhemTheme ? '#ffffff' : '#0f172b',
+                  border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #B7FF1A' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : isMayhemTheme ? '1px solid rgba(255,0,105,0.5)' : undefined,
                   fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : isGothicTheme ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" : isCartoonTheme ? "'Bricolage Grotesque', 'Arial Black', sans-serif" : undefined,
                   letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : isNeoTheme ? '1.5px' : isBlocksTheme ? '0.5px' : isGothicTheme ? '1.5px' : isCartoonTheme ? '-0.5px' : undefined,
                   fontWeight: isCyberpunkTheme ? '900' : isNeoTheme ? '700' : isBlocksTheme ? '400' : isCartoonTheme ? '800' : undefined,
                   fontSize: isBlocksTheme ? '0.5rem' : isCartoonTheme ? '0.7rem' : undefined,
                   borderRadius: isBlocksTheme ? '4px' : undefined,
-                  boxShadow: isBlocksTheme ? '4px 4px 0 #000' : isGothicTheme ? '0 0 14px #c27aff33' : isCartoonTheme ? '3px 3px 0 #1d1d1f' : undefined,
+                  boxShadow: isBlocksTheme ? '4px 4px 0 #000' : isGothicTheme ? '0 0 14px #c27aff33' : isCartoonTheme ? '3px 3px 0 #1d1d1f' : isMayhemTheme ? '0 0 12px rgba(255,0,105,0.4)' : undefined,
                 }}>
                   <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>{isGothicTheme ? '👻 Collection' : 'Collection'}</span>
               </button>
-
-            {/* Stats card */}
-            <div
-              className="relative mt-4 rounded-lg transition-all duration-300"
-              style={{
-                width: '100%',
-                maxWidth: '600px',
-              }}
-            >
+              )}
 
               <div 
-                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''}`}
+                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''} ${isMayhemTheme ? 'mayhem-stats-card' : ''}`}
                 style={isWatermelonTheme ? {
                   background: '#ffb3c1',
+                  minWidth: '384px',
                 } : isLightBackground ? {
                   background: 'rgba(255,255,255,0.37)',
                   border: '0.556px solid rgba(255,255,255,0.8)',
                   boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+                  minWidth: '384px',
                 } : isZombieTheme ? {
                   background: '#1a1d1a',
                   border: '1.667px solid #7ccf00',
                   boxShadow: '0 0 18px #9ae60055, 0 0 40px #9ae60022',
+                  minWidth: '384px',
                 } : isCyberpunkTheme ? {
                   background: '#020617',
                   border: '1px solid #00b8db',
+                  minWidth: '384px',
                 } : isNeoTheme ? {
                   background: '#001a00',
                   border: '1px solid #00ff4177',
                   boxShadow: '0 0 16px #00ff4122, 0 0 40px #00ff4111',
+                  minWidth: '384px',
                 } : isBlocksTheme ? {
                   background: '#2a2a2a',
                   border: '1px solid rgba(183, 255, 26, 0.2)',
+                  minWidth: '384px',
                 } : isForestTheme ? {
                   background: '#e8d5b7',
                   border: '1px solid #c4a88266',
+                  minWidth: '384px',
+                } : isBatTheme ? {
+                  background: '#000000',
+                  border: '1px solid rgba(255,140,0,0.2)',
+                  minWidth: '384px',
+                } : isMayhemTheme ? {
+                  background: '#020617',
+                  border: '1px solid #00c8e8',
+                  minWidth: '384px',
                 } : {
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'rgba(10,15,25,0.85)',
+                  border: `1px solid ${accentColor}55`,
+                  boxShadow: `0 0 20px ${accentColor}15`,
+                  minWidth: '384px',
                 }}
               >
                 <div className="p-5">
                   {profileSectionTab === 'stats' ? (
-                    <div className="flex items-center" style={isWatermelonTheme ? { gap: 0 } : { gap: '2rem' }}>
+                    <div className="flex items-center w-full" style={{ gap: isWatermelonTheme ? 0 : '2rem' }}>
                       <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
                         <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
                         <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>Uploads</span>
                       </div>
-                      <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
+                      <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/followers`)}>
                         <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : isBlocksTheme ? '#3b82f6' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{Number(profile._count?.followers || 0)}</span>
                         <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>Followers</span>
                       </div>
-                      <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
+                      <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/followers?tab=following`)}>
                         <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
                         <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#B7FF1A', color: '#1a1a1a', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>Following</span>
                       </div>
@@ -3439,29 +3839,38 @@ const ProfilePage = () => {
             {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.rumbleUsername || profile.instagramUsername || profile.facebookUsername) && (
               <div className={`flex flex-wrap gap-2 mt-4 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''}`}>
                 {profile.steamUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('steam')}>
+                  <a href={`https://steamcommunity.com/id/${profile.steamUsername}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity" style={getBtnStyle('steam')}>
                     <SiSteam className="w-3 h-3" />
                     <span>{profile.steamUsername}</span>
-                  </div>
+                  </a>
                 )}
                 {profile.xboxUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('xbox')}>
+                  <a href={`https://account.xbox.com/en-US/profile?gamertag=${encodeURIComponent(profile.xboxUsername)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity" style={getBtnStyle('xbox')}>
                     <FaXbox className="w-3 h-3" />
                     <span>{profile.xboxUsername}</span>
-                  </div>
+                  </a>
                 )}
                 {profile.playstationUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('playstation')}>
+                  <a href={`https://psnprofiles.com/${profile.playstationUsername}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity" style={getBtnStyle('playstation')}>
                     <SiPlaystation className="w-3 h-3" />
                     <span>{profile.playstationUsername}</span>
-                  </div>
+                  </a>
                 )}
-                {profile.discordUsername && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('discord')}>
-                    <SiDiscord className="w-3 h-3" />
-                    <span>{profile.discordUsername}</span>
-                  </div>
-                )}
+                {profile.discordUsername && (() => {
+                  const raw = profile.discordUsername!;
+                  const url = raw.startsWith('http') ? raw : raw.includes('discord.gg') ? `https://${raw}` : raw.includes('/') ? `https://discord.gg/${raw.split('/').pop()}` : null;
+                  const Tag = url ? 'a' : 'div';
+                  return (
+                    <Tag
+                      {...(url ? { href: url, target: '_blank', rel: 'noopener noreferrer' } : {})}
+                      className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
+                      style={getBtnStyle('discord')}
+                    >
+                      <SiDiscord className="w-3 h-3" />
+                      <span>{raw}</span>
+                    </Tag>
+                  );
+                })()}
                 {profile.epicUsername && (
                   <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={getBtnStyle('epic')}>
                     <SiEpicgames className="w-3 h-3" />
@@ -3585,7 +3994,7 @@ const ProfilePage = () => {
           </div>
 
           {/* Action buttons - positioned below banner */}
-          <div className="absolute hidden md:block" style={{ top: '145px', right: '-40px' }}>
+          <div className="absolute hidden md:block" style={{ top: '145px', right: '20px' }}>
             {!isOwnProfile && currentUser && (
               <div className="flex gap-3">
                   <Button 
@@ -3641,12 +4050,7 @@ const ProfilePage = () => {
                     variant="outline"
                     size="default"
                     className="relative overflow-hidden font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg px-6 py-3 text-base"
-                    style={{
-                      borderColor: accentColor || 'hsl(var(--primary))',
-                      color: accentColor || 'hsl(var(--primary))',
-                      backgroundColor: 'transparent',
-                      ...(isCyberpunkTheme && { boxShadow: `0 0 10px ${accentColor}44`, fontFamily: "'Orbitron', sans-serif" }),
-                    }}
+                    style={userTagStyle}
                   >
                     <MessageSquare className="mr-2 h-5 w-5" /> Message
                   </Button>
@@ -3750,60 +4154,62 @@ const ProfilePage = () => {
         {/* Spacer for tabs section */}
         <div className="h-0 md:h-[12px]"></div>
 
-        {/* Stream Embed - shown for streamers with a configured channel */}
+        {/* Stream Embeds - one per platform the streamer has chosen to show */}
         {(() => {
           if (!isStreamer) return null;
-          const twitchChannel = (profile as any)?.twitchChannelName || (profile?.twitchVerified ? profile?.streamChannelName : null);
-          const kickChannel = (profile as any)?.kickChannelName || (profile?.kickVerified ? profile?.streamChannelName : null);
-          let activePlatform: string | null = null;
-          let activeChannel: string | null = null;
-          if (profileLiveStatus) {
-            activePlatform = profileLiveStatus.activePlatform;
-            activeChannel = profileLiveStatus.activeChannel;
-          }
-          if (!activePlatform) {
-            activePlatform = profile?.streamPlatform || (twitchChannel ? 'twitch' : kickChannel ? 'kick' : null);
-            activeChannel = activePlatform === 'twitch' ? twitchChannel : kickChannel;
-          }
-          if (!activePlatform || !activeChannel) return null;
-          const isKick = activePlatform === 'kick';
-          const isLive = profileLiveStatus?.isLive ?? false;
           const hostname = window.location.hostname;
 
-          const playerSrc = isKick
-            ? `https://player.kick.com/${activeChannel}?autoplay=${isLive ? 'true' : 'false'}&muted=true`
-            : `https://player.twitch.tv/?channel=${activeChannel}&parent=${hostname}&autoplay=${isLive ? 'true' : 'false'}&muted=true`;
+          const twitchChannel = profileLiveStatus?.twitchChannel
+            || (profile as any)?.twitchChannelName
+            || (profile?.twitchVerified ? profile?.streamChannelName : null);
+          const kickChannel = profileLiveStatus?.kickChannel
+            || (profile as any)?.kickChannelName
+            || (profile?.kickVerified ? profile?.streamChannelName : null);
 
-          const chatSrc = isKick
-            ? `https://kick.com/${activeChannel}/chatroom`
-            : `https://www.twitch.tv/embed/${activeChannel}/chat?parent=${hostname}&darkpopout`;
+          // Each connected platform is shown independently based on its
+          // "Show on profile" toggle (default on). Only shown when live.
+          const panels: Array<{ platform: 'twitch' | 'kick'; channel: string; isLive: boolean }> = [];
+          if (((profile as any)?.twitchShowOnProfile ?? true) && twitchChannel && (profileLiveStatus?.twitchLive ?? false)) {
+            panels.push({ platform: 'twitch', channel: twitchChannel, isLive: true });
+          }
+          if (((profile as any)?.kickShowOnProfile ?? true) && kickChannel && (profileLiveStatus?.kickLive ?? false)) {
+            panels.push({ platform: 'kick', channel: kickChannel, isLive: true });
+          }
+          if (panels.length === 0) return null;
 
-          const headerBg = isKick
-            ? 'linear-gradient(90deg, #1a3a1a, #0f2a0f)'
-            : 'linear-gradient(90deg, #1f1035, #0f0a1e)';
+          const renderPanel = ({ platform, channel, isLive }: { platform: 'twitch' | 'kick'; channel: string; isLive: boolean }) => {
+            const isKick = platform === 'kick';
+            const playerSrc = isKick
+              ? `https://player.kick.com/${channel}?autoplay=${isLive ? 'true' : 'false'}&muted=true`
+              : `https://player.twitch.tv/?channel=${channel}&parent=${hostname}&autoplay=${isLive ? 'true' : 'false'}&muted=true`;
+            const chatSrc = isKick
+              ? `https://kick.com/${channel}/chatroom`
+              : `https://www.twitch.tv/embed/${channel}/chat?parent=${hostname}&darkpopout`;
+            const headerBg = isKick
+              ? 'linear-gradient(90deg, #1a3a1a, #0f2a0f)'
+              : 'linear-gradient(90deg, #1f1035, #0f0a1e)';
+            const expanded = !!expandedStreams[platform];
+            const showPlayer = isLive || expanded;
 
-          const showPlayer = isLive || streamExpanded;
-
-          return (
-          <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-4 mb-2">
-            <div className="rounded-xl overflow-hidden border border-border bg-black shadow-lg">
+            return (
+            <div key={platform} className="rounded-xl overflow-hidden border border-border bg-black shadow-lg">
               {/* Header bar — clickable when offline to expand/collapse */}
               <div
                 className={`flex items-center gap-2 px-3 py-2 ${showPlayer ? 'border-b border-border' : ''} ${!isLive ? 'cursor-pointer select-none hover:brightness-110 transition-all' : ''}`}
                 style={{ background: headerBg }}
-                onClick={!isLive ? () => setStreamExpanded(prev => !prev) : undefined}
+                onClick={!isLive ? () => setExpandedStreams(prev => ({ ...prev, [platform]: !prev[platform] })) : undefined}
               >
-                <div className={`w-2 h-2 rounded-full ${isLive ? 'animate-pulse' : 'opacity-40'} ${isKick ? 'bg-primary' : 'bg-primary'}`} />
-                <span className={`text-xs font-semibold ${isKick ? 'text-primary' : 'text-primary'}`}>
+                <div className={`w-2 h-2 rounded-full bg-primary ${isLive ? 'animate-pulse' : 'opacity-40'}`} />
+                <span className="text-xs font-semibold text-primary">
                   {isKick ? 'Kick' : 'Twitch'}
                 </span>
-                <span className="text-xs text-muted-foreground">— {activeChannel}</span>
+                <span className="text-xs text-muted-foreground">— {channel}</span>
                 {isLive ? (
                   <span className="ml-auto text-[10px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded-full">LIVE</span>
                 ) : (
                   <div className="ml-auto flex items-center gap-1.5">
                     <span className="text-[10px] text-muted-foreground/60 italic">Offline</span>
-                    {streamExpanded
+                    {expanded
                       ? <ChevronUp className="h-3 w-3 text-muted-foreground/60" />
                       : <ChevronDown className="h-3 w-3 text-muted-foreground/60" />
                     }
@@ -3815,45 +4221,73 @@ const ProfilePage = () => {
               {showPlayer && (
                 isLive ? (
                   <div className="flex flex-col lg:flex-row" style={{ height: 'auto' }}>
-                    {/* Player — 16:9 aspect ratio */}
+                    {/* Player — min 400px on mobile so Twitch/Kick consent dialog fits;
+                        16:9 aspect-ratio trick on desktop. */}
                     <div className="relative w-full lg:w-[65%] flex-none">
-                      <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                      <div className="relative w-full min-h-[400px] lg:min-h-0 lg:[padding-bottom:56.25%]">
                         <iframe
-                          key={`player-live-${activeChannel}`}
+                          key={`player-live-${platform}-${channel}`}
                           src={playerSrc}
                           className="absolute inset-0 w-full h-full"
                           allowFullScreen
                           allow="autoplay; fullscreen"
-                          title={`${activeChannel}'s stream`}
+                          title={`${channel}'s stream`}
+                          {...{ scrolling: 'yes' } as any}
                         />
                       </div>
                     </div>
-                    {/* Chat */}
-                    <div className="w-full lg:w-[35%] border-t lg:border-t-0 lg:border-l border-border" style={{ height: '300px' }}>
+                    {/* Chat — hidden on mobile, shown on desktop */}
+                    <div className="hidden lg:block w-full lg:w-[35%] border-t lg:border-t-0 lg:border-l border-border" style={{ height: '300px' }}>
                       <iframe
-                        key={`chat-live-${activeChannel}`}
+                        key={`chat-live-${platform}-${channel}`}
                         src={chatSrc}
                         className="w-full h-full"
-                        title={`${activeChannel}'s chat`}
+                        title={`${channel}'s chat`}
                       />
                     </div>
                   </div>
                 ) : (
-                  /* Offline — greyed out player, no chat */
-                  <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-                    <div className="absolute inset-0 bg-black/40 z-10 pointer-events-none" />
-                    <iframe
-                      key={`player-offline-${activeChannel}`}
-                      src={playerSrc}
-                      className="absolute inset-0 w-full h-full opacity-60 grayscale"
-                      allowFullScreen
-                      title={`${activeChannel}'s stream`}
-                    />
-                  </div>
+                  /* Offline — mobile: CTA button (avoids loading iframe cookie wall);
+                     desktop: greyed-out player preview */
+                  <>
+                    {/* Mobile CTA */}
+                    <div className="flex lg:hidden flex-col items-center gap-3 py-6 px-4">
+                      <p className="text-sm text-muted-foreground text-center">
+                        {channel} is currently offline.
+                      </p>
+                      <a
+                        href={isKick ? `https://kick.com/${channel}` : `https://www.twitch.tv/${channel}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-black"
+                        style={{ background: isKick ? '#53fc18' : '#9147ff' }}
+                      >
+                        Watch on {isKick ? 'Kick' : 'Twitch'}
+                      </a>
+                    </div>
+                    {/* Desktop greyed-out player */}
+                    <div className="hidden lg:block relative w-full" style={{ paddingBottom: '56.25%' }}>
+                      <div className="absolute inset-0 bg-black/40 z-10 pointer-events-none" />
+                      <iframe
+                        key={`player-offline-${platform}-${channel}`}
+                        src={playerSrc}
+                        className="absolute inset-0 w-full h-full opacity-60 grayscale"
+                        allowFullScreen
+                        title={`${channel}'s stream`}
+                        {...{ scrolling: 'yes' } as any}
+                      />
+                    </div>
+                  </>
                 )
               )}
             </div>
-          </div>
+            );
+          };
+
+          return (
+            <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-4 mb-2 space-y-3">
+              {panels.map(renderPanel)}
+            </div>
           );
         })()
         }
@@ -4018,17 +4452,6 @@ const ProfilePage = () => {
             const arrowBtnClass = `flex items-center justify-center w-7 h-7 rounded-full transition-colors ${isLightBackground ? 'bg-black/15 hover:bg-black/30' : 'bg-black/40 hover:bg-black/60'}`;
             return (
           <div className="relative w-full">
-            {showScrollArrows && (
-              <button
-                type="button"
-                onClick={() => { if (tabsListRef.current) tabsListRef.current.scrollLeft -= 150; }}
-                className={arrowBtnClass}
-                style={{ color: accentColor, position: 'absolute', left: 4, top: '50%', transform: 'translateY(-50%)', zIndex: 10 }}
-                aria-label="Scroll tabs left"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-            )}
           <TabsList 
             ref={tabsListRef}
             className={`w-full max-w-lg lg:max-w-full mx-auto justify-start md:justify-center p-1 relative flex flex-nowrap gap-0.5 overflow-x-auto scrollbar-hide ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-tab-list' : isGothicTheme ? 'rounded-2xl' : isCartoonTheme ? '' : 'rounded-full'} ${isLightBackground ? '' : isCyberpunkTheme ? '' : isNeoTheme ? '' : isBlocksTheme ? '' : isForestTheme ? '' : isZombieTheme ? '' : isMacTheme ? '' : isGothicTheme ? '' : isCartoonTheme ? '' : 'bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)] shadow-lg'} ${showLimits ? 'h-14 md:h-16' : 'h-11 md:h-12'}`}
@@ -4151,17 +4574,6 @@ const ProfilePage = () => {
               </TabsTrigger>
             )}
           </TabsList>
-            {showScrollArrows && (
-              <button
-                type="button"
-                onClick={() => { if (tabsListRef.current) tabsListRef.current.scrollLeft += 150; }}
-                className={arrowBtnClass}
-                style={{ color: accentColor, position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', zIndex: 10 }}
-                aria-label="Scroll tabs right"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            )}
           </div>
             );
           })()}
@@ -5120,7 +5532,7 @@ const ProfilePage = () => {
                     <Button 
                       variant="outline" 
                       className="flex items-center gap-2"
-                      onClick={() => alert('Followers list coming soon!')}
+                      onClick={() => setLocation(`/profile/${profile.username}/followers`)}
                     >
                       <Users className="h-4 w-4" />
                       {(profile as any)?._count?.followers || 0} Followers
@@ -5128,7 +5540,7 @@ const ProfilePage = () => {
                     <Button 
                       variant="outline" 
                       className="flex items-center gap-2"
-                      onClick={() => alert('Following list coming soon!')}
+                      onClick={() => setLocation(`/profile/${profile.username}/followers?tab=following`)}
                     >
                       <Users className="h-4 w-4" />
                       Following {(profile as any)?._count?.following || 0}
@@ -5136,9 +5548,6 @@ const ProfilePage = () => {
                   </div>
                 </div>
 
-                {isOwnProfile && (
-                  <OutroPanel />
-                )}
               </div>
             </div>
           </TabsContent>
@@ -5348,6 +5757,7 @@ const ProfilePage = () => {
         </React.Suspense>
       )}
 
+
       {/* Name Tag Detail Dialog - matches Store page design */}
       <NameTagDetailDialog
         nameTag={nameTagData?.nameTag ? {
@@ -5368,6 +5778,28 @@ const ProfilePage = () => {
       />
 
     </div>
+
+    {/* Mayhem GIF — rendered via portal at body level so position:fixed always works */}
+    {isMayhemTheme && createPortal(
+      <>
+        {/* Mobile: sits on top of the mobile nav footer */}
+        <img
+          src={sipGifPath}
+          className="fixed z-[75] pointer-events-none md:hidden"
+          style={{ right: 0, bottom: 'calc(3.5rem + 12px + env(safe-area-inset-bottom, 0px))', width: 120, objectFit: 'contain' }}
+          alt=""
+        />
+        {/* Desktop: pinned to bottom-right corner of viewport */}
+        <img
+          src={sipGifPath}
+          className="fixed z-[60] pointer-events-none hidden md:block"
+          style={{ right: 0, bottom: 0, width: 528, objectFit: 'contain', filter: 'drop-shadow(0 0 11px rgba(255,255,255,0.46)) drop-shadow(0 0 29px rgba(255,255,255,0.25))' }}
+          alt=""
+        />
+      </>,
+      document.body
+    )}
+
     </>
   );
 };

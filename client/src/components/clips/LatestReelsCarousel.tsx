@@ -141,12 +141,12 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
               data-testid={`reel-card-${reel.id}`}
             >
               {/* 9:16 thumbnail with duration + view pills */}
-              <div className="relative aspect-[9/16] w-full overflow-hidden rounded-xl bg-black border border-white/5">
+              <div className="relative aspect-[9/16] w-full overflow-hidden rounded-xl bg-black border border-white/5 transition-transform duration-300 group-hover:-translate-y-1.5 group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.55)]">
                 {reel.thumbnailUrl ? (
                   <LazyImage
                     src={reel.thumbnailUrl}
                     alt={reel.title || 'Reel thumbnail'}
-                    className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+                    className="w-full h-full object-contain"
                     showLoadingSpinner={true}
                     rootMargin="400px"
                     threshold={0.1}

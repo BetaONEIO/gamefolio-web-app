@@ -8,8 +8,32 @@ interface BuyGFTScreenProps {
   currentBalance?: number;
 }
 
+interface GftPricing {
+  gbpRate: number;
+  localCurrency?: string;
+  localRate?: number;
+  exchangeRate?: number;
+}
+
 const presetAmounts = [5, 10, 25, 50, 100];
 const GFT_RATE = 0.01;
+
+function formatCurrency(amount: number, currency: string): string {
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+function getCurrencySymbol(currency: string): string {
+  return (
+    new Intl.NumberFormat(undefined, { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 })
+      .formatToParts(0)
+      .find(p => p.type === 'currency')?.value ?? currency
+  );
+}
 
 export default function BuyGFTScreen({
   onBack,
@@ -20,11 +44,31 @@ export default function BuyGFTScreen({
   const [customAmount, setCustomAmount] = useState<number | null>(null);
   const [isCustom, setIsCustom] = useState(false);
   const [showCustomScreen, setShowCustomScreen] = useState(false);
+  const [pricing, setPricing] = useState<GftPricing>({ gbpRate: GFT_RATE });
   const { balance: tokenBalanceStr } = useTokenBalance();
   const balance = parseFloat(tokenBalanceStr || '0') || currentBalance;
 
-  const displayAmount = isCustom && customAmount !== null ? customAmount : selectedAmount;
-  const gftReceived = displayAmount / GFT_RATE;
+  useEffect(() => {
+    fetch('/api/gft-pricing', { credentials: 'include' })
+      .then(r => r.json())
+      .then((data: GftPricing) => setPricing(data))
+      .catch(() => {});
+  }, []);
+
+  const { localCurrency, localRate, exchangeRate } = pricing;
+  const hasLocal = !!(localCurrency && exchangeRate && exchangeRate !== 1);
+
+  // Internal amounts always in GBP; display converts to local when available
+  const gbpAmount = isCustom && customAmount !== null ? customAmount : selectedAmount;
+  const gftReceived = gbpAmount / GFT_RATE;
+
+  const formatDisplay = (gbp: number) =>
+    hasLocal ? formatCurrency(gbp * exchangeRate!, localCurrency!) : `£${gbp.toFixed(2)}`;
+
+  const formatPreset = (gbp: number) =>
+    hasLocal
+      ? formatCurrency(gbp * exchangeRate!, localCurrency!)
+      : `£${gbp}`;
 
   const handlePresetClick = (amount: number) => {
     setSelectedAmount(amount);
@@ -51,9 +95,15 @@ export default function BuyGFTScreen({
       <CustomAmountScreen
         onBack={handleCustomBack}
         onApply={handleCustomApply}
+        localCurrency={localCurrency}
+        exchangeRate={exchangeRate}
       />
     );
   }
+
+  const displayStr = formatDisplay(gbpAmount);
+  const numPart = displayStr.replace(/^[^0-9]*/, '');
+  const symPart = displayStr.slice(0, displayStr.length - numPart.length);
 
   return (
     <div 
@@ -100,15 +150,21 @@ export default function BuyGFTScreen({
               className="text-3xl font-bold"
               style={{ color: '#B8C0AE' }}
             >
-              £
+              {symPart}
             </span>
             <span 
               className="text-6xl font-bold"
               style={{ color: '#fff' }}
             >
-              {displayAmount.toFixed(2)}
+              {numPart}
             </span>
           </div>
+
+          {hasLocal && (
+            <span className="text-sm" style={{ color: '#B8C0AE' }}>
+              ≈ £{gbpAmount.toFixed(2)} GBP charged at checkout
+            </span>
+          )}
 
           {/* GFT Receive Badge */}
           <div 
@@ -137,7 +193,7 @@ export default function BuyGFTScreen({
               <button
                 key={amount}
                 onClick={() => handlePresetClick(amount)}
-                className="h-14 rounded-2xl font-bold text-lg transition-all"
+                className="h-14 rounded-2xl font-bold text-base transition-all"
                 style={{ 
                   background: isSelected ? '#B7FF1A' : '#1B2A33',
                   border: `1px solid ${isSelected ? '#B7FF1A' : '#1B2A33'}`,
@@ -145,7 +201,7 @@ export default function BuyGFTScreen({
                   boxShadow: isSelected ? '0 0 20px -5px #B7FF1A' : 'none'
                 }}
               >
-                £{amount}
+                {formatPreset(amount)}
               </button>
             );
           })}
@@ -190,7 +246,13 @@ export default function BuyGFTScreen({
               </div>
               <div className="flex flex-col">
                 <span className="text-xs uppercase" style={{ color: '#B8C0AE' }}>Current Rate</span>
-                <span className="text-base font-bold" style={{ color: '#fff' }}>1 GFT ≈ £{GFT_RATE} GBP</span>
+                {hasLocal ? (
+                  <span className="text-base font-bold" style={{ color: '#fff' }}>
+                    1 GFT ≈ {formatCurrency(localRate!, localCurrency!)} {localCurrency}
+                  </span>
+                ) : (
+                  <span className="text-base font-bold" style={{ color: '#fff' }}>1 GFT ≈ £{GFT_RATE} GBP</span>
+                )}
               </div>
             </div>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -234,16 +296,22 @@ export default function BuyGFTScreen({
           borderTop: '1px solid rgba(30, 41, 59, 0.3)'
         }}
       >
-        <div className="max-w-[600px] mx-auto w-full flex flex-col gap-6">
+        <div className="max-w-[600px] mx-auto w-full flex flex-col gap-4">
           {/* Total to Pay */}
           <div className="flex items-center justify-between">
             <span className="text-base font-medium" style={{ color: '#B8C0AE' }}>Total to Pay</span>
-            <span className="text-2xl font-bold" style={{ color: '#fff' }}>£{displayAmount.toFixed(2)}</span>
+            <span className="text-2xl font-bold" style={{ color: '#fff' }}>{formatDisplay(gbpAmount)}</span>
           </div>
+
+          {hasLocal && (
+            <p className="text-xs text-center" style={{ color: '#B8C0AE' }}>
+              Approximate local price · Exact amount confirmed at checkout
+            </p>
+          )}
 
           {/* Continue Button */}
           <button
-            onClick={() => onContinue(displayAmount, gftReceived)}
+            onClick={() => onContinue(gbpAmount, gftReceived)}
             className="w-full flex items-center justify-center gap-2 py-5 rounded-2xl font-bold text-lg transition-all hover:opacity-90 active:scale-[0.98]"
             style={{ 
               background: '#B7FF1A',

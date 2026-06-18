@@ -40,7 +40,7 @@ export function ProBadge({ selectedVerificationBadgeId, size = "md", isModerator
           </span>
         </TooltipTrigger>
         <TooltipContent>
-          <p className="text-xs">Verified Gamefolio member</p>
+          <p className="text-xs">Gamefolio Pro member</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

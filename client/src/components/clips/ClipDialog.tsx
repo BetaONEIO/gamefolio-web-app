@@ -36,7 +36,6 @@ import {
   UserMinus,
   UserCheck,
   AlertTriangle,
-  Trash2,
   Play,
   Pause,
   Volume2,
@@ -568,9 +567,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           className={cn(
             "fixed left-[50%] top-[50%] z-[9999] grid w-full translate-x-[-50%] translate-y-[-50%] border shadow-lg sm:rounded-lg",
             "p-0 text-foreground clip-dialog-content",
-            !isMobile && effectiveType === 'reel' ? "bg-black" : "bg-background",
+            (effectiveType === 'reel' || (isMobile && effectiveType === 'reel')) ? "bg-black" : "bg-background",
             isMobile && effectiveType === 'reel'
-              ? "w-screen h-[calc(100dvh-64px)] max-w-none max-h-none overflow-hidden top-0 translate-y-0" // Leave space for footer on mobile reels, use dvh for dynamic viewport
+              ? "w-screen h-[calc(100dvh-64px)] max-w-none max-h-none overflow-hidden top-0 translate-y-0 border-0 shadow-none rounded-none grid-rows-[1fr]" // Leave space for footer on mobile reels, use dvh for dynamic viewport
               : isMobile 
                 ? "w-screen h-[100dvh] max-w-none max-h-none overflow-hidden top-0 translate-y-0 border-0 rounded-none" // Full screen, no border/radius on mobile clips
                 : "max-w-5xl w-[90%] max-h-[90vh] h-[88vh] overflow-hidden grid-rows-[1fr]" // Desktop size
@@ -615,25 +614,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             >
               View all
             </Link>
-          )}
-          {/* Delete button - only show for clip owner, not on mobile (shown in overlay for clips) */}
-          {isOwnClip && clip && (!isMobile || clip.videoType === 'reel') && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowDeleteConfirm(true);
-              }}
-              className={cn(
-                "rounded-sm opacity-70 ring-offset-background transition-all hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 group/trash",
-                isMobile 
-                  ? "p-3 bg-black/30 backdrop-blur-sm hover:bg-black/50"
-                  : "p-2"
-              )}
-              title="Delete clip"
-            >
-              <Trash2 className={cn("text-white group-hover/trash:text-red-500 transition-colors", isMobile ? "h-6 w-6" : "h-5 w-5")} />
-              <span className="sr-only">Delete</span>
-            </button>
           )}
           {/* Volume toggle - only for mobile clips (not reels, reels have their own) */}
           {isMobile && clip && clip.videoType !== 'reel' && (
@@ -713,18 +693,15 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               clip.videoType === 'reel' && isMobile ? (
                 // TikTok-style mobile fullscreen layout for reels only
                 <div
-                  className="w-full h-full flex items-center justify-center bg-black relative transition-all duration-300 ease-out"
-                  style={{
-                    paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
-                    ...(showComments ? { transform: 'translateY(-8px) scale(0.97)', transformOrigin: 'center top' } : {}),
-                  }}
+                  className="absolute inset-0 bg-black"
+                  style={showComments ? { transform: 'translateY(-8px) scale(0.97)', transformOrigin: 'center top' } : undefined}
                 >
                   <VideoPlayer 
                     videoUrl={clip.videoUrl} 
                     thumbnailUrl={clip.thumbnailUrl || (clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined)} 
                     autoPlay={true}
                     className="w-full h-full"
-                    objectFit="contain"
+                    objectFit="cover"
                     clipId={clip.id}
                     disableAspectRatio={true}
                     hideControls={true}
@@ -1016,14 +993,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       className="absolute right-3 flex flex-col items-center space-y-5 z-50 pointer-events-auto"
                       style={{ bottom: showComments ? '0.75rem' : '2rem' }}
                     >
-                      {isOwnClip && !showComments && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
-                          className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 flex items-center justify-center"
-                        >
-                          <Trash2 className="h-5 w-5 text-white hover:text-red-500 transition-colors" />
-                        </button>
-                      )}
                       <FireButton
                         contentId={clip.id}
                         contentType="clip"
