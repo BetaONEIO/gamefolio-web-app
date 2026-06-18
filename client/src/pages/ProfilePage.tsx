@@ -1542,6 +1542,70 @@ const ProfilePage = () => {
 
   const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isBatTheme && !isMayhemTheme && !isLightBackground;
 
+  const userTagStyle: React.CSSProperties = isLightBackground ? {
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    color: '#ff2056',
+    border: '0.556px solid #fda5d5',
+    boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+  } : isMayhemTheme ? {
+    background: 'linear-gradient(135deg, #00DFFF 0%, #9B30E8 50%, #FF0069 100%)',
+    color: '#ffffff',
+    border: '1px solid rgba(0,223,255,0.5)',
+    boxShadow: '0 0 10px rgba(0,223,255,0.3)',
+  } : isCyberpunkTheme ? {
+    backgroundColor: '#00b8db',
+    color: '#020617',
+    border: '1px solid #00d3f2',
+    fontFamily: "'Orbitron', sans-serif",
+  } : isNeoTheme ? {
+    backgroundColor: '#003300',
+    color: '#00ff41',
+    border: '1px solid rgba(0,255,65,0.47)',
+  } : isZombieTheme ? {
+    backgroundColor: 'rgba(154,230,0,0.9)',
+    color: '#3c6300',
+    border: '1px solid rgba(154,230,0,0.4)',
+  } : isBlocksTheme ? {
+    backgroundColor: '#B7FF1A',
+    color: '#1a1a1a',
+    border: '3px solid #1a1a1a',
+    fontFamily: "'Press Start 2P', monospace",
+    boxShadow: '3px 3px 0 #000',
+    fontSize: '6px',
+  } : isForestTheme ? {
+    backgroundColor: '#1d3932',
+    color: '#e8d5b7',
+    border: '1px solid rgba(164,118,66,0.4)',
+  } : isGothicTheme ? {
+    background: 'linear-gradient(135deg, #3d0070 0%, #1e053a 100%)',
+    color: '#c27aff',
+    border: '1px solid rgba(194,122,255,0.33)',
+    boxShadow: '0 0 8px rgba(194,122,255,0.13)',
+  } : isCartoonTheme ? {
+    background: 'linear-gradient(135deg, #ff5e5e 0%, #ff7a5e 100%)',
+    color: '#ffffff',
+    border: '3px solid #1d1d1f',
+    boxShadow: '3px 3px 0 #1d1d1f',
+    fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif",
+    fontWeight: '800',
+  } : isWatermelonTheme ? {
+    backgroundColor: '#1d3932',
+    color: '#ffb3c1',
+    border: '3px solid #1d3932',
+  } : isElectricTheme ? {
+    backgroundColor: '#ffe033',
+    color: '#1a1200',
+    border: '1px solid rgba(255,224,51,0.4)',
+  } : isBatTheme ? {
+    backgroundColor: '#ff8c00',
+    color: '#000000',
+    border: '1px solid rgba(255,140,0,0.4)',
+  } : {
+    backgroundColor: `${accentColor}33`,
+    color: accentColor,
+    borderColor: `${accentColor}66`,
+  };
+
   const platformBtnStyle = isWatermelonTheme
     ? { backgroundColor: '#ffb3c1', color: '#0d1a12', border: '3px solid #1d3932', borderRadius: '9999px' }
     : isCartoonTheme
@@ -3210,16 +3274,7 @@ const ProfilePage = () => {
                         key={`${type}-${index}`}
                         variant="outline" 
                         className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px]"
-                        style={isLightBackground ? {
-                          backgroundColor: 'rgba(255,255,255,0.6)',
-                          color: '#ff2056',
-                          border: '0.556px solid #fda5d5',
-                          boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
-                        } : {
-                          backgroundColor: `${accentColor}1a`,
-                          color: accentColor,
-                          borderColor: `${accentColor}66`,
-                        }}
+                        style={userTagStyle}
                       >
                         <IconComponent className="w-3 h-3 mr-1.5" />
                         {config.label}
@@ -3624,16 +3679,7 @@ const ProfilePage = () => {
                       key={`${type}-${index}`}
                       variant="outline" 
                       className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px]"
-                      style={isLightBackground ? {
-                        backgroundColor: 'rgba(255,255,255,0.6)',
-                        color: '#ff2056',
-                        border: '0.556px solid #fda5d5',
-                        boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
-                      } : {
-                        backgroundColor: `${accentColor}1a`,
-                        color: accentColor,
-                        borderColor: `${accentColor}66`,
-                      }}
+                      style={userTagStyle}
                     >
                       <IconComponent className="w-3 h-3 mr-1.5" />
                       {config.label}
