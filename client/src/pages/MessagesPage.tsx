@@ -811,7 +811,7 @@ const MessagesPage: React.FC = () => {
       {/* Chat Area */}
       <div className={`
         ${!showMobileConversationList && selectedConversation ? 'flex' : 'hidden'} 
-        md:flex flex-1 flex-col
+        md:flex flex-1 flex-col bg-[#0B1218]
       `}>
         {selectedConversation ? (
           <>

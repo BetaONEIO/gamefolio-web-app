@@ -418,7 +418,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
         <main
           ref={mainScrollRef}
-          className={`flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide ${!isMobile ? 'ml-64' : ''}`}
+          className={`flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide bg-background ${!isMobile ? 'ml-64' : ''}`}
           style={{
             ...(isMobile && keyboardHeight > 0 ? { paddingBottom: `${keyboardHeight}px` } : {}),
             overflowAnchor: 'none',
