@@ -81,6 +81,7 @@ import { FireButton } from "@/components/engagement/FireButton";
 import { ModeratorIcon } from "@/components/ui/moderator-icon";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { PartnerBadge } from "@/components/ui/partner-badge";
+import { ProBadge } from "@/components/ui/pro-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { useProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
@@ -1604,9 +1605,10 @@ const ProfilePage = () => {
     color: '#000000',
     border: '1px solid rgba(255,140,0,0.4)',
   } : {
-    backgroundColor: `${accentColor}33`,
-    color: accentColor,
-    borderColor: `${accentColor}66`,
+    backgroundColor: accentColor,
+    color: '#000000',
+    border: `1px solid ${accentColor}`,
+    boxShadow: `0 0 8px ${accentColor}44`,
   };
 
   const platformBtnStyle = isWatermelonTheme
@@ -3669,6 +3671,7 @@ const ProfilePage = () => {
                 size="xl" 
               />
               <PartnerBadge isPartner={(profile as any).isPartner} size="xl" />
+              <ProBadge selectedVerificationBadgeId={profile.selectedVerificationBadgeId} size="xl" />
             </div>
 
             {/* User type tags — own row so they never wrap with the name */}
@@ -3786,8 +3789,9 @@ const ProfilePage = () => {
                   border: '1px solid #00c8e8',
                   minWidth: '384px',
                 } : {
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'rgba(10,15,25,0.85)',
+                  border: `1px solid ${accentColor}55`,
+                  boxShadow: `0 0 20px ${accentColor}15`,
                   minWidth: '384px',
                 }}
               >
