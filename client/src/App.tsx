@@ -12,6 +12,7 @@ import { SequenceConnect } from "@0xsequence/connect";
 import { sequenceConfig } from "@/lib/sequence-config";
 import { WalletProvider, NoWalletProvider } from "@/hooks/use-wallet";
 import { CrossmintProvider } from "@/hooks/use-crossmint";
+import { CRYPTO_FEATURES_ENABLED } from "@/lib/crypto-features";
 import { RevenueCatProvider } from "@/hooks/use-revenuecat";
 import { LevelTrackerProvider } from "@/hooks/use-level-tracker";
 import { DailyStreakProvider } from "@/hooks/use-daily-streak";
@@ -26,6 +27,7 @@ import { AdminProtectedRoute } from "@/components/auth/admin-protected-route";
 import { OnboardingGuard } from "@/components/auth/onboarding-guard";
 import { PageTransition } from "@/components/ui/page-transition";
 import { BannerSettings } from "@shared/schema";
+import { WebPlatformRedirect } from "@/components/WebPlatformRedirect";
 
 // Layout components
 import Header from "./components/layout/Header";
@@ -47,6 +49,15 @@ import { DiscordCallback } from "./components/auth/DiscordCallback";
 import { XboxCallback } from "./components/auth/XboxCallback";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
+
+// Single gate for all wallet / NFT / store / staking UI. These pages call wagmi
+// hooks (useConfig, useAccount, …), which throw "must be used within
+// WagmiProvider" unless the SequenceConnect provider tree is mounted. That tree
+// only mounts when BOTH the compliance flag is on AND a real Sequence config
+// exists — so the routes MUST gate on the same condition. Gating routes on
+// CRYPTO_FEATURES_ENABLED alone (while the provider also required sequenceConfig)
+// is what let WalletPage render with no provider on native and crash.
+const WALLET_UI_ENABLED = CRYPTO_FEATURES_ENABLED && Boolean(sequenceConfig);
 
 async function bustViteDepCache() {
   const entries = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
@@ -110,7 +121,10 @@ const LatestReelsPage = lazyWithRecovery(() => import("./pages/LatestReelsPage")
 const LatestClipsPage = lazyWithRecovery(() => import("./pages/LatestClipsPage"));
 const LatestScreenshotsPage = lazyWithRecovery(() => import("@/pages/LatestScreenshotsPage"));
 const InvitePage = lazyWithRecovery(() => import("./pages/InvitePage"));
+const ReferralInvitePage = lazyWithRecovery(() => import("./pages/ReferralInvitePage"));
 const RegisterPage = lazyWithRecovery(() => import("./pages/RegisterPage"));
+const NotificationsPage = lazyWithRecovery(() => import("./pages/NotificationsPage"));
+const FollowersPage = lazyWithRecovery(() => import("./pages/FollowersPage"));
 const NotFound = lazyWithRecovery(() => import("@/pages/not-found"));
 const AdminPage = lazyWithRecovery(() => import("./pages/AdminPage"));
 const AdminContentFilter = lazyWithRecovery(() => import("./pages/AdminContentFilter"));
@@ -161,6 +175,7 @@ function AuthRedirect() {
   
   return null;
 }
+
 
 function MainLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useMobile();
@@ -350,10 +365,6 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
-      {/* Simple green gradient effect */}
-      <div className="fixed top-0 right-0 w-full h-full bg-gradient-to-br from-transparent via-transparent to-primary/5 pointer-events-none"></div>
-      <div className="fixed bottom-0 left-0 w-full h-full bg-gradient-to-tr from-transparent via-transparent to-primary/5 pointer-events-none"></div>
-
       <Header />
 
       {/* Activity Scroll Banner - Only show on home page */}
@@ -403,7 +414,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
         <main
           ref={mainScrollRef}
-          className={`flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide ${!isMobile ? 'ml-64' : ''}`}
+          className={`flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide bg-background ${!isMobile ? 'ml-64' : ''}`}
           style={{
             ...(isMobile && keyboardHeight > 0 ? { paddingBottom: `${keyboardHeight}px` } : {}),
             overflowAnchor: 'none',
@@ -476,6 +487,7 @@ function Router() {
           <Route path="/browse/games/categories" component={GameCategoriesPage} />
           <Route path="/leaderboard" component={LeaderboardPage} />
           <ProtectedRoute path="/messages" component={MessagesPage} />
+          <ProtectedRoute path="/notifications" component={NotificationsPage} />
           <Route path="/latest-reels" component={LatestReelsPage} />
           <Route path="/latest-clips" component={LatestClipsPage} />
           <Route path="/latest-screenshots" component={LatestScreenshotsPage} />
@@ -496,25 +508,65 @@ function Router() {
           <Route path="/privacy" component={PrivacyPage} />
           <Route path="/contact" component={ContactPage} />
           <Route path="/help" component={HelpPage} />
+          <Route path="/invite/:code" component={ReferralInvitePage} />
           <Route path="/invite" component={InvitePage} />
           <Route path="/register" component={RegisterPage} />
-          <Route path="/store" component={StorePage} />
-          <Route path="/mint-nft" component={MintNFTPage} />
-          <Route path="/nft/:id" component={NFTDetailsPage} />
-          <Route path="/wallet" component={WalletPage} />
-          <Route path="/staking" component={StakingPage} />
+          {/* Web3 routes: full feature on web; branded redirect to app.gamefolio.com on native. */}
+          <Route path="/store" component={WALLET_UI_ENABLED ? StorePage : () => (
+            <WebPlatformRedirect
+              title="Gamefolio Store"
+              description="Browse and purchase cosmetics, borders, name tags, and exclusive items. The full store is available on our web platform."
+            />
+          )} />
+          <Route path="/mint-nft" component={WALLET_UI_ENABLED ? MintNFTPage : () => (
+            <WebPlatformRedirect
+              title="Mint Your NFT"
+              description="Create and mint unique NFTs on the SKALE network. NFT minting is available on the Gamefolio web platform."
+            />
+          )} />
+          <Route path="/nft/:id" component={WALLET_UI_ENABLED ? NFTDetailsPage : () => (
+            <WebPlatformRedirect
+              title="NFT Collectibles"
+              description="View, trade, and manage your NFT collection. Access the full NFT marketplace on the Gamefolio web platform."
+            />
+          )} />
+          <Route path="/wallet" component={WALLET_UI_ENABLED ? WalletPage : () => (
+            <WebPlatformRedirect
+              title="Your Wallet"
+              description="Manage your GFT token balance, transactions, and wallet settings securely on the Gamefolio web platform."
+            />
+          )} />
+          <Route path="/staking" component={WALLET_UI_ENABLED ? StakingPage : () => (
+            <WebPlatformRedirect
+              title="GFT Staking"
+              description="Stake your GFT tokens to earn rewards and boost your creator status. Staking is available on the Gamefolio web platform."
+            />
+          )} />
           <Route path="/storage" component={StoragePage} />
-          <Route path="/watchlist" component={WatchlistPage} />
+          <Route path="/watchlist" component={WALLET_UI_ENABLED ? WatchlistPage : () => (
+            <WebPlatformRedirect
+              title="NFT Watchlist"
+              description="Track your favourite NFTs and monitor floor prices. Your watchlist is available on the Gamefolio web platform."
+            />
+          )} />
           <Route path="/battles" component={UserBattlesPage} />
           <Route path="/user-battles" component={UserBattlesPage} />
           <ProtectedRoute path="/level-tracker" component={LevelTrackerPage} />
+          {/* Collection renders on native too (browse-only): the page is server-
+              sourced and uses no wallet provider at render time. Transaction
+              actions (Quick Sell) are disabled on native — see MintedNftDetailScreen. */}
           <ProtectedRoute path="/collection" component={CollectionPage} />
           <Route path="/leaderboard/embed" component={LeaderboardEmbedPage} />
-          <Route path="/debug/wallet" component={DebugWalletPage} />
+          <Route path="/debug/wallet" component={WALLET_UI_ENABLED ? DebugWalletPage : () => (
+            <WebPlatformRedirect title="Wallet" />
+          )} />
 
           {/* Public view routes for shareable content */}
           <Route path="/view/screenshot/:id" component={ViewContentPage} />
           <Route path="/view/:id" component={ViewContentPage} />
+
+          {/* Followers / following full-page view (single route, tab via ?tab=following) */}
+          <Route path="/profile/:username/followers" component={FollowersPage} />
 
           {/* Custom profile link route - matches gamefolio.gg/username pattern */}
           {/* General profile routes - MUST be at bottom after all specific routes */}
@@ -543,7 +595,7 @@ function App() {
               <AuthProvider>
                 <RevenueCatProvider>
                   <LevelTrackerProvider>
-                      {sequenceConfig ? (
+                      {WALLET_UI_ENABLED && sequenceConfig ? (
                       <SequenceConnect config={sequenceConfig}>
                         <WalletProvider>
                           <CrossmintProvider>

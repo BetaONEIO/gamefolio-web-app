@@ -72,7 +72,7 @@ const VideoClipGridItem = ({
   return (
     <div className="cursor-pointer group" onClick={handleOpenClip}>
       <div
-        className={`relative overflow-hidden rounded-xl ${aspectRatioClass} border`}
+        className={`relative overflow-hidden rounded-xl ${aspectRatioClass} border transition-transform duration-300 group-hover:-translate-y-1.5 group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.55)]`}
         style={{
           borderColor: customAccentColor
             ? `${customAccentColor}30`
@@ -83,7 +83,7 @@ const VideoClipGridItem = ({
           <video
             ref={lazyVideo.ref}
             src={lazyVideo.visible ? (clip.videoUrl ?? undefined) : undefined}
-            className={`w-full h-full object-cover ${clip.ageRestricted ? "blur-2xl" : ""}`}
+            className={`w-full h-full ${isReel ? "object-contain" : "object-cover"}`}
             preload="none"
             muted
             playsInline
@@ -104,9 +104,9 @@ const VideoClipGridItem = ({
             <LazyImage
               src={thumbnailUrl}
               alt={clip.title || "Video clip thumbnail"}
-              className={`w-full h-full transition-transform duration-300 group-hover:scale-105 relative z-[2] ${
-                showBlur ? "object-contain" : "object-cover"
-              } ${clip.ageRestricted ? "blur-2xl" : ""}`}
+              className={`w-full h-full relative z-[2] ${
+                isReel ? "object-contain" : showBlur ? "object-contain" : "object-cover"
+              }`}
               placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%230B1218'/%3e%3c/svg%3e"
               showLoadingSpinner={true}
               rootMargin="100px"
@@ -114,14 +114,6 @@ const VideoClipGridItem = ({
               onLoad={handleThumbnailLoad}
             />
           </>
-        )}
-
-        {clip.ageRestricted && (
-          <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-10 pointer-events-none">
-            <div className="text-red-500 text-4xl mb-2">⚠️</div>
-            <div className="text-white font-bold text-sm mb-1">Age Restricted</div>
-            <div className="text-white/70 text-xs">18+ Content</div>
-          </div>
         )}
 
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10 pointer-events-none">
@@ -138,11 +130,6 @@ const VideoClipGridItem = ({
         </div>
 
         <div className="absolute top-1.5 left-1.5 flex items-center gap-1 z-20">
-          {clip.ageRestricted && (
-            <div className="bg-red-600 text-white font-bold text-[9px] px-1.5 py-0.5 rounded shadow-md">
-              18+
-            </div>
-          )}
           {isNew && (
             <div className="bg-gray-600 text-white font-bold text-[9px] px-1.5 py-0.5 rounded shadow-md">
               NEW

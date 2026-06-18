@@ -144,7 +144,11 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
           )}
           
           <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center">
+            <Link
+              href={`/profile/${clip.user.username}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center hover:opacity-80 transition-opacity"
+            >
               <img 
                 src={clip.user.avatarUrl || `https://ui-avatars.com/api/?name=${clip.user.displayName}`} 
                 alt={clip.user.displayName} 
@@ -152,7 +156,7 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
                 className="w-5 h-5 rounded-full mr-2"
               />
               <span className="text-sm text-white">{clip.user.displayName}</span>
-            </div>
+            </Link>
             <div className="flex items-center space-x-2">
               <div onClick={(e) => e.stopPropagation()}>
                 <LikeButton 

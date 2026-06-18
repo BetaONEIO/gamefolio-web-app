@@ -11,6 +11,7 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage } from "./storage";
 import { LeaderboardService } from "./leaderboard-service";
+import { recordView } from "./view-rate-limiter";
 import { StreakService } from "./streak-service";
 import { PerformanceMilestoneService } from "./performance-milestone-service";
 import { CreatorMilestoneService } from "./creator-milestone-service";
@@ -23,6 +24,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
 import { eq, sql, desc, inArray, and } from "drizzle-orm";
+import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
 import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory } from "@shared/schema";
 
@@ -48,6 +50,7 @@ const __dirname = dirname(__filename);
 import { getDemoUser, getDemoUserWithStats, getDemoClips, getDemoFavoriteGames } from "./demo-user";
 import { getMacUserWithStats, MAC_BONUS_XP } from "./mac-profile";
 import axios from "axios";
+import { syncXboxForUser, syncPsnForUser, PlatformSyncError } from "./platform-sync";
 import adminRouter from "./routes/admin";
 import adminContentFilterRouter from "./routes/admin-content-filter";
 import twitchGamesRouter from "./routes/twitch-games";
@@ -341,6 +344,8 @@ function toPublicUser(user: any): Record<string, unknown> {
     kickVerified: user.kickVerified,
     liveEnabled: user.liveEnabled,
     showLiveOverlay: user.showLiveOverlay,
+    twitchShowOnProfile: user.twitchShowOnProfile ?? true,
+    kickShowOnProfile: user.kickShowOnProfile ?? true,
     accentColor: user.accentColor,
     primaryColor: user.primaryColor,
     backgroundColor: user.backgroundColor,
@@ -358,6 +363,7 @@ function toPublicUser(user: any): Record<string, unknown> {
     profileBackgroundDesktopY: user.profileBackgroundDesktopY,
     profileBackgroundDesktopZoom: user.profileBackgroundDesktopZoom,
     profileBackgroundGradient: user.profileBackgroundGradient,
+    profileBackgroundGradientCss: user.profileBackgroundGradientCss,
     hideBanner: user.hideBanner,
     statsGlassEffect: user.statsGlassEffect,
     layoutStyle: user.layoutStyle,
@@ -397,13 +403,15 @@ async function checkMediaOwnerAccess(
 
   if (owner.isPrivate) {
     const requesterId = req.user?.id;
-    const isOwner = requesterId === ownerId;
+    // Use Number() on both sides — JWT auth returns id as a string while session
+    // auth returns a number; strict === would wrongly block the owner in JWT sessions.
+    const isOwner = requesterId != null && Number(requesterId) === Number(ownerId);
     if (!isOwner) {
       if (!requesterId) {
         res.status(403).json({ message: "This profile is private. Please log in and follow the user to see their content." });
         return false;
       }
-      const isFollowing = await storage.isFollowing(requesterId, ownerId);
+      const isFollowing = await storage.isFollowing(Number(requesterId), ownerId);
       if (!isFollowing) {
         res.status(403).json({ message: "This profile is private. Follow the user to see their content." });
         return false;
@@ -929,7 +937,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Google authentication route
   app.post("/api/auth/google", async (req, res) => {
     try {
-      const { email, displayName, photoURL, uid } = req.body;
+      const { idToken } = req.body;
+
+      if (!idToken) {
+        return res.status(400).json({ message: "Missing required Google auth data" });
+      }
+
+      // Verify the Firebase ID token server-side — do not trust client-supplied fields
+      let claims: Awaited<ReturnType<typeof verifyFirebaseIdToken>>;
+      try {
+        claims = await verifyFirebaseIdToken(idToken);
+      } catch (err) {
+        console.error("Firebase token verification failed:", err);
+        return res.status(401).json({ message: "Invalid or expired Google token" });
+      }
+
+      const { uid, email, name: displayName, picture: photoURL } = claims;
 
       if (!email || !uid) {
         return res.status(400).json({ message: "Missing required Google auth data" });
@@ -1665,7 +1688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const state = randomBytes(16).toString("hex");
     (req.session as any).twitchOAuthState = state;
     (req.session as any).twitchOAuthUserId = (req.user as any).id;
-    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/twitch/callback`;
+    const redirectUri = `${process.env.APP_BASE_URL || `${req.protocol}://${req.get("host")}`}/api/auth/twitch/callback`;
     const url = new URL("https://id.twitch.tv/oauth2/authorize");
     url.searchParams.set("client_id", clientId);
     url.searchParams.set("redirect_uri", redirectUri);
@@ -1690,7 +1713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const clientId = process.env.TWITCH_CLIENT_ID!;
     const clientSecret = process.env.TWITCH_CLIENT_SECRET!;
-    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/twitch/callback`;
+    const redirectUri = `${process.env.APP_BASE_URL || `${req.protocol}://${req.get("host")}`}/api/auth/twitch/callback`;
 
     try {
       // Exchange code for access token
@@ -1724,11 +1747,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUser(userId, {
         twitchChannelName: twitchUser.login,
         twitchChannelId: twitchUser.id,
+        twitchUserId: twitchUser.id,
+        streamPlatform: 'twitch',
+        streamChannelName: twitchUser.login,
         twitchVerified: true,
         twitchAccessToken: accessToken,
+        twitchShowOnProfile: true,
       });
 
-      res.redirect("/settings?tab=platforms&twitch_connected=1");
+      res.redirect("/settings/profile?tab=streamer&twitch_connected=true");
     } catch (err: any) {
       console.error("Twitch callback error:", err);
       res.redirect(`/settings?tab=platforms&twitch_error=${encodeURIComponent(err.message || "connection_failed")}`);
@@ -1742,6 +1769,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUser((req.user as any).id, {
         twitchChannelName: null,
         twitchChannelId: null,
+        twitchUserId: null,
+        streamChannelName: null,
         twitchVerified: false,
         twitchAccessToken: null,
       });
@@ -1765,6 +1794,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUser((req.user as any).id, {
         kickChannelName: null,
         kickChannelId: null,
+        kickId: null,
+        streamChannelName: null,
         kickVerified: false,
         kickAccessToken: null,
       });
@@ -1787,7 +1818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/user/streamer-settings", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
-      const { isStreamer, streamPlatform, liveEnabled } = req.body;
+      const { isStreamer, streamPlatform, liveEnabled, twitchShowOnProfile, kickShowOnProfile } = req.body;
       const ALLOWED_PLATFORMS = ["twitch", "kick"];
       if (streamPlatform !== undefined && !ALLOWED_PLATFORMS.includes(streamPlatform)) {
         return res.status(400).json({ message: "Invalid streamPlatform value" });
@@ -1796,6 +1827,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isStreamer !== undefined) update.isStreamer = Boolean(isStreamer);
       if (streamPlatform !== undefined) update.streamPlatform = streamPlatform;
       if (liveEnabled !== undefined) update.liveEnabled = Boolean(liveEnabled);
+      if (twitchShowOnProfile !== undefined) update.twitchShowOnProfile = Boolean(twitchShowOnProfile);
+      if (kickShowOnProfile !== undefined) update.kickShowOnProfile = Boolean(kickShowOnProfile);
       const updated = await storage.updateUser((req.user as any).id, update);
       res.json(updated);
     } catch (err) {
@@ -1804,53 +1837,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Xbox Achievements — sync from xbl.io
+  // Xbox Achievements — sync from xbl.io. The per-user sync logic lives in
+  // server/platform-sync.ts so the daily background scheduler can reuse it.
   app.post("/api/xbox/achievements/sync", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const user = await storage.getUserById((req.user as any).id);
       if (!user) return res.status(404).json({ message: "User not found" });
-      if (!user.xboxXuid) return res.status(400).json({ message: "No Xbox account linked. Please connect your Xbox account first." });
 
-      const xblApiKey = process.env.XBL_API_KEY;
-      if (!xblApiKey) return res.status(500).json({ message: "Xbox integration is not configured" });
-
-      const axiosResponse = await axios.get(`https://xbl.io/api/v2/achievements/player/${user.xboxXuid}`, {
-        headers: {
-          'x-authorization': xblApiKey,
-          'Accept': 'application/json',
-          'Accept-Language': 'en-US',
-        },
-        validateStatus: null,
+      const result = await syncXboxForUser(user);
+      res.json({
+        achievements: result.achievements,
+        syncedAt: new Date().toISOString(),
+        gamerscore: result.gamerscore,
+        totalAchievements: result.totalAchievements,
       });
-
-      if (axiosResponse.status < 200 || axiosResponse.status >= 300) {
-        console.error("xbl.io achievements error:", axiosResponse.status, JSON.stringify(axiosResponse.data));
-        return res.status(502).json({ message: "Failed to fetch achievements from Xbox Live" });
-      }
-
-      const data = axiosResponse.data as any;
-      const allTitles = data.titles || data.achievements || data.data || [];
-      const achievements = allTitles.slice(0, 100);
-
-      // Tally true totals across ALL games before slicing
-      const totalAchievementsEarned = allTitles.reduce((sum: number, t: any) => {
-        return sum + (t.achievement?.currentAchievements ?? t.earnedAchievements ?? t.currentAchievements ?? 0);
-      }, 0);
-
-      const totalGamerscoreEarned = allTitles.reduce((sum: number, t: any) => {
-        return sum + (t.achievement?.currentGamerscore ?? t.currentGamerscore ?? 0);
-      }, 0);
-
-      await storage.updateUser(user.id, {
-        xboxAchievements: achievements,
-        xboxAchievementsLastSync: new Date(),
-        xboxTotalAchievements: totalAchievementsEarned,
-        xboxGamerscore: totalGamerscoreEarned > 0 ? totalGamerscoreEarned : null,
-      });
-
-      res.json({ achievements, syncedAt: new Date().toISOString(), gamerscore: totalGamerscoreEarned, totalAchievements: totalAchievementsEarned });
     } catch (error) {
+      if (error instanceof PlatformSyncError) {
+        return res.status(error.httpStatus).json({ message: error.message });
+      }
       console.error("Xbox achievements sync error:", error);
       res.status(500).json({ message: "Failed to sync achievements" });
     }
@@ -1872,151 +1877,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PSN helpers — store/retrieve refresh token from server_settings
-  async function getPsnRefreshToken(): Promise<string | null> {
-    try {
-      const rows = await db.select().from(serverSettings).where(eq(serverSettings.key, "psn_refresh_token"));
-      return rows[0]?.value ?? null;
-    } catch { return null; }
-  }
-
-  async function setPsnRefreshToken(token: string): Promise<void> {
-    try {
-      await db.insert(serverSettings).values({ key: "psn_refresh_token", value: token, updatedAt: new Date() })
-        .onConflictDoUpdate({ target: serverSettings.key, set: { value: token, updatedAt: new Date() } });
-    } catch (e) {
-      console.error("Failed to save PSN refresh token:", e);
-    }
-  }
-
-  // PSN Trophy Sync
+  // PSN Trophy Sync. Per-user logic + the self-renewing refresh-token handling
+  // live in server/platform-sync.ts so the daily background scheduler reuses it.
   app.post("/api/psn/trophies/sync", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const user = await storage.getUserById((req.user as any).id);
       if (!user) return res.status(404).json({ message: "User not found" });
-      if (!user.playstationUsername) return res.status(400).json({ message: "No PlayStation ID saved. Please add your PSN ID first." });
 
-      // psn-api is ESM-formatted but lacks "type":"module", so dynamic import()
-      // fails in production. Instead we load the CJS build via require (dev) or
-      // createRequire (production ESM build).
-      const psnMod: any = await (async () => {
-        const cjsRequire: NodeRequire | undefined = (globalThis as any).require;
-        if (cjsRequire) {
-          return cjsRequire('psn-api');
-        }
-        const { createRequire } = await import('node:module');
-        return createRequire(process.cwd() + '/index.js')('psn-api');
-      })();
-      const {
-        exchangeNpssoForCode,
-        exchangeCodeForAccessToken,
-        exchangeRefreshTokenForAuthTokens,
-        getProfileFromUserName,
-        getUserPlayedGames,
-      } = psnMod;
-
-      let accessToken: string;
-
-      // Try refresh token first (self-renewing — no manual rotation needed)
-      const storedRefreshToken = await getPsnRefreshToken();
-      if (storedRefreshToken) {
-        try {
-          const tokens = await exchangeRefreshTokenForAuthTokens(storedRefreshToken);
-          accessToken = tokens.accessToken;
-          // Save the new refresh token — keeps the chain alive indefinitely
-          if (tokens.refreshToken) await setPsnRefreshToken(tokens.refreshToken);
-        } catch (refreshErr: any) {
-          console.warn("PSN refresh token expired, falling back to NPSSO:", refreshErr?.message);
-          // Fall through to NPSSO below
-          accessToken = "";
-        }
-      } else {
-        accessToken = "";
-      }
-
-      // Fall back to NPSSO (one-time bootstrap)
-      if (!accessToken) {
-        const npsso = process.env.PSN_NPSSO_TOKEN;
-        if (!npsso) {
-          return res.status(503).json({
-            message: "PSN is not configured. Please add a PSN_NPSSO_TOKEN secret to get started. After the first sync, it will self-renew automatically.",
-          });
-        }
-        try {
-          const code = await exchangeNpssoForCode(npsso);
-          const tokens = await exchangeCodeForAccessToken(code);
-          accessToken = tokens.accessToken;
-          if (tokens.refreshToken) await setPsnRefreshToken(tokens.refreshToken);
-        } catch (authErr: any) {
-          console.error("PSN NPSSO auth error:", authErr?.message || authErr);
-          return res.status(503).json({ message: "Failed to authenticate with PSN. The NPSSO token may be expired — please update it in your secrets." });
-        }
-      }
-
-      let profile: any;
-      try {
-        profile = await getProfileFromUserName({ accessToken }, user.playstationUsername);
-      } catch (lookupErr: any) {
-        const msg = lookupErr?.message || "";
-        if (msg.includes("not found") || msg.includes("404") || msg.includes("2105023")) {
-          return res.status(404).json({ message: `Could not find PSN user "${user.playstationUsername}". Check the PSN ID is correct and the profile is public.` });
-        }
-        throw lookupErr;
-      }
-
-      const accountId: string = profile?.profile?.accountId;
-      if (!accountId) {
-        return res.status(404).json({ message: `Could not find PSN user "${user.playstationUsername}". Check the PSN ID is correct and the profile is public.` });
-      }
-
-      const trophySummaryData = profile?.profile?.trophySummary ?? null;
-      const trophyLevel: number | null = trophySummaryData?.level ?? null;
-      const earnedTrophies = trophySummaryData?.earnedTrophies ?? {};
-      const totalTrophies = (
-        (earnedTrophies.platinum ?? 0) +
-        (earnedTrophies.gold ?? 0) +
-        (earnedTrophies.silver ?? 0) +
-        (earnedTrophies.bronze ?? 0)
-      ) || null;
-
-      let recentGames: any[] = [];
-      try {
-        const gamesResult = await getUserPlayedGames({ accessToken }, accountId, { limit: 12, categories: "ps4_game,ps5_native_game" });
-        recentGames = gamesResult?.titles ?? [];
-      } catch (gamesErr: any) {
-        console.warn("PSN recent games unavailable:", gamesErr?.message || gamesErr);
-      }
-
-      const trophyData = {
-        earnedTrophies,
-        trophyLevel,
-        recentGames: recentGames.slice(0, 10).map((g: any) => ({
-          titleId: g.titleId,
-          name: g.name,
-          imageUrl: g.imageUrl,
-          category: g.category,
-          playCount: g.playCount,
-          lastPlayedDateTime: g.lastPlayedDateTime,
-        })),
-      };
-
-      await storage.updateUser(user.id, {
-        psnTrophyData: [trophyData],
-        psnTrophiesLastSync: new Date(),
-        psnTrophyLevel: trophyLevel,
-        psnTotalTrophies: totalTrophies,
-      });
-
+      const result = await syncPsnForUser(user);
       res.json({
         success: true,
-        trophyLevel,
-        totalTrophies,
-        earnedTrophies,
-        recentGames: trophyData.recentGames,
+        trophyLevel: result.trophyLevel,
+        totalTrophies: result.totalTrophies,
+        earnedTrophies: result.earnedTrophies,
+        recentGames: result.recentGames,
         syncedAt: new Date().toISOString(),
       });
     } catch (error: any) {
+      if (error instanceof PlatformSyncError) {
+        return res.status(error.httpStatus).json({ message: error.message });
+      }
       console.error("PSN sync error:", error?.message || error);
       res.status(500).json({ message: "Failed to fetch PSN data. Please try again later." });
     }
@@ -2217,8 +2098,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Login route
   app.post("/api/login", (req, res, next) => {
-    // Special handling for demo account (always allow login with "demo" username)
-    if (req.body.username === "demo" || req.body.username === "Demo") {
+    // Special handling for demo account (allow login with "demo" username).
+    // Gated to non-production: the demo account is an in-memory admin-role user
+    // (id 999) with no password check, so it must never be reachable on prod.
+    // In production this falls through to normal auth and fails as expected.
+    if (process.env.NODE_ENV !== "production" && (req.body.username === "demo" || req.body.username === "Demo")) {
       const demoUser = getDemoUser();
       req.login(demoUser, (err) => {
         if (err) {
@@ -2708,6 +2592,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           kickId: u.kickId || null,
           showLiveOverlay: u.showLiveOverlay || false,
           liveEnabled: u.liveEnabled || false,
+          twitchShowOnProfile: u.twitchShowOnProfile ?? true,
+          kickShowOnProfile: u.kickShowOnProfile ?? true,
           referralCode: u.referralCode || null,
           referredBy: u.referredBy || null,
         });
@@ -2777,6 +2663,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       kickChannelName: u.kickChannelName || null,
       kickVerified: u.kickVerified || false,
       liveEnabled: u.liveEnabled || false,
+      twitchShowOnProfile: u.twitchShowOnProfile ?? true,
+      kickShowOnProfile: u.kickShowOnProfile ?? true,
     });
   });
 
@@ -2802,6 +2690,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   })();
 
+  // Run migration to ensure portrait outro column exists
+  (async () => {
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS outro_video_path_portrait TEXT`);
+    } catch (err) {
+      // Column already exists or other harmless error
+    }
+  })();
+
+  // Public endpoint — look up a user by referral code for the invite landing page
+  app.get("/api/invite/:code", async (req, res) => {
+    try {
+      const code = (req.params.code as string).trim().toUpperCase();
+      const user = await storage.getUserByReferralCode(code);
+      if (!user) return res.status(404).json({ message: "Invite not found" });
+      return res.json({
+        username: user.username,
+        displayName: user.displayName || null,
+        avatarUrl: user.avatarUrl || null,
+        referralCode: user.referralCode,
+      });
+    } catch (error) {
+      console.error("Error fetching invite:", error);
+      return res.status(500).json({ message: "Failed to fetch invite" });
+    }
+  });
+
   app.get("/api/user/referral-stats", authMiddleware, async (req, res) => {
     try {
       const userId = (req.user as any).id;
@@ -2812,7 +2727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         referralCount: stats.referralCount,
         totalXpEarned: stats.totalXpEarned,
         referralCodeCustomized: stats.referralCodeCustomized,
-        referralLink: stats.referralCode ? `${appUrl}/auth?ref=${stats.referralCode}` : null,
+        referralLink: stats.referralCode ? `${appUrl}/invite/${stats.referralCode}` : null,
       });
     } catch (error) {
       console.error('Error fetching referral stats:', error);
@@ -3258,6 +3173,209 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/hero-carousel - Dynamic community data for the homepage hero carousel
+  app.get("/api/hero-carousel", async (_req: Request, res: Response) => {
+    try {
+      const { supabaseStorage } = await import('./supabase-storage');
+
+      const signUrl = async (url: string | null | undefined): Promise<string | null> => {
+        if (!url) return null;
+        if (!url.includes('supabase.co')) return url;
+        return (await supabaseStorage.convertToSignedUrl(url, 3600)) ?? url;
+      };
+
+      const [
+        trendingClipRows,
+        leaderboardEntries,
+        trendingGameRows,
+        liveNowRows,
+        spotlightRows,
+        milestoneRows,
+        discoverRows,
+      ] = await Promise.all([
+        // 1. Trending clip — highest views, non-age-restricted clips
+        db.execute(sql`
+          SELECT c.id, c.title, c.thumbnail_url, c.views,
+                 u.username, u.display_name, u.avatar_url, u.is_pro, u.is_partner,
+                 g.name as game_name, g.image_url as game_image_url
+          FROM clips c
+          JOIN users u ON c.user_id = u.id
+          LEFT JOIN games g ON c.game_id = g.id
+          WHERE c.age_restricted = false AND c.video_type = 'clip' AND c.thumbnail_url IS NOT NULL
+          ORDER BY c.views DESC NULLS LAST
+          LIMIT 1
+        `),
+        // 2. Top gamefolios — all-time leaderboard top 3
+        LeaderboardService.getAllTimeLeaderboard(3),
+        // 3. Trending game — most clips uploaded in last 30 days
+        db.execute(sql`
+          SELECT g.id, g.name, g.image_url, COUNT(c.id)::int as clip_count
+          FROM clips c
+          JOIN games g ON c.game_id = g.id
+          WHERE c.created_at > NOW() - INTERVAL '30 days'
+          GROUP BY g.id, g.name, g.image_url
+          ORDER BY clip_count DESC
+          LIMIT 1
+        `),
+        // 4. Live right now — active streamers with live enabled
+        db.execute(sql`
+          SELECT id, username, display_name, avatar_url, stream_platform,
+                 twitch_channel_name, kick_channel_name, is_pro, is_partner
+          FROM users
+          WHERE live_enabled = true AND is_streamer = true AND status = 'active'
+          ORDER BY RANDOM()
+          LIMIT 4
+        `),
+        // 5. Creator spotlight — highest total XP user
+        db.execute(sql`
+          SELECT u.id, u.username, u.display_name, u.avatar_url, u.total_xp, u.level,
+                 u.is_pro, u.is_partner,
+                 COUNT(c.id)::int as clip_count
+          FROM users u
+          LEFT JOIN clips c ON c.user_id = u.id
+          WHERE u.status = 'active' AND u.hide_from_leaderboard = false
+          GROUP BY u.id
+          ORDER BY u.total_xp DESC NULLS LAST
+          LIMIT 1
+        `),
+        // 6. Community milestone — aggregate platform stats
+        db.execute(sql`
+          SELECT
+            (SELECT COUNT(*)::int FROM users WHERE status = 'active') as total_users,
+            (SELECT COUNT(*)::int FROM clips) as total_clips,
+            (SELECT COUNT(*)::int FROM screenshots) as total_screenshots,
+            (SELECT COALESCE(SUM(views), 0)::bigint FROM clips) as total_views
+        `),
+        // 7. Discover something new — random recent content with a thumbnail
+        db.execute(sql`
+          SELECT content_type, id, title, image_url, views FROM (
+            (SELECT 'clip' as content_type, id, title, thumbnail_url as image_url, views
+             FROM clips
+             WHERE age_restricted = false AND thumbnail_url IS NOT NULL
+             ORDER BY created_at DESC LIMIT 20)
+            UNION ALL
+            (SELECT 'screenshot' as content_type, id, title, thumbnail_url as image_url, views
+             FROM screenshots
+             WHERE age_restricted = false AND thumbnail_url IS NOT NULL
+             ORDER BY created_at DESC LIMIT 20)
+          ) sub
+          ORDER BY RANDOM()
+          LIMIT 1
+        `),
+      ]);
+
+      const slides: any[] = [];
+
+      // 1. Trending Clip
+      const tc = (trendingClipRows as any[])[0];
+      if (tc) {
+        slides.push({
+          type: 'trending_clip',
+          clipId: tc.id,
+          title: tc.title,
+          thumbnailUrl: await signUrl(tc.thumbnail_url),
+          views: tc.views ?? 0,
+          username: tc.username,
+          displayName: tc.display_name,
+          avatarUrl: await signUrl(tc.avatar_url),
+          gameName: tc.game_name ?? null,
+          gameImageUrl: await signUrl(tc.game_image_url),
+        });
+      }
+
+      // 2. Top Gamefolios
+      const topGamefolios = await Promise.all(
+        leaderboardEntries.slice(0, 3).map(async (entry: any) => ({
+          rank: entry.rank,
+          username: entry.user?.username,
+          displayName: entry.user?.displayName,
+          avatarUrl: await signUrl(entry.user?.avatarUrl),
+          totalPoints: entry.totalPoints ?? 0,
+          level: entry.user?.level ?? 1,
+          isPro: entry.user?.isPro ?? false,
+        }))
+      );
+      if (topGamefolios.length > 0) {
+        slides.push({ type: 'top_gamefolios', entries: topGamefolios });
+      }
+
+      // 3. Trending Game
+      const tg = (trendingGameRows as any[])[0];
+      if (tg) {
+        slides.push({
+          type: 'trending_game',
+          gameId: tg.id,
+          gameName: tg.name,
+          gameImageUrl: await signUrl(tg.image_url),
+          clipCount: tg.clip_count ?? 0,
+        });
+      }
+
+      // 4. Live Right Now
+      const liveUsers = await Promise.all(
+        (liveNowRows as any[]).map(async (u: any) => ({
+          id: u.id,
+          username: u.username,
+          displayName: u.display_name,
+          avatarUrl: await signUrl(u.avatar_url),
+          streamPlatform: u.stream_platform,
+          channelName: u.twitch_channel_name || u.kick_channel_name,
+          isPro: u.is_pro,
+        }))
+      );
+      if (liveUsers.length > 0) {
+        slides.push({ type: 'live_now', streamers: liveUsers });
+      }
+
+      // 5. Creator Spotlight
+      const sp = (spotlightRows as any[])[0];
+      if (sp) {
+        slides.push({
+          type: 'creator_spotlight',
+          userId: sp.id,
+          username: sp.username,
+          displayName: sp.display_name,
+          avatarUrl: await signUrl(sp.avatar_url),
+          totalXP: Math.round(Number(sp.total_xp ?? 0)),
+          level: sp.level ?? 1,
+          clipCount: sp.clip_count ?? 0,
+          isPro: sp.is_pro,
+          isPartner: sp.is_partner,
+        });
+      }
+
+      // 6. Community Milestone
+      const ms = (milestoneRows as any[])[0];
+      if (ms) {
+        slides.push({
+          type: 'community_milestone',
+          totalUsers: ms.total_users ?? 0,
+          totalClips: ms.total_clips ?? 0,
+          totalScreenshots: ms.total_screenshots ?? 0,
+          totalViews: Number(ms.total_views ?? 0),
+        });
+      }
+
+      // 7. Discover Something New
+      const disc = (discoverRows as any[])[0];
+      if (disc) {
+        slides.push({
+          type: 'discover_new',
+          contentType: disc.content_type,
+          contentId: disc.id,
+          title: disc.title,
+          imageUrl: await signUrl(disc.image_url),
+          views: disc.views ?? 0,
+        });
+      }
+
+      res.json(slides);
+    } catch (err) {
+      console.error('[hero-carousel] Error:', err);
+      res.status(500).json({ message: 'Failed to load carousel data' });
+    }
+  });
+
   // Helper to sign all Supabase URLs in clip objects (thumbnails, videos, avatars)
   // Short-lived in-memory cache for trending feeds (DB query + signed URLs).
   // Keyed by route+normalized-params+user. Bounded LRU so user-controlled
@@ -3317,6 +3435,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ? parseInt(String(gameId), 10)
       : '';
     return `${route}:${periodStr}:${parsedLimit}:${parsedGameId}:${currentUserId ?? 'guest'}`;
+  }
+
+  // Evict all trending cache entries whose key starts with a given route prefix.
+  function invalidateTrendingByRoute(routePrefix: string) {
+    for (const k of trendingCache.keys()) {
+      if (k.startsWith(routePrefix + ':') || k === routePrefix) {
+        trendingCache.delete(k);
+      }
+    }
   }
 
   // Periodic eviction so the cache doesn't grow without bound
@@ -4586,13 +4713,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // OG thumbnail with play button overlay for clips/reels
-  app.get('/api/og-thumbnail/:shareCode', async (req: Request, res: Response) => {
+  app.get('/api/og-thumbnail/:identifier', async (req: Request, res: Response) => {
     try {
-      const { shareCode } = req.params;
-      console.log(`🎬 Generating OG thumbnail with play button for shareCode: ${shareCode}`);
-      
-      // Try to find the clip by share code
-      const clip = await storage.getClipByShareCode(shareCode);
+      const { identifier } = req.params;
+      console.log(`🎬 Generating OG thumbnail with play button for: ${identifier}`);
+
+      // Accept both share codes and numeric clip IDs so every clip has a
+      // stable, non-expiring og:image URL regardless of whether it has a shareCode.
+      let clip = await storage.getClipByShareCode(identifier);
+      if (!clip) {
+        const numericId = parseInt(identifier, 10);
+        if (!isNaN(numericId)) {
+          clip = await storage.getClip(numericId);
+        }
+      }
       if (!clip) {
         return res.status(404).json({ error: 'Clip not found' });
       }
@@ -4608,14 +4742,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const thumbnailWithPlayButton = await addPlayButtonOverlay(fullClip.thumbnailUrl);
         res.setHeader('Content-Type', 'image/jpeg');
         res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day (signed URLs)
-        console.log(`✅ OG thumbnail with play button generated for ${shareCode}`);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        console.log(`✅ OG thumbnail with play button generated for ${identifier}`);
         return res.send(thumbnailWithPlayButton);
       } catch (overlayErr) {
         // Sharp/fetch failed — gracefully redirect to a freshly-signed thumbnail
         // so social crawlers still get a valid image instead of a 500.
         // Only redirect if target is on the trusted Supabase storage host to
         // prevent this endpoint from becoming an open-redirect sink.
-        console.warn(`⚠️ Play button overlay failed for ${shareCode}, falling back to raw thumbnail`);
+        console.warn(`⚠️ Play button overlay failed for ${identifier}, falling back to raw thumbnail`);
         const fresh = await refreshSupabaseSignedUrl(fullClip.thumbnailUrl);
         const supabaseHost = (() => {
           try { return new URL(process.env.SUPABASE_URL || '').host; } catch { return ''; }
@@ -4626,16 +4761,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.setHeader('Cache-Control', 'public, max-age=300'); // short cache on fallback
           return res.redirect(302, fresh);
         }
-        // Untrusted/invalid target — serve a transparent placeholder (200) instead
-        // of redirecting, so og:image is still a valid response.
-        return res.status(200)
-          .setHeader('Content-Type', 'image/svg+xml')
-          .setHeader('Cache-Control', 'public, max-age=60')
-          .send('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><rect width="1200" height="630" fill="#0a0a0a"/></svg>');
+        // Untrusted/invalid target — serve a solid-black JPEG placeholder (200)
+        // instead of redirecting. X/Twitter rejects SVG og:image responses, so
+        // we must return a proper JPEG here.
+        try {
+          const placeholderJpeg = await sharp({
+            create: { width: 1200, height: 630, channels: 3, background: { r: 10, g: 10, b: 10 } }
+          }).jpeg({ quality: 80 }).toBuffer();
+          return res.status(200)
+            .setHeader('Content-Type', 'image/jpeg')
+            .setHeader('Cache-Control', 'public, max-age=60')
+            .send(placeholderJpeg);
+        } catch {
+          // If sharp also fails, 404 is safer than serving unsupported SVG to X
+          return res.status(404).json({ error: 'Thumbnail not available' });
+        }
       }
     } catch (error) {
       console.error('Error generating OG thumbnail with play button:', error);
       res.status(500).json({ error: 'Failed to generate thumbnail' });
+    }
+  });
+
+  // Stable OG video proxy — lets Telegram (and other messengers) stream the clip
+  // in-app without an expiring Supabase signed URL in the og:video tag.
+  app.get('/api/og-video/:identifier', async (req: Request, res: Response) => {
+    try {
+      const { identifier } = req.params;
+
+      let clip = await storage.getClipByShareCode(identifier);
+      if (!clip) {
+        const numericId = parseInt(identifier, 10);
+        if (!isNaN(numericId)) clip = await storage.getClip(numericId);
+      }
+      if (!clip || !clip.videoUrl) return res.status(404).json({ error: 'Clip not found' });
+
+      const { refreshSupabaseSignedUrl } = await import('./og-thumbnail');
+      const freshUrl = await refreshSupabaseSignedUrl(clip.videoUrl, 60 * 60 * 4);
+
+      // Forward Range header so seekable/partial-content playback works in Telegram
+      const fetchHeaders: Record<string, string> = {};
+      if (req.headers['range']) fetchHeaders['Range'] = req.headers['range'] as string;
+
+      const videoResponse = await fetch(freshUrl, { headers: fetchHeaders });
+      if (!videoResponse.ok && videoResponse.status !== 206) {
+        return res.status(502).json({ error: 'Video source unavailable' });
+      }
+
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+
+      const contentLength = videoResponse.headers.get('content-length');
+      const contentRange = videoResponse.headers.get('content-range');
+      if (contentLength) res.setHeader('Content-Length', contentLength);
+      if (contentRange) res.setHeader('Content-Range', contentRange);
+
+      res.status(videoResponse.status === 206 ? 206 : 200);
+
+      const { Readable } = await import('stream');
+      const nodeStream = Readable.fromWeb(videoResponse.body as any);
+      nodeStream.pipe(res);
+    } catch (error) {
+      console.error('OG video proxy error:', error);
+      if (!res.headersSent) res.status(500).json({ error: 'Failed to proxy video' });
     }
   });
 
@@ -4674,10 +4864,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const contentType = imgResponse.headers.get('content-type') || 'image/jpeg';
-      const buffer = Buffer.from(await imgResponse.arrayBuffer());
+      const rawBuffer = Buffer.from(await imgResponse.arrayBuffer());
 
-      res.setHeader('Content-Type', contentType);
+      // Resize to the standard 1200×630 OG image size for consistent social cards
+      let buffer: Buffer;
+      try {
+        buffer = await sharp(rawBuffer, { failOn: 'none' })
+          .resize(1200, 630, { fit: 'cover', position: 'center' })
+          .jpeg({ quality: 90 })
+          .toBuffer();
+      } catch {
+        buffer = rawBuffer;
+      }
+
+      res.setHeader('Content-Type', 'image/jpeg');
       res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day cache for bots
+      res.setHeader('Access-Control-Allow-Origin', '*');
       return res.send(buffer);
     } catch (error) {
       console.error('Error serving OG screenshot image:', error);
@@ -4699,6 +4901,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const freshUrl = await refreshSupabaseSignedUrl(clip.videoUrl, 60 * 60); // 1-hour signed URL
       const safeTitle = (clip.title || 'video').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 60);
+
+      // Notify the clip owner (fire-and-forget)
+      const downloaderId = (req as any).user?.id;
+      NotificationService.createDownloadNotification(clipId, downloaderId).catch(() => {});
+
       res.json({ url: freshUrl, filename: `${safeTitle}_gamefolio.mp4` });
     } catch (error) {
       console.error('Download URL error:', error);
@@ -4740,6 +4947,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const safeTitle = (clip.title || 'clip').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 60);
 
+      // Notify the clip owner (fire-and-forget)
+      const downloaderId = (req as any).user?.id;
+      const isOwner = Number(downloaderId) === Number(clip.userId);
+      NotificationService.createDownloadNotification(clipId, downloaderId).catch(() => {});
+
       res.setHeader('Content-Type', 'video/mp4');
       res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}_gamefolio.mp4"`);
       res.setHeader('Cache-Control', 'private, no-cache');
@@ -4748,49 +4960,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.removeHeader('Content-Length');
       res.setHeader('Transfer-Encoding', 'chunked');
 
-      const logoPath = path.join(process.cwd(), 'client', 'public', 'attached_assets', 'gamefolio-logo-white.png');
+      const logoPath = path.join(process.cwd(), 'client', 'public', 'attached_assets', 'gamefolio-logo-green.png');
       const fs = await import('fs');
       const logoExists = fs.existsSync(logoPath);
 
-      if (logoExists) {
-        // Two-line text + logo overlay (TikTok style) — complex filtergraph
-        // Layout (bottom-right): logo (44 px tall) → line1 (38 px) → line2 (28 px)
-        // Each layer is stacked with a fixed gap; the box behind both text lines is shared.
-        const line1Filter =
-          `drawtext=text='${watermarkLine1}':fontsize=38:fontcolor=white@0.95:` +
-          `x=W-tw-20:y=H-th-56:` +
-          `shadowcolor=black@0.75:shadowx=2:shadowy=2:` +
-          `box=1:boxcolor=black@0.38:boxborderw=10`;
-        const line2Filter =
-          `drawtext=text='${watermarkLine2}':fontsize=26:fontcolor=white@0.80:` +
-          `x=W-tw-20:y=H-th-20:` +
-          `shadowcolor=black@0.55:shadowx=1:shadowy=1:` +
-          `box=1:boxcolor=black@0.38:boxborderw=8`;
+      // ── Step 1: Probe clip for dimensions + audio (needed before outro selection) ──
+      let clipHasAudio = false;
+      let clipW = 1280;
+      let clipH = 720;
+      {
+        const probeData = await new Promise<any>((resolve) => {
+          (ffmpeg as any).ffprobe(freshUrl, (err: any, data: any) => resolve(err ? null : data));
+        });
+        if (probeData?.streams) {
+          clipHasAudio = probeData.streams.some((s: any) => s.codec_type === 'audio');
+          const vs = probeData.streams.find((s: any) => s.codec_type === 'video');
+          if (vs?.width && vs?.height) { clipW = vs.width; clipH = vs.height; }
+        }
+      }
 
+      // Determine clip orientation — portrait (9:16) or landscape (16:9)
+      const clipIsPortrait = clipH > clipW;
+      const outroFormat: 'portrait' | 'landscape' = clipIsPortrait ? 'portrait' : 'landscape';
+
+      // ── Step 2: Resolve the clip creator's outro (appended for ALL downloads) ──
+      // Auto-generate if the creator has no cached outro yet, then cache it.
+      // Fail-open: any error here is non-fatal and the clip downloads without outro.
+      let outroSignedUrl: string | null = null;
+      try {
+        const clipOwner = await storage.getUser(clip.userId!);
+        if (clipOwner) {
+          // Select the right cached path by orientation:
+          //   portrait clips  → outroVideoPathPortrait (9:16 canvas)
+          //   landscape clips → outroVideoPath         (square, fill-cropped to 16:9)
+          let cachedPath = clipIsPortrait
+            ? (clipOwner.outroVideoPathPortrait ?? null)
+            : (clipOwner.outroVideoPath ?? null);
+
+          if (!cachedPath) {
+            console.log(`[outro] No cached ${outroFormat} outro for user ${clip.userId} — auto-generating`);
+            const { VideoProcessor } = await import('./video-processor');
+            const buffer = await VideoProcessor.generateOutroVideo(clipOwner.username, clip.userId!, outroFormat);
+            const storagePath = `outros/${clip.userId}_${outroFormat}.mp4`;
+            await supabaseStorage.uploadBufferToFixedPath(buffer, storagePath, 'video/mp4');
+            if (clipIsPortrait) {
+              await db.update(users).set({ outroVideoPathPortrait: storagePath }).where(eq(users.id, clip.userId!));
+            } else {
+              await db.update(users).set({ outroVideoPath: storagePath }).where(eq(users.id, clip.userId!));
+            }
+            cachedPath = storagePath;
+            console.log(`[outro] Auto-generated and cached ${outroFormat} outro for user ${clip.userId}`);
+          }
+
+          outroSignedUrl = await supabaseStorage.getSignedUrl(cachedPath, 3600);
+          console.log(`[outro] Using ${outroFormat} outro for user ${clip.userId}`);
+        } else {
+          console.warn(`[outro] Could not find clip owner (userId=${clip.userId})`);
+        }
+      } catch (outroErr: any) {
+        console.error('[outro] Failed to resolve outro (non-fatal):', outroErr?.message ?? outroErr);
+      }
+
+      // Probe outro for audio stream — cached outros generated before audio support may lack it
+      let outroHasAudio = false;
+      if (outroSignedUrl) {
+        const outroProbe = await new Promise<any>((resolve) => {
+          (ffmpeg as any).ffprobe(outroSignedUrl, (err: any, data: any) => resolve(err ? null : data));
+        });
+        if (outroProbe?.streams) {
+          outroHasAudio = outroProbe.streams.some((s: any) => s.codec_type === 'audio');
+        }
+      }
+
+      // Audio concat is only safe when BOTH the clip AND the outro have audio streams
+      const concatWithAudio = clipHasAudio && outroHasAudio;
+
+      // ── Build watermark filters ──────────────────────────────────────────
+      const sgFont = path.join(process.cwd(), 'server', 'assets', 'fonts', 'SpaceGrotesk-Bold.ttf');
+      const line1Filter =
+        `drawtext=text='${watermarkLine1}':fontfile='${sgFont}':fontsize=38:fontcolor=white@0.95:` +
+        `x=W-tw-20:y=H-th-56:shadowcolor=black@0.75:shadowx=2:shadowy=2`;
+      const line2Filter =
+        `drawtext=text='${watermarkLine2}':fontfile='${sgFont}':fontsize=26:fontcolor=white@0.80:` +
+        `x=W-tw-20:y=H-th-20:shadowcolor=black@0.55:shadowx=1:shadowy=1`;
+
+      const sharedOutputOptions = [
+        '-c:v', 'libx264',
+        '-c:a', 'copy',
+        '-preset', 'ultrafast',
+        '-crf', '24',
+        '-pix_fmt', 'yuv420p',
+        '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
+        '-threads', '0',
+      ];
+
+      // Shared output options for outro branches (codec + container settings)
+      const outroBaseOpts = [
+        '-preset', 'ultrafast', '-crf', '24', '-pix_fmt', 'yuv420p',
+        '-movflags', 'frag_keyframe+empty_moov+default_base_moof', '-threads', '0',
+      ];
+
+      // Scale outro to fill clip's exact dimensions — crop excess to avoid black bars
+      const outroScaleFilter =
+        `scale=${clipW}:${clipH}:force_original_aspect_ratio=increase,` +
+        `crop=${clipW}:${clipH},setsar=1,fps=fps=30`;
+
+      if (logoExists && outroSignedUrl) {
+        // Watermark + outro concat
+        // Inputs: 0=clip, 1=logo, 2=outro (outro has audio baked in)
+        const audioFilters = concatWithAudio ? [
+          '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+          `[2:v]${outroScaleFilter}[outro_n]`,
+          '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
+          '[2:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
+          '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
+        ] : [
+          '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+          `[2:v]${outroScaleFilter}[outro_n]`,
+          '[clip_n][outro_n]concat=n=2:v=1:a=0[outv]',
+        ];
+        const outroMapOpts = concatWithAudio
+          ? ['-map', '[outv]', '-map', '[outa]', '-c:v', 'libx264', '-c:a', 'aac', '-ar', '44100', ...outroBaseOpts]
+          : ['-map', '[outv]', '-c:v', 'libx264', '-an', ...outroBaseOpts];
+        const command = (ffmpeg as any)()
+          .input(freshUrl)
+          .input(logoPath)
+          .input(outroSignedUrl)
+          .complexFilter([
+            '[1:v]scale=-1:72[logo]',
+            '[0:v][logo]overlay=x=W-w-20:y=H-h-102[wl]',
+            `[wl]${line1Filter}[wl2]`,
+            `[wl2]${line2Filter}[clip_wm]`,
+            ...audioFilters,
+          ])
+          .outputOptions(outroMapOpts)
+          .format('mp4');
+
+        command.on('error', (err: Error) => {
+          console.error('FFmpeg watermark+outro error:', err.message);
+          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
+        });
+        command.pipe(res, { end: true });
+
+      } else if (logoExists) {
+        // Watermark only (existing behaviour)
         const command = (ffmpeg as any)()
           .input(freshUrl)
           .input(logoPath)
           .complexFilter([
-            // Scale logo to 44 px tall (preserving aspect ratio)
-            '[1:v]scale=-1:44[logo]',
-            // Overlay logo in bottom-right above the two text lines
-            '[0:v][logo]overlay=x=W-w-20:y=H-h-108[wl]',
-            // Draw line 1 (username) just below the logo
+            '[1:v]scale=-1:72[logo]',
+            '[0:v][logo]overlay=x=W-w-20:y=H-h-102[wl]',
             `[wl]${line1Filter}[wl2]`,
-            // Draw line 2 (game / site) at the very bottom
             `[wl2]${line2Filter}[out]`,
           ])
-          .outputOptions([
-            '-map', '[out]',
-            '-map', '0:a?',
-            '-c:v', 'libx264',
-            '-c:a', 'copy',
-            '-preset', 'ultrafast',
-            '-crf', '24',
-            '-pix_fmt', 'yuv420p',
-            '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
-            '-threads', '0',
-          ])
+          .outputOptions(['-map', '[out]', '-map', '0:a?', ...sharedOutputOptions])
           .format('mp4');
 
         command.on('error', (err: Error) => {
@@ -4798,8 +5121,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
         });
         command.pipe(res, { end: true });
+
+      } else if (outroSignedUrl) {
+        // Text watermark + outro concat (no logo)
+        // Inputs: 0=clip, 1=outro (outro has audio baked in)
+        const audioFilters2 = concatWithAudio ? [
+          '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+          `[1:v]${outroScaleFilter}[outro_n]`,
+          '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
+          '[1:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
+          '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
+        ] : [
+          '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+          `[1:v]${outroScaleFilter}[outro_n]`,
+          '[clip_n][outro_n]concat=n=2:v=1:a=0[outv]',
+        ];
+        const outroMapOpts2 = concatWithAudio
+          ? ['-map', '[outv]', '-map', '[outa]', '-c:v', 'libx264', '-c:a', 'aac', '-ar', '44100', ...outroBaseOpts]
+          : ['-map', '[outv]', '-c:v', 'libx264', '-an', ...outroBaseOpts];
+        const command = (ffmpeg as any)()
+          .input(freshUrl)
+          .input(outroSignedUrl)
+          .complexFilter([
+            `[0:v]${line1Filter}[wl]`,
+            `[wl]${line2Filter}[clip_wm]`,
+            ...audioFilters2,
+          ])
+          .outputOptions(outroMapOpts2)
+          .format('mp4');
+
+        command.on('error', (err: Error) => {
+          console.error('FFmpeg text-watermark+outro error:', err.message);
+          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
+        });
+        command.pipe(res, { end: true });
+
       } else {
-        // Fallback: text-only watermark (no logo)
+        // Fallback: text-only watermark (no logo, no outro)
         const drawtextFilter =
           `drawtext=text='${watermarkLine1}':fontsize=38:fontcolor=white@0.92:` +
           `x=w-tw-20:y=h-th-56:shadowcolor=black@0.75:shadowx=2:shadowy=2:` +
@@ -4830,6 +5188,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Download clip error:', error);
       if (!res.headersSent) res.status(500).json({ error: 'Failed to download clip' });
+    }
+  });
+
+  // ── Outro video endpoints ─────────────────────────────────────────────────
+
+  // GET /api/users/me/outro — return a signed URL for the current user's outro
+  app.get('/api/users/me/outro', hybridAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+
+      const user = await storage.getUser(userId);
+      if (!user?.outroVideoPath) return res.json({ url: null });
+
+      const signedUrl = await supabaseStorage.getSignedUrl(user.outroVideoPath, 60 * 60 * 2);
+      res.json({ url: signedUrl });
+    } catch (err) {
+      console.error('GET outro error:', err);
+      res.status(500).json({ error: 'Failed to get outro' });
+    }
+  });
+
+  // POST /api/users/me/outro — generate (or regenerate) the user's outro video
+  app.post('/api/users/me/outro', hybridAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+
+      console.log(`🎬 Generating outro for user ${user.username} (${userId})`);
+
+      const { VideoProcessor } = await import('./video-processor');
+      const buffer = await VideoProcessor.generateOutroVideo(user.username, userId);
+
+      const storagePath = `outros/${userId}.mp4`;
+      await supabaseStorage.uploadBufferToFixedPath(buffer, storagePath, 'video/mp4');
+
+      await db.update(users).set({ outroVideoPath: storagePath }).where(eq(users.id, userId));
+
+      const signedUrl = await supabaseStorage.getSignedUrl(storagePath, 60 * 60 * 2);
+      console.log(`✅ Outro generated and stored for user ${userId}`);
+      res.json({ url: signedUrl });
+    } catch (err) {
+      console.error('POST outro error:', err);
+      res.status(500).json({ error: 'Failed to generate outro' });
     }
   });
 
@@ -4885,7 +5290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "profileBackgroundType", "profileBackgroundTheme", "profileBackgroundAnimation", "profileBackgroundImageUrl",
         "profileBackgroundPositionX", "profileBackgroundPositionY",
         "profileBackgroundZoom", "profileBackgroundDesktopX", "profileBackgroundDesktopY", "profileBackgroundDesktopZoom",
-        "hideBanner", "statsGlassEffect", "profileBackgroundGradient",
+        "hideBanner", "statsGlassEffect", "profileBackgroundGradient", "profileBackgroundGradientCss",
         "steamUsername", "xboxUsername", "playstationUsername",
         "discordUsername", "epicUsername", "twitchUsername", "youtubeUsername",
         "twitterUsername", "instagramUsername", "facebookUsername", "nintendoUsername", "rumbleUsername",
@@ -5448,6 +5853,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error fetching screenshot:", err);
       return res.status(500).json({ message: "Error fetching screenshot" });
+    }
+  });
+
+  // Download screenshot with Gamefolio watermark
+  app.get("/api/screenshots/:id/download", optionalHybridAuth, async (req, res) => {
+    try {
+      const screenshotId = parseInt(req.params.id);
+      if (isNaN(screenshotId)) {
+        return res.status(400).json({ error: "Invalid screenshot ID" });
+      }
+
+      const screenshot = await storage.getScreenshot(screenshotId);
+      if (!screenshot) {
+        return res.status(404).json({ error: "Screenshot not found" });
+      }
+
+      if (!(await checkMediaOwnerAccess(screenshot.userId, req, res))) return;
+
+      // Resolve the image URL — sign if it's a Supabase storage path
+      let imageUrl: string = screenshot.imageUrl || "";
+      if (!imageUrl) {
+        return res.status(404).json({ error: "Screenshot image not found" });
+      }
+
+      // Sign Supabase URLs if needed
+      if (imageUrl.includes("supabase") && !imageUrl.includes("token=")) {
+        try {
+          const pathMatch = imageUrl.match(/\/storage\/v1\/object\/(?:public|authenticated)\/([^?]+)/);
+          if (pathMatch) {
+            const { data: signed } = await supabaseAdmin.storage
+              .from("gamefolio-media")
+              .createSignedUrl(pathMatch[1].replace(/^gamefolio-media\//, ""), 300);
+            if (signed?.signedUrl) imageUrl = signed.signedUrl;
+          }
+        } catch (_) {}
+      }
+
+      // Fetch the screenshot image
+      const imgResponse = await fetch(imageUrl);
+      if (!imgResponse.ok) {
+        return res.status(502).json({ error: "Failed to fetch screenshot image" });
+      }
+      const imgBuffer = Buffer.from(await imgResponse.arrayBuffer());
+
+      // Fetch username and game name for text overlay
+      const [screenshotUser, screenshotGame] = await Promise.all([
+        storage.getUser(screenshot.userId),
+        screenshot.gameId ? storage.getGame(screenshot.gameId) : Promise.resolve(null),
+      ]);
+      const usernameLabel = `@${screenshotUser?.username || "gamefolio"}`;
+      const gameLabel = screenshotGame?.name || "gamefolio.gg";
+
+      // Load logo watermark
+      const path = await import("path");
+      const logoPath = path.resolve("client/src/assets/gamefolio-logo-white.png");
+      const { width: imgW = 1920, height: imgH = 1080 } = await sharp(imgBuffer).metadata();
+
+      // Scale logo to ~18% of image width, positioned bottom-right with 2.5% padding
+      const logoTargetW = Math.round(imgW * 0.18);
+      const logoBuffer = await sharp(logoPath)
+        .resize(logoTargetW, undefined, { fit: "inside" })
+        .ensureAlpha()
+        .modulate({ brightness: 1 })
+        .composite([{
+          input: Buffer.from([255, 255, 255, 160]),
+          raw: { width: 1, height: 1, channels: 4 },
+          tile: true,
+          blend: "dest-in",
+        }])
+        .png()
+        .toBuffer();
+
+      const { width: logoW = logoTargetW, height: logoH = 60 } = await sharp(logoBuffer).metadata();
+      const padding = Math.round(imgW * 0.025);
+      const left = imgW - logoW - padding;
+      const top = imgH - logoH - padding;
+
+      // Build SVG text overlay — bottom-left, matching clip watermark style
+      const fontSize = Math.max(24, Math.round(imgW * 0.028));
+      const lineGap = Math.round(fontSize * 1.35);
+      const textPad = padding;
+      const textY1 = imgH - textPad - lineGap;
+      const textY2 = imgH - textPad;
+
+      // Escape XML special chars
+      const xmlEsc = (s: string) =>
+        s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+      const svgOverlay = `<svg xmlns="http://www.w3.org/2000/svg" width="${imgW}" height="${imgH}">
+        <defs>
+          <filter id="shadow">
+            <feDropShadow dx="1" dy="1" stdDeviation="3" flood-color="#000" flood-opacity="0.8"/>
+          </filter>
+        </defs>
+        <text x="${textPad}" y="${textY1}" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="bold"
+          fill="#B7FF18" filter="url(#shadow)">${xmlEsc(usernameLabel)}</text>
+        <text x="${textPad}" y="${textY2}" font-family="Arial, sans-serif" font-size="${Math.round(fontSize * 0.82)}"
+          fill="white" filter="url(#shadow)">${xmlEsc(gameLabel)}</text>
+      </svg>`;
+
+      const watermarked = await sharp(imgBuffer)
+        .composite([
+          { input: logoBuffer, left, top, blend: "over" },
+          { input: Buffer.from(svgOverlay), blend: "over" },
+        ])
+        .png()
+        .toBuffer();
+
+      const safeTitle = (screenshot.title || "screenshot").replace(/[^a-z0-9]/gi, "_").slice(0, 60);
+      res.set({
+        "Content-Type": "image/png",
+        "Content-Disposition": `attachment; filename="${safeTitle}_gamefolio.png"`,
+        "Cache-Control": "no-store",
+      });
+      res.send(watermarked);
+    } catch (err: any) {
+      console.error("Screenshot watermark download error:", err);
+      res.status(500).json({ error: "Failed to generate watermarked screenshot" });
     }
   });
 
@@ -6320,6 +6843,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )}`
       };
 
+      const signedThumbnailUrl = clip.thumbnailUrl
+        ? (await supabaseStorage.convertToSignedUrl(clip.thumbnailUrl, 3600)) || clip.thumbnailUrl
+        : null;
+
       res.json({
         clipId,
         qrCode: qrCodeDataUrl,
@@ -6328,7 +6855,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clipUrl,
         title: clip.title,
         description: clip.description,
-        thumbnailUrl: clip.thumbnailUrl || null,
+        thumbnailUrl: signedThumbnailUrl,
         videoUrl: clip.videoUrl || null,
         videoType: clip.videoType || 'clip'
       });
@@ -6376,6 +6903,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
+      // Notify the clip owner (fire-and-forget)
+      NotificationService.createShareNotification(clipId, sharerId).catch(() => {});
+
       res.json({ awarded: !sharedToday });
     } catch (err) {
       console.error("Error tracking clip share:", err);
@@ -6418,6 +6948,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `Screenshot #${screenshotId} was shared`
         );
       }
+
+      // Notify the screenshot owner (fire-and-forget)
+      NotificationService.createScreenshotShareNotification(screenshotId, sharerId).catch(() => {});
 
       res.json({ awarded: !sharedToday });
     } catch (err) {
@@ -7095,6 +7628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const comment = await storage.createComment(commentData);
+      invalidateTrendingByRoute('clips');
 
       // Award points to the commenter
       await LeaderboardService.awardPoints(
@@ -7157,6 +7691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to delete comment" });
       }
 
+      invalidateTrendingByRoute('clips');
       res.status(200).json({ message: "Comment deleted successfully" });
     } catch (err) {
       console.error("Error deleting comment:", err);
@@ -7292,10 +7827,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use production domain for share URLs
       const baseUrl = 'https://app.gamefolio.com';
 
-      // Generate proper share URL with username and share code
-      const screenshotUrl = screenshot.shareCode
-        ? `${baseUrl}/@${username}/screenshot/${screenshot.shareCode}`
-        : `${baseUrl}/screenshots/${screenshotId}`;
+      // Ensure screenshot has a share code - generate one if missing
+      let shareCode = screenshot.shareCode;
+      if (!shareCode) {
+        shareCode = generateShareCode();
+        await storage.updateScreenshot(screenshotId, { shareCode });
+      }
+
+      // Always use username-based URL format with alphanumeric share code
+      const screenshotUrl = `${baseUrl}/@${username}/screenshot/${shareCode}`;
 
       const qrCodeDataUrl = await QRCode.toDataURL(screenshotUrl);
 
@@ -7350,12 +7890,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )}`
       };
 
+      const signedImageUrl = screenshot.imageUrl
+        ? (await supabaseStorage.convertToSignedUrl(screenshot.imageUrl, 3600)) || screenshot.imageUrl
+        : null;
+
       res.json({
         screenshotId,
         qrCode: qrCodeDataUrl,
         socialMediaLinks,
         screenshotUrl,
-        imageUrl: screenshot.imageUrl, // Add the actual image URL for preview
+        imageUrl: signedImageUrl,
         title: screenshot.title,
         description: screenshot.description || ""
       });
@@ -7565,10 +8109,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingReaction = await storage.getUserClipReaction(userId, clipId, emoji);
       
       if (existingReaction) {
-        // Fire reactions cannot be removed
+        // Zaps cannot be removed
         if (emoji === '🔥') {
           return res.status(400).json({ 
-            message: "Fire reactions are permanent and cannot be removed",
+            message: "Zaps are permanent and cannot be removed",
             reacted: true
           });
         }
@@ -7588,8 +8132,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // For fire reactions, check daily limit
+      let fireLimits: Awaited<ReturnType<typeof storage.getFireLimits>> | null = null;
       if (emoji === '🔥') {
-        const fireLimits = await storage.getFireLimits(userId);
+        fireLimits = await storage.getFireLimits(userId);
         
         if (!fireLimits.canFire) {
           return res.status(400).json({ 
@@ -7616,8 +8161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const reaction = await storage.createClipReaction(reactionData);
 
-      if (emoji === '🔥') {
-        // fireLimits already fetched above; compute remaining without a second DB call
+      if (emoji === '🔥' && fireLimits) {
         const firesRemaining = fireLimits.maxFiresPerDay - fireLimits.firesUsedToday - 1;
         const reactionsList = await storage.getClipReactions(clipId);
         const count = reactionsList.filter(r => r.emoji === emoji).length;
@@ -7632,7 +8176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           maxFires: fireLimits.maxFiresPerDay
         });
 
-        // Background: XP and leaderboard points
+        // Background: XP, leaderboard points, and notification
         (async () => {
           try {
             const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'fire', 'clip', clipId);
@@ -7640,6 +8184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               await LeaderboardService.awardPoints(userId, 'fire', `Fire reaction given to clip #${clipId}`);
             }
             await XPService.awardXP(userId, 50, 'other', `Earned 50 XP for giving a fire reaction on clip #${clipId}`, clipId);
+            await NotificationService.createReactionNotification(clipId, userId, emoji);
           } catch (bgErr) {
             console.error('Error in fire reaction side-effects for clip', clipId, bgErr);
           }
@@ -7652,6 +8197,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const count = reactionsList.filter(r => r.emoji === emoji).length;
 
       res.status(201).json({ ...reaction, reacted: true, count });
+      // Notify the clip owner (fire-and-forget)
+      NotificationService.createReactionNotification(clipId, userId, emoji).catch(() => {});
     } catch (err) {
       return handleValidationError(err, res);
     }
@@ -7669,6 +8216,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Don't increment views for demo clips
       if (clipId >= 10000) {
         return res.json({ success: true, message: 'Demo clip views not tracked' });
+      }
+
+      // Rate-limit: same IP may only count once per clip per hour
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+      const isNewView = recordView('clip', clipId, ip);
+
+      if (!isNewView) {
+        return res.json({ success: true, message: 'View already counted recently' });
       }
 
       // Get the clip to find the owner, then increment — these are the minimum
@@ -8129,17 +8684,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If user is not private, follow immediately
       await storage.createFollow({followerId, followingId});
-      await NotificationService.createFollowNotification(followingId, followerId);
 
-      // Award follow_received XP to the person being followed
-      await LeaderboardService.awardCustomPoints(
-        followingId,
-        'follow_received',
-        50,
-        `Received a new follower`
-      );
-
+      // Respond immediately — notification + XP are fire-and-forget
       res.json({ status: 'following', message: 'User followed successfully' });
+
+      // Background side-effects (don't block the response)
+      NotificationService.createFollowNotification(followingId, followerId).catch(() => {});
+      LeaderboardService.awardCustomPoints(followingId, 'follow_received', 50, 'Received a new follower').catch(() => {});
     } catch (err) {
       console.error("Error following user:", err);
       return res.status(500).json({ message: "Error following user" });
@@ -9580,6 +10131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...unlockedBadges,
       ];
       
+      const isUserPro = !!(req.user as any).isPro;
       const hiddenBadgeNames = ['moderator', 'moderator icon', 'pro user'];
       const filteredBadges = mergedBadges
         .filter(b => {
@@ -9589,7 +10141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .map(b => {
           if (b.name.toLowerCase() === 'verified128') {
-            return { ...b, name: 'Pro' };
+            return { ...b, name: 'Verified', requiresPro: true, proLocked: !isUserPro };
           }
           return b;
         });
@@ -9626,11 +10178,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Invalid verification badge" });
         }
         
-        // Default badges are available to everyone
+        // Default badges are available to everyone except the verified badge which requires Pro
         // Moderator badges are available to moderators and admins
         const isModeratorBadge = badge.name?.toLowerCase().includes('moderator');
         const userIsModerator = req.user.role === 'moderator' || req.user.role === 'admin';
-        
+        const isVerifiedBadge = badge.name?.toLowerCase() === 'verified128';
+
+        if (isVerifiedBadge && !(req.user as any).isPro) {
+          return res.status(403).json({ message: "The Verified badge is a Gamefolio Pro exclusive. Upgrade to Pro to use it!" });
+        }
+
         if (!badge.isDefault && !(isModeratorBadge && userIsModerator)) {
           const hasUnlocked = await storage.userHasUnlockedVerificationBadge(req.user.id, badgeId);
           if (!hasUnlocked) {
@@ -9666,6 +10223,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const badge = await storage.getVerificationBadge(user.selectedVerificationBadgeId);
+
+      // Suppress the Pro-only verified badge for non-Pro users (handles legacy selections)
+      if (badge && badge.name?.toLowerCase() === 'verified128' && !(user as any).isPro) {
+        return res.json({ verificationBadge: null });
+      }
+
       if (badge && badge.imageUrl && badge.imageUrl.includes('supabase.co/storage')) {
         const signed = await supabaseStorage.convertToSignedUrl(badge.imageUrl, 3600);
         if (signed) {
@@ -11687,10 +12250,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingReaction = await storage.getUserScreenshotReaction(userId, screenshotId, emoji);
 
       if (existingReaction) {
-        // Fire reactions cannot be removed
+        // Zaps cannot be removed
         if (emoji === '🔥') {
           return res.status(400).json({ 
-            message: "Fire reactions are permanent and cannot be removed",
+            message: "Zaps are permanent and cannot be removed",
             reacted: true
           });
         }
@@ -11747,7 +12310,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Get updated fire limits to return
           const fireLimits = await storage.getFireLimits(userId);
-          
+
+          // Notify screenshot owner (fire-and-forget)
+          NotificationService.createScreenshotReactionNotification(screenshotId, userId, emoji).catch(() => {});
+
           return res.status(201).json({ 
             message: "Reaction added", 
             reacted: true, 
@@ -11757,7 +12323,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             maxFires: fireLimits.maxFiresPerDay
           });
         }
-        
+
+        // Notify screenshot owner (fire-and-forget)
+        NotificationService.createScreenshotReactionNotification(screenshotId, userId, emoji).catch(() => {});
+
         res.status(201).json({ message: "Reaction added", reacted: true, reaction });
       }
     } catch (err) {
@@ -11931,18 +12500,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let socialMediaLinks;
 
       // Get content based on type
+      const BASE_URL = 'https://app.gamefolio.com';
       if (contentType === 'clip' || contentType === 'reel') {
-        content = await storage.getClip(contentId);
-        if (!content) {
+        const clipWithUser = await storage.getClipWithUser(contentId);
+        if (!clipWithUser) {
           return res.status(404).json({ message: "Clip not found" });
         }
-        shareUrl = `${req.protocol}://${req.get('host')}/view/${contentId}`;
+        content = clipWithUser;
+        const username = clipWithUser.user?.username || 'unknown';
+        let sc = clipWithUser.shareCode;
+        if (!sc) {
+          sc = nanoid(8);
+          await storage.updateClip(contentId, { shareCode: sc });
+        }
+        shareUrl = `${BASE_URL}/@${username}/clip/${sc}`;
       } else if (contentType === 'screenshot') {
-        content = await storage.getScreenshot(contentId);
-        if (!content) {
+        const screenshotWithUser = await storage.getScreenshotWithUser(contentId);
+        if (!screenshotWithUser) {
           return res.status(404).json({ message: "Screenshot not found" });
         }
-        shareUrl = `${req.protocol}://${req.get('host')}/screenshot/${contentId}`;
+        content = screenshotWithUser;
+        const username = screenshotWithUser.user?.username || 'unknown';
+        let sc = screenshotWithUser.shareCode;
+        if (!sc) {
+          sc = nanoid(8);
+          await storage.updateScreenshot(contentId, { shareCode: sc });
+        }
+        shareUrl = `${BASE_URL}/@${username}/screenshots/${sc}`;
       } else {
         return res.status(400).json({ message: "Invalid content type" });
       }
@@ -13175,6 +13759,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       let isCancelled = false;
+      // Currency + amount of the live Stripe subscription, so the manage
+      // screen shows what the user is actually billed (region-dependent).
+      let subscriptionCurrency: string | null = null;
+      let subscriptionAmount: number | null = null;
       const hasActiveEndDate = user.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date();
 
       if (!user.isPro && hasActiveEndDate) {
@@ -13191,23 +13779,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 status: 'active',
                 limit: 10,
               });
-              const matchingSub = subs.data.find((s: any) => 
+              const matchingSub = subs.data.find((s: any) =>
                 s.metadata?.userId === String(user.id) || s.metadata?.plan
               ) || subs.data[0];
               if (matchingSub?.cancel_at_period_end) {
                 isCancelled = true;
+              }
+              // Base (GBP) price as a fallback. All Pro prices use 2-decimal
+              // currencies, so /100 is safe here.
+              const item = matchingSub?.items?.data?.[0];
+              if (item?.price?.unit_amount != null) {
+                subscriptionCurrency = item.price.currency;
+                subscriptionAmount = item.price.unit_amount / 100;
+              }
+              // Prefer the presentment (local) amount the customer is actually
+              // billed under Adaptive Pricing — read from the latest invoice.
+              try {
+                const latestInvoiceId = typeof matchingSub?.latest_invoice === 'string'
+                  ? matchingSub.latest_invoice
+                  : matchingSub?.latest_invoice?.id;
+                if (latestInvoiceId) {
+                  const invoice: any = await stripe.invoices.retrieve(latestInvoiceId);
+                  const pd = invoice?.presentment_details;
+                  if (pd?.presentment_amount != null && pd?.presentment_currency) {
+                    subscriptionCurrency = pd.presentment_currency;
+                    subscriptionAmount = pd.presentment_amount / 100;
+                  }
+                }
+              } catch (invErr) {
+                // Non-fatal — fall back to the base price captured above.
               }
             }
           }
         } catch (e) {}
       }
 
-      res.json({ 
+      res.json({
         isPro: user.isPro || false,
         userId: user.id,
         isCancelled,
         proSubscriptionEndDate: user.proSubscriptionEndDate,
         proSubscriptionType: user.proSubscriptionType,
+        subscriptionCurrency,
+        subscriptionAmount,
       });
     } catch (error) {
       console.error("Error getting subscription status:", error);

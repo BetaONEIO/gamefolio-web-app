@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
@@ -21,11 +22,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Drawer as DrawerPrimitive } from "vaul";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -216,33 +213,30 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
       if (isScreenshot) {
         toast({
           title: "⚡ Preparing your screenshot…",
-          description: "Fetching the image. This may take a moment.",
+          description: "Adding Gamefolio watermark. This may take a moment.",
         });
-        const sourceUrl = screenshotImageUrl || (clip as any).imageUrl || "";
-        if (!sourceUrl) throw new Error("Image URL unavailable");
-        const response = await fetch(sourceUrl, { credentials: "omit" });
-        if (!response.ok) throw new Error("Image fetch failed");
+        const response = await fetch(`/api/screenshots/${clip.id}/download`, {
+          credentials: "include",
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error((data as any).error || "Download failed");
+        }
         const blob = await response.blob();
-        const ext = (blob.type && blob.type.split("/")[1]) || "png";
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${safeTitle}_gamefolio.${ext}`;
+        a.download = `${safeTitle}_gamefolio.png`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         toast({
           title: "Download complete!",
-          description: "Screenshot saved. Share it anywhere!",
+          description: "Saved with Gamefolio watermark. Share it anywhere!",
           variant: "gamefolioSuccess",
         });
       } else {
-        toast({
-          title: "⚡ Preparing your clip…",
-          description: "Adding Gamefolio watermark. This may take a moment.",
-        });
-
         let downloadedViaWatermark = false;
         try {
           const response = await fetch(`/api/clips/${clip.id}/download`, {
@@ -367,6 +361,20 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
           pinMutation.mutate();
         }}
       />
+      {!isScreenshot && (
+        <MenuItem
+          icon={
+            isDownloading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )
+          }
+          label={isDownloading ? "Downloading…" : `Download ${Noun}`}
+          disabled={isDownloading}
+          onClick={handleDownload}
+        />
+      )}
       <MenuDivider />
       <MenuItem
         icon={<Trash2 className="h-4 w-4" />}
@@ -425,23 +433,26 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
       {isMobile ? (
         <>
           {mobileTriggerBtn}
-          <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetContent
-              side="bottom"
-              className="p-0 bg-[#0B1218] border-t border-white/10 rounded-t-2xl [&>button]:hidden"
-            >
-              <SheetTitle className="sr-only">{menuLabel}</SheetTitle>
-              <div className="flex justify-center pt-3 pb-2">
-                <div className="w-10 h-1 rounded-full bg-white/20" />
-              </div>
-              <div className="px-4 py-2 border-b border-white/10 mb-1">
-                <p className="text-xs text-muted-foreground truncate font-medium">{clip.title}</p>
-                <p className="text-xs text-muted-foreground/60 truncate">@{clip.user.username}</p>
-              </div>
-              {menuContent}
-              <div className="pb-20" />
-            </SheetContent>
-          </Sheet>
+          <DrawerPrimitive.Root open={isOpen} onOpenChange={setIsOpen} shouldScaleBackground={false}>
+            <DrawerPrimitive.Portal>
+              <DrawerPrimitive.Overlay className="fixed inset-0 z-[9999] bg-black/60" />
+              <DrawerPrimitive.Content
+                className="fixed inset-x-0 bottom-0 z-[9999] flex flex-col rounded-t-2xl bg-[#0B1218] border-t border-white/10 outline-none"
+              >
+                <DrawerPrimitive.Title className="sr-only">{menuLabel}</DrawerPrimitive.Title>
+                {/* Drag handle */}
+                <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing">
+                  <div className="w-10 h-1 rounded-full bg-white/30" />
+                </div>
+                <div className="px-4 py-2 border-b border-white/10 mb-1">
+                  <p className="text-xs text-muted-foreground truncate font-medium">{clip.title}</p>
+                  <p className="text-xs text-muted-foreground/60 truncate">@{clip.user.username}</p>
+                </div>
+                {menuContent}
+                <div className="pb-6" />
+              </DrawerPrimitive.Content>
+            </DrawerPrimitive.Portal>
+          </DrawerPrimitive.Root>
         </>
       ) : (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -572,6 +583,48 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Flashing download indicator — fixed bottom-right, visible on all screen sizes */}
+      {isDownloading && createPortal(
+        <div className="fixed bottom-6 right-6 z-[9999] flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-[#071013]/90 border border-[#BFFF00]/40 shadow-[0_0_24px_rgba(191,255,0,0.25)] backdrop-blur-sm animate-bounce-subtle">
+          <div className="relative flex-shrink-0">
+            <Download className="h-5 w-5 text-[#BFFF00]" style={{ animation: 'downloadFlash 0.8s ease-in-out infinite' }} />
+            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[#BFFF00]" style={{ animation: 'downloadPing 0.8s ease-in-out infinite' }} />
+          </div>
+          <div className="flex flex-col leading-tight">
+            <span className="text-xs font-bold text-[#BFFF00] tracking-wide uppercase">Downloading</span>
+            <span className="text-[10px] text-white/50">Adding watermark…</span>
+          </div>
+          <div className="flex gap-0.5 ml-1">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="block w-1 rounded-full bg-[#BFFF00]"
+                style={{
+                  height: '14px',
+                  animation: `downloadBar 1s ease-in-out ${i * 0.2}s infinite`,
+                  transformOrigin: 'bottom',
+                }}
+              />
+            ))}
+          </div>
+          <style>{`
+            @keyframes downloadFlash {
+              0%, 100% { opacity: 1; transform: translateY(0); }
+              50% { opacity: 0.3; transform: translateY(2px); }
+            }
+            @keyframes downloadPing {
+              0%, 100% { transform: scale(1); opacity: 1; }
+              50% { transform: scale(1.8); opacity: 0; }
+            }
+            @keyframes downloadBar {
+              0%, 100% { transform: scaleY(0.4); opacity: 0.5; }
+              50% { transform: scaleY(1); opacity: 1; }
+            }
+          `}</style>
+        </div>,
+        document.body
+      )}
     </>
   );
 }

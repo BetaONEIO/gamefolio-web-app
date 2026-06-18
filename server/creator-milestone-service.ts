@@ -1,5 +1,6 @@
 import { storage } from "./storage";
 import { LeaderboardService } from "./leaderboard-service";
+import { NotificationService } from "./notification-service";
 
 // In-memory lock to prevent concurrent view events from double-awarding
 // milestones before the DB write lands. The lock is acquired BEFORE the
@@ -120,6 +121,12 @@ export class CreatorMilestoneService {
           250,
           `First clip to reach 100 views (clip #${clipId})!`
         );
+        await NotificationService.createViewMilestoneNotification(
+          clipId,
+          userId,
+          100,
+          100
+        );
       }
     } catch (error) {
       console.error("Error checking first 100 views:", error);
@@ -141,6 +148,12 @@ export class CreatorMilestoneService {
           "first_1000_views",
           1000,
           `First clip to reach 1,000 views (clip #${clipId})!`
+        );
+        await NotificationService.createViewMilestoneNotification(
+          clipId,
+          userId,
+          1000,
+          1000
         );
       }
     } catch (error) {

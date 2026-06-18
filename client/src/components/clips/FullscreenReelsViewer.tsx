@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { MessageCircle, Trash2, ChevronDown, ChevronLeft, BarChart2, Gamepad2, Music } from "lucide-react";
+import { MessageCircle, Trash2, ChevronDown, ChevronLeft, BarChart2, Gamepad2, Music, Download, X } from "lucide-react";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
@@ -48,6 +48,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
   const [isPlaying, setIsPlaying] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
+  const [isDownloading, setIsDownloading] = useState(false);
   const isAcceptingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartYRef = useRef<number | null>(null);
@@ -112,6 +113,40 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
     }
     if (user.id === currentReel.user.id) return;
     followMutation.mutate();
+  };
+
+  const handleDownload = async () => {
+    if (isDownloading || !currentReel) return;
+    setIsDownloading(true);
+    const safeTitle = (currentReel.title || 'reel').replace(/[^a-z0-9]/gi, '_').slice(0, 60);
+    let done = false;
+    try {
+      const res = await fetch(`/api/clips/${currentReel.id}/download`, { credentials: 'include', headers: { Accept: 'video/mp4' } });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `${safeTitle}_gamefolio.mp4`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        done = true;
+        toast({ title: "Download complete!", description: "Saved with Gamefolio watermark.", variant: "gamefolioSuccess" as any });
+      }
+    } catch { /* fall through to fallback */ }
+    if (!done) {
+      try {
+        const fb = await fetch(`/api/clips/${currentReel.id}/download-url`, { credentials: 'include' });
+        if (!fb.ok) throw new Error('unavailable');
+        const { url: directUrl, filename } = await fb.json();
+        const a = document.createElement('a');
+        a.href = directUrl; a.download = filename || `${safeTitle}_gamefolio.mp4`; a.target = '_blank';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        toast({ title: "Download started!", description: "Your reel is downloading.", variant: "gamefolioSuccess" as any });
+      } catch {
+        toast({ title: "Download failed", description: "Please try again.", variant: "destructive" });
+      }
+    }
+    setIsDownloading(false);
   };
 
   const deleteReelMutation = useMutation({
@@ -208,7 +243,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
 
   return (
     <div
-      className="fixed inset-0 bg-black z-[60] flex flex-col lg:flex-row"
+      className="fixed inset-0 bg-black z-[9999] flex flex-col lg:flex-row"
       style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
     >
 
@@ -263,8 +298,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           {reels.map((reel, index) => (
             <div
               key={reel.id}
-              className="snap-start snap-always h-full w-full relative"
-              style={{ scrollSnapStop: 'always' }}
+              className="snap-start snap-always w-full relative flex-shrink-0"
+              style={{ scrollSnapStop: 'always', height: 'calc(100dvh - 64px - env(safe-area-inset-bottom, 0px))' }}
             >
               {/* Video */}
               <div className="absolute inset-0 pointer-events-none">
@@ -274,7 +309,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     thumbnailUrl={reel.thumbnailUrl || undefined}
                     autoPlay={index === currentIndex && isPlaying}
                     className="w-full h-full"
-                    objectFit="contain"
+                    objectFit="cover"
                     clipId={reel.id}
                     disableAspectRatio={true}
                     hideControls={true}
@@ -387,6 +422,16 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                   className="text-white drop-shadow"
                   onClick={(e) => { e.stopPropagation(); setShowShare(true); }}
                 />
+                <button
+                  className="flex flex-col items-center gap-0.5"
+                  onClick={(e) => { e.stopPropagation(); handleDownload(); }}
+                  disabled={isDownloading}
+                >
+                  <Download className={`h-6 w-6 drop-shadow ${isDownloading ? 'text-white/40' : 'text-white'}`} />
+                  <span className={`text-[10px] font-semibold drop-shadow ${isDownloading ? 'text-white/40' : 'text-white'}`}>
+                    {isDownloading ? '…' : 'Save'}
+                  </span>
+                </button>
               </div>
             )}
 
@@ -476,7 +521,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       {currentReel && isDesktop && (
         <div
           className="flex flex-col justify-between w-[340px] flex-shrink-0 h-full border-l border-white/10"
-          style={{ background: '#03080A', paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+          style={{ background: '#081017', paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
           onClick={e => e.stopPropagation()}
         >
           {/* Profile + info */}
@@ -607,6 +652,16 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
               className="text-white/60"
               onClick={() => setShowShare(true)}
             />
+            <button
+              className="flex flex-col items-center gap-1"
+              onClick={handleDownload}
+              disabled={isDownloading}
+            >
+              <Download className={`h-6 w-6 ${isDownloading ? 'text-white/30' : 'text-white/60'}`} />
+              <span className={`text-xs font-semibold ${isDownloading ? 'text-white/30' : 'text-white/60'}`}>
+                {isDownloading ? '…' : 'Save'}
+              </span>
+            </button>
           </div>
         </div>
       )}

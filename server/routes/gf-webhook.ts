@@ -6,6 +6,8 @@ import { eq } from 'drizzle-orm';
 import { getUncachableStripeClient, getStripeSecretKey } from '../stripeClient';
 import { transferGfTokens } from '../gf-token-service';
 import { EmailService } from '../email-service';
+import { notifyProPurchase } from '../telegram-notify';
+import { provisionProSubscription, grantGiftPro } from './pro-subscription';
 import Stripe from 'stripe';
 
 const router = Router();
@@ -156,15 +158,51 @@ router.post('/api/stripe/webhook',
 
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
-      
+
       if (session.metadata?.gfAmount) {
         try {
           await processGfOrderDelivery(
-            session.id, 
+            session.id,
             typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id
           );
         } catch (error) {
           console.error('[GF Webhook] Error processing order delivery:', error);
+        }
+      }
+
+      // Gift Pro — one-time hosted checkout that grants Pro to a recipient.
+      if (session.metadata?.type === 'gift_pro' && session.metadata?.gift_for_user_id) {
+        try {
+          const recipientId = parseInt(session.metadata.gift_for_user_id, 10);
+          const plan: 'monthly' | 'yearly' = session.metadata.plan === 'yearly' ? 'yearly' : 'monthly';
+          await grantGiftPro({ recipientId, plan });
+          console.log(`[GF Webhook] Granted Gift Pro (${plan}) to user ${recipientId} from user ${session.metadata.gifter_user_id}`);
+        } catch (error) {
+          console.error('[GF Webhook] Error processing gift_pro:', error);
+        }
+      }
+
+      // Pro subscription checkout — backstop for the client-side confirm call.
+      // Idempotent: safe even if the client already provisioned this session.
+      if (session.metadata?.type === 'pro_subscription' && session.metadata?.userId) {
+        try {
+          const userId = parseInt(session.metadata.userId, 10);
+          const plan: 'monthly' | 'yearly' = session.metadata.plan === 'yearly' ? 'yearly' : 'monthly';
+          const subscriptionId = typeof session.subscription === 'string'
+            ? session.subscription
+            : session.subscription?.id;
+          const customerId = typeof session.customer === 'string'
+            ? session.customer
+            : session.customer?.id;
+
+          if (userId && subscriptionId && customerId) {
+            await provisionProSubscription({ userId, plan, customerId, subscriptionId });
+            console.log(`[GF Webhook] Provisioned Pro for user ${userId} via checkout.session.completed`);
+          } else {
+            console.warn('[GF Webhook] pro_subscription session missing user/subscription/customer ids');
+          }
+        } catch (error) {
+          console.error('[GF Webhook] Error provisioning Pro subscription:', error);
         }
       }
     }
@@ -217,6 +255,8 @@ router.post('/api/stripe/webhook',
                 nextRenewal
               ).catch(err => console.error('[GF Webhook] Failed to send renewal email:', err));
             }
+
+            notifyProPurchase(user, { kind: 'renewal', plan, source: 'Stripe' });
           } else {
             console.warn(`[GF Webhook] No user found for subscription: ${subscriptionId}`);
           }

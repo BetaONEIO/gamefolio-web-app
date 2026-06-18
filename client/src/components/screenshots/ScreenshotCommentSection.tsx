@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Send } from "lucide-react";
 import { PixelHeartReaction } from "@/components/ui/PixelHeartReaction";
+import { EmojiPickerButton } from "@/components/ui/EmojiPickerButton";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
@@ -305,7 +306,8 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
                 className="min-h-[60px] resize-none text-sm"
                 data-testid="input-comment"
               />
-              <div className="flex justify-end">
+              <div className="flex justify-end items-center gap-2">
+                <EmojiPickerButton onEmojiSelect={(emoji) => setNewComment((prev) => prev + emoji)} />
                 <Button 
                   type="submit" 
                   variant="default"

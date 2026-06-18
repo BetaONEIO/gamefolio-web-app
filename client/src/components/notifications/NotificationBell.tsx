@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Bell, Heart, MessageCircle, Upload, UserPlus, X, UserCheck, UserX, Flame, Video } from "lucide-react";
+import { Bell, MessageCircle, Upload, UserPlus, X, UserCheck, UserX, Flame, Video, Download, Share2, Trophy } from "lucide-react";
 import { ZapIconFire } from "@/components/ui/ZapReactionIcon";
+import { PixelHeartReaction } from "@/components/ui/PixelHeartReaction";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -52,6 +53,7 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [showGreenPopup, setShowGreenPopup] = useState(false);
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
+  const [followedBack, setFollowedBack] = useState<Set<number>>(new Set());
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   
@@ -175,13 +177,28 @@ export function NotificationBell() {
       return { previous };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
+      // Use setQueryData instead of invalidateQueries to avoid a refetch race
+      // that would temporarily restore stale notifications.
+      queryClient.setQueryData(['/api/notifications'], []);
+      queryClient.setQueryData(['/api/notifications/unread-count'], 0);
     },
     onError: (_err, _vars, context: any) => {
       queryClient.setQueryData(['/api/notifications'], context?.previous);
       queryClient.setQueryData(['/api/notifications/unread-count'], (context?.previous as any[])?.filter((n: any) => !n.isRead).length ?? 0);
       toast({ title: "Failed to clear notifications", variant: "destructive" });
+    },
+  });
+
+  // Follow back from a follow notification
+  const followBackMutation = useMutation({
+    mutationFn: async ({ username }: { username: string; notifId: number }) => {
+      await apiRequest("POST", `/api/users/${username}/follow`);
+    },
+    onSuccess: (_data, { notifId }) => {
+      setFollowedBack((prev) => new Set(prev).add(notifId));
+    },
+    onError: () => {
+      toast({ title: "Failed to follow back", variant: "destructive" });
     },
   });
 
@@ -201,7 +218,7 @@ export function NotificationBell() {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'like':
-        return <Heart className="h-4 w-4 fill-red-500 text-red-500" />;
+        return <PixelHeartReaction size={16} active={true} />;
       case 'reaction':
         return <ZapIconFire className="h-4 w-4" style={{ width: 14, height: 14 }} />;
       case 'comment':
@@ -223,6 +240,12 @@ export function NotificationBell() {
         return <MessageCircle className="h-4 w-4 text-sky-400" />;
       case 'streak':
         return <Flame className="h-4 w-4 text-orange-500" />;
+      case 'download':
+        return <Download className="h-4 w-4 text-[#B7FF1A]" />;
+      case 'share':
+        return <Share2 className="h-4 w-4 text-[#B7FF1A]" />;
+      case 'milestone':
+        return <Trophy className="h-4 w-4 text-[#B7FF1A]" />;
       default:
         return <Bell className="h-4 w-4 text-gray-500" />;
     }
@@ -386,6 +409,35 @@ export function NotificationBell() {
                         {notification.message}
                       </p>
                       
+                      {/* Show Follow Back button for follow notifications */}
+                      {notification.type === 'follow' && notification.fromUser && (
+                        <div className="mb-2">
+                          {followedBack.has(notification.id) ? (
+                            <Button size="sm" variant="outline" disabled className="h-7 px-3 text-xs">
+                              <UserCheck className="h-3 w-3 mr-1" />
+                              Following
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                followBackMutation.mutate({
+                                  username: notification.fromUser!.username,
+                                  notifId: notification.id,
+                                });
+                              }}
+                              disabled={followBackMutation.isPending}
+                              className="h-7 px-3 text-xs bg-primary hover:bg-primary/90"
+                            >
+                              <UserPlus className="h-3 w-3 mr-1" />
+                              Follow Back
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
                       {/* Show approve/reject buttons for unread follow requests only */}
                       {notification.type === 'follow_request' && !notification.isRead && (
                         <div className="flex gap-2 mb-2">

@@ -123,7 +123,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex flex-col justify-end md:items-center"
+      className="fixed inset-0 z-[200000] flex flex-col justify-end md:items-center"
       style={{ pointerEvents: slideIn ? 'auto' : 'none' }}
     >
       {/* Backdrop */}
@@ -177,9 +177,9 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
           {/* Logo */}
           <div className="mb-6 mt-2 flex justify-center">
             <img
-              src="/attached_assets/Gamefolio logo.png"
+              src="/attached_assets/gf-logo-tex_1780361907049.png"
               alt="Gamefolio"
-              className="h-24 w-auto drop-shadow-lg"
+              className="h-36 w-auto drop-shadow-lg"
             />
           </div>
 

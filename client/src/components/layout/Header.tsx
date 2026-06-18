@@ -18,7 +18,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
-import { User, Game } from "@shared/schema";
+import { User } from "@shared/schema";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import logoGreen from "@assets/gamefolio-logo-green.png";
@@ -101,6 +101,12 @@ class MobileSearchErrorBoundary extends React.Component<
     }
     return this.props.children;
   }
+}
+
+interface TwitchGame {
+  id: string;
+  name: string;
+  box_art_url: string;
 }
 
 const Header = () => {
@@ -192,11 +198,11 @@ const Header = () => {
     enabled: !!debouncedQuery && debouncedQuery.length >= 2,
   });
 
-  // Search games for dropdown
-  const { data: gameResults } = useQuery<Game[]>({
-    queryKey: ['/api/search/games', debouncedQuery],
+  // Search games for dropdown — uses Twitch catalog (same source as Explore page)
+  const { data: gameResults } = useQuery<TwitchGame[]>({
+    queryKey: ['/api/twitch/games/search', debouncedQuery],
     queryFn: async () => {
-      const response = await fetch(`/api/search/games?q=${encodeURIComponent(debouncedQuery)}`);
+      const response = await fetch(`/api/twitch/games/search?q=${encodeURIComponent(debouncedQuery)}`);
       if (!response.ok) throw new Error("Failed to search games");
       return await response.json();
     },
@@ -250,7 +256,7 @@ const Header = () => {
     setSearchQuery("");
   };
 
-  const handleGameSelect = (gameId: number, gameName: string) => {
+  const handleGameSelect = (gameName: string) => {
     saveRecentSearch(searchQuery.trim() || gameName);
     const gameSlug = gameName
       .toLowerCase()
@@ -305,7 +311,7 @@ const Header = () => {
               <img
                 src={logoGreen}
                 alt="Gamefolio"
-                className="h-[60px] sm:h-[60px] md:h-[72px] xl:h-24 w-auto object-contain flex-shrink-0"
+                className="h-[45px] sm:h-[60px] md:h-[72px] xl:h-24 w-auto object-contain flex-shrink-0"
               />
             </div>
           </Link>
@@ -409,13 +415,13 @@ const Header = () => {
                     {gameResults.slice(0, 3).map((game) => (
                       <button
                         key={game.id}
-                        onClick={() => handleGameSelect(game.id, game.name)}
+                        onClick={() => handleGameSelect(game.name)}
                         className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left"
                       >
                         <div className="w-8 h-8 rounded-md overflow-hidden bg-secondary flex-shrink-0">
-                          {game.imageUrl ? (
+                          {game.box_art_url ? (
                             <img
-                              src={game.imageUrl}
+                              src={game.box_art_url.replace("{width}x{height}", "64x85").replace("{width}", "64").replace("{height}", "85")}
                               alt={game.name}
                               className="w-full h-full object-cover"
                             />
@@ -638,7 +644,7 @@ const Header = () => {
                         data-testid="button-manage-pro"
                       >
                         <ManageProIcon className="mr-2 h-4 w-4 text-yellow-500" />
-                        <span>Manage Pro Subscription</span>
+                        <span>Manage Pro</span>
                       </DropdownMenuItem>
                     )}
 
@@ -849,13 +855,13 @@ const Header = () => {
                         {gameResults.slice(0, 3).map((game) => (
                           <button
                             key={game.id}
-                            onClick={() => handleGameSelect(game.id, game.name)}
+                            onClick={() => handleGameSelect(game.name)}
                             className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left touch-manipulation active:bg-secondary/50"
                           >
                             <div className="w-8 h-8 rounded-md overflow-hidden bg-secondary flex-shrink-0">
-                              {game.imageUrl ? (
+                              {game.box_art_url ? (
                                 <img
-                                  src={game.imageUrl}
+                                  src={game.box_art_url.replace("{width}x{height}", "64x85").replace("{width}", "64").replace("{height}", "85")}
                                   alt={game.name}
                                   className="w-full h-full object-cover"
                                 />

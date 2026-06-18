@@ -1,9 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
-import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
-import { useMobile } from "@/hooks/use-mobile";
-import { TrendingSection } from "@/components/trending/TrendingSection";
+import VideoClipCard from "@/components/clips/VideoClipCard";
 
 import { Button } from "@/components/ui/button";
 import { ClipWithUser, Game } from "@shared/schema";
@@ -18,9 +15,11 @@ import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBann
 import { LatestReelsCarousel } from "@/components/clips/LatestReelsCarousel";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
+import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreenshotsViewer";
+import { useMobile } from "@/hooks/use-mobile";
 import { Camera } from "lucide-react";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
-import { ProUpgradeDialog } from "@/components/ProUpgradeDialog";
+import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { LazySection } from "@/components/ui/lazy-section";
 import { openExternal } from "@/lib/platform";
 import { useAuthModal } from "@/hooks/use-auth-modal";
@@ -28,6 +27,7 @@ import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
 import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
 import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
+import HomeCarousel from "@/components/home/HomeCarousel";
 import { Trophy } from "lucide-react";
 
 interface TrendingContentCarouselProps {
@@ -41,9 +41,7 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState(0);
   const [scrollStart, setScrollStart] = useState(0);
-  const [mobileViewer, setMobileViewer] = useState<{ clips: ClipWithUser[]; startId: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const isMobile = useMobile();
 
   const scroll = useCallback((direction: 'left' | 'right') => {
     if (!scrollRef.current) return;
@@ -124,16 +122,16 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
       {/* Navigation Arrows - hidden on mobile, visible on larger screens */}
       <button
         onClick={() => scroll('left')}
-        className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+        className="absolute -left-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
       >
-        <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+        <ChevronLeft className="h-5 w-5" />
       </button>
       
       <button
         onClick={() => scroll('right')}
-        className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors hidden sm:block"
+        className="absolute -right-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
       >
-        <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+        <ChevronRight className="h-5 w-5" />
       </button>
 
       {/* Carousel Container */}
@@ -155,24 +153,14 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
             key={`trending-clip-${clip.id}`} 
             className="flex-shrink-0 w-[280px] sm:w-[320px] md:w-[400px] lg:w-[480px]"
           >
-            <VideoClipGridItem 
+            <VideoClipCard
               clip={clip}
               userId={userId}
-              compact={false}
               clipsList={clips}
-              onCardClick={isMobile ? (clipId, clipsArr) => setMobileViewer({ clips: clipsArr, startId: clipId }) : undefined}
-              viewAllHref="/latest-clips"
             />
           </div>
         ))}
       </div>
-      {mobileViewer && (
-        <MobileTrendingViewer
-          content={mobileViewer.clips}
-          initialIndex={Math.max(0, mobileViewer.clips.findIndex(c => c.id === mobileViewer.startId))}
-          onClose={() => setMobileViewer(null)}
-        />
-      )}
     </div>
   );
 };
@@ -497,6 +485,7 @@ const HomePage = () => {
   const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [selectedGameFilter, setSelectedGameFilter] = useState<string | null>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
+  const isMobile = useMobile();
   const [, setLocation] = useLocation();
   const screenshotsScrollRef = useRef<HTMLDivElement>(null);
   const [screenshotsDragging, setScreenshotsDragging] = useState(false);
@@ -649,9 +638,11 @@ const HomePage = () => {
         </div>
       )}
       
-      {/* Hero Slideshow Section - wait for DB slides before rendering to prevent fallback flash */}
+      {/* Hero Banner — original HeroBannerSlideshow */}
+      {/* Community Carousel commented out */}
+      {/* <HomeCarousel /> */}
       {!isLoadingDbSlides && dbHeroSlides && dbHeroSlides.length > 0 && (
-        <HeroBannerSlideshow 
+        <HeroBannerSlideshow
           heroText={heroText}
           user={user}
           userHasContent={userHasContent}
@@ -662,7 +653,7 @@ const HomePage = () => {
       )}
 
       {/* Ecosystem Activity Rail */}
-      <EcosystemActivityRail />
+      {/* <EcosystemActivityRail /> */}
       
       <div className="space-y-4 sm:space-y-6 md:space-y-8 mt-4 sm:mt-6 md:mt-8">
       {/* Recommended for You Section - only for logged-in users */}
@@ -748,19 +739,19 @@ const HomePage = () => {
             <div className="relative">
               <button
                 onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft -= 480; } }}
-                className="absolute -left-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
+                className="absolute -left-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
               <button
                 onClick={() => { if (screenshotsScrollRef.current) { screenshotsScrollRef.current.scrollLeft += 480; } }}
-                className="absolute -right-5 top-[35%] -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
+                className="absolute -right-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
               >
                 <ChevronRight className="h-5 w-5" />
               </button>
               <div
                 ref={screenshotsScrollRef}
-                className={`flex gap-5 overflow-x-auto scrollbar-hide pb-4 select-none ${screenshotsDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                className={`flex gap-4 overflow-x-auto scrollbar-hide pb-4 px-2 sm:px-8 py-2 select-none ${screenshotsDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
                 style={{ scrollBehavior: screenshotsDragging ? 'auto' : 'smooth' }}
                 onMouseDown={(e) => {
                   if (!screenshotsScrollRef.current) return;
@@ -804,21 +795,21 @@ const HomePage = () => {
       </LazySection>
 
       {/* Daily XP Challenges */}
-      <LazySection minHeight="280px" rootMargin="200px">
+      {/* <LazySection minHeight="280px" rootMargin="200px">
         <div className="px-4 sm:px-6 md:px-8">
           <DailyXPChallenges />
         </div>
-      </LazySection>
+      </LazySection> */}
 
       {/* Live Streams Now */}
-      <LazySection minHeight="280px" rootMargin="200px">
+      {/* <LazySection minHeight="280px" rootMargin="200px">
         <div className="px-4 sm:px-6 md:px-8">
           <LiveStreamsSection />
         </div>
-      </LazySection>
+      </LazySection> */}
 
       {/* Trending Gamefolios */}
-      <LazySection minHeight="260px" rootMargin="200px">
+      {/* <LazySection minHeight="260px" rootMargin="200px">
         <section className="px-4 sm:px-6 md:px-8 pb-10">
           <div className="flex justify-between items-center mb-5">
             <div className="flex items-center gap-2">
@@ -831,17 +822,25 @@ const HomePage = () => {
           </div>
           <FeaturedUsersSection />
         </section>
-      </LazySection>
+      </LazySection> */}
 
       </div>
 
-      <ScreenshotLightbox
-        screenshot={selectedScreenshot}
-        onClose={() => setSelectedScreenshot(null)}
-        currentUserId={user?.id}
-        screenshots={latestScreenshots || []}
-        onNavigate={(s: any) => setSelectedScreenshot(s)}
-      />
+      {selectedScreenshot && isMobile ? (
+        <MobileScreenshotsViewer
+          screenshots={latestScreenshots || []}
+          startId={selectedScreenshot.id}
+          onBack={() => setSelectedScreenshot(null)}
+        />
+      ) : (
+        <ScreenshotLightbox
+          screenshot={selectedScreenshot}
+          onClose={() => setSelectedScreenshot(null)}
+          currentUserId={user?.id}
+          screenshots={latestScreenshots || []}
+          onNavigate={(s: any) => setSelectedScreenshot(s)}
+        />
+      )}
     </div>
   );
 };

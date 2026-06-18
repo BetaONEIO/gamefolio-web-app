@@ -1,6 +1,7 @@
 import { storage } from "./storage";
 import { InsertNotification } from "@shared/schema";
 import { sendPushToUser } from "./push-service";
+import { nanoid } from "nanoid";
 
 // Create the in-app notification row, then fire a push to the recipient.
 // Push failure is logged but does not block in-app delivery.
@@ -19,18 +20,27 @@ export async function createAndPush(notification: InsertNotification): Promise<v
   }).catch(err => console.warn("[notification-service] push fan-out failed:", err));
 }
 
+// Returns a user-scoped clip URL. Generates and persists a share code if the
+// clip doesn't have one yet. Never exposes the numeric ID in the URL.
+async function clipUrl(clipId: number, username: string, shareCode: string | null | undefined): Promise<string> {
+  let code = shareCode;
+  if (!code) {
+    code = nanoid(8);
+    await storage.updateClip(clipId, { shareCode: code });
+  }
+  return `/@${username}/clip/${code}`;
+}
+
 export class NotificationService {
   // Create notification for when someone likes a clip
   static async createLikeNotification(clipId: number, likedByUserId: number) {
     try {
-      // Get clip details and owner
       const clip = await storage.getClipWithUser(clipId);
       if (!clip) return;
 
       // Don't notify if user likes their own clip
       if (clip.userId === likedByUserId) return;
 
-      // Get the user who liked the clip
       const likedByUser = await storage.getUser(likedByUserId);
       if (!likedByUser) return;
 
@@ -41,7 +51,7 @@ export class NotificationService {
         message: `${likedByUser.username} liked your clip "${clip.title}"`,
         fromUserId: likedByUserId,
         clipId: clipId,
-        actionUrl: `/clips/${clipId}`
+        actionUrl: await clipUrl(clipId, clip.user.username, clip.shareCode),
       };
 
       await createAndPush(notification);
@@ -53,20 +63,23 @@ export class NotificationService {
   // Create notification for when someone comments on a clip
   static async createCommentNotification(clipId: number, commentedByUserId: number, commentContent: string, commentId?: number) {
     try {
-      // Get clip details and owner
       const clip = await storage.getClipWithUser(clipId);
       if (!clip) return;
 
       // Don't notify if user comments on their own clip
       if (clip.userId === commentedByUserId) return;
 
-      // Get the user who commented
       const commentedByUser = await storage.getUser(commentedByUserId);
       if (!commentedByUser) return;
 
-      const truncatedComment = commentContent.length > 50 
-        ? commentContent.substring(0, 50) + "..." 
+      const truncatedComment = commentContent.length > 50
+        ? commentContent.substring(0, 50) + "..."
         : commentContent;
+
+      const base = await clipUrl(clipId, clip.user.username, clip.shareCode);
+      const suffix = commentId
+        ? `?openComments=true&highlightComment=${commentId}`
+        : `?openComments=true`;
 
       const notification: InsertNotification = {
         userId: clip.userId,
@@ -75,7 +88,7 @@ export class NotificationService {
         message: `${commentedByUser.username} commented on your clip "${clip.title}": "${truncatedComment}"`,
         fromUserId: commentedByUserId,
         clipId: clipId,
-        actionUrl: `/clips/${clipId}?openComments=true${commentId ? `&highlightComment=${commentId}` : ''}`
+        actionUrl: `${base}${suffix}`,
       };
 
       await createAndPush(notification);
@@ -87,10 +100,8 @@ export class NotificationService {
   // Create notification for when someone follows a user
   static async createFollowNotification(followedUserId: number, followerUserId: number) {
     try {
-      // Don't notify if user follows themselves
       if (followedUserId === followerUserId) return;
 
-      // Get the follower user
       const followerUser = await storage.getUser(followerUserId);
       if (!followerUser) return;
 
@@ -100,7 +111,7 @@ export class NotificationService {
         title: "New Follower",
         message: `${followerUser.username} started following you`,
         fromUserId: followerUserId,
-        actionUrl: `/profile/${followerUser.username}`
+        actionUrl: `/profile/${followerUser.username}`,
       };
 
       await createAndPush(notification);
@@ -112,10 +123,8 @@ export class NotificationService {
   // Create notification for follow requests
   static async createFollowRequestNotification(requestedUserId: number, requesterUserId: number) {
     try {
-      // Don't notify if user requests themselves
       if (requestedUserId === requesterUserId) return;
 
-      // Get the requester user
       const requesterUser = await storage.getUser(requesterUserId);
       if (!requesterUser) return;
 
@@ -125,7 +134,7 @@ export class NotificationService {
         title: "Follow Request",
         message: `${requesterUser.username} wants to follow you`,
         fromUserId: requesterUserId,
-        actionUrl: `/settings/follow-requests`
+        actionUrl: `/settings/follow-requests`,
       };
 
       await createAndPush(notification);
@@ -137,10 +146,8 @@ export class NotificationService {
   // Create notification when follow request is accepted
   static async createFollowRequestAcceptedNotification(requesterUserId: number, acceptedByUserId: number) {
     try {
-      // Don't notify if user accepts their own request
       if (requesterUserId === acceptedByUserId) return;
 
-      // Get the user who accepted
       const acceptedByUser = await storage.getUser(acceptedByUserId);
       if (!acceptedByUser) return;
 
@@ -150,7 +157,7 @@ export class NotificationService {
         title: "Follow Request Accepted",
         message: `${acceptedByUser.username} accepted your follow request`,
         fromUserId: acceptedByUserId,
-        actionUrl: `/profile/${acceptedByUser.username}`
+        actionUrl: `/profile/${acceptedByUser.username}`,
       };
 
       await createAndPush(notification);
@@ -162,18 +169,15 @@ export class NotificationService {
   // Create notification for followers when someone uploads a new clip
   static async createUploadNotification(userId: number, clipId: number) {
     try {
-      // Get the user who uploaded
-      const uploader = await storage.getUser(userId);
-      if (!uploader) return;
-
-      // Get clip details
-      const clip = await storage.getClip(clipId);
+      const clip = await storage.getClipWithUser(clipId);
       if (!clip) return;
 
-      // Get all followers of the user
-      const followers = await storage.getFollowersByUserId(userId);
+      const uploader = clip.user;
+      if (!uploader) return;
 
-      // Create notifications for all followers
+      const followers = await storage.getFollowersByUserId(userId);
+      const url = await clipUrl(clipId, uploader.username, clip.shareCode);
+
       const notifications: InsertNotification[] = followers.map(follower => ({
         userId: follower.id,
         type: "upload",
@@ -181,10 +185,9 @@ export class NotificationService {
         message: `${uploader.username} uploaded a new clip: "${clip.title}"`,
         fromUserId: userId,
         clipId: clipId,
-        actionUrl: `/clips/${clipId}`
+        actionUrl: url,
       }));
 
-      // Create all notifications
       for (const notification of notifications) {
         await createAndPush(notification);
       }
@@ -196,14 +199,11 @@ export class NotificationService {
   // Create notification for emoji reaction on a clip
   static async createReactionNotification(clipId: number, reactedByUserId: number, emoji: string) {
     try {
-      // Get clip details and owner
       const clip = await storage.getClipWithUser(clipId);
       if (!clip) return;
 
-      // Don't notify if user reacts to their own clip
       if (clip.userId === reactedByUserId) return;
 
-      // Get the user who reacted
       const reactedByUser = await storage.getUser(reactedByUserId);
       if (!reactedByUser) return;
 
@@ -214,7 +214,7 @@ export class NotificationService {
         message: `${reactedByUser.username} reacted with ${emoji} to your clip "${clip.title}"`,
         fromUserId: reactedByUserId,
         clipId: clipId,
-        actionUrl: `/clips/${clipId}`,
+        actionUrl: await clipUrl(clipId, clip.user.username, clip.shareCode),
         metadata: { emoji },
       };
 
@@ -224,19 +224,42 @@ export class NotificationService {
     }
   }
 
+  // Create notification for emoji reaction on a screenshot
+  static async createScreenshotReactionNotification(screenshotId: number, reactedByUserId: number, emoji: string) {
+    try {
+      const screenshot = await storage.getScreenshotWithUser(screenshotId);
+      if (!screenshot || !screenshot.user) return;
+      if (screenshot.userId === reactedByUserId) return;
+
+      const reactedByUser = await storage.getUser(reactedByUserId);
+      if (!reactedByUser) return;
+
+      const notification: InsertNotification = {
+        userId: screenshot.userId,
+        type: "reaction",
+        title: "New Reaction",
+        message: `${reactedByUser.username} reacted with ${emoji} to your screenshot "${screenshot.title}"`,
+        fromUserId: reactedByUserId,
+        actionUrl: `/@${screenshot.user.username}/screenshots/${screenshotId}`,
+        metadata: { emoji },
+      };
+
+      await createAndPush(notification);
+    } catch (error) {
+      console.error("Error creating screenshot reaction notification:", error);
+    }
+  }
+
   // Create notification for new message
   static async createMessageNotification(senderId: number, receiverId: number, messageContent: string) {
     try {
-      // Don't notify if user messages themselves
       if (senderId === receiverId) return;
 
-      // Get the sender user
       const senderUser = await storage.getUser(senderId);
       if (!senderUser) return;
 
-      // Truncate message content for notification
-      const truncatedMessage = messageContent.length > 50 
-        ? messageContent.substring(0, 50) + "..." 
+      const truncatedMessage = messageContent.length > 50
+        ? messageContent.substring(0, 50) + "..."
         : messageContent;
 
       const notification: InsertNotification = {
@@ -245,7 +268,7 @@ export class NotificationService {
         title: "New Message",
         message: `${senderUser.username} sent you a message: "${truncatedMessage}"`,
         fromUserId: senderId,
-        actionUrl: `/messages?user=${senderUser.username}`
+        actionUrl: `/messages?user=${senderUser.username}`,
       };
 
       await createAndPush(notification);
@@ -257,14 +280,11 @@ export class NotificationService {
   // Create notification for when someone likes a screenshot
   static async createScreenshotLikeNotification(screenshotId: number, likedByUserId: number) {
     try {
-      // Get screenshot details and owner
       const screenshot = await storage.getScreenshotWithUser(screenshotId);
       if (!screenshot) return;
 
-      // Don't notify if user likes their own screenshot
       if (screenshot.userId === likedByUserId) return;
 
-      // Get the user who liked the screenshot
       const likedByUser = await storage.getUser(likedByUserId);
       if (!likedByUser) return;
 
@@ -275,7 +295,7 @@ export class NotificationService {
         message: `${likedByUser.username} liked your screenshot "${screenshot.title}"`,
         fromUserId: likedByUserId,
         screenshotId: screenshotId,
-        actionUrl: `/@${screenshot.user.username}/screenshots/${screenshotId}`
+        actionUrl: `/@${screenshot.user.username}/screenshots/${screenshotId}`,
       };
 
       await createAndPush(notification);
@@ -287,20 +307,22 @@ export class NotificationService {
   // Create notification for when someone comments on a screenshot
   static async createScreenshotCommentNotification(screenshotId: number, commentedByUserId: number, commentContent: string, commentId?: number) {
     try {
-      // Get screenshot details and owner
       const screenshot = await storage.getScreenshotWithUser(screenshotId);
       if (!screenshot) return;
 
-      // Don't notify if user comments on their own screenshot
       if (screenshot.userId === commentedByUserId) return;
 
-      // Get the user who commented
       const commentedByUser = await storage.getUser(commentedByUserId);
       if (!commentedByUser) return;
 
-      const truncatedComment = commentContent.length > 50 
-        ? commentContent.substring(0, 50) + "..." 
+      const truncatedComment = commentContent.length > 50
+        ? commentContent.substring(0, 50) + "..."
         : commentContent;
+
+      const base = `/@${screenshot.user.username}/screenshots/${screenshotId}`;
+      const suffix = commentId
+        ? `?openComments=true&highlightComment=${commentId}`
+        : `?openComments=true`;
 
       const notification: InsertNotification = {
         userId: screenshot.userId,
@@ -309,12 +331,119 @@ export class NotificationService {
         message: `${commentedByUser.username} commented on your screenshot "${screenshot.title}": "${truncatedComment}"`,
         fromUserId: commentedByUserId,
         screenshotId: screenshotId,
-        actionUrl: `/@${screenshot.user.username}/screenshots/${screenshotId}?openComments=true${commentId ? `&highlightComment=${commentId}` : ''}`
+        actionUrl: `${base}${suffix}`,
       };
 
       await createAndPush(notification);
     } catch (error) {
       console.error("Error creating screenshot comment notification:", error);
+    }
+  }
+
+  // Create notification when someone downloads your clip
+  static async createDownloadNotification(clipId: number, downloadedByUserId: number | undefined) {
+    try {
+      const clip = await storage.getClipWithUser(clipId);
+      if (!clip) return;
+      if (downloadedByUserId && clip.userId === downloadedByUserId) return;
+
+      const downloader = downloadedByUserId ? await storage.getUser(downloadedByUserId) : null;
+      const message = downloader
+        ? `${downloader.username} downloaded your clip "${clip.title}"`
+        : `Your clip "${clip.title}" was downloaded`;
+
+      const notification: InsertNotification = {
+        userId: clip.userId,
+        type: "download",
+        title: "New Download",
+        message,
+        fromUserId: downloadedByUserId,
+        clipId: clipId,
+        actionUrl: await clipUrl(clipId, clip.user.username, clip.shareCode),
+      };
+      await createAndPush(notification);
+    } catch (error) {
+      console.error("Error creating download notification:", error);
+    }
+  }
+
+  // Create notification when someone shares your clip
+  static async createShareNotification(clipId: number, sharedByUserId: number | undefined) {
+    try {
+      const clip = await storage.getClipWithUser(clipId);
+      if (!clip) return;
+      if (sharedByUserId && clip.userId === sharedByUserId) return;
+
+      const sharer = sharedByUserId ? await storage.getUser(sharedByUserId) : null;
+      const message = sharer
+        ? `${sharer.username} shared your clip "${clip.title}"`
+        : `Your clip "${clip.title}" was shared`;
+
+      const notification: InsertNotification = {
+        userId: clip.userId,
+        type: "share",
+        title: "New Share",
+        message,
+        fromUserId: sharedByUserId,
+        clipId: clipId,
+        actionUrl: await clipUrl(clipId, clip.user.username, clip.shareCode),
+      };
+      await createAndPush(notification);
+    } catch (error) {
+      console.error("Error creating share notification:", error);
+    }
+  }
+
+  // Create notification when someone shares your screenshot
+  static async createScreenshotShareNotification(screenshotId: number, sharedByUserId: number | undefined) {
+    try {
+      const screenshot = await storage.getScreenshotWithUser(screenshotId);
+      if (!screenshot || !screenshot.user) return;
+      if (sharedByUserId && screenshot.userId === sharedByUserId) return;
+
+      const sharer = sharedByUserId ? await storage.getUser(sharedByUserId) : null;
+      const message = sharer
+        ? `${sharer.username} shared your screenshot "${screenshot.title}"`
+        : `Your screenshot "${screenshot.title}" was shared`;
+
+      const notification: InsertNotification = {
+        userId: screenshot.userId,
+        type: "share",
+        title: "New Share",
+        message,
+        fromUserId: sharedByUserId,
+        screenshotId: screenshotId,
+        actionUrl: `/@${screenshot.user.username}/screenshots/${screenshotId}`,
+      };
+      await createAndPush(notification);
+    } catch (error) {
+      console.error("Error creating screenshot share notification:", error);
+    }
+  }
+
+  // Create notification when a clip reaches a view milestone
+  static async createViewMilestoneNotification(
+    clipId: number,
+    ownerId: number,
+    viewCount: number,
+    milestone: number
+  ) {
+    try {
+      const clip = await storage.getClipWithUser(clipId);
+      if (!clip) return;
+
+      const notification: InsertNotification = {
+        userId: ownerId,
+        type: "milestone",
+        title: "View Milestone",
+        message: `Your clip "${clip.title}" hit ${milestone.toLocaleString()} views!`,
+        clipId: clipId,
+        actionUrl: await clipUrl(clipId, clip.user.username, clip.shareCode),
+        metadata: { viewCount, milestone },
+      };
+      await createAndPush(notification);
+    } catch (error) {
+      console.error("Error creating view milestone notification:", error);
     }
   }
 }

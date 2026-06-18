@@ -10,7 +10,7 @@ import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, getRedirectResult, User as FirebaseUser } from "firebase/auth";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useDailyStreak } from "@/hooks/use-daily-streak";
 import { isNative } from "@/lib/platform";
 import { clearTokens, setTokens } from "@/lib/auth-token";
@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
 
     // Dedup: track which Firebase UID we've already processed in this page
-    // load so that getRedirectResult and onAuthStateChanged don't both call
+    // load so that rapid onAuthStateChanged fires don't double-call
     // /api/auth/google for the same user.
     const processedUid = { current: null as string | null };
 
@@ -117,11 +117,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       processedUid.current = firebaseUser.uid;
 
       try {
+        const idToken = await firebaseUser.getIdToken();
         const response = await apiRequest("POST", "/api/auth/google", {
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-          photoURL: firebaseUser.photoURL,
-          uid: firebaseUser.uid
+          idToken
         });
 
         if (!mounted) return;
@@ -173,55 +171,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       }
     };
-
-    // Check for a pending Google redirect result (signInWithRedirect flow).
-    // signInWithPopup was replaced because COOP headers block window.closed
-    // polling on the popup. getRedirectResult resolves quickly with null when
-    // there's no pending redirect, so it doesn't delay normal page loads.
-    // If it resolves with a user, flip isInitialAuthCheckRef so the first
-    // onAuthStateChanged fire (which would normally be skipped as a restore)
-    // is treated as a real sign-in — then handleFirebaseSignIn's UID dedup
-    // prevents it from being processed twice.
-    const hadPendingRedirect = document.cookie.includes('google_redirect_pending=1');
-    // Clear the pending-redirect cookie immediately so it doesn't linger.
-    document.cookie = 'google_redirect_pending=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
-
-    getRedirectResult(auth)
-      .then(async (result) => {
-        if (result?.user && mounted) {
-          isInitialAuthCheckRef.current = false;
-          await handleFirebaseSignIn(result.user);
-        } else if (!result && hadPendingRedirect && mounted) {
-          // We set the cookie before redirecting to Google, but came back
-          // with no result. This usually means:
-          //  - auth/unauthorized-domain (app.gamefolio.com not in Firebase
-          //    authorized domains), or
-          //  - the user cancelled the Google sign-in, or
-          //  - a Firebase internal storage error lost the redirect result.
-          console.warn('Google redirect returned but getRedirectResult was null');
-          toast({
-            title: "Google sign-in incomplete",
-            description: "Sign-in was cancelled or could not be completed. Please try again.",
-            variant: "gamefolioError",
-          });
-        }
-      })
-      .catch((err) => {
-        console.error('getRedirectResult error:', err);
-        if (!mounted) return;
-        const code = err?.code as string | undefined;
-        const friendlyMessage =
-          code === 'auth/unauthorized-domain'
-            ? 'This site is not authorised for Google sign-in. Please contact support.'
-            : code === 'auth/network-request-failed'
-            ? 'Network error during Google sign-in. Please check your connection.'
-            : `Google sign-in error: ${err?.message ?? code ?? 'Unknown error'}`;
-        toast({
-          title: "Google sign-in failed",
-          description: friendlyMessage,
-          variant: "gamefolioError",
-        });
-      });
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       // Firebase always emits one onAuthStateChanged on init to report the

@@ -33,6 +33,7 @@ export const users = pgTable("users", {
   hideBanner: boolean("hide_banner").default(false),
   statsGlassEffect: boolean("stats_glass_effect").default(false),
   profileBackgroundGradient: boolean("profile_background_gradient").default(true),
+  profileBackgroundGradientCss: text("profile_background_gradient_css"),
   layoutStyle: text("layout_style").default("grid"), // grid, masonry, classic
   // Platform connections
   steamUsername: text("steam_username"),
@@ -85,6 +86,8 @@ export const users = pgTable("users", {
   rumbleId: text("rumble_id"),              // Rumble user ID (set when OAuth-connected)
   rumbleVerified: boolean("rumble_verified").default(false), // Connected via OAuth
   showLiveOverlay: boolean("show_live_overlay").default(false), // Show LIVE badge on avatar
+  twitchShowOnProfile: boolean("twitch_show_on_profile").default(true), // Embed Twitch stream on profile
+  kickShowOnProfile: boolean("kick_show_on_profile").default(true),     // Embed Kick stream on profile
   ageRange: text("age_range"), // Age range: 13-17, 18-24, 25-34, 35-44, 45-54, 55+
   // Authentication provider fields
   authProvider: text("auth_provider").default("local"), // "local", "google", "discord", "steam", "apple"
@@ -152,6 +155,9 @@ export const users = pgTable("users", {
   referralCode: text("referral_code").unique(), // User's unique referral code
   referredBy: text("referred_by"), // The referral code used when this user signed up
   referralCodeCustomized: boolean("referral_code_customized").default(false).notNull(), // Whether the user has already customised their referral code
+  // Outro videos — auto-appended on download; separate files for landscape (16:9) and portrait (9:16)
+  outroVideoPath: text("outro_video_path"),          // landscape 1920×1080 — "outros/42.mp4"
+  outroVideoPathPortrait: text("outro_video_path_portrait"), // portrait 1080×1920 — "outros/42_portrait.mp4"
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

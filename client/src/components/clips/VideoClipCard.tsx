@@ -1,11 +1,10 @@
-import { useState } from "react";
 import { Link } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { formatDuration } from "@/lib/constants";
 import { Eye, Play } from "lucide-react";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
-import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
+import { useClipDialog } from "@/hooks/use-clip-dialog";
 
 interface VideoClipCardProps {
   clip: ClipWithUser;
@@ -15,12 +14,12 @@ interface VideoClipCardProps {
 }
 
 const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
-  const [mobileViewerOpen, setMobileViewerOpen] = useState(false);
+  const { openClipDialog } = useClipDialog();
   const allClips = clipsList || [clip];
 
   const handleCardClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    setMobileViewerOpen(true);
+    openClipDialog(clip.id, allClips, undefined, 'clip');
   };
 
   const isNew = clip.createdAt && Date.now() - new Date(clip.createdAt).getTime() < 86400000 * 3;
@@ -38,13 +37,6 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
 
   return (
     <>
-    {mobileViewerOpen && (
-      <MobileTrendingViewer
-        content={allClips}
-        initialIndex={allClips.findIndex(c => c.id === clip.id)}
-        onClose={() => setMobileViewerOpen(false)}
-      />
-    )}
     <div
       onClick={handleCardClick}
       role="button"
@@ -59,7 +51,7 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
       className="cursor-pointer group"
     >
       {/* 16:9 Thumbnail */}
-      <div className="relative aspect-video overflow-hidden rounded-xl bg-[#0B1218] border border-[#1B2A33]">
+      <div className="relative aspect-video overflow-hidden rounded-xl bg-[#0B1218] transition-transform duration-300 group-hover:-translate-y-1.5 group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.55)]">
         <div className="absolute inset-0 flex items-center justify-center bg-[#0B1218] z-0">
           <Play className="h-10 w-10 text-gray-600" />
         </div>
@@ -81,9 +73,10 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
         <LazyImage
           src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
           alt={clip.title}
-          className={`w-full h-full transition-transform duration-300 group-hover:scale-105 object-contain ${clip.ageRestricted ? "blur-2xl" : ""}`}
+          className="w-full h-full object-contain"
           placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%230B1218'/%3e%3c/svg%3e"
           showLoadingSpinner={false}
+          rootMargin="400px"
           containerClassName="absolute inset-0 z-10"
           fallback={
             <div className="w-full h-full flex items-center justify-center bg-[#0B1218]">
@@ -93,28 +86,14 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
         />
 
         {/* Hover play overlay */}
-        <div className="absolute inset-0 z-20 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center pointer-events-none">
           <div className="bg-primary/90 rounded-full p-3 transform scale-90 group-hover:scale-100 transition-transform duration-300 backdrop-blur-sm">
             <Play className="h-6 w-6 text-white fill-white" />
           </div>
         </div>
 
-        {/* Age restricted overlay */}
-        {clip.ageRestricted && (
-          <div className="absolute inset-0 z-20 bg-black/80 flex flex-col items-center justify-center pointer-events-none">
-            <div className="text-red-500 text-3xl mb-2">⚠️</div>
-            <div className="text-white font-bold text-sm mb-1">Age Restricted</div>
-            <div className="text-white/70 text-xs">18+ Content</div>
-          </div>
-        )}
-
-        {/* Top-left: 18+ + NEW badges */}
+        {/* Top-left: NEW badge */}
         <div className="absolute top-2 left-2 z-30 flex items-center gap-1">
-          {clip.ageRestricted && (
-            <div className="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded font-bold shadow-md">
-              18+
-            </div>
-          )}
           {isNew && (
             <div className="bg-gray-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-md">
               NEW

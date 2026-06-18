@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClipWithUser, Game } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
+import { useBlockedUsers } from "@/hooks/use-blocked-users";
 import { ChevronRight, ChevronLeft, Video, Plus, Camera, Image, Eye } from "lucide-react";
 import BannerImage from "@assets/Untitled (1920 x 1080 px).png";
 import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
@@ -52,7 +53,6 @@ const HomePage = () => {
   const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [selectedGameFilter, setSelectedGameFilter] = useState<string | null>(null);
   const [activeContentTab, setActiveContentTab] = useState<'clips' | 'reels' | 'screenshots'>('clips');
-  const [mobileViewer, setMobileViewer] = useState<{ clips: ClipWithUser[]; startId: number } | null>(null);
   const [reelsViewer, setReelsViewer] = useState<number | null>(null);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -68,6 +68,7 @@ const HomePage = () => {
   // Get current user from auth context
   const { user } = useAuth();
   const userId = user?.id;
+  const { blockedUserIds } = useBlockedUsers();
   const { openClipDialog } = useClipDialog();
   const isMobile = useMobile();
   const { toast } = useToast();
@@ -128,11 +129,11 @@ const HomePage = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const proPayment = params.get("pro_payment");
-    const paymentIntentId = params.get("pi");
+    const sessionId = params.get("session_id");
     const plan = params.get("plan");
 
-    if (proPayment === "success" && paymentIntentId && plan) {
-      apiRequest("POST", "/api/stripe/confirm-pro-subscription", { paymentIntentId, plan })
+    if (proPayment === "success" && sessionId && plan) {
+      apiRequest("POST", "/api/stripe/confirm-pro-subscription", { sessionId, plan })
         .then(() => {
           globalQueryClient.invalidateQueries({ queryKey: ["/api/user"] });
           toast({
@@ -334,7 +335,7 @@ const HomePage = () => {
   });
 
   // Latest screenshots — sorted newest first
-  const { data: latestScreenshots, isLoading: isLoadingLatestScreenshots } = useQuery<any[]>({
+  const { data: latestScreenshotsRaw, isLoading: isLoadingLatestScreenshots } = useQuery<any[]>({
     queryKey: ['/api/screenshots/latest'],
     queryFn: async () => {
       const response = await fetch('/api/screenshots/latest?limit=20', { credentials: 'include' });
@@ -369,29 +370,35 @@ const HomePage = () => {
     gcTime: 0,
   });
 
-  // Latest clips (already sorted newest first by the backend)
-  const latestClips = latestClipsRaw ?? [];
+  // Filter screenshots from blocked users
+  const latestScreenshots = useMemo(() =>
+    (latestScreenshotsRaw ?? []).filter((s: any) => !blockedUserIds.has(s.userId)),
+    [latestScreenshotsRaw, blockedUserIds]
+  );
 
-  // Latest reels (already sorted newest first by the backend)
-  const latestReels = latestReelsRaw ?? [];
-  
+  // Latest clips (already sorted newest first by the backend), with blocked users filtered out
+  const latestClips = useMemo(() =>
+    (latestClipsRaw ?? []).filter(c => !blockedUserIds.has(c.userId)),
+    [latestClipsRaw, blockedUserIds]
+  );
+
+  // Latest reels (already sorted newest first by the backend), with blocked users filtered out
+  const latestReels = useMemo(() =>
+    (latestReelsRaw ?? []).filter(c => !blockedUserIds.has(c.userId)),
+    [latestReelsRaw, blockedUserIds]
+  );
+
   // Filter user clips by game name instead of ID
   const filteredClips = useMemo(() => {
     if (!userClips) return [];
+    const nonBlocked = userClips.filter(clip => !blockedUserIds.has(clip.userId));
     
     if (selectedGameFilter && selectedGameFilter !== 'all') {
-      // Filter by game name - convert both to lowercase and slugified format for comparison
-      return userClips.filter(clip => {
-        // Get the game name from clip data
+      return nonBlocked.filter(clip => {
         const gameName = clip.game?.name || '';
-        
-        // Convert to lowercase slug format (replace spaces and special chars with dashes)
         const gameSlug = gameName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        
-        // Compare with selected filter
         return gameSlug.includes(selectedGameFilter) || 
                selectedGameFilter.includes(gameSlug) ||
-               // Special case for Minecraft
                (selectedGameFilter === 'minecraft' && 
                 (gameName.toLowerCase().includes('minecraft') || 
                  clip.gameId === 7 || 
@@ -399,16 +406,16 @@ const HomePage = () => {
       });
     }
     
-    return userClips;
-  }, [userClips, selectedGameFilter]);
+    return nonBlocked;
+  }, [userClips, selectedGameFilter, blockedUserIds]);
 
   const popularClips = useMemo(() => {
     if (!userClips) return [];
-    // Sort by most views
-    return [...userClips].sort((a, b) => 
-      (b.views || 0) - (a.views || 0)
-    ).slice(0, 4);
-  }, [userClips]);
+    return [...userClips]
+      .filter(c => !blockedUserIds.has(c.userId))
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .slice(0, 4);
+  }, [userClips, blockedUserIds]);
   
   const isLoadingClips = isLoadingLatestClips || isLoadingLatestReels;
 
@@ -566,7 +573,7 @@ const HomePage = () => {
       </section>
 
       {/* Ecosystem Activity Rail */}
-      <EcosystemActivityRail />
+      {/* <EcosystemActivityRail /> */}
       
       {/* Latest Clips Section */}
       <section className="px-0">
@@ -617,7 +624,6 @@ const HomePage = () => {
                     userId={userId}
                     compact={true}
                     clipsList={latestClips ?? undefined}
-                    onCardClick={isMobile ? (clipId, clips) => setMobileViewer({ clips, startId: clipId }) : undefined}
                   />
                 ))
               )}
@@ -823,8 +829,7 @@ const HomePage = () => {
               {latestScreenshots?.slice(0, 12).map((screenshot) => (
                 <div 
                   key={`screenshot-${screenshot.id}`} 
-                  className="relative overflow-hidden rounded-xl cursor-pointer group shadow-lg transition-all duration-500 border aspect-video"
-                  style={{ borderColor: 'rgba(255,255,255,0.05)' }}
+                  className="relative overflow-hidden rounded-xl cursor-pointer group shadow-lg transition-all duration-500 aspect-video"
                   onClick={() => setLocation(`/view/screenshot/${screenshot.id}`)}
                 >
                   <img 
@@ -874,18 +879,18 @@ const HomePage = () => {
       </section>
 
       {/* Daily XP Challenges */}
-      <DailyXPChallenges />
+      {/* <DailyXPChallenges /> */}
 
       {/* Live Streams Section */}
-      <LiveStreamsSection />
+      {/* <LiveStreamsSection /> */}
 
       {/* Recommended for You Section - Only show for authenticated users */}
       {user && <RecommendedForYou userId={user.id} />}
       
       {/* Trending Gamefolios Section */}
-      <section className="mt-16 px-0">
+      {/* <section className="mt-16 px-0">
         <FeaturedUsersSection />
-      </section>
+      </section> */}
 
       {/* Trending Games Section */}
       <section className="mt-16 px-0">
@@ -991,6 +996,7 @@ const HomePage = () => {
                 key={clip.id} 
                 clip={clip} 
                 userId={userId}
+                clipsList={topClips ?? undefined}
               />
             ))
           )}
@@ -1023,6 +1029,7 @@ const HomePage = () => {
                 clip={clip} 
                 userId={userId}
                 compact={true}
+                clipsList={popularClips ?? undefined}
               />
             ))
           )}
@@ -1031,14 +1038,6 @@ const HomePage = () => {
 
 
     </div>
-
-    {mobileViewer && (
-      <MobileTrendingViewer
-        content={mobileViewer.clips}
-        initialIndex={Math.max(0, mobileViewer.clips.findIndex(c => c.id === mobileViewer.startId))}
-        onClose={() => setMobileViewer(null)}
-      />
-    )}
 
     {reelsViewer !== null && latestReels.length > 0 && (
       <MobileTrendingViewer

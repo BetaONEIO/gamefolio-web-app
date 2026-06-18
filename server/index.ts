@@ -1,4 +1,36 @@
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
+import { eq } from 'drizzle-orm';
+import { db } from './db';
+import { users } from '../shared/schema';
+import { scrypt, randomBytes } from 'crypto';
+import { promisify } from 'util';
+
+const scryptAsync = promisify(scrypt);
+
+async function ensureOnboardingTestAccount() {
+  try {
+    const email = 'onboarding@gamefolio.com';
+    const username = 'onboardingtest';
+
+    const [existing] = await db.select().from(users).where(eq(users.email, email));
+    if (existing) return;
+
+    const [byUsername] = await db.select().from(users).where(eq(users.username, username));
+    const salt = randomBytes(16).toString('hex');
+    const buf = (await scryptAsync('Helloworld1!', salt, 64)) as Buffer;
+    const hashed = `${buf.toString('hex')}.${salt}`;
+
+    if (byUsername) {
+      await db.update(users).set({ email, password: hashed, emailVerified: true, userType: null }).where(eq(users.id, byUsername.id));
+    } else {
+      await db.insert(users).values({ username, email, password: hashed, displayName: 'Onboarding Test', emailVerified: true, userType: null, authProvider: 'local', role: 'user', status: 'active' });
+    }
+    log('Onboarding test account ready');
+  } catch (err) {
+    console.error('Failed to ensure onboarding test account:', err);
+  }
+}
 import { setupVite, serveStatic, log } from './vite';
 import { registerRoutes } from './routes';
 import { runMigration } from './migrate-to-supabase';
@@ -11,6 +43,7 @@ import gfCheckoutRoutes from './routes/gf-checkout';
 import proSubscriptionRoutes from './routes/pro-subscription';
 import gfWebhookRoutes from './routes/gf-webhook';
 import gfStakingRoutes from './routes/gf-staking';
+import { blockCryptoOnNative } from './middleware/block-crypto-on-native';
 import storeRoutes from './routes/store';
 import gamefolioPurchaseRoutes from './routes/gamefolio-purchases';
 import revenuecatRoutes from './routes/revenuecat';
@@ -32,6 +65,13 @@ const app = express();
 if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
+
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: false,
+}));
 
 // CORS configuration for production and mobile apps
 function isOriginAllowed(origin: string, allowedOrigins: string[]): boolean {
@@ -102,6 +142,11 @@ app.use(gfWebhookRoutes);
 // Configure body parser with larger limits to support file uploads
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ extended: false, limit: '500mb' }));
+
+// Refuse crypto/wallet/NFT/staking endpoints for native (Capacitor) clients —
+// the mobile apps ship without crypto features for App Store / Play financial
+// compliance. Web requests (no X-GF-Platform header) pass through untouched.
+app.use(blockCryptoOnNative);
 
 // All referenced /attached_assets/* files live under client/public/
 // attached_assets/ and ship via the SPA build to dist/public/attached_assets/,
@@ -366,6 +411,22 @@ app.use((req, res, next) => {
         setTimeout(tick, 90 * 1000);
         setInterval(tick, RECONCILE_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule gamefolio reconciler:', err));
+
+      // Auto-refresh connected Xbox/PSN profiles. The runner only touches
+      // profiles whose last sync is stale (~23h), so a 6h interval keeps every
+      // connected profile fresh roughly daily while spreading API load across
+      // runs rather than one big nightly batch. Set PLATFORM_AUTOSYNC_DISABLED
+      // to "true" to turn it off.
+      import('./platform-sync').then(({ runScheduledPlatformSync }) => {
+        const SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000;
+        const tick = () => {
+          runScheduledPlatformSync()
+            .catch((err) => console.error('platform-sync failed:', err));
+        };
+        // Delay first run so the app is fully warm.
+        setTimeout(tick, 2 * 60 * 1000);
+        setInterval(tick, SYNC_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule platform sync:', err));
     });
   } catch (error) {
     console.error("Fatal server error:", error);

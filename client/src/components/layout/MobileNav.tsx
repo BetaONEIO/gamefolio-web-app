@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useIsKeyboardOpen } from "@/hooks/use-keyboard-height";
 import AuthModal from "@/components/auth/auth-modal";
 import { ZapIconSvg, useZapFly, ZapFlyOverlay } from "@/components/ui/ZapReactionIcon";
@@ -26,8 +26,21 @@ const MobileNav = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
   const trendingIconRef = useRef<HTMLSpanElement>(null);
+  const navRef = useRef<HTMLElement>(null);
   const { zapFlyState, triggerZapFly, dismissZapFly } = useZapFly();
   const isKeyboardOpen = useIsKeyboardOpen();
+
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const update = () => {
+      document.documentElement.style.setProperty('--mobile-nav-height', `${nav.offsetHeight}px`);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(nav);
+    return () => ro.disconnect();
+  }, []);
 
   // All hooks must be declared before any early return.
   const handleUploadOptionClick = useCallback((type: string) => {
@@ -118,7 +131,7 @@ const MobileNav = () => {
         </div>
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-[70] safe-area-bottom">
+      <nav ref={navRef} className="fixed bottom-0 left-0 right-0 bg-[#0B1218] border-t border-border z-[70] safe-area-bottom">
         <div className="flex justify-around py-3">
           {navItems.map((item) => {
             if ('isUpload' in item && item.isUpload) {

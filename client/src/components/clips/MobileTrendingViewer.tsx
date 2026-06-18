@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { ArrowLeft, Heart, MessageCircle, User, Play, Pause, Flag, BarChart2, Gamepad2, X, Send, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, User, Play, Pause, Flag, BarChart2, Gamepad2, X, MoreHorizontal } from "lucide-react";
 import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/content/ReportDialog";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
-import { useCreateComment } from "@/hooks/use-clips";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 
@@ -111,9 +110,19 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   const sheetDragStartY = useRef(0);
   const sheetIsDragging = useRef(false);
 
-  // Inline comment input state
-  const [inlineComment, setInlineComment] = useState("");
-  const createCommentMutation = useCreateComment();
+  // Track software keyboard height via visualViewport
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const kh = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKeyboardHeight(kh);
+    };
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => { vv.removeEventListener('resize', update); vv.removeEventListener('scroll', update); };
+  }, []);
 
   useEffect(() => {
     onCommentsVisibilityChange?.(showComments);
@@ -132,6 +141,13 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Track index without re-renders during scroll
   const committedIndexRef = useRef(initialIndex);
+
+  // Scroll to initialIndex on mount so the clicked reel is shown first
+  useEffect(() => {
+    if (!scrollContainerRef.current || initialIndex <= 0) return;
+    scrollContainerRef.current.scrollTop =
+      initialIndex * scrollContainerRef.current.clientHeight;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset overlay states when switching between content items
   useEffect(() => {
@@ -312,8 +328,8 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   return (
     <div
       ref={containerRef}
-      className={embedded ? "relative w-full h-full overflow-hidden" : "fixed inset-0 z-[60] overflow-hidden"}
-      style={{ background: '#0B1218' }}
+      className={embedded ? "relative w-full h-full overflow-hidden" : "fixed top-0 left-0 right-0 z-[9999] overflow-hidden"}
+      style={{ background: '#0B1218', bottom: embedded ? undefined : 'var(--mobile-nav-height, 4rem)' }}
       data-testid="mobile-trending-viewer"
     >
       {/* ── Scroll-snap content stack ─────────────────────────────────────── */}
@@ -334,7 +350,8 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             ref={el => { itemRefs.current[index] = el; }}
             className="relative w-full bg-black"
             style={{
-              height: '100%',
+              height: embedded ? '100%' : 'calc(100dvh - var(--mobile-nav-height, 4rem))',
+              flexShrink: 0,
               scrollSnapAlign: 'start',
               scrollSnapStop: 'always',
             }}
@@ -343,7 +360,10 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             {/* Only render video/image for current + adjacent items (performance) */}
             {Math.abs(index - currentIndex) <= 1 && (
               isVideoContent(item) ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-black">
+                <div
+                  className="absolute inset-0 flex items-center justify-center bg-black"
+                  style={item.videoType !== 'reel' ? { paddingTop: 'calc(env(safe-area-inset-top, 0px) + 52px)' } : undefined}
+                >
                   <VideoPlayer
                     key={item.id}
                     videoUrl={item.videoUrl || ''}
@@ -353,7 +373,8 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                     hideControls={true}
                     className="w-full h-full"
                     clipId={item.id}
-                    objectFit="contain"
+                    objectFit="cover"
+                    disableAspectRatio={true}
                     data-testid={`video-player-${item.id}`}
                   />
                 </div>
@@ -365,8 +386,8 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               <div
                 className="absolute left-0 right-0 z-10 px-4 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent"
                 style={{
-                  bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
-                  paddingBottom: '8px',
+                  bottom: '0',
+                  paddingBottom: '20px',
                   pointerEvents: 'none',
                 }}
                 onClick={e => e.stopPropagation()}
@@ -484,7 +505,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
         <div
           className="absolute right-3 z-20 flex flex-col items-center gap-3"
           style={{
-            bottom: 'calc(88px + env(safe-area-inset-bottom, 0px))',
+            bottom: '44px',
             pointerEvents: 'none',
           }}
         >
@@ -592,11 +613,15 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
             animate={{ y: sheetY > 0 ? sheetY : 0 }}
             exit={{ y: "100%" }}
             transition={sheetY > 0 ? { duration: 0 } : { type: "tween", duration: 0.42, ease: [0.32, 0, 0.67, 0] }}
-            className="absolute bottom-0 left-0 right-0 z-30 flex flex-col overflow-hidden"
+            className="absolute left-0 right-0 z-[55]"
             style={{
+              bottom: keyboardHeight,
               height: '70%',
               background: '#0B1218',
               borderRadius: '20px 20px 0 0',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
             }}
             onClick={e => e.stopPropagation()}
           >
@@ -642,71 +667,12 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
               </button>
             </div>
 
-            {/* Scrollable comment list only — form is below */}
-            <div className="flex-1 overflow-y-auto px-4 py-2 min-h-0">
-              {isVideoContent(currentItem) && (
-                <CommentSection clipId={currentItem.id} hideForm={true} />
-              )}
-            </div>
-
-            {/* Sticky comment input — always visible at bottom of sheet */}
-            <div
-              className="flex-shrink-0 px-3 py-2"
-              style={{
-                borderTop: '1px solid rgba(255,255,255,0.07)',
-                background: '#0B1218',
-                paddingBottom: 'max(env(safe-area-inset-bottom, 8px), 8px)',
-              }}
-            >
-              {user ? (
-                <div className="flex items-center gap-2">
-                  <CustomAvatar user={user} size="sm" showBorder={false} />
-                  <div
-                    className="flex-1 flex items-center gap-2 rounded-full px-3 py-1.5"
-                    style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}
-                  >
-                    <input
-                      type="text"
-                      value={inlineComment}
-                      onChange={(e) => setInlineComment(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey && inlineComment.trim() && isVideoContent(currentItem)) {
-                          e.preventDefault();
-                          createCommentMutation.mutate(
-                            { clipId: currentItem.id, text: inlineComment },
-                            { onSuccess: () => setInlineComment("") }
-                          );
-                        }
-                      }}
-                      placeholder="Add a comment…"
-                      className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/35 min-w-0"
-                      data-testid="input-comment-inline"
-                    />
-                    <button
-                      onClick={() => {
-                        if (!inlineComment.trim() || !isVideoContent(currentItem)) return;
-                        createCommentMutation.mutate(
-                          { clipId: currentItem.id, text: inlineComment },
-                          { onSuccess: () => setInlineComment("") }
-                        );
-                      }}
-                      disabled={!inlineComment.trim() || createCommentMutation.isPending}
-                      className="flex-shrink-0 transition-opacity disabled:opacity-30"
-                      style={{ color: '#B7FF1A' }}
-                      data-testid="button-post-comment-inline"
-                    >
-                      <Send className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
+            {/* Scrollable comment list with built-in form — same as clips viewer */}
+            <div className="flex-1 overflow-y-auto px-4 py-3 pb-5" style={{ minHeight: 0 }}>
+              {isVideoContent(currentItem) ? (
+                <CommentSection clipId={currentItem.id} currentUserId={user?.id} />
               ) : (
-                <button
-                  onClick={() => openModal('login')}
-                  className="w-full text-center text-sm py-2 rounded-full"
-                  style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)' }}
-                >
-                  <span style={{ color: '#B7FF1A' }}>Sign in</span> to comment
-                </button>
+                <CommentSection screenshotId={currentItem.id} currentUserId={user?.id} />
               )}
             </div>
           </motion.div>

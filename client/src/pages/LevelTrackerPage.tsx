@@ -385,7 +385,7 @@ export default function LevelTrackerPage() {
                     style={{
                       width: 140,
                       height: 140,
-                      background: '#03080A',
+                      background: '#081017',
                       border: '2px solid #B7FF1A',
                       boxShadow: '0 0 24px rgba(183,255,26,0.35), inset 0 0 16px rgba(183,255,26,0.04)',
                     }}
@@ -832,7 +832,7 @@ export default function LevelTrackerPage() {
                       >
                         <div
                           className="p-2 rounded-full shrink-0"
-                          style={{ background: '#03080A' }}
+                          style={{ background: '#081017' }}
                         >
                           <Icon className={`w-4 h-4 ${colorClass}`} />
                         </div>

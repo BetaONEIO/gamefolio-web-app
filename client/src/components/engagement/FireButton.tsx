@@ -62,7 +62,7 @@ export function FireButton({
     queryKey: [`/api/${contentType}s/${contentId}/reactions/status`],
     queryFn: async () => {
       const res = await fetch(`/api/${contentType}s/${contentId}/reactions/status`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch fire status");
+      if (!res.ok) throw new Error("Failed to fetch zap status");
       return res.json();
     },
     enabled: !!user,
@@ -92,7 +92,7 @@ export function FireButton({
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to add fire reaction');
+        throw new Error(error.message || 'Failed to add zap');
       }
 
       return response.json();

@@ -36,6 +36,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   const [isMobile, setIsMobile] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isDesktopFullscreen, setIsDesktopFullscreen] = useState(false);
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; time: number } | null>(null);
@@ -43,6 +44,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const previousUrlRef = useRef<string | null>(null);
+  const desktopImageRef = useRef<HTMLDivElement>(null);
 
   // Update the address bar URL to reflect the current screenshot so it can be copied/shared
   useEffect(() => {
@@ -181,6 +183,21 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
     }
   }, []);
 
+  const toggleDesktopFullscreen = useCallback(() => {
+    if (!desktopImageRef.current) return;
+    if (!document.fullscreenElement) {
+      desktopImageRef.current.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setIsDesktopFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
+
   if (!screenshot) return null;
 
   const getVisibleDots = (total: number, current: number, windowSize = 5) => {
@@ -198,7 +215,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
       <div className="fixed inset-0 z-[100] bg-black flex flex-col">
         <div className="absolute top-3 right-3 z-50">
           <button
-            onClick={() => { setIsFullscreen(false); handleClose(); }}
+            onClick={() => setIsFullscreen(false)}
             className="rounded-sm opacity-70 transition-opacity hover:opacity-100 p-3 bg-black/30 backdrop-blur-sm hover:bg-black/50 flex items-center justify-center"
           >
             <X className="h-6 w-6 text-white" />
@@ -516,12 +533,22 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
           </DialogPrimitive.Close>
 
           <div className="flex flex-row h-full">
-          <div className="bg-black flex items-center justify-center w-[75%] h-full flex-shrink-0">
+          <div ref={desktopImageRef} className="bg-black flex items-center justify-center w-[75%] h-full flex-shrink-0 relative">
             <img
               src={signedUrl || screenshot.imageUrl}
               alt={screenshot.title}
               className="max-w-full max-h-full object-contain"
             />
+            <button
+              onClick={toggleDesktopFullscreen}
+              className="absolute bottom-3 right-3 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors"
+              title={isDesktopFullscreen ? "Exit fullscreen" : "View fullscreen"}
+            >
+              {isDesktopFullscreen
+                ? <Minimize2 className="h-4 w-4 text-white" />
+                : <Maximize2 className="h-4 w-4 text-white" />
+              }
+            </button>
           </div>
 
           <div className="flex flex-col w-[25%] h-full">

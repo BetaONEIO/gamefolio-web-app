@@ -533,7 +533,113 @@ export class VideoProcessor {
     }
   }
 
-  static async getVideoInfo(videoPath: string): Promise<{ duration: number; width: number; height: number }> {
+  /**
+   * Generate a personalised outro video: dark background → logo fade+glow → @username fade-in.
+   * Landscape/default: 1080×1080 square (fill-cropped to 16:9 at download time).
+   * Portrait: 1080×1920 (9:16, fills portrait/reel clips natively).
+   * Returns the raw MP4 buffer (caller uploads to storage).
+   */
+  static async generateOutroVideo(username: string, userId: number, format: 'portrait' | 'landscape' = 'landscape'): Promise<Buffer> {
+    await this.ensureDirectories();
+
+    const outputPath = path.join(this.TEMP_DIR, `outro_${userId}_${format}_${Date.now()}.mp4`);
+    const logoPath = path.join(process.cwd(), 'client', 'public', 'attached_assets', 'gamefolio-logo-green.png');
+    const fontPath = path.join(process.cwd(), 'server', 'assets', 'fonts', 'SpaceGrotesk-Bold.ttf');
+
+    // Strip any characters that could break the drawtext filter
+    const safeUser = `@${username}`.replace(/[^a-zA-Z0-9_@.-]/g, '');
+
+    const logoExists = (() => {
+      try { accessSync(logoPath); return true; } catch { return false; }
+    })();
+
+    const audioPath = path.join(process.cwd(), 'server', 'assets', 'audio', 'outro-sting.mp3');
+    const audioExists = (() => {
+      try { accessSync(audioPath); return true; } catch { return false; }
+    })();
+
+    // Portrait (reels): 9:16 canvas; landscape/default: square (fill-cropped at download time)
+    const canvasSize = format === 'portrait' ? '1080x1920' : '1080x1080';
+    // Timing: logo fades in at 0.3 s over 0.8 s (fully visible at 1.1 s)
+    //         username fades in at 1.1 s (0.8 s after logo starts) over 0.8 s
+    const logoFadeStart = 0.3;
+    const logoFadeDur   = 0.8;
+    const userFadeStart = logoFadeStart + logoFadeDur; // 1.1 s
+    const userFadeDur   = 0.8;
+    const totalDur      = 4;
+
+    return new Promise<Buffer>((resolve, reject) => {
+      const cmd = (ffmpeg as any)()
+        // Input 0: 4-second solid dark background
+        .input(`color=c=0x0B1319:size=${canvasSize}:rate=30:d=${totalDur}`)
+        .inputOptions(['-f', 'lavfi']);
+
+      if (logoExists) {
+        cmd.input(logoPath).inputOptions(['-loop', '1']);
+      }
+
+      // Audio input index: 2 if logo present, 1 otherwise
+      const audioIdx = logoExists ? 2 : 1;
+      if (audioExists) {
+        cmd.input(audioPath);
+      }
+
+      const audioFilter = audioExists
+        ? [`[${audioIdx}:a]adelay=400:all=1,atrim=duration=3.5,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[aout]`]
+        : [];
+
+      const filters: string[] = logoExists ? [
+        // Scale logo to 320 px wide, force RGBA
+        '[1:v]scale=320:-1,format=rgba[logo_raw]',
+        // Split into glow copy and main copy
+        '[logo_raw]split=2[logo1][logo2]',
+        // Blur second copy to create the glow halo
+        '[logo2]gblur=sigma=22[glow_blur]',
+        // Logo fades in at logoFadeStart s over logoFadeDur s
+        `[logo1]fade=t=in:st=${logoFadeStart}:d=${logoFadeDur}:alpha=1[logo_faded]`,
+        `[glow_blur]fade=t=in:st=${logoFadeStart}:d=${logoFadeDur}:alpha=1[glow_faded]`,
+        // Composite: glow behind logo, both centred
+        '[0:v][glow_faded]overlay=(W-w)/2:(H-h)/2-90[bg_glow]',
+        '[bg_glow][logo_faded]overlay=(W-w)/2:(H-h)/2-90[with_logo]',
+        // Username text fades in 0.8 s AFTER logo starts (i.e. once logo is fully visible)
+        `[with_logo]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+120:alpha='if(lt(t\\,${userFadeStart})\\,0\\,if(lt(t\\,${userFadeStart + userFadeDur})\\,(t-${userFadeStart})/${userFadeDur}\\,1))'[out]`,
+        ...audioFilter,
+      ] : [
+        // Fallback: no logo — just text fading in at userFadeStart
+        `[0:v]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+10:alpha='if(lt(t\\,${userFadeStart})\\,0\\,if(lt(t\\,${userFadeStart + userFadeDur})\\,(t-${userFadeStart})/${userFadeDur}\\,1))'[out]`,
+        ...audioFilter,
+      ];
+
+      cmd
+        .complexFilter(filters)
+        .outputOptions([
+          '-map', '[out]',
+          ...(audioExists ? ['-map', '[aout]', '-c:a', 'aac', '-ar', '44100'] : ['-an']),
+          '-c:v', 'libx264',
+          '-t', `${totalDur}`,
+          '-preset', 'slow',
+          '-crf', '18',
+          '-pix_fmt', 'yuv420p',
+        ])
+        .format('mp4')
+        .on('error', (err: Error) => {
+          console.error('❌ Outro generation failed:', err.message);
+          reject(err);
+        })
+        .on('end', async () => {
+          try {
+            const buffer = await fs.readFile(outputPath);
+            await fs.unlink(outputPath).catch(() => {});
+            resolve(buffer);
+          } catch (e) {
+            reject(e);
+          }
+        })
+        .save(outputPath);
+    });
+  }
+
+  static async getVideoInfo(videoPath: string): Promise<{ duration: number; width: number; height: number; videoCodec: string; audioCodec: string | null }> {
     return new Promise((resolve, reject) => {
       ffmpeg.ffprobe(videoPath, (error: any, metadata: any) => {
         if (error) {
@@ -547,12 +653,29 @@ export class VideoProcessor {
           return;
         }
 
+        const audioStream = metadata.streams.find((stream: any) => stream.codec_type === 'audio');
+
         resolve({
           duration: metadata.format?.duration || 0,
           width: videoStream.width || 0,
-          height: videoStream.height || 0
+          height: videoStream.height || 0,
+          videoCodec: (videoStream.codec_name || '').toLowerCase(),
+          audioCodec: audioStream ? (audioStream.codec_name || '').toLowerCase() : null
         });
       });
     });
+  }
+
+  /**
+   * Returns true when the file can be played as-is by a standard HTML <video>
+   * element across browsers / WebViews. Anything else (HEVC/H.265, 10-bit,
+   * ProRes, exotic audio, etc.) must be re-encoded to H.264 + AAC before it is
+   * served, otherwise it will fail to play for viewers — the same way it fails
+   * to preview at upload time.
+   */
+  static isBrowserPlayable(videoCodec: string, audioCodec: string | null): boolean {
+    const videoOk = videoCodec === 'h264';
+    const audioOk = audioCodec === null || audioCodec === 'aac' || audioCodec === 'mp3';
+    return videoOk && audioOk;
   }
 }

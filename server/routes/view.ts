@@ -1,5 +1,6 @@
 import express from 'express';
 import { storage } from '../storage';
+import { recordView } from '../view-rate-limiter';
 
 const router = express.Router();
 
@@ -119,16 +120,19 @@ router.get('/screenshot/:id', async (req, res) => {
     }
 
     try {
-      // Increment view count (don't fail if this errors)
-      await storage.incrementScreenshotViews(screenshotId);
-      
-      // Award 1 point to the content owner for receiving a view
-      const { LeaderboardService } = await import("../leaderboard-service");
-      await LeaderboardService.awardPoints(
-        screenshot.userId,
-        'view',
-        `Screenshot #${screenshotId} received a view`
-      );
+      // Rate-limit: same IP may only count once per screenshot per hour
+      const ip = (req.ip || req.socket.remoteAddress || 'unknown');
+      if (recordView('screenshot', screenshotId, ip)) {
+        await storage.incrementScreenshotViews(screenshotId);
+
+        // Award 1 point to the content owner for receiving a view
+        const { LeaderboardService } = await import("../leaderboard-service");
+        await LeaderboardService.awardPoints(
+          screenshot.userId,
+          'view',
+          `Screenshot #${screenshotId} received a view`
+        );
+      }
     } catch (viewError) {
       console.log(`⚠️ Warning: Could not increment view count for screenshot ${screenshotId}:`, viewError);
     }
@@ -184,8 +188,11 @@ router.get('/@:username/screenshot/:shareCode', async (req, res) => {
     }
 
     try {
-      // Increment view count (don't fail if this errors)
-      await storage.incrementScreenshotViews(screenshot.id);
+      // Rate-limit: same IP may only count once per screenshot per hour
+      const ip = (req.ip || req.socket.remoteAddress || 'unknown');
+      if (recordView('screenshot', screenshot.id, ip)) {
+        await storage.incrementScreenshotViews(screenshot.id);
+      }
     } catch (viewError) {
       console.log(`⚠️ Warning: Could not increment view count for screenshot ${screenshot.id}:`, viewError);
     }

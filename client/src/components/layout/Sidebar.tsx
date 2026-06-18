@@ -6,6 +6,9 @@ import {
   X,
   Check,
   Trash2,
+  ChevronDown,
+  Gift,
+  Users,
 } from "lucide-react";
 import { GamefolioStoreIcon } from "@/components/icons/GamefolioStoreIcon";
 import { GamefolioCollectionIcon } from "@/components/icons/GamefolioCollectionIcon";
@@ -22,6 +25,7 @@ import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Game } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
+import { GiftProSearchDialog } from "@/components/profile/GiftProSearchDialog";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +54,8 @@ const Sidebar = () => {
   const queryClient = useQueryClient();
   const [hoveredGameId, setHoveredGameId] = useState<number | null>(null);
   const [gameToRemove, setGameToRemove] = useState<{ id: number; name: string } | null>(null);
+  const [myGamefolioExpanded, setMyGamefolioExpanded] = useState(false);
+  const [showGiftProDialog, setShowGiftProDialog] = useState(false);
 
   // Maximum number of games a user can have
   const MAX_GAMES = 25;
@@ -84,6 +90,19 @@ const Sidebar = () => {
 
   // Use favorite games if user is authenticated, otherwise use trending games
   const displayGames = user ? favoriteGames : trendingGames;
+
+  // Own profile data for follower/following counts
+  const { data: ownProfileData } = useQuery({
+    queryKey: [`/api/users/${user?.username}`],
+    queryFn: async () => {
+      if (!user?.username) return null;
+      const res = await apiRequest('GET', `/api/users/${user.username}`);
+      return res.json();
+    },
+    enabled: !!user?.username,
+  });
+  const followerCount = (ownProfileData as any)?._count?.followers ?? 0;
+  const followingCount = (ownProfileData as any)?._count?.following ?? 0;
 
   // Search for games to add
   const { data: searchResults } = useQuery<TwitchGame[]>({
@@ -239,8 +258,16 @@ const Sidebar = () => {
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: TrendingNavIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
+
+    // Store stays on native but renders a crypto-free cosmetics catalogue.
     { icon: GamefolioStoreIcon, label: "Store", href: "/store" },
+
+    // Wallet stays on native too — the /wallet route renders a redirect-to-web
+    // card (App Store / Play financial compliance), same pattern as Store.
     { icon: GamefolioWalletIcon, label: "Wallet", href: "/wallet" },
+
+    // Collection renders read-only on native (browse only); transaction actions
+    // like Quick Sell are web-only. See MintedNftDetailScreen.
     { icon: GamefolioCollectionIcon, label: "Collection", href: "/collection" },
 
     // Only show Messages link if user has messaging enabled - default to true for demo user
@@ -261,6 +288,63 @@ const Sidebar = () => {
           {menuItems.map((item) => {
             const isActive = location === item.href;
             const isGamefolioItem = 'gamefolioIcon' in item && item.gamefolioIcon;
+
+            if (item.label === 'My Gamefolio' && user) {
+              return (
+                <div key={item.href}>
+                  <div
+                    className={cn(
+                      "flex items-center p-3 rounded-lg transition-all cursor-pointer group",
+                      isActive
+                        ? "text-[#071013] bg-primary"
+                        : "text-muted-foreground hover:bg-primary hover:text-[#071013]"
+                    )}
+                    onClick={() => { closeClipDialog(); setMyGamefolioExpanded(prev => !prev); }}
+                  >
+                    <span className="inline-flex items-center justify-center w-6 h-6 flex-shrink-0 overflow-visible">
+                      <GamefolioIcon glow={isActive} className="w-6 h-6 scale-[1.85] transition-all duration-300 group-hover:[filter:drop-shadow(0_0_10px_rgba(183,255,26,0.45))]" />
+                    </span>
+                    <span className="ml-3 font-medium flex-1">My Gamefolio</span>
+                    <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", myGamefolioExpanded ? "rotate-180" : "")} />
+                  </div>
+                  {myGamefolioExpanded && (
+                    <div className="ml-3 mt-0.5 space-y-0.5 pl-5 border-l border-border">
+                      <Link href={item.href} onClick={() => { closeClipDialog(); setMyGamefolioExpanded(false); }}>
+                        <div className="flex items-center px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors cursor-pointer">
+                          View Profile
+                        </div>
+                      </Link>
+                      <button
+                        onClick={() => { setLocation(`/profile/${user.username}/followers`); setMyGamefolioExpanded(false); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors"
+                      >
+                        <Users className="h-3.5 w-3.5 shrink-0" />
+                        <span className="font-semibold">{followerCount.toLocaleString()}</span>
+                        <span>Followers</span>
+                      </button>
+                      <button
+                        onClick={() => { setLocation(`/profile/${user.username}/followers?tab=following`); setMyGamefolioExpanded(false); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors"
+                      >
+                        <Users className="h-3.5 w-3.5 shrink-0" />
+                        <span className="font-semibold">{followingCount.toLocaleString()}</span>
+                        <span>Following</span>
+                      </button>
+                      {/* Gift Pro — temporarily disabled
+                      <button
+                        onClick={() => setShowGiftProDialog(true)}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors"
+                      >
+                        <Gift className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        <span>Gift Pro</span>
+                      </button>
+                      */}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             return (
               <Link key={item.href} href={item.href} onClick={() => { closeClipDialog(); if (item.href === '/' && location === '/') setLocation('/'); }}>
                 <div
@@ -331,7 +415,9 @@ const Sidebar = () => {
                   key={`sidebar-${game.id}`}
                   className="relative flex items-center px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary group cursor-pointer"
                   onClick={() => {
-                    setLocation(`/profile/${user?.username}`);
+                    const gameSlug = game.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    closeClipDialog();
+                    setLocation(`/games/${gameSlug}`);
                   }}
                   onMouseEnter={() => setHoveredGameId(game.id)}
                   onMouseLeave={() => setHoveredGameId(null)}
@@ -672,6 +758,8 @@ const Sidebar = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <GiftProSearchDialog open={showGiftProDialog} onOpenChange={setShowGiftProDialog} />
 
       {/* Remove Game Confirmation Dialog */}
       <AlertDialog open={!!gameToRemove} onOpenChange={() => setGameToRemove(null)}>

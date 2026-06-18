@@ -938,7 +938,7 @@ const UploadPage = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 pb-28 md:pb-6">
       <div className="flex items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Upload Content</h1>
       </div>

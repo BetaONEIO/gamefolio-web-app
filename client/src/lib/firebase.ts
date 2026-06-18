@@ -1,5 +1,5 @@
 import { initializeApp, getApps, FirebaseApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithRedirect, signOut, Auth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, Auth } from "firebase/auth";
 import { isNative } from "./platform";
 
 const firebaseConfig = {
@@ -39,10 +39,7 @@ if (isFirebaseConfigValid) {
     googleProvider.addScope('profile');
     googleProvider.setCustomParameters({
       prompt: 'select_account',
-      // 'page' is the correct display mode for a full-page redirect flow.
-      // 'popup' was previously set but is only appropriate when using
-      // signInWithPopup — it can confuse the redirect flow.
-      display: 'page'
+      display: 'popup'
     });
 
     console.log('Firebase initialized successfully');
@@ -58,6 +55,7 @@ export type NativeGoogleAuthResult = {
   displayName: string;
   photoURL: string | null;
   uid: string;
+  idToken: string | null;
 };
 
 /**
@@ -84,15 +82,15 @@ export async function signInWithGoogleNative(): Promise<NativeGoogleAuthResult> 
     displayName: user.displayName || user.email.split('@')[0],
     photoURL: user.photoUrl ?? null,
     uid: user.uid,
+    idToken: result.credential?.idToken ?? null,
   };
 }
 
 /**
- * Web Google sign-in using a full-page redirect.
- * signInWithPopup is blocked by Cross-Origin-Opener-Policy headers on the
- * server because it polls window.closed on the popup — COOP prevents that.
- * signInWithRedirect avoids the popup entirely; the result is retrieved via
- * getRedirectResult() in use-auth.tsx after the page reloads.
+ * Web Google sign-in using a popup window.
+ * The popup resolves without leaving the page. Firebase triggers
+ * onAuthStateChanged in use-auth.tsx after the popup completes, which
+ * calls /api/auth/google and sets the user session.
  */
 export const signInWithGoogle = async (): Promise<void> => {
   if (isNative) {
@@ -101,12 +99,7 @@ export const signInWithGoogle = async (): Promise<void> => {
   if (!auth || !googleProvider) {
     throw new Error('Firebase not properly configured');
   }
-  // Set a short-lived cookie before navigating so the callback can detect
-  // if getRedirectResult returns null when a result was expected.
-  const expires = new Date(Date.now() + 5 * 60 * 1000).toUTCString();
-  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
-  document.cookie = `google_redirect_pending=1; path=/; expires=${expires}; SameSite=Lax${secure}`;
-  await signInWithRedirect(auth, googleProvider);
+  await signInWithPopup(auth, googleProvider);
 };
 
 export const signOutUser = async () => {

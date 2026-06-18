@@ -5,7 +5,7 @@ import RegisterForm from "@/components/auth/register-form";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 
 const PRIMARY = "#B7FF1A";
-const BG = "#03080A";
+const BG = "#081017";
 const CARD_BG = "#0B1218";
 const CARD_BORDER = "#1B2A33";
 

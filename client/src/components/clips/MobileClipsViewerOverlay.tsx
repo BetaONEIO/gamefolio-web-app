@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { ClipWithUser } from "@shared/schema";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
-import ClipFeedCard from "@/components/clips/ClipFeedCard";
+import { ClipFeedCard } from "@/components/clips/MobileClipsViewer";
 
 interface MobileClipsViewerOverlayProps {
   clips: ClipWithUser[];
@@ -33,17 +33,17 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
 
   const content = (
     <div
-      className="fixed inset-0 flex flex-col"
-      style={{ background: '#03080A', zIndex: 60 }}
+      className="fixed top-0 left-0 right-0"
+      style={{ background: '#081017', zIndex: 9999, bottom: 'var(--mobile-nav-height, 3.5rem)' }}
     >
-      {/* Top bar */}
+      {/* Top bar — floats over the feed */}
       <div
-        className="flex-shrink-0 flex items-center justify-between px-4 pb-3"
-        style={{ background: '#03080A', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+        className="absolute left-0 right-0 z-10 flex items-center justify-between px-4 pb-3 bg-gradient-to-b from-black/60 to-transparent pointer-events-none"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
       >
         <button
           onClick={onBack}
-          className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
+          className="w-9 h-9 flex items-center justify-center rounded-full transition-colors pointer-events-auto"
           style={{ color: '#F5F7F2' }}
           aria-label="Back"
         >
@@ -54,7 +54,7 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
           <Link
             href={viewAllHref}
             onClick={onBack}
-            className="text-sm font-semibold px-3 py-1.5 rounded-full transition-colors"
+            className="text-sm font-semibold px-3 py-1.5 rounded-full transition-colors pointer-events-auto"
             style={{
               color: '#B7FF1A',
               border: '1px solid rgba(183, 255, 26, 0.5)',
@@ -70,24 +70,40 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
       <div
         ref={scrollRef}
         style={{
-          flex: 1,
+          position: 'absolute',
+          inset: 0,
           overflowY: 'auto',
           scrollSnapType: 'y mandatory',
           WebkitOverflowScrolling: 'touch',
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)',
+          overscrollBehaviorY: 'none',
         }}
       >
         {clips.map((clip) => (
           <div
             key={clip.id}
-            className="flex flex-col justify-center"
             style={{
               scrollSnapAlign: 'start',
-              scrollSnapStop: 'always',
-              minHeight: '100%',
+              scrollSnapStop: 'normal',
+              height: 'calc(100dvh - var(--mobile-nav-height, 3.5rem))',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              boxSizing: 'border-box',
             }}
           >
-            <ClipFeedCard clip={clip} clips={clips} />
+            {/* Margin wrapper — positions content below header, above bottom edge */}
+            <div
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                marginTop: 'calc(env(safe-area-inset-top, 0px) + 155px)',
+                marginBottom: '16px',
+              }}
+            >
+              <ClipFeedCard clip={clip} clips={clips} />
+            </div>
           </div>
         ))}
       </div>

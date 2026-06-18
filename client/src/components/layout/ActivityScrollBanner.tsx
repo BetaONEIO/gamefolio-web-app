@@ -4,7 +4,7 @@ import { getQueryFn } from "@/lib/queryClient";
 import { useEffect, useRef } from "react";
 import { Upload, Video, Image, Film } from "lucide-react";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 
 interface RecentUpload {
   id: number;
@@ -79,7 +79,13 @@ export function ActivityScrollBanner() {
               style={{ color: '#071013' }}
             >
               <Icon className="h-4 w-4" />
-              <span className="font-semibold">{upload.displayName || upload.username}</span>
+              <Link
+                href={`/profile/${upload.username}`}
+                className="font-semibold hover:underline"
+                style={{ color: '#071013' }}
+              >
+                {upload.displayName || upload.username}
+              </Link>
               <span>{label}</span>
               <button
                 onClick={() => {

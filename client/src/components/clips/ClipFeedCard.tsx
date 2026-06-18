@@ -130,7 +130,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
     <div
       ref={cardRef}
       className={commentsOverlay ? "fixed inset-0 z-[75] flex flex-col overflow-hidden" : "w-full"}
-      style={{ background: commentsOverlay ? '#000' : '#03080A' }}
+      style={{ background: commentsOverlay ? '#000' : '#081017' }}
     >
       {/* Video */}
       <div
@@ -142,16 +142,18 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
         } : {}}
       >
         {isNear ? (
-          <VideoPlayer
-            videoUrl={clip.videoUrl || ''}
-            thumbnailUrl={clip.thumbnailUrl || undefined}
-            autoPlay={isInView}
-            clipId={clip.id}
-            objectFit="contain"
-            autoHideControls
-            externalPaused={!isInView}
-            className={commentsOverlay ? "w-full h-full" : "w-full"}
-          />
+          <div className={commentsOverlay ? "w-full h-full" : "w-full aspect-video overflow-hidden bg-black"}>
+            <VideoPlayer
+              videoUrl={clip.videoUrl || ''}
+              thumbnailUrl={clip.thumbnailUrl || undefined}
+              autoPlay={isInView}
+              clipId={clip.id}
+              objectFit="contain"
+              autoHideControls
+              externalPaused={!isInView}
+              className="w-full h-full"
+            />
+          </div>
         ) : (
           <div className={commentsOverlay ? "w-full h-full bg-black flex items-center justify-center" : "w-full aspect-video bg-black flex items-center justify-center relative overflow-hidden"}>
             {clip.thumbnailUrl ? (
@@ -228,7 +230,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
         </div>
 
         {/* Caption + social */}
-        <div className="px-4" style={{ background: '#03080A' }}>
+        <div className="px-4" style={{ background: '#081017' }}>
           {caption && (
             <div className="pb-3">
               <p className="text-[14px] leading-relaxed" style={{ color: '#B8C0AE' }}>

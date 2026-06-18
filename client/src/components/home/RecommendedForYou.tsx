@@ -1,16 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
-import { Video, Film, ChevronLeft, ChevronRight } from "lucide-react";
+import { Video, Film, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { RecommendedIcon } from "@/components/icons/RecommendedIcon";
 import { Link } from "wouter";
 import { ClipWithUser } from "@shared/schema";
-import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
+import VideoClipCard from "@/components/clips/VideoClipCard";
 import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
+import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
 import { useEffect, useRef, useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { LazyImage } from "@/components/ui/lazy-image";
+import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
+import { formatNumber } from "@/lib/format";
+import { formatDuration } from "@/lib/constants";
 
 interface RecommendedForYouProps {
   userId?: number;
@@ -46,6 +52,11 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
       return response.json();
     },
     enabled: !!actualUserId,
+    // The global default is staleTime: Infinity, which froze this section for
+    // the whole session. The server now returns a rotating, freshness-weighted
+    // mix, so re-pull on every mount to actually surface new clips per visit.
+    staleTime: 1000 * 60 * 5,
+    refetchOnMount: 'always',
   });
 
   // Filter clips based on selected content type
@@ -218,14 +229,15 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
         />
       )}
 
-      {/* Mobile reels viewer — same as Trending reels tab */}
-      {mobileReelsViewer && (
+      {/* Mobile reels viewer — portal to body so fixed positioning isn't clipped by ancestor stacking contexts */}
+      {mobileReelsViewer && createPortal(
         <MobileTrendingViewer
           content={mobileReelsViewer.reels}
           initialIndex={mobileReelsViewer.startIndex}
           onClose={() => setMobileReelsViewer(null)}
           hideCloseButton={false}
-        />
+        />,
+        document.body
       )}
 
       <section className="px-4 sm:px-6 md:px-8 mb-6 sm:mb-8" data-testid="recommended-for-you-section">
@@ -265,7 +277,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
             {/* Navigation Arrows (desktop only) */}
             <button
               onClick={() => canScrollLeft && scroll('left')}
-              className={`absolute -left-5 top-1/2 -translate-y-1/2 z-10 text-white p-2.5 rounded-full transition-all hidden sm:flex items-center justify-center shadow-lg ${
+              className={`absolute -left-5 top-1/2 -translate-y-1/2 z-10 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg ${
                 canScrollLeft ? 'bg-black/70 hover:bg-black/90 cursor-pointer' : 'bg-black/20 cursor-not-allowed opacity-40'
               }`}
               disabled={!canScrollLeft}
@@ -302,17 +314,80 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
                 <div
                   key={`recommended-clip-${clip.id}`}
                   className={contentType === 'reels'
-                    ? "w-56 sm:w-64 lg:w-72 xl:w-80 flex-shrink-0"
+                    ? "w-40 sm:w-48 lg:w-56 xl:w-64 flex-shrink-0"
                     : "w-[280px] sm:w-[320px] md:w-[400px] lg:w-[480px] flex-shrink-0"
                   }
                 >
-                  <VideoClipGridItem
-                    clip={clip}
-                    userId={actualUserId}
-                    data-testid={`clip-recommended-${clip.id}`}
-                    compact={false}
-                    onCardClick={() => handleCardClick(clip)}
-                  />
+                  {contentType === 'reels' ? (
+                    <div
+                      onClick={() => handleCardClick(clip)}
+                      className="cursor-pointer group"
+                      data-testid={`clip-recommended-${clip.id}`}
+                    >
+                      {/* 9:16 thumbnail with duration + view pills */}
+                      <div className="relative aspect-[9/16] w-full overflow-hidden rounded-xl bg-black border border-white/5">
+                        <LazyImage
+                          src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
+                          alt={clip.title || 'Reel thumbnail'}
+                          className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+                          showLoadingSpinner={true}
+                          rootMargin="100px"
+                          threshold={0.1}
+                        />
+                        {/* Duration pill — top left */}
+                        <div className="absolute top-2 left-2 bg-black/70 text-white text-[11px] px-2 py-0.5 rounded-md font-semibold">
+                          {formatDuration(
+                            clip.trimEnd && clip.trimEnd > 0
+                              ? clip.trimEnd - (clip.trimStart || 0)
+                              : clip.duration || 0
+                          )}
+                        </div>
+                        {/* View count pill — top right */}
+                        <div className="absolute top-2 right-2 bg-black/70 text-white text-[11px] px-2 py-0.5 rounded-md font-semibold flex items-center gap-1">
+                          <Eye className="h-3 w-3" />
+                          {formatNumber(clip.views || 0)}
+                        </div>
+                      </div>
+                      {/* Meta below thumbnail */}
+                      <div className="pt-2 px-0.5">
+                        <div className="flex items-start justify-between gap-1">
+                          <h3 className="text-white font-bold text-sm line-clamp-1 flex-1 min-w-0">
+                            {clip.title}
+                          </h3>
+                          <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} className="flex-shrink-0 -mt-0.5">
+                            <TrendingClipMenu clip={clip} />
+                          </div>
+                        </div>
+                        <ProfileHoverCard username={clip.user.username}>
+                          <Link
+                            href={`/profile/${clip.user.username}`}
+                            className="text-white/60 text-xs mt-0.5 hover:text-white/90 transition-colors block"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            @{clip.user.username}
+                          </Link>
+                        </ProfileHoverCard>
+                        {clip.game?.name && (
+                          <Link
+                            href={`/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span
+                              className="inline-block mt-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded hover:opacity-90 transition-opacity"
+                              style={{ background: '#B7FF1A', color: '#071013' }}
+                            >
+                              {clip.game.name}
+                            </span>
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <VideoClipCard
+                      clip={clip}
+                      clipsList={filteredContent}
+                    />
+                  )}
                 </div>
               ))}
             </div>
