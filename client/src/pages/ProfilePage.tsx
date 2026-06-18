@@ -3654,14 +3654,13 @@ const ProfilePage = () => {
             )}
 
             {/* Profile Info Card — stats only, Collection button on top-right border */}
-            <div className="relative mt-4 max-w-xl">
+            <div className="relative mt-4 w-full">
 
             {/* Stats card */}
             <div
               className="relative mt-4 rounded-lg transition-all duration-300"
               style={{
                 width: '100%',
-                maxWidth: '600px',
               }}
             >
               {/* Collection button — straddles the top border of the stats card (half on, half off). Hidden on native builds. */}
@@ -3744,7 +3743,7 @@ const ProfilePage = () => {
               >
                 <div className="p-5">
                   {profileSectionTab === 'stats' ? (
-                    <div className="flex items-center" style={isWatermelonTheme ? { gap: 0 } : { gap: '2rem' }}>
+                    <div className="flex items-center justify-between w-full" style={isWatermelonTheme ? { gap: 0 } : {}}>
                       <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
                         <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
                         <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>Uploads</span>
