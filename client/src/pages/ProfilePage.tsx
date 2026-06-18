@@ -3670,11 +3670,10 @@ const ProfilePage = () => {
                 isModerator={(profile.role === "moderator" || profile.role === "admin") && !verificationBadgeData?.verificationBadge} 
                 size="xl" 
               />
-              <PartnerBadge isPartner={(profile as any).isPartner} size="xl" />
               <ProBadge selectedVerificationBadgeId={profile.selectedVerificationBadgeId} size="xl" />
               {profile.userType && profile.showUserType !== false && (() => {
                 const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
-                return userTypes.slice(0, 2).map((type, index) => {
+                return userTypes.map((type, index) => {
                   const config = userTypeConfig[type];
                   if (!config) return null;
                   const IconComponent = config.icon;
