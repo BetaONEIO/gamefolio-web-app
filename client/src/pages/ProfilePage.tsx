@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import sipGifPath from '@assets/Sip-Transparent_1781777014668.gif';
+const sipGifPath = '/attached_assets/Sip-Transparent_1781777014668.gif';
 import { useParams, Link, useLocation } from "wouter";
 import { CRYPTO_FEATURES_ENABLED } from "@/lib/crypto-features";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -1564,7 +1564,7 @@ const ProfilePage = () => {
               : isElectricTheme
               ? { backgroundColor: 'rgba(20,15,0,0.9)', color: '#ffe033', border: '1px solid #ffe03366', borderRadius: '9999px', boxShadow: '0 0 8px #ffe03333', fontFamily: "'Bangers', 'Impact', cursive", letterSpacing: '1px' }
               : isMayhemTheme
-              ? { backgroundColor: 'rgba(2,1,20,0.92)', color: '#00DFFF', border: '1px solid rgba(255,0,105,0.55)', fontSize: '0.6rem', letterSpacing: '0.8px', borderRadius: '3px', boxShadow: '0 0 8px rgba(0,223,255,0.25)' }
+              ? { backgroundColor: 'rgba(0,6,18,0.9)', color: '#00DFFF', border: '1px solid #00DFFF55', fontFamily: "'Orbitron', sans-serif", fontSize: '0.6rem', letterSpacing: '0.8px', borderRadius: '2px' }
               : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
 
   const socialOutlineStyle = isWatermelonTheme
@@ -2589,24 +2589,23 @@ const ProfilePage = () => {
               radial-gradient(ellipse 35% 35% at 55% 48%, rgba(155,48,255,0.09) 0%, transparent 50%);
             animation: mayhemGlowPulse 4s ease-in-out infinite;
           }
+          @keyframes mayhemBorderGlow {
+            0%,100% { box-shadow: 0 0 12px #00DFFF66, 0 0 32px #00DFFF22; border-color: #00c8e8; }
+            50%      { box-shadow: 0 0 14px #FF006977, 0 0 36px #FF006922; border-color: #FF0069; }
+          }
           .mayhem-stats-card {
             position: relative;
-            background: #020617 !important;
-            border: 1px solid rgba(255,0,105,0.6) !important;
-            box-shadow: 0 0 18px rgba(0,223,255,0.18), 0 0 35px rgba(255,0,105,0.1), inset 0 0 20px rgba(0,223,255,0.04) !important;
+            animation: mayhemBorderGlow 4s ease-in-out infinite;
           }
-          .mayhem-stats-card::before {
+          .mayhem-stats-card::before, .mayhem-stats-card::after {
             content: '';
             position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            padding: 1px;
-            background: linear-gradient(135deg, rgba(0,223,255,0.6), rgba(155,48,255,0.4), rgba(255,0,105,0.6));
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
+            width: 10px;
+            height: 10px;
             pointer-events: none;
           }
+          .mayhem-stats-card::before { top: -1px; left: -1px; border-top: 1.667px solid #ffffff88; border-left: 1.667px solid #ffffff88; }
+          .mayhem-stats-card::after  { bottom: -1px; right: -1px; border-bottom: 1.667px solid #ffffff88; border-right: 1.667px solid #ffffff88; }
         `}</style>
       )}
       {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-stripes-cyan" />}
@@ -3336,6 +3335,9 @@ const ProfilePage = () => {
               } : isBatTheme ? {
                 background: '#000000',
                 border: '1px solid rgba(255,140,0,0.2)',
+              } : isMayhemTheme ? {
+                background: '#020617',
+                border: '1px solid #00c8e8',
               } : {
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.1)',
@@ -3742,6 +3744,9 @@ const ProfilePage = () => {
                 } : isBatTheme ? {
                   background: '#000000',
                   border: '1px solid rgba(255,140,0,0.2)',
+                } : isMayhemTheme ? {
+                  background: '#020617',
+                  border: '1px solid #00c8e8',
                 } : {
                   background: 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.1)',
