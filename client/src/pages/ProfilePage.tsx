@@ -1513,7 +1513,10 @@ const ProfilePage = () => {
     );
   }
 
-  const accentColor = profile.accentColor || '#B7FF1A';
+  const _rawAccent = profile.accentColor || '#B7FF1A';
+  const accentColor = /^#[0-9a-fA-F]{3}$/.test(_rawAccent)
+    ? `#${_rawAccent[1]}${_rawAccent[1]}${_rawAccent[2]}${_rawAccent[2]}${_rawAccent[3]}${_rawAccent[3]}`
+    : _rawAccent;
   const backgroundColor = profile.backgroundColor || '#121F2B';
   const cardColor = profile.cardColor || '#1E3A8A';
 
@@ -3666,28 +3669,32 @@ const ProfilePage = () => {
                 size="xl" 
               />
               <PartnerBadge isPartner={(profile as any).isPartner} size="xl" />
-              {profile.userType && profile.showUserType !== false && (() => {
-                const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
-                const displayTypes = userTypes.slice(0, 2);
-                
-                return displayTypes.map((type, index) => {
-                  const config = userTypeConfig[type];
-                  if (!config) return null;
-                  const IconComponent = config.icon;
-                  return (
-                    <Badge 
-                      key={`${type}-${index}`}
-                      variant="outline" 
-                      className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px]"
-                      style={userTagStyle}
-                    >
-                      <IconComponent className="w-3 h-3 mr-1.5" />
-                      {config.label}
-                    </Badge>
-                  );
-                });
-              })()}
             </div>
+
+            {/* User type tags — own row so they never wrap with the name */}
+            {profile.userType && profile.showUserType !== false && (
+              <div className="flex items-center gap-2 flex-nowrap mt-1 mb-1">
+                {(() => {
+                  const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
+                  return userTypes.slice(0, 2).map((type, index) => {
+                    const config = userTypeConfig[type];
+                    if (!config) return null;
+                    const IconComponent = config.icon;
+                    return (
+                      <Badge
+                        key={`${type}-${index}`}
+                        variant="outline"
+                        className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px]"
+                        style={userTagStyle}
+                      >
+                        <IconComponent className="w-3 h-3 mr-1.5" />
+                        {config.label}
+                      </Badge>
+                    );
+                  });
+                })()}
+              </div>
+            )}
 
             {/* Username */}
             <span className="text-base font-normal mt-1" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.7)' }}>@{profile.username}</span>
