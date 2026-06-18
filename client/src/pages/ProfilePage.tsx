@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 const sipGifPath = '/attached_assets/Sip-Transparent_1781777014668.gif';
 import { useParams, Link, useLocation } from "wouter";
 import { CRYPTO_FEATURES_ENABLED } from "@/lib/crypto-features";
@@ -3243,14 +3244,6 @@ const ProfilePage = () => {
           <div className="relative mx-4 mt-2 mb-1">
             {/* Collection button pinned to top-right border of the card.
                 Hidden on native builds (crypto/NFT surfaces disabled). */}
-            {isMayhemTheme && (
-              <img
-                src={sipGifPath}
-                className="fixed z-[75] pointer-events-none md:hidden"
-                style={{ right: '0', bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))', width: '120px', objectFit: 'contain' }}
-                alt=""
-              />
-            )}
             {CRYPTO_FEATURES_ENABLED && (
             <button
               onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
@@ -4400,14 +4393,6 @@ const ProfilePage = () => {
             const arrowBtnClass = `flex items-center justify-center w-7 h-7 rounded-full transition-colors ${isLightBackground ? 'bg-black/15 hover:bg-black/30' : 'bg-black/40 hover:bg-black/60'}`;
             return (
           <div className="relative w-full">
-            {isMayhemTheme && (
-              <img
-                src={sipGifPath}
-                className="fixed z-[60] pointer-events-none hidden md:block"
-                style={{ right: '0', bottom: '0', width: '528px', objectFit: 'contain' }}
-                alt=""
-              />
-            )}
             {showScrollArrows && (
               <button
                 type="button"
@@ -5756,6 +5741,28 @@ const ProfilePage = () => {
       />
 
     </div>
+
+    {/* Mayhem GIF — rendered via portal at body level so position:fixed always works */}
+    {isMayhemTheme && createPortal(
+      <>
+        {/* Mobile: sits on top of the mobile nav footer */}
+        <img
+          src={sipGifPath}
+          className="fixed z-[75] pointer-events-none md:hidden"
+          style={{ right: 0, bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))', width: 120, objectFit: 'contain' }}
+          alt=""
+        />
+        {/* Desktop: pinned to bottom-right corner of viewport */}
+        <img
+          src={sipGifPath}
+          className="fixed z-[60] pointer-events-none hidden md:block"
+          style={{ right: 0, bottom: 0, width: 528, objectFit: 'contain' }}
+          alt=""
+        />
+      </>,
+      document.body
+    )}
+
     </>
   );
 };
