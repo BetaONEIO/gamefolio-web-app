@@ -4404,7 +4404,7 @@ const ProfilePage = () => {
               <img
                 src={sipGifPath}
                 className="absolute z-20 pointer-events-none hidden md:block"
-                style={{ right: '0', bottom: '100%', width: '88px', objectFit: 'contain', transform: 'translateX(12px)' }}
+                style={{ right: '0', bottom: '0', width: '264px', objectFit: 'contain', transform: 'translateY(0%)' }}
                 alt=""
               />
             )}
