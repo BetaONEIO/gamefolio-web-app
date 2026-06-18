@@ -365,10 +365,6 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
-      {/* Simple green gradient effect */}
-      <div className="fixed top-0 right-0 w-full h-full bg-gradient-to-br from-transparent via-transparent to-primary/5 pointer-events-none"></div>
-      <div className="fixed bottom-0 left-0 w-full h-full bg-gradient-to-tr from-transparent via-transparent to-primary/5 pointer-events-none"></div>
-
       <Header />
 
       {/* Activity Scroll Banner - Only show on home page */}
