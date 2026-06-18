@@ -3680,10 +3680,10 @@ const ProfilePage = () => {
                     <Badge
                       key={`${type}-${index}`}
                       variant="outline"
-                      className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px]"
+                      className="border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-[0.5px] whitespace-nowrap flex-shrink-0"
                       style={userTagStyle}
                     >
-                      <IconComponent className="w-3 h-3 mr-1.5" />
+                      <IconComponent className="w-3 h-3 mr-1.5 flex-shrink-0" />
                       {config.label}
                     </Badge>
                   );
