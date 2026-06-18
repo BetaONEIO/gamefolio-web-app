@@ -3753,36 +3753,6 @@ const ProfilePage = () => {
                         <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
                         <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#B7FF1A', color: '#1a1a1a', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>Following</span>
                       </div>
-                      {CRYPTO_FEATURES_ENABLED && (
-                        <button
-                          onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-                          className="ml-auto px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity flex-shrink-0"
-                          style={{ 
-                            background: profileSectionTab === 'collection'
-                              ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : isCartoonTheme ? '#fffaec' : isMayhemTheme ? 'rgba(2,1,20,0.95)' : '#0B1218')
-                              : isWatermelonTheme ? '#ffb3c1'
-                              : isLightBackground ? 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)'
-                              : isZombieTheme ? 'linear-gradient(180deg, #2a5000 0%, #162b00 100%)'
-                              : isCyberpunkTheme ? 'rgba(2,6,23,0.9)'
-                              : isNeoTheme ? 'linear-gradient(180deg, #003300 0%, #001400 100%)'
-                              : isBlocksTheme ? '#B7FF1A'
-                              : isForestTheme ? '#1d3932'
-                              : isGothicTheme ? 'linear-gradient(135deg, #3d0070 0%, #1e053a 100%)'
-                              : isCartoonTheme ? 'linear-gradient(135deg, #ff5e5e 0%, #ff7a5e 100%)'
-                              : isMayhemTheme ? 'linear-gradient(135deg, #00DFFF 0%, #9B30E8 50%, #FF0069 100%)'
-                              : '#B7FF1A',
-                            color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : isMayhemTheme ? '#00DFFF' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : isMayhemTheme ? '#ffffff' : '#0f172b',
-                            border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #B7FF1A' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : isMayhemTheme ? '1px solid rgba(255,0,105,0.5)' : undefined,
-                            fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : isGothicTheme ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" : isCartoonTheme ? "'Bricolage Grotesque', 'Arial Black', sans-serif" : undefined,
-                            letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : isNeoTheme ? '1.5px' : isBlocksTheme ? '0.5px' : isGothicTheme ? '1.5px' : isCartoonTheme ? '-0.5px' : undefined,
-                            fontWeight: isCyberpunkTheme ? '900' : isNeoTheme ? '700' : isBlocksTheme ? '400' : isCartoonTheme ? '800' : undefined,
-                            fontSize: isBlocksTheme ? '0.5rem' : isCartoonTheme ? '0.7rem' : undefined,
-                            borderRadius: isBlocksTheme ? '4px' : undefined,
-                            boxShadow: isBlocksTheme ? '4px 4px 0 #000' : isGothicTheme ? '0 0 14px #c27aff33' : isCartoonTheme ? '3px 3px 0 #1d1d1f' : isMayhemTheme ? '0 0 12px rgba(255,0,105,0.4)' : undefined,
-                          }}>
-                          <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>{isGothicTheme ? '👻 Collection' : 'Collection'}</span>
-                        </button>
-                      )}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
