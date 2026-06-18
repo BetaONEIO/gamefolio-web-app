@@ -3545,7 +3545,7 @@ const ProfilePage = () => {
         {/* Desktop Layout - Vertical stacked on left */}
         <div className="hidden md:flex flex-row pb-4 relative max-w-[90%] mx-auto" style={{ marginTop: '-112px' }}>
           {/* Left side - Profile info stacked vertically */}
-          <div className="flex flex-col">
+          <div className="flex flex-col flex-shrink-0 w-[520px]">
             {/* Profile Picture positioned to overlap banner - explicit dimensions to ensure circular glow renders correctly */}
             <div className="relative flex-shrink-0 mb-4 h-56 w-56">
               {/* Circular glow - only show when NO SVG border is selected and no overlay is open */}
@@ -3654,14 +3654,11 @@ const ProfilePage = () => {
             )}
 
             {/* Profile Info Card — stats only, Collection button on top-right border */}
-            <div className="relative mt-4 w-full">
+            <div className="relative mt-4">
 
             {/* Stats card */}
             <div
               className="relative mt-4 rounded-lg transition-all duration-300"
-              style={{
-                width: '100%',
-              }}
             >
               {/* Collection button — straddles the top border of the stats card (half on, half off). Hidden on native builds. */}
               {CRYPTO_FEATURES_ENABLED && (
@@ -3709,36 +3706,46 @@ const ProfilePage = () => {
                 className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''} ${isMayhemTheme ? 'mayhem-stats-card' : ''}`}
                 style={isWatermelonTheme ? {
                   background: '#ffb3c1',
+                  minWidth: '480px',
                 } : isLightBackground ? {
                   background: 'rgba(255,255,255,0.37)',
                   border: '0.556px solid rgba(255,255,255,0.8)',
                   boxShadow: '0 1px 2px -1px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1)',
+                  minWidth: '480px',
                 } : isZombieTheme ? {
                   background: '#1a1d1a',
                   border: '1.667px solid #7ccf00',
                   boxShadow: '0 0 18px #9ae60055, 0 0 40px #9ae60022',
+                  minWidth: '480px',
                 } : isCyberpunkTheme ? {
                   background: '#020617',
                   border: '1px solid #00b8db',
+                  minWidth: '480px',
                 } : isNeoTheme ? {
                   background: '#001a00',
                   border: '1px solid #00ff4177',
                   boxShadow: '0 0 16px #00ff4122, 0 0 40px #00ff4111',
+                  minWidth: '480px',
                 } : isBlocksTheme ? {
                   background: '#2a2a2a',
                   border: '1px solid rgba(183, 255, 26, 0.2)',
+                  minWidth: '480px',
                 } : isForestTheme ? {
                   background: '#e8d5b7',
                   border: '1px solid #c4a88266',
+                  minWidth: '480px',
                 } : isBatTheme ? {
                   background: '#000000',
                   border: '1px solid rgba(255,140,0,0.2)',
+                  minWidth: '480px',
                 } : isMayhemTheme ? {
                   background: '#020617',
                   border: '1px solid #00c8e8',
+                  minWidth: '480px',
                 } : {
                   background: 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.1)',
+                  minWidth: '480px',
                 }}
               >
                 <div className="p-5">
