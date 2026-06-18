@@ -1538,7 +1538,7 @@ const ProfilePage = () => {
   const isWatermelonTheme = accentColor?.toLowerCase() === '#b7ff1a' && backgroundColor?.toLowerCase() === '#ff4d6d';
   const isElectricTheme = !isLightBackground && accentColor?.toLowerCase() === '#ffe033' && backgroundColor?.toLowerCase() === '#1a1200';
   const isBatTheme = !isLightBackground && accentColor?.toLowerCase() === '#ff8c00' && (backgroundColor?.toLowerCase() === '#111111' || backgroundColor?.toLowerCase() === '#0a0010');
-  const isMayhemTheme = !isLightBackground && accentColor?.toLowerCase() === '#00dfff' && backgroundColor?.toLowerCase() === '#0d0d0d';
+  const isMayhemTheme = !isLightBackground && accentColor?.toLowerCase() === '#00dfff';
 
   const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isBatTheme && !isMayhemTheme && !isLightBackground;
 
@@ -3923,7 +3923,7 @@ const ProfilePage = () => {
           </div>
 
           {/* Action buttons - positioned below banner */}
-          <div className="absolute hidden md:block" style={{ top: '145px', right: '-40px' }}>
+          <div className="absolute hidden md:block" style={{ top: '145px', right: '20px' }}>
             {!isOwnProfile && currentUser && (
               <div className="flex gap-3">
                   <Button 
