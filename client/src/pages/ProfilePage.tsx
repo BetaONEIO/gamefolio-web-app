@@ -3246,8 +3246,8 @@ const ProfilePage = () => {
             {isMayhemTheme && (
               <img
                 src={sipGifPath}
-                className="absolute z-20 pointer-events-none md:hidden"
-                style={{ right: '-8px', bottom: 'calc(100% + 12px)', width: '76px', objectFit: 'contain' }}
+                className="fixed z-[60] pointer-events-none md:hidden"
+                style={{ right: '0', bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))', width: '120px', objectFit: 'contain' }}
                 alt=""
               />
             )}
@@ -4404,7 +4404,7 @@ const ProfilePage = () => {
               <img
                 src={sipGifPath}
                 className="absolute z-20 pointer-events-none hidden md:block"
-                style={{ right: '0', bottom: '100%', width: '528px', objectFit: 'contain' }}
+                style={{ right: '0', bottom: '0', width: '528px', objectFit: 'contain', position: 'fixed' }}
                 alt=""
               />
             )}
