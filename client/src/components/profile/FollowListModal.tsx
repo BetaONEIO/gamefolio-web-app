@@ -168,6 +168,7 @@ function FollowUserRow({ user, onClose }: { user: FollowUser; onClose: () => voi
                 <><UserPlus className="h-3 w-3 mr-1" />Follow</>
               )}
             </Button>
+            {/* Gift Pro — temporarily disabled
             {!(user as any).isPro && (
               <Button
                 size="sm"
@@ -179,6 +180,7 @@ function FollowUserRow({ user, onClose }: { user: FollowUser; onClose: () => voi
                 <Gift className="h-3 w-3" />
               </Button>
             )}
+            */}
           </div>
         )}
       </div>

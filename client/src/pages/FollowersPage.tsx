@@ -105,6 +105,7 @@ function FollowUserRow({ user }: { user: FollowUser }) {
             >
               <MessageCircle className="h-3.5 w-3.5" />
             </Button>
+            {/* Gift Pro — temporarily disabled
             {!user.selectedVerificationBadgeId && (
               <Button
                 size="sm"
@@ -116,6 +117,7 @@ function FollowUserRow({ user }: { user: FollowUser }) {
                 <Gift className="h-3.5 w-3.5" />
               </Button>
             )}
+            */}
           </div>
         )}
       </div>
