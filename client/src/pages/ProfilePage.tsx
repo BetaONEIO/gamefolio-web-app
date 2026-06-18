@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import sipGifPath from '@assets/Sip-Transparent_1781777014668.gif';
 import { useParams, Link, useLocation } from "wouter";
 import { CRYPTO_FEATURES_ENABLED } from "@/lib/crypto-features";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -1562,6 +1563,8 @@ const ProfilePage = () => {
               ? { backgroundColor: 'rgba(20,2,50,0.85)', color: '#c27aff', border: '1px solid #c27aff44', borderRadius: '9999px', boxShadow: '0 0 8px #c27aff22' }
               : isElectricTheme
               ? { backgroundColor: 'rgba(20,15,0,0.9)', color: '#ffe033', border: '1px solid #ffe03366', borderRadius: '9999px', boxShadow: '0 0 8px #ffe03333', fontFamily: "'Bangers', 'Impact', cursive", letterSpacing: '1px' }
+              : isMayhemTheme
+              ? { backgroundColor: 'rgba(2,1,20,0.92)', color: '#00DFFF', border: '1px solid rgba(255,0,105,0.55)', fontSize: '0.6rem', letterSpacing: '0.8px', borderRadius: '3px', boxShadow: '0 0 8px rgba(0,223,255,0.25)' }
               : { backgroundColor: `${accentColor}22`, color: '#ffffff', border: `1px solid ${accentColor}55` };
 
   const socialOutlineStyle = isWatermelonTheme
@@ -1572,7 +1575,7 @@ const ProfilePage = () => {
     ? platformBtnStyle
     : isLightBackground
     ? { backgroundColor: 'rgba(255,255,255,0.9)', color: '#000000', border: '1.5px solid rgba(0,0,0,0.5)', borderRadius: '9999px' }
-    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme)
+    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme || isMayhemTheme)
       ? platformBtnStyle
       : { backgroundColor: '#ffffff', color: '#000000', border: '1.5px solid #000000', borderRadius: '9999px' };
 
@@ -1696,6 +1699,12 @@ const ProfilePage = () => {
     borderRadius: '9999px',
     padding: '4px 8px',
     boxShadow: '0 0 18px #ffe03333, 0 0 4px #fff5 inset',
+  } : isMayhemTheme ? {
+    background: 'rgba(2,1,20,0.92)',
+    border: '1px solid rgba(255,0,105,0.4)',
+    borderRadius: '9999px',
+    padding: '4px 8px',
+    boxShadow: '0 0 18px rgba(0,223,255,0.18), 0 0 30px rgba(255,0,105,0.1)',
   } : undefined;
 
   const blocksTabColors: Record<string, string> = {
@@ -1974,7 +1983,9 @@ const ProfilePage = () => {
         position: 'relative',
         zIndex: 1
       } : (profile as any).profileBackgroundGradient !== false ? {
-        background: isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
+        background: isMayhemTheme
+          ? 'linear-gradient(to top right, #00DFFF 0%, #9B30E8 48%, #FF0069 100%)'
+          : isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
         backgroundAttachment: 'fixed',
         position: 'relative',
         zIndex: 1
@@ -2577,6 +2588,24 @@ const ProfilePage = () => {
               radial-gradient(ellipse 45% 50% at 80% 72%, rgba(255,0,128,0.11) 0%, transparent 55%),
               radial-gradient(ellipse 35% 35% at 55% 48%, rgba(155,48,255,0.09) 0%, transparent 50%);
             animation: mayhemGlowPulse 4s ease-in-out infinite;
+          }
+          .mayhem-stats-card {
+            position: relative;
+            background: #020617 !important;
+            border: 1px solid rgba(255,0,105,0.6) !important;
+            box-shadow: 0 0 18px rgba(0,223,255,0.18), 0 0 35px rgba(255,0,105,0.1), inset 0 0 20px rgba(0,223,255,0.04) !important;
+          }
+          .mayhem-stats-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(0,223,255,0.6), rgba(155,48,255,0.4), rgba(255,0,105,0.6));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
           }
         `}</style>
       )}
@@ -3215,13 +3244,21 @@ const ProfilePage = () => {
           <div className="relative mx-4 mt-2 mb-1">
             {/* Collection button pinned to top-right border of the card.
                 Hidden on native builds (crypto/NFT surfaces disabled). */}
+            {isMayhemTheme && (
+              <img
+                src={sipGifPath}
+                className="absolute z-20 pointer-events-none md:hidden"
+                style={{ right: '-8px', bottom: 'calc(100% + 12px)', width: '76px', objectFit: 'contain' }}
+                alt=""
+              />
+            )}
             {CRYPTO_FEATURES_ENABLED && (
             <button
               onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
               className="absolute -top-3 -right-1 z-10 px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
               style={{ 
                 background: profileSectionTab === 'collection'
-                  ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : '#0B1218')
+                  ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : isMayhemTheme ? 'rgba(2,1,20,0.95)' : '#0B1218')
                   : isWatermelonTheme
                     ? '#ffb3c1'
                     : isLightBackground
@@ -3240,15 +3277,17 @@ const ProfilePage = () => {
                                   ? 'linear-gradient(135deg, #3d0070 0%, #1e053a 100%)'
                                   : isCartoonTheme
                                     ? (profileSectionTab === 'collection' ? '#fffaec' : 'linear-gradient(135deg, #ff5e5e 0%, #ff7a5e 100%)')
-                                    : '#B7FF1A',
-                color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : '#0f172b',
-                border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #B7FF1A' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : undefined,
+                                    : isMayhemTheme
+                                      ? 'linear-gradient(135deg, #00DFFF 0%, #9B30E8 50%, #FF0069 100%)'
+                                      : '#B7FF1A',
+                color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : isMayhemTheme ? '#00DFFF' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : isMayhemTheme ? '#ffffff' : '#0f172b',
+                border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #B7FF1A' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : isMayhemTheme ? '1px solid rgba(255,0,105,0.5)' : undefined,
                 fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : isGothicTheme ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" : isCartoonTheme ? "'Bricolage Grotesque', 'Arial Black', sans-serif" : undefined,
                 letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : isNeoTheme ? '1.5px' : isBlocksTheme ? '0.5px' : isGothicTheme ? '1.5px' : isCartoonTheme ? '-0.5px' : undefined,
                 fontWeight: isCyberpunkTheme ? '900' : isNeoTheme ? '700' : isBlocksTheme ? '400' : isCartoonTheme ? '800' : undefined,
                 fontSize: isBlocksTheme ? '0.5rem' : isCartoonTheme ? '0.7rem' : undefined,
                 borderRadius: isBlocksTheme ? '4px' : undefined,
-                boxShadow: isBlocksTheme ? '4px 4px 0 #000' : isGothicTheme ? '0 0 14px #c27aff33' : isCartoonTheme ? '3px 3px 0 #1d1d1f' : undefined,
+                boxShadow: isBlocksTheme ? '4px 4px 0 #000' : isGothicTheme ? '0 0 14px #c27aff33' : isCartoonTheme ? '3px 3px 0 #1d1d1f' : isMayhemTheme ? '0 0 12px rgba(255,0,105,0.4)' : undefined,
               }}>
                 <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>{isGothicTheme ? '👻 Collection' : 'Collection'}</span>
             </button>
@@ -3261,7 +3300,7 @@ const ProfilePage = () => {
             >
 
             <div 
-              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''}`}
+              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''} ${isMayhemTheme ? 'mayhem-stats-card' : ''}`}
               style={isWatermelonTheme ? {
                 background: '#ffb3c1',
               } : isCartoonTheme ? {
@@ -3294,9 +3333,6 @@ const ProfilePage = () => {
                 background: 'rgba(15,2,38,0.92)',
                 border: '1px solid #c27aff55',
                 boxShadow: '0 0 20px #c27aff22, 0 0 40px #c27aff11',
-              } : isMayhemTheme ? {
-                background: '#000000',
-                border: '1px solid rgba(0,223,255,0.2)',
               } : isBatTheme ? {
                 background: '#000000',
                 border: '1px solid rgba(255,140,0,0.2)',
@@ -3634,7 +3670,7 @@ const ProfilePage = () => {
                 className="absolute -top-3 -right-1 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
                 style={{ 
                   background: profileSectionTab === 'collection'
-                    ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : isCartoonTheme ? '#fffaec' : '#0B1218')
+                    ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : isCartoonTheme ? '#fffaec' : isMayhemTheme ? 'rgba(2,1,20,0.95)' : '#0B1218')
                     : isWatermelonTheme
                       ? '#ffb3c1'
                       : isLightBackground
@@ -3653,15 +3689,17 @@ const ProfilePage = () => {
                                     ? 'linear-gradient(135deg, #3d0070 0%, #1e053a 100%)'
                                     : isCartoonTheme
                                       ? 'linear-gradient(135deg, #ff5e5e 0%, #ff7a5e 100%)'
-                                      : '#B7FF1A',
-                  color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : '#0f172b',
-                  border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #B7FF1A' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : undefined,
+                                      : isMayhemTheme
+                                        ? 'linear-gradient(135deg, #00DFFF 0%, #9B30E8 50%, #FF0069 100%)'
+                                        : '#B7FF1A',
+                  color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : isMayhemTheme ? '#00DFFF' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : isMayhemTheme ? '#ffffff' : '#0f172b',
+                  border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #B7FF1A' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : isMayhemTheme ? '1px solid rgba(255,0,105,0.5)' : undefined,
                   fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : isGothicTheme ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" : isCartoonTheme ? "'Bricolage Grotesque', 'Arial Black', sans-serif" : undefined,
                   letterSpacing: isZombieTheme ? '2px' : isCyberpunkTheme ? '2px' : isNeoTheme ? '1.5px' : isBlocksTheme ? '0.5px' : isGothicTheme ? '1.5px' : isCartoonTheme ? '-0.5px' : undefined,
                   fontWeight: isCyberpunkTheme ? '900' : isNeoTheme ? '700' : isBlocksTheme ? '400' : isCartoonTheme ? '800' : undefined,
                   fontSize: isBlocksTheme ? '0.5rem' : isCartoonTheme ? '0.7rem' : undefined,
                   borderRadius: isBlocksTheme ? '4px' : undefined,
-                  boxShadow: isBlocksTheme ? '4px 4px 0 #000' : isGothicTheme ? '0 0 14px #c27aff33' : isCartoonTheme ? '3px 3px 0 #1d1d1f' : undefined,
+                  boxShadow: isBlocksTheme ? '4px 4px 0 #000' : isGothicTheme ? '0 0 14px #c27aff33' : isCartoonTheme ? '3px 3px 0 #1d1d1f' : isMayhemTheme ? '0 0 12px rgba(255,0,105,0.4)' : undefined,
                 }}>
                   <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>{isGothicTheme ? '👻 Collection' : 'Collection'}</span>
               </button>
@@ -3677,7 +3715,7 @@ const ProfilePage = () => {
             >
 
               <div 
-                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''}`}
+                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''} ${isMayhemTheme ? 'mayhem-stats-card' : ''}`}
                 style={isWatermelonTheme ? {
                   background: '#ffb3c1',
                 } : isLightBackground ? {
@@ -3701,9 +3739,6 @@ const ProfilePage = () => {
                 } : isForestTheme ? {
                   background: '#e8d5b7',
                   border: '1px solid #c4a88266',
-                } : isMayhemTheme ? {
-                  background: '#000000',
-                  border: '1px solid rgba(0,223,255,0.2)',
                 } : isBatTheme ? {
                   background: '#000000',
                   border: '1px solid rgba(255,140,0,0.2)',
@@ -4360,6 +4395,14 @@ const ProfilePage = () => {
             const arrowBtnClass = `flex items-center justify-center w-7 h-7 rounded-full transition-colors ${isLightBackground ? 'bg-black/15 hover:bg-black/30' : 'bg-black/40 hover:bg-black/60'}`;
             return (
           <div className="relative w-full">
+            {isMayhemTheme && (
+              <img
+                src={sipGifPath}
+                className="absolute z-20 pointer-events-none hidden md:block"
+                style={{ right: '0', bottom: '100%', width: '88px', objectFit: 'contain', transform: 'translateX(12px)' }}
+                alt=""
+              />
+            )}
             {showScrollArrows && (
               <button
                 type="button"
