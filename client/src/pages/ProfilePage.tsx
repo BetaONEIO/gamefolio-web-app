@@ -3655,12 +3655,20 @@ const ProfilePage = () => {
 
             {/* Profile Info Card — stats only, Collection button on top-right border */}
             <div className="relative mt-4 max-w-xl">
-              {/* Collection button pinned to top-right border.
-                  Hidden on native builds (crypto/NFT surfaces disabled). */}
+
+            {/* Stats card */}
+            <div
+              className="relative mt-4 rounded-lg transition-all duration-300"
+              style={{
+                width: '100%',
+                maxWidth: '600px',
+              }}
+            >
+              {/* Collection button — straddles the top border of the stats card (half on, half off). Hidden on native builds. */}
               {CRYPTO_FEATURES_ENABLED && (
               <button
                 onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-                className="absolute -top-3 -right-1 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
+                className="absolute -top-[14px] right-2 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
                 style={{ 
                   background: profileSectionTab === 'collection'
                     ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : isCartoonTheme ? '#fffaec' : isMayhemTheme ? 'rgba(2,1,20,0.95)' : '#0B1218')
@@ -3697,15 +3705,6 @@ const ProfilePage = () => {
                   <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>{isGothicTheme ? '👻 Collection' : 'Collection'}</span>
               </button>
               )}
-
-            {/* Stats card */}
-            <div
-              className="relative mt-4 rounded-lg transition-all duration-300"
-              style={{
-                width: '100%',
-                maxWidth: '600px',
-              }}
-            >
 
               <div 
                 className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''} ${isMayhemTheme ? 'mayhem-stats-card' : ''}`}
