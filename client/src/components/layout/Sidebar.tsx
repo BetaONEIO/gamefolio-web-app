@@ -330,6 +330,7 @@ const Sidebar = () => {
                         <span className="font-semibold">{followingCount.toLocaleString()}</span>
                         <span>Following</span>
                       </button>
+                      {/* Gift Pro — temporarily disabled
                       <button
                         onClick={() => setShowGiftProDialog(true)}
                         className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors"
@@ -337,6 +338,7 @@ const Sidebar = () => {
                         <Gift className="h-3.5 w-3.5 shrink-0 text-primary" />
                         <span>Gift Pro</span>
                       </button>
+                      */}
                     </div>
                   )}
                 </div>

@@ -251,6 +251,7 @@ const MobileMenu = () => {
                   <span className="font-black text-sm">{followingCount.toLocaleString()}</span>
                   <span className="text-xs text-muted-foreground">Following</span>
                 </button>
+                {/* Gift Pro — temporarily disabled
                 <button
                   onClick={() => setShowGiftProDialog(true)}
                   className="ml-auto flex items-center gap-1 text-xs text-primary font-medium hover:opacity-75 transition-opacity"
@@ -258,6 +259,7 @@ const MobileMenu = () => {
                   <Gift className="h-3.5 w-3.5" />
                   Gift Pro
                 </button>
+                */}
               </div>
             </div>
           )}
