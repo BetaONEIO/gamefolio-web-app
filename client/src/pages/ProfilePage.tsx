@@ -4188,7 +4188,7 @@ const ProfilePage = () => {
                     <button
                       key={platform}
                       onClick={() => setExpandedStreams(prev => ({ ...prev, [platform]: !prev[platform] }))}
-                      className="flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-sm transition-all hover:brightness-110 active:scale-95 select-none"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold text-xs transition-all hover:brightness-110 active:scale-95 select-none"
                       style={{
                         background: isKick ? '#53FC18' : '#9146FF',
                         color: isKick ? '#000000' : '#ffffff',
