@@ -64,6 +64,7 @@ import {
   SiEpicgames,
   SiTwitch,
   SiKick,
+  SiYoutube,
 } from "react-icons/si";
 import { FaXbox, FaPlaystation, FaYoutube, FaInstagram, FaFacebook } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
@@ -456,15 +457,18 @@ const ProfilePage = () => {
   });
 
   const isStreamer = !!(profile?.userType?.split(',').map(t => t.trim()).includes('streamer'));
-  const hasStreamSetup = !!(isStreamer && (profile?.twitchVerified || profile?.kickVerified));
+  const hasStreamSetup = !!(isStreamer && (profile?.twitchVerified || profile?.kickVerified || (profile as any)?.youtubeVerified));
   const { data: profileLiveStatus } = useQuery<{
     isLive: boolean;
     twitchLive: boolean;
     kickLive: boolean;
+    youtubeLive: boolean;
     activePlatform: string | null;
     activeChannel: string | null;
     twitchChannel: string | null;
     kickChannel: string | null;
+    youtubeChannelId: string | null;
+    youtubeChannelName: string | null;
   }>({
     queryKey: [`/api/user/${profile?.id}/live-status`],
     queryFn: getQueryFn({ on401: 'returnNull' }),
@@ -481,6 +485,7 @@ const ProfilePage = () => {
     const initial: Record<string, boolean> = {};
     if ((profile as any).twitchShowOnProfile !== false && profile.twitchVerified) initial['twitch'] = true;
     if ((profile as any).kickShowOnProfile !== false && profile.kickVerified) initial['kick'] = true;
+    if ((profile as any).youtubeShowOnProfile !== false && (profile as any).youtubeVerified) initial['youtube'] = true;
     if (Object.keys(initial).length > 0) {
       setExpandedStreams(initial);
       setStreamsAutoExpanded(true);
@@ -4181,8 +4186,12 @@ const ProfilePage = () => {
           const kickChannel = profileLiveStatus?.kickChannel
             || (profile as any)?.kickChannelName
             || (profile?.kickVerified ? profile?.streamChannelName : null);
+          const youtubeChannelId = profileLiveStatus?.youtubeChannelId
+            || (profile as any)?.youtubeChannelId || null;
+          const youtubeChannelName = profileLiveStatus?.youtubeChannelName
+            || (profile as any)?.youtubeChannelName || null;
 
-          type StreamPlatform = { platform: 'twitch' | 'kick'; channel: string; isLive: boolean };
+          type StreamPlatform = { platform: 'twitch' | 'kick' | 'youtube'; channel: string; displayName?: string; isLive: boolean };
           const platforms: StreamPlatform[] = [];
           if (((profile as any)?.twitchShowOnProfile ?? true) && twitchChannel) {
             platforms.push({ platform: 'twitch', channel: twitchChannel, isLive: !!(profileLiveStatus?.twitchLive) });
@@ -4190,29 +4199,41 @@ const ProfilePage = () => {
           if (((profile as any)?.kickShowOnProfile ?? true) && kickChannel) {
             platforms.push({ platform: 'kick', channel: kickChannel, isLive: !!(profileLiveStatus?.kickLive) });
           }
+          if (((profile as any)?.youtubeShowOnProfile ?? true) && youtubeChannelId) {
+            platforms.push({ platform: 'youtube', channel: youtubeChannelId, displayName: youtubeChannelName || youtubeChannelId, isLive: !!(profileLiveStatus?.youtubeLive) });
+          }
           if (platforms.length === 0) return null;
+
+          const platformColor = (p: string) => p === 'kick' ? '#53FC18' : p === 'youtube' ? '#FF0000' : '#9146FF';
+          const platformTextColor = (p: string) => p === 'kick' ? '#000000' : '#ffffff';
+          const platformLabel = (p: string) => p === 'kick' ? 'Kick' : p === 'youtube' ? 'YouTube' : 'Twitch';
+          const PlatformIcon = ({ platform, className }: { platform: string; className?: string }) => {
+            if (platform === 'kick') return <SiKick className={className} />;
+            if (platform === 'youtube') return <SiYoutube className={className} />;
+            return <SiTwitch className={className} />;
+          };
 
           return (
             <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-4 mb-0">
               {/* Compact platform trigger buttons */}
               <div className="flex gap-2 mb-3">
-                {platforms.map(({ platform, channel, isLive }) => {
-                  const isKick = platform === 'kick';
+                {platforms.map(({ platform, isLive }) => {
                   const expanded = !!expandedStreams[platform];
+                  const color = platformColor(platform);
                   return (
                     <button
                       key={platform}
                       onClick={() => setExpandedStreams(prev => ({ ...prev, [platform]: !prev[platform] }))}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold text-xs transition-all hover:brightness-110 active:scale-95 select-none"
                       style={{
-                        background: isKick ? '#53FC18' : '#9146FF',
-                        color: isKick ? '#000000' : '#ffffff',
-                        outline: expanded ? `2px solid ${isKick ? '#53FC18' : '#9146FF'}` : 'none',
+                        background: color,
+                        color: platformTextColor(platform),
+                        outline: expanded ? `2px solid ${color}` : 'none',
                         outlineOffset: '2px',
                       }}
                     >
-                      {isKick ? <SiKick className="w-4 h-4" /> : <SiTwitch className="w-4 h-4" />}
-                      <span>{isKick ? 'Kick' : 'Twitch'}</span>
+                      <PlatformIcon platform={platform} className="w-4 h-4" />
+                      <span>{platformLabel(platform)}</span>
                       {isLive && (
                         <>
                           <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
@@ -4227,28 +4248,31 @@ const ProfilePage = () => {
               {/* Expandable stream embeds */}
               {platforms.some(p => !!expandedStreams[p.platform]) && (
                 <div className="space-y-3 mb-4">
-                  {platforms.filter(p => !!expandedStreams[p.platform]).map(({ platform, channel, isLive }) => {
+                  {platforms.filter(p => !!expandedStreams[p.platform]).map(({ platform, channel, displayName, isLive }) => {
+                    const isYouTube = platform === 'youtube';
                     const isKick = platform === 'kick';
-                    const playerSrc = isKick
-                      ? `https://player.kick.com/${channel}?autoplay=${isLive ? 'true' : 'false'}&muted=true`
-                      : `https://player.twitch.tv/?channel=${channel}&parent=${hostname}&autoplay=${isLive ? 'true' : 'false'}&muted=true`;
-                    const headerBg = isKick
-                      ? 'linear-gradient(90deg, #1a3a1a, #0f2a0f)'
-                      : 'linear-gradient(90deg, #1f1035, #0f0a1e)';
+                    const playerSrc = isYouTube
+                      ? `https://www.youtube.com/embed/live_stream?channel=${channel}&autoplay=${isLive ? '1' : '0'}&mute=1`
+                      : isKick
+                        ? `https://player.kick.com/${channel}?autoplay=${isLive ? 'true' : 'false'}&muted=true`
+                        : `https://player.twitch.tv/?channel=${channel}&parent=${hostname}&autoplay=${isLive ? 'true' : 'false'}&muted=true`;
+                    const color = platformColor(platform);
+                    const headerBg = isYouTube
+                      ? 'linear-gradient(90deg, #1a0000, #2a0000)'
+                      : isKick
+                        ? 'linear-gradient(90deg, #1a3a1a, #0f2a0f)'
+                        : 'linear-gradient(90deg, #1f1035, #0f0a1e)';
 
                     return (
                       <div key={platform} className="rounded-xl overflow-hidden border border-border bg-black shadow-lg">
                         {/* Header */}
                         <div className="flex items-center gap-2 px-3 py-2 border-b border-border" style={{ background: headerBg }}>
                           <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-red-500 animate-pulse' : 'bg-gray-500'}`} />
-                          {isKick
-                            ? <SiKick className="w-3.5 h-3.5" style={{ color: '#53FC18' }} />
-                            : <SiTwitch className="w-3.5 h-3.5" style={{ color: '#9146FF' }} />
-                          }
-                          <span className="text-xs font-semibold" style={{ color: isKick ? '#53FC18' : '#9146FF' }}>
-                            {isKick ? 'Kick' : 'Twitch'}
+                          <PlatformIcon platform={platform} className="w-3.5 h-3.5" style={{ color } as any} />
+                          <span className="text-xs font-semibold" style={{ color }}>
+                            {platformLabel(platform)}
                           </span>
-                          <span className="text-xs text-muted-foreground">— {channel}</span>
+                          <span className="text-xs text-muted-foreground">— {displayName || channel}</span>
                           {isLive && (
                             <span className="ml-auto text-[10px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded-full">LIVE</span>
                           )}

@@ -32,7 +32,7 @@ import { connectXboxAccount, isXboxConfigValid } from '@/lib/xbox';
 import { useTheme } from '@/hooks/use-theme';
 import { FaXTwitter } from 'react-icons/fa6';
 import gamefolioLogo from '@assets/gamefolio-logo-green.png';
-import { SiEpicgames, SiTwitch, SiKick } from 'react-icons/si';
+import { SiEpicgames, SiTwitch, SiKick, SiYoutube } from 'react-icons/si';
 import Cropper from "react-easy-crop";
 import NftProfilePopup from "@/components/nft/NftProfilePopup";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -567,6 +567,8 @@ export default function SettingsPage() {
   const [disconnectingKick, setDisconnectingKick] = useState(false);
   const [connectingTwitch, setConnectingTwitch] = useState(false);
   const [disconnectingTwitch, setDisconnectingTwitch] = useState(false);
+  const [connectingYouTube, setConnectingYouTube] = useState(false);
+  const [disconnectingYouTube, setDisconnectingYouTube] = useState(false);
   const [connectingRumble, setConnectingRumble] = useState(false);
   const [disconnectingRumble, setDisconnectingRumble] = useState(false);
 
@@ -814,7 +816,20 @@ export default function SettingsPage() {
     }
   };
 
-  const handleStreamerSettingsSave = async (patch: { isStreamer?: boolean; streamPlatform?: string; liveEnabled?: boolean; twitchShowOnProfile?: boolean; kickShowOnProfile?: boolean }) => {
+  const handleYouTubeDisconnect = async () => {
+    setDisconnectingYouTube(true);
+    try {
+      await apiRequest("POST", "/api/auth/youtube/disconnect");
+      await refreshUser();
+      toast({ title: "YouTube disconnected", description: "Your YouTube channel has been unlinked.", duration: 3000 });
+    } catch {
+      toast({ title: "Failed to disconnect", variant: "destructive" });
+    } finally {
+      setDisconnectingYouTube(false);
+    }
+  };
+
+  const handleStreamerSettingsSave = async (patch: { isStreamer?: boolean; streamPlatform?: string; liveEnabled?: boolean; twitchShowOnProfile?: boolean; kickShowOnProfile?: boolean; youtubeShowOnProfile?: boolean }) => {
     setSavingStreamerSettings(true);
     try {
       await apiRequest("PATCH", "/api/user/streamer-settings", patch);
@@ -1430,6 +1445,20 @@ export default function SettingsPage() {
         no_user: 'No Rumble user found on your account.',
       };
       toast({ title: "Rumble connection failed", description: errMap[params.get('rumble_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('youtube_connected') === 'true') {
+      refreshUser();
+      toast({ title: "YouTube connected!", description: "Your YouTube channel has been verified and linked.", duration: 4000 });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('youtube_error')) {
+      const errMap: Record<string, string> = {
+        access_denied: 'You cancelled the YouTube authorisation.',
+        invalid_state: 'Invalid OAuth state. Please try again.',
+        not_configured: 'YouTube OAuth is not configured on this server.',
+        auth_failed: 'YouTube authentication failed. Please try again.',
+        no_channel: 'No YouTube channel found on your Google account.',
+      };
+      toast({ title: "YouTube connection failed", description: errMap[params.get('youtube_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
       window.history.replaceState({}, '', window.location.pathname);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -4556,6 +4585,84 @@ export default function SettingsPage() {
                     )}
                 </>
 
+                {/* YouTube Connection */}
+                <>
+                    {(user as any)?.youtubeVerified ? (
+                      <div className="rounded-xl border border-[#FF0000]/20 bg-[#FF0000]/5 px-4 py-3 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-[#FF0000]/10 flex items-center justify-center flex-shrink-0">
+                            <SiYoutube className="w-4 h-4 text-[#FF0000]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-slate-200">{(user as any)?.youtubeChannelName}</span>
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#FF0000]/10 text-[#FF0000] border border-[#FF0000]/30">
+                                <Check className="w-2.5 h-2.5" />
+                                Verified
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-400">youtube.com/channel/{(user as any)?.youtubeChannelId}</div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleYouTubeDisconnect}
+                            disabled={disconnectingYouTube}
+                            className="gap-1.5 border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                          >
+                            {disconnectingYouTube ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlink className="w-4 h-4" />}
+                            Disconnect
+                          </Button>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-[#FF0000]/15 pt-3">
+                          <div>
+                            <div className="text-sm font-medium text-slate-200">Show on profile</div>
+                            <div className="text-xs text-slate-400 mt-0.5">Embed your YouTube stream on your profile</div>
+                          </div>
+                          <Switch
+                            checked={(user as any)?.youtubeShowOnProfile ?? true}
+                            disabled={savingStreamerSettings}
+                            onCheckedChange={(val) => handleStreamerSettingsSave({ youtubeShowOnProfile: val })}
+                          />
+                        </div>
+                      </div>
+                    ) : oauthConfig?.youtube === false ? (
+                      <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <SiYoutube className="w-4 h-4 text-amber-400" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-amber-300">YouTube OAuth not configured</div>
+                            <div className="text-xs text-slate-400 mt-0.5">YouTube integration requires Google OAuth credentials to be set up by the administrator.</div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-medium text-slate-200">Connect YouTube</div>
+                            <div className="text-xs text-slate-400 mt-0.5">Authenticate via Google to verify your YouTube channel</div>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setConnectingYouTube(true);
+                              const url = "/api/auth/youtube/connect";
+                              if (isNative) void openExternal(`${API_BASE}${url}`);
+                              else { window.open(url, '_blank', 'noopener'); setConnectingYouTube(false); }
+                            }}
+                            className="gap-1.5 bg-[#FF0000] hover:bg-[#cc0000] text-white border-0"
+                          >
+                            {connectingYouTube ? <Loader2 className="w-4 h-4 animate-spin" /> : <SiYoutube className="w-4 h-4" />}
+                            Connect with YouTube
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                </>
+
                 {/* LIVE Badge Toggle */}
                 <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
                   <div>
@@ -4564,11 +4671,11 @@ export default function SettingsPage() {
                   </div>
                   <Switch
                     checked={!!(user as any)?.liveEnabled}
-                    disabled={savingStreamerSettings || (!(user as any)?.twitchVerified && !(user as any)?.kickVerified)}
+                    disabled={savingStreamerSettings || (!(user as any)?.twitchVerified && !(user as any)?.kickVerified && !(user as any)?.youtubeVerified)}
                     onCheckedChange={(val) => handleStreamerSettingsSave({ liveEnabled: val })}
                   />
                 </div>
-                {!(user as any)?.twitchVerified && !(user as any)?.kickVerified && (
+                {!(user as any)?.twitchVerified && !(user as any)?.kickVerified && !(user as any)?.youtubeVerified && (
                   <p className="text-xs text-slate-500 px-1">Connect a streaming platform first to enable the LIVE badge.</p>
                 )}
 
