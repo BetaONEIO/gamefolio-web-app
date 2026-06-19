@@ -306,6 +306,7 @@ const ProfilePage = () => {
   // Profile section tab state (stats/bio vs collection)
   const [profileSectionTab, setProfileSectionTab] = useState<'stats' | 'collection'>('stats');
   const [expandedStreams, setExpandedStreams] = useState<Record<string, boolean>>({});
+  const [streamsAutoExpanded, setStreamsAutoExpanded] = useState(false);
   const [selectedProfileNft, setSelectedProfileNft] = useState<OwnedNft | null>(null);
 
   // Screenshot action handlers
@@ -471,6 +472,20 @@ const ProfilePage = () => {
     staleTime: 60 * 1000,
     refetchInterval: 2 * 60 * 1000,
   });
+
+  // Auto-expand stream embeds once profile data is ready
+  useEffect(() => {
+    if (!profile || streamsAutoExpanded) return;
+    const isStreamerProfile = !!(profile.userType?.split(',').map((t: string) => t.trim()).includes('streamer'));
+    if (!isStreamerProfile) return;
+    const initial: Record<string, boolean> = {};
+    if ((profile as any).twitchShowOnProfile !== false && profile.twitchVerified) initial['twitch'] = true;
+    if ((profile as any).kickShowOnProfile !== false && profile.kickVerified) initial['kick'] = true;
+    if (Object.keys(initial).length > 0) {
+      setExpandedStreams(initial);
+      setStreamsAutoExpanded(true);
+    }
+  }, [profile, streamsAutoExpanded]);
 
   const profileNftQueryKey = isOwnProfile ? "/api/nfts/owned" : `/api/nfts/user/${profile?.id}`;
   const { data: profileNftData, isLoading: profileNftsLoading, refetch: refetchProfileNfts } = useQuery<OwnedNftsData>({
