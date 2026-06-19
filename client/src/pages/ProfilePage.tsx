@@ -62,6 +62,8 @@ import {
   SiPlaystation,
   SiDiscord,
   SiEpicgames,
+  SiTwitch,
+  SiKick,
 } from "react-icons/si";
 import { FaXbox, FaPlaystation, FaYoutube, FaInstagram, FaFacebook } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
@@ -4154,11 +4156,10 @@ const ProfilePage = () => {
         {/* Spacer for tabs section */}
         <div className="h-0 md:h-[12px]"></div>
 
-        {/* Stream Embeds - one per platform the streamer has chosen to show */}
+        {/* Stream platform buttons — always visible for streamers with connected channels; embed expands on click */}
         {(() => {
           if (!isStreamer) return null;
           const hostname = window.location.hostname;
-
           const twitchChannel = profileLiveStatus?.twitchChannel
             || (profile as any)?.twitchChannelName
             || (profile?.twitchVerified ? profile?.streamChannelName : null);
@@ -4166,131 +4167,119 @@ const ProfilePage = () => {
             || (profile as any)?.kickChannelName
             || (profile?.kickVerified ? profile?.streamChannelName : null);
 
-          // Each connected platform is shown independently based on its
-          // "Show on profile" toggle (default on). Only shown when live.
-          const panels: Array<{ platform: 'twitch' | 'kick'; channel: string; isLive: boolean }> = [];
-          if (((profile as any)?.twitchShowOnProfile ?? true) && twitchChannel && (profileLiveStatus?.twitchLive ?? false)) {
-            panels.push({ platform: 'twitch', channel: twitchChannel, isLive: true });
+          type StreamPlatform = { platform: 'twitch' | 'kick'; channel: string; isLive: boolean };
+          const platforms: StreamPlatform[] = [];
+          if (((profile as any)?.twitchShowOnProfile ?? true) && twitchChannel) {
+            platforms.push({ platform: 'twitch', channel: twitchChannel, isLive: !!(profileLiveStatus?.twitchLive) });
           }
-          if (((profile as any)?.kickShowOnProfile ?? true) && kickChannel && (profileLiveStatus?.kickLive ?? false)) {
-            panels.push({ platform: 'kick', channel: kickChannel, isLive: true });
+          if (((profile as any)?.kickShowOnProfile ?? true) && kickChannel) {
+            platforms.push({ platform: 'kick', channel: kickChannel, isLive: !!(profileLiveStatus?.kickLive) });
           }
-          if (panels.length === 0) return null;
-
-          const renderPanel = ({ platform, channel, isLive }: { platform: 'twitch' | 'kick'; channel: string; isLive: boolean }) => {
-            const isKick = platform === 'kick';
-            const playerSrc = isKick
-              ? `https://player.kick.com/${channel}?autoplay=${isLive ? 'true' : 'false'}&muted=true`
-              : `https://player.twitch.tv/?channel=${channel}&parent=${hostname}&autoplay=${isLive ? 'true' : 'false'}&muted=true`;
-            const chatSrc = isKick
-              ? `https://kick.com/${channel}/chatroom`
-              : `https://www.twitch.tv/embed/${channel}/chat?parent=${hostname}&darkpopout`;
-            const headerBg = isKick
-              ? 'linear-gradient(90deg, #1a3a1a, #0f2a0f)'
-              : 'linear-gradient(90deg, #1f1035, #0f0a1e)';
-            const expanded = !!expandedStreams[platform];
-            const showPlayer = isLive || expanded;
-
-            return (
-            <div key={platform} className="rounded-xl overflow-hidden border border-border bg-black shadow-lg">
-              {/* Header bar — clickable when offline to expand/collapse */}
-              <div
-                className={`flex items-center gap-2 px-3 py-2 ${showPlayer ? 'border-b border-border' : ''} ${!isLive ? 'cursor-pointer select-none hover:brightness-110 transition-all' : ''}`}
-                style={{ background: headerBg }}
-                onClick={!isLive ? () => setExpandedStreams(prev => ({ ...prev, [platform]: !prev[platform] })) : undefined}
-              >
-                <div className={`w-2 h-2 rounded-full bg-primary ${isLive ? 'animate-pulse' : 'opacity-40'}`} />
-                <span className="text-xs font-semibold text-primary">
-                  {isKick ? 'Kick' : 'Twitch'}
-                </span>
-                <span className="text-xs text-muted-foreground">— {channel}</span>
-                {isLive ? (
-                  <span className="ml-auto text-[10px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded-full">LIVE</span>
-                ) : (
-                  <div className="ml-auto flex items-center gap-1.5">
-                    <span className="text-[10px] text-muted-foreground/60 italic">Offline</span>
-                    {expanded
-                      ? <ChevronUp className="h-3 w-3 text-muted-foreground/60" />
-                      : <ChevronDown className="h-3 w-3 text-muted-foreground/60" />
-                    }
-                  </div>
-                )}
-              </div>
-
-              {/* Player + Chat — only rendered when live or manually expanded */}
-              {showPlayer && (
-                isLive ? (
-                  <div className="flex flex-col lg:flex-row" style={{ height: 'auto' }}>
-                    {/* Player — min 400px on mobile so Twitch/Kick consent dialog fits;
-                        16:9 aspect-ratio trick on desktop. */}
-                    <div className="relative w-full lg:w-[65%] flex-none">
-                      <div className="relative w-full min-h-[400px] lg:min-h-0 lg:[padding-bottom:56.25%]">
-                        <iframe
-                          key={`player-live-${platform}-${channel}`}
-                          src={playerSrc}
-                          className="absolute inset-0 w-full h-full"
-                          allowFullScreen
-                          allow="autoplay; fullscreen"
-                          title={`${channel}'s stream`}
-                          {...{ scrolling: 'yes' } as any}
-                        />
-                      </div>
-                    </div>
-                    {/* Chat — hidden on mobile, shown on desktop */}
-                    <div className="hidden lg:block w-full lg:w-[35%] border-t lg:border-t-0 lg:border-l border-border" style={{ height: '300px' }}>
-                      <iframe
-                        key={`chat-live-${platform}-${channel}`}
-                        src={chatSrc}
-                        className="w-full h-full"
-                        title={`${channel}'s chat`}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  /* Offline — mobile: CTA button (avoids loading iframe cookie wall);
-                     desktop: greyed-out player preview */
-                  <>
-                    {/* Mobile CTA */}
-                    <div className="flex lg:hidden flex-col items-center gap-3 py-6 px-4">
-                      <p className="text-sm text-muted-foreground text-center">
-                        {channel} is currently offline.
-                      </p>
-                      <a
-                        href={isKick ? `https://kick.com/${channel}` : `https://www.twitch.tv/${channel}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-black"
-                        style={{ background: isKick ? '#53fc18' : '#9147ff' }}
-                      >
-                        Watch on {isKick ? 'Kick' : 'Twitch'}
-                      </a>
-                    </div>
-                    {/* Desktop greyed-out player */}
-                    <div className="hidden lg:block relative w-full" style={{ paddingBottom: '56.25%' }}>
-                      <div className="absolute inset-0 bg-black/40 z-10 pointer-events-none" />
-                      <iframe
-                        key={`player-offline-${platform}-${channel}`}
-                        src={playerSrc}
-                        className="absolute inset-0 w-full h-full opacity-60 grayscale"
-                        allowFullScreen
-                        title={`${channel}'s stream`}
-                        {...{ scrolling: 'yes' } as any}
-                      />
-                    </div>
-                  </>
-                )
-              )}
-            </div>
-            );
-          };
+          if (platforms.length === 0) return null;
 
           return (
-            <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-4 mb-2 space-y-3">
-              {panels.map(renderPanel)}
+            <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-4 mb-0">
+              {/* Compact platform trigger buttons */}
+              <div className="flex gap-2 mb-3">
+                {platforms.map(({ platform, channel, isLive }) => {
+                  const isKick = platform === 'kick';
+                  const expanded = !!expandedStreams[platform];
+                  return (
+                    <button
+                      key={platform}
+                      onClick={() => setExpandedStreams(prev => ({ ...prev, [platform]: !prev[platform] }))}
+                      className="flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-sm transition-all hover:brightness-110 active:scale-95 select-none"
+                      style={{
+                        background: isKick ? '#53FC18' : '#9146FF',
+                        color: isKick ? '#000000' : '#ffffff',
+                        outline: expanded ? `2px solid ${isKick ? '#53FC18' : '#9146FF'}` : 'none',
+                        outlineOffset: '2px',
+                      }}
+                    >
+                      {isKick ? <SiKick className="w-4 h-4" /> : <SiTwitch className="w-4 h-4" />}
+                      <span>{isKick ? 'Kick' : 'Twitch'}</span>
+                      {isLive && (
+                        <>
+                          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                          <span className="text-[11px] font-bold">LIVE</span>
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Expandable stream embeds */}
+              {platforms.some(p => !!expandedStreams[p.platform]) && (
+                <div className="space-y-3 mb-4">
+                  {platforms.filter(p => !!expandedStreams[p.platform]).map(({ platform, channel, isLive }) => {
+                    const isKick = platform === 'kick';
+                    const playerSrc = isKick
+                      ? `https://player.kick.com/${channel}?autoplay=${isLive ? 'true' : 'false'}&muted=true`
+                      : `https://player.twitch.tv/?channel=${channel}&parent=${hostname}&autoplay=${isLive ? 'true' : 'false'}&muted=true`;
+                    const chatSrc = isKick
+                      ? `https://kick.com/${channel}/chatroom`
+                      : `https://www.twitch.tv/embed/${channel}/chat?parent=${hostname}&darkpopout`;
+                    const headerBg = isKick
+                      ? 'linear-gradient(90deg, #1a3a1a, #0f2a0f)'
+                      : 'linear-gradient(90deg, #1f1035, #0f0a1e)';
+
+                    return (
+                      <div key={platform} className="rounded-xl overflow-hidden border border-border bg-black shadow-lg">
+                        {/* Header */}
+                        <div className="flex items-center gap-2 px-3 py-2 border-b border-border" style={{ background: headerBg }}>
+                          <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-red-500 animate-pulse' : 'bg-gray-500'}`} />
+                          {isKick
+                            ? <SiKick className="w-3.5 h-3.5" style={{ color: '#53FC18' }} />
+                            : <SiTwitch className="w-3.5 h-3.5" style={{ color: '#9146FF' }} />
+                          }
+                          <span className="text-xs font-semibold" style={{ color: isKick ? '#53FC18' : '#9146FF' }}>
+                            {isKick ? 'Kick' : 'Twitch'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">— {channel}</span>
+                          {isLive && (
+                            <span className="ml-auto text-[10px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded-full">LIVE</span>
+                          )}
+                          <button
+                            className="ml-auto flex items-center justify-center w-6 h-6 rounded-full hover:bg-white/10 transition-colors"
+                            onClick={() => setExpandedStreams(prev => ({ ...prev, [platform]: false }))}
+                          >
+                            <X className="w-3.5 h-3.5 text-muted-foreground" />
+                          </button>
+                        </div>
+
+                        {/* Player + Chat */}
+                        <div className="flex flex-col lg:flex-row" style={{ height: 'auto' }}>
+                          <div className="relative w-full lg:w-[65%] flex-none">
+                            <div className="relative w-full min-h-[400px] lg:min-h-0 lg:[padding-bottom:56.25%]">
+                              <iframe
+                                key={`player-${platform}-${channel}`}
+                                src={playerSrc}
+                                className="absolute inset-0 w-full h-full"
+                                allowFullScreen
+                                allow="autoplay; fullscreen"
+                                title={`${channel}'s stream`}
+                                {...{ scrolling: 'yes' } as any}
+                              />
+                            </div>
+                          </div>
+                          <div className="hidden lg:block w-full lg:w-[35%] border-t lg:border-t-0 lg:border-l border-border" style={{ height: '300px' }}>
+                            <iframe
+                              key={`chat-${platform}-${channel}`}
+                              src={chatSrc}
+                              className="w-full h-full"
+                              title={`${channel}'s chat`}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
-        })()
-        }
+        })()}
 
         {/* Enhanced Tabs section with rounded container style */}
         <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-2 md:mt-8 relative z-20">
