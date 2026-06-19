@@ -4217,9 +4217,6 @@ const ProfilePage = () => {
                     const playerSrc = isKick
                       ? `https://player.kick.com/${channel}?autoplay=${isLive ? 'true' : 'false'}&muted=true`
                       : `https://player.twitch.tv/?channel=${channel}&parent=${hostname}&autoplay=${isLive ? 'true' : 'false'}&muted=true`;
-                    const chatSrc = isKick
-                      ? `https://kick.com/${channel}/chatroom`
-                      : `https://www.twitch.tv/embed/${channel}/chat?parent=${hostname}&darkpopout`;
                     const headerBg = isKick
                       ? 'linear-gradient(90deg, #1a3a1a, #0f2a0f)'
                       : 'linear-gradient(90deg, #1f1035, #0f0a1e)';
@@ -4248,29 +4245,17 @@ const ProfilePage = () => {
                           </button>
                         </div>
 
-                        {/* Player + Chat */}
-                        <div className="flex flex-col lg:flex-row" style={{ height: 'auto' }}>
-                          <div className="relative w-full lg:w-[65%] flex-none">
-                            <div className="relative w-full min-h-[400px] lg:min-h-0 lg:[padding-bottom:56.25%]">
-                              <iframe
-                                key={`player-${platform}-${channel}`}
-                                src={playerSrc}
-                                className="absolute inset-0 w-full h-full"
-                                allowFullScreen
-                                allow="autoplay; fullscreen"
-                                title={`${channel}'s stream`}
-                                {...{ scrolling: 'yes' } as any}
-                              />
-                            </div>
-                          </div>
-                          <div className="hidden lg:block w-full lg:w-[35%] border-t lg:border-t-0 lg:border-l border-border" style={{ height: '300px' }}>
-                            <iframe
-                              key={`chat-${platform}-${channel}`}
-                              src={chatSrc}
-                              className="w-full h-full"
-                              title={`${channel}'s chat`}
-                            />
-                          </div>
+                        {/* Player */}
+                        <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                          <iframe
+                            key={`player-${platform}-${channel}`}
+                            src={playerSrc}
+                            className="absolute inset-0 w-full h-full"
+                            allowFullScreen
+                            allow="autoplay; fullscreen"
+                            title={`${channel}'s stream`}
+                            {...{ scrolling: 'yes' } as any}
+                          />
                         </div>
                       </div>
                     );
