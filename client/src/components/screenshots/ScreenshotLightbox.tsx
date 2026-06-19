@@ -37,6 +37,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   const [showComments, setShowComments] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isDesktopFullscreen, setIsDesktopFullscreen] = useState(false);
+  const [liveViews, setLiveViews] = useState<number | null>(null);
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; time: number } | null>(null);
@@ -60,6 +61,16 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
       silentReplaceState(`/@${username}/screenshot/${screenshot.id}`);
     }
     return () => {};
+  }, [screenshot?.id]);
+
+  // Increment view count when a screenshot is opened
+  useEffect(() => {
+    if (!screenshot?.id) return;
+    setLiveViews(screenshot.views ?? 0);
+    fetch(`/api/screenshots/${screenshot.id}/views`, { method: 'POST', credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(() => setLiveViews(v => (v ?? 0) + 1))
+      .catch(() => {});
   }, [screenshot?.id]);
 
   const handleClose = useCallback(() => {
@@ -452,7 +463,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
 
               <div className="flex items-center mt-2 text-sm text-muted-foreground">
                 <Eye className="h-4 w-4 mr-1" />
-                <span className="mr-3">{screenshot.views || 0} views</span>
+                <span className="mr-3">{liveViews ?? screenshot.views ?? 0} views</span>
                 <Clock className="h-4 w-4 mr-1" />
                 <span>{screenshot.createdAt ? formatDistance(new Date(screenshot.createdAt), new Date(), { addSuffix: true }) : 'Unknown time'}</span>
               </div>
@@ -629,7 +640,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
 
                 <div className="flex items-center mt-2 text-sm text-muted-foreground">
                   <Eye className="h-4 w-4 mr-1" />
-                  <span className="mr-3">{screenshot.views || 0} views</span>
+                  <span className="mr-3">{liveViews ?? screenshot.views ?? 0} views</span>
                   <Clock className="h-4 w-4 mr-1" />
                   <span>{screenshot.createdAt ? formatDistance(new Date(screenshot.createdAt), new Date(), { addSuffix: true }) : 'Unknown time'}</span>
                 </div>

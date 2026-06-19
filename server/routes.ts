@@ -8275,6 +8275,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Increment screenshot views - called when a screenshot is opened
+  app.post("/api/screenshots/:id/views", async (req, res) => {
+    try {
+      const screenshotId = parseInt(req.params.id);
+      if (isNaN(screenshotId)) {
+        return res.status(400).json({ error: 'Invalid screenshot ID' });
+      }
+
+      // Rate-limit: same IP may only count once per screenshot per hour
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+      const isNewView = recordView('screenshot', screenshotId, ip);
+
+      if (!isNewView) {
+        return res.json({ success: true, message: 'View already counted recently' });
+      }
+
+      const screenshot = await storage.getScreenshot(screenshotId);
+      if (screenshot) {
+        await storage.incrementScreenshotViews(screenshotId);
+      }
+
+      // Respond immediately so the client isn't blocked.
+      res.json({ success: true });
+
+      // Run XP side-effects in the background (fire-and-forget).
+      if (screenshot) {
+        (async () => {
+          try {
+            await LeaderboardService.awardPoints(
+              screenshot.userId,
+              'view',
+              `Screenshot #${screenshotId} received a view`
+            );
+          } catch (bgErr) {
+            console.error('Error in view side-effects for screenshot', screenshotId, bgErr);
+          }
+        })();
+      }
+    } catch (error) {
+      console.error('Error incrementing screenshot views:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Failed to increment views'
+      });
+    }
+  });
+
   // Delete a reaction (supports both session and JWT token auth for mobile apps)
   app.delete("/api/reactions/:id", hybridEmailVerification, async (req, res) => {
     try {
