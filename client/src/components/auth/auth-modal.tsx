@@ -32,6 +32,23 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
   const touchStartScrollTop = useRef(0);
   const sheetRef = useRef<HTMLDivElement>(null);
 
+  // ── Keyboard-aware compacting ─────────────────────────────────────────────
+  // On iOS/Android the native keyboard shrinks the WebView (resize: 'native').
+  // The full-size modal then no longer fits, so the OS scrolls the focused
+  // field into view and the sheet visibly jumps. We compact the layout (shrink
+  // the logo, tighten spacing) while the keyboard is open so everything fits
+  // above the keyboard and no scroll-jump is needed. `mobile-init.ts` toggles
+  // the `keyboard-visible` class on <body> from the Capacitor Keyboard events.
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const sync = () => setKeyboardOpen(document.body.classList.contains("keyboard-visible"));
+    sync();
+    const obs = new MutationObserver(sync);
+    obs.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+
   useEffect(() => {
     if (isOpen) {
       setMounted(true);
@@ -174,12 +191,23 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
           className="px-6 pb-8 text-white"
           style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}
         >
-          {/* Logo */}
-          <div className="mb-6 mt-2 flex justify-center">
+          {/* Logo — shrinks while the keyboard is open so the form fits above it */}
+          <div
+            className="flex justify-center"
+            style={{
+              marginTop: keyboardOpen ? 0 : '0.5rem',
+              marginBottom: keyboardOpen ? '0.75rem' : '1.5rem',
+              transition: 'margin 200ms ease',
+            }}
+          >
             <img
               src="/attached_assets/gf-logo-tex_1780361907049.png"
               alt="Gamefolio"
-              className="h-36 w-auto drop-shadow-lg"
+              className="w-auto drop-shadow-lg"
+              style={{
+                height: keyboardOpen ? '4rem' : '9rem',
+                transition: 'height 200ms ease',
+              }}
             />
           </div>
 
@@ -190,7 +218,10 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
             onValueChange={value => setActiveTab(value as "login" | "register")}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-2 mb-6 gap-2 p-1.5 rounded-xl" style={{ background: '#0B1218' }}>
+            <TabsList
+              className="grid w-full grid-cols-2 gap-2 p-1.5 rounded-xl"
+              style={{ background: '#0B1218', marginBottom: keyboardOpen ? '1rem' : '1.5rem' }}
+            >
               <TabsTrigger
                 value="login"
                 className="rounded-lg font-semibold transition-all duration-150 data-[state=active]:shadow-none"
@@ -226,9 +257,11 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
             </TabsContent>
           </Tabs>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm font-medium" style={{ color: '#B8C0AE', opacity: 0.5 }}>www.gamefolio.com</p>
-          </div>
+          {!keyboardOpen && (
+            <div className="mt-6 text-center">
+              <p className="text-sm font-medium" style={{ color: '#B8C0AE', opacity: 0.5 }}>www.gamefolio.com</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
