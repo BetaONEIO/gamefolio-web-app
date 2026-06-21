@@ -4,11 +4,18 @@ const config: CapacitorConfig = {
   appId: 'com.gamefolio.app',
   appName: 'Gamefolio',
   webDir: 'dist/public',
+  // Match the WebView background to the app's base navy (--card / body bg).
+  // Without this the native WebView background defaults to black, which flashed
+  // through as a "random black area" at the top whenever iOS rubber-band
+  // overscrolled or applied its content inset.
+  backgroundColor: '#0B1218',
   ios: {
     contentInset: 'always',
+    backgroundColor: '#0B1218',
   },
   android: {
     allowMixedContent: false,
+    backgroundColor: '#0B1218',
   },
   server: {
     androidScheme: 'https',
