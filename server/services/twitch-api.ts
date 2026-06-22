@@ -47,7 +47,6 @@ export interface TwitchClip {
   url: string;            // public twitch.tv clip page
   embedUrl: string;
   thumbnailUrl: string;
-  mp4Url: string;         // derived direct MP4 (see deriveClipMp4Url)
   duration: number;       // seconds
   viewCount: number;
   createdAt: string;
@@ -56,27 +55,15 @@ export interface TwitchClip {
   gameBoxArtUrl: string;
 }
 
-// Derive a downloadable MP4 URL from a clip's thumbnail_url.
-//
-// Twitch's Helix Get Clips endpoint exposes no official download URL, but every
-// clip's thumbnail lives on the same CDN path as its MP4, differing only by the
-// `-preview-<WxH>.jpg` suffix. Stripping everything from `-preview` onward and
-// appending `.mp4` yields the playable file. This is unofficial and could break
-// if Twitch changes their CDN layout — callers should treat a derivation failure
-// as "clip not importable" rather than a hard error.
-export function deriveClipMp4Url(thumbnailUrl: string | null | undefined): string {
-  if (!thumbnailUrl) return '';
-  // The strip-and-append trick only holds on the legacy clips CDN, where the
-  // thumbnail and MP4 are co-located. Twitch's newer thumbnail host
-  // (static-cdn.jtvnw.net) decouples them, so deriving there yields a dead URL —
-  // treat those clips as "not importable" instead of handing back a 404 link.
-  if (!thumbnailUrl.includes('clips-media-assets2.twitch.tv')) return '';
-  // Use lastIndexOf: the "-preview-<WxH>.jpg" segment is always the tail, so this
-  // can't be fooled by an earlier "-preview" substring in the path or clip slug.
-  const idx = thumbnailUrl.lastIndexOf('-preview');
-  if (idx === -1) return '';
-  return thumbnailUrl.slice(0, idx) + '.mp4';
-}
+// Twitch's public web client-id. The Helix API exposes no official clip-download
+// URL, so the actual MP4 is fetched from Twitch's GraphQL endpoint, which mints a
+// short-lived signed playback token for a clip slug (see getClipDownloadUrl).
+// This is the same anonymous client-id the Twitch web player uses.
+const TWITCH_GQL_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko';
+
+// Twitch clip slugs are restricted to these chars; validated before being
+// interpolated into the GraphQL query as a defensive measure.
+const CLIP_SLUG_RE = /^[\w-]+$/;
 
 // Resolve Twitch box art URL to a specific size, handling all URL formats:
 // 1. Template {width}x{height} → e.g. "...Game-{width}x{height}.jpg"
@@ -440,27 +427,24 @@ class TwitchApiService {
     const rawClips: any[] = response.data.data || [];
     const gameMap = await this.getGamesByIds(rawClips.map((c) => c.game_id));
 
-    return rawClips
-      .map((c): TwitchClip | null => {
-        const mp4Url = deriveClipMp4Url(c.thumbnail_url);
-        if (!mp4Url) return null;
-        const game = gameMap.get(c.game_id);
-        return {
-          id: c.id,
-          title: c.title || 'Untitled clip',
-          url: c.url,
-          embedUrl: c.embed_url,
-          thumbnailUrl: c.thumbnail_url,
-          mp4Url,
-          duration: Math.round(c.duration || 0),
-          viewCount: c.view_count || 0,
-          createdAt: c.created_at,
-          gameId: c.game_id || '',
-          gameName: game?.name || '',
-          gameBoxArtUrl: game?.box_art_url || '',
-        };
-      })
-      .filter((c): c is TwitchClip => c !== null);
+    // All clips are importable — the MP4 is resolved on demand via GraphQL when
+    // the user actually picks one (getClipDownloadUrl), so nothing is filtered here.
+    return rawClips.map((c): TwitchClip => {
+      const game = gameMap.get(c.game_id);
+      return {
+        id: c.id,
+        title: c.title || 'Untitled clip',
+        url: c.url,
+        embedUrl: c.embed_url,
+        thumbnailUrl: c.thumbnail_url,
+        duration: Math.round(c.duration || 0),
+        viewCount: c.view_count || 0,
+        createdAt: c.created_at,
+        gameId: c.game_id || '',
+        gameName: game?.name || '',
+        gameBoxArtUrl: game?.box_art_url || '',
+      };
+    });
   }
 
   /**
@@ -480,15 +464,12 @@ class TwitchApiService {
     });
     const c = (response.data.data || [])[0];
     if (!c) return null;
-    const mp4Url = deriveClipMp4Url(c.thumbnail_url);
-    if (!mp4Url) return null;
     return {
       id: c.id,
       title: c.title || 'Untitled clip',
       url: c.url,
       embedUrl: c.embed_url,
       thumbnailUrl: c.thumbnail_url,
-      mp4Url,
       duration: Math.round(c.duration || 0),
       viewCount: c.view_count || 0,
       createdAt: c.created_at,
@@ -496,6 +477,44 @@ class TwitchApiService {
       gameName: '',
       gameBoxArtUrl: '',
     };
+  }
+
+  /**
+   * Resolve a clip's directly-downloadable MP4 URL via Twitch's GraphQL API.
+   * Helix exposes no official clip-download endpoint, so we query gql.twitch.tv
+   * with the public web client-id to mint a short-lived signed playback token,
+   * then return the highest-quality source URL with that token appended. Returns
+   * null if the clip can't be resolved. The URL is short-lived — the caller
+   * should fetch it promptly, server-side.
+   */
+  async getClipDownloadUrl(slug: string): Promise<string | null> {
+    if (!slug || !CLIP_SLUG_RE.test(slug)) return null;
+    try {
+      const query = `{
+  clip(slug: "${slug}") {
+    playbackAccessToken(params: {platform: "web", playerBackend: "mediaplayer", playerType: "site"}) {
+      signature
+      value
+    }
+    videoQualities { frameRate quality sourceURL }
+  }
+}`;
+      const resp = await axios.post(
+        'https://gql.twitch.tv/gql',
+        { query },
+        { headers: { 'Client-ID': TWITCH_GQL_CLIENT_ID, 'Content-Type': 'application/json' }, timeout: 10000 },
+      );
+      const clip = resp.data?.data?.clip;
+      const token = clip?.playbackAccessToken;
+      const qualities: any[] = clip?.videoQualities ?? [];
+      // videoQualities are returned highest-resolution first.
+      const best = qualities[0];
+      if (!token?.signature || !token?.value || !best?.sourceURL) return null;
+      return `${best.sourceURL}?sig=${token.signature}&token=${encodeURIComponent(token.value)}`;
+    } catch (err: any) {
+      console.warn('Twitch GQL clip download lookup failed:', err?.message);
+      return null;
+    }
   }
 }
 

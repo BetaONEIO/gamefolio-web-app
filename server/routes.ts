@@ -1839,11 +1839,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const user = req.user as any;
-      if (!user.twitchVerified || !user.twitchChannelId) {
+      // The Twitch broadcaster id is stored in twitchUserId (set by the OAuth
+      // connect flow in social-oauth.ts). twitchChannelId is a legacy column
+      // from this branch's original design and is not populated — fall back to
+      // it only for safety.
+      const broadcasterId = user.twitchUserId || user.twitchChannelId;
+      if (!user.twitchVerified || !broadcasterId) {
         return res.status(400).json({ message: "Connect your Twitch account first", code: "twitch_not_connected" });
       }
 
-      const clips = await twitchApi.getClipsForBroadcaster(user.twitchChannelId, 30);
+      const clips = await twitchApi.getClipsForBroadcaster(broadcasterId, 30);
 
       // Resolve internal games once per unique Twitch game id.
       const internalByTwitchId = new Map<string, { id: number; name: string; imageUrl: string | null } | null>();
@@ -1886,12 +1891,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const clipId = String(req.query.clipId || "");
     if (!clipId) return res.status(400).json({ message: "Missing clipId" });
     try {
-      const clip = await twitchApi.getClipById(clipId);
-      if (!clip?.mp4Url) {
+      const mp4Url = await twitchApi.getClipDownloadUrl(clipId);
+      if (!mp4Url) {
         return res.status(404).json({ message: "Clip not found or not importable" });
       }
 
-      const upstream = await fetch(clip.mp4Url, { signal: AbortSignal.timeout(15000) });
+      const upstream = await fetch(mp4Url, { signal: AbortSignal.timeout(30000) });
       if (!upstream.ok || !upstream.body) {
         console.warn(`Twitch clip MP4 fetch failed ${upstream.status} for ${clipId}`);
         return res.status(502).json({ message: "Could not download clip from Twitch" });
