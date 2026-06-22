@@ -58,16 +58,17 @@ export const users = pgTable("users", {
   instagramUsername: text("instagram_username"), // Instagram
   facebookUsername: text("facebook_username"), // Facebook
   rumbleUsername: text("rumble_username"),    // Rumble
-  // Streamer settings (OAuth-verified Twitch/Kick connections)
+  // Streamer settings (OAuth-verified Twitch/Kick connections).
+  // streamPlatform / twitch+kick ChannelName / twitch+kick Verified are defined
+  // in the "Streamer settings" block below (from main) — removed here to drop
+  // the duplicate object keys the merge created. Only the OAuth token/id columns
+  // unique to clip-import remain in this block. (twitchChannelId/kickChannelId
+  // overlap conceptually with main's twitchUserId/kickId — left for a later
+  // schema reconciliation.)
   isStreamer: boolean("is_streamer").default(false),
-  streamPlatform: text("stream_platform"), // "twitch" or "kick"
-  twitchChannelName: text("twitch_channel_name"), // Verified via OAuth
   twitchChannelId: text("twitch_channel_id"),     // Twitch user ID from OAuth
-  twitchVerified: boolean("twitch_verified").default(false),
   twitchAccessToken: text("twitch_access_token"), // OAuth access token (server-only)
-  kickChannelName: text("kick_channel_name"),     // Verified via OAuth
   kickChannelId: text("kick_channel_id"),         // Kick user/channel ID from OAuth
-  kickVerified: boolean("kick_verified").default(false),
   kickAccessToken: text("kick_access_token"),     // OAuth access token (server-only)
   liveEnabled: boolean("live_enabled").default(false), // Show LIVE badge on profile
   // Onboarding data for analytics and personalization
