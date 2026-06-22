@@ -535,8 +535,8 @@ export class VideoProcessor {
 
   /**
    * Generate a personalised outro video: dark background → logo fade+glow → @username fade-in.
-   * Always outputs 1080×1080 at 4 seconds; the download route scales it to match the clip.
-   * format parameter is kept for API compatibility but no longer affects canvas dimensions.
+   * Landscape/default: 1080×1080 square (fill-cropped to 16:9 at download time).
+   * Portrait: 1080×1920 (9:16, fills portrait/reel clips natively).
    * Returns the raw MP4 buffer (caller uploads to storage).
    */
   static async generateOutroVideo(username: string, userId: number, format: 'portrait' | 'landscape' = 'landscape'): Promise<Buffer> {
@@ -558,8 +558,8 @@ export class VideoProcessor {
       try { accessSync(audioPath); return true; } catch { return false; }
     })();
 
-    // Square canvas — download route scales to clip dimensions via letter/pillarbox
-    const canvasSize = '1080x1080';
+    // Portrait (reels): 9:16 canvas; landscape/default: square (fill-cropped at download time)
+    const canvasSize = format === 'portrait' ? '1080x1920' : '1080x1080';
     // Timing: logo fades in at 0.3 s over 0.8 s (fully visible at 1.1 s)
     //         username fades in at 1.1 s (0.8 s after logo starts) over 0.8 s
     const logoFadeStart = 0.3;
@@ -639,7 +639,7 @@ export class VideoProcessor {
     });
   }
 
-  static async getVideoInfo(videoPath: string): Promise<{ duration: number; width: number; height: number }> {
+  static async getVideoInfo(videoPath: string): Promise<{ duration: number; width: number; height: number; videoCodec: string; audioCodec: string | null }> {
     return new Promise((resolve, reject) => {
       ffmpeg.ffprobe(videoPath, (error: any, metadata: any) => {
         if (error) {
@@ -653,12 +653,29 @@ export class VideoProcessor {
           return;
         }
 
+        const audioStream = metadata.streams.find((stream: any) => stream.codec_type === 'audio');
+
         resolve({
           duration: metadata.format?.duration || 0,
           width: videoStream.width || 0,
-          height: videoStream.height || 0
+          height: videoStream.height || 0,
+          videoCodec: (videoStream.codec_name || '').toLowerCase(),
+          audioCodec: audioStream ? (audioStream.codec_name || '').toLowerCase() : null
         });
       });
     });
+  }
+
+  /**
+   * Returns true when the file can be played as-is by a standard HTML <video>
+   * element across browsers / WebViews. Anything else (HEVC/H.265, 10-bit,
+   * ProRes, exotic audio, etc.) must be re-encoded to H.264 + AAC before it is
+   * served, otherwise it will fail to play for viewers — the same way it fails
+   * to preview at upload time.
+   */
+  static isBrowserPlayable(videoCodec: string, audioCodec: string | null): boolean {
+    const videoOk = videoCodec === 'h264';
+    const audioOk = audioCodec === null || audioCodec === 'aac' || audioCodec === 'mp3';
+    return videoOk && audioOk;
   }
 }

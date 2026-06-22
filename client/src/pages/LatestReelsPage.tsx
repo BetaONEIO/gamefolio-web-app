@@ -38,7 +38,7 @@ export default function LatestReelsPage() {
 
   return (
     <div className="min-h-screen bg-background px-3 py-4 sm:p-4 md:p-6">
-      <div className="w-full">
+      <div className="w-full max-w-[880px] mx-auto">
         {/* Header */}
         <div className="space-y-3 mb-5 sm:space-y-4 sm:mb-8">
           <div className="flex items-center gap-3">

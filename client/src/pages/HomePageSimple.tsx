@@ -19,7 +19,7 @@ import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreensh
 import { useMobile } from "@/hooks/use-mobile";
 import { Camera } from "lucide-react";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
-import { ProUpgradeDialog } from "@/components/ProUpgradeDialog";
+import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { LazySection } from "@/components/ui/lazy-section";
 import { openExternal } from "@/lib/platform";
 import { useAuthModal } from "@/hooks/use-auth-modal";
@@ -27,6 +27,7 @@ import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
 import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
 import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
+import HomeCarousel from "@/components/home/HomeCarousel";
 import { Trophy } from "lucide-react";
 
 interface TrendingContentCarouselProps {
@@ -637,9 +638,11 @@ const HomePage = () => {
         </div>
       )}
       
-      {/* Hero Slideshow Section - wait for DB slides before rendering to prevent fallback flash */}
+      {/* Hero Banner — original HeroBannerSlideshow */}
+      {/* Community Carousel commented out */}
+      {/* <HomeCarousel /> */}
       {!isLoadingDbSlides && dbHeroSlides && dbHeroSlides.length > 0 && (
-        <HeroBannerSlideshow 
+        <HeroBannerSlideshow
           heroText={heroText}
           user={user}
           userHasContent={userHasContent}

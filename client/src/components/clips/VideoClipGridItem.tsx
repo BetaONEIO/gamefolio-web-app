@@ -72,7 +72,7 @@ const VideoClipGridItem = ({
   return (
     <div className="cursor-pointer group" onClick={handleOpenClip}>
       <div
-        className={`relative overflow-hidden rounded-xl ${aspectRatioClass} border`}
+        className={`relative overflow-hidden rounded-xl ${aspectRatioClass} border transition-transform duration-300 group-hover:-translate-y-1.5 group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.55)]`}
         style={{
           borderColor: customAccentColor
             ? `${customAccentColor}30`
@@ -104,7 +104,7 @@ const VideoClipGridItem = ({
             <LazyImage
               src={thumbnailUrl}
               alt={clip.title || "Video clip thumbnail"}
-              className={`w-full h-full transition-transform duration-300 group-hover:scale-105 relative z-[2] ${
+              className={`w-full h-full relative z-[2] ${
                 isReel ? "object-contain" : showBlur ? "object-contain" : "object-cover"
               }`}
               placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%230B1218'/%3e%3c/svg%3e"

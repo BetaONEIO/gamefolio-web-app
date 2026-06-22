@@ -21,21 +21,40 @@ export function resolveApiUrl(url: string): string {
   return url;
 }
 
+// True when `url` points at our own backend (relative paths are always
+// rewritten there on native). Third-party URLs must not receive our header.
+function targetsBackend(url: string): boolean {
+  if (/^https?:\/\//i.test(url)) return url.startsWith(API_BASE);
+  return true;
+}
+
+// Tag native backend requests so the server can identify Capacitor clients and
+// refuse crypto/wallet/NFT/staking endpoints (App Store / Play financial
+// compliance — see server/middleware/block-crypto-on-native.ts).
+function withNativeHeader(url: string, init?: RequestInit): RequestInit | undefined {
+  if (!targetsBackend(url)) return init;
+  const headers = new Headers(init?.headers);
+  headers.set('X-GF-Platform', platform);
+  return { ...init, headers };
+}
+
 let fetchPatched = false;
 export function installNativeFetchPatch(): void {
   if (!isNative || fetchPatched) return;
   const originalFetch = globalThis.fetch.bind(globalThis);
   globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
     if (typeof input === 'string') {
-      return originalFetch(resolveApiUrl(input), init);
+      const url = resolveApiUrl(input);
+      return originalFetch(url, withNativeHeader(url, init));
     }
     if (input instanceof URL) {
-      return originalFetch(input, init);
+      return originalFetch(input, withNativeHeader(input.toString(), init));
     }
-    // Request object — rebuild with rewritten URL if relative
+    // Request object — rebuild with rewritten URL (if relative) and tag it.
     const rewritten = resolveApiUrl(input.url);
-    if (rewritten === input.url) return originalFetch(input, init);
-    return originalFetch(new Request(rewritten, input), init);
+    const req = new Request(rewritten, input);
+    if (targetsBackend(rewritten)) req.headers.set('X-GF-Platform', platform);
+    return originalFetch(req);
   }) as typeof fetch;
   fetchPatched = true;
 }

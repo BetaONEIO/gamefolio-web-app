@@ -793,13 +793,17 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
 
         await fs.promises.writeFile(tempVideoPath, Buffer.from(videoBuffer));
 
-        // Get actual video duration first
+        // Get actual video duration + codec first
+        let sourceVideoCodec = '';
+        let sourceAudioCodec: string | null = null;
         try {
           const videoInfo = await VideoProcessor.getVideoInfo(tempVideoPath);
           actualDuration = Math.round(videoInfo.duration); // Round to nearest second
-          console.log(`📹 Video actual duration: ${actualDuration} seconds`);
+          sourceVideoCodec = videoInfo.videoCodec;
+          sourceAudioCodec = videoInfo.audioCodec;
+          console.log(`📹 Video actual duration: ${actualDuration}s, codec: ${sourceVideoCodec || 'unknown'}/${sourceAudioCodec || 'none'}`);
         } catch (durationError) {
-          console.warn('Failed to extract video duration, using fallback:', durationError);
+          console.warn('Failed to extract video info, using fallback:', durationError);
           actualDuration = 60; // Fallback to 60 seconds if extraction fails
         }
 
@@ -850,11 +854,30 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
           thumbnailUrl = clipThumbnailUrl || '';
           actualDuration = processedDuration;
           console.log(`✅ Clip trimmed successfully. Duration: ${actualDuration}s`);
+        } else if (sourceVideoCodec && !VideoProcessor.isBrowserPlayable(sourceVideoCodec, sourceAudioCodec)) {
+          // Untrimmed clip, but its codec (e.g. HEVC/H.265, 10-bit, exotic audio)
+          // won't play in a standard <video> element. If we stored it as-is it
+          // would fail to play for viewers — the same reason its preview failed
+          // at upload time. Re-encode the full clip to H.264 + AAC.
+          console.log(`🔄 Re-encoding clip — source codec ${sourceVideoCodec}/${sourceAudioCodec || 'none'} is not browser-playable`);
+          const { videoUrl: reencodedUrl, thumbnailUrl: clipThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
+            tempVideoPath,
+            tempClipId,
+            0,
+            actualDuration,
+            true,
+            req.user!.id,
+            'clip'
+          );
+          processedVideoUrl = reencodedUrl;
+          thumbnailUrl = clipThumbnailUrl || '';
+          actualDuration = processedDuration;
+          console.log(`✅ Clip re-encoded to H.264. Duration: ${actualDuration}s`);
         } else {
-          console.log('🖼️ Generating clip thumbnail (no trimming needed)...');
+          console.log('🖼️ Generating clip thumbnail (no trimming/re-encode needed)...');
           thumbnailUrl = await VideoProcessor.generateAutoThumbnail(
-            tempVideoPath, 
-            req.user!.id, 
+            tempVideoPath,
+            req.user!.id,
             `${videoType}_thumb`
           );
           console.log(`✅ Clip thumbnail generated: ${thumbnailUrl ? thumbnailUrl.substring(0, 60) + '...' : 'NONE'}`);

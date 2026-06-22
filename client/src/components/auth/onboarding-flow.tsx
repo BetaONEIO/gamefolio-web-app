@@ -1215,12 +1215,12 @@ export default function OnboardingFlow({
         const toggleUserType = (typeId: string) => {
           if (userTypes.includes(typeId)) {
             setUserTypes(userTypes.filter(t => t !== typeId));
-          } else if (userTypes.length < 2) {
+          } else if (userTypes.length < 3) {
             setUserTypes([...userTypes, typeId]);
           } else {
             toast({
               title: "Maximum reached",
-              description: "You can only select up to 2 options. Deselect one first.",
+              description: "You can only select up to 3 options. Deselect one first.",
               variant: "default",
               duration: 2500,
             });
@@ -1241,7 +1241,7 @@ export default function OnboardingFlow({
               </Tooltip>
             </div>
             <p className="text-gray-300 mb-6">
-              Select up to 2 that best describe you - this helps us customize your experience on Gamefolio
+              Select up to 3 that best describe you - this helps us customize your experience on Gamefolio
             </p>
             
             <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1257,7 +1257,7 @@ export default function OnboardingFlow({
               ].map((type) => {
                 const IconComponent = type.icon;
                 const isSelected = userTypes.includes(type.id);
-                const isLocked = !isSelected && userTypes.length >= 2;
+                const isLocked = !isSelected && userTypes.length >= 3;
                 
                 return (
                   <button
@@ -1433,13 +1433,6 @@ export default function OnboardingFlow({
                   Get a blockchain wallet to store GF Tokens, collect NFTs, and unlock exclusive features.
                 </p>
 
-                <div className="flex items-center gap-2 mb-6 px-3 py-2.5 rounded-lg bg-primary/10 border border-primary/30">
-                  <span className="text-xl">🎁</span>
-                  <p className="text-sm text-primary font-medium">
-                    Create a wallet now and receive <span className="font-bold">100 GFT tokens free!</span>
-                  </p>
-                </div>
-                
                 <button
                   onClick={handleCreateWalletClick}
                   disabled={isCreatingAnyWallet}

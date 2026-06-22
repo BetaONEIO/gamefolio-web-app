@@ -33,6 +33,7 @@ export const users = pgTable("users", {
   hideBanner: boolean("hide_banner").default(false),
   statsGlassEffect: boolean("stats_glass_effect").default(false),
   profileBackgroundGradient: boolean("profile_background_gradient").default(true),
+  profileBackgroundGradientCss: text("profile_background_gradient_css"),
   layoutStyle: text("layout_style").default("grid"), // grid, masonry, classic
   // Platform connections
   steamUsername: text("steam_username"),
@@ -84,7 +85,13 @@ export const users = pgTable("users", {
   rumbleChannelName: text("rumble_channel_name"), // Rumble channel slug/username
   rumbleId: text("rumble_id"),              // Rumble user ID (set when OAuth-connected)
   rumbleVerified: boolean("rumble_verified").default(false), // Connected via OAuth
+  youtubeChannelName: text("youtube_channel_name"), // YouTube channel display name/handle
+  youtubeChannelId: text("youtube_channel_id"),     // YouTube channel ID (UC…) for embeds/API
+  youtubeVerified: boolean("youtube_verified").default(false), // Connected via Google/YouTube OAuth
+  youtubeShowOnProfile: boolean("youtube_show_on_profile").default(true), // Embed YouTube on profile
   showLiveOverlay: boolean("show_live_overlay").default(false), // Show LIVE badge on avatar
+  twitchShowOnProfile: boolean("twitch_show_on_profile").default(true), // Embed Twitch stream on profile
+  kickShowOnProfile: boolean("kick_show_on_profile").default(true),     // Embed Kick stream on profile
   ageRange: text("age_range"), // Age range: 13-17, 18-24, 25-34, 35-44, 45-54, 55+
   // Authentication provider fields
   authProvider: text("auth_provider").default("local"), // "local", "google", "discord", "steam", "apple"

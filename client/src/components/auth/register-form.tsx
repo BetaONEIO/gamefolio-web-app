@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,9 +11,83 @@ import { GoogleAuthButton } from "./GoogleAuthButton";
 import { DiscordAuthButton } from "./DiscordAuthButton";
 import { PasswordRequirementsDisplay } from "@/components/ui/password-requirements";
 import { FieldError, FieldStatus } from "@/components/ui/field-error";
-import { CalendarIcon, X } from "lucide-react";
+import { CalendarIcon, ChevronDown, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+
+const MONTHS = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December"
+];
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: CURRENT_YEAR - 1900 + 1 }, (_, i) => CURRENT_YEAR - i);
+
+function InlineSelect({ value, onChange, options, className }: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { label: string; value: string }[];
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const el = listRef.current?.querySelector('[data-selected="true"]');
+    el?.scrollIntoView({ block: "nearest" });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value);
+
+  return (
+    <div ref={ref} className={cn("relative", className)}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between h-8 rounded-md border border-input bg-[#0b1319] px-3 text-sm text-foreground hover:border-[#B7FF1A]/50 focus:outline-none focus:border-[#B7FF1A] transition-colors"
+      >
+        <span>{selected?.label ?? value}</span>
+        <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <ul
+          ref={listRef}
+          className="absolute left-0 right-0 top-full mt-1 z-10 max-h-48 overflow-y-auto rounded-md border border-input bg-[#0b1319] shadow-xl py-1 gf-scrollbar"
+        >
+          {options.map((opt) => (
+            <li
+              key={opt.value}
+              data-selected={opt.value === value}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onChange(opt.value);
+                setOpen(false);
+              }}
+              className={cn(
+                "px-3 py-1.5 text-sm cursor-pointer transition-colors",
+                opt.value === value
+                  ? "bg-[#B7FF1A]/15 text-[#B7FF1A] font-medium"
+                  : "text-foreground hover:bg-white/5"
+              )}
+            >
+              {opt.label}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 interface RegisterFormProps {
   onSuccess: () => void;
@@ -41,6 +115,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   const usernameAbortRef = useRef<AbortController | null>(null);
   const checkedUsernameRef = useRef<string>("");
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date(2000, 0));
   const [emailValid, setEmailValid] = useState<boolean | null>(null);
   const [passwordRequirements, setPasswordRequirements] = useState({
     length: false,
@@ -437,9 +512,29 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
         </Button>
         {datePickerOpen && (
           <div className="mt-1 rounded-md border border-input bg-background shadow-lg w-full">
+            <div className="flex gap-2 px-3 pt-3">
+              <InlineSelect
+                className="flex-1"
+                value={String(calendarMonth.getMonth())}
+                onChange={(v) =>
+                  setCalendarMonth((prev) => new Date(prev.getFullYear(), Number(v), 1))
+                }
+                options={MONTHS.map((m, i) => ({ label: m, value: String(i) }))}
+              />
+              <InlineSelect
+                className="w-24"
+                value={String(calendarMonth.getFullYear())}
+                onChange={(v) =>
+                  setCalendarMonth((prev) => new Date(Number(v), prev.getMonth(), 1))
+                }
+                options={YEARS.map((y) => ({ label: String(y), value: String(y) }))}
+              />
+            </div>
             <Calendar
               mode="single"
               selected={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : undefined}
+              month={calendarMonth}
+              onMonthChange={setCalendarMonth}
               onSelect={(date) => {
                 if (date) {
                   const yyyy = date.getFullYear();
@@ -451,12 +546,13 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                 setDatePickerOpen(false);
               }}
               disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-              defaultMonth={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : new Date(2000, 0)}
               initialFocus
               className="w-full"
               classNames={{
                 months: "w-full",
                 month: "w-full space-y-3",
+                caption: "hidden",
+                nav: "hidden",
                 table: "w-full border-collapse",
                 head_row: "flex w-full",
                 head_cell: "text-muted-foreground font-normal text-[0.8rem] flex-1 text-center",
@@ -483,7 +579,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           onChange={handleChange}
           disabled={isLoading}
           className="auth-input uppercase"
-          maxLength={8}
+          maxLength={16}
         />
         <p className="text-xs text-muted-foreground">Have a friend's referral code? Enter it here to earn bonus XP!</p>
       </div>

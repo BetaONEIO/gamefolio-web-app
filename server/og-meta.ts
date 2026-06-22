@@ -16,6 +16,21 @@ interface OGMetaTags {
   videoUrl?: string;
 }
 
+/**
+ * Determine the canonical base URL for OG proxy links.
+ * Priority: APP_URL env var > X-Forwarded-Proto + host header > https + host header.
+ * This ensures OG image URLs always point to the public production hostname even
+ * when the server is behind a reverse proxy that may rewrite the Host header.
+ */
+function getBaseHost(req: Request): string {
+  if (process.env.APP_URL) {
+    return process.env.APP_URL.replace(/\/$/, '');
+  }
+  const proto = req.headers['x-forwarded-proto'] as string || 'https';
+  const host = req.get('host') || 'app.gamefolio.com';
+  return `${proto}://${host}`;
+}
+
 export function createOGMetaMiddleware(storage: IStorage) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const url = req.originalUrl;
@@ -84,7 +99,7 @@ export function createOGMetaMiddleware(storage: IStorage) {
           // Always route through the stable server-side proxy so og:image never
           // contains an expiring Supabase signed URL.  The endpoint accepts both
           // share codes and numeric clip IDs, so every clip is covered.
-          const baseHost = `https://${req.get('host')}`;
+          const baseHost = getBaseHost(req);
           const identifier = clip.shareCode || clip.id;
           const imageUrl = `${baseHost}/api/og-thumbnail/${identifier}`;
           const stableVideoUrl = clip.videoUrl ? `${baseHost}/api/og-video/${identifier}` : undefined;
@@ -93,7 +108,7 @@ export function createOGMetaMiddleware(storage: IStorage) {
             title: `${clip.title} - ${clip.user.displayName || clip.user.username} | Gamefolio`,
             description: clip.description || `Watch this amazing ${contentType.toLowerCase()} by ${clip.user.displayName || clip.user.username} on Gamefolio`,
             image: imageUrl,
-            url: `https://${req.get('host')}${url}`,
+            url: `${baseHost}${url}`,
             type: 'video.other',
             videoUrl: stableVideoUrl,
           };
@@ -126,7 +141,7 @@ export function createOGMetaMiddleware(storage: IStorage) {
 
           // Skip OG preview for suspended/banned accounts
           if (user && user.status !== 'suspended' && user.status !== 'banned') {
-            const baseHost = `https://${req.get('host')}`;
+            const baseHost = getBaseHost(req);
             // Use our stable server-side proxy endpoint — avoids expiring Supabase signed URL tokens
             const idOrCode = screenshot.shareCode || screenshot.id;
             const screenshotImageUrl = `${baseHost}/api/og-screenshot/${idOrCode}`;
@@ -159,7 +174,7 @@ export function createOGMetaMiddleware(storage: IStorage) {
 
         if (clip && clip.user) {
           const contentType = type.startsWith('reel') ? 'Reel' : 'Clip';
-          const baseHost = `https://${req.get('host')}`;
+          const baseHost = getBaseHost(req);
           const identifier = clip.shareCode || clip.id;
           const imageUrl = `${baseHost}/api/og-thumbnail/${identifier}`;
           const stableVideoUrl = clip.videoUrl ? `${baseHost}/api/og-video/${identifier}` : undefined;
@@ -183,7 +198,7 @@ export function createOGMetaMiddleware(storage: IStorage) {
         const user = await storage.getUserByUsername(username);
         
         if (user && user.status !== 'suspended' && user.status !== 'banned') {
-          const baseHost = `https://${req.get('host')}`;
+          const baseHost = getBaseHost(req);
           const previewImageUrl = `${baseHost}/api/social-preview/${username}`;
           
           ogTags = {
