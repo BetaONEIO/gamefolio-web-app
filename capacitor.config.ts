@@ -10,7 +10,13 @@ const config: CapacitorConfig = {
   // overscrolled or applied its content inset.
   backgroundColor: '#0B1218',
   ios: {
-    contentInset: 'always',
+    // The overlaid status bar + CSS env(safe-area-inset-*) own the top spacing
+    // (Header.tsx applies .safe-area-top, full-screen viewers use env() too).
+    // 'always' made WKWebView ALSO inset content below the status bar, so the
+    // top spacing was applied twice — leaving a tall navy band under the status
+    // bar. 'never' lets the CSS safe-area handle it once, so bg-card paints
+    // right up to the status bar with no band.
+    contentInset: 'never',
     backgroundColor: '#0B1218',
   },
   android: {
