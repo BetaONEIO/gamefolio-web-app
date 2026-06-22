@@ -16,7 +16,7 @@ import { isNative } from "@/lib/platform";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 import ProOnboardingScreen from "@/components/pro/ProOnboardingScreen";
 
-type SubscriptionTier = "pro" | "partner";
+type SubscriptionTier = "pro" | "partner" | "indie";
 
 interface StripePricing {
   currency: string;
@@ -113,6 +113,89 @@ const partnerExtras = [
 ];
 const partnerBenefits = [...partnerExtras, ...premiumBenefits];
 
+// Indie Partner mirrors Streamer Partner, but for indie game developers: every
+// Pro perk plus game-showcase + cross-Gamefolio featuring.
+//
+// IMPORTANT: the Indie Partner *backend* (Stripe /api/stripe/indie-* endpoints,
+// the RevenueCat "Gamefolio Indie Partner" offering, and server provisioning)
+// lives on the `indie-partner` branch and is NOT wired up here. This is
+// front-end advertising only — flip INDIE_BACKEND_READY to true once that
+// branch is merged in and the endpoints/offering exist.
+const INDIE_BACKEND_READY = false;
+const indieExtras = [
+  {
+    title: "Showcase your game",
+    description: "Feature your indie game on your profile for players to discover",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 11H10M8 9V13M15 12H15.01M18 10H18.01" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M17.32 5H6.68C4.65 5 3 6.65 3 8.68C3 9.36 3.13 10.03 3.38 10.66L5.2 15.2C5.66 16.34 6.76 17.09 7.99 17.09C8.79 17.09 9.55 16.77 10.11 16.21L10.83 15.5H13.17L13.89 16.21C14.45 16.77 15.21 17.09 16.01 17.09C17.24 17.09 18.34 16.34 18.8 15.2L20.62 10.66C20.87 10.03 21 9.36 21 8.68C21 6.65 19.35 5 17.32 5Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    title: "Featured across Gamefolio",
+    description: "Get your game spotlighted on Gamefolio pages",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 3L14.09 8.26L20 9.27L15.5 13.14L16.82 19L12 15.77L7.18 19L8.5 13.14L4 9.27L9.91 8.26L12 3Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+];
+const indieBenefits = [...indieExtras, ...premiumBenefits];
+
+interface TierMeta {
+  name: string;        // hero heading, e.g. "Streamer Partner"
+  cardTitle: string;   // plan-card line 1, e.g. "Streamer"
+  cardSub: string;     // plan-card line 2, e.g. "Partner"
+  blurb: string;       // short subtitle (mobile)
+  benefits: typeof premiumBenefits;
+  cta: string;
+  tagline: string;     // hero subtitle (desktop)
+  api: "pro" | "partner" | "indie"; // builds /api/stripe/{create,confirm,pricing} routes
+  teaserMonthly: number;            // GBP, plan-card teaser only — real price comes from the pricing endpoint
+}
+
+const TIER_META: Record<SubscriptionTier, TierMeta> = {
+  pro: {
+    name: "Gamefolio Pro",
+    cardTitle: "Pro",
+    cardSub: "Membership",
+    blurb: "Elevate your gaming identity with premium features",
+    benefits: premiumBenefits,
+    cta: "Join Gamefolio Pro",
+    tagline: "Elevate your gaming identity with premium features designed for elite creators",
+    api: "pro",
+    teaserMonthly: 2.99,
+  },
+  partner: {
+    name: "Streamer Partner",
+    cardTitle: "Streamer",
+    cardSub: "Partner",
+    blurb: "Put your live stream front and centre across Gamefolio",
+    benefits: partnerBenefits,
+    cta: "Become a Streamer Partner",
+    tagline: "Go pro and put your live stream front and centre across Gamefolio",
+    api: "partner",
+    teaserMonthly: 4.99,
+  },
+  indie: {
+    name: "Indie Partner",
+    cardTitle: "Indie",
+    cardSub: "Partner",
+    blurb: "Put your indie game front and centre across Gamefolio",
+    benefits: indieBenefits,
+    cta: "Become an Indie Partner",
+    tagline: "Showcase your indie game front and centre across Gamefolio",
+    api: "indie",
+    teaserMonthly: 4.99, // placeholder — confirm with the Indie Partner pricing on merge
+  },
+};
+
+// Order the plan cards render in.
+const TIER_ORDER: SubscriptionTier[] = ["pro", "partner", "indie"];
+
 
 function isYearlyPackage(pkg: Package): boolean {
   const id = pkg.identifier.toLowerCase();
@@ -174,18 +257,20 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   // the Go-Pro screen). Start from the requested tier and reset on each open.
   const [activeTier, setActiveTier] = useState<SubscriptionTier>(tier);
   useEffect(() => { if (open) setActiveTier(tier); }, [open, tier]);
+  const meta = TIER_META[activeTier];
   const isPartnerTier = activeTier === "partner";
-  const partnerOfferingAvailable = (getPartnerOffering()?.length ?? 0) > 0;
-  const tierName = isPartnerTier ? "Streamer Partner" : "Gamefolio Pro";
-  const ownsThisTier = isPartnerTier ? isPartner : isPro;
-  const benefits = isPartnerTier ? partnerBenefits : premiumBenefits;
-  const createEndpoint = isPartnerTier ? "/api/stripe/create-partner-subscription" : "/api/stripe/create-pro-subscription";
-  const confirmEndpoint = isPartnerTier ? "/api/stripe/confirm-partner-subscription" : "/api/stripe/confirm-pro-subscription";
-  const pricingEndpoint = isPartnerTier ? "/api/stripe/partner-pricing" : "/api/stripe/pro-pricing";
-  const ctaLabel = isPartnerTier ? "Become a Streamer Partner" : "Join Gamefolio Pro";
-  const tagline = isPartnerTier
-    ? "Go pro and put your live stream front and centre across Gamefolio"
-    : "Elevate your gaming identity with premium features designed for elite creators";
+  const isIndieTier = activeTier === "indie";
+  // Indie Partner can't be purchased here yet — its backend lands with the
+  // indie-partner merge. Until then the card advertises but can't check out.
+  const indieComingSoon = isIndieTier && !INDIE_BACKEND_READY;
+  const tierName = meta.name;
+  const ownsThisTier = activeTier === "partner" ? isPartner : activeTier === "pro" ? isPro : false;
+  const benefits = meta.benefits;
+  const createEndpoint = `/api/stripe/create-${meta.api}-subscription`;
+  const confirmEndpoint = `/api/stripe/confirm-${meta.api}-subscription`;
+  const pricingEndpoint = `/api/stripe/${meta.api}-pricing`;
+  const ctaLabel = meta.cta;
+  const tagline = meta.tagline;
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
   const [purchasing, setPurchasing] = useState(false);
   const [step, setStep] = useState<"plans" | "checkout" | "success">("plans");
@@ -203,7 +288,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     }
   }, [step, open]);
 
-  const packages = isPartnerTier ? getPartnerOffering() : getCurrentOffering();
+  const packages = activeTier === "partner" ? getPartnerOffering() : activeTier === "indie" ? null : getCurrentOffering();
 
   const { monthlyPkg, yearlyPkg } = useMemo(() => {
     if (!packages) return { monthlyPkg: null, yearlyPkg: null };
@@ -318,6 +403,9 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     let cancelled = false;
     // Clear stale pricing so the button re-gates while a tier switch repriced.
     setWebPricing(null);
+    // Indie Partner has no pricing endpoint yet — the card shows an indicative
+    // price (TIER_META.teaserMonthly); don't hit a 404 here.
+    if (indieComingSoon) return;
     (async () => {
       try {
         const res = await fetch(pricingEndpoint, { credentials: "include" });
@@ -340,7 +428,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     return () => {
       cancelled = true;
     };
-  }, [open, pricingEndpoint]);
+  }, [open, pricingEndpoint, indieComingSoon]);
 
   const handleJoinPro = async () => {
     if (!user) {
@@ -446,8 +534,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     );
   }
 
-  const canPurchase = isNative ? !!selectedPackage : !!webPricing;
-  const buttonDisabled = !onAuthRequired && (isLoading || purchasing || checkoutLoading || !canPurchase || (isNative && !isInitialized));
+  const canPurchase = !indieComingSoon && (isNative ? !!selectedPackage : !!webPricing);
+  const buttonDisabled = indieComingSoon || (!onAuthRequired && (isLoading || purchasing || checkoutLoading || !canPurchase || (isNative && !isInitialized)));
 
   const planSelector = (compact: boolean = false) => {
     const yearlyPerMonth = yearlyView?.perMonthFormatted ?? null;
@@ -554,28 +642,50 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     );
   };
 
-  // Cross-sell between tiers in-place: offer Streamer Partner from the Pro
-  // screen, and a way back if the user switched over.
-  const tierSwitch = !partnerOfferingAvailable ? null : (
-    !isPartnerTier ? (
-      <button
-        type="button"
-        onClick={() => setActiveTier("partner")}
-        className="w-full text-center text-[12px] font-semibold text-[#B7FF1A] hover:text-[#A2F000] transition-colors"
-        data-testid="link-switch-partner"
-      >
-        Are you a streamer? Unlock Streamer Partner →
-      </button>
-    ) : tier === "pro" ? (
-      <button
-        type="button"
-        onClick={() => setActiveTier("pro")}
-        className="w-full text-center text-[12px] text-[#B8C0AE] hover:text-white transition-colors"
-        data-testid="link-switch-pro"
-      >
-        ← Back to Gamefolio Pro
-      </button>
-    ) : null
+  // Plan picker: Pro / Streamer Partner / Indie Partner as selectable cards.
+  // Selecting a card switches the whole dialog (benefits, pricing, checkout) to
+  // that tier. Indie shows a "Soon" tag until its backend is wired in.
+  const tierCards = (
+    <div className="grid grid-cols-3 gap-2" data-testid="tier-cards">
+      {TIER_ORDER.map((t) => {
+        const m = TIER_META[t];
+        const selected = activeTier === t;
+        const soon = t === "indie" && !INDIE_BACKEND_READY;
+        return (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setActiveTier(t)}
+            className={`relative rounded-xl border-2 p-2.5 text-left transition-all ${
+              selected
+                ? "border-[#B7FF1A] bg-[#B7FF1A0d]"
+                : "border-[#1B2A33] bg-[#0B1218] hover:border-[#22313A]"
+            }`}
+            data-testid={`tier-card-${t}`}
+          >
+            {soon && (
+              <div className="absolute -top-2 right-1.5 bg-[#1B2A33] text-[#B8C0AE] text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border border-[#22313A]">
+                Soon
+              </div>
+            )}
+            <div className="text-white font-semibold text-[12px] leading-tight">{m.cardTitle}</div>
+            <div className="text-[#B8C0AE] text-[9px] leading-tight mb-1.5">{m.cardSub}</div>
+            <div className="text-white font-bold text-[13px] leading-none">£{m.teaserMonthly.toFixed(2)}</div>
+            <div className="text-[#B8C0AE] text-[9px] mt-0.5">from /mo</div>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  // Shown in place of the billing selector while Indie Partner is pre-launch.
+  const comingSoonNotice = (
+    <div className="rounded-xl border-2 border-[#1B2A33] bg-[#0B1218] p-3 text-center" data-testid="indie-coming-soon">
+      <div className="text-white font-semibold text-sm mb-1">Coming soon</div>
+      <div className="text-[#B8C0AE] text-[11px] leading-relaxed">
+        Indie Partner launches with the Indie programme. The price shown is indicative.
+      </div>
+    </div>
   );
 
   const leftPanel = (
@@ -660,7 +770,9 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
           </span>
         </div>
 
-        {planSelector()}
+        {tierCards}
+
+        {indieComingSoon ? comingSoonNotice : planSelector()}
 
         <button
           onClick={handleJoinPro}
@@ -671,6 +783,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         >
           {purchasing || isLoading || checkoutLoading ? (
             <Loader2 className="w-5 h-5 animate-spin text-[#071013]" />
+          ) : indieComingSoon ? (
+            <span className="text-[#071013] text-base font-bold">Coming soon</span>
           ) : (
             <>
               <span className="text-[#071013] text-base font-bold">{ctaLabel}</span>
@@ -684,8 +798,6 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         {checkoutError && (
           <p className="text-red-400 text-xs text-center">{checkoutError}</p>
         )}
-
-        {tierSwitch && <div className="pt-1">{tierSwitch}</div>}
 
         <span className="text-[#B8C0AE] text-[11px] text-center">
           Cancel anytime. Terms and conditions apply.
@@ -784,7 +896,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                   </h2>
 
                   <p className="text-[#B8C0AE] text-xs text-center leading-relaxed mb-3 max-w-[260px] mx-auto">
-                    {isPartnerTier ? "Put your live stream front and centre across Gamefolio" : "Elevate your gaming identity with premium features"}
+                    {meta.blurb}
                   </p>
 
                   <div className="flex flex-col gap-3 mb-4 pt-1">
@@ -817,7 +929,11 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                     </span>
                   </div>
 
-                  {planSelector(true)}
+                  {tierCards}
+
+                  <div className="mt-3">
+                    {indieComingSoon ? comingSoonNotice : planSelector(true)}
+                  </div>
 
                   <button
                     onClick={handleJoinPro}
@@ -828,6 +944,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                   >
                     {purchasing || isLoading || checkoutLoading ? (
                       <Loader2 className="w-5 h-5 animate-spin text-[#071013]" />
+                    ) : indieComingSoon ? (
+                      <span className="text-[#071013] text-base font-bold">Coming soon</span>
                     ) : (
                       <>
                         <span className="text-[#071013] text-base font-bold">{ctaLabel}</span>
@@ -837,8 +955,6 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                       </>
                     )}
                   </button>
-
-                  {tierSwitch && <div className="mt-3">{tierSwitch}</div>}
 
                   <span className="text-[#B8C0AE] text-[11px] text-center block mt-2">
                     Cancel anytime. Terms and conditions apply.
