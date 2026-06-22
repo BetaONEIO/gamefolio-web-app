@@ -4,11 +4,24 @@ const config: CapacitorConfig = {
   appId: 'com.gamefolio.app',
   appName: 'Gamefolio',
   webDir: 'dist/public',
+  // Match the WebView background to the app's base navy (--card / body bg).
+  // Without this the native WebView background defaults to black, which flashed
+  // through as a "random black area" at the top whenever iOS rubber-band
+  // overscrolled or applied its content inset.
+  backgroundColor: '#0B1218',
   ios: {
-    contentInset: 'always',
+    // The overlaid status bar + CSS env(safe-area-inset-*) own the top spacing
+    // (Header.tsx applies .safe-area-top, full-screen viewers use env() too).
+    // 'always' made WKWebView ALSO inset content below the status bar, so the
+    // top spacing was applied twice — leaving a tall navy band under the status
+    // bar. 'never' lets the CSS safe-area handle it once, so bg-card paints
+    // right up to the status bar with no band.
+    contentInset: 'never',
+    backgroundColor: '#0B1218',
   },
   android: {
     allowMixedContent: false,
+    backgroundColor: '#0B1218',
   },
   server: {
     androidScheme: 'https',

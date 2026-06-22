@@ -460,6 +460,138 @@ router.post('/auth/rumble/disconnect', async (req: Request, res: Response) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// YouTube  OAuth 2.0  (via Google Identity Platform)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Required env vars:
+//   GOOGLE_CLIENT_ID     – from Google Cloud Console
+//   GOOGLE_CLIENT_SECRET – from Google Cloud Console
+//
+// Redirect URI to register in your Google OAuth app:
+//   https://<your-domain>/api/auth/youtube/callback
+//
+// Scopes required: https://www.googleapis.com/auth/youtube.readonly
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.get('/auth/youtube/connect', (req: Request, res: Response) => {
+  if (!(req.user as any)?.id) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    return res.status(503).json({ message: 'YouTube OAuth is not configured.' });
+  }
+
+  const state = crypto.randomBytes(16).toString('hex');
+  (req.session as any).youtubeOAuthState = state;
+  (req.session as any).youtubeOAuthUserId = (req.user as any).id;
+
+  req.session.save(() => {
+    const callbackUrl = `${getBaseUrl(req)}/api/auth/youtube/callback`;
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: clientId,
+      redirect_uri: callbackUrl,
+      scope: 'https://www.googleapis.com/auth/youtube.readonly',
+      state,
+      access_type: 'offline',
+      prompt: 'consent',
+    });
+
+    res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  });
+});
+
+router.get('/auth/youtube/callback', async (req: Request, res: Response) => {
+  const { code, state, error } = req.query;
+
+  const storedState = (req.session as any).youtubeOAuthState;
+  const userId = (req.session as any).youtubeOAuthUserId;
+
+  delete (req.session as any).youtubeOAuthState;
+  delete (req.session as any).youtubeOAuthUserId;
+
+  if (error) {
+    return res.redirect('/settings/profile?tab=streamer&youtube_error=access_denied');
+  }
+
+  if (!code || !state || state !== storedState || !userId) {
+    return res.redirect('/settings/profile?tab=streamer&youtube_error=invalid_state');
+  }
+
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    return res.redirect('/settings/profile?tab=streamer&youtube_error=not_configured');
+  }
+
+  try {
+    const callbackUrl = `${getBaseUrl(req)}/api/auth/youtube/callback`;
+
+    // Exchange code for access token
+    const tokenRes = await axios.post(
+      'https://oauth2.googleapis.com/token',
+      new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code: code as string,
+        grant_type: 'authorization_code',
+        redirect_uri: callbackUrl,
+      }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+
+    const accessToken = tokenRes.data.access_token;
+
+    // Fetch the user's YouTube channel
+    const channelRes = await axios.get('https://www.googleapis.com/youtube/v3/channels', {
+      params: { part: 'snippet', mine: true },
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    const channel = channelRes.data.items?.[0];
+    if (!channel) {
+      return res.redirect('/settings/profile?tab=streamer&youtube_error=no_channel');
+    }
+
+    const youtubeChannelId = channel.id as string;
+    const youtubeChannelName = (channel.snippet?.customUrl || channel.snippet?.title || youtubeChannelId) as string;
+
+    await db.update(users).set({
+      youtubeChannelId,
+      youtubeChannelName,
+      youtubeVerified: true,
+      youtubeShowOnProfile: true,
+    }).where(eq(users.id, userId));
+
+    return res.redirect('/settings/profile?tab=streamer&youtube_connected=true');
+  } catch (err: any) {
+    console.error('YouTube OAuth callback error:', err?.response?.data || err.message);
+    return res.redirect('/settings/profile?tab=streamer&youtube_error=auth_failed');
+  }
+});
+
+router.post('/auth/youtube/disconnect', async (req: Request, res: Response) => {
+  if (!(req.user as any)?.id) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+  try {
+    await db.update(users).set({
+      youtubeChannelId: null,
+      youtubeChannelName: null,
+      youtubeVerified: false,
+    }).where(eq(users.id, (req.user as any).id));
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('YouTube disconnect error:', err);
+    res.status(500).json({ message: 'Failed to disconnect YouTube' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Config check endpoint – lets the frontend know which OAuth providers are set up
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -468,6 +600,7 @@ router.get('/auth/social-oauth/config', (_req: Request, res: Response) => {
     kick: !!process.env.KICK_CLIENT_ID,
     twitch: !!process.env.TWITCH_CLIENT_ID,
     rumble: !!process.env.RUMBLE_CLIENT_ID,
+    youtube: !!process.env.GOOGLE_CLIENT_ID,
   });
 });
 

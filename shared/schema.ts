@@ -85,6 +85,10 @@ export const users = pgTable("users", {
   rumbleChannelName: text("rumble_channel_name"), // Rumble channel slug/username
   rumbleId: text("rumble_id"),              // Rumble user ID (set when OAuth-connected)
   rumbleVerified: boolean("rumble_verified").default(false), // Connected via OAuth
+  youtubeChannelName: text("youtube_channel_name"), // YouTube channel display name/handle
+  youtubeChannelId: text("youtube_channel_id"),     // YouTube channel ID (UC…) for embeds/API
+  youtubeVerified: boolean("youtube_verified").default(false), // Connected via Google/YouTube OAuth
+  youtubeShowOnProfile: boolean("youtube_show_on_profile").default(true), // Embed YouTube on profile
   showLiveOverlay: boolean("show_live_overlay").default(false), // Show LIVE badge on avatar
   twitchShowOnProfile: boolean("twitch_show_on_profile").default(true), // Embed Twitch stream on profile
   kickShowOnProfile: boolean("kick_show_on_profile").default(true),     // Embed Kick stream on profile
