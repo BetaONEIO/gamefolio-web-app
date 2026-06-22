@@ -62,6 +62,9 @@ import {
   SiPlaystation,
   SiDiscord,
   SiEpicgames,
+  SiTwitch,
+  SiKick,
+  SiYoutube,
 } from "react-icons/si";
 import { FaXbox, FaPlaystation, FaYoutube, FaInstagram, FaFacebook } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
@@ -304,6 +307,7 @@ const ProfilePage = () => {
   // Profile section tab state (stats/bio vs collection)
   const [profileSectionTab, setProfileSectionTab] = useState<'stats' | 'collection'>('stats');
   const [expandedStreams, setExpandedStreams] = useState<Record<string, boolean>>({});
+  const [streamsAutoExpanded, setStreamsAutoExpanded] = useState(false);
   const [selectedProfileNft, setSelectedProfileNft] = useState<OwnedNft | null>(null);
 
   // Screenshot action handlers
@@ -453,15 +457,18 @@ const ProfilePage = () => {
   });
 
   const isStreamer = !!(profile?.userType?.split(',').map(t => t.trim()).includes('streamer'));
-  const hasStreamSetup = !!(isStreamer && (profile?.twitchVerified || profile?.kickVerified));
+  const hasStreamSetup = !!(isStreamer && (profile?.twitchVerified || profile?.kickVerified || (profile as any)?.youtubeVerified));
   const { data: profileLiveStatus } = useQuery<{
     isLive: boolean;
     twitchLive: boolean;
     kickLive: boolean;
+    youtubeLive: boolean;
     activePlatform: string | null;
     activeChannel: string | null;
     twitchChannel: string | null;
     kickChannel: string | null;
+    youtubeChannelId: string | null;
+    youtubeChannelName: string | null;
   }>({
     queryKey: [`/api/user/${profile?.id}/live-status`],
     queryFn: getQueryFn({ on401: 'returnNull' }),
@@ -469,6 +476,21 @@ const ProfilePage = () => {
     staleTime: 60 * 1000,
     refetchInterval: 2 * 60 * 1000,
   });
+
+  // Auto-expand stream embeds once profile data is ready
+  useEffect(() => {
+    if (!profile || streamsAutoExpanded) return;
+    const isStreamerProfile = !!(profile.userType?.split(',').map((t: string) => t.trim()).includes('streamer'));
+    if (!isStreamerProfile) return;
+    const initial: Record<string, boolean> = {};
+    if ((profile as any).twitchShowOnProfile !== false && profile.twitchVerified) initial['twitch'] = true;
+    if ((profile as any).kickShowOnProfile !== false && profile.kickVerified) initial['kick'] = true;
+    if ((profile as any).youtubeShowOnProfile !== false && (profile as any).youtubeVerified) initial['youtube'] = true;
+    if (Object.keys(initial).length > 0) {
+      setExpandedStreams(initial);
+      setStreamsAutoExpanded(true);
+    }
+  }, [profile, streamsAutoExpanded]);
 
   const profileNftQueryKey = isOwnProfile ? "/api/nfts/owned" : `/api/nfts/user/${profile?.id}`;
   const { data: profileNftData, isLoading: profileNftsLoading, refetch: refetchProfileNfts } = useQuery<OwnedNftsData>({
@@ -4154,143 +4176,134 @@ const ProfilePage = () => {
         {/* Spacer for tabs section */}
         <div className="h-0 md:h-[12px]"></div>
 
-        {/* Stream Embeds - one per platform the streamer has chosen to show */}
+        {/* Stream platform buttons — always visible for streamers with connected channels; embed expands on click */}
         {(() => {
           if (!isStreamer) return null;
           const hostname = window.location.hostname;
-
           const twitchChannel = profileLiveStatus?.twitchChannel
             || (profile as any)?.twitchChannelName
             || (profile?.twitchVerified ? profile?.streamChannelName : null);
           const kickChannel = profileLiveStatus?.kickChannel
             || (profile as any)?.kickChannelName
             || (profile?.kickVerified ? profile?.streamChannelName : null);
+          const youtubeChannelId = profileLiveStatus?.youtubeChannelId
+            || (profile as any)?.youtubeChannelId || null;
+          const youtubeChannelName = profileLiveStatus?.youtubeChannelName
+            || (profile as any)?.youtubeChannelName || null;
 
-          // Each connected platform is shown independently based on its
-          // "Show on profile" toggle (default on). Only shown when live.
-          const panels: Array<{ platform: 'twitch' | 'kick'; channel: string; isLive: boolean }> = [];
-          if (((profile as any)?.twitchShowOnProfile ?? true) && twitchChannel && (profileLiveStatus?.twitchLive ?? false)) {
-            panels.push({ platform: 'twitch', channel: twitchChannel, isLive: true });
+          type StreamPlatform = { platform: 'twitch' | 'kick' | 'youtube'; channel: string; displayName?: string; isLive: boolean };
+          const platforms: StreamPlatform[] = [];
+          if (((profile as any)?.twitchShowOnProfile ?? true) && twitchChannel) {
+            platforms.push({ platform: 'twitch', channel: twitchChannel, isLive: !!(profileLiveStatus?.twitchLive) });
           }
-          if (((profile as any)?.kickShowOnProfile ?? true) && kickChannel && (profileLiveStatus?.kickLive ?? false)) {
-            panels.push({ platform: 'kick', channel: kickChannel, isLive: true });
+          if (((profile as any)?.kickShowOnProfile ?? true) && kickChannel) {
+            platforms.push({ platform: 'kick', channel: kickChannel, isLive: !!(profileLiveStatus?.kickLive) });
           }
-          if (panels.length === 0) return null;
+          if (((profile as any)?.youtubeShowOnProfile ?? true) && youtubeChannelId) {
+            platforms.push({ platform: 'youtube', channel: youtubeChannelId, displayName: youtubeChannelName || youtubeChannelId, isLive: !!(profileLiveStatus?.youtubeLive) });
+          }
+          if (platforms.length === 0) return null;
 
-          const renderPanel = ({ platform, channel, isLive }: { platform: 'twitch' | 'kick'; channel: string; isLive: boolean }) => {
-            const isKick = platform === 'kick';
-            const playerSrc = isKick
-              ? `https://player.kick.com/${channel}?autoplay=${isLive ? 'true' : 'false'}&muted=true`
-              : `https://player.twitch.tv/?channel=${channel}&parent=${hostname}&autoplay=${isLive ? 'true' : 'false'}&muted=true`;
-            const chatSrc = isKick
-              ? `https://kick.com/${channel}/chatroom`
-              : `https://www.twitch.tv/embed/${channel}/chat?parent=${hostname}&darkpopout`;
-            const headerBg = isKick
-              ? 'linear-gradient(90deg, #1a3a1a, #0f2a0f)'
-              : 'linear-gradient(90deg, #1f1035, #0f0a1e)';
-            const expanded = !!expandedStreams[platform];
-            const showPlayer = isLive || expanded;
-
-            return (
-            <div key={platform} className="rounded-xl overflow-hidden border border-border bg-black shadow-lg">
-              {/* Header bar — clickable when offline to expand/collapse */}
-              <div
-                className={`flex items-center gap-2 px-3 py-2 ${showPlayer ? 'border-b border-border' : ''} ${!isLive ? 'cursor-pointer select-none hover:brightness-110 transition-all' : ''}`}
-                style={{ background: headerBg }}
-                onClick={!isLive ? () => setExpandedStreams(prev => ({ ...prev, [platform]: !prev[platform] })) : undefined}
-              >
-                <div className={`w-2 h-2 rounded-full bg-primary ${isLive ? 'animate-pulse' : 'opacity-40'}`} />
-                <span className="text-xs font-semibold text-primary">
-                  {isKick ? 'Kick' : 'Twitch'}
-                </span>
-                <span className="text-xs text-muted-foreground">— {channel}</span>
-                {isLive ? (
-                  <span className="ml-auto text-[10px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded-full">LIVE</span>
-                ) : (
-                  <div className="ml-auto flex items-center gap-1.5">
-                    <span className="text-[10px] text-muted-foreground/60 italic">Offline</span>
-                    {expanded
-                      ? <ChevronUp className="h-3 w-3 text-muted-foreground/60" />
-                      : <ChevronDown className="h-3 w-3 text-muted-foreground/60" />
-                    }
-                  </div>
-                )}
-              </div>
-
-              {/* Player + Chat — only rendered when live or manually expanded */}
-              {showPlayer && (
-                isLive ? (
-                  <div className="flex flex-col lg:flex-row" style={{ height: 'auto' }}>
-                    {/* Player — min 400px on mobile so Twitch/Kick consent dialog fits;
-                        16:9 aspect-ratio trick on desktop. */}
-                    <div className="relative w-full lg:w-[65%] flex-none">
-                      <div className="relative w-full min-h-[400px] lg:min-h-0 lg:[padding-bottom:56.25%]">
-                        <iframe
-                          key={`player-live-${platform}-${channel}`}
-                          src={playerSrc}
-                          className="absolute inset-0 w-full h-full"
-                          allowFullScreen
-                          allow="autoplay; fullscreen"
-                          title={`${channel}'s stream`}
-                          {...{ scrolling: 'yes' } as any}
-                        />
-                      </div>
-                    </div>
-                    {/* Chat — hidden on mobile, shown on desktop */}
-                    <div className="hidden lg:block w-full lg:w-[35%] border-t lg:border-t-0 lg:border-l border-border" style={{ height: '300px' }}>
-                      <iframe
-                        key={`chat-live-${platform}-${channel}`}
-                        src={chatSrc}
-                        className="w-full h-full"
-                        title={`${channel}'s chat`}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  /* Offline — mobile: CTA button (avoids loading iframe cookie wall);
-                     desktop: greyed-out player preview */
-                  <>
-                    {/* Mobile CTA */}
-                    <div className="flex lg:hidden flex-col items-center gap-3 py-6 px-4">
-                      <p className="text-sm text-muted-foreground text-center">
-                        {channel} is currently offline.
-                      </p>
-                      <a
-                        href={isKick ? `https://kick.com/${channel}` : `https://www.twitch.tv/${channel}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-black"
-                        style={{ background: isKick ? '#53fc18' : '#9147ff' }}
-                      >
-                        Watch on {isKick ? 'Kick' : 'Twitch'}
-                      </a>
-                    </div>
-                    {/* Desktop greyed-out player */}
-                    <div className="hidden lg:block relative w-full" style={{ paddingBottom: '56.25%' }}>
-                      <div className="absolute inset-0 bg-black/40 z-10 pointer-events-none" />
-                      <iframe
-                        key={`player-offline-${platform}-${channel}`}
-                        src={playerSrc}
-                        className="absolute inset-0 w-full h-full opacity-60 grayscale"
-                        allowFullScreen
-                        title={`${channel}'s stream`}
-                        {...{ scrolling: 'yes' } as any}
-                      />
-                    </div>
-                  </>
-                )
-              )}
-            </div>
-            );
+          const platformColor = (p: string) => p === 'kick' ? '#53FC18' : p === 'youtube' ? '#FF0000' : '#9146FF';
+          const platformTextColor = (p: string) => p === 'kick' ? '#000000' : '#ffffff';
+          const platformLabel = (p: string) => p === 'kick' ? 'Kick' : p === 'youtube' ? 'YouTube' : 'Twitch';
+          const PlatformIcon = ({ platform, className }: { platform: string; className?: string }) => {
+            if (platform === 'kick') return <SiKick className={className} />;
+            if (platform === 'youtube') return <SiYoutube className={className} />;
+            return <SiTwitch className={className} />;
           };
 
           return (
-            <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-4 mb-2 space-y-3">
-              {panels.map(renderPanel)}
+            <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-4 mb-0">
+              {/* Compact platform trigger buttons */}
+              <div className="flex gap-2 mb-3">
+                {platforms.map(({ platform, isLive }) => {
+                  const expanded = !!expandedStreams[platform];
+                  const color = platformColor(platform);
+                  return (
+                    <button
+                      key={platform}
+                      onClick={() => setExpandedStreams(prev => ({ ...prev, [platform]: !prev[platform] }))}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold text-xs transition-all hover:brightness-110 active:scale-95 select-none"
+                      style={{
+                        background: color,
+                        color: platformTextColor(platform),
+                        outline: expanded ? `2px solid ${color}` : 'none',
+                        outlineOffset: '2px',
+                      }}
+                    >
+                      <PlatformIcon platform={platform} className="w-4 h-4" />
+                      <span>{platformLabel(platform)}</span>
+                      {isLive && (
+                        <>
+                          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                          <span className="text-[11px] font-bold">LIVE</span>
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Expandable stream embeds */}
+              {platforms.some(p => !!expandedStreams[p.platform]) && (
+                <div className="space-y-3 mb-4">
+                  {platforms.filter(p => !!expandedStreams[p.platform]).map(({ platform, channel, displayName, isLive }) => {
+                    const isYouTube = platform === 'youtube';
+                    const isKick = platform === 'kick';
+                    const playerSrc = isYouTube
+                      ? `https://www.youtube.com/embed/live_stream?channel=${channel}&autoplay=${isLive ? '1' : '0'}&mute=1`
+                      : isKick
+                        ? `https://player.kick.com/${channel}?autoplay=${isLive ? 'true' : 'false'}&muted=true`
+                        : `https://player.twitch.tv/?channel=${channel}&parent=${hostname}&autoplay=${isLive ? 'true' : 'false'}&muted=true`;
+                    const color = platformColor(platform);
+                    const headerBg = isYouTube
+                      ? 'linear-gradient(90deg, #1a0000, #2a0000)'
+                      : isKick
+                        ? 'linear-gradient(90deg, #1a3a1a, #0f2a0f)'
+                        : 'linear-gradient(90deg, #1f1035, #0f0a1e)';
+
+                    return (
+                      <div key={platform} className="rounded-xl overflow-hidden border border-border bg-black shadow-lg">
+                        {/* Header */}
+                        <div className="flex items-center gap-2 px-3 py-2 border-b border-border" style={{ background: headerBg }}>
+                          <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-red-500 animate-pulse' : 'bg-gray-500'}`} />
+                          <PlatformIcon platform={platform} className="w-3.5 h-3.5" style={{ color } as any} />
+                          <span className="text-xs font-semibold" style={{ color }}>
+                            {platformLabel(platform)}
+                          </span>
+                          <span className="text-xs text-muted-foreground">— {displayName || channel}</span>
+                          {isLive && (
+                            <span className="ml-auto text-[10px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded-full">LIVE</span>
+                          )}
+                          <button
+                            className="ml-auto flex items-center justify-center w-6 h-6 rounded-full hover:bg-white/10 transition-colors"
+                            onClick={() => setExpandedStreams(prev => ({ ...prev, [platform]: false }))}
+                          >
+                            <X className="w-3.5 h-3.5 text-muted-foreground" />
+                          </button>
+                        </div>
+
+                        {/* Player */}
+                        <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                          <iframe
+                            key={`player-${platform}-${channel}`}
+                            src={playerSrc}
+                            className="absolute inset-0 w-full h-full"
+                            allowFullScreen
+                            allow="autoplay; fullscreen"
+                            title={`${channel}'s stream`}
+                            {...{ scrolling: 'yes' } as any}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
-        })()
-        }
+        })()}
 
         {/* Enhanced Tabs section with rounded container style */}
         <div className="max-w-[98%] md:max-w-[90%] mx-auto mt-2 md:mt-8 relative z-20">
