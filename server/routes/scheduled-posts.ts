@@ -1,14 +1,25 @@
 import express from 'express';
 import { storage } from '../storage';
+import { supabaseStorage } from '../supabase-storage';
 import { hybridFullAccess } from '../middleware/hybrid-auth';
 
 const router = express.Router();
 
 // List the current user's scheduled posts (pending queue + recent history).
+// Thumbnails live in a private Supabase bucket, so sign them for display the
+// same way clip/screenshot responses do.
 router.get('/', hybridFullAccess, async (req, res) => {
   try {
     const posts = await storage.getScheduledPostsByUser(req.user!.id);
-    res.json({ posts });
+    const withSignedThumbs = await Promise.all(
+      posts.map(async (post) => ({
+        ...post,
+        thumbnailUrl: post.thumbnailUrl
+          ? (await supabaseStorage.convertToSignedUrl(post.thumbnailUrl, 3600)) ?? post.thumbnailUrl
+          : post.thumbnailUrl,
+      }))
+    );
+    res.json({ posts: withSignedThumbs });
   } catch (error) {
     console.error('Error listing scheduled posts:', error);
     res.status(500).json({ error: 'Failed to load scheduled posts' });
