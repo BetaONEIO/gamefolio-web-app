@@ -6,8 +6,56 @@ uri = "file://attached_assets/angular_heart_icon.png"
 type = "image"
 title = "angular heart icon green"
 
+[[generated]]
+id = "Bqp3g1OtYAOmQz86dwIPK"
+uri = "file://attached_assets/generated_images/streak_icon.png"
+type = "image"
+title = "upload streak icon"
+
+[[generated]]
+id = "yA-j6sXmgBj0sIsA8MBFL"
+uri = "file://attached_assets/generated_images/1st_place_icon.png"
+type = "image"
+title = "1st place icon"
+
+[[generated]]
+id = "LqSxCGsnnAOpY_GCUtDv1"
+uri = "file://attached_assets/generated_images/2nd_place_icon.png"
+type = "image"
+title = "2nd place icon"
+
+[[generated]]
+id = "zAb1Izvw1KhaeSuWgTXjS"
+uri = "file://attached_assets/generated_images/3rd_place_icon.png"
+type = "image"
+title = "3rd place icon"
+
 [[outputs]]
 id = "uRHLdEQZY0LBFpOcTQuXt"
 uri = "file://attached_assets/angular_heart_icon_nobg.png"
 type = "image"
 title = "Angular Heart Icon (transparent background)"
+
+[[outputs]]
+id = "9q34dtyCSx1Au9IBxEx_q"
+uri = "file://attached_assets/generated_images/streak_icon.png"
+type = "image"
+title = "Streak Icon"
+
+[[outputs]]
+id = "SzHyISb8aSTClnjWfIQkI"
+uri = "file://attached_assets/generated_images/1st_place_icon.png"
+type = "image"
+title = "1st Place Icon"
+
+[[outputs]]
+id = "JEiUTP1JuGQDIKGwuMjxn"
+uri = "file://attached_assets/generated_images/2nd_place_icon.png"
+type = "image"
+title = "2nd Place Icon"
+
+[[outputs]]
+id = "hLVamg5Wi_EzKLXRR0FQW"
+uri = "file://attached_assets/generated_images/3rd_place_icon.png"
+type = "image"
+title = "3rd Place Icon"

@@ -3,6 +3,10 @@ import { getQueryFn } from "@/lib/queryClient";
 import { useState, useEffect, useRef, useCallback } from "react";
 
 const xpIcon = "/attached_assets/XP-text_1779960376768.png";
+const streakIcon = "/attached_assets/generated_images/streak_icon.png";
+const firstPlaceIcon = "/attached_assets/generated_images/1st_place_icon.png";
+const secondPlaceIcon = "/attached_assets/generated_images/2nd_place_icon.png";
+const thirdPlaceIcon = "/attached_assets/generated_images/3rd_place_icon.png";
 
 type EventKind = "xp" | "streak" | "trending" | "follow" | "levelup";
 
@@ -23,10 +27,10 @@ interface RailItem extends FeedItem {
 
 const KIND_EMOJI: Record<EventKind, string> = {
   xp:      "",
-  streak:  "🔥",
+  streak:  "",
   trending:"📈",
   follow:  "👥",
-  levelup: "🏆",
+  levelup: "",
 };
 
 const MAX_ITEMS = 8;
@@ -62,6 +66,53 @@ function XPIcon() {
       />
     </span>
   );
+}
+
+function StreakIcon() {
+  return (
+    <span
+      className="relative flex-shrink-0"
+      style={{ width: 16, height: 16, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+    >
+      <span
+        className="streak-flare"
+        style={{ position: "absolute", inset: -2, borderRadius: "50%", zIndex: 0 }}
+      />
+      <img
+        src={streakIcon}
+        alt="Streak"
+        style={{ position: "relative", zIndex: 1, width: 16, height: 16, objectFit: "contain", display: "block", filter: "drop-shadow(0 0 3px rgba(255,120,0,0.8))" }}
+      />
+    </span>
+  );
+}
+
+function PlaceIcon({ place }: { place: 1 | 2 | 3 }) {
+  const icon = place === 1 ? firstPlaceIcon : place === 2 ? secondPlaceIcon : thirdPlaceIcon;
+  const glowColor = place === 1 ? "255,215,0" : place === 2 ? "192,192,192" : "205,127,50";
+  return (
+    <span
+      className="relative flex-shrink-0"
+      style={{ width: 16, height: 16, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+    >
+      <span
+        className="place-glow"
+        style={{ position: "absolute", inset: -2, borderRadius: "50%", zIndex: 0, "--glow-color": glowColor } as React.CSSProperties}
+      />
+      <img
+        src={icon}
+        alt={`${place}${place === 1 ? "st" : place === 2 ? "nd" : "rd"}`}
+        style={{ position: "relative", zIndex: 1, width: 16, height: 16, objectFit: "contain", display: "block", filter: `drop-shadow(0 0 3px rgba(${glowColor},0.8))` }}
+      />
+    </span>
+  );
+}
+
+function getPlaceFromText(text: string): 1 | 2 | 3 {
+  if (text.includes("#1") || text.includes("1st") || text.includes("first")) return 1;
+  if (text.includes("#2") || text.includes("2nd") || text.includes("second")) return 2;
+  if (text.includes("#3") || text.includes("3rd") || text.includes("third")) return 3;
+  return 1; // default to 1st if not specified
 }
 
 const seedRailItems: RailItem[] = SEED_ITEMS.map(u => ({ ...u, uid: u.id, status: 'visible' as ItemStatus }));
@@ -141,6 +192,20 @@ export function EcosystemActivityRail() {
         .xp-pulse-bg {
           animation: xp-bg-pulse 2.4s ease-in-out infinite;
         }
+        @keyframes streak-flare {
+          0%, 100% { opacity: 0.6; box-shadow: 0 0 4px 1px rgba(255,120,0,0.5); }
+          50%       { opacity: 1;   box-shadow: 0 0 10px 3px rgba(255,120,0,0.9); }
+        }
+        .streak-flare {
+          animation: streak-flare 1.8s ease-in-out infinite;
+        }
+        @keyframes place-glow {
+          0%, 100% { opacity: 0.6; box-shadow: 0 0 4px 1px rgba(var(--glow-color),0.5); }
+          50%       { opacity: 1;   box-shadow: 0 0 10px 3px rgba(var(--glow-color),0.9); }
+        }
+        .place-glow {
+          animation: place-glow 2.4s ease-in-out infinite;
+        }
       `}</style>
 
       <div
@@ -172,6 +237,10 @@ export function EcosystemActivityRail() {
               >
                 {item.kind === "xp" ? (
                   <XPIcon />
+                ) : item.kind === "streak" ? (
+                  <StreakIcon />
+                ) : item.kind === "levelup" ? (
+                  <PlaceIcon place={getPlaceFromText(item.text)} />
                 ) : (
                   <span className="text-sm leading-none select-none">
                     {KIND_EMOJI[item.kind]}
