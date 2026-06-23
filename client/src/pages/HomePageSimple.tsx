@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+
 import { useQuery } from "@tanstack/react-query";
 import VideoClipCard from "@/components/clips/VideoClipCard";
 
@@ -23,6 +24,18 @@ import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
 import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
 import { Trophy } from "lucide-react";
+import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
+
+interface DbHeroSlide {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  buttonText: string | null;
+  buttonLink: string | null;
+  imageUrl: string;
+  displayOrder: number;
+  isActive: boolean;
+}
 
 interface TrendingContentCarouselProps {
   clips: ClipWithUser[] | undefined;
@@ -185,6 +198,10 @@ const HomePage = () => {
   const { user } = useAuth();
   const userId = user?.id;
 
+  // Hero carousel state
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const slideTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // Query latest clips for the homepage section — newest uploaded first
   const { data: trendingClipsData, isLoading: isLoadingTrendingClips } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/clips/latest'],
@@ -267,6 +284,42 @@ const HomePage = () => {
 
   const slideIntervalMs = (heroSlideSettings?.intervalSeconds || 6) * 1000;
 
+  const activeSlides = useMemo(() => {
+    if (!dbHeroSlides || dbHeroSlides.length === 0) return null;
+    return dbHeroSlides;
+  }, [dbHeroSlides]);
+
+  const resetSlideTimer = useCallback(() => {
+    if (slideTimerRef.current) clearInterval(slideTimerRef.current);
+    if (activeSlides && activeSlides.length > 1) {
+      slideTimerRef.current = setInterval(() => {
+        setCurrentSlide((prev) => (prev + 1) % activeSlides.length);
+      }, slideIntervalMs);
+    }
+  }, [activeSlides, slideIntervalMs]);
+
+  useEffect(() => {
+    resetSlideTimer();
+    return () => { if (slideTimerRef.current) clearInterval(slideTimerRef.current); };
+  }, [resetSlideTimer]);
+
+  const prevSlide = useCallback(() => {
+    if (!activeSlides) return;
+    setCurrentSlide((prev) => (prev - 1 + activeSlides.length) % activeSlides.length);
+    resetSlideTimer();
+  }, [activeSlides, resetSlideTimer]);
+
+  const nextSlide = useCallback(() => {
+    if (!activeSlides) return;
+    setCurrentSlide((prev) => (prev + 1) % activeSlides.length);
+    resetSlideTimer();
+  }, [activeSlides, resetSlideTimer]);
+
+  const goToSlide = useCallback((idx: number) => {
+    setCurrentSlide(idx);
+    resetSlideTimer();
+  }, [resetSlideTimer]);
+
   // Query to get custom hero text
   const { data: experiencedHeroText, isLoading: isLoadingExperiencedText } = useQuery<{ 
     title: string; 
@@ -327,6 +380,114 @@ const HomePage = () => {
         </div>
       )}
       
+      {/* Hero Banner Carousel */}
+      <section className="mb-0 -mx-0">
+        <div className="relative overflow-hidden">
+          <div className="w-full bg-black relative min-h-[300px] sm:min-h-[380px] md:min-h-[450px] border-b-2 border-primary">
+            {activeSlides && activeSlides.length > 0 ? (
+              <div className="relative w-full h-full min-h-[300px] sm:min-h-[380px] md:min-h-[450px]">
+                {activeSlides.map((slide, idx) => (
+                  <div
+                    key={slide.id}
+                    className="absolute inset-0 transition-opacity duration-700 ease-in-out"
+                    style={{ opacity: idx === currentSlide ? 1 : 0, zIndex: idx === currentSlide ? 1 : 0 }}
+                  >
+                    <img
+                      src={slide.imageUrl}
+                      alt={slide.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent">
+                      <div className="flex flex-col items-start justify-center h-full max-w-3xl p-6 sm:p-8 md:p-12">
+                        <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-3 md:mb-4 leading-tight drop-shadow-md">
+                          {slide.title}
+                        </h1>
+                        {slide.subtitle && (
+                          <h2 className="text-lg sm:text-2xl md:text-3xl font-semibold text-primary mb-4 md:mb-6 leading-tight drop-shadow-lg">
+                            {slide.subtitle}
+                          </h2>
+                        )}
+                        {slide.buttonText && (
+                          <Button
+                            className="w-fit px-6 py-5 h-auto text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground mt-4"
+                            onClick={() => {
+                              if (!slide.buttonLink) return;
+                              const link = slide.buttonLink.toLowerCase();
+                              if (link === '#pro' || link === '/pro' || link.includes('pro')) {
+                                window.dispatchEvent(new CustomEvent('open-pro-upgrade'));
+                              } else {
+                                setLocation(slide.buttonLink);
+                              }
+                            }}
+                          >
+                            {slide.buttonText}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {activeSlides.length > 1 && (
+                  <>
+                    <button
+                      onClick={prevSlide}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+                      aria-label="Previous slide"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={nextSlide}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+                      aria-label="Next slide"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2">
+                      {activeSlides.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => goToSlide(idx)}
+                          className={`w-2.5 h-2.5 rounded-full transition-all ${idx === currentSlide ? 'bg-primary w-6' : 'bg-white/50 hover:bg-white/80'}`}
+                          aria-label={`Go to slide ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <>
+                <img
+                  src={ForzaGif}
+                  alt="Epic racing gameplay - Build your Gamefolio"
+                  className="w-full h-full object-cover absolute inset-0"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent">
+                  <div className="flex flex-col items-start justify-center h-full max-w-3xl p-6 sm:p-8 md:p-12">
+                    <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-3 md:mb-4 leading-tight drop-shadow-md">
+                      Build Your Gamefolio
+                    </h1>
+                    <h2 className="text-lg sm:text-2xl md:text-3xl font-semibold text-primary mb-4 md:mb-6 leading-tight drop-shadow-lg">
+                      With Your Best Gaming Clips
+                    </h2>
+                    <p className="text-gray-200 mb-6 sm:mb-8 max-w-lg text-sm sm:text-base md:text-lg leading-relaxed">
+                      Showcase your most epic gaming moments, connect with other gamers, and build your personal gaming portfolio.
+                    </p>
+                    <Button
+                      className="w-fit px-6 py-5 h-auto text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                      onClick={() => setLocation('/upload')}
+                    >
+                      Start Building Now
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* Ecosystem Activity Rail */}
       <EcosystemActivityRail />
       
