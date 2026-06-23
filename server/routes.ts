@@ -57,7 +57,8 @@ import twitchGamesRouter from "./routes/twitch-games";
 import authRouter from "./routes/auth-routes";
 import tokenAuthRouter from "./routes/token-auth";
 import { JWTService } from "./services/jwt-service";
-import uploadRouter from "./routes/upload";
+import uploadRouter, { parseScheduledAt } from "./routes/upload";
+import scheduledPostsRouter from "./routes/scheduled-posts";
 import migrationRouter from "./routes/migration";
 import viewRouter from "./routes/view";
 import supportRouter from "./routes/support";
@@ -10575,6 +10576,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Title is required" });
       }
 
+      // Resolve scheduling intent up front so we reject before sharp/Supabase work.
+      const { date: scheduledAt, error: scheduleError } = parseScheduledAt(req.body.scheduledAt);
+      if (scheduleError) {
+        if (req.file?.path) fs.unlink(req.file.path, () => {});
+        return res.status(400).json({ message: scheduleError });
+      }
+      if (scheduledAt) {
+        const scheduleLimits = await storage.getScheduledPostLimits(req.user!.id);
+        if (!scheduleLimits.isUnlimited && scheduleLimits.remaining !== null && scheduleLimits.remaining <= 0) {
+          if (req.file?.path) fs.unlink(req.file.path, () => {});
+          return res.status(403).json({
+            error: 'Scheduled post limit reached',
+            message: `Free accounts can have ${scheduleLimits.max} scheduled posts at a time. Publish or cancel one, or upgrade to Pro for unlimited scheduling.`,
+            scheduleLimits,
+          });
+        }
+      }
+
       // Validate text content for profanity and inappropriate language
       const validationErrors: string[] = [];
 
@@ -10680,6 +10699,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ageRestricted: req.body.ageRestricted === 'true' || req.body.ageRestricted === true,
         shareCode: generateShareCode()
       };
+
+      // Scheduled path: store the processed screenshot for later publishing.
+      if (scheduledAt) {
+        await fsPromises.unlink(originalPath).catch(() => {});
+        const scheduled = await storage.createScheduledPost({
+          userId,
+          contentType: 'screenshot',
+          scheduledAt,
+          payload: screenshotData,
+          title: screenshotData.title,
+          thumbnailUrl: screenshotData.thumbnailUrl || null,
+          videoType: null,
+        });
+        return res.json({
+          success: true,
+          scheduled,
+          message: `Screenshot scheduled for ${scheduledAt.toISOString()}`,
+        });
+      }
 
       const screenshot = await storage.createScreenshot(screenshotData);
 
@@ -11424,6 +11462,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Mount upload routes
   app.use('/api/upload', uploadRouter);
+
+  // Mount scheduled posts routes
+  app.use('/api/scheduled-posts', scheduledPostsRouter);
 
   // Mount mint NFT routes
   app.use(mintNftRouter);

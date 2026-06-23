@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { ScheduleControl, type ScheduleLimits } from "@/components/upload/ScheduleControl";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -179,6 +180,10 @@ const UploadPage = () => {
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [ageRestricted, setAgeRestricted] = useState(false);
+  // Scheduling: when enabled, the upload is queued for future publishing instead
+  // of going live. Shared across all three content tabs.
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -260,6 +265,46 @@ const UploadPage = () => {
     enabled: !!userId,
   });
 
+  // Scheduling quota (unlimited for Pro/Partner, capped pending count for Free).
+  const { data: scheduleLimits } = useQuery<ScheduleLimits>({
+    queryKey: ['/api/scheduled-posts/limits'],
+    enabled: !!userId,
+  });
+
+  // ISO timestamp for the scheduled upload, or undefined for an immediate post.
+  const getScheduledIso = (): string | undefined => {
+    if (!scheduleEnabled || !scheduledAt) return undefined;
+    const d = new Date(scheduledAt);
+    return isNaN(d.getTime()) ? undefined : d.toISOString();
+  };
+
+  // Validate the schedule selection before kicking off an upload. Returns true
+  // when the upload may proceed.
+  const validateSchedule = (): boolean => {
+    if (!scheduleEnabled) return true;
+    const iso = getScheduledIso();
+    if (!iso) {
+      toast({ title: "Pick a time", description: "Choose a date and time to schedule this post.", variant: "gamefolioError" });
+      return false;
+    }
+    if (new Date(iso).getTime() <= Date.now()) {
+      toast({ title: "Time must be in the future", description: "Pick a date and time later than now.", variant: "gamefolioError" });
+      return false;
+    }
+    return true;
+  };
+
+  const renderScheduleControl = (contentNoun: string) => (
+    <ScheduleControl
+      enabled={scheduleEnabled}
+      onEnabledChange={setScheduleEnabled}
+      value={scheduledAt}
+      onValueChange={setScheduledAt}
+      limits={scheduleLimits}
+      contentNoun={contentNoun}
+    />
+  );
+
   useEffect(() => {
     const dismissed = localStorage.getItem(uploadSizeTipStorageKey) === "true";
     setShowUploadSizeTip(!dismissed);
@@ -285,6 +330,8 @@ const UploadPage = () => {
     descriptionRef.current = "";
     setShowShareDialog(false);
     setUploadedClip(null);
+    setScheduleEnabled(false);
+    setScheduledAt("");
     // Note: Navigation is now handled separately in success callbacks
   };
 
@@ -302,6 +349,8 @@ const UploadPage = () => {
     setScreenshotAgeRestricted(false);
     setShowScreenshotShareDialog(false);
     setUploadedScreenshot(null);
+    setScheduleEnabled(false);
+    setScheduledAt("");
     // Note: Navigation is now handled in XP dialog onContinue callback
   };
 
@@ -507,6 +556,8 @@ const UploadPage = () => {
         }
         formData.append("tags", JSON.stringify(screenshotTags));
         formData.append("ageRestricted", screenshotAgeRestricted.toString());
+        const scheduledIso = getScheduledIso();
+        if (scheduledIso) formData.append("scheduledAt", scheduledIso);
         formData.append("screenshot", file);
         
         const response = await fetch("/api/screenshots/upload", {
@@ -537,13 +588,27 @@ const UploadPage = () => {
     },
     onSuccess: async (data) => {
       console.log('Screenshot upload success data:', data);
-      
+
+      // Scheduled upload: nothing went live. Confirm and send the user to their queue.
+      if (data?.scheduled) {
+        resetScreenshotForm();
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduled-posts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduled-posts/limits'] });
+        const when = new Date(data.scheduled.scheduledAt).toLocaleString();
+        toast({
+          title: "Scheduled",
+          description: `Your screenshot${screenshotFiles.length > 1 ? 's' : ''} will publish on ${when}.`,
+        });
+        navigate('/scheduled-posts');
+        return;
+      }
+
       // Invalidate all relevant queries to ensure the new screenshot appears everywhere
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/screenshots`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/screenshots`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/upload/limits'] });
-      
+
       // Reset form first
       resetScreenshotForm();
       
@@ -707,6 +772,7 @@ const UploadPage = () => {
             ageRestricted,
             trimStart: Math.round(trimStart),
             trimEnd: Math.round(trimEnd),
+            scheduledAt: getScheduledIso(),
           };
           
           console.log('🔞 Age Restriction Debug - Sending to backend:', {
@@ -756,6 +822,23 @@ const UploadPage = () => {
       });
     },
     onSuccess: async (data: any) => {
+      setIsUploading(false);
+      setUploadProgress(0);
+
+      // Scheduled upload: nothing went live. Confirm and send the user to their queue.
+      if (data?.scheduled) {
+        resetFormAndNavigate();
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduled-posts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduled-posts/limits'] });
+        const when = new Date(data.scheduled.scheduledAt).toLocaleString();
+        toast({
+          title: "Scheduled",
+          description: `Your ${contentType === 'reels' ? 'reel' : 'clip'} will publish on ${when}.`,
+        });
+        navigate('/scheduled-posts');
+        return;
+      }
+
       // Invalidate all relevant queries to ensure the new clip appears everywhere
       queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
       queryClient.invalidateQueries({ queryKey: ["/api/clips/latest"] });
@@ -763,10 +846,7 @@ const UploadPage = () => {
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/clips`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/upload/limits'] });
-      
-      setIsUploading(false);
-      setUploadProgress(0);
-      
+
       // Reset form first
       resetFormAndNavigate();
       
@@ -920,10 +1000,12 @@ const UploadPage = () => {
     
 
     
+    if (!validateSchedule()) return;
+
     // Show progress bar immediately when starting upload
     setIsUploading(true);
     setUploadProgress(0);
-    
+
     console.log('About to call uploadMutation.mutate()');
     console.log('Final validation before upload:', {
       fileExists: !!file,
@@ -1424,9 +1506,10 @@ const UploadPage = () => {
                   </div>
                 </div>
 
+                {renderScheduleControl('clip')}
               </form>
             </CardContent>
-            
+
             <CardFooter className="flex justify-between border-t pt-6">
               <div className="flex items-center space-x-2">
                 <Video className="text-muted-foreground h-5 w-5" />
@@ -2016,6 +2099,8 @@ const UploadPage = () => {
                 </div>
 
                 
+                {renderScheduleControl('reel')}
+
                 <div className="flex justify-end space-x-2">
                   <Button
                     variant="outline"
@@ -2096,8 +2181,9 @@ const UploadPage = () => {
                   });
                   return;
                 }
-                
-                
+
+                if (!validateSchedule()) return;
+
                 screenshotUploadMutation.mutate();
               }} className="space-y-6">
                 <div className="space-y-2">
@@ -2305,6 +2391,8 @@ const UploadPage = () => {
                   </div>
                 </div>
                 
+                {renderScheduleControl('screenshot')}
+
                 <div className="flex justify-end space-x-2">
                   <Button
                     variant="outline"

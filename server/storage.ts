@@ -34,6 +34,7 @@ import {
   type AssetRewardWithClaims,
   type ProLootboxGrant, type InsertProLootboxGrant,
   type UploadLimits,
+  type ScheduledPost, type InsertScheduledPost, type ScheduledPostLimits,
   type UserDailyFires, type InsertUserDailyFires,
   type FireLimits,
   type NameTag, type InsertNameTag,
@@ -478,6 +479,16 @@ export interface IStorage {
 
   // Daily upload quota operations
   getUploadLimits(userId: number): Promise<UploadLimits>;
+
+  // Scheduled posts operations
+  createScheduledPost(data: InsertScheduledPost): Promise<ScheduledPost>;
+  getScheduledPost(id: number): Promise<ScheduledPost | undefined>;
+  getScheduledPostsByUser(userId: number): Promise<ScheduledPost[]>;
+  countPendingScheduledPosts(userId: number): Promise<number>;
+  getDueScheduledPosts(now: Date, limit?: number): Promise<ScheduledPost[]>;
+  updateScheduledPost(id: number, updates: Partial<ScheduledPost>): Promise<ScheduledPost | undefined>;
+  deleteScheduledPost(id: number): Promise<void>;
+  getScheduledPostLimits(userId: number): Promise<ScheduledPostLimits>;
 
   // Pro lootbox grant operations
   hasProLootboxGrant(userId: number, grantType: 'initial' | 'monthly', month?: string): Promise<boolean>;

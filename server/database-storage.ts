@@ -9,6 +9,7 @@ import {
   FollowRequest, InsertFollowRequest,
   ProfileBanner,
   Screenshot, InsertScreenshot, ScreenshotLike,
+  ScheduledPost, InsertScheduledPost, ScheduledPostLimits,
   ClipReaction, InsertClipReaction,
   ScreenshotComment, InsertScreenshotComment,
   ScreenshotReaction, InsertScreenshotReaction,
@@ -62,6 +63,7 @@ import {
   followRequests,
   profileBanners,
   screenshots,
+  scheduledPosts,
   screenshotLikes,
   screenshotComments,
   screenshotReactions,
@@ -114,7 +116,7 @@ import {
   pushBroadcasts
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, notInArray, isNotNull, getTableColumns } from "drizzle-orm";
+import { eq, and, desc, like, ilike, asc, or, lt, lte, gt, sql, arrayContains, ne, inArray, notInArray, isNotNull, getTableColumns } from "drizzle-orm";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { IStorage } from "./storage";
@@ -5442,6 +5444,76 @@ export class DatabaseStorage implements IStorage {
       maxClipDurationSeconds: this.FREE_MAX_CLIP_DURATION_SECONDS,
       maxReelDurationSeconds: this.FREE_MAX_REEL_DURATION_SECONDS,
     };
+  }
+
+  // ==================== SCHEDULED POSTS OPERATIONS ====================
+
+  // Free users may have up to this many posts queued (status='scheduled') at once.
+  // Pro and Partner users are unlimited.
+  private readonly FREE_MAX_SCHEDULED_POSTS = 3;
+
+  async createScheduledPost(data: InsertScheduledPost): Promise<ScheduledPost> {
+    const [row] = await db.insert(scheduledPosts).values(data).returning();
+    return row;
+  }
+
+  async getScheduledPost(id: number): Promise<ScheduledPost | undefined> {
+    const [row] = await db.select().from(scheduledPosts).where(eq(scheduledPosts.id, id));
+    return row;
+  }
+
+  // Posts a user can see/manage: pending queue first, then recently published/failed.
+  async getScheduledPostsByUser(userId: number): Promise<ScheduledPost[]> {
+    return db
+      .select()
+      .from(scheduledPosts)
+      .where(eq(scheduledPosts.userId, userId))
+      .orderBy(asc(scheduledPosts.scheduledAt));
+  }
+
+  async countPendingScheduledPosts(userId: number): Promise<number> {
+    const [row] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(scheduledPosts)
+      .where(and(eq(scheduledPosts.userId, userId), eq(scheduledPosts.status, 'scheduled')));
+    return row?.count ?? 0;
+  }
+
+  // Due posts the worker should publish: still scheduled and past their time.
+  async getDueScheduledPosts(now: Date, limit: number = 20): Promise<ScheduledPost[]> {
+    return db
+      .select()
+      .from(scheduledPosts)
+      .where(and(eq(scheduledPosts.status, 'scheduled'), lte(scheduledPosts.scheduledAt, now)))
+      .orderBy(asc(scheduledPosts.scheduledAt))
+      .limit(limit);
+  }
+
+  async updateScheduledPost(id: number, updates: Partial<ScheduledPost>): Promise<ScheduledPost | undefined> {
+    const [row] = await db
+      .update(scheduledPosts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(scheduledPosts.id, id))
+      .returning();
+    return row;
+  }
+
+  async deleteScheduledPost(id: number): Promise<void> {
+    await db.delete(scheduledPosts).where(eq(scheduledPosts.id, id));
+  }
+
+  async getScheduledPostLimits(userId: number): Promise<ScheduledPostLimits> {
+    const user = await this.getUser(userId);
+    // Pro, Partner, and admins all get unlimited scheduling.
+    const isUnlimited = !!(user?.isPro || user?.isPartner || user?.role === 'admin');
+    const used = await this.countPendingScheduledPosts(userId);
+
+    if (isUnlimited) {
+      return { isUnlimited: true, max: null, used, remaining: null };
+    }
+
+    const max = this.FREE_MAX_SCHEDULED_POSTS;
+    return { isUnlimited: false, max, used, remaining: Math.max(0, max - used) };
   }
 
   // ==================== PRO LOOTBOX GRANT OPERATIONS ====================

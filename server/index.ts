@@ -427,6 +427,20 @@ app.use((req, res, next) => {
         setTimeout(tick, 2 * 60 * 1000);
         setInterval(tick, SYNC_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule platform sync:', err));
+
+      // Publish scheduled posts whose time has come. Posts are processed up
+      // front (thumbnails/transcode/upload), so this tick just inserts the real
+      // clip/screenshot record and runs the upload XP side-effects. 60s cadence
+      // keeps publish latency low; each tick only touches due rows.
+      import('./scheduled-posts-service').then(({ publishDueScheduledPosts }) => {
+        const SCHEDULE_INTERVAL_MS = 60 * 1000;
+        const tick = () => {
+          publishDueScheduledPosts()
+            .catch((err) => console.error('scheduled-posts publish failed:', err));
+        };
+        setTimeout(tick, 30 * 1000);
+        setInterval(tick, SCHEDULE_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule scheduled-posts worker:', err));
     });
   } catch (error) {
     console.error("Fatal server error:", error);

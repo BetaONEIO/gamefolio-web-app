@@ -558,6 +558,11 @@ const Header = () => {
                     <Camera className="h-4 w-4 mr-2" />
                     Upload Screenshot
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setLocation('/scheduled-posts')} className="cursor-pointer" data-testid="menu-scheduled-posts">
+                    <Clock className="h-4 w-4 mr-2" />
+                    Scheduled posts
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
