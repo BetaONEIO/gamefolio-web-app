@@ -859,6 +859,51 @@ const IndieGamePage = () => {
                   </div>
                 </div>
 
+                {/* Recent Clips preview */}
+                {clipData.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-black text-white">Recent Clips</h2>
+                      <button onClick={() => setActiveTab("clips")}
+                        className="text-xs font-bold flex items-center gap-1 transition-opacity hover:opacity-70"
+                        style={{ color: NEON }}>
+                        View all <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {(clipData as ClipWithUser[]).slice(0, 3).map(clip => (
+                        <VideoClipGridItem key={clip.id} clip={clip} userId={user?.id} compact={false}
+                          clipsList={clipData as ClipWithUser[]}
+                          onCardClick={isMobile ? (id) => {
+                            const idx = clipData.findIndex((c: any) => c.id === id);
+                            setMobileViewerIndex(idx >= 0 ? idx : 0);
+                            setMobileViewerClipId(id);
+                            setMobileViewerOpen(true);
+                          } : undefined} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Reels preview */}
+                {reelData.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-black text-white">Recent Reels</h2>
+                      <button onClick={() => setActiveTab("reels")}
+                        className="text-xs font-bold flex items-center gap-1 transition-opacity hover:opacity-70"
+                        style={{ color: NEON }}>
+                        View all <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {(reelData as ClipWithUser[]).slice(0, 4).map(reel => (
+                        <VideoClipGridItem key={reel.id} clip={reel} userId={user?.id} compact={false} reelsList={reelData} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* About */}
                 <div>
                   <h2 className="text-xl font-black text-white mb-4">About The Game</h2>
