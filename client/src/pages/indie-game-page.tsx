@@ -14,6 +14,9 @@ import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
 import { openExternal } from "@/lib/platform";
+import { CampaignCard, type Campaign } from "@/components/indie-bounty/CampaignCard";
+import { CreatorDashboard } from "@/components/indie-bounty/CreatorDashboard";
+import { DeveloperDashboard } from "@/components/indie-bounty/DeveloperDashboard";
 import {
   ArrowLeft, Play, Camera, Users, Clock, Eye,
   Trophy, Zap, Key, Star, Gift, Sword, Plus, Upload, X,
@@ -388,6 +391,9 @@ const IndieGamePage = () => {
   const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
   const [acceptingBountyId, setAcceptingBountyId] = useState<number | null>(null);
   const [acceptedBounties, setAcceptedBounties] = useState<Set<number>>(new Set());
+  const [showCreatorDashboard, setShowCreatorDashboard] = useState(false);
+  const [showDeveloperDashboard, setShowDeveloperDashboard] = useState(false);
+  const [selectedBountyId, setSelectedBountyId] = useState<number | null>(null);
 
   const { data: game, isLoading: gameLoading } = useQuery<Game & { indieMeta?: IndieGameMeta }>({
     queryKey: ["/api/games/slug", gameSlug],
@@ -461,25 +467,39 @@ const IndieGamePage = () => {
     enabled: !!game?.id,
   });
 
-  const acceptMutation = useMutation({
-    mutationFn: (bountyId: number) => apiRequest("POST", `/api/games/bounties/${bountyId}/accept`, {}),
-    onSuccess: (_, bountyId) => {
+  const joinMutation = useMutation({
+    mutationFn: (bountyId: number) => apiRequest("POST", `/api/games/bounties/${bountyId}/join`, {}),
+    onSuccess: (data: any, bountyId) => {
       setAcceptedBounties(prev => new Set([...prev, bountyId]));
       setAcceptingBountyId(null);
       queryClient.invalidateQueries({ queryKey: ["/api/games", game?.id, "bounties"] });
       queryClient.invalidateQueries({ queryKey: ["/api/games", game?.id, "bounty-stats"] });
-      toast({ title: "Bounty accepted!", description: "Get creating and claim your reward.", variant: "gamefolioSuccess" });
+      toast({
+        title: "Campaign joined!",
+        description: data.demoKey ? "Demo key assigned. Create content and unlock the full game!" : "Welcome to the campaign!",
+        variant: "gamefolioSuccess",
+      });
     },
-    onError: () => {
+    onError: (err: any) => {
       setAcceptingBountyId(null);
-      toast({ title: "Error", description: "Could not accept bounty.", variant: "gamefolioError" });
+      toast({ title: "Error", description: err.message || "Could not join campaign.", variant: "gamefolioError" });
     },
   });
 
-  const handleAcceptBounty = (bountyId: number) => {
-    if (!user) { toast({ title: "Sign in required", description: "Sign in to accept bounties.", variant: "gamefolioError" }); return; }
+  const handleJoinCampaign = (bountyId: number) => {
+    if (!user) { toast({ title: "Sign in required", description: "Sign in to join campaigns.", variant: "gamefolioError" }); return; }
     setAcceptingBountyId(bountyId);
-    acceptMutation.mutate(bountyId);
+    joinMutation.mutate(bountyId);
+  };
+
+  const handleViewDashboard = (bountyId: number) => {
+    setSelectedBountyId(bountyId);
+    setShowCreatorDashboard(true);
+  };
+
+  const handleViewDevDashboard = (bountyId: number) => {
+    setSelectedBountyId(bountyId);
+    setShowDeveloperDashboard(true);
   };
 
   const allClips = useMemo(() => clips ?? [], [clips]);
@@ -1243,23 +1263,34 @@ const IndieGamePage = () => {
         {activeTab === "bounties" && (
           <div className="py-5 space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="font-black text-white text-base flex items-center gap-2">
-                <Sword className="w-5 h-5" style={{ color: NEON }} />Creator Mission Board
-              </h2>
-              {canCreateBounty && (
-                <Button size="sm" onClick={() => setShowCreateBounty(true)}
-                  className="font-bold text-xs"
-                  style={{ background: NEON, color: "#0a0f1c", boxShadow: "0 4px 16px rgba(193,255,0,0.25)" }}>
-                  <Plus className="w-3.5 h-3.5 mr-1.5" />Create Bounty
-                </Button>
-              )}
+              <div>
+                <h2 className="font-black text-white text-base flex items-center gap-2">
+                  <Sword className="w-5 h-5" style={{ color: NEON }} />Creator Campaigns
+                </h2>
+                <p className="text-xs text-gray-500 mt-1">Try before you earn. Claim demo access, create content, and unlock the full game.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {canCreateBounty && (
+                  <Button size="sm" onClick={() => setShowCreateBounty(true)}
+                    className="font-bold text-xs"
+                    style={{ background: NEON, color: "#0a0f1c", boxShadow: "0 4px 16px rgba(193,255,0,0.25)" }}>
+                    <Plus className="w-3.5 h-3.5 mr-1.5" />Create Campaign
+                  </Button>
+                )}
+                {bounties.length > 0 && user && bounties[0].createdByUserId === user?.id && (
+                  <Button size="sm" variant="ghost" onClick={() => handleViewDevDashboard(bounties[0].id)}
+                    className="font-bold text-xs text-gray-400 hover:text-white">
+                    Dashboard
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Bounty stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatCard value={bountyStats?.activeBounties ?? 0} label="Active Bounties" icon={Target} />
+              <StatCard value={bountyStats?.activeBounties ?? 0} label="Active Campaigns" icon={Target} />
               <StatCard value={bountyStats?.creatorsJoined ?? 0} label="Creators Joined" icon={Users} />
-              <StatCard value={bountyStats?.keysAvailable ?? 0} label="Keys Available" icon={Key} />
+              <StatCard value={bountyStats?.demoKeysAvailable ?? bountyStats?.keysAvailable ?? 0} label="Demo Keys" icon={Key} />
               <StatCard value={allClips.length} label="Content Generated" icon={Play} />
             </div>
 
@@ -1277,7 +1308,7 @@ const IndieGamePage = () => {
                   style={{ background: "rgba(193,255,0,0.08)", border: "1px solid rgba(193,255,0,0.15)" }}>
                   <Sword className="w-8 h-8" style={{ color: NEON }} />
                 </div>
-                <h3 className="text-lg font-black text-white mb-2">No Active Bounties</h3>
+                <h3 className="text-lg font-black text-white mb-2">No Active Campaigns</h3>
                 <p className="text-sm text-gray-400 mb-5 max-w-xs mx-auto">
                   {canCreateBounty
                     ? "Launch your first creator campaign to start growing your game's community."
@@ -1286,33 +1317,41 @@ const IndieGamePage = () => {
                 {canCreateBounty && (
                   <Button onClick={() => setShowCreateBounty(true)}
                     style={{ background: NEON, color: "#0a0f1c", fontWeight: 700, boxShadow: "0 8px 24px rgba(193,255,0,0.25)" }}>
-                    <Plus className="w-4 h-4 mr-2" />Create First Bounty
+                    <Plus className="w-4 h-4 mr-2" />Create First Campaign
                   </Button>
                 )}
               </div>
             ) : (
-              <>
-                <FeaturedBountyCard
-                  bounty={bounties[0]}
-                  onAccept={handleAcceptBounty}
-                  accepting={acceptingBountyId === bounties[0].id}
-                  alreadyAccepted={acceptedBounties.has(bounties[0].id)}
+              <div className="space-y-4">
+                <CampaignCard
+                  campaign={bounties[0] as Campaign}
+                  isFeatured={true}
+                  onJoin={handleJoinCampaign}
+                  onViewDashboard={handleViewDashboard}
+                  onClaimKey={(id) => { setSelectedBountyId(id); setShowCreatorDashboard(true); }}
+                  joining={acceptingBountyId === bounties[0].id}
+                  joined={acceptedBounties.has(bounties[0].id)}
                 />
                 {bounties.length > 1 && (
                   <div>
                     <h3 className="font-black text-white text-sm mb-3 flex items-center gap-2">
-                      <Flame className="w-4 h-4" style={{ color: NEON }} />Open Bounties
+                      <Flame className="w-4 h-4" style={{ color: NEON }} />More Campaigns
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {bounties.slice(1).map(bounty => (
-                        <BountyCard key={bounty.id} bounty={bounty} onAccept={handleAcceptBounty}
-                          accepting={acceptingBountyId === bounty.id}
-                          alreadyAccepted={acceptedBounties.has(bounty.id)} />
+                        <CampaignCard key={bounty.id}
+                          campaign={bounty as Campaign}
+                          onJoin={handleJoinCampaign}
+                          onViewDashboard={handleViewDashboard}
+                          onClaimKey={(id) => { setSelectedBountyId(id); setShowCreatorDashboard(true); }}
+                          joining={acceptingBountyId === bounty.id}
+                          joined={acceptedBounties.has(bounty.id)}
+                        />
                       ))}
                     </div>
                   </div>
                 )}
-              </>
+              </div>
             )}
           </div>
         )}
@@ -1329,6 +1368,20 @@ const IndieGamePage = () => {
 
       <CreateBountyDialog open={showCreateBounty} onClose={() => setShowCreateBounty(false)}
         gameId={game?.id ?? 0} onCreated={() => queryClient.invalidateQueries({ queryKey: ["/api/games", game?.id, "bounties"] })} />
+
+      {/* Creator Dashboard */}
+      <CreatorDashboard
+        bountyId={selectedBountyId ?? 0}
+        open={showCreatorDashboard}
+        onClose={() => setShowCreatorDashboard(false)}
+      />
+
+      {/* Developer Dashboard */}
+      <DeveloperDashboard
+        bountyId={selectedBountyId ?? 0}
+        open={showDeveloperDashboard}
+        onClose={() => setShowDeveloperDashboard(false)}
+      />
 
       {/* Screenshot lightbox */}
       {selectedScreenshot && (
