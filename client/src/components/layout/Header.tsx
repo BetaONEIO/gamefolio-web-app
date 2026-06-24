@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera, Clock, X as XIcon } from "lucide-react";
+import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera, Clock, Layers, X as XIcon } from "lucide-react";
 import {
   LevelTrackerIcon,
   ReferFriendIcon,
@@ -562,6 +562,10 @@ const Header = () => {
                   <DropdownMenuItem onClick={() => setLocation('/scheduled-posts')} className="cursor-pointer" data-testid="menu-scheduled-posts">
                     <Clock className="h-4 w-4 mr-2" />
                     Scheduled posts
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLocation('/upload/bulk')} className="cursor-pointer">
+                    <Layers className="h-4 w-4 mr-2" />
+                    Bulk Upload
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

@@ -37,6 +37,8 @@ import {
   type ScheduledPost, type InsertScheduledPost, type ScheduledPostLimits,
   type UserDailyFires, type InsertUserDailyFires,
   type FireLimits,
+  type UserDailyImports,
+  type ImportLimits,
   type NameTag, type InsertNameTag,
   type UserUnlockedNameTag, type InsertUserUnlockedNameTag,
   type ProfileBorder, type InsertProfileBorder,
@@ -532,6 +534,9 @@ export interface IStorage {
   getUserDailyFires(userId: number, date: string): Promise<UserDailyFires | null>;
   incrementDailyFireCount(userId: number): Promise<UserDailyFires>;
   getFireLimits(userId: number): Promise<FireLimits>;
+  getUserDailyImports(userId: number, date: string): Promise<UserDailyImports | null>;
+  incrementDailyImportCount(userId: number): Promise<UserDailyImports>;
+  getImportLimits(userId: number): Promise<ImportLimits>;
 
   // XP settings operations
   getXpSettings(): Promise<XpSetting[]>;

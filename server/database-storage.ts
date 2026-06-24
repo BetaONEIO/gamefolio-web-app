@@ -102,12 +102,15 @@ import {
   assetRewardClaims,
   userDailyLootbox,
   userDailyFires,
+  userDailyImports,
   proLootboxGrants,
   userUnlockedBanners,
   commentLikes,
   screenshotCommentLikes,
   UserDailyFires, InsertUserDailyFires,
   FireLimits,
+  UserDailyImports,
+  ImportLimits,
   xpSettings,
   XpSetting, InsertXpSetting,
   PushToken, InsertPushToken,
@@ -5391,6 +5394,9 @@ export class DatabaseStorage implements IStorage {
   private readonly PRO_MAX_SCREENSHOT_SIZE_MB = 50;
   private readonly PRO_MAX_CLIP_DURATION_SECONDS = 600; // 10 minutes
   private readonly PRO_MAX_REEL_DURATION_SECONDS = 180; // 3 minutes
+  // Per-batch bulk-upload caps (number of files queued at once).
+  private readonly FREE_MAX_BULK_UPLOADS = 3;
+  private readonly PRO_MAX_BULK_UPLOADS = 10;
 
   private getCurrentMonthString(): string {
     const now = new Date();
@@ -5424,6 +5430,11 @@ export class DatabaseStorage implements IStorage {
     // Get user to check Pro status (admins are treated as Pro for upload caps).
     const user = await this.getUser(userId);
     const isPro = user?.isPro || user?.role === 'admin' || false;
+    // The higher bulk-upload batch cap is granted to Pro, Partner and admin
+    // users. Partners aren't flagged isPro, so they're checked explicitly here.
+    const maxBulkUploads = (isPro || user?.isPartner)
+      ? this.PRO_MAX_BULK_UPLOADS
+      : this.FREE_MAX_BULK_UPLOADS;
 
     if (isPro) {
       return {
@@ -5433,6 +5444,7 @@ export class DatabaseStorage implements IStorage {
         maxScreenshotSizeMB: this.PRO_MAX_SCREENSHOT_SIZE_MB,
         maxClipDurationSeconds: this.PRO_MAX_CLIP_DURATION_SECONDS,
         maxReelDurationSeconds: this.PRO_MAX_REEL_DURATION_SECONDS,
+        maxBulkUploads,
       };
     }
 
@@ -5443,6 +5455,7 @@ export class DatabaseStorage implements IStorage {
       maxScreenshotSizeMB: this.FREE_MAX_SCREENSHOT_SIZE_MB,
       maxClipDurationSeconds: this.FREE_MAX_CLIP_DURATION_SECONDS,
       maxReelDurationSeconds: this.FREE_MAX_REEL_DURATION_SECONDS,
+      maxBulkUploads,
     };
   }
 
@@ -6006,6 +6019,67 @@ export class DatabaseStorage implements IStorage {
       maxFiresPerDay,
       firesUsedToday,
       canFire: firesUsedToday < maxFiresPerDay
+    };
+  }
+
+  // Daily Twitch-clip import limit operations
+  async getUserDailyImports(userId: number, date: string): Promise<UserDailyImports | null> {
+    const [record] = await db
+      .select()
+      .from(userDailyImports)
+      .where(
+        and(
+          eq(userDailyImports.userId, userId),
+          eq(userDailyImports.importDate, date)
+        )
+      );
+    return record || null;
+  }
+
+  async incrementDailyImportCount(userId: number): Promise<UserDailyImports> {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format (UTC)
+
+    const existing = await this.getUserDailyImports(userId, today);
+
+    if (existing) {
+      const [updated] = await db
+        .update(userDailyImports)
+        .set({
+          importsCount: existing.importsCount + 1,
+          updatedAt: new Date()
+        })
+        .where(eq(userDailyImports.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(userDailyImports)
+        .values({
+          userId,
+          importDate: today,
+          importsCount: 1
+        })
+        .returning();
+      return created;
+    }
+  }
+
+  async getImportLimits(userId: number): Promise<ImportLimits> {
+    const user = await this.getUser(userId);
+    const isPro = user?.isPro ?? false;
+
+    // Pro users get 10 Twitch imports per day, free users get 2
+    const maxImportsPerDay = isPro ? 10 : 2;
+
+    const today = new Date().toISOString().split('T')[0];
+    const dailyImports = await this.getUserDailyImports(userId, today);
+    const importsUsedToday = dailyImports?.importsCount ?? 0;
+
+    return {
+      isPro,
+      maxImportsPerDay,
+      importsUsedToday,
+      canImport: importsUsedToday < maxImportsPerDay
     };
   }
 

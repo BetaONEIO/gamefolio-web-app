@@ -1783,6 +1783,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Twitch clip import ───────────────────────────────────────────────────
+  //
+  // Lets a connected streamer pull their recent Twitch clips and import one
+  // into their gamefolio. Listing uses the app token (no user token / extra
+  // scope needed — only the broadcaster_id, which we already store). The file
+  // proxy re-derives the MP4 server-side and streams it so the client can drop
+  // it straight into the normal upload pipeline as if it were a picked file.
+
+  // Resolve a Twitch game id to our internal games row, creating it if missing.
+  // Mirrors the game-resolution logic used by the upload pipeline so an imported
+  // clip's game maps to the same row a manual upload would produce.
+  async function resolveInternalGame(
+    twitchGameId: string,
+    fallback?: { name: string; box_art_url: string },
+  ): Promise<{ id: number; name: string; imageUrl: string | null } | null> {
+    if (!twitchGameId) return null;
+    try {
+      let game = await storage.getGameByTwitchId(twitchGameId);
+      if (!game) {
+        const data = fallback?.name
+          ? { id: twitchGameId, name: fallback.name, box_art_url: fallback.box_art_url }
+          : await twitchApi.getGameById(twitchGameId);
+        if (!data?.name) return null;
+        const existingByName = await storage.getGameByName(data.name);
+        if (existingByName) {
+          game = existingByName;
+        } else {
+          try {
+            game = await storage.createGame({
+              name: data.name,
+              imageUrl: data.box_art_url
+                ? data.box_art_url.replace('{width}', '600').replace('{height}', '800')
+                : '',
+              twitchId: twitchGameId,
+            });
+          } catch (createErr: any) {
+            // Race: another request created it — fetch by name.
+            if (createErr?.code === '23505') {
+              game = await storage.getGameByName(data.name);
+            } else {
+              throw createErr;
+            }
+          }
+        }
+      }
+      return game ? { id: game.id, name: game.name, imageUrl: game.imageUrl } : null;
+    } catch (err) {
+      console.error('Failed to resolve Twitch game', twitchGameId, err);
+      return null;
+    }
+  }
+
+  // List the signed-in user's recent Twitch clips, each enriched with our
+  // internal game id so the upload screen can prefill the game correctly.
+  app.get("/api/twitch/clips", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const user = req.user as any;
+      // The Twitch broadcaster id is stored in twitchUserId (set by the OAuth
+      // connect flow in social-oauth.ts). twitchChannelId is a legacy column
+      // from this branch's original design and is not populated — fall back to
+      // it only for safety.
+      const broadcasterId = user.twitchUserId || user.twitchChannelId;
+      if (!user.twitchVerified || !broadcasterId) {
+        return res.status(400).json({ message: "Connect your Twitch account first", code: "twitch_not_connected" });
+      }
+
+      const clips = await twitchApi.getClipsForBroadcaster(broadcasterId, 30);
+
+      // Resolve internal games once per unique Twitch game id.
+      const internalByTwitchId = new Map<string, { id: number; name: string; imageUrl: string | null } | null>();
+      for (const clip of clips) {
+        if (clip.gameId && !internalByTwitchId.has(clip.gameId)) {
+          internalByTwitchId.set(
+            clip.gameId,
+            await resolveInternalGame(clip.gameId, { name: clip.gameName, box_art_url: clip.gameBoxArtUrl }),
+          );
+        }
+      }
+
+      const enriched = clips.map((clip) => {
+        const game = clip.gameId ? internalByTwitchId.get(clip.gameId) : null;
+        return {
+          id: clip.id,
+          title: clip.title,
+          thumbnailUrl: clip.thumbnailUrl,
+          duration: clip.duration,
+          viewCount: clip.viewCount,
+          createdAt: clip.createdAt,
+          gameId: game?.id ?? null,
+          gameName: game?.name ?? clip.gameName ?? null,
+          gameImage: game?.imageUrl ?? clip.gameBoxArtUrl ?? null,
+        };
+      });
+
+      res.json({ clips: enriched });
+    } catch (err: any) {
+      console.error("Twitch clips list error:", err);
+      res.status(500).json({ message: "Failed to fetch Twitch clips" });
+    }
+  });
+
+  // Stream a clip's MP4 to the client. We re-resolve the clip by id and derive
+  // the MP4 URL server-side (never trusting a client-supplied URL), so the only
+  // reachable origin is Twitch's clip CDN.
+  app.get("/api/twitch/clips/file", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const clipId = String(req.query.clipId || "");
+    if (!clipId) return res.status(400).json({ message: "Missing clipId" });
+    try {
+      const mp4Url = await twitchApi.getClipDownloadUrl(clipId);
+      if (!mp4Url) {
+        return res.status(404).json({ message: "Clip not found or not importable" });
+      }
+
+      const upstream = await fetch(mp4Url, { signal: AbortSignal.timeout(30000) });
+      if (!upstream.ok || !upstream.body) {
+        console.warn(`Twitch clip MP4 fetch failed ${upstream.status} for ${clipId}`);
+        return res.status(502).json({ message: "Could not download clip from Twitch" });
+      }
+
+      // Clips are short; buffering keeps this simple and avoids stream plumbing.
+      const buffer = Buffer.from(await upstream.arrayBuffer());
+      res.setHeader("Content-Type", "video/mp4");
+      res.setHeader("Content-Length", buffer.length);
+      res.setHeader("Content-Disposition", `inline; filename="twitch-clip-${clipId}.mp4"`);
+      res.send(buffer);
+    } catch (err: any) {
+      console.error("Twitch clip file proxy error:", err);
+      res.status(500).json({ message: "Failed to download Twitch clip" });
+    }
+  });
+
+  // Daily Twitch-clip import allowance (free: 2/day, Pro: 10/day). Counted only
+  // when an imported clip is successfully posted (see /api/upload/process-video).
+  // The Upload page reads this to show "imported X of N today" + a Pro upsell.
+  app.get("/api/twitch/import-limits", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const limits = await storage.getImportLimits((req.user as any).id);
+      res.json(limits);
+    } catch (err) {
+      console.error("Twitch import-limits error:", err);
+      res.status(500).json({ message: "Failed to load import limits" });
+    }
+  });
+
   // ── Kick OAuth ───────────────────────────────────────────────────────────
 
   // Kick Connect — redirect to Kick OAuth authorization

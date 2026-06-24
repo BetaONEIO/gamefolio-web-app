@@ -39,6 +39,32 @@ export interface TwitchStream {
   is_mature: boolean;
 }
 
+// Interface for a Twitch clip (Helix Get Clips), enriched with the derived
+// downloadable MP4 URL and resolved game metadata for the picker UI.
+export interface TwitchClip {
+  id: string;
+  title: string;
+  url: string;            // public twitch.tv clip page
+  embedUrl: string;
+  thumbnailUrl: string;
+  duration: number;       // seconds
+  viewCount: number;
+  createdAt: string;
+  gameId: string;
+  gameName: string;
+  gameBoxArtUrl: string;
+}
+
+// Twitch's public web client-id. The Helix API exposes no official clip-download
+// URL, so the actual MP4 is fetched from Twitch's GraphQL endpoint, which mints a
+// short-lived signed playback token for a clip slug (see getClipDownloadUrl).
+// This is the same anonymous client-id the Twitch web player uses.
+const TWITCH_GQL_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko';
+
+// Twitch clip slugs are restricted to these chars; validated before being
+// interpolated into the GraphQL query as a defensive measure.
+const CLIP_SLUG_RE = /^[\w-]+$/;
+
 // Resolve Twitch box art URL to a specific size, handling all URL formats:
 // 1. Template {width}x{height} → e.g. "...Game-{width}x{height}.jpg"
 // 2. Separate {width} / {height} tokens
@@ -337,6 +363,157 @@ class TwitchApiService {
     } catch (error) {
       console.error('Error checking Twitch live status:', error);
       return false;
+    }
+  }
+
+  /**
+   * Resolve game id → name + box art for a set of game ids in a single Helix
+   * call (Get Games accepts up to 100 `id` params). Returns a map keyed by id.
+   */
+  async getGamesByIds(gameIds: string[]): Promise<Map<string, TwitchGame>> {
+    const result = new Map<string, TwitchGame>();
+    const unique = Array.from(new Set(gameIds.filter(Boolean))).slice(0, 100);
+    if (unique.length === 0) return result;
+    try {
+      const token = await this.getAccessToken();
+      const response = await axios.get('https://api.twitch.tv/helix/games', {
+        headers: {
+          'Client-ID': this.clientId,
+          'Authorization': `Bearer ${token}`,
+        },
+        // axios serialises array params as id=a&id=b which Helix expects
+        params: { id: unique },
+        paramsSerializer: { indexes: null },
+      });
+      for (const game of response.data.data || []) {
+        result.set(game.id, {
+          id: game.id,
+          name: game.name,
+          box_art_url: resolveBoxArtUrl(game.box_art_url),
+          igdb_id: game.igdb_id,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching games by ids from Twitch:', error);
+    }
+    return result;
+  }
+
+  /**
+   * Get a broadcaster's recent clips. Uses the app access token (client
+   * credentials) — listing a channel's public clips needs only the
+   * broadcaster_id, no user token or extra OAuth scope. Each clip is enriched
+   * with a derived MP4 URL and resolved game metadata; clips whose MP4 URL
+   * cannot be derived are dropped (they aren't importable).
+   */
+  async getClipsForBroadcaster(broadcasterId: string, limit: number = 20): Promise<TwitchClip[]> {
+    if (!this.isConfigured()) {
+      throw new Error('Twitch API credentials not configured');
+    }
+    if (!broadcasterId) return [];
+
+    const token = await this.getAccessToken();
+    const response = await axios.get('https://api.twitch.tv/helix/clips', {
+      headers: {
+        'Client-ID': this.clientId,
+        'Authorization': `Bearer ${token}`,
+      },
+      params: {
+        broadcaster_id: broadcasterId,
+        first: Math.min(Math.max(limit, 1), 100),
+      },
+    });
+
+    const rawClips: any[] = response.data.data || [];
+    const gameMap = await this.getGamesByIds(rawClips.map((c) => c.game_id));
+
+    // All clips are importable — the MP4 is resolved on demand via GraphQL when
+    // the user actually picks one (getClipDownloadUrl), so nothing is filtered here.
+    return rawClips.map((c): TwitchClip => {
+      const game = gameMap.get(c.game_id);
+      return {
+        id: c.id,
+        title: c.title || 'Untitled clip',
+        url: c.url,
+        embedUrl: c.embed_url,
+        thumbnailUrl: c.thumbnail_url,
+        duration: Math.round(c.duration || 0),
+        viewCount: c.view_count || 0,
+        createdAt: c.created_at,
+        gameId: c.game_id || '',
+        gameName: game?.name || '',
+        gameBoxArtUrl: game?.box_art_url || '',
+      };
+    });
+  }
+
+  /**
+   * Resolve a single clip by its id (used by the download proxy to re-derive
+   * the MP4 URL server-side rather than trusting a client-supplied URL).
+   * Returns null if the clip doesn't exist or its MP4 can't be derived.
+   */
+  async getClipById(clipId: string): Promise<TwitchClip | null> {
+    if (!this.isConfigured() || !clipId) return null;
+    const token = await this.getAccessToken();
+    const response = await axios.get('https://api.twitch.tv/helix/clips', {
+      headers: {
+        'Client-ID': this.clientId,
+        'Authorization': `Bearer ${token}`,
+      },
+      params: { id: clipId },
+    });
+    const c = (response.data.data || [])[0];
+    if (!c) return null;
+    return {
+      id: c.id,
+      title: c.title || 'Untitled clip',
+      url: c.url,
+      embedUrl: c.embed_url,
+      thumbnailUrl: c.thumbnail_url,
+      duration: Math.round(c.duration || 0),
+      viewCount: c.view_count || 0,
+      createdAt: c.created_at,
+      gameId: c.game_id || '',
+      gameName: '',
+      gameBoxArtUrl: '',
+    };
+  }
+
+  /**
+   * Resolve a clip's directly-downloadable MP4 URL via Twitch's GraphQL API.
+   * Helix exposes no official clip-download endpoint, so we query gql.twitch.tv
+   * with the public web client-id to mint a short-lived signed playback token,
+   * then return the highest-quality source URL with that token appended. Returns
+   * null if the clip can't be resolved. The URL is short-lived — the caller
+   * should fetch it promptly, server-side.
+   */
+  async getClipDownloadUrl(slug: string): Promise<string | null> {
+    if (!slug || !CLIP_SLUG_RE.test(slug)) return null;
+    try {
+      const query = `{
+  clip(slug: "${slug}") {
+    playbackAccessToken(params: {platform: "web", playerBackend: "mediaplayer", playerType: "site"}) {
+      signature
+      value
+    }
+    videoQualities { frameRate quality sourceURL }
+  }
+}`;
+      const resp = await axios.post(
+        'https://gql.twitch.tv/gql',
+        { query },
+        { headers: { 'Client-ID': TWITCH_GQL_CLIENT_ID, 'Content-Type': 'application/json' }, timeout: 10000 },
+      );
+      const clip = resp.data?.data?.clip;
+      const token = clip?.playbackAccessToken;
+      const qualities: any[] = clip?.videoQualities ?? [];
+      // videoQualities are returned highest-resolution first.
+      const best = qualities[0];
+      if (!token?.signature || !token?.value || !best?.sourceURL) return null;
+      return `${best.sourceURL}?sig=${token.signature}&token=${encodeURIComponent(token.value)}`;
+    } catch (err: any) {
+      console.warn('Twitch GQL clip download lookup failed:', err?.message);
+      return null;
     }
   }
 }
