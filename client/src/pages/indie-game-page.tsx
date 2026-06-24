@@ -786,6 +786,79 @@ const IndieGamePage = () => {
               {/* Left: About + Features + Screenshots + Trailer */}
               <div className="lg:col-span-2 space-y-8">
 
+                {/* Trailer + Media Showcase */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-black text-white">Trailer & Artwork</h2>
+                    <button onClick={() => setActiveTab("screenshots")}
+                      className="text-xs font-bold flex items-center gap-1 transition-opacity hover:opacity-70"
+                      style={{ color: NEON }}>
+                      View all <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Main trailer or game art */}
+                  <div className="rounded-2xl overflow-hidden aspect-video mb-4 relative group cursor-pointer"
+                    style={{ border: `1px solid ${CARD_BORDER}`, boxShadow: "0 0 40px rgba(0,0,0,0.3)" }}
+                    onClick={() => setSelectedScreenshot({ id: 0, imageUrl: game.imageUrl || "https://placehold.co/1280x720/0B1218/333?text=Game+Artwork", title: `${game.name} Artwork` })}>
+                    {meta.trailerUrl ? (
+                      <iframe src={meta.trailerUrl} className="w-full h-full" allowFullScreen title={`${game.name} Trailer`} />
+                    ) : (
+                      <>
+                        <img
+                          src={game.imageUrl || "https://placehold.co/1280x720/0B1218/333?text=Game+Artwork"}
+                          alt="Game artwork"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
+                          <div className="w-16 h-16 rounded-full flex items-center justify-center"
+                            style={{ background: "rgba(0,0,0,0.5)", border: "2px solid rgba(255,255,255,0.3)" }}>
+                            <Play className="w-7 h-7 text-white ml-1" fill="white" />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Artwork thumbnail strip */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {/* Artwork 1 */}
+                    <div className="aspect-video rounded-xl overflow-hidden cursor-pointer group relative"
+                      style={{ border: `1px solid ${CARD_BORDER}` }}
+                      onClick={() => setSelectedScreenshot({ id: 1, imageUrl: game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Artwork+1", title: `Artwork 1` })}>
+                      <img src={game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Artwork+1"}
+                        alt="Artwork 1" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
+                    </div>
+                    {/* Artwork 2 */}
+                    <div className="aspect-video rounded-xl overflow-hidden cursor-pointer group relative"
+                      style={{ border: `1px solid ${CARD_BORDER}` }}
+                      onClick={() => setSelectedScreenshot({ id: 2, imageUrl: game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Artwork+2", title: `Artwork 2` })}>
+                      <img src={game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Artwork+2"}
+                        alt="Artwork 2" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
+                    </div>
+                    {/* Artwork 3 */}
+                    <div className="aspect-video rounded-xl overflow-hidden cursor-pointer group relative"
+                      style={{ border: `1px solid ${CARD_BORDER}` }}
+                      onClick={() => setSelectedScreenshot({ id: 3, imageUrl: game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Artwork+3", title: `Artwork 3` })}>
+                      <img src={game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Artwork+3"}
+                        alt="Artwork 3" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
+                    </div>
+                    {/* View all */}
+                    <button
+                      onClick={() => setActiveTab("screenshots")}
+                      className="aspect-video rounded-xl overflow-hidden group relative flex items-center justify-center"
+                      style={{ background: "rgba(193,255,0,0.05)", border: `1px solid ${CARD_BORDER}` }}>
+                      <div className="text-center">
+                        <ChevronRight className="w-6 h-6 mx-auto mb-1" style={{ color: NEON }} />
+                        <span className="text-xs font-bold" style={{ color: NEON }}>View All</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
                 {/* About */}
                 <div>
                   <h2 className="text-xl font-black text-white mb-4">About The Game</h2>
@@ -814,41 +887,6 @@ const IndieGamePage = () => {
                   <div className="flex flex-wrap gap-3">
                     {meta.platforms.map(p => <PlatformIcon key={p} platform={p} />)}
                     {meta.platforms.length === 0 && <PlatformIcon platform="pc" />}
-                  </div>
-                </div>
-
-                {/* Trailer */}
-                {meta.trailerUrl && (
-                  <div>
-                    <h2 className="text-xl font-black text-white mb-4">Trailer</h2>
-                    <div className="rounded-2xl overflow-hidden aspect-video" style={{ border: `1px solid ${CARD_BORDER}` }}>
-                      <iframe src={meta.trailerUrl} className="w-full h-full" allowFullScreen />
-                    </div>
-                  </div>
-                )}
-
-                {/* Screenshots preview */}
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-black text-white">Screenshots</h2>
-                    <button onClick={() => setActiveTab("screenshots")}
-                      className="text-xs font-bold flex items-center gap-1 transition-opacity hover:opacity-70"
-                      style={{ color: NEON }}>
-                      View all <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {Array(4).fill(0).map((_, i) => (
-                      <div key={i} className="aspect-video rounded-xl overflow-hidden cursor-pointer group"
-                        style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${CARD_BORDER}` }}
-                        onClick={() => setSelectedScreenshot({ id: i, imageUrl: game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Screenshot", title: `Screenshot ${i + 1}` })}>
-                        <img
-                          src={game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Screenshot"}
-                          alt={`Screenshot ${i + 1}`}
-                          className="w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-300"
-                        />
-                      </div>
-                    ))}
                   </div>
                 </div>
 
