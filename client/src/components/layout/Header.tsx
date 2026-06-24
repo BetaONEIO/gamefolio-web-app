@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera, Clock, X as XIcon } from "lucide-react";
+import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera, Clock, Layers, X as XIcon } from "lucide-react";
 import {
   LevelTrackerIcon,
   ReferFriendIcon,
@@ -557,6 +557,11 @@ const Header = () => {
                   <DropdownMenuItem onClick={() => { window.dispatchEvent(new CustomEvent('upload-type-change', { detail: 'screenshots' })); setLocation('/upload?type=screenshots'); }} className="cursor-pointer">
                     <Camera className="h-4 w-4 mr-2" />
                     Upload Screenshot
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setLocation('/upload/bulk')} className="cursor-pointer">
+                    <Layers className="h-4 w-4 mr-2" />
+                    Bulk Upload
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

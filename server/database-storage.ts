@@ -5392,6 +5392,9 @@ export class DatabaseStorage implements IStorage {
   private readonly PRO_MAX_SCREENSHOT_SIZE_MB = 50;
   private readonly PRO_MAX_CLIP_DURATION_SECONDS = 600; // 10 minutes
   private readonly PRO_MAX_REEL_DURATION_SECONDS = 180; // 3 minutes
+  // Per-batch bulk-upload caps (number of files queued at once).
+  private readonly FREE_MAX_BULK_UPLOADS = 3;
+  private readonly PRO_MAX_BULK_UPLOADS = 10;
 
   private getCurrentMonthString(): string {
     const now = new Date();
@@ -5425,6 +5428,11 @@ export class DatabaseStorage implements IStorage {
     // Get user to check Pro status (admins are treated as Pro for upload caps).
     const user = await this.getUser(userId);
     const isPro = user?.isPro || user?.role === 'admin' || false;
+    // The higher bulk-upload batch cap is granted to Pro, Partner and admin
+    // users. Partners aren't flagged isPro, so they're checked explicitly here.
+    const maxBulkUploads = (isPro || user?.isPartner)
+      ? this.PRO_MAX_BULK_UPLOADS
+      : this.FREE_MAX_BULK_UPLOADS;
 
     if (isPro) {
       return {
@@ -5434,6 +5442,7 @@ export class DatabaseStorage implements IStorage {
         maxScreenshotSizeMB: this.PRO_MAX_SCREENSHOT_SIZE_MB,
         maxClipDurationSeconds: this.PRO_MAX_CLIP_DURATION_SECONDS,
         maxReelDurationSeconds: this.PRO_MAX_REEL_DURATION_SECONDS,
+        maxBulkUploads,
       };
     }
 
@@ -5444,6 +5453,7 @@ export class DatabaseStorage implements IStorage {
       maxScreenshotSizeMB: this.FREE_MAX_SCREENSHOT_SIZE_MB,
       maxClipDurationSeconds: this.FREE_MAX_CLIP_DURATION_SECONDS,
       maxReelDurationSeconds: this.FREE_MAX_REEL_DURATION_SECONDS,
+      maxBulkUploads,
     };
   }
 

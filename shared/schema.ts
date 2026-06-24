@@ -1542,6 +1542,9 @@ export interface UploadLimits {
   maxScreenshotSizeMB: number;
   maxClipDurationSeconds: number;
   maxReelDurationSeconds: number;
+  // Max number of files a user can queue in a single bulk-upload batch.
+  // Free: 3, Pro/Partner/admin: 10. This is a per-batch cap, not a daily quota.
+  maxBulkUploads: number;
 }
 
 // Linked external wallets - addresses the user has cryptographically proven control of.
