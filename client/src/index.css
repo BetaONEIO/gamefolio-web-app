@@ -618,6 +618,30 @@ video:focus {
   to { transform: translateX(-100%); }
 }
 
+/* Mobile drawer nav items: gate the green selection highlight to true-hover
+   devices and use :active for touch feedback. Fixes the iOS/Android
+   sticky-:hover bug where the highlight lingered (via transition-colors) and
+   visibly "jumped"/smeared between items as you tapped. */
+.drawer-nav-item {
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.drawer-nav-item:active {
+  background-color: hsl(var(--primary));
+  color: #071013;
+}
+.drawer-nav-item:active svg {
+  color: #071013;
+}
+@media (hover: hover) and (pointer: fine) {
+  .drawer-nav-item:hover {
+    background-color: hsl(var(--primary));
+    color: #071013;
+  }
+  .drawer-nav-item:hover svg {
+    color: #071013;
+  }
+}
+
 @keyframes push-enter {
   from { transform: translateX(calc(100% + 2rem)); opacity: 0; max-width: 0; }
   20% { max-width: 600px; }

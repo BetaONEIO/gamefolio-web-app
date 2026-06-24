@@ -58,16 +58,17 @@ export const users = pgTable("users", {
   instagramUsername: text("instagram_username"), // Instagram
   facebookUsername: text("facebook_username"), // Facebook
   rumbleUsername: text("rumble_username"),    // Rumble
-  // Streamer settings (OAuth-verified Twitch/Kick connections)
+  // Streamer settings (OAuth-verified Twitch/Kick connections).
+  // streamPlatform / twitch+kick ChannelName / twitch+kick Verified are defined
+  // in the "Streamer settings" block below (from main) — removed here to drop
+  // the duplicate object keys the merge created. Only the OAuth token/id columns
+  // unique to clip-import remain in this block. (twitchChannelId/kickChannelId
+  // overlap conceptually with main's twitchUserId/kickId — left for a later
+  // schema reconciliation.)
   isStreamer: boolean("is_streamer").default(false),
-  streamPlatform: text("stream_platform"), // "twitch" or "kick"
-  twitchChannelName: text("twitch_channel_name"), // Verified via OAuth
   twitchChannelId: text("twitch_channel_id"),     // Twitch user ID from OAuth
-  twitchVerified: boolean("twitch_verified").default(false),
   twitchAccessToken: text("twitch_access_token"), // OAuth access token (server-only)
-  kickChannelName: text("kick_channel_name"),     // Verified via OAuth
   kickChannelId: text("kick_channel_id"),         // Kick user/channel ID from OAuth
-  kickVerified: boolean("kick_verified").default(false),
   kickAccessToken: text("kick_access_token"),     // OAuth access token (server-only)
   liveEnabled: boolean("live_enabled").default(false), // Show LIVE badge on profile
   // Onboarding data for analytics and personalization
@@ -85,6 +86,10 @@ export const users = pgTable("users", {
   rumbleChannelName: text("rumble_channel_name"), // Rumble channel slug/username
   rumbleId: text("rumble_id"),              // Rumble user ID (set when OAuth-connected)
   rumbleVerified: boolean("rumble_verified").default(false), // Connected via OAuth
+  youtubeChannelName: text("youtube_channel_name"), // YouTube channel display name/handle
+  youtubeChannelId: text("youtube_channel_id"),     // YouTube channel ID (UC…) for embeds/API
+  youtubeVerified: boolean("youtube_verified").default(false), // Connected via Google/YouTube OAuth
+  youtubeShowOnProfile: boolean("youtube_show_on_profile").default(true), // Embed YouTube on profile
   showLiveOverlay: boolean("show_live_overlay").default(false), // Show LIVE badge on avatar
   twitchShowOnProfile: boolean("twitch_show_on_profile").default(true), // Embed Twitch stream on profile
   kickShowOnProfile: boolean("kick_show_on_profile").default(true),     // Embed Kick stream on profile
@@ -1268,6 +1273,26 @@ export const insertUserDailyFiresSchema = createInsertSchema(userDailyFires).omi
   updatedAt: true,
 });
 
+// Daily Twitch-clip import limit: counts clips fetched from Twitch and
+// successfully posted. Free users: 2/day, Pro users: 10/day. Reset is by UTC day.
+export const userDailyImports = pgTable("user_daily_imports", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  importDate: text("import_date").notNull(), // YYYY-MM-DD format in UTC
+  importsCount: integer("imports_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueUserDate: unique().on(table.userId, table.importDate),
+}));
+
+// Schema for inserting daily import record
+export const insertUserDailyImportsSchema = createInsertSchema(userDailyImports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Schema for inserting pro lootbox grant
 export const insertProLootboxGrantSchema = createInsertSchema(proLootboxGrants).omit({
   id: true,
@@ -1488,6 +1513,8 @@ export type InsertProLootboxGrant = z.infer<typeof insertProLootboxGrantSchema>;
 // Types for daily fire tracking
 export type UserDailyFires = typeof userDailyFires.$inferSelect;
 export type InsertUserDailyFires = z.infer<typeof insertUserDailyFiresSchema>;
+export type UserDailyImports = typeof userDailyImports.$inferSelect;
+export type InsertUserDailyImports = z.infer<typeof insertUserDailyImportsSchema>;
 
 // Fire limits configuration type
 export interface FireLimits {
@@ -1495,6 +1522,14 @@ export interface FireLimits {
   maxFiresPerDay: number;
   firesUsedToday: number;
   canFire: boolean;
+}
+
+// Twitch clip import limits configuration type
+export interface ImportLimits {
+  isPro: boolean;
+  maxImportsPerDay: number;
+  importsUsedToday: number;
+  canImport: boolean;
 }
 
 // Upload limits configuration type
@@ -1507,6 +1542,9 @@ export interface UploadLimits {
   maxScreenshotSizeMB: number;
   maxClipDurationSeconds: number;
   maxReelDurationSeconds: number;
+  // Max number of files a user can queue in a single bulk-upload batch.
+  // Free: 3, Pro/Partner/admin: 10. This is a per-batch cap, not a daily quota.
+  maxBulkUploads: number;
 }
 
 // Linked external wallets - addresses the user has cryptographically proven control of.
