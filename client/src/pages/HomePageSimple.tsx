@@ -499,13 +499,6 @@ const HomePage = () => {
         </LazySection>
       )}
 
-      {/* Trending Gamefolios - below Recommended for You */}
-      <LazySection minHeight="260px" rootMargin="200px">
-        <section className="px-4 sm:px-6 md:px-8 pb-10">
-          <FeaturedUsersSection />
-        </section>
-      </LazySection>
-      
       {/* Latest Clips Section */}
       <LazySection minHeight="400px" rootMargin="200px">
         <section className="px-4 sm:px-6 md:px-8">
@@ -556,6 +549,13 @@ const HomePage = () => {
             isLoading={isLoadingReels}
             userId={userId}
           />
+        </section>
+      </LazySection>
+
+      {/* Trending Gamefolios - between Latest Reels and Latest Screenshots */}
+      <LazySection minHeight="260px" rootMargin="200px">
+        <section className="px-4 sm:px-6 md:px-8 pt-6 sm:pt-8">
+          <FeaturedUsersSection />
         </section>
       </LazySection>
 

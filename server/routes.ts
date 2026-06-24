@@ -6030,7 +6030,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Fetch all real data sources in parallel
       // Dates are expressed as SQL intervals (no JS Date binding) to avoid postgres.js serialisation issues
-      const [xpRows, streakRows, leaderboardRows, followRows] = await Promise.all([
+      const [xpRows, streakRows, leaderboardRows] = await Promise.all([
         // Recent meaningful XP gains (not "view" — too noisy), last 7 days
         db.execute(sql`
           SELECT xh.id, xh.user_id, xh.xp_amount, xh.source, xh.created_at,
@@ -6071,26 +6071,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ORDER BY ml.rank ASC
           LIMIT 8
         `),
-
-        // Recent follows (last 7 days)
-        db.execute(sql`
-          SELECT f.id, f.created_at,
-                 follower.username AS follower_username, follower.display_name AS follower_display,
-                 following.username AS following_username, following.display_name AS following_display
-          FROM follows f
-          JOIN users follower ON follower.id = f.follower_id
-          JOIN users following ON following.id = f.following_id
-          WHERE f.created_at >= NOW() - INTERVAL '7 days'
-            AND follower.status = 'active'
-            AND following.status = 'active'
-          ORDER BY f.created_at DESC
-          LIMIT 12
-        `),
       ]);
 
       type FeedItem = {
         id: string;
-        kind: 'xp' | 'streak' | 'trending' | 'follow' | 'levelup';
+        kind: 'xp' | 'streak' | 'trending' | 'levelup';
         username: string;
         text: string;
         timestamp?: string | null;
@@ -6100,7 +6085,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // XP events
       for (const row of (xpRows as any).rows ?? xpRows) {
-        const name = row.display_name || row.username;
+        const name = `@${row.username}`;
         const xp = Number(row.xp_amount);
         const source: string = row.source;
         let text = '';
@@ -6121,7 +6106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Streak events
       for (const row of (streakRows as any).rows ?? streakRows) {
-        const name = row.display_name || row.username;
+        const name = `@${row.username}`;
         const days = Number(row.current_streak);
         activities.push({
           id: `streak-${row.id}`,
@@ -6133,7 +6118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Leaderboard events
       for (const row of (leaderboardRows as any).rows ?? leaderboardRows) {
-        const name = row.display_name || row.username;
+        const name = `@${row.username}`;
         const rank = Number(row.rank);
         const pts = Math.round(Number(row.total_points)).toLocaleString();
         activities.push({
@@ -6141,19 +6126,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           kind: rank <= 3 ? 'levelup' : 'trending',
           username: row.username,
           text: `${name} is #${rank} this month · ${pts} XP`,
-        });
-      }
-
-      // Follow events
-      for (const row of (followRows as any).rows ?? followRows) {
-        const followerName = row.follower_display || row.follower_username;
-        const followingName = row.following_display || row.following_username;
-        activities.push({
-          id: `follow-${row.id}`,
-          kind: 'follow',
-          username: row.follower_username,
-          text: `${followerName} started following ${followingName}`,
-          timestamp: row.created_at ? new Date(row.created_at).toISOString() : null,
         });
       }
 

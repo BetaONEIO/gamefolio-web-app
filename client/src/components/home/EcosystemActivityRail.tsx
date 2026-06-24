@@ -8,7 +8,7 @@ const firstPlaceIcon = "/attached_assets/generated_images/1st_place_icon.png";
 const secondPlaceIcon = "/attached_assets/generated_images/2nd_place_icon.png";
 const thirdPlaceIcon = "/attached_assets/generated_images/3rd_place_icon.png";
 
-type EventKind = "xp" | "streak" | "trending" | "follow" | "levelup";
+type EventKind = "xp" | "streak" | "trending" | "levelup";
 
 interface FeedItem {
   id: string;
@@ -29,7 +29,6 @@ const KIND_EMOJI: Record<EventKind, string> = {
   xp:      "",
   streak:  "",
   trending:"📈",
-  follow:  "👥",
   levelup: "",
 };
 
@@ -41,8 +40,7 @@ const SEED_ITEMS: FeedItem[] = [
   { id: 'seed-2', kind: 'streak',  username: 'player',  text: 'A player is on a 7-day upload streak 🔥' },
   { id: 'seed-3', kind: 'levelup', username: 'pro',     text: 'A pro is #1 this month · 4,200 XP' },
   { id: 'seed-4', kind: 'xp',      username: 'clip',    text: 'Someone earned +25 XP daily login bonus' },
-  { id: 'seed-5', kind: 'follow',  username: 'fan',     text: 'New players are joining the community' },
-  { id: 'seed-6', kind: 'trending',username: 'rising',  text: 'Gamefolio is growing — join today!' },
+  { id: 'seed-5', kind: 'trending',username: 'rising',  text: 'Gamefolio is growing — join today!' },
 ];
 
 function XPIcon() {
