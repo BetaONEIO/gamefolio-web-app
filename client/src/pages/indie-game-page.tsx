@@ -538,15 +538,20 @@ const IndieGamePage = () => {
 
   if (gameLoading) {
     return (
-      <div className="py-6 px-4 sm:px-6">
-        <Skeleton className="h-8 w-32 mb-6" />
-        <div className="flex gap-5 mb-8">
-          <Skeleton className="w-28 h-28 rounded-[20px] flex-shrink-0" />
-          <div className="flex-1 space-y-3">
-            <Skeleton className="h-7 w-48" />
-            <Skeleton className="h-4 w-72" />
-            <div className="flex gap-2"><Skeleton className="h-8 w-20" /><Skeleton className="h-8 w-20" /></div>
+      <div className="min-h-screen" style={{ background: "#0B1319" }}>
+        <div className="h-72 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0B1319 0%, #1a0b30 50%, #0d1f2d 100%)" }}>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+            <Skeleton className="h-20 w-20 rounded-2xl" />
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-4 w-40" />
+            <div className="flex gap-3"><Skeleton className="h-10 w-32 rounded-lg" /><Skeleton className="h-10 w-28 rounded-lg" /></div>
           </div>
+        </div>
+        <div className="px-6 py-8 space-y-6 max-w-6xl mx-auto">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+            {Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
+          </div>
+          <Skeleton className="h-10 w-full rounded-none" />
         </div>
       </div>
     );
@@ -572,6 +577,41 @@ const IndieGamePage = () => {
 
   return (
     <>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes igp-scanline {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(200vh); }
+        }
+        @keyframes igp-flowDash {
+          to { stroke-dashoffset: -20; }
+        }
+        @keyframes igp-pulseGlow {
+          0%, 100% { box-shadow: 0 0 20px rgba(193,255,0,0.15), 0 4px 30px rgba(0,0,0,0.3); }
+          50% { box-shadow: 0 0 40px rgba(193,255,0,0.35), 0 4px 30px rgba(0,0,0,0.3); }
+        }
+        .igp-scan-container { position: relative; overflow: hidden; }
+        .igp-scanline {
+          position: absolute; top: 0; left: 0; width: 100%; height: 12px;
+          background: linear-gradient(to bottom, transparent, rgba(193,255,0,0.25), transparent);
+          animation: igp-scanline 10s linear infinite;
+          pointer-events: none; z-index: 5;
+        }
+        .igp-flow-line {
+          stroke: rgba(193,255,0,0.45);
+          stroke-width: 2;
+          stroke-dasharray: 6 4;
+          animation: igp-flowDash 1.2s linear infinite;
+        }
+        .igp-dev-card { animation: igp-pulseGlow 4s ease-in-out infinite; }
+        .igp-tab-btn { position: relative; transition: color 0.2s; }
+        .igp-tab-active-bar {
+          position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+          border-radius: 9999px;
+          background: #C1FF00;
+          box-shadow: 0 0 10px rgba(193,255,0,0.8);
+        }
+      `}} />
+
       {isMobile && mobileViewerOpen && clipData.length > 0 && (
         activeTab === "clips" ? (
           <MobileClipsViewerOverlay
@@ -588,139 +628,166 @@ const IndieGamePage = () => {
         )
       )}
 
-      {/* ── HERO BANNER ── */}
-      <div className="relative">
-        <div className="h-48 sm:h-56 relative overflow-hidden">
-          <img
-            src={game.imageUrl || "https://placehold.co/1200x400/0B1218/333?text=Game+Banner"}
-            alt={game.name}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0"
-            style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(7,16,19,0.6) 60%, #071013 100%)" }} />
-        </div>
-      </div>
+      {/* ── CINEMATIC HERO ── */}
+      <section
+        className="igp-scan-container relative w-full border-b border-white/5"
+        style={{ background: "linear-gradient(135deg, #0B1319 0%, #1a0b30 55%, #0d1f2d 100%)", minHeight: isMobile ? "420px" : "480px" }}
+      >
+        <div className="igp-scanline" />
 
-      {/* ── PROFILE HEADER ── */}
-      <div className="relative px-4 sm:px-6 -mt-16 sm:-mt-20 mb-4">
-        <div className="flex items-start gap-4 sm:gap-5">
-          {/* Square rounded game image */}
-          <div className="flex-shrink-0 relative z-10">
-            <div
-              className="overflow-hidden"
-              style={{
-                width: isMobile ? "96px" : "128px",
-                height: isMobile ? "96px" : "128px",
-                borderRadius: "24px",
-                border: `2px solid rgba(193,255,0,0.45)`,
-                boxShadow: "0 0 40px rgba(193,255,0,0.28), 0 12px 40px rgba(0,0,0,0.6)",
-              }}
-            >
-              <img
-                src={game.imageUrl || `https://placehold.co/320x320/111/333?text=${encodeURIComponent(game.name.charAt(0))}`}
-                alt={game.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
+        {/* Background art with overlay */}
+        {game.imageUrl && (
+          <div className="absolute inset-0">
+            <img src={game.imageUrl} alt="" className="w-full h-full object-cover" style={{ opacity: 0.08 }} />
           </div>
+        )}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_60%,rgba(34,211,238,0.12)_0%,transparent_55%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_20%,rgba(139,92,246,0.1)_0%,transparent_50%)] pointer-events-none" />
 
-          {/* Game info */}
-          <div className="flex-1 min-w-0 pt-2 sm:pt-4">
-            <div className="flex items-start gap-2 flex-wrap mb-1">
-              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
-                style={{ background: "rgba(193,255,0,0.12)", color: NEON, border: "1px solid rgba(193,255,0,0.25)" }}>
-                <Sword className="w-2.5 h-2.5" />Indie Game
+        {/* Back button */}
+        <button
+          onClick={() => navigate("/explore")}
+          className="absolute top-4 left-4 z-20 flex items-center gap-1.5 text-xs font-bold text-white/50 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </button>
+
+        <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center text-center px-6 pt-16 pb-16">
+          {/* Genre tags */}
+          <div className="flex gap-2 mb-5 flex-wrap justify-center">
+            {meta.genres.map(g => (
+              <span key={g} className="px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full"
+                style={{ background: "rgba(193,255,0,0.1)", color: NEON, border: "1px solid rgba(193,255,0,0.3)" }}>
+                {g}
               </span>
-              {meta.verifiedDeveloper && (
-                <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
-                  style={{ background: "rgba(59,130,246,0.12)", color: "#60a5fa", border: "1px solid rgba(59,130,246,0.25)" }}>
-                  <Check className="w-2.5 h-2.5" />Verified Developer
-                </span>
-              )}
-            </div>
+            ))}
+          </div>
 
-            <h1 className={`font-black text-white leading-tight ${isMobile ? "text-xl" : "text-3xl"}`}>{game.name}</h1>
-            <p className="text-sm text-gray-400 mt-1">{meta.developerName}</p>
+          {/* Game art icon */}
+          <div className="mb-5 flex-shrink-0"
+            style={{
+              width: isMobile ? "80px" : "100px", height: isMobile ? "80px" : "100px",
+              borderRadius: "20px",
+              border: "2px solid rgba(193,255,0,0.4)",
+              boxShadow: "0 0 40px rgba(193,255,0,0.2), 0 12px 40px rgba(0,0,0,0.5)",
+              overflow: "hidden",
+            }}>
+            <img
+              src={game.imageUrl || `https://placehold.co/200x200/0B1218/333?text=${encodeURIComponent(game.name.charAt(0))}`}
+              alt={game.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
 
-            {/* Genre tags */}
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {meta.genres.map(g => (
-                <span key={g} className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                  style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", border: `1px solid ${CARD_BORDER}` }}>
-                  {g}
-                </span>
-              ))}
-            </div>
+          {/* Title */}
+          <h1
+            className={`font-black tracking-tighter text-white mb-3 leading-none ${isMobile ? "text-4xl" : "text-6xl md:text-7xl"}`}
+            style={{ textShadow: "0 0 40px rgba(255,255,255,0.2)" }}
+          >
+            {game.name.toUpperCase()}
+          </h1>
 
-            {/* Platform icons */}
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {meta.platforms.map(p => <PlatformIcon key={p} platform={p} />)}
+          {/* Dev + status badge */}
+          <div className="flex items-center gap-3 mb-8 flex-wrap justify-center">
+            <span className="text-sm font-semibold text-white/60">{meta.developerName}</span>
+            <span className="w-1 h-1 rounded-full bg-white/30" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md"
+              style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.12)" }}>
+              <Sword className="w-3.5 h-3.5" style={{ color: NEON }} />
+              <span className="text-xs font-black tracking-widest text-white/90">INDIE GAME</span>
             </div>
+            {meta.verifiedDeveloper && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md"
+                style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.3)" }}>
+                <Check className="w-3 h-3 text-blue-400" />
+                <span className="text-xs font-black tracking-widest text-blue-400">VERIFIED DEV</span>
+              </div>
+            )}
+          </div>
+
+          {/* CTA buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <button
+              onClick={() => setShowUploadDialog(true)}
+              className="flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl font-black text-sm text-black transition-all hover:scale-105 active:scale-95"
+              style={{ background: NEON, boxShadow: `0 0 24px rgba(193,255,0,0.35)` }}>
+              <Heart className="w-4 h-4" style={{ fill: "#0a0f1c" }} />
+              Add to Wishlist
+            </button>
+            <button
+              className="flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl font-black text-sm transition-all hover:bg-white/5"
+              style={{ border: `1px solid ${NEON}`, color: NEON }}>
+              Follow Game
+            </button>
+            {meta.website && (
+              <button
+                onClick={() => openExternal(meta.website)}
+                className="flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl font-black text-sm text-white transition-all hover:bg-white/5 border border-white/20">
+                <Globe className="w-4 h-4" />
+                Website
+              </button>
+            )}
+            {meta.discordUrl && (
+              <button
+                onClick={() => openExternal(meta.discordUrl)}
+                className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-black text-sm text-white/70 transition-all hover:bg-white/5 border border-white/10">
+                <Users className="w-4 h-4" />
+                Discord
+              </button>
+            )}
           </div>
         </div>
+      </section>
 
-        {/* Hero Actions */}
-        <div className="flex flex-wrap gap-2 mt-4">
-          <Button size="sm" className="font-bold text-xs"
-            style={{ background: NEON, color: "#0a0f1c", boxShadow: "0 4px 16px rgba(193,255,0,0.25)" }}>
-            <Gamepad2 className="w-3.5 h-3.5 mr-1.5" />Get Gaming on Indie
-          </Button>
-          <Button size="sm" className="font-bold text-xs"
-            style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${CARD_BORDER}`, color: "#fff" }}>
-            <Heart className="w-3.5 h-3.5 mr-1.5" />Follow Game
-          </Button>
-          {meta.steamUrl && (
-            <Button size="sm" className="font-bold text-xs"
-              onClick={() => openExternal(meta.steamUrl)}
-              style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${CARD_BORDER}`, color: "#fff" }}>
-              <Gamepad2 className="w-3.5 h-3.5 mr-1.5" />Steam
-            </Button>
-          )}
-          {meta.website && (
-            <Button size="sm" className="font-bold text-xs"
-              onClick={() => openExternal(meta.website)}
-              style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${CARD_BORDER}`, color: "#fff" }}>
-              <Globe className="w-3.5 h-3.5 mr-1.5" />Website
-            </Button>
-          )}
-          {meta.discordUrl && (
-            <Button size="sm" className="font-bold text-xs"
-              onClick={() => openExternal(meta.discordUrl)}
-              style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${CARD_BORDER}`, color: "#fff" }}>
-              <Users className="w-3.5 h-3.5 mr-1.5" />Discord
-            </Button>
-          )}
-          <Button size="sm" onClick={() => setShowUploadDialog(true)}
-            className="font-bold text-xs"
-            style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${CARD_BORDER}`, color: "#fff" }}>
-            <Upload className="w-3.5 h-3.5 mr-1.5" />Upload
-          </Button>
+      {/* ── STATS STRIP ── */}
+      <section className="border-b border-white/5 py-4" style={{ background: "rgba(0,0,0,0.45)" }}>
+        <div className="flex overflow-x-auto gap-3 px-4 sm:px-6 scrollbar-none sm:justify-center">
+          {[
+            { label: "Followers", value: meta.followers.toLocaleString(), icon: Users },
+            { label: "Clips", value: allClips.filter((c: any) => !c.videoType || c.videoType === "clip").length, icon: Play },
+            { label: "Reels", value: allClips.filter((c: any) => c.videoType === "reel").length, icon: Video },
+            { label: "Creators", value: uniqueCreators.length, icon: Users },
+            { label: "Total Views", value: totalViews.toLocaleString(), icon: Eye },
+            { label: "Streams", value: 0, icon: Radio },
+          ].map((stat, i) => {
+            const Icon = stat.icon;
+            return (
+              <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-xl flex-shrink-0"
+                style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+                <Icon className="w-5 h-5 flex-shrink-0" style={{ color: NEON, opacity: 0.85 }} />
+                <div>
+                  <div className="text-[9px] uppercase tracking-widest font-bold text-white/50">{stat.label}</div>
+                  <div className="text-lg font-black text-white leading-tight">{stat.value}</div>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Upload + bounty quick actions in strip */}
+          <button
+            onClick={() => setShowUploadDialog(true)}
+            className="flex items-center gap-2 px-4 py-3 rounded-xl flex-shrink-0 font-bold text-xs transition-all hover:bg-white/5"
+            style={{ background: "rgba(193,255,0,0.07)", border: "1px solid rgba(193,255,0,0.2)", color: NEON }}>
+            <Upload className="w-4 h-4" />
+            Upload Content
+          </button>
           {canCreateBounty && (
-            <Button size="sm" onClick={() => setShowCreateBounty(true)}
-              className="font-bold text-xs"
-              style={{ background: "rgba(193,255,0,0.15)", border: "1px solid rgba(193,255,0,0.3)", color: NEON }}>
-              <Plus className="w-3.5 h-3.5 mr-1.5" />Create Bounty
-            </Button>
+            <button
+              onClick={() => setShowCreateBounty(true)}
+              className="flex items-center gap-2 px-4 py-3 rounded-xl flex-shrink-0 font-bold text-xs transition-all hover:bg-white/10"
+              style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${CARD_BORDER}`, color: "rgba(255,255,255,0.6)" }}>
+              <Plus className="w-4 h-4" />
+              Create Bounty
+            </button>
           )}
         </div>
-      </div>
+      </section>
 
-      {/* ── STATS ── */}
-      <div className="px-4 sm:px-6 mb-4">
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-          <StatCard value={meta.followers.toLocaleString()} label="Followers" icon={Users} />
-          <StatCard value={totalViews.toLocaleString()} label="Total Views" icon={Eye} />
-          <StatCard value={allClips.filter((c: any) => !c.videoType || c.videoType === "clip").length} label="Clips" icon={Play} />
-          <StatCard value={allClips.filter((c: any) => c.videoType === "reel").length} label="Reels" icon={Video} />
-          <StatCard value={uniqueCreators.length} label="Creators" icon={Users} />
-          <StatCard value={0} label="Streams" icon={Radio} />
-        </div>
-      </div>
-
-      {/* ── TAB BAR ── */}
-      <div className="px-4 sm:px-6">
-        <div className="flex gap-0 overflow-x-auto scrollbar-none -mx-4 sm:-mx-6 px-4 sm:px-6"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+      {/* ── STICKY TAB NAV ── */}
+      <nav className="sticky top-0 z-40 border-b border-white/10 backdrop-blur-xl"
+        style={{ background: "rgba(11,19,25,0.85)" }}>
+        <div className="flex overflow-x-auto scrollbar-none px-2">
           {TABS.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -728,114 +795,253 @@ const IndieGamePage = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className="flex items-center gap-1.5 px-4 py-3 text-sm font-bold whitespace-nowrap flex-shrink-0 transition-all relative"
-                style={{ color: isActive ? NEON : "rgba(255,255,255,0.4)" }}
+                className="igp-tab-btn flex items-center gap-1.5 px-4 sm:px-6 py-4 text-xs font-black tracking-widest uppercase whitespace-nowrap flex-shrink-0 transition-colors"
+                style={{ color: isActive ? "#fff" : "rgba(255,255,255,0.4)" }}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className="w-3.5 h-3.5" style={{ color: isActive ? NEON : "rgba(255,255,255,0.35)" }} />
                 {tab.label}
-                {isActive && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: NEON, boxShadow: "0 0 8px rgba(193,255,0,0.7)" }} />
-                )}
+                {isActive && <div className="igp-tab-active-bar" />}
               </button>
             );
           })}
         </div>
-      </div>
+      </nav>
 
       {/* ── TAB CONTENT ── */}
-      <div className="px-4 sm:px-6 pb-24">
+      <div className="pb-24">
 
         {/* ──── OVERVIEW ──── */}
         {activeTab === "overview" && (
-          <div className="py-5 space-y-8">
-            {/* About The Game */}
-            <div>
-              <h2 className="font-black text-white text-lg mb-3">About The Game</h2>
-              <div className="rounded-2xl p-5" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-                <p className="text-sm text-gray-300 leading-relaxed mb-4">{meta.description}</p>
-                <div className="h-px my-4" style={{ background: "rgba(255,255,255,0.06)" }} />
-                <div className="flex items-start gap-2">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ background: "rgba(193,255,0,0.1)" }}>
-                    <Users className="w-4 h-4" style={{ color: NEON }} />
+          <div className="py-8">
+            {/* Main 2-col layout */}
+            <div className="px-4 sm:px-6 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+              {/* Left: About + Features + Screenshots + Trailer */}
+              <div className="lg:col-span-2 space-y-8">
+
+                {/* About */}
+                <div>
+                  <h2 className="text-xl font-black text-white mb-4">About The Game</h2>
+                  <div className="rounded-2xl p-6" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+                    <p className="text-sm text-gray-300 leading-relaxed">{meta.description}</p>
                   </div>
+                </div>
+
+                {/* Features */}
+                <div>
+                  <h2 className="text-xl font-black text-white mb-4">Key Features</h2>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {(meta.features.length > 0 ? meta.features : ["Singleplayer", "Co-op", "Multiplayer", "PvP", "Open World", "Crafting"]).map(f => (
+                      <div key={f} className="flex items-start gap-3 p-4 rounded-xl"
+                        style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+                        <Check className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: NEON }} />
+                        <span className="text-sm font-medium text-white/90">{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Platforms */}
+                <div>
+                  <h2 className="text-xl font-black text-white mb-4">Available Platforms</h2>
+                  <div className="flex flex-wrap gap-3">
+                    {meta.platforms.map(p => <PlatformIcon key={p} platform={p} />)}
+                    {meta.platforms.length === 0 && <PlatformIcon platform="pc" />}
+                  </div>
+                </div>
+
+                {/* Trailer */}
+                {meta.trailerUrl && (
                   <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Developer</p>
-                    <p className="text-sm text-white">{meta.developerDescription}</p>
+                    <h2 className="text-xl font-black text-white mb-4">Trailer</h2>
+                    <div className="rounded-2xl overflow-hidden aspect-video" style={{ border: `1px solid ${CARD_BORDER}` }}>
+                      <iframe src={meta.trailerUrl} className="w-full h-full" allowFullScreen />
+                    </div>
+                  </div>
+                )}
+
+                {/* Screenshots preview */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-black text-white">Screenshots</h2>
+                    <button onClick={() => setActiveTab("screenshots")}
+                      className="text-xs font-bold flex items-center gap-1 transition-opacity hover:opacity-70"
+                      style={{ color: NEON }}>
+                      View all <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {Array(4).fill(0).map((_, i) => (
+                      <div key={i} className="aspect-video rounded-xl overflow-hidden cursor-pointer group"
+                        style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${CARD_BORDER}` }}
+                        onClick={() => setSelectedScreenshot({ id: i, imageUrl: game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Screenshot", title: `Screenshot ${i + 1}` })}>
+                        <img
+                          src={game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Screenshot"}
+                          alt={`Screenshot ${i + 1}`}
+                          className="w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-300"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Community stats */}
+                <div>
+                  <h2 className="text-xl font-black text-white mb-4">Community Activity</h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <StatCard value={totalViews.toLocaleString()} label="Total Views" icon={Eye} />
+                    <StatCard value={allClips.filter((c: any) => !c.videoType || c.videoType === "clip").length} label="Clips" icon={Play} />
+                    <StatCard value={allClips.filter((c: any) => c.videoType === "reel").length} label="Reels" icon={Video} />
+                    <StatCard value={uniqueCreators.length} label="Creators" icon={Users} />
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Features */}
-            <div>
-              <h2 className="font-black text-white text-lg mb-3">Features</h2>
-              <div className="flex flex-wrap gap-2">
-                {meta.features.map(f => <FeatureTag key={f} label={f} />)}
-                {meta.features.length === 0 && (
-                  <>
-                    <FeatureTag label="Co-op" /><FeatureTag label="Multiplayer" /><FeatureTag label="Singleplayer" />
-                    <FeatureTag label="Survival" /><FeatureTag label="PvP" /><FeatureTag label="Crafting" />
-                    <FeatureTag label="Open World" />
-                  </>
+              {/* Right sidebar: Dev card + Game info + Store links */}
+              <div className="space-y-5">
+
+                {/* Developer card */}
+                <div className="igp-dev-card rounded-2xl p-6 space-y-5"
+                  style={{ background: CARD_BG, border: `1px solid rgba(193,255,0,0.18)` }}>
+                  <div>
+                    <div className="text-[9px] uppercase tracking-widest font-bold text-white/40 mb-1">Developer</div>
+                    <div className="text-lg font-black text-white flex items-center gap-2">
+                      <Sword className="w-4 h-4 flex-shrink-0" style={{ color: NEON }} />
+                      {meta.developerName}
+                    </div>
+                    {meta.publisher && meta.publisher !== meta.developerName && (
+                      <div className="text-xs text-white/40 mt-1">Published by {meta.publisher}</div>
+                    )}
+                  </div>
+
+                  {meta.developerDescription && (
+                    <p className="text-xs text-white/60 leading-relaxed">{meta.developerDescription}</p>
+                  )}
+
+                  <div className="h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-[9px] uppercase tracking-widest font-bold text-white/40 mb-1">Release Date</div>
+                      <div className="text-sm font-bold text-white">{meta.releaseDate || "TBA"}</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] uppercase tracking-widest font-bold text-white/40 mb-1">Genre</div>
+                      <div className="text-sm font-bold text-white">{meta.genres[0] || "Indie"}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Game info card */}
+                <div className="rounded-2xl p-5" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+                  <h3 className="text-[9px] uppercase tracking-widest font-bold text-white/40 mb-3">Game Info</h3>
+                  <InfoRow label="Genres" value={meta.genres.join(", ")} />
+                  <InfoRow label="Platforms" value={meta.platforms.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(", ")} />
+                  {meta.releaseDate && <InfoRow label="Release" value={meta.releaseDate} />}
+                </div>
+
+                {/* Store links */}
+                {(meta.steamUrl || meta.discordUrl || meta.website) && (
+                  <div className="rounded-2xl p-5 space-y-3" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+                    <h3 className="text-[9px] uppercase tracking-widest font-bold text-white/40 mb-1">Links</h3>
+                    {meta.steamUrl && (
+                      <button
+                        onClick={() => openExternal(meta.steamUrl)}
+                        className="w-full flex items-center justify-between p-3 rounded-xl transition-colors group"
+                        style={{ background: "#171a21", border: "1px solid rgba(255,255,255,0.06)" }}>
+                        <div className="flex items-center gap-3">
+                          <Gamepad2 className="w-5 h-5 text-[#66c0f4]" />
+                          <span className="font-bold text-sm text-[#c7d5e0]">Steam</span>
+                        </div>
+                        <Globe className="w-4 h-4 text-white/20 group-hover:text-white/60 transition-colors" />
+                      </button>
+                    )}
+                    {meta.discordUrl && (
+                      <button
+                        onClick={() => openExternal(meta.discordUrl)}
+                        className="w-full flex items-center justify-between p-3 rounded-xl transition-colors group"
+                        style={{ background: "#1e2124", border: "1px solid rgba(255,255,255,0.06)" }}>
+                        <div className="flex items-center gap-3">
+                          <Users className="w-5 h-5 text-[#5865F2]" />
+                          <span className="font-bold text-sm text-white/80">Discord</span>
+                        </div>
+                        <Globe className="w-4 h-4 text-white/20 group-hover:text-white/60 transition-colors" />
+                      </button>
+                    )}
+                    {meta.website && (
+                      <button
+                        onClick={() => openExternal(meta.website)}
+                        className="w-full flex items-center justify-between p-3 rounded-xl transition-colors group"
+                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                        <div className="flex items-center gap-3">
+                          <Globe className="w-5 h-5 text-white/60" />
+                          <span className="font-bold text-sm text-white/80">Official Website</span>
+                        </div>
+                        <Globe className="w-4 h-4 text-white/20 group-hover:text-white/60 transition-colors" />
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Trailer */}
-            {meta.trailerUrl && (
-              <div>
-                <h2 className="font-black text-white text-lg mb-3">Trailer</h2>
-                <div className="rounded-2xl overflow-hidden aspect-video" style={{ border: `1px solid ${CARD_BORDER}` }}>
-                  <iframe src={meta.trailerUrl} className="w-full h-full" allowFullScreen />
+            {/* Why Gamefolio section */}
+            <div className="relative mt-16 py-16 overflow-hidden" style={{ background: "rgba(193,255,0,0.018)" }}>
+              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[rgba(193,255,0,0.25)] to-transparent" />
+              <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[rgba(193,255,0,0.25)] to-transparent" />
+
+              <div className="max-w-4xl mx-auto px-6 text-center">
+                <h2 className="text-2xl sm:text-3xl font-black mb-4"
+                  style={{ color: NEON, textShadow: "0 0 20px rgba(193,255,0,0.3)" }}>
+                  WHY GAMEFOLIO?
+                </h2>
+                <p className="text-sm sm:text-base mb-12 max-w-2xl mx-auto text-white/60">
+                  Gamefolio helps indie games get discovered by connecting developers, creators, streamers, and players in one living ecosystem.
+                </p>
+
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 relative">
+                  <svg className="absolute hidden md:block w-full h-20 top-1/2 -translate-y-1/2 z-0 pointer-events-none">
+                    <line x1="10%" y1="50%" x2="90%" y2="50%" className="igp-flow-line" />
+                  </svg>
+                  {["Indie Dev", "Gamefolio", "Creators", "Streamers", "Players"].map((node, i) => (
+                    <div key={node} className="relative z-10 flex flex-col items-center gap-2 md:gap-0">
+                      <div
+                        className="w-28 h-28 rounded-2xl flex items-center justify-center text-center font-black text-sm text-white"
+                        style={{
+                          background: node === "Gamefolio" ? "rgba(193,255,0,0.1)" : CARD_BG,
+                          border: node === "Gamefolio" ? `1px solid rgba(193,255,0,0.35)` : `1px solid ${CARD_BORDER}`,
+                          boxShadow: node === "Gamefolio" ? "0 0 24px rgba(193,255,0,0.18)" : "none",
+                          backdropFilter: "blur(10px)",
+                        }}>
+                        {node}
+                      </div>
+                      {i < 4 && (
+                        <div className="md:hidden">
+                          <ChevronRight className="w-5 h-5 rotate-90 text-white/20" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
-            )}
+            </div>
 
-            {/* Official Screenshots */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="font-black text-white text-lg">Official Screenshots</h2>
-                <button onClick={() => setActiveTab("screenshots")}
-                  className="text-xs font-bold flex items-center gap-1" style={{ color: NEON }}>
-                  View all <ChevronRight className="w-3.5 h-3.5" />
+            {/* Footer CTA */}
+            <div className="px-4 sm:px-6 py-10">
+              <div className="max-w-4xl mx-auto rounded-2xl p-8 sm:p-12 text-center relative overflow-hidden"
+                style={{ background: CARD_BG, border: `1px solid rgba(193,255,0,0.15)` }}>
+                <div className="absolute inset-0 bg-gradient-to-br from-[rgba(193,255,0,0.07)] to-transparent pointer-events-none" />
+                <h2 className="relative z-10 text-2xl sm:text-3xl font-black text-white mb-3">
+                  Get Your Game on Gamefolio
+                </h2>
+                <p className="relative z-10 text-white/60 mb-7 max-w-xl mx-auto text-sm sm:text-base">
+                  Join hundreds of indie developers building real communities and reaching new players every day.
+                </p>
+                <button
+                  className="relative z-10 px-8 py-4 rounded-xl font-black text-sm text-black transition-transform hover:scale-105 active:scale-95"
+                  style={{ background: NEON, boxShadow: `0 0 24px rgba(193,255,0,0.3)` }}>
+                  Claim Your Developer Profile
                 </button>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {Array(4).fill(0).map((_, i) => (
-                  <div key={i} className="aspect-video rounded-xl overflow-hidden"
-                    style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${CARD_BORDER}` }}>
-                    <img src={game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Screenshot"}
-                      alt={`Screenshot ${i + 1}`} className="w-full h-full object-cover opacity-60" />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Game Information */}
-            <div>
-              <h2 className="font-black text-white text-lg mb-3">Game Information</h2>
-              <div className="rounded-2xl p-5" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-                <InfoRow label="Developer" value={meta.developerName} />
-                <InfoRow label="Publisher" value={meta.publisher || "Independent"} />
-                <InfoRow label="Release Date" value={meta.releaseDate} />
-                <InfoRow label="Platforms" value={meta.platforms.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(", ")} />
-                <InfoRow label="Genres" value={meta.genres.join(", ")} />
-                {meta.website && <InfoRow label="Website" value={meta.website} />}
-                {meta.discordUrl && <InfoRow label="Discord" value={meta.discordUrl} />}
-                {meta.steamUrl && <InfoRow label="Steam" value={meta.steamUrl} />}
-              </div>
-            </div>
-
-            {/* Community Stats */}
-            <div>
-              <h2 className="font-black text-white text-lg mb-3">Community</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                <StatCard value={totalViews.toLocaleString()} label="Total Views" icon={Eye} />
-                <StatCard value={allClips.filter((c: any) => !c.videoType || c.videoType === "clip").length} label="Total Clips" icon={Play} />
-                <StatCard value={allClips.filter((c: any) => c.videoType === "reel").length} label="Total Reels" icon={Video} />
-                <StatCard value={uniqueCreators.length} label="Active Creators" icon={Users} />
-                <StatCard value={0} label="Livestream Hours" icon={Clock} />
               </div>
             </div>
           </div>
