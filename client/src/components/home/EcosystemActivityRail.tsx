@@ -1,10 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { useState, useEffect, useRef, useCallback } from "react";
-import uploadStreakIcon from "@assets/Upload_streak_(1)_1782322613907.png";
 
 const xpIcon = "/attached_assets/XP-text_1779960376768.png";
-const streakIcon = uploadStreakIcon;
+const streakIcon = "/attached_assets/Upload_streak_(1)_1782322613907.png";
 const firstPlaceIcon = "/attached_assets/generated_images/1st_place_icon.png";
 const secondPlaceIcon = "/attached_assets/generated_images/2nd_place_icon.png";
 const thirdPlaceIcon = "/attached_assets/generated_images/3rd_place_icon.png";
