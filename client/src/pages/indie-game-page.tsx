@@ -706,81 +706,48 @@ const IndieGamePage = () => {
             )}
           </div>
 
-          {/* CTA buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <button
-              onClick={() => setShowUploadDialog(true)}
-              className="flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl font-black text-sm text-black transition-all hover:scale-105 active:scale-95"
-              style={{ background: NEON, boxShadow: `0 0 24px rgba(193,255,0,0.35)` }}>
-              <Heart className="w-4 h-4" style={{ fill: "#0a0f1c" }} />
-              Add to Wishlist
-            </button>
-            <button
-              className="flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl font-black text-sm transition-all hover:bg-white/5"
-              style={{ border: `1px solid ${NEON}`, color: NEON }}>
-              Follow Game
-            </button>
+          {/* Inline stats row (like regular gamefolio) */}
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+            <span className="flex items-center gap-1.5 text-xs font-bold text-white/60">
+              <Users className="w-3.5 h-3.5" style={{ color: NEON }} />
+              {meta.followers.toLocaleString()} followers
+            </span>
+            <span className="flex items-center gap-1.5 text-xs font-bold text-white/60">
+              <Users className="w-3.5 h-3.5" style={{ color: NEON }} />
+              {uniqueCreators.length} creators
+            </span>
+            <span className="flex items-center gap-1.5 text-xs font-bold text-white/60">
+              <Eye className="w-3.5 h-3.5" style={{ color: NEON }} />
+              {totalViews.toLocaleString()} views
+            </span>
+            <span className="flex items-center gap-1.5 text-xs font-bold text-white/60">
+              <Radio className="w-3.5 h-3.5" style={{ color: NEON }} />
+              {0} streams
+            </span>
             {meta.website && (
               <button
                 onClick={() => openExternal(meta.website)}
-                className="flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl font-black text-sm text-white transition-all hover:bg-white/5 border border-white/20">
-                <Globe className="w-4 h-4" />
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white/70 transition-all hover:bg-white/5 border border-white/10">
+                <Globe className="w-3.5 h-3.5" />
                 Website
               </button>
             )}
             {meta.discordUrl && (
               <button
                 onClick={() => openExternal(meta.discordUrl)}
-                className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-black text-sm text-white/70 transition-all hover:bg-white/5 border border-white/10">
-                <Users className="w-4 h-4" />
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white/70 transition-all hover:bg-white/5 border border-white/10">
+                <Users className="w-3.5 h-3.5" />
                 Discord
               </button>
             )}
-          </div>
-        </div>
-      </section>
-
-      {/* ── STATS STRIP ── */}
-      <section className="border-b border-white/5 py-4" style={{ background: "rgba(0,0,0,0.45)" }}>
-        <div className="flex overflow-x-auto gap-3 px-4 sm:px-6 scrollbar-none sm:justify-center">
-          {[
-            { label: "Followers", value: meta.followers.toLocaleString(), icon: Users },
-            { label: "Clips", value: allClips.filter((c: any) => !c.videoType || c.videoType === "clip").length, icon: Play },
-            { label: "Reels", value: allClips.filter((c: any) => c.videoType === "reel").length, icon: Video },
-            { label: "Creators", value: uniqueCreators.length, icon: Users },
-            { label: "Total Views", value: totalViews.toLocaleString(), icon: Eye },
-            { label: "Streams", value: 0, icon: Radio },
-          ].map((stat, i) => {
-            const Icon = stat.icon;
-            return (
-              <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-xl flex-shrink-0"
-                style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-                <Icon className="w-5 h-5 flex-shrink-0" style={{ color: NEON, opacity: 0.85 }} />
-                <div>
-                  <div className="text-[9px] uppercase tracking-widest font-bold text-white/50">{stat.label}</div>
-                  <div className="text-lg font-black text-white leading-tight">{stat.value}</div>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Upload + bounty quick actions in strip */}
-          <button
-            onClick={() => setShowUploadDialog(true)}
-            className="flex items-center gap-2 px-4 py-3 rounded-xl flex-shrink-0 font-bold text-xs transition-all hover:bg-white/5"
-            style={{ background: "rgba(193,255,0,0.07)", border: "1px solid rgba(193,255,0,0.2)", color: NEON }}>
-            <Upload className="w-4 h-4" />
-            Upload Content
-          </button>
-          {canCreateBounty && (
             <button
-              onClick={() => setShowCreateBounty(true)}
-              className="flex items-center gap-2 px-4 py-3 rounded-xl flex-shrink-0 font-bold text-xs transition-all hover:bg-white/10"
-              style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${CARD_BORDER}`, color: "rgba(255,255,255,0.6)" }}>
-              <Plus className="w-4 h-4" />
-              Create Bounty
+              onClick={() => setShowUploadDialog(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/5"
+              style={{ background: "rgba(193,255,0,0.1)", border: "1px solid rgba(193,255,0,0.25)", color: NEON }}>
+              <Upload className="w-3.5 h-3.5" />
+              Upload
             </button>
-          )}
+          </div>
         </div>
       </section>
 
