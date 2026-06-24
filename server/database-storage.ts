@@ -5448,9 +5448,11 @@ export class DatabaseStorage implements IStorage {
 
   // ==================== SCHEDULED POSTS OPERATIONS ====================
 
-  // Free users may have up to this many posts queued (status='scheduled') at once.
-  // Pro and Partner users are unlimited.
+  // How many posts a user may have queued (status='scheduled') at once.
+  // Free users get the base cap; Pro/Partner get the higher cap; admins are
+  // unlimited (internal convenience).
   private readonly FREE_MAX_SCHEDULED_POSTS = 3;
+  private readonly PRO_MAX_SCHEDULED_POSTS = 20;
 
   async createScheduledPost(data: InsertScheduledPost): Promise<ScheduledPost> {
     const [row] = await db.insert(scheduledPosts).values(data).returning();
@@ -5504,15 +5506,17 @@ export class DatabaseStorage implements IStorage {
 
   async getScheduledPostLimits(userId: number): Promise<ScheduledPostLimits> {
     const user = await this.getUser(userId);
-    // Pro, Partner, and admins all get unlimited scheduling.
-    const isUnlimited = !!(user?.isPro || user?.isPartner || user?.role === 'admin');
     const used = await this.countPendingScheduledPosts(userId);
 
-    if (isUnlimited) {
+    // Admins are unlimited (internal convenience).
+    if (user?.role === 'admin') {
       return { isUnlimited: true, max: null, used, remaining: null };
     }
 
-    const max = this.FREE_MAX_SCHEDULED_POSTS;
+    // Pro/Partner get the higher cap; everyone else the free cap.
+    const max = (user?.isPro || user?.isPartner)
+      ? this.PRO_MAX_SCHEDULED_POSTS
+      : this.FREE_MAX_SCHEDULED_POSTS;
     return { isUnlimited: false, max, used, remaining: Math.max(0, max - used) };
   }
 

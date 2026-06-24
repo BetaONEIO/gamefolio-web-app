@@ -20,11 +20,18 @@ interface ScheduleControlProps {
   contentNoun?: string;
 }
 
+const pad = (n: number) => String(n).padStart(2, '0');
+const toLocalInput = (d: Date) =>
+  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
 // Minimum selectable time: a few minutes out so the worker has a moment to run.
 function localMin(): string {
-  const d = new Date(Date.now() + 5 * 60 * 1000);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return toLocalInput(new Date(Date.now() + 5 * 60 * 1000));
+}
+
+// Maximum: one year out, matching the server's cap.
+function localMax(): string {
+  return toLocalInput(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000));
 }
 
 export function ScheduleControl({
@@ -59,9 +66,9 @@ export function ScheduleControl({
             {limits?.isUnlimited
               ? `Pick a date and time and your ${contentNoun} will publish automatically.`
               : noSlots
-                ? `You've used all ${limits?.max} free scheduled-post slots. Publish or cancel one, or upgrade to Pro for unlimited scheduling.`
+                ? `You've reached your limit of ${limits?.max} scheduled posts. Publish or cancel one to schedule another.`
                 : `Publish automatically at a future time.${
-                    limits ? ` ${limits.remaining} of ${limits.max} free slots left.` : ''
+                    limits ? ` ${limits.remaining} of ${limits.max} slots left.` : ''
                   }`}
           </p>
         </div>
@@ -70,6 +77,7 @@ export function ScheduleControl({
         <Input
           type="datetime-local"
           min={localMin()}
+          max={localMax()}
           value={value}
           onChange={(e) => onValueChange(e.target.value)}
           className="w-full"

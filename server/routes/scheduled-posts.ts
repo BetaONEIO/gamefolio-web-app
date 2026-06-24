@@ -2,6 +2,7 @@ import express from 'express';
 import { storage } from '../storage';
 import { supabaseStorage } from '../supabase-storage';
 import { hybridFullAccess } from '../middleware/hybrid-auth';
+import { parseScheduledAt } from './upload';
 
 const router = express.Router();
 
@@ -51,12 +52,15 @@ router.patch('/:id', hybridFullAccess, async (req, res) => {
       return res.status(400).json({ error: `Cannot reschedule a post that is already ${post.status}.` });
     }
 
-    const date = new Date(req.body.scheduledAt);
-    if (isNaN(date.getTime())) {
-      return res.status(400).json({ error: 'Invalid schedule date/time.' });
+    // Same validation as the schedule path: valid, in the future, and at most
+    // one year out. parseScheduledAt returns {} for an empty value, which here
+    // means a missing required field.
+    if (!req.body.scheduledAt) {
+      return res.status(400).json({ error: 'A new schedule date/time is required.' });
     }
-    if (date.getTime() <= Date.now()) {
-      return res.status(400).json({ error: 'Schedule time must be in the future.' });
+    const { date, error } = parseScheduledAt(req.body.scheduledAt);
+    if (error || !date) {
+      return res.status(400).json({ error: error || 'Invalid schedule date/time.' });
     }
 
     const updated = await storage.updateScheduledPost(id, { scheduledAt: date });

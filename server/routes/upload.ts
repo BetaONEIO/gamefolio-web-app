@@ -397,7 +397,7 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
         if (req.file?.path) fs.unlink(req.file.path, () => {});
         return res.status(403).json({
           error: 'Scheduled post limit reached',
-          message: `Free accounts can have ${scheduleLimits.max} scheduled posts at a time. Publish or cancel one, or upgrade to Pro for unlimited scheduling.`,
+          message: `Your plan allows ${scheduleLimits.max} scheduled posts at a time. Publish or cancel one to schedule another.`,
           scheduleLimits,
         });
       }
@@ -662,7 +662,7 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
       if (!scheduleLimits.isUnlimited && scheduleLimits.remaining !== null && scheduleLimits.remaining <= 0) {
         return res.status(403).json({
           error: 'Scheduled post limit reached',
-          message: `Free accounts can have ${scheduleLimits.max} scheduled posts at a time. Publish or cancel one, or upgrade to Pro for unlimited scheduling.`,
+          message: `Your plan allows ${scheduleLimits.max} scheduled posts at a time. Publish or cancel one to schedule another.`,
           scheduleLimits,
         });
       }

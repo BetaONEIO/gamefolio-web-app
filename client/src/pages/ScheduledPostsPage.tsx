@@ -42,6 +42,12 @@ function localMin(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function localMax(): string {
+  const d = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function typeLabel(post: ScheduledPost): string {
   if (post.contentType === 'screenshot') return 'Screenshot';
   return post.videoType === 'reel' ? 'Reel' : 'Clip';
@@ -159,6 +165,7 @@ export default function ScheduledPostsPage() {
               <Input
                 type="datetime-local"
                 min={localMin()}
+                max={localMax()}
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
                 className="h-9 w-auto"
@@ -229,7 +236,7 @@ export default function ScheduledPostsPage() {
             {limits?.isUnlimited
               ? 'You can schedule unlimited posts.'
               : limits
-                ? `${limits.used} of ${limits.max} free slots in use${limits.remaining != null ? ` · ${limits.remaining} left` : ''}.`
+                ? `${limits.used} of ${limits.max} slots in use${limits.remaining != null ? ` · ${limits.remaining} left` : ''}.`
                 : 'Manage posts queued to publish later.'}
           </p>
         </div>
