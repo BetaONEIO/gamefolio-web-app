@@ -108,6 +108,7 @@ const HashtagPage = lazyWithRecovery(() => import("./pages/hashtag-page"));
 const ClipPage = lazyWithRecovery(() => import("./pages/ClipPage"));
 const ClipRedirectPage = lazyWithRecovery(() => import("./pages/ClipRedirectPage"));
 const UploadPage = lazyWithRecovery(() => import("./pages/UploadPage"));
+const ScheduledPostsPage = lazyWithRecovery(() => import("./pages/ScheduledPostsPage"));
 const ScreenshotUploadPage = lazyWithRecovery(() => import("./pages/ScreenshotUploadPage"));
 const AccountSettingsPage = lazyWithRecovery(() => import("./pages/AccountSettingsPage"));
 const GameCategoriesPage = lazyWithRecovery(() => import("./pages/GameCategoriesPage"));
@@ -479,6 +480,7 @@ function Router() {
           <Route path="/games/:gameId/clips" component={GameClipsPage} />
           <ProtectedRoute path="/hashtag/:hashtag" component={HashtagPage} />
           <ProtectedRoute path="/upload" component={UploadPage} />
+          <ProtectedRoute path="/scheduled-posts" component={ScheduledPostsPage} />
           <ProtectedRoute path="/upload/screenshots" component={ScreenshotUploadPage} />
           <ProtectedRoute path="/upload-success" component={PostUploadSuccessPage} />
           <ProtectedRoute path="/upload-success/:contentType/:contentId" component={PostUploadSuccessPage} />

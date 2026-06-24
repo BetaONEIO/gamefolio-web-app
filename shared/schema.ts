@@ -85,6 +85,10 @@ export const users = pgTable("users", {
   rumbleChannelName: text("rumble_channel_name"), // Rumble channel slug/username
   rumbleId: text("rumble_id"),              // Rumble user ID (set when OAuth-connected)
   rumbleVerified: boolean("rumble_verified").default(false), // Connected via OAuth
+  youtubeChannelName: text("youtube_channel_name"), // YouTube channel display name/handle
+  youtubeChannelId: text("youtube_channel_id"),     // YouTube channel ID (UC…) for embeds/API
+  youtubeVerified: boolean("youtube_verified").default(false), // Connected via Google/YouTube OAuth
+  youtubeShowOnProfile: boolean("youtube_show_on_profile").default(true), // Embed YouTube on profile
   showLiveOverlay: boolean("show_live_overlay").default(false), // Show LIVE badge on avatar
   twitchShowOnProfile: boolean("twitch_show_on_profile").default(true), // Embed Twitch stream on profile
   kickShowOnProfile: boolean("kick_show_on_profile").default(true),     // Embed Kick stream on profile
@@ -241,6 +245,33 @@ export const screenshots = pgTable("screenshots", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Scheduled posts table - clips/screenshots queued to publish at a future time.
+// The post is fully processed (thumbnails, transcode, Supabase upload) up front;
+// `payload` holds the validated clip/screenshot insert data plus publish-time
+// extras (e.g. videoType), and the background worker inserts it into the real
+// clips/screenshots table when scheduledAt is reached.
+export const scheduledPosts = pgTable("scheduled_posts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  contentType: text("content_type").notNull(), // "clip" | "screenshot"
+  scheduledAt: timestamp("scheduled_at").notNull(),
+  status: text("status").default("scheduled").notNull(), // scheduled | published | failed | cancelled
+  payload: json("payload").notNull(), // validated insert data + extras
+  // Denormalized for list display without parsing payload:
+  title: text("title").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
+  videoType: text("video_type"), // "clip" | "reel" for content_type=clip, null for screenshots
+  publishedAt: timestamp("published_at"),
+  publishedContentId: integer("published_content_id"),
+  errorMessage: text("error_message"),
+  attempts: integer("attempts").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  dueIdx: index("scheduled_posts_due_idx").on(table.status, table.scheduledAt),
+  userIdx: index("scheduled_posts_user_idx").on(table.userId, table.status),
+}));
 
 // UserGameFavorites table
 export const userGameFavorites = pgTable("user_game_favorites", {
@@ -824,6 +855,19 @@ export const insertScreenshotSchema = createInsertSchema(screenshots).omit({
   tags: z.array(z.string().max(50, "Each tag must be 50 characters or less")).max(20, "Maximum 20 tags allowed").optional(),
 });
 
+// Schema for inserting a scheduled post (server constructs payload internally;
+// status/publish bookkeeping fields are set by the worker, not the client)
+export const insertScheduledPostSchema = createInsertSchema(scheduledPosts).omit({
+  id: true,
+  status: true,
+  publishedAt: true,
+  publishedContentId: true,
+  errorMessage: true,
+  attempts: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Schema for inserting a user game favorite
 export const insertUserGameFavoriteSchema = createInsertSchema(userGameFavorites).omit({
   id: true,
@@ -1346,6 +1390,15 @@ export type Screenshot = typeof screenshots.$inferSelect & {
   _count?: { likes: number; reactions: number; comments: number };
 };
 export type InsertScreenshot = z.infer<typeof insertScreenshotSchema>;
+
+export type ScheduledPost = typeof scheduledPosts.$inferSelect;
+export type InsertScheduledPost = z.infer<typeof insertScheduledPostSchema>;
+export type ScheduledPostLimits = {
+  isUnlimited: boolean;
+  max: number | null; // null when unlimited
+  used: number;
+  remaining: number | null; // null when unlimited
+};
 
 export type Badge = typeof badges.$inferSelect;
 export type InsertBadge = z.infer<typeof insertBadgeSchema>;

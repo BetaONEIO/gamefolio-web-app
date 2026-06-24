@@ -57,7 +57,8 @@ import twitchGamesRouter from "./routes/twitch-games";
 import authRouter from "./routes/auth-routes";
 import tokenAuthRouter from "./routes/token-auth";
 import { JWTService } from "./services/jwt-service";
-import uploadRouter from "./routes/upload";
+import uploadRouter, { parseScheduledAt } from "./routes/upload";
+import scheduledPostsRouter from "./routes/scheduled-posts";
 import migrationRouter from "./routes/migration";
 import viewRouter from "./routes/view";
 import supportRouter from "./routes/support";
@@ -1819,8 +1820,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/user/streamer-settings", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
-      const { isStreamer, streamPlatform, liveEnabled, twitchShowOnProfile, kickShowOnProfile } = req.body;
-      const ALLOWED_PLATFORMS = ["twitch", "kick"];
+      const { isStreamer, streamPlatform, liveEnabled, twitchShowOnProfile, kickShowOnProfile, youtubeShowOnProfile } = req.body;
+      const ALLOWED_PLATFORMS = ["twitch", "kick", "youtube"];
       if (streamPlatform !== undefined && !ALLOWED_PLATFORMS.includes(streamPlatform)) {
         return res.status(400).json({ message: "Invalid streamPlatform value" });
       }
@@ -1830,6 +1831,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (liveEnabled !== undefined) update.liveEnabled = Boolean(liveEnabled);
       if (twitchShowOnProfile !== undefined) update.twitchShowOnProfile = Boolean(twitchShowOnProfile);
       if (kickShowOnProfile !== undefined) update.kickShowOnProfile = Boolean(kickShowOnProfile);
+      if (youtubeShowOnProfile !== undefined) update.youtubeShowOnProfile = Boolean(youtubeShowOnProfile);
       const updated = await storage.updateUser((req.user as any).id, update);
       res.json(updated);
     } catch (err) {
@@ -8295,6 +8297,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Increment screenshot views - called when a screenshot is opened
+  app.post("/api/screenshots/:id/views", async (req, res) => {
+    try {
+      const screenshotId = parseInt(req.params.id);
+      if (isNaN(screenshotId)) {
+        return res.status(400).json({ error: 'Invalid screenshot ID' });
+      }
+
+      // Rate-limit: same IP may only count once per screenshot per hour
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+      const isNewView = recordView('screenshot', screenshotId, ip);
+
+      if (!isNewView) {
+        return res.json({ success: true, message: 'View already counted recently' });
+      }
+
+      const screenshot = await storage.getScreenshot(screenshotId);
+      if (screenshot) {
+        await storage.incrementScreenshotViews(screenshotId);
+      }
+
+      // Respond immediately so the client isn't blocked.
+      res.json({ success: true });
+
+      // Run XP side-effects in the background (fire-and-forget).
+      if (screenshot) {
+        (async () => {
+          try {
+            await LeaderboardService.awardPoints(
+              screenshot.userId,
+              'view',
+              `Screenshot #${screenshotId} received a view`
+            );
+          } catch (bgErr) {
+            console.error('Error in view side-effects for screenshot', screenshotId, bgErr);
+          }
+        })();
+      }
+    } catch (error) {
+      console.error('Error incrementing screenshot views:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Failed to increment views'
+      });
+    }
+  });
+
   // Delete a reaction (supports both session and JWT token auth for mobile apps)
   app.delete("/api/reactions/:id", hybridEmailVerification, async (req, res) => {
     try {
@@ -9496,9 +9544,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let twitchLive = false;
       let kickLive = false;
+      let youtubeLive = false;
 
       const twitchChannel = user.twitchChannelName || (user.twitchVerified ? user.streamChannelName : null);
       const kickChannel = user.kickChannelName || (user.kickVerified ? user.streamChannelName : null);
+      const youtubeChannelId = (user as any).youtubeChannelId || null;
+      const youtubeChannelName = (user as any).youtubeChannelName || null;
 
       if (user.twitchVerified && user.twitchUserId) {
         twitchLive = await twitchApi.checkUserLive(user.twitchUserId);
@@ -9519,7 +9570,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const isLive = twitchLive || kickLive;
+      if ((user as any).youtubeVerified && youtubeChannelId && process.env.YOUTUBE_API_KEY) {
+        try {
+          const ytRes = await axios.get('https://www.googleapis.com/youtube/v3/search', {
+            params: {
+              part: 'snippet',
+              channelId: youtubeChannelId,
+              type: 'video',
+              eventType: 'live',
+              maxResults: 1,
+              key: process.env.YOUTUBE_API_KEY,
+            },
+            timeout: 5000,
+          });
+          youtubeLive = (ytRes.data?.items?.length ?? 0) > 0;
+        } catch (e) {
+          console.error("YouTube live check failed:", e);
+        }
+      }
+
+      const isLive = twitchLive || kickLive || youtubeLive;
       let activePlatform: string | null = null;
       let activeChannel: string | null = null;
 
@@ -9529,16 +9599,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (kickLive) {
         activePlatform = 'kick';
         activeChannel = kickChannel || null;
+      } else if (youtubeLive) {
+        activePlatform = 'youtube';
+        activeChannel = youtubeChannelId || null;
       }
 
       return res.json({
         isLive,
         twitchLive,
         kickLive,
+        youtubeLive,
         activePlatform,
         activeChannel,
         twitchChannel: twitchChannel || null,
         kickChannel: kickChannel || null,
+        youtubeChannelId: youtubeChannelId || null,
+        youtubeChannelName: youtubeChannelName || null,
       });
     } catch (err) {
       console.error("Error checking live status:", err);
@@ -10520,6 +10596,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Title is required" });
       }
 
+      // Resolve scheduling intent up front so we reject before sharp/Supabase work.
+      const { date: scheduledAt, error: scheduleError } = parseScheduledAt(req.body.scheduledAt);
+      if (scheduleError) {
+        if (req.file?.path) fs.unlink(req.file.path, () => {});
+        return res.status(400).json({ message: scheduleError });
+      }
+      if (scheduledAt) {
+        const scheduleLimits = await storage.getScheduledPostLimits(req.user!.id);
+        if (!scheduleLimits.isUnlimited && scheduleLimits.remaining !== null && scheduleLimits.remaining <= 0) {
+          if (req.file?.path) fs.unlink(req.file.path, () => {});
+          return res.status(403).json({
+            error: 'Scheduled post limit reached',
+            message: `Your plan allows ${scheduleLimits.max} scheduled posts at a time. Publish or cancel one to schedule another.`,
+            scheduleLimits,
+          });
+        }
+      }
+
       // Validate text content for profanity and inappropriate language
       const validationErrors: string[] = [];
 
@@ -10625,6 +10719,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ageRestricted: req.body.ageRestricted === 'true' || req.body.ageRestricted === true,
         shareCode: generateShareCode()
       };
+
+      // Scheduled path: store the processed screenshot for later publishing.
+      if (scheduledAt) {
+        await fsPromises.unlink(originalPath).catch(() => {});
+        const scheduled = await storage.createScheduledPost({
+          userId,
+          contentType: 'screenshot',
+          scheduledAt,
+          payload: screenshotData,
+          title: screenshotData.title,
+          thumbnailUrl: screenshotData.thumbnailUrl || null,
+          videoType: null,
+        });
+        return res.json({
+          success: true,
+          scheduled,
+          message: `Screenshot scheduled for ${scheduledAt.toISOString()}`,
+        });
+      }
 
       const screenshot = await storage.createScreenshot(screenshotData);
 
@@ -11370,6 +11483,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Mount upload routes
   app.use('/api/upload', uploadRouter);
+
+  // Mount scheduled posts routes
+  app.use('/api/scheduled-posts', scheduledPostsRouter);
 
   // Mount mint NFT routes
   app.use(mintNftRouter);

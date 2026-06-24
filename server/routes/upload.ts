@@ -102,6 +102,26 @@ const avatarUpload = multer({
   }
 });
 
+// Parse and validate a client-supplied `scheduledAt` for deferred publishing.
+// Returns { date } on success or { error } with a user-facing message. Returns
+// {} (neither) when no scheduling was requested — a normal immediate upload.
+const MAX_SCHEDULE_AHEAD_MS = 365 * 24 * 60 * 60 * 1000; // 1 year
+export function parseScheduledAt(raw: unknown): { date?: Date; error?: string } {
+  if (raw === undefined || raw === null || raw === '') return {};
+  const date = new Date(raw as string);
+  if (isNaN(date.getTime())) {
+    return { error: 'Invalid schedule date/time.' };
+  }
+  const now = Date.now();
+  if (date.getTime() <= now) {
+    return { error: 'Schedule time must be in the future.' };
+  }
+  if (date.getTime() - now > MAX_SCHEDULE_AHEAD_MS) {
+    return { error: 'Posts can be scheduled at most one year in advance.' };
+  }
+  return { date };
+}
+
 // TUS `onUploadFinish` handler — exported so tests can exercise the
 // upload-error contract directly without requiring the underlying TUS HTTP
 // transport (the contract that desktop and mobile clients depend on lives in
@@ -358,10 +378,29 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
       });
     }
 
-    const { title, description, gameId, tags, ageRestricted } = req.body;
+    const { title, description, gameId, tags, ageRestricted, scheduledAt: rawScheduledAt } = req.body;
 
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
+    }
+
+    // Resolve scheduling intent before the (cheaper, but still real) image
+    // processing + upload below.
+    const { date: scheduledAt, error: scheduleError } = parseScheduledAt(rawScheduledAt);
+    if (scheduleError) {
+      if (req.file?.path) fs.unlink(req.file.path, () => {});
+      return res.status(400).json({ error: scheduleError });
+    }
+    if (scheduledAt) {
+      const scheduleLimits = await storage.getScheduledPostLimits(req.user!.id);
+      if (!scheduleLimits.isUnlimited && scheduleLimits.remaining !== null && scheduleLimits.remaining <= 0) {
+        if (req.file?.path) fs.unlink(req.file.path, () => {});
+        return res.status(403).json({
+          error: 'Scheduled post limit reached',
+          message: `Your plan allows ${scheduleLimits.max} scheduled posts at a time. Publish or cancel one to schedule another.`,
+          scheduleLimits,
+        });
+      }
     }
 
     // Handle game ID - ensure game exists in database
@@ -518,6 +557,25 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
       shareCode: shareCode
     };
 
+    // Scheduled path: store the processed screenshot for later publishing.
+    if (scheduledAt) {
+      const validatedScheduled = insertScreenshotSchema.parse(screenshotDataWithShareCode);
+      const scheduled = await storage.createScheduledPost({
+        userId: req.user!.id,
+        contentType: 'screenshot',
+        scheduledAt,
+        payload: validatedScheduled,
+        title: validatedScheduled.title,
+        thumbnailUrl: validatedScheduled.thumbnailUrl || null,
+        videoType: null,
+      });
+      return res.json({
+        success: true,
+        scheduled,
+        message: `Screenshot scheduled for ${scheduledAt.toISOString()}`,
+      });
+    }
+
     const screenshot = await storage.createScreenshot(screenshotDataWithShareCode);
 
     // Award upload points to the user (screenshots are worth 100 XP)
@@ -591,7 +649,24 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 // Video/Reel processing endpoint (called after TUS upload completes)
 router.post('/process-video', hybridFullAccess, async (req, res) => {
   try {
-    const { uploadResult, title, description, gameId, tags, videoType = 'clip', ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd } = req.body;
+    const { uploadResult, title, description, gameId, tags, videoType = 'clip', ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd, scheduledAt: rawScheduledAt } = req.body;
+
+    // Resolve scheduling intent up front so we can reject before doing the
+    // expensive download/transcode work below.
+    const { date: scheduledAt, error: scheduleError } = parseScheduledAt(rawScheduledAt);
+    if (scheduleError) {
+      return res.status(400).json({ error: scheduleError });
+    }
+    if (scheduledAt) {
+      const scheduleLimits = await storage.getScheduledPostLimits(req.user!.id);
+      if (!scheduleLimits.isUnlimited && scheduleLimits.remaining !== null && scheduleLimits.remaining <= 0) {
+        return res.status(403).json({
+          error: 'Scheduled post limit reached',
+          message: `Your plan allows ${scheduleLimits.max} scheduled posts at a time. Publish or cancel one to schedule another.`,
+          scheduleLimits,
+        });
+      }
+    }
 
     console.log('🔞 Age Restriction Backend Debug:', {
       ageRestricted,
@@ -982,6 +1057,26 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
     };
 
     const validatedClipData = insertClipSchema.parse(finalClipData);
+
+    // Scheduled path: store the fully-processed record for later publishing
+    // instead of going live now. The background worker inserts it and runs the
+    // upload XP side-effects when scheduledAt is reached.
+    if (scheduledAt) {
+      const scheduled = await storage.createScheduledPost({
+        userId: req.user!.id,
+        contentType: 'clip',
+        scheduledAt,
+        payload: validatedClipData,
+        title: validatedClipData.title,
+        thumbnailUrl: validatedClipData.thumbnailUrl || null,
+        videoType,
+      });
+      return res.json({
+        success: true,
+        scheduled,
+        message: `${videoType === 'reel' ? 'Reel' : 'Clip'} scheduled for ${scheduledAt.toISOString()}`,
+      });
+    }
 
     // Create the clip
     const clip = await storage.createClip(validatedClipData);
