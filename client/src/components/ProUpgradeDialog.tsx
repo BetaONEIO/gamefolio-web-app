@@ -7,16 +7,23 @@ import { useAuth } from "@/hooks/use-auth";
 import { Package } from "@revenuecat/purchases-js";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import {
-  Elements,
-  PaymentElement,
-  useStripe,
-  useElements,
+  EmbeddedCheckoutProvider,
+  EmbeddedCheckout,
 } from "@stripe/react-stripe-js";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isNative } from "@/lib/platform";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 import ProOnboardingScreen from "@/components/pro/ProOnboardingScreen";
+
+interface StripePricing {
+  currency: string;
+  monthly: number;
+  yearly: number;
+  formattedMonthly: string;
+  formattedYearly: string;
+  country: string;
+}
 
 interface ProUpgradeDialogProps {
   open: boolean;
@@ -101,142 +108,34 @@ function getCurrency(pkg: Package): string {
 }
 
 function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(amount);
+}
+
+// Pricing returned by /api/stripe/pro-pricing.
+// `currency` / `monthly` / `yearly` are always present (GBP base).
+// When the server can detect the visitor's country via the Cloudflare
+// cf-ipcountry header it also returns an approximate local-currency conversion
+// (`localCurrency`, `localMonthly`, `localYearly`).  The paywall shows the
+// local price (with a "~" prefix) so international users aren't put off by £.
+// The exact amount is always confirmed inside Stripe's embedded checkout.
+interface WebPricing {
+  currency: string;
+  monthly: number;
+  yearly: number;
+  localCurrency?: string;
+  localMonthly?: number;
+  localYearly?: number;
+}
+
+interface PlanView {
+  amount: number;
+  formatted: string;
+  perMonthFormatted: string;
 }
 
 interface LootboxReward {
   reward: { name: string; rarity: string; assetType: string; imageUrl?: string | null };
   isDuplicate: boolean;
-}
-
-interface CheckoutFormProps {
-  plan: "monthly" | "yearly";
-  planLabel: string;
-  priceFormatted: string;
-  periodLabel: string;
-  paymentIntentId: string;
-  onBack: () => void;
-  onSuccess: (lootboxReward: LootboxReward | null) => void;
-}
-
-function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentIntentId, onBack, onSuccess }: CheckoutFormProps) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const { toast } = useToast();
-  const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isReady, setIsReady] = useState(false);
-
-  const handlePay = async () => {
-    if (!stripe || !elements || !paymentIntentId || processing) return;
-
-    setProcessing(true);
-    setError(null);
-
-    try {
-      const { error: submitError } = await elements.submit();
-      if (submitError) {
-        throw new Error(submitError.message || "Please check your payment details");
-      }
-
-      const result = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: window.location.origin + "/?pro_payment=success&pi=" + paymentIntentId + "&plan=" + plan,
-        },
-        redirect: "if_required",
-      });
-
-      if (result.error) {
-        throw new Error(result.error.message || "Payment failed");
-      }
-
-      if (result.paymentIntent?.status === "succeeded") {
-        let lootboxReward: LootboxReward | null = null;
-        try {
-          const confirmRes = await apiRequest("POST", "/api/stripe/confirm-pro-subscription", { paymentIntentId, plan });
-          const confirmData = await confirmRes.json();
-          lootboxReward = confirmData.lootboxReward || null;
-        } catch {
-        }
-        await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-        onSuccess(lootboxReward);
-      } else if (result.paymentIntent?.status === "processing") {
-        toast({ title: "Payment processing", description: "You'll be notified when complete." });
-        onSuccess(null);
-      } else {
-        throw new Error("Payment could not be completed. Please try again.");
-      }
-    } catch (err: any) {
-      const msg = err?.message || "Payment failed";
-      setError(msg);
-      toast({ title: "Payment failed", description: msg, variant: "destructive" });
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col h-full bg-[#0B1218]">
-      <div className="flex items-center py-[25px] px-6 border-b border-[#1B2A3380]">
-        <button
-          onClick={onBack}
-          className="w-10 h-10 rounded-2xl bg-[#1B2A33] flex items-center justify-center flex-shrink-0"
-        >
-          <ArrowLeft className="w-5 h-5 text-white" />
-        </button>
-        <span className="flex-1 text-center text-white text-lg font-bold pr-10">Gamefolio</span>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-6 pt-6 pb-8" style={{ scrollbarWidth: "none" }}>
-        <div className="max-w-[382px] mx-auto flex flex-col gap-8">
-          <div className="bg-[#0B121866] backdrop-blur-[12px] border border-[#1B2A3380] rounded-2xl p-6">
-            <p className="text-[#F5F7F2] text-lg font-bold leading-7">
-              Subscribe to {planLabel} Pro Subscription
-            </p>
-            <div className="flex items-end gap-2 mt-2">
-              <span className="text-[#F5F7F2] text-[30px] font-black leading-9">{priceFormatted}</span>
-              <span className="text-[#B8C0AE] text-sm pb-1">{periodLabel}</span>
-            </div>
-            <div className="border-t border-[#1B2A3380] pt-4 mt-4 flex items-center justify-between">
-              <span className="text-[#B8C0AE] text-sm font-medium">Total due today</span>
-              <span className="text-[#B7FF1A] text-2xl font-black">{priceFormatted}</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-6">
-            <div className="rounded-2xl overflow-hidden" style={{ background: "#0B1218" }}>
-              <PaymentElement
-                onReady={() => setIsReady(true)}
-                options={{ layout: "tabs" }}
-              />
-            </div>
-
-            {error && (
-              <p className="text-red-400 text-sm text-center">{error}</p>
-            )}
-
-            <button
-              onClick={handlePay}
-              disabled={processing || !stripe || !isReady}
-              className="w-full bg-[#B7FF1A] hover:bg-[#A2F000] rounded-2xl h-[60px] flex items-center justify-center transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-              style={{ boxShadow: "0 12px 40px -10px #B7FF1A80" }}
-            >
-              {processing ? (
-                <Loader2 className="w-6 h-6 animate-spin text-[#071013]" />
-              ) : (
-                <span className="text-[#071013] text-lg font-black">Pay now</span>
-              )}
-            </button>
-
-            <p className="text-[#B8C0AE] text-xs text-center leading-[19.5px]">
-              By subscribing, you agree to allow Gamefolio to charge you according to their terms until you cancel. Subscription renews automatically. Cancel anytime. Secure checkout by Gamefolio
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthRequired }: ProUpgradeDialogProps) {
@@ -249,9 +148,10 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   const [proLootboxReward, setProLootboxReward] = useState<LootboxReward | null>(null);
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
-  const [checkoutPaymentIntentId, setCheckoutPaymentIntentId] = useState<string | null>(null);
+  const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [webPricing, setWebPricing] = useState<WebPricing | null>(null);
   const scrollContainerRef = useCallback((node: HTMLDivElement | null) => {
     if (node) {
       node.scrollTop = 0;
@@ -276,16 +176,61 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     return yearlyPkg || monthlyPkg || (packages?.[0] ?? null);
   }, [billingPeriod, monthlyPkg, yearlyPkg, packages]);
 
+  // Normalised plan views: native reads RevenueCat packages (store-localised),
+  // web reads the server price book (region-localised). Everything below
+  // renders from these, so display always matches what will be charged.
+  const { monthlyView, yearlyView } = useMemo<{ monthlyView: PlanView | null; yearlyView: PlanView | null }>(() => {
+    if (isNative) {
+      return {
+        monthlyView: monthlyPkg
+          ? {
+              amount: getPriceAmount(monthlyPkg),
+              formatted: formatPrice(monthlyPkg),
+              perMonthFormatted: formatCurrency(getPriceAmount(monthlyPkg), getCurrency(monthlyPkg)),
+            }
+          : null,
+        yearlyView: yearlyPkg
+          ? {
+              amount: getPriceAmount(yearlyPkg),
+              formatted: formatPrice(yearlyPkg),
+              perMonthFormatted: formatCurrency(getPriceAmount(yearlyPkg) / 12, getCurrency(yearlyPkg)),
+            }
+          : null,
+      };
+    }
+    if (!webPricing) return { monthlyView: null, yearlyView: null };
+
+    // If the server detected the visitor's country and provided a local-currency
+    // approximation, show that instead of GBP. Use a "~" prefix so users know
+    // the paywall price is an estimate; the exact amount is shown at checkout.
+    const hasLocal = !!(webPricing.localCurrency && webPricing.localMonthly != null && webPricing.localYearly != null);
+    const displayCurrency = hasLocal ? webPricing.localCurrency! : webPricing.currency;
+    const displayMonthly  = hasLocal ? webPricing.localMonthly!  : webPricing.monthly;
+    const displayYearly   = hasLocal ? webPricing.localYearly!   : webPricing.yearly;
+    return {
+      monthlyView: {
+        amount: displayMonthly,
+        formatted: formatCurrency(displayMonthly, displayCurrency),
+        perMonthFormatted: formatCurrency(displayMonthly, displayCurrency),
+      },
+      yearlyView: {
+        amount: displayYearly,
+        formatted: formatCurrency(displayYearly, displayCurrency),
+        perMonthFormatted: formatCurrency(displayYearly / 12, displayCurrency),
+      },
+    };
+  }, [monthlyPkg, yearlyPkg, webPricing]);
+
   const savings = useMemo(() => {
-    if (!monthlyPkg || !yearlyPkg) return 0;
-    const monthlyPrice = getPriceAmount(monthlyPkg);
-    const yearlyMonthly = getPriceAmount(yearlyPkg) / 12;
+    if (!monthlyView || !yearlyView) return 0;
+    const monthlyPrice = monthlyView.amount;
+    const yearlyMonthly = yearlyView.amount / 12;
     if (monthlyPrice > 0) {
       const s = Math.round((1 - yearlyMonthly / monthlyPrice) * 100);
       return s > 0 ? s : 0;
     }
     return 0;
-  }, [monthlyPkg, yearlyPkg]);
+  }, [monthlyView, yearlyView]);
 
   const loadStripeInstance = useCallback(async () => {
     if (stripePromise) return;
@@ -307,17 +252,48 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       setPurchasing(false);
       setPurchaseInProgress(false);
       setCheckoutClientSecret(null);
-      setCheckoutPaymentIntentId(null);
+      setCheckoutSessionId(null);
       setCheckoutError(null);
       setProLootboxReward(null);
     }
   }, [open]);
 
+  // Fetch localized Stripe pricing when dialog opens on web
   useEffect(() => {
     if (step === "checkout") {
       loadStripeInstance();
     }
   }, [step, loadStripeInstance]);
+
+  // On web, fetch the base (GBP) price for the paywall. The local converted
+  // amount is shown inside Stripe's embedded checkout via Adaptive Pricing.
+  // Native uses RevenueCat store prices instead.
+  useEffect(() => {
+    if (!open || isNative) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/stripe/pro-pricing", { credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data?.currency) {
+          setWebPricing({
+            currency: data.currency,
+            monthly: data.monthly,
+            yearly: data.yearly,
+            localCurrency: data.localCurrency,
+            localMonthly: data.localMonthly,
+            localYearly: data.localYearly,
+          });
+        }
+      } catch {
+        // Non-fatal: button stays disabled until pricing resolves.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   const handleJoinPro = async () => {
     if (!user) {
@@ -325,12 +301,13 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       return;
     }
 
-    if (!selectedPackage || purchasing) return;
+    if (purchasing) return;
 
     // On native (iOS/Android) Apple/Google require all digital subscription
     // purchases to flow through the platform's IAP. RevenueCat handles that;
     // we never present Stripe on a native build.
     if (isNative) {
+      if (!selectedPackage) return;
       setCheckoutError(null);
       setPurchasing(true);
       setPurchaseInProgress(true);
@@ -347,17 +324,23 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       return;
     }
 
+    // Web (Stripe) path — open an embedded Checkout Session. Stripe Adaptive
+    // Pricing (enabled in the Dashboard) converts £2.99 to the buyer's local
+    // currency inside the checkout; the server only sends the base GBP price.
+    if (!webPricing) return;
     setCheckoutLoading(true);
     setCheckoutError(null);
     setCheckoutClientSecret(null);
-    setCheckoutPaymentIntentId(null);
+    setCheckoutSessionId(null);
     setPurchaseInProgress(true);
     try {
       await loadStripeInstance();
-      const res = await apiRequest("POST", "/api/stripe/create-pro-subscription", { plan: billingPeriod });
+      const res = await apiRequest("POST", "/api/stripe/create-pro-subscription", {
+        plan: billingPeriod,
+      });
       const data = await res.json();
       setCheckoutClientSecret(data.clientSecret);
-      setCheckoutPaymentIntentId(data.paymentIntentId);
+      setCheckoutSessionId(data.sessionId);
       setStep("checkout");
     } catch (err: any) {
       setCheckoutError(err?.message || "Failed to start checkout");
@@ -366,9 +349,27 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     }
   };
 
-  const checkoutPlanLabel = billingPeriod === "yearly" ? "Yearly" : "Monthly";
-  const checkoutPriceFormatted = selectedPackage ? formatPrice(selectedPackage) : "";
-  const checkoutPeriodLabel = billingPeriod === "yearly" ? "per year" : "per month";
+  // Called by the embedded checkout when payment completes (redirect_on_
+  // completion is 'never'). Confirm with the server to provision Pro + lootbox,
+  // then show the success screen.
+  const handleCheckoutComplete = useCallback(async () => {
+    let lootboxReward: LootboxReward | null = null;
+    try {
+      if (checkoutSessionId) {
+        const res = await apiRequest("POST", "/api/stripe/confirm-pro-subscription", {
+          sessionId: checkoutSessionId,
+          plan: billingPeriod,
+        });
+        const data = await res.json();
+        lootboxReward = data.lootboxReward || null;
+      }
+    } catch {
+      // The webhook backstop will still provision Pro server-side.
+    }
+    await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    setProLootboxReward(lootboxReward);
+    setStep("success");
+  }, [checkoutSessionId, billingPeriod]);
 
   if (isPro && step !== "success" && !purchaseInProgress) {
     return (
@@ -394,16 +395,17 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     );
   }
 
-  const buttonDisabled = !onAuthRequired && (!isInitialized || isLoading || purchasing || !selectedPackage || checkoutLoading);
+  const canPurchase = isNative ? !!selectedPackage : !!webPricing;
+  const buttonDisabled = !onAuthRequired && (isLoading || purchasing || checkoutLoading || !canPurchase || (isNative && !isInitialized));
 
   const planSelector = (compact: boolean = false) => {
-    const yearlyPerMonth = yearlyPkg ? formatCurrency(getPriceAmount(yearlyPkg) / 12, getCurrency(yearlyPkg)) : null;
-    const yearlyTotal = yearlyPkg ? formatPrice(yearlyPkg) : null;
-    const monthlyPrice = monthlyPkg ? formatPrice(monthlyPkg) : null;
+    const yearlyPerMonth = yearlyView?.perMonthFormatted ?? null;
+    const yearlyTotal = yearlyView?.formatted ?? null;
+    const monthlyPrice = monthlyView?.formatted ?? null;
 
     return (
       <div className="flex flex-col gap-2">
-        {yearlyPkg && (
+        {yearlyView && (
           <button
             type="button"
             onClick={() => setBillingPeriod("yearly")}
@@ -440,7 +442,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
           </button>
         )}
 
-        {monthlyPkg && (
+        {monthlyView && (
           <button
             type="button"
             onClick={() => setBillingPeriod("monthly")}
@@ -472,7 +474,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
           </button>
         )}
 
-        {!monthlyPkg && !yearlyPkg && packages && packages.length > 0 && (
+        {!monthlyView && !yearlyView && packages && packages.length > 0 && (
           <div className="w-full rounded-xl border-2 border-[#B7FF1A] bg-[#B7FF1A0d] p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -488,6 +490,14 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
               </div>
             </div>
           </div>
+        )}
+
+        {!isNative && (monthlyView || yearlyView) && (
+          <p className="text-[#B8C0AE] text-[10px] text-center mt-0.5">
+            {webPricing?.localCurrency
+              ? "Approximate local price · Exact amount confirmed at checkout"
+              : "Shown in GBP · Your local currency shown at checkout"}
+          </p>
         )}
       </div>
     );
@@ -611,71 +621,35 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     <ProOnboardingScreen onComplete={() => onOpenChange(false)} lootboxReward={proLootboxReward} />
   );
 
-  const checkoutScreen = stripePromise && checkoutClientSecret && checkoutPaymentIntentId ? (
-    <Elements
-      stripe={stripePromise}
-      options={{
-        clientSecret: checkoutClientSecret,
-        appearance: {
-          theme: "night",
-          variables: {
-            colorPrimary: "#B7FF1A",
-            colorBackground: "#1B2A33",
-            colorText: "#F5F7F2",
-            colorDanger: "#ef4444",
-            fontFamily: "Plus Jakarta Sans, system-ui, sans-serif",
-            borderRadius: "16px",
-            spacingUnit: "4px",
-          },
-          rules: {
-            ".Input": {
-              backgroundColor: "#1B2A33",
-              border: "1px solid rgba(30, 41, 59, 0.5)",
-              padding: "16px",
-            },
-            ".Input:focus": {
-              border: "1px solid #B7FF1A",
-              boxShadow: "0 0 0 1px #B7FF1A",
-            },
-            ".Label": {
-              color: "#B8C0AE",
-              fontSize: "10px",
-              fontWeight: "700",
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-              marginBottom: "8px",
-            },
-            ".Tab": {
-              backgroundColor: "#1B2A33",
-              border: "1px solid rgba(30, 41, 59, 0.5)",
-              color: "#B8C0AE",
-            },
-            ".Tab:hover": {
-              backgroundColor: "#22313A",
-              color: "#F5F7F2",
-            },
-            ".Tab--selected": {
-              backgroundColor: "#22313A",
-              border: "1px solid #B7FF1A",
-              color: "#F5F7F2",
-            },
-          },
-        },
-      }}
-    >
-      <CheckoutForm
-        plan={billingPeriod}
-        planLabel={checkoutPlanLabel}
-        priceFormatted={checkoutPriceFormatted}
-        periodLabel={checkoutPeriodLabel}
-        paymentIntentId={checkoutPaymentIntentId}
-        onBack={() => setStep("plans")}
-        onSuccess={(lootboxReward) => { setProLootboxReward(lootboxReward); setStep("success"); }}
-      />
-    </Elements>
-  ) : (
-    <div className="flex items-center justify-center min-h-[400px] bg-[#0B1218]">
-      <Loader2 className="w-8 h-8 animate-spin text-[#B7FF1A]" />
+  const checkoutScreen = (
+    <div className="flex flex-col h-full bg-[#0B1218]">
+      <div className="flex items-center py-[25px] px-6 border-b border-[#1B2A3380]">
+        <button
+          onClick={() => setStep("plans")}
+          className="w-10 h-10 rounded-2xl bg-[#1B2A33] flex items-center justify-center flex-shrink-0"
+        >
+          <ArrowLeft className="w-5 h-5 text-white" />
+        </button>
+        <span className="flex-1 text-center text-white text-lg font-bold pr-10">Gamefolio</span>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-8" style={{ scrollbarWidth: "none" }}>
+        {stripePromise && checkoutClientSecret ? (
+          <EmbeddedCheckoutProvider
+            stripe={stripePromise}
+            options={{
+              clientSecret: checkoutClientSecret,
+              onComplete: handleCheckoutComplete,
+            }}
+          >
+            <EmbeddedCheckout />
+          </EmbeddedCheckoutProvider>
+        ) : (
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Loader2 className="w-8 h-8 animate-spin text-[#B7FF1A]" />
+          </div>
+        )}
+      </div>
     </div>
   );
 

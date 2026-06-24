@@ -50,13 +50,13 @@ export function ScreenshotCard({
     >
       {/* Thumbnail — dark card matching VideoClipCard style */}
       <div 
-        className="relative aspect-video overflow-hidden rounded-xl bg-[#0B1218]"
+        className="relative aspect-video overflow-hidden rounded-xl bg-[#0B1218] transition-transform duration-300 group-hover/card:-translate-y-1.5 group-hover/card:shadow-[0_8px_24px_rgba(0,0,0,0.55)]"
         onClick={() => onSelect?.(screenshot)}
       >
         <LazyImage 
           src={screenshot.imageUrl || ''} 
           alt={screenshot.title}
-          className="w-full h-full object-contain transition-transform duration-500 group-hover/card:scale-105"
+          className="w-full h-full object-contain"
           placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%231f2937'/%3e%3c/svg%3e"
           showLoadingSpinner={true}
           containerClassName="absolute inset-0"

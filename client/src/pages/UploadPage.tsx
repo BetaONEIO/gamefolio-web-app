@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { ScheduleControl, type ScheduleLimits } from "@/components/upload/ScheduleControl";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -40,8 +41,18 @@ import {
   StopCircle,
   Pause,
   RotateCcw,
-  X
+  X,
+  Twitch,
+  Eye,
+  Clock
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
@@ -52,7 +63,7 @@ import { ShareDialog } from "@/components/shared/ShareDialog";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { XPGainedDialog } from "@/components/gamification/XPGainedDialog";
 import { ToastAction } from "@/components/ui/toast";
-import type { UploadLimits } from "@shared/schema";
+import type { UploadLimits, ImportLimits } from "@shared/schema";
 
 // Shape of the structured payload the server returns from /api/upload/* and
 // /api/screenshots/upload when an upload is rejected for a tier limit.
@@ -73,6 +84,20 @@ class UploadLimitError extends Error {
     this.name = "UploadLimitError";
     this.limits = limits;
   }
+}
+
+// A recent Twitch clip returned by GET /api/twitch/clips, already enriched
+// with our internal game id so it can prefill the upload form directly.
+interface TwitchClipItem {
+  id: string;
+  title: string;
+  thumbnailUrl: string;
+  duration: number;
+  viewCount: number;
+  createdAt: string;
+  gameId: number | null;
+  gameName: string | null;
+  gameImage: string | null;
 }
 
 // Define filter options
@@ -179,6 +204,10 @@ const UploadPage = () => {
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [ageRestricted, setAgeRestricted] = useState(false);
+  // Scheduling: when enabled, the upload is queued for future publishing instead
+  // of going live. Shared across all three content tabs.
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -247,6 +276,122 @@ const UploadPage = () => {
   const userId = user?.id;
   const uploadSizeTipStorageKey = "gamefolio_upload_size_tip_dismissed";
 
+  // ── Twitch clip import ─────────────────────────────────────────────────
+  const twitchConnected = !!(user as any)?.twitchVerified;
+  const [showTwitchPicker, setShowTwitchPicker] = useState(false);
+  const [importingClipId, setImportingClipId] = useState<string | null>(null);
+  // Tracks whether the currently-staged file came from Twitch (and which clip),
+  // so the post is tagged source:"twitch" and counts against the daily allowance.
+  // Cleared whenever the user picks/clears a file manually.
+  const [twitchSourceClipId, setTwitchSourceClipId] = useState<string | null>(null);
+  // Dismissable "did you know" promo, only shown to users without Twitch linked.
+  const [twitchPromoDismissed, setTwitchPromoDismissed] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem("gf-twitch-import-promo-dismissed") === "1"
+  );
+  const dismissTwitchPromo = () => {
+    localStorage.setItem("gf-twitch-import-promo-dismissed", "1");
+    setTwitchPromoDismissed(true);
+  };
+  // Daily Twitch import allowance (free: 2/day, Pro: 10/day) for the picker UI.
+  const { data: importLimits } = useQuery<ImportLimits>({
+    queryKey: ["/api/twitch/import-limits"],
+    queryFn: async () => {
+      const res = await fetch("/api/twitch/import-limits", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load import limits");
+      return res.json();
+    },
+    enabled: twitchConnected,
+    staleTime: 30_000,
+  });
+  const { data: twitchClips, isLoading: twitchClipsLoading, error: twitchClipsError } = useQuery<TwitchClipItem[]>({
+    queryKey: ["/api/twitch/clips"],
+    queryFn: async () => {
+      const res = await fetch("/api/twitch/clips", { credentials: "include" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || "Failed to load your Twitch clips");
+      }
+      const body = await res.json();
+      return body.clips as TwitchClipItem[];
+    },
+    enabled: showTwitchPicker && twitchConnected,
+    staleTime: 60_000,
+  });
+
+  // Pull the selected Twitch clip's MP4 down through our proxy and feed it into
+  // the normal upload flow as if the user had picked the file themselves.
+  const importTwitchClip = async (clip: TwitchClipItem) => {
+    if (importingClipId) return;
+    setImportingClipId(clip.id);
+    try {
+      const res = await fetch(`/api/twitch/clips/file?clipId=${encodeURIComponent(clip.id)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Could not download this clip from Twitch");
+      const blob = await res.blob();
+      const importedFile = new File([blob], `twitch-clip-${clip.id}.mp4`, { type: "video/mp4" });
+
+      // Honour the user's tier size cap (same check as a manual file pick).
+      const maxSizeMB = uploadLimits?.maxClipSizeMB ?? 100;
+      if (importedFile.size > maxSizeMB * 1024 * 1024) {
+        toast({
+          title: "Clip too large",
+          description: `This clip is larger than your ${maxSizeMB}MB limit.${uploadLimits && !uploadLimits.isPro ? " Upgrade to Pro for larger uploads." : ""}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Reset video-editing state, mirroring handleFileChange.
+      setContentType("clips");
+      setFileError(null);
+      setVideoPreviewError(null);
+      setShowEditingTools(false);
+      setGeneratedThumbnails([]);
+      setThumbnailUrl("");
+      setVideoDuration(0);
+      setTrimStart(0);
+      setTrimEnd(0);
+      setReelZoom(1);
+      setReelPanX(0);
+      setReelPanY(0);
+      setIsReelAspectMismatch(false);
+      setVideoAspectRatio(0);
+      setFormatSuggestion(null);
+
+      setFile(importedFile);
+      setTwitchSourceClipId(clip.id);
+
+      // Prefill title + game from the clip's Twitch metadata.
+      const prefillTitle = (clip.title || "").slice(0, 100);
+      setTitle(prefillTitle);
+      titleRef.current = prefillTitle;
+      if (clip.gameId && clip.gameName) {
+        setSelectedGame({
+          id: clip.gameId,
+          name: clip.gameName,
+          imageUrl: clip.gameImage ?? null,
+          twitchId: null,
+          createdAt: new Date(),
+        });
+      }
+
+      setShowTwitchPicker(false);
+      toast({
+        title: "Clip imported from Twitch",
+        description: "Review the details below, then post it to your gamefolio.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Import failed",
+        description: err?.message || "Could not import this clip. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setImportingClipId(null);
+    }
+  };
+
   // Fetch upload limits (size + duration only — no count caps)
   const { data: uploadLimits, isLoading: limitsLoading } = useQuery<{
     isPro: boolean;
@@ -259,6 +404,46 @@ const UploadPage = () => {
     queryKey: ['/api/upload/limits'],
     enabled: !!userId,
   });
+
+  // Scheduling quota (unlimited for Pro/Partner, capped pending count for Free).
+  const { data: scheduleLimits } = useQuery<ScheduleLimits>({
+    queryKey: ['/api/scheduled-posts/limits'],
+    enabled: !!userId,
+  });
+
+  // ISO timestamp for the scheduled upload, or undefined for an immediate post.
+  const getScheduledIso = (): string | undefined => {
+    if (!scheduleEnabled || !scheduledAt) return undefined;
+    const d = new Date(scheduledAt);
+    return isNaN(d.getTime()) ? undefined : d.toISOString();
+  };
+
+  // Validate the schedule selection before kicking off an upload. Returns true
+  // when the upload may proceed.
+  const validateSchedule = (): boolean => {
+    if (!scheduleEnabled) return true;
+    const iso = getScheduledIso();
+    if (!iso) {
+      toast({ title: "Pick a time", description: "Choose a date and time to schedule this post.", variant: "gamefolioError" });
+      return false;
+    }
+    if (new Date(iso).getTime() <= Date.now()) {
+      toast({ title: "Time must be in the future", description: "Pick a date and time later than now.", variant: "gamefolioError" });
+      return false;
+    }
+    return true;
+  };
+
+  const renderScheduleControl = (contentNoun: string) => (
+    <ScheduleControl
+      enabled={scheduleEnabled}
+      onEnabledChange={setScheduleEnabled}
+      value={scheduledAt}
+      onValueChange={setScheduledAt}
+      limits={scheduleLimits}
+      contentNoun={contentNoun}
+    />
+  );
 
   useEffect(() => {
     const dismissed = localStorage.getItem(uploadSizeTipStorageKey) === "true";
@@ -285,6 +470,8 @@ const UploadPage = () => {
     descriptionRef.current = "";
     setShowShareDialog(false);
     setUploadedClip(null);
+    setScheduleEnabled(false);
+    setScheduledAt("");
     // Note: Navigation is now handled separately in success callbacks
   };
 
@@ -302,6 +489,8 @@ const UploadPage = () => {
     setScreenshotAgeRestricted(false);
     setShowScreenshotShareDialog(false);
     setUploadedScreenshot(null);
+    setScheduleEnabled(false);
+    setScheduledAt("");
     // Note: Navigation is now handled in XP dialog onContinue callback
   };
 
@@ -431,7 +620,9 @@ const UploadPage = () => {
     
     // Then set the new file - this will trigger videoSrc recreation via useMemo
     setFile(selectedFile);
-    
+    // Manually-picked file is not a Twitch import — don't count it against quota.
+    setTwitchSourceClipId(null);
+
     console.log('File state updated successfully, video preview should be visible');
   };
 
@@ -507,6 +698,8 @@ const UploadPage = () => {
         }
         formData.append("tags", JSON.stringify(screenshotTags));
         formData.append("ageRestricted", screenshotAgeRestricted.toString());
+        const scheduledIso = getScheduledIso();
+        if (scheduledIso) formData.append("scheduledAt", scheduledIso);
         formData.append("screenshot", file);
         
         const response = await fetch("/api/screenshots/upload", {
@@ -537,13 +730,27 @@ const UploadPage = () => {
     },
     onSuccess: async (data) => {
       console.log('Screenshot upload success data:', data);
-      
+
+      // Scheduled upload: nothing went live. Confirm and send the user to their queue.
+      if (data?.scheduled) {
+        resetScreenshotForm();
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduled-posts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduled-posts/limits'] });
+        const when = new Date(data.scheduled.scheduledAt).toLocaleString();
+        toast({
+          title: "Scheduled",
+          description: `Your screenshot${screenshotFiles.length > 1 ? 's' : ''} will publish on ${when}.`,
+        });
+        navigate('/scheduled-posts');
+        return;
+      }
+
       // Invalidate all relevant queries to ensure the new screenshot appears everywhere
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/screenshots`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/screenshots`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/upload/limits'] });
-      
+
       // Reset form first
       resetScreenshotForm();
       
@@ -707,6 +914,10 @@ const UploadPage = () => {
             ageRestricted,
             trimStart: Math.round(trimStart),
             trimEnd: Math.round(trimEnd),
+            scheduledAt: getScheduledIso(),
+            // Tag Twitch-imported clips so the server counts them against the
+            // daily import allowance (free: 2/day, Pro: 10/day).
+            ...(twitchSourceClipId ? { source: 'twitch', twitchClipId: twitchSourceClipId } : {}),
           };
           
           console.log('🔞 Age Restriction Debug - Sending to backend:', {
@@ -756,17 +967,36 @@ const UploadPage = () => {
       });
     },
     onSuccess: async (data: any) => {
+      setIsUploading(false);
+      setUploadProgress(0);
+
+      // Scheduled upload: nothing went live. Confirm and send the user to their queue.
+      if (data?.scheduled) {
+        resetFormAndNavigate();
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduled-posts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduled-posts/limits'] });
+        const when = new Date(data.scheduled.scheduledAt).toLocaleString();
+        toast({
+          title: "Scheduled",
+          description: `Your ${contentType === 'reels' ? 'reel' : 'clip'} will publish on ${when}.`,
+        });
+        navigate('/scheduled-posts');
+        return;
+      }
+
       // Invalidate all relevant queries to ensure the new clip appears everywhere
       queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
       queryClient.invalidateQueries({ queryKey: ["/api/clips/latest"] });
       queryClient.invalidateQueries({ queryKey: ["/api/reels/latest"] });
+      // Refresh the Twitch import counter if this post used the daily allowance.
+      if (twitchSourceClipId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/twitch/import-limits"] });
+        setTwitchSourceClipId(null);
+      }
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/clips`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/upload/limits'] });
-      
-      setIsUploading(false);
-      setUploadProgress(0);
-      
+
       // Reset form first
       resetFormAndNavigate();
       
@@ -920,10 +1150,12 @@ const UploadPage = () => {
     
 
     
+    if (!validateSchedule()) return;
+
     // Show progress bar immediately when starting upload
     setIsUploading(true);
     setUploadProgress(0);
-    
+
     console.log('About to call uploadMutation.mutate()');
     console.log('Final validation before upload:', {
       fileExists: !!file,
@@ -1009,6 +1241,31 @@ const UploadPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {!twitchConnected && !twitchPromoDismissed && (
+                <div className="relative mb-6 rounded-lg border border-[#9146FF]/40 bg-[#9146FF]/10 p-4 pr-10">
+                  <button
+                    type="button"
+                    onClick={dismissTwitchPromo}
+                    aria-label="Dismiss"
+                    className="absolute right-2 top-2 rounded-md p-1 text-muted-foreground hover:bg-[#9146FF]/20 hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <div className="flex items-start gap-3">
+                    <Twitch className="h-5 w-5 shrink-0 text-[#9146FF] mt-0.5" />
+                    <div className="space-y-1 text-sm">
+                      <p className="font-semibold text-foreground">Did you know you can upload straight from Twitch?</p>
+                      <p className="text-muted-foreground">
+                        Connect your Twitch account to fetch your recent clips and post them here in a couple of taps —
+                        no downloading and re-uploading. Free members can import 2 clips a day, Pro members up to 10.
+                      </p>
+                      <p className="text-muted-foreground">
+                        Set it up in <span className="font-medium text-foreground">Profile &amp; Appearance → Platforms → Twitch</span>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -1330,7 +1587,24 @@ const UploadPage = () => {
                       </div>
                     )}
                   </div>
-                  
+
+                  {!file && twitchConnected && (
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="flex-1 h-px bg-border" />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowTwitchPicker(true)}
+                        className="text-[#9146FF] border-[#9146FF]/40 hover:bg-[#9146FF]/10"
+                      >
+                        <Twitch className="h-4 w-4 mr-2" />
+                        Import from Twitch
+                      </Button>
+                      <div className="flex-1 h-px bg-border" />
+                    </div>
+                  )}
+
                   {fileError && (
                     <Alert variant="gamefolioError" className="mt-2">
                       <AlertCircle className="h-4 w-4" />
@@ -1424,9 +1698,10 @@ const UploadPage = () => {
                   </div>
                 </div>
 
+                {renderScheduleControl('clip')}
               </form>
             </CardContent>
-            
+
             <CardFooter className="flex justify-between border-t pt-6">
               <div className="flex items-center space-x-2">
                 <Video className="text-muted-foreground h-5 w-5" />
@@ -2016,6 +2291,8 @@ const UploadPage = () => {
                 </div>
 
                 
+                {renderScheduleControl('reel')}
+
                 <div className="flex justify-end space-x-2">
                   <Button
                     variant="outline"
@@ -2096,8 +2373,9 @@ const UploadPage = () => {
                   });
                   return;
                 }
-                
-                
+
+                if (!validateSchedule()) return;
+
                 screenshotUploadMutation.mutate();
               }} className="space-y-6">
                 <div className="space-y-2">
@@ -2305,6 +2583,8 @@ const UploadPage = () => {
                   </div>
                 </div>
                 
+                {renderScheduleControl('screenshot')}
+
                 <div className="flex justify-end space-x-2">
                   <Button
                     variant="outline"
@@ -2424,6 +2704,98 @@ const UploadPage = () => {
         onOpenChange={setShowProUpgrade}
         subtitle="Get unlimited uploads"
       />
+
+      {/* Twitch clip picker */}
+      <Dialog open={showTwitchPicker} onOpenChange={(o) => !importingClipId && setShowTwitchPicker(o)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Twitch className="h-5 w-5 text-[#9146FF]" />
+              Import a Twitch clip
+            </DialogTitle>
+            <DialogDescription>
+              Pick one of your recent Twitch clips. We'll load it into the upload form so you can review and post it.
+            </DialogDescription>
+          </DialogHeader>
+
+          {importLimits && (
+            <div
+              className={`rounded-md border px-3 py-2 text-xs ${
+                importLimits.canImport
+                  ? "border-border bg-muted/50 text-muted-foreground"
+                  : "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+              }`}
+            >
+              You've imported{" "}
+              <span className="font-semibold">{importLimits.importsUsedToday}</span> of{" "}
+              <span className="font-semibold">{importLimits.maxImportsPerDay}</span> Twitch clips today —{" "}
+              {importLimits.canImport ? "this refreshes tomorrow." : "your limit refreshes tomorrow."}
+              {!importLimits.isPro && (
+                <> Pro members can import up to 10 a day.</>
+              )}
+            </div>
+          )}
+
+          <div className="overflow-y-auto -mx-1 px-1">
+            {twitchClipsLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <div className="w-6 h-6 rounded-full border-2 border-t-transparent border-[#9146FF] animate-spin mb-3" />
+                Loading your clips…
+              </div>
+            ) : twitchClipsError ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">
+                {(twitchClipsError as Error).message || "Couldn't load your Twitch clips."}
+              </div>
+            ) : !twitchClips || twitchClips.length === 0 ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">
+                No clips found on your Twitch channel yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {twitchClips.map((clip) => (
+                  <button
+                    key={clip.id}
+                    type="button"
+                    disabled={!!importingClipId}
+                    onClick={() => importTwitchClip(clip)}
+                    className="group text-left rounded-lg border border-border overflow-hidden hover:border-[#9146FF] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <div className="relative aspect-video bg-muted">
+                      {clip.thumbnailUrl && (
+                        <img
+                          src={clip.thumbnailUrl}
+                          alt={clip.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      )}
+                      <span className="absolute bottom-1 right-1 flex items-center gap-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white">
+                        <Clock className="h-3 w-3" />
+                        {formatDuration(clip.duration)}
+                      </span>
+                      {importingClipId === clip.id && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                          <div className="w-6 h-6 rounded-full border-2 border-t-transparent border-white animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-2">
+                      <p className="text-sm font-medium line-clamp-2">{clip.title}</p>
+                      <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                        {clip.gameName && <span className="truncate">{clip.gameName}</span>}
+                        <span className="flex items-center gap-1 shrink-0">
+                          <Eye className="h-3 w-3" />
+                          {clip.viewCount.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Share Dialog for uploaded content */}
       <ShareDialog

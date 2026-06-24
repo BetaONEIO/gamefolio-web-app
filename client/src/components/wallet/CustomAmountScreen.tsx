@@ -2,19 +2,47 @@ import { useState, useEffect } from "react";
 
 interface CustomAmountScreenProps {
   onBack: () => void;
-  onApply: (amount: number) => void;
+  onApply: (gbpAmount: number) => void;
+  localCurrency?: string;
+  exchangeRate?: number;
 }
 
 const GFT_RATE = 0.01;
-const MIN_AMOUNT = 5;
-const MAX_AMOUNT = 10000;
+const MIN_GBP = 5;
+const MAX_GBP = 10000;
+
+function getCurrencySymbol(currency: string): string {
+  return (
+    new Intl.NumberFormat(undefined, { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 })
+      .formatToParts(0)
+      .find(p => p.type === 'currency')?.value ?? currency
+  );
+}
 
 export default function CustomAmountScreen({
   onBack,
   onApply,
+  localCurrency,
+  exchangeRate = 1,
 }: CustomAmountScreenProps) {
   const [amountString, setAmountString] = useState("");
   const [showCursor, setShowCursor] = useState(true);
+
+  const hasLocal = !!(localCurrency && exchangeRate && exchangeRate !== 1);
+  const symbol = hasLocal ? getCurrencySymbol(localCurrency!) : '£';
+
+  // The typed number is in local currency when hasLocal, else GBP
+  const typedAmount = parseFloat(amountString) || 0;
+
+  // Convert to GBP for validation and onApply
+  const gbpAmount = hasLocal ? typedAmount / exchangeRate : typedAmount;
+  const gftReceived = gbpAmount / GFT_RATE;
+
+  const minLocal = hasLocal ? MIN_GBP * exchangeRate : MIN_GBP;
+  const maxLocal = hasLocal ? MAX_GBP * exchangeRate : MAX_GBP;
+
+  const isValidAmount = typedAmount >= minLocal && typedAmount <= maxLocal;
+  const isOverMax = typedAmount > maxLocal;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -22,11 +50,6 @@ export default function CustomAmountScreen({
     }, 530);
     return () => clearInterval(interval);
   }, []);
-
-  const amount = parseFloat(amountString) || 0;
-  const gftReceived = amount / GFT_RATE;
-  const isValidAmount = amount >= MIN_AMOUNT && amount <= MAX_AMOUNT;
-  const isOverMax = amount > MAX_AMOUNT;
 
   const handleKeyPress = (key: string) => {
     if (key === "backspace") {
@@ -40,7 +63,7 @@ export default function CustomAmountScreen({
         const decimalPart = amountString.split(".")[1];
         if (decimalPart && decimalPart.length >= 2) return;
       }
-      if (amountString.length < 6) {
+      if (amountString.length < 7) {
         setAmountString((prev) => prev + key);
       }
     }
@@ -48,7 +71,7 @@ export default function CustomAmountScreen({
 
   const handleApply = () => {
     if (isValidAmount) {
-      onApply(amount);
+      onApply(gbpAmount);
     }
   };
 
@@ -77,9 +100,7 @@ export default function CustomAmountScreen({
         handleKeyPress("backspace");
       } else if (e.key === "Enter") {
         e.preventDefault();
-        if (amount >= MIN_AMOUNT && amount <= MAX_AMOUNT) {
-          onApply(amount);
-        }
+        if (isValidAmount) onApply(gbpAmount);
       } else if (e.key === "Escape") {
         e.preventDefault();
         onBack();
@@ -88,7 +109,7 @@ export default function CustomAmountScreen({
 
     window.addEventListener("keydown", handlePhysicalKey);
     return () => window.removeEventListener("keydown", handlePhysicalKey);
-  }, [amountString, amount, onApply, onBack]);
+  }, [amountString, gbpAmount, isValidAmount, onApply, onBack]);
 
   const keypadLayout = [
     ["1", "2", "3"],
@@ -156,7 +177,7 @@ export default function CustomAmountScreen({
               className="text-4xl font-bold"
               style={{ color: "#B7FF1A" }}
             >
-              £
+              {symbol}
             </span>
             <span className="text-7xl font-bold text-white">
               {amountString || "0"}
@@ -207,13 +228,18 @@ export default function CustomAmountScreen({
             </svg>
             <span className="text-sm font-bold" style={{ color: "#B7FF1A" }}>
               Receive ≈{" "}
-              {gftReceived.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}{" "}
+              {typedAmount > 0
+                ? gftReceived.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                : "0.00"}{" "}
               GFT
             </span>
           </div>
+
+          {hasLocal && typedAmount > 0 && (
+            <span className="text-xs" style={{ color: '#B8C0AE' }}>
+              ≈ £{gbpAmount.toFixed(2)} GBP charged at checkout
+            </span>
+          )}
         </div>
 
         {/* Keypad */}
@@ -260,7 +286,7 @@ export default function CustomAmountScreen({
           borderRadius: "40px 40px 0 0",
         }}
       >
-        <div className="max-w-[430px] mx-auto w-full flex flex-col gap-6">
+        <div className="max-w-[430px] mx-auto w-full flex flex-col gap-4">
           {/* Info Card */}
           <div
             className="flex items-center gap-4 rounded-2xl px-4 py-4"
@@ -293,18 +319,30 @@ export default function CustomAmountScreen({
                 <>
                   The maximum purchase amount is{" "}
                   <span className="font-bold text-white">
-                    £{MAX_AMOUNT.toLocaleString()}.00
+                    {hasLocal
+                      ? new Intl.NumberFormat(undefined, { style: 'currency', currency: localCurrency!, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(maxLocal)
+                      : `£${MAX_GBP.toLocaleString()}.00`}
                   </span>
                   . Please lower the amount to continue.
                 </>
               ) : (
                 <>
                   The minimum purchase amount is{" "}
-                  <span className="font-bold text-white">£5.00</span>. Transaction fees are calculated at the next step.
+                  <span className="font-bold text-white">
+                    {hasLocal
+                      ? new Intl.NumberFormat(undefined, { style: 'currency', currency: localCurrency!, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(minLocal)
+                      : '£5.00'}
+                  </span>. Transaction fees are calculated at the next step.
                 </>
               )}
             </p>
           </div>
+
+          {hasLocal && (
+            <p className="text-xs text-center" style={{ color: '#B8C0AE' }}>
+              Approximate local price · Exact amount confirmed at checkout
+            </p>
+          )}
 
           {/* Apply Button */}
           <button

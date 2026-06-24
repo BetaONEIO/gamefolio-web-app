@@ -102,6 +102,26 @@ const avatarUpload = multer({
   }
 });
 
+// Parse and validate a client-supplied `scheduledAt` for deferred publishing.
+// Returns { date } on success or { error } with a user-facing message. Returns
+// {} (neither) when no scheduling was requested — a normal immediate upload.
+const MAX_SCHEDULE_AHEAD_MS = 365 * 24 * 60 * 60 * 1000; // 1 year
+export function parseScheduledAt(raw: unknown): { date?: Date; error?: string } {
+  if (raw === undefined || raw === null || raw === '') return {};
+  const date = new Date(raw as string);
+  if (isNaN(date.getTime())) {
+    return { error: 'Invalid schedule date/time.' };
+  }
+  const now = Date.now();
+  if (date.getTime() <= now) {
+    return { error: 'Schedule time must be in the future.' };
+  }
+  if (date.getTime() - now > MAX_SCHEDULE_AHEAD_MS) {
+    return { error: 'Posts can be scheduled at most one year in advance.' };
+  }
+  return { date };
+}
+
 // TUS `onUploadFinish` handler — exported so tests can exercise the
 // upload-error contract directly without requiring the underlying TUS HTTP
 // transport (the contract that desktop and mobile clients depend on lives in
@@ -358,10 +378,29 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
       });
     }
 
-    const { title, description, gameId, tags, ageRestricted } = req.body;
+    const { title, description, gameId, tags, ageRestricted, scheduledAt: rawScheduledAt } = req.body;
 
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
+    }
+
+    // Resolve scheduling intent before the (cheaper, but still real) image
+    // processing + upload below.
+    const { date: scheduledAt, error: scheduleError } = parseScheduledAt(rawScheduledAt);
+    if (scheduleError) {
+      if (req.file?.path) fs.unlink(req.file.path, () => {});
+      return res.status(400).json({ error: scheduleError });
+    }
+    if (scheduledAt) {
+      const scheduleLimits = await storage.getScheduledPostLimits(req.user!.id);
+      if (!scheduleLimits.isUnlimited && scheduleLimits.remaining !== null && scheduleLimits.remaining <= 0) {
+        if (req.file?.path) fs.unlink(req.file.path, () => {});
+        return res.status(403).json({
+          error: 'Scheduled post limit reached',
+          message: `Your plan allows ${scheduleLimits.max} scheduled posts at a time. Publish or cancel one to schedule another.`,
+          scheduleLimits,
+        });
+      }
     }
 
     // Handle game ID - ensure game exists in database
@@ -518,6 +557,25 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
       shareCode: shareCode
     };
 
+    // Scheduled path: store the processed screenshot for later publishing.
+    if (scheduledAt) {
+      const validatedScheduled = insertScreenshotSchema.parse(screenshotDataWithShareCode);
+      const scheduled = await storage.createScheduledPost({
+        userId: req.user!.id,
+        contentType: 'screenshot',
+        scheduledAt,
+        payload: validatedScheduled,
+        title: validatedScheduled.title,
+        thumbnailUrl: validatedScheduled.thumbnailUrl || null,
+        videoType: null,
+      });
+      return res.json({
+        success: true,
+        scheduled,
+        message: `Screenshot scheduled for ${scheduledAt.toISOString()}`,
+      });
+    }
+
     const screenshot = await storage.createScreenshot(screenshotDataWithShareCode);
 
     // Award upload points to the user (screenshots are worth 100 XP)
@@ -591,7 +649,41 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 // Video/Reel processing endpoint (called after TUS upload completes)
 router.post('/process-video', hybridFullAccess, async (req, res) => {
   try {
-    const { uploadResult, title, description, gameId, tags, videoType = 'clip', ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd } = req.body;
+    const { uploadResult, title, description, gameId, tags, videoType = 'clip', ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd, scheduledAt: rawScheduledAt, source } = req.body;
+
+    // Resolve scheduling intent up front so we can reject before doing the
+    // expensive download/transcode work below.
+    const { date: scheduledAt, error: scheduleError } = parseScheduledAt(rawScheduledAt);
+    if (scheduleError) {
+      return res.status(400).json({ error: scheduleError });
+    }
+    if (scheduledAt) {
+      const scheduleLimits = await storage.getScheduledPostLimits(req.user!.id);
+      if (!scheduleLimits.isUnlimited && scheduleLimits.remaining !== null && scheduleLimits.remaining <= 0) {
+        return res.status(403).json({
+          error: 'Scheduled post limit reached',
+          message: `Your plan allows ${scheduleLimits.max} scheduled posts at a time. Publish or cancel one to schedule another.`,
+          scheduleLimits,
+        });
+      }
+    }
+
+    // Clips fetched from Twitch count against a daily import allowance
+    // (free: 2/day, Pro: 10/day). Gate before any expensive processing; the
+    // counter is incremented only after the clip is successfully created.
+    const isTwitchImport = source === 'twitch';
+    if (isTwitchImport) {
+      const importLimits = await storage.getImportLimits(req.user!.id);
+      if (!importLimits.canImport) {
+        return res.status(429).json({
+          error: 'Daily Twitch import limit reached',
+          message: importLimits.isPro
+            ? `You've imported all ${importLimits.maxImportsPerDay} Twitch clips for today. Your limit refreshes tomorrow.`
+            : `You've imported your ${importLimits.maxImportsPerDay} Twitch clips for today. Pro members can import up to 10 a day — and your limit refreshes tomorrow.`,
+          limits: importLimits,
+        });
+      }
+    }
 
     console.log('🔞 Age Restriction Backend Debug:', {
       ageRestricted,
@@ -776,13 +868,17 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
 
         await fs.promises.writeFile(tempVideoPath, Buffer.from(videoBuffer));
 
-        // Get actual video duration first
+        // Get actual video duration + codec first
+        let sourceVideoCodec = '';
+        let sourceAudioCodec: string | null = null;
         try {
           const videoInfo = await VideoProcessor.getVideoInfo(tempVideoPath);
           actualDuration = Math.round(videoInfo.duration); // Round to nearest second
-          console.log(`📹 Video actual duration: ${actualDuration} seconds`);
+          sourceVideoCodec = videoInfo.videoCodec;
+          sourceAudioCodec = videoInfo.audioCodec;
+          console.log(`📹 Video actual duration: ${actualDuration}s, codec: ${sourceVideoCodec || 'unknown'}/${sourceAudioCodec || 'none'}`);
         } catch (durationError) {
-          console.warn('Failed to extract video duration, using fallback:', durationError);
+          console.warn('Failed to extract video info, using fallback:', durationError);
           actualDuration = 60; // Fallback to 60 seconds if extraction fails
         }
 
@@ -833,11 +929,30 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
           thumbnailUrl = clipThumbnailUrl || '';
           actualDuration = processedDuration;
           console.log(`✅ Clip trimmed successfully. Duration: ${actualDuration}s`);
+        } else if (sourceVideoCodec && !VideoProcessor.isBrowserPlayable(sourceVideoCodec, sourceAudioCodec)) {
+          // Untrimmed clip, but its codec (e.g. HEVC/H.265, 10-bit, exotic audio)
+          // won't play in a standard <video> element. If we stored it as-is it
+          // would fail to play for viewers — the same reason its preview failed
+          // at upload time. Re-encode the full clip to H.264 + AAC.
+          console.log(`🔄 Re-encoding clip — source codec ${sourceVideoCodec}/${sourceAudioCodec || 'none'} is not browser-playable`);
+          const { videoUrl: reencodedUrl, thumbnailUrl: clipThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
+            tempVideoPath,
+            tempClipId,
+            0,
+            actualDuration,
+            true,
+            req.user!.id,
+            'clip'
+          );
+          processedVideoUrl = reencodedUrl;
+          thumbnailUrl = clipThumbnailUrl || '';
+          actualDuration = processedDuration;
+          console.log(`✅ Clip re-encoded to H.264. Duration: ${actualDuration}s`);
         } else {
-          console.log('🖼️ Generating clip thumbnail (no trimming needed)...');
+          console.log('🖼️ Generating clip thumbnail (no trimming/re-encode needed)...');
           thumbnailUrl = await VideoProcessor.generateAutoThumbnail(
-            tempVideoPath, 
-            req.user!.id, 
+            tempVideoPath,
+            req.user!.id,
             `${videoType}_thumb`
           );
           console.log(`✅ Clip thumbnail generated: ${thumbnailUrl ? thumbnailUrl.substring(0, 60) + '...' : 'NONE'}`);
@@ -960,8 +1075,34 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
 
     const validatedClipData = insertClipSchema.parse(finalClipData);
 
+    // Scheduled path: store the fully-processed record for later publishing
+    // instead of going live now. The background worker inserts it and runs the
+    // upload XP side-effects when scheduledAt is reached.
+    if (scheduledAt) {
+      const scheduled = await storage.createScheduledPost({
+        userId: req.user!.id,
+        contentType: 'clip',
+        scheduledAt,
+        payload: validatedClipData,
+        title: validatedClipData.title,
+        thumbnailUrl: validatedClipData.thumbnailUrl || null,
+        videoType,
+      });
+      return res.json({
+        success: true,
+        scheduled,
+        message: `${videoType === 'reel' ? 'Reel' : 'Clip'} scheduled for ${scheduledAt.toISOString()}`,
+      });
+    }
+
     // Create the clip
     const clip = await storage.createClip(validatedClipData);
+
+    // Count this against the user's daily Twitch import allowance (post-time,
+    // so fetching/previewing a clip without posting it never burns quota).
+    if (isTwitchImport) {
+      await storage.incrementDailyImportCount(req.user!.id);
+    }
 
     // Award upload points to the user
     await LeaderboardService.awardPoints(

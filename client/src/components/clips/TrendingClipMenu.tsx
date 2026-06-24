@@ -213,33 +213,30 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
       if (isScreenshot) {
         toast({
           title: "⚡ Preparing your screenshot…",
-          description: "Fetching the image. This may take a moment.",
+          description: "Adding Gamefolio watermark. This may take a moment.",
         });
-        const sourceUrl = screenshotImageUrl || (clip as any).imageUrl || "";
-        if (!sourceUrl) throw new Error("Image URL unavailable");
-        const response = await fetch(sourceUrl, { credentials: "omit" });
-        if (!response.ok) throw new Error("Image fetch failed");
+        const response = await fetch(`/api/screenshots/${clip.id}/download`, {
+          credentials: "include",
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error((data as any).error || "Download failed");
+        }
         const blob = await response.blob();
-        const ext = (blob.type && blob.type.split("/")[1]) || "png";
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${safeTitle}_gamefolio.${ext}`;
+        a.download = `${safeTitle}_gamefolio.png`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         toast({
           title: "Download complete!",
-          description: "Screenshot saved. Share it anywhere!",
+          description: "Saved with Gamefolio watermark. Share it anywhere!",
           variant: "gamefolioSuccess",
         });
       } else {
-        toast({
-          title: "⚡ Preparing your clip…",
-          description: "Adding watermark & outro. First download may take ~30 s.",
-        });
-
         let downloadedViaWatermark = false;
         try {
           const response = await fetch(`/api/clips/${clip.id}/download`, {
@@ -364,6 +361,20 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
           pinMutation.mutate();
         }}
       />
+      {!isScreenshot && (
+        <MenuItem
+          icon={
+            isDownloading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )
+          }
+          label={isDownloading ? "Downloading…" : `Download ${Noun}`}
+          disabled={isDownloading}
+          onClick={handleDownload}
+        />
+      )}
       <MenuDivider />
       <MenuItem
         icon={<Trash2 className="h-4 w-4" />}

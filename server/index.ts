@@ -43,6 +43,7 @@ import gfCheckoutRoutes from './routes/gf-checkout';
 import proSubscriptionRoutes from './routes/pro-subscription';
 import gfWebhookRoutes from './routes/gf-webhook';
 import gfStakingRoutes from './routes/gf-staking';
+import { blockCryptoOnNative } from './middleware/block-crypto-on-native';
 import storeRoutes from './routes/store';
 import gamefolioPurchaseRoutes from './routes/gamefolio-purchases';
 import revenuecatRoutes from './routes/revenuecat';
@@ -141,6 +142,11 @@ app.use(gfWebhookRoutes);
 // Configure body parser with larger limits to support file uploads
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ extended: false, limit: '500mb' }));
+
+// Refuse crypto/wallet/NFT/staking endpoints for native (Capacitor) clients —
+// the mobile apps ship without crypto features for App Store / Play financial
+// compliance. Web requests (no X-GF-Platform header) pass through untouched.
+app.use(blockCryptoOnNative);
 
 // All referenced /attached_assets/* files live under client/public/
 // attached_assets/ and ship via the SPA build to dist/public/attached_assets/,
@@ -351,12 +357,18 @@ app.use((req, res, next) => {
     // ALWAYS serve the app on port 5000
     // this serves both the API and the client.
     // It is the only port that is not firewalled.
-    const port = 5000;
-    server.listen({
+    // (Overridable via PORT for local dev — macOS AirPlay squats 5000.)
+    const port = Number(process.env.PORT) || 5000;
+    // reusePort uses SO_REUSEPORT, which macOS sockets reject with ENOTSUP —
+    // only enable it off-darwin (Linux/Replit), where it's supported.
+    const listenOptions: { port: number; host: string; reusePort?: boolean } = {
       port,
       host: "0.0.0.0",
-      reusePort: true,
-    }, () => {
+    };
+    if (process.platform !== "darwin") {
+      listenOptions.reusePort = true;
+    }
+    server.listen(listenOptions, () => {
       log(`serving on port ${port}`);
 
       LeaderboardService.processPeriodicLeaderboardClosures()
@@ -421,6 +433,20 @@ app.use((req, res, next) => {
         setTimeout(tick, 2 * 60 * 1000);
         setInterval(tick, SYNC_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule platform sync:', err));
+
+      // Publish scheduled posts whose time has come. Posts are processed up
+      // front (thumbnails/transcode/upload), so this tick just inserts the real
+      // clip/screenshot record and runs the upload XP side-effects. 60s cadence
+      // keeps publish latency low; each tick only touches due rows.
+      import('./scheduled-posts-service').then(({ publishDueScheduledPosts }) => {
+        const SCHEDULE_INTERVAL_MS = 60 * 1000;
+        const tick = () => {
+          publishDueScheduledPosts()
+            .catch((err) => console.error('scheduled-posts publish failed:', err));
+        };
+        setTimeout(tick, 30 * 1000);
+        setInterval(tick, SCHEDULE_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule scheduled-posts worker:', err));
     });
   } catch (error) {
     console.error("Fatal server error:", error);

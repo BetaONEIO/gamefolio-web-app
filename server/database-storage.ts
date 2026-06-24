@@ -9,6 +9,7 @@ import {
   FollowRequest, InsertFollowRequest,
   ProfileBanner,
   Screenshot, InsertScreenshot, ScreenshotLike,
+  ScheduledPost, InsertScheduledPost, ScheduledPostLimits,
   ClipReaction, InsertClipReaction,
   ScreenshotComment, InsertScreenshotComment,
   ScreenshotReaction, InsertScreenshotReaction,
@@ -62,6 +63,7 @@ import {
   followRequests,
   profileBanners,
   screenshots,
+  scheduledPosts,
   screenshotLikes,
   screenshotComments,
   screenshotReactions,
@@ -100,12 +102,15 @@ import {
   assetRewardClaims,
   userDailyLootbox,
   userDailyFires,
+  userDailyImports,
   proLootboxGrants,
   userUnlockedBanners,
   commentLikes,
   screenshotCommentLikes,
   UserDailyFires, InsertUserDailyFires,
   FireLimits,
+  UserDailyImports,
+  ImportLimits,
   xpSettings,
   XpSetting, InsertXpSetting,
   PushToken, InsertPushToken,
@@ -114,7 +119,7 @@ import {
   pushBroadcasts
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, notInArray, isNotNull, getTableColumns } from "drizzle-orm";
+import { eq, and, desc, like, ilike, asc, or, lt, lte, gt, sql, arrayContains, ne, inArray, notInArray, isNotNull, getTableColumns } from "drizzle-orm";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { IStorage } from "./storage";
@@ -4236,78 +4241,71 @@ export class DatabaseStorage implements IStorage {
       
       const gameIds = allGameIds;
       
-      // Find clips from those games, excluding the user's own clips
-      const recommendedClips = await db
+      // Build a candidate pool scored by time-decayed engagement, then
+      // weighted-random sample down to `limit`. The old query ordered purely
+      // by lifetime views, so a user with stable favourite games always saw
+      // the same most-viewed clips and the section never appeared to update.
+      // Over-fetching a pool (~5x) and sampling makes the carousel rotate
+      // between visits while still favouring fresh, well-engaged clips.
+      const poolSize = Math.min(limit * 5, 100);
+
+      const candidates = await db
         .select({
-          id: clips.id,
-          title: clips.title,
-          description: clips.description,
-          videoUrl: clips.videoUrl,
-          thumbnailUrl: clips.thumbnailUrl,
-          userId: clips.userId,
-          gameId: clips.gameId,
-          views: clips.views,
-          duration: clips.duration,
-          videoType: clips.videoType,
-          createdAt: clips.createdAt,
-          updatedAt: clips.updatedAt,
-          // User fields with aliases
-          userUsername: users.username,
-          userDisplayName: users.displayName,
-          userAvatarUrl: users.avatarUrl,
-          userAvatarBorderColor: users.avatarBorderColor,
-          userAccentColor: users.accentColor,
-          userPrimaryColor: users.primaryColor,
-          userBackgroundColor: users.backgroundColor,
-          userCardColor: users.cardColor,
-          // Game fields with aliases
-          gameName: games.name,
-          gameImageUrl: games.imageUrl,
+          clipId: clips.id,
+          // Hacker-News style gravity: recent + engaged clips score highest;
+          // old clips decay no matter how many lifetime views they hold, so
+          // fresh uploads in the user's games can break through.
+          score: sql<number>`
+            (cast(${clips.views} as double precision)
+              + count(distinct ${likes.id}) * 3
+              + count(distinct ${comments.id}) * 5
+              + 1)
+            / power(extract(epoch from (now() - ${clips.createdAt})) / 3600.0 + 2.0, 1.5)
+          `.as('score'),
         })
         .from(clips)
-        .innerJoin(users, eq(clips.userId, users.id))
-        .leftJoin(games, eq(clips.gameId, games.id))
+        .leftJoin(users, eq(clips.userId, users.id))
+        .leftJoin(likes, eq(clips.id, likes.clipId))
+        .leftJoin(comments, eq(clips.id, comments.clipId))
         .where(
           and(
             inArray(clips.gameId, gameIds),
-            ne(clips.userId, userId) // Exclude user's own clips
+            ne(clips.userId, userId), // Exclude user's own clips
+            // Respect privacy: public accounts, or private accounts the user follows
+            or(
+              eq(users.isPrivate, false),
+              sql`exists (select 1 from follows f where f.following_id = ${users.id} and f.follower_id = ${userId})`
+            ),
+            // Only content for approved games (or no game)
+            or(
+              sql`${clips.gameId} IS NULL`,
+              sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
+            ),
+            // Exclude content from suspended/banned users
+            sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
           )
         )
-        .orderBy(desc(clips.views), desc(clips.createdAt), desc(clips.id))
-        .limit(limit);
-      
-      // Transform the flat result into the expected nested structure
-      const transformedClips = recommendedClips.map(clip => ({
-        id: clip.id,
-        title: clip.title,
-        description: clip.description,
-        videoUrl: clip.videoUrl,
-        thumbnailUrl: clip.thumbnailUrl,
-        userId: clip.userId,
-        gameId: clip.gameId,
-        views: clip.views,
-        duration: clip.duration,
-        videoType: clip.videoType,
-        createdAt: clip.createdAt,
-        updatedAt: clip.updatedAt,
-        user: {
-          id: clip.userId,
-          username: clip.userUsername,
-          displayName: clip.userDisplayName,
-          avatarUrl: clip.userAvatarUrl,
-          avatarBorderColor: clip.userAvatarBorderColor,
-          accentColor: clip.userAccentColor,
-          primaryColor: clip.userPrimaryColor,
-          backgroundColor: clip.userBackgroundColor,
-          cardColor: clip.userCardColor,
-        },
-        game: clip.gameId ? {
-          id: clip.gameId,
-          name: clip.gameName,
-          imageUrl: clip.gameImageUrl,
-        } : null
-      }));
-      
+        .groupBy(clips.id)
+        .orderBy(sql`score desc`)
+        .limit(poolSize);
+
+      // Weighted random sampling without replacement (Efraimidis–Spirakis):
+      // each clip's draw key is rand^(1/score); take the top `limit` keys.
+      // Higher-scoring clips are more likely to surface, but the mix changes
+      // every request so the carousel actually updates between visits.
+      const sampledIds = candidates
+        .map(c => ({
+          clipId: c.clipId,
+          key: Math.pow(Math.random(), 1 / Math.max(Number(c.score) || 0, 0.0001)),
+        }))
+        .sort((a, b) => b.key - a.key)
+        .slice(0, limit)
+        .map(c => c.clipId);
+
+      // Hydrate full clip details in parallel (same pattern as getTrendingClips).
+      const hydrated = await Promise.all(sampledIds.map(id => this.getClipWithUser(id)));
+      const transformedClips: ClipWithUser[] = hydrated.filter((c): c is ClipWithUser => !!c);
+
       // If not enough clips from favorite games, supplement with trending clips
       if (transformedClips.length < limit) {
         const remainingLimit = limit - transformedClips.length;
@@ -5396,6 +5394,9 @@ export class DatabaseStorage implements IStorage {
   private readonly PRO_MAX_SCREENSHOT_SIZE_MB = 50;
   private readonly PRO_MAX_CLIP_DURATION_SECONDS = 600; // 10 minutes
   private readonly PRO_MAX_REEL_DURATION_SECONDS = 180; // 3 minutes
+  // Per-batch bulk-upload caps (number of files queued at once).
+  private readonly FREE_MAX_BULK_UPLOADS = 3;
+  private readonly PRO_MAX_BULK_UPLOADS = 10;
 
   private getCurrentMonthString(): string {
     const now = new Date();
@@ -5429,6 +5430,11 @@ export class DatabaseStorage implements IStorage {
     // Get user to check Pro status (admins are treated as Pro for upload caps).
     const user = await this.getUser(userId);
     const isPro = user?.isPro || user?.role === 'admin' || false;
+    // The higher bulk-upload batch cap is granted to Pro, Partner and admin
+    // users. Partners aren't flagged isPro, so they're checked explicitly here.
+    const maxBulkUploads = (isPro || user?.isPartner)
+      ? this.PRO_MAX_BULK_UPLOADS
+      : this.FREE_MAX_BULK_UPLOADS;
 
     if (isPro) {
       return {
@@ -5438,6 +5444,7 @@ export class DatabaseStorage implements IStorage {
         maxScreenshotSizeMB: this.PRO_MAX_SCREENSHOT_SIZE_MB,
         maxClipDurationSeconds: this.PRO_MAX_CLIP_DURATION_SECONDS,
         maxReelDurationSeconds: this.PRO_MAX_REEL_DURATION_SECONDS,
+        maxBulkUploads,
       };
     }
 
@@ -5448,7 +5455,82 @@ export class DatabaseStorage implements IStorage {
       maxScreenshotSizeMB: this.FREE_MAX_SCREENSHOT_SIZE_MB,
       maxClipDurationSeconds: this.FREE_MAX_CLIP_DURATION_SECONDS,
       maxReelDurationSeconds: this.FREE_MAX_REEL_DURATION_SECONDS,
+      maxBulkUploads,
     };
+  }
+
+  // ==================== SCHEDULED POSTS OPERATIONS ====================
+
+  // How many posts a user may have queued (status='scheduled') at once.
+  // Free users get the base cap; Pro/Partner get the higher cap; admins are
+  // unlimited (internal convenience).
+  private readonly FREE_MAX_SCHEDULED_POSTS = 3;
+  private readonly PRO_MAX_SCHEDULED_POSTS = 20;
+
+  async createScheduledPost(data: InsertScheduledPost): Promise<ScheduledPost> {
+    const [row] = await db.insert(scheduledPosts).values(data).returning();
+    return row;
+  }
+
+  async getScheduledPost(id: number): Promise<ScheduledPost | undefined> {
+    const [row] = await db.select().from(scheduledPosts).where(eq(scheduledPosts.id, id));
+    return row;
+  }
+
+  // Posts a user can see/manage: pending queue first, then recently published/failed.
+  async getScheduledPostsByUser(userId: number): Promise<ScheduledPost[]> {
+    return db
+      .select()
+      .from(scheduledPosts)
+      .where(eq(scheduledPosts.userId, userId))
+      .orderBy(asc(scheduledPosts.scheduledAt));
+  }
+
+  async countPendingScheduledPosts(userId: number): Promise<number> {
+    const [row] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(scheduledPosts)
+      .where(and(eq(scheduledPosts.userId, userId), eq(scheduledPosts.status, 'scheduled')));
+    return row?.count ?? 0;
+  }
+
+  // Due posts the worker should publish: still scheduled and past their time.
+  async getDueScheduledPosts(now: Date, limit: number = 20): Promise<ScheduledPost[]> {
+    return db
+      .select()
+      .from(scheduledPosts)
+      .where(and(eq(scheduledPosts.status, 'scheduled'), lte(scheduledPosts.scheduledAt, now)))
+      .orderBy(asc(scheduledPosts.scheduledAt))
+      .limit(limit);
+  }
+
+  async updateScheduledPost(id: number, updates: Partial<ScheduledPost>): Promise<ScheduledPost | undefined> {
+    const [row] = await db
+      .update(scheduledPosts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(scheduledPosts.id, id))
+      .returning();
+    return row;
+  }
+
+  async deleteScheduledPost(id: number): Promise<void> {
+    await db.delete(scheduledPosts).where(eq(scheduledPosts.id, id));
+  }
+
+  async getScheduledPostLimits(userId: number): Promise<ScheduledPostLimits> {
+    const user = await this.getUser(userId);
+    const used = await this.countPendingScheduledPosts(userId);
+
+    // Admins are unlimited (internal convenience).
+    if (user?.role === 'admin') {
+      return { isUnlimited: true, max: null, used, remaining: null };
+    }
+
+    // Pro/Partner get the higher cap; everyone else the free cap.
+    const max = (user?.isPro || user?.isPartner)
+      ? this.PRO_MAX_SCHEDULED_POSTS
+      : this.FREE_MAX_SCHEDULED_POSTS;
+    return { isUnlimited: false, max, used, remaining: Math.max(0, max - used) };
   }
 
   // ==================== PRO LOOTBOX GRANT OPERATIONS ====================
@@ -5937,6 +6019,67 @@ export class DatabaseStorage implements IStorage {
       maxFiresPerDay,
       firesUsedToday,
       canFire: firesUsedToday < maxFiresPerDay
+    };
+  }
+
+  // Daily Twitch-clip import limit operations
+  async getUserDailyImports(userId: number, date: string): Promise<UserDailyImports | null> {
+    const [record] = await db
+      .select()
+      .from(userDailyImports)
+      .where(
+        and(
+          eq(userDailyImports.userId, userId),
+          eq(userDailyImports.importDate, date)
+        )
+      );
+    return record || null;
+  }
+
+  async incrementDailyImportCount(userId: number): Promise<UserDailyImports> {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format (UTC)
+
+    const existing = await this.getUserDailyImports(userId, today);
+
+    if (existing) {
+      const [updated] = await db
+        .update(userDailyImports)
+        .set({
+          importsCount: existing.importsCount + 1,
+          updatedAt: new Date()
+        })
+        .where(eq(userDailyImports.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(userDailyImports)
+        .values({
+          userId,
+          importDate: today,
+          importsCount: 1
+        })
+        .returning();
+      return created;
+    }
+  }
+
+  async getImportLimits(userId: number): Promise<ImportLimits> {
+    const user = await this.getUser(userId);
+    const isPro = user?.isPro ?? false;
+
+    // Pro users get 10 Twitch imports per day, free users get 2
+    const maxImportsPerDay = isPro ? 10 : 2;
+
+    const today = new Date().toISOString().split('T')[0];
+    const dailyImports = await this.getUserDailyImports(userId, today);
+    const importsUsedToday = dailyImports?.importsCount ?? 0;
+
+    return {
+      isPro,
+      maxImportsPerDay,
+      importsUsedToday,
+      canImport: importsUsedToday < maxImportsPerDay
     };
   }
 

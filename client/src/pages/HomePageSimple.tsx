@@ -17,7 +17,7 @@ import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreensh
 import { useMobile } from "@/hooks/use-mobile";
 import { Camera } from "lucide-react";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
-import { ProUpgradeDialog } from "@/components/ProUpgradeDialog";
+import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { LazySection } from "@/components/ui/lazy-section";
 import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
 import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
