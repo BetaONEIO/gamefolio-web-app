@@ -8,45 +8,86 @@ import type { ScheduledPost, InsertClip, InsertScreenshot } from '@shared/schema
 // 'failed' so it stops being picked up by the worker every minute.
 const MAX_PUBLISH_ATTEMPTS = 5;
 
+// Run the upload XP / bonus side-effects. These are best-effort: a failure here
+// must NOT fail the publish, otherwise the post is already live (the row gets
+// created) but the scheduled_posts row is marked failed and retried, which then
+// collides on the unique share_code. Errors are logged and swallowed.
+async function awardUploadRewards(
+  userId: number,
+  kind: 'clip' | 'reel' | 'screenshot',
+  title: string,
+): Promise<void> {
+  try {
+    if (kind === 'screenshot') {
+      await LeaderboardService.awardPoints(userId, 'screenshot_upload', `Upload: Screenshot - ${title}`);
+      await BonusEventsService.awardWeekendUploadBonus(userId, 100);
+      await CreatorMilestoneService.checkFirstUploadOfDay(userId);
+      await CreatorMilestoneService.checkWeeklyUploadMilestones(userId);
+      await BonusEventsService.checkConsecutiveUploadBonus(userId);
+    } else {
+      await LeaderboardService.awardPoints(userId, 'upload', `Upload: ${kind === 'reel' ? 'Reel' : 'Clip'} - ${title}`);
+    }
+  } catch (err) {
+    console.error(`⚠️ Scheduled post published but reward side-effects failed for user ${userId}:`, err);
+  }
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  // Drizzle wraps the driver error, so the Postgres code ('23505' = unique
+  // violation) can be on the error itself or on its `cause`.
+  if (!err || typeof err !== 'object') return false;
+  const e = err as { code?: string; cause?: { code?: string } };
+  return e.code === '23505' || e.cause?.code === '23505';
+}
+
 /**
  * Publish a single scheduled post: insert the real clip/screenshot record and
  * run the same XP / bonus side-effects the live upload endpoints run. The post
  * is already fully processed (thumbnails/transcode/Supabase upload happened at
  * schedule time), so `payload` is ready-to-insert clip/screenshot data.
  *
+ * Idempotent: if a prior attempt already created the row (recognised by the
+ * unique share_code), we reuse it instead of creating a duplicate, so a retry
+ * after a transient post-insert failure converges instead of colliding.
+ *
  * Returns the id of the created clip/screenshot.
  */
 export async function publishScheduledPost(post: ScheduledPost): Promise<number> {
   if (post.contentType === 'clip') {
     const clipData = post.payload as InsertClip;
-    const clip = await storage.createClip(clipData);
+    let clipId: number;
+    try {
+      const clip = await storage.createClip(clipData);
+      clipId = clip.id;
+    } catch (err) {
+      if (isUniqueViolation(err) && clipData.shareCode) {
+        const existing = await storage.getClipByShareCode(clipData.shareCode);
+        if (existing) return existing.id; // already published by an earlier attempt
+      }
+      throw err;
+    }
 
     const videoType = clipData.videoType === 'reel' ? 'reel' : 'clip';
-    await LeaderboardService.awardPoints(
-      post.userId,
-      'upload',
-      `Upload: ${videoType === 'reel' ? 'Reel' : 'Clip'} - ${clipData.title}`
-    );
-
-    return clip.id;
+    await awardUploadRewards(post.userId, videoType, clipData.title);
+    return clipId;
   }
 
   if (post.contentType === 'screenshot') {
     const screenshotData = post.payload as InsertScreenshot;
-    const screenshot = await storage.createScreenshot(screenshotData);
+    let screenshotId: number;
+    try {
+      const screenshot = await storage.createScreenshot(screenshotData);
+      screenshotId = screenshot.id;
+    } catch (err) {
+      if (isUniqueViolation(err) && screenshotData.shareCode) {
+        const existing = await storage.getScreenshotByShareCode(screenshotData.shareCode);
+        if (existing) return existing.id;
+      }
+      throw err;
+    }
 
-    // Mirror the live /screenshot endpoint's award flow.
-    await LeaderboardService.awardPoints(
-      post.userId,
-      'screenshot_upload',
-      `Upload: Screenshot - ${screenshot.title}`
-    );
-    await BonusEventsService.awardWeekendUploadBonus(post.userId, 100);
-    await CreatorMilestoneService.checkFirstUploadOfDay(post.userId);
-    await CreatorMilestoneService.checkWeeklyUploadMilestones(post.userId);
-    await BonusEventsService.checkConsecutiveUploadBonus(post.userId);
-
-    return screenshot.id;
+    await awardUploadRewards(post.userId, 'screenshot', screenshotData.title);
+    return screenshotId;
   }
 
   throw new Error(`Unknown scheduled post content type: ${post.contentType}`);
