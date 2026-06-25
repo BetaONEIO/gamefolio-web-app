@@ -23,7 +23,7 @@ import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
 import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
 import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
-import { FeaturedGamefolioSlider } from "@/components/home/FeaturedGamefolioSlider";
+
 import { Trophy } from "lucide-react";
 import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
 
@@ -37,6 +37,28 @@ interface DbHeroSlide {
   displayOrder: number;
   isActive: boolean;
 }
+
+interface FeaturedGamefolioData {
+  user: {
+    id: number;
+    username: string;
+    displayName: string | null;
+    bio: string | null;
+    avatarUrl: string | null;
+    bannerUrl: string | null;
+    accentColor: string | null;
+    primaryColor: string | null;
+    backgroundColor: string | null;
+    avatarBorderColor: string | null;
+    level: number | null;
+    userType: string | null;
+  };
+  gamesPlayed: { id: number; name: string }[];
+  latestClip: { id: number; thumbnailUrl: string | null } | null;
+  clipCount: number;
+}
+
+type AnySlide = DbHeroSlide | { type: 'featured'; id: 'featured' };
 
 interface TrendingContentCarouselProps {
   clips: ClipWithUser[] | undefined;
@@ -283,11 +305,22 @@ const HomePage = () => {
     staleTime: 30000,
   });
 
+  const { data: featuredGamefolio } = useQuery<FeaturedGamefolioData>({
+    queryKey: ["/api/featured/gamefolio"],
+    queryFn: async () => {
+      const r = await fetch("/api/featured/gamefolio");
+      if (!r.ok) throw new Error("Failed to fetch");
+      return r.json();
+    },
+    staleTime: 60_000,
+  });
+
   const slideIntervalMs = (heroSlideSettings?.intervalSeconds || 6) * 1000;
 
-  const activeSlides = useMemo(() => {
-    if (!dbHeroSlides || dbHeroSlides.length === 0) return null;
-    return dbHeroSlides;
+  const activeSlides = useMemo<AnySlide[] | null>(() => {
+    const base: AnySlide[] = dbHeroSlides && dbHeroSlides.length > 0 ? [...dbHeroSlides] : [];
+    const featuredSlide: AnySlide = { type: 'featured', id: 'featured' };
+    return base.length > 0 ? [...base, featuredSlide] : [featuredSlide];
   }, [dbHeroSlides]);
 
   const resetSlideTimer = useCallback(() => {
@@ -387,47 +420,166 @@ const HomePage = () => {
           <div className="w-full bg-black relative min-h-[300px] sm:min-h-[380px] md:min-h-[450px] border-b-2 border-primary">
             {activeSlides && activeSlides.length > 0 ? (
               <div className="relative w-full h-full min-h-[300px] sm:min-h-[380px] md:min-h-[450px]">
-                {activeSlides.map((slide, idx) => (
+                {activeSlides.map((slide, idx) => {
+                  const isFeaturedSlide = 'type' in slide && slide.type === 'featured';
+                  const fg = featuredGamefolio;
+                  const accent = fg?.user.accentColor || "#C1FF00";
+                  const avatarBorder = fg?.user.avatarBorderColor || accent;
+                  const types = (fg?.user.userType || "").split(",").map((t: string) => t.trim()).filter(Boolean);
+                  const games = fg?.gamesPlayed ?? [];
+                  const isStreamer = types.some((t: string) => t.toLowerCase() === "streamer");
+
+                  return (
                   <div
                     key={slide.id}
                     className="absolute inset-0 transition-opacity duration-700 ease-in-out"
                     style={{ opacity: idx === currentSlide ? 1 : 0, zIndex: idx === currentSlide ? 1 : 0 }}
                   >
-                    <img
-                      src={slide.imageUrl}
-                      alt={slide.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent">
-                      <div className="flex flex-col items-start justify-center h-full max-w-3xl p-6 sm:p-8 md:p-12">
-                        <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-3 md:mb-4 leading-tight drop-shadow-md">
-                          {slide.title}
-                        </h1>
-                        {slide.subtitle && (
-                          <h2 className="text-lg sm:text-2xl md:text-3xl font-semibold text-primary mb-4 md:mb-6 leading-tight drop-shadow-lg">
-                            {slide.subtitle}
-                          </h2>
+                    {isFeaturedSlide ? (
+                      /* ── Featured Gamefolio slide ── */
+                      <div className="absolute inset-0 overflow-hidden"
+                        style={{ background: "linear-gradient(135deg, #02172C 0%, #0B1218 60%, #0a0f1c 100%)" }}>
+                        {/* Background banner image */}
+                        {fg?.user.bannerUrl && (
+                          <div className="absolute inset-0">
+                            <img src={fg.user.bannerUrl} alt="" className="w-full h-full object-cover opacity-20" />
+                            <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(2,23,44,0.92) 0%, rgba(11,18,24,0.85) 100%)" }} />
+                          </div>
                         )}
-                        {slide.buttonText && (
-                          <Button
-                            className="w-fit px-6 py-5 h-auto text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground mt-4"
-                            onClick={() => {
-                              if (!slide.buttonLink) return;
-                              const link = slide.buttonLink.toLowerCase();
-                              if (link === '#pro' || link === '/pro' || link.includes('pro')) {
-                                window.dispatchEvent(new CustomEvent('open-pro-upgrade'));
-                              } else {
-                                setLocation(slide.buttonLink);
-                              }
-                            }}
-                          >
-                            {slide.buttonText}
-                          </Button>
-                        )}
+                        {/* Grid pattern */}
+                        <div className="absolute inset-0 opacity-[0.025] pointer-events-none"
+                          style={{ backgroundImage: "linear-gradient(rgba(193,255,0,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(193,255,0,0.6) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
+                        {/* Glow orb */}
+                        <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full pointer-events-none opacity-60"
+                          style={{ background: "radial-gradient(circle, rgba(193,255,0,0.07) 0%, transparent 70%)" }} />
+
+                        <div className="relative h-full flex items-center">
+                          <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-0 h-full">
+
+                            {/* Left: profile card */}
+                            <div className="flex items-center justify-center p-5 sm:p-6 md:p-10">
+                              <div className="w-full max-w-[260px] sm:max-w-[300px] rounded-2xl overflow-hidden relative"
+                                style={{ background: "rgba(255,255,255,0.04)", border: `1.5px solid ${accent}30`, boxShadow: `0 8px 32px rgba(0,0,0,0.4), 0 0 24px ${accent}10` }}>
+                                {/* Mini banner */}
+                                {fg?.user.bannerUrl && (
+                                  <div className="h-14 sm:h-16 overflow-hidden relative">
+                                    <img src={fg.user.bannerUrl} alt="" className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 30%, rgba(11,18,24,0.95))" }} />
+                                  </div>
+                                )}
+                                <div className="px-4 pb-4 pt-2">
+                                  {/* Avatar */}
+                                  <div className="relative inline-block -mt-7 mb-2">
+                                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden"
+                                      style={{ border: `2.5px solid ${avatarBorder}`, boxShadow: `0 0 10px ${avatarBorder}55` }}>
+                                      {fg?.user.avatarUrl
+                                        ? <img src={fg.user.avatarUrl} alt={fg.user.username} className="w-full h-full object-cover" />
+                                        : <div className="w-full h-full flex items-center justify-center font-black text-lg" style={{ background: accent, color: "#0a0f1c" }}>{fg?.user.username?.[0]?.toUpperCase()}</div>
+                                      }
+                                    </div>
+                                    {fg?.user.level && (
+                                      <div className="absolute -bottom-1 -right-1 text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none" style={{ background: accent, color: "#0a0f1c" }}>
+                                        {fg.user.level}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="font-black text-white text-sm leading-none">{fg?.user.displayName || fg?.user.username}</div>
+                                  <div className="text-[11px] mt-0.5 mb-2" style={{ color: accent }}>@{fg?.user.username}</div>
+                                  <div className="flex gap-1 flex-wrap mb-3">
+                                    {types.map((t: string) => (
+                                      <span key={t} className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full" style={{ background: `${accent}18`, color: accent, border: `1px solid ${accent}33` }}>{t}</span>
+                                    ))}
+                                  </div>
+                                  <div className="h-px mb-2.5" style={{ background: `${accent}22` }} />
+                                  <div className="grid grid-cols-3 gap-1.5 text-center">
+                                    {[{ l: "Uploads", v: fg?.clipCount ?? 0 }, { l: "Level", v: fg?.user.level ?? 1 }, { l: "Games", v: games.length }].map(({ l, v }) => (
+                                      <div key={l} className="rounded-lg py-1.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                                        <div className="font-black text-white text-xs leading-none">{v}</div>
+                                        <div className="text-[8px] text-gray-500 uppercase mt-0.5">{l}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right: info */}
+                            <div className="flex flex-col justify-center px-5 sm:px-6 md:px-10 pb-10 sm:pb-0">
+                              {/* "Featured" label */}
+                              <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                                <div className="h-px w-6" style={{ background: accent }} />
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: accent }}>Featured</span>
+                              </div>
+                              <div className="font-black text-white text-2xl sm:text-3xl md:text-4xl leading-none tracking-tight mb-1">
+                                @{fg?.user.username}
+                              </div>
+                              {types.length > 0 && (
+                                <div className="flex gap-1.5 mt-2 mb-4 flex-wrap">
+                                  {types.map((t: string) => (
+                                    <span key={t} className="text-xs font-bold uppercase px-2.5 py-0.5 rounded-full" style={{ background: `${accent}18`, color: accent, border: `1px solid ${accent}33` }}>{t}</span>
+                                  ))}
+                                </div>
+                              )}
+                              <div className="space-y-2 sm:space-y-2.5 mb-5">
+                                {[
+                                  games.length > 0 && { icon: "🎮", text: `Plays ${games.slice(0, 3).map((g: { name: string }) => g.name).join(", ")}` },
+                                  isStreamer && { icon: "📺", text: "Streamer & content creator" },
+                                  { icon: "⚡", text: "Uploads gaming content regularly" },
+                                  { icon: "🏆", text: `Level ${fg?.user.level ?? 1} Gamefolio member` },
+                                  { icon: "⭐", text: "Official Gamefolio account" },
+                                ].filter(Boolean).map((b: any) => (
+                                  <div key={b.text} className="flex items-center gap-2.5">
+                                    <span className="text-base leading-none">{b.icon}</span>
+                                    <span className="text-sm sm:text-base text-gray-200 font-medium leading-tight">{b.text}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              <button
+                                onClick={() => setLocation(`/profile/${fg?.user.username}`)}
+                                className="w-fit inline-flex items-center gap-2 text-sm font-black px-5 py-2.5 rounded-xl transition-all hover:opacity-90 active:scale-95"
+                                style={{ background: accent, color: "#0a0f1c", boxShadow: `0 4px 20px ${accent}40` }}>
+                                View Profile →
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      /* ── Regular image slide ── */
+                      <>
+                        <img src={(slide as DbHeroSlide).imageUrl} alt={(slide as DbHeroSlide).title} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent">
+                          <div className="flex flex-col items-start justify-center h-full max-w-3xl p-6 sm:p-8 md:p-12">
+                            <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-3 md:mb-4 leading-tight drop-shadow-md">
+                              {(slide as DbHeroSlide).title}
+                            </h1>
+                            {(slide as DbHeroSlide).subtitle && (
+                              <h2 className="text-lg sm:text-2xl md:text-3xl font-semibold text-primary mb-4 md:mb-6 leading-tight drop-shadow-lg">
+                                {(slide as DbHeroSlide).subtitle}
+                              </h2>
+                            )}
+                            {(slide as DbHeroSlide).buttonText && (
+                              <Button
+                                className="w-fit px-6 py-5 h-auto text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground mt-4"
+                                onClick={() => {
+                                  const link = ((slide as DbHeroSlide).buttonLink || "").toLowerCase();
+                                  if (link === '#pro' || link === '/pro' || link.includes('pro')) {
+                                    window.dispatchEvent(new CustomEvent('open-pro-upgrade'));
+                                  } else {
+                                    setLocation((slide as DbHeroSlide).buttonLink!);
+                                  }
+                                }}
+                              >
+                                {(slide as DbHeroSlide).buttonText}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
                 {activeSlides.length > 1 && (
                   <>
                     <button
@@ -492,10 +644,6 @@ const HomePage = () => {
       {/* Ecosystem Activity Rail */}
       <EcosystemActivityRail />
 
-      {/* Featured Gamefolio */}
-      <section className="px-4 sm:px-6 md:px-8 mt-6 sm:mt-8">
-        <FeaturedGamefolioSlider />
-      </section>
       
       <div className="space-y-4 sm:space-y-6 md:space-y-8 mt-4 sm:mt-6 md:mt-8">
       {/* Recommended for You Section - only for logged-in users */}
