@@ -120,6 +120,7 @@ const AuthPage = lazyWithRecovery(() => import("./pages/auth-page"));
 const OnboardingPage = lazyWithRecovery(() => import("./pages/onboarding-page"));
 const MessagesPage = lazyWithRecovery(() => import("./pages/MessagesPage"));
 const LatestReelsPage = lazyWithRecovery(() => import("./pages/LatestReelsPage"));
+const LatestContentPage = lazyWithRecovery(() => import("./pages/LatestContentPage"));
 const LatestClipsPage = lazyWithRecovery(() => import("./pages/LatestClipsPage"));
 const LatestScreenshotsPage = lazyWithRecovery(() => import("@/pages/LatestScreenshotsPage"));
 const InvitePage = lazyWithRecovery(() => import("./pages/InvitePage"));
@@ -496,6 +497,7 @@ function Router() {
           <ProtectedRoute path="/notifications" component={NotificationsPage} />
           <Route path="/latest-reels" component={LatestReelsPage} />
           <Route path="/latest-clips" component={LatestClipsPage} />
+          <Route path="/latest-content" component={LatestContentPage} />
           <Route path="/latest-screenshots" component={LatestScreenshotsPage} />
 
           <AdminProtectedRoute path="/admin" component={AdminPage} />
