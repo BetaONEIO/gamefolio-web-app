@@ -594,7 +594,7 @@ const HomePage = () => {
                         <div className="relative h-full flex flex-row">
 
                           {/* ── LEFT: header + podium ── */}
-                          <div className="flex flex-col items-center py-3 px-3 sm:px-5" style={{ width:'52%', flexShrink:0 }}>
+                          <div className="flex flex-col items-center py-3 px-3 sm:px-5" style={{ width:'63%', flexShrink:0 }}>
                             {/* Header */}
                             <div className="text-center flex-shrink-0 mb-2">
                               <div className="flex items-center justify-center gap-2 mb-0.5">
@@ -617,7 +617,7 @@ const HomePage = () => {
 
                             {/* Podium — 2nd · 1st · 3rd, scaled to fit left column */}
                             <div className="relative w-full flex items-end justify-center" style={{ flex:'1 1 0', minHeight:0 }}>
-                              <div style={{ transform:'scale(0.54)', transformOrigin:'bottom center', display:'flex', alignItems:'flex-end', gap:'16px' }}>
+                              <div style={{ transform:'scale(0.76)', transformOrigin:'bottom center', display:'flex', alignItems:'flex-end', gap:'16px' }}>
                                 {(() => {
                                   const top3 = weeklyTop3 ?? [];
 
