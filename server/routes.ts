@@ -3702,7 +3702,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     'stripeCustomerId', 'stripeSubscriptionId',
   ] as const;
 
-  async function signLeaderboardAvatars<T extends { user: { avatarUrl?: string | null } }>(entries: T[]): Promise<T[]> {
+  async function signLeaderboardAvatars<T extends { user: { avatarUrl?: string | null; bannerUrl?: string | null; profileBackgroundImageUrl?: string | null } }>(entries: T[]): Promise<T[]> {
     return Promise.all(
       entries.map(async (entry) => {
         let userData = { ...entry.user };
@@ -3714,6 +3714,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (userData.avatarUrl && userData.avatarUrl.includes('supabase.co/storage')) {
           const signed = await supabaseStorage.convertToSignedUrl(userData.avatarUrl, 3600);
           if (signed) userData.avatarUrl = signed;
+        }
+        // Sign banner URL if needed
+        if (userData.bannerUrl && userData.bannerUrl.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(userData.bannerUrl, 3600);
+          if (signed) userData.bannerUrl = signed;
+        }
+        // Sign profile background image URL if needed
+        if (userData.profileBackgroundImageUrl && userData.profileBackgroundImageUrl.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(userData.profileBackgroundImageUrl, 3600);
+          if (signed) userData.profileBackgroundImageUrl = signed;
         }
         return { ...entry, user: userData };
       })
