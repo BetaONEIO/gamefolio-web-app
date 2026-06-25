@@ -148,7 +148,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
             </div>
 
             <div className="relative flex-shrink-0 mx-2 mt-1 rounded-lg overflow-hidden" style={{ height: 70 }}>
-              {hasBanner ? (
+              {hasBanner && !user.profileBackgroundImageUrl ? (
                 <>
                   <img src={user.bannerUrl!} alt="" className="w-full h-full object-cover" onError={() => setBannerError(true)} />
                   <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(11,19,25,0.2) 0%, rgba(11,19,25,0.55) 100%)' }} />

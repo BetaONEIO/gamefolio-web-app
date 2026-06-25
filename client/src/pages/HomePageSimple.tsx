@@ -88,6 +88,11 @@ interface LeaderboardWinner {
   rank: number;
   uploadsCount: number;
   totalPoints: number;
+  followersCount?: number;
+  followingCount?: number;
+  clipsCount?: number;
+  reelsCount?: number;
+  screenshotsCount?: number;
   user: {
     id: number;
     username: string;
@@ -395,9 +400,9 @@ const HomePage = () => {
   });
 
   const { data: weeklyTop10 } = useQuery<LeaderboardWinner[]>({
-    queryKey: ["/api/leaderboard/weekly/current", 10],
+    queryKey: ["/api/trending-gamefolios", "week", 10],
     queryFn: async () => {
-      const r = await fetch("/api/leaderboard/weekly/current?limit=10");
+      const r = await fetch("/api/trending-gamefolios?period=week&limit=10");
       if (!r.ok) throw new Error("Failed to fetch");
       return r.json();
     },
@@ -668,8 +673,8 @@ const HomePage = () => {
                                     const entry: TrendingEntry = {
                                       userId: winner.userId, rank: winner.rank,
                                       uploadsCount: winner.uploadsCount, totalPoints: winner.totalPoints,
-                                      clipsCount: winner.uploadsCount, reelsCount: 0, screenshotsCount: 0,
-                                      followersCount: 0, followingCount: 0,
+                                      clipsCount: winner.clipsCount ?? winner.uploadsCount, reelsCount: winner.reelsCount ?? 0, screenshotsCount: winner.screenshotsCount ?? 0,
+                                      followersCount: winner.followersCount ?? 0, followingCount: winner.followingCount ?? 0,
                                       user: {
                                         id: winner.user.id, username: winner.user.username,
                                         displayName: winner.user.displayName, avatarUrl: winner.user.avatarUrl,
