@@ -98,6 +98,10 @@ interface LeaderboardWinner {
     avatarBorderColor: string | null;
     level: number | null;
     emailVerified?: boolean | null;
+    backgroundColor: string | null;
+    primaryColor: string | null;
+    profileBackgroundGradient: boolean | null;
+    profileBackgroundImageUrl: string | null;
   };
 }
 
@@ -594,15 +598,9 @@ const HomePage = () => {
                         <div className="relative h-full flex flex-col">
 
                           {/* ── HEADER — centred above both columns ── */}
-                          <div className="text-center flex-shrink-0 pt-3 pb-1">
-                            <div className="flex items-center justify-center gap-2 mb-0.5">
-                              <span className="text-base">🏆</span>
-                              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.22em]" style={{ color:"#B7FF18" }}>This Week's Leaderboard</span>
-                            </div>
-                            <p className="text-[10px] text-white/35 mx-auto hidden sm:block leading-relaxed">
-                              Compete, earn XP, climb the leaderboard and become this week's champion.
-                            </p>
-                            <div className="flex items-center justify-center gap-3 mt-1">
+                          <div className="flex-shrink-0 pt-4 pb-2 px-4 flex items-center justify-between">
+                            <h2 className="text-xl sm:text-2xl font-bold">Leaderboard</h2>
+                            <div className="flex items-center gap-3">
                               <span className="text-[10px] text-white/40">⏱ Resets in: <span className="font-bold text-white/70">{resetCountdown.days}d {resetCountdown.hours}h</span></span>
                               <button
                                 onClick={() => setLocation('/leaderboard')}
@@ -618,9 +616,9 @@ const HomePage = () => {
 
                           {/* ── LEFT: podium ── */}
                           <div className="flex flex-col items-center py-2 px-3 sm:px-5" style={{ width:'63%', flexShrink:0 }}>
-                            {/* Podium — 2nd · 1st · 3rd, scaled to fit left column */}
-                            <div className="relative w-full flex items-end justify-center" style={{ flex:'1 1 0', minHeight:0 }}>
-                              <div style={{ transform:'scale(0.96)', transformOrigin:'bottom center', display:'flex', alignItems:'flex-end', gap:'16px' }}>
+                            {/* Podium — 2nd · 1st · 3rd, vertically centred in column */}
+                            <div className="relative w-full flex items-center justify-center" style={{ flex:'1 1 0', minHeight:0 }}>
+                              <div style={{ transform:'scale(0.96)', transformOrigin:'center center', display:'flex', alignItems:'flex-end', gap:'16px' }}>
                                 {(() => {
                                   const top3 = weeklyTop3 ?? [];
 
@@ -662,10 +660,14 @@ const HomePage = () => {
                                       user: {
                                         id: winner.user.id, username: winner.user.username,
                                         displayName: winner.user.displayName, avatarUrl: winner.user.avatarUrl,
-                                        bannerUrl: winner.user.bannerUrl, avatarBorderColor: accentClr,
-                                        accentColor: accentClr, level: winner.user.level,
-                                        backgroundColor: winner.user.backgroundColor, primaryColor: null,
-                                        profileBackgroundGradient: false, profileBackgroundImageUrl: null,
+                                        bannerUrl: winner.user.bannerUrl,
+                                        avatarBorderColor: accentClr,
+                                        accentColor: accentClr,
+                                        level: winner.user.level,
+                                        backgroundColor: winner.user.backgroundColor,
+                                        primaryColor: winner.user.primaryColor,
+                                        profileBackgroundGradient: winner.user.profileBackgroundGradient ?? false,
+                                        profileBackgroundImageUrl: winner.user.profileBackgroundImageUrl,
                                       },
                                     };
 
