@@ -619,7 +619,7 @@ const HomePage = () => {
                           <div className="flex flex-col items-center py-2 px-3 sm:px-5" style={{ width:'63%', flexShrink:0 }}>
                             {/* Podium — 2nd · 1st · 3rd, vertically centred in column */}
                             <div className="relative w-full flex items-center justify-center" style={{ flex:'1 1 0', minHeight:0 }}>
-                              <div style={{ display:'flex', alignItems:'flex-end', gap:'8px' }}>
+                              <div style={{ display:'flex', alignItems:'flex-end', gap:'2px' }}>
                                 {(() => {
                                   const top3 = weeklyTop3 ?? [];
 
