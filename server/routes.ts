@@ -3229,16 +3229,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .slice(0, 3)
         .map(g => ({ id: g.id, name: g.name }));
 
-      // Get latest clip for the user
+      // Get latest clip/reel for the user with full metadata
       const userClips = await storage.getClipsByUserId(featuredUserId);
-      const latestClip = userClips.length > 0 ? {
-        id: userClips[0].id,
-        title: userClips[0].title,
-        thumbnailUrl: userClips[0].thumbnailUrl,
-        videoUrl: userClips[0].videoUrl,
-        views: userClips[0].views,
-        createdAt: userClips[0].createdAt,
-      } : null;
+      let latestClip: {
+        id: number; title: string; thumbnailUrl: string | null; videoUrl: string;
+        views: number; createdAt: Date | null; gameName: string | null; duration: number;
+        videoType: string; likesCount: number;
+      } | null = null;
+      if (userClips.length > 0) {
+        const c = userClips[0];
+        const [likeRows] = await Promise.all([
+          db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+            .from(likes).where(eq(likes.clipId, c.id)),
+        ]);
+        latestClip = {
+          id: c.id,
+          title: c.title,
+          thumbnailUrl: c.thumbnailUrl ?? null,
+          videoUrl: c.videoUrl,
+          views: c.views ?? 0,
+          createdAt: c.createdAt ?? null,
+          gameName: (c as any).gameName ?? null,
+          duration: (c as any).duration ?? 0,
+          videoType: (c as any).videoType ?? 'clip',
+          likesCount: likeRows[0]?.count ?? 0,
+        };
+      }
 
       const { password: _p, ...publicUser } = user;
       res.json({

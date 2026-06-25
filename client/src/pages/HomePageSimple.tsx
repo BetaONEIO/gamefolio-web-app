@@ -55,9 +55,21 @@ interface FeaturedGamefolioData {
     userType: string | null;
     profileBackgroundGradient?: boolean | null;
     profileBackgroundImageUrl?: string | null;
+    isVerified?: boolean | null;
   };
   gamesPlayed: { id: number; name: string }[];
-  latestClip: { id: number; thumbnailUrl: string | null } | null;
+  latestClip: {
+    id: number;
+    title: string;
+    thumbnailUrl: string | null;
+    videoUrl: string;
+    views: number;
+    createdAt: string | null;
+    gameName: string | null;
+    duration: number;
+    videoType: string;
+    likesCount: number;
+  } | null;
   clipCount: number;
   clipsCount: number;
   reelsCount: number;
@@ -465,6 +477,25 @@ const HomePage = () => {
                     },
                   } : null;
 
+                  const lc = fg?.latestClip;
+                  const fmtDuration = (s: number) => s > 0 ? `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}` : null;
+                  const fmtViews = (n: number) => n >= 1000 ? `${(n/1000).toFixed(1)}K` : String(n);
+                  const fmtTimeAgo = (d: string | null) => {
+                    if (!d) return '';
+                    const diff = Date.now() - new Date(d).getTime();
+                    const h = Math.floor(diff / 3600000);
+                    if (h < 1) return 'just now';
+                    if (h < 24) return `${h}h ago`;
+                    const days = Math.floor(h / 24);
+                    return days < 7 ? `${days}d ago` : `${Math.floor(days/7)}w ago`;
+                  };
+                  const isReel = lc?.videoType === 'reel';
+                  const contentLabel = isReel ? 'LATEST REEL' : 'LATEST CLIP';
+                  const watchLabel = isReel ? '📱 Watch Reel' : '▶ Watch Clip';
+                  const trendingReason = (fg?.weeklyUploadsCount ?? 0) > 0
+                    ? `Uploaded ${fg!.weeklyUploadsCount} clip${fg!.weeklyUploadsCount !== 1 ? 's' : ''} this week`
+                    : (fg?.followersCount ?? 0) > 20 ? `${fg!.followersCount} followers` : 'Rising creator';
+
                   return (
                   <div
                     key={slide.id}
@@ -474,88 +505,126 @@ const HomePage = () => {
                     {isFeaturedSlide ? (
                       /* ── Featured Gamefolio slide ── */
                       <div className="absolute inset-0 overflow-hidden"
-                        style={{ background: "linear-gradient(135deg, #02172C 0%, #0B1218 60%, #0a0f1c 100%)" }}>
+                        style={{ background: "#0B1319" }}>
                         <style>{CREATOR_CARD_STYLES}</style>
-                        {/* Background banner image */}
+                        {/* Subtle background banner */}
                         {fg?.user.bannerUrl && (
                           <div className="absolute inset-0">
-                            <img src={fg.user.bannerUrl} alt="" className="w-full h-full object-cover opacity-20" />
-                            <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(2,23,44,0.92) 0%, rgba(11,18,24,0.85) 100%)" }} />
+                            <img src={fg.user.bannerUrl} alt="" className="w-full h-full object-cover opacity-10" />
+                            <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(11,19,25,0.97) 0%, rgba(11,19,25,0.90) 100%)" }} />
                           </div>
                         )}
                         {/* Grid pattern */}
-                        <div className="absolute inset-0 opacity-[0.025] pointer-events-none"
+                        <div className="absolute inset-0 opacity-[0.02] pointer-events-none"
                           style={{ backgroundImage: "linear-gradient(rgba(183,255,26,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(183,255,26,0.6) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
-                        {/* Glow orb */}
-                        <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full pointer-events-none opacity-60"
-                          style={{ background: "radial-gradient(circle, rgba(183,255,26,0.07) 0%, transparent 70%)" }} />
 
-                        <div className="relative h-full flex items-center">
-                          <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-0 h-full">
+                        <div className="relative h-full flex items-center px-4 sm:px-6 md:px-8 py-4">
+                          <div className="w-full flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-stretch max-w-6xl mx-auto">
 
-                            {/* Left: CreatorCard — same design as Trending Gamefolios */}
-                            <div className="flex items-center justify-center p-5 sm:p-6 md:p-10">
+                            {/* ── LEFT: Profile mini-card ── */}
+                            <div className="flex-shrink-0 flex items-center justify-center sm:w-[37%]">
                               {fgEntry ? (
                                 <CreatorCard entry={fgEntry} period="alltime" />
                               ) : (
-                                <div className="fire-card" style={{ width: 190, height: 340, borderRadius: 16 }}>
-                                  <div className="absolute inset-[3px] rounded-[13px]" style={{ background: 'rgba(11,19,25,0.95)' }} />
-                                </div>
+                                <div className="w-[190px] h-[320px] rounded-2xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} />
                               )}
                             </div>
 
-                            {/* Right: info pulled from the actual Gamefolio profile */}
-                            <div className="flex flex-col justify-center px-5 sm:px-6 md:px-10 pb-10 sm:pb-0">
-                              {/* "Featured" label */}
-                              <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                                <div className="h-px w-6" style={{ background: accent }} />
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: accent }}>Featured</span>
-                              </div>
-                              <div className="font-black text-white text-2xl sm:text-3xl md:text-4xl leading-none tracking-tight mb-1">
-                                @{fg?.user.username}
-                              </div>
-                              {types.length > 0 && (
-                                <div className="flex gap-1.5 mt-2 mb-4 flex-wrap">
-                                  {types.map((t: string) => (
-                                    <span key={t} className="text-xs font-bold uppercase px-2.5 py-0.5 rounded-full" style={{ background: `${accent}18`, color: accent, border: `1px solid ${accent}33` }}>{t}</span>
-                                  ))}
+                            {/* ── RIGHT: Content showcase ── */}
+                            <div className="flex-1 flex flex-col justify-center min-w-0 sm:w-[63%]">
+                              {/* Header row */}
+                              <div className="flex items-center gap-3 mb-2">
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-1 h-3 rounded-full" style={{ background: accent }} />
+                                  <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white/60">Trending Gamefolio</span>
                                 </div>
-                              )}
-                              {/* Top game highlight */}
-                              {fg?.topGame && (
-                                <div className="flex items-center gap-3 mb-4 px-3 py-2.5 rounded-xl" style={{ background: 'rgba(183,255,26,0.07)', border: '1px solid rgba(183,255,26,0.18)' }}>
-                                  {fg.topGame.imageUrl && (
-                                    <img src={fg.topGame.imageUrl} alt={fg.topGame.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" style={{ border: `1.5px solid ${accent}44` }} />
+                                <div className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide"
+                                  style={{ background: `${accent}18`, color: accent, border: `1px solid ${accent}30` }}>
+                                  🔥 Trending Now
+                                </div>
+                              </div>
+                              <div className="text-white font-black text-lg sm:text-xl md:text-2xl leading-tight mb-3 tracking-tight">
+                                Featured Creator
+                              </div>
+
+                              {/* Media thumbnail */}
+                              {lc?.thumbnailUrl ? (
+                                <div
+                                  className="relative rounded-xl overflow-hidden cursor-pointer group mb-3"
+                                  style={{ aspectRatio: isReel ? '9/5' : '16/7', background: '#0a0f1c', border: '1px solid rgba(255,255,255,0.08)', maxHeight: 180 }}
+                                  onClick={() => setLocation(`/clips/${lc.id}`)}
+                                >
+                                  <img
+                                    src={lc.thumbnailUrl}
+                                    alt={lc.title}
+                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                  />
+                                  {/* Dark overlay */}
+                                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+                                  {/* Play button */}
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="w-11 h-11 rounded-full flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
+                                      style={{ background: 'rgba(0,0,0,0.65)', border: `2px solid ${accent}`, boxShadow: `0 0 18px ${accent}50` }}>
+                                      <svg className="w-5 h-5 ml-0.5" fill={accent} viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                    </div>
+                                  </div>
+                                  {/* Duration badge */}
+                                  {lc.duration > 0 && (
+                                    <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded text-[10px] font-bold text-white"
+                                      style={{ background: 'rgba(0,0,0,0.75)' }}>
+                                      {fmtDuration(lc.duration)}
+                                    </div>
                                   )}
-                                  <div className="min-w-0">
-                                    <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: accent }}>Most Uploaded Game</div>
-                                    <div className="text-white font-bold text-sm leading-tight truncate">{fg.topGame.name}</div>
-                                    <div className="text-white/50 text-[11px]">{fg.topGame.uploadCount} clip{fg.topGame.uploadCount !== 1 ? 's' : ''} uploaded</div>
+                                </div>
+                              ) : (
+                                <div className="relative rounded-xl mb-3 flex items-center justify-center"
+                                  style={{ aspectRatio: '16/7', maxHeight: 180, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                  <span className="text-white/20 text-sm">No preview</span>
+                                </div>
+                              )}
+
+                              {/* Content metadata */}
+                              {lc && (
+                                <div className="mb-2">
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <span className="text-[9px] font-black uppercase tracking-[0.18em]" style={{ color: accent }}>🎬 {contentLabel}</span>
+                                  </div>
+                                  <div className="text-white font-bold text-sm leading-snug truncate mb-1.5">{lc.title}</div>
+                                  <div className="flex items-center gap-3 text-[11px] text-white/50 flex-wrap">
+                                    <span>👁 {fmtViews(lc.views)} views</span>
+                                    <span>♥ {lc.likesCount} likes</span>
+                                    <span>· {fmtTimeAgo(lc.createdAt)}</span>
+                                    {lc.gameName && <span>🎮 {lc.gameName}</span>}
                                   </div>
                                 </div>
                               )}
 
-                              <div className="space-y-2 sm:space-y-2.5 mb-5">
-                                {[
-                                  fg && (fg.weeklyUploadsCount ?? 0) > 0 && { icon: "🔥", text: `${fg.weeklyUploadsCount} upload${fg.weeklyUploadsCount !== 1 ? 's' : ''} this week` },
-                                  isStreamer && { icon: "📺", text: "Streamer & content creator" },
-                                  fg && (fg.followersCount ?? 0) > 0 && { icon: "👥", text: `${(fg.followersCount ?? 0).toLocaleString()} follower${(fg.followersCount ?? 0) !== 1 ? 's' : ''}` },
-                                  fgGames.length > 0 && { icon: "🎮", text: `Also plays ${fgGames.slice(0, 2).map((g: { name: string }) => g.name).join(" & ")}` },
-                                  { icon: "🏆", text: `Level ${fg?.user.level ?? 1} Gamefolio member` },
-                                ].filter(Boolean).map((b: any) => (
-                                  <div key={b.text} className="flex items-center gap-2.5">
-                                    <span className="text-base leading-none">{b.icon}</span>
-                                    <span className="text-sm sm:text-base text-gray-200 font-medium leading-tight">{b.text}</span>
-                                  </div>
-                                ))}
+                              {/* Trending because chip */}
+                              <div className="flex items-center gap-1.5 mb-3 px-2.5 py-1.5 rounded-lg w-fit"
+                                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                <span className="text-[11px] text-white/50">📈</span>
+                                <span className="text-[11px] text-white/70"><span className="text-white/40">Trending because:</span> <span className="text-white font-semibold">{trendingReason}</span></span>
                               </div>
-                              <button
-                                onClick={() => setLocation(`/profile/${fg?.user.username}`)}
-                                className="w-fit inline-flex items-center gap-2 text-sm font-black px-5 py-2.5 rounded-xl transition-all hover:opacity-90 active:scale-95"
-                                style={{ background: accent, color: "#0B1319", boxShadow: `0 4px 20px ${accent}40` }}>
-                                View Profile →
-                              </button>
+
+                              {/* Action buttons */}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {lc && (
+                                  <button
+                                    onClick={() => setLocation(`/clips/${lc.id}`)}
+                                    className="inline-flex items-center gap-1.5 text-xs font-black px-4 py-2 rounded-lg transition-all hover:opacity-90 active:scale-95"
+                                    style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)' }}>
+                                    {watchLabel}
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => setLocation(`/profile/${fg?.user.username}`)}
+                                  className="inline-flex items-center gap-1.5 text-xs font-black px-4 py-2 rounded-lg transition-all hover:opacity-90 active:scale-95"
+                                  style={{ background: accent, color: '#0B1319', boxShadow: `0 4px 16px ${accent}40` }}>
+                                  View Gamefolio →
+                                </button>
+                              </div>
                             </div>
+
                           </div>
                         </div>
                       </div>
