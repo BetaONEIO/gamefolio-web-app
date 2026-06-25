@@ -3433,7 +3433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { heroTextSettings } = await import('@shared/schema');
       const [config] = await db.select().from(heroTextSettings).where(eq(heroTextSettings.textType, "slide_config"));
-      res.json({ intervalSeconds: config ? parseInt(config.title) || 6 : 6 });
+      res.json({ intervalSeconds: config ? parseInt(config.title) || 15 : 15 });
     } catch (err) {
       console.error("Error fetching hero slide settings:", err);
       res.status(500).json({ message: "Error fetching settings" });
