@@ -3171,7 +3171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const favoriteGames = await storage.getUserGameFavorites(GAMEPOLIO_USER_ID);
       const gamesPlayed = favoriteGames.map(g => ({ id: g.id, name: g.name }));
 
-      // Get latest clip as "reel"
+      // Get latest clip
       const userClips = await storage.getClipsByUserId(GAMEPOLIO_USER_ID);
       const latestClip = userClips.length > 0 ? {
         id: userClips[0].id,
@@ -3182,8 +3182,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: userClips[0].createdAt,
       } : null;
 
-      // Clip count across all types
-      const clipCount = userClips.length;
+      // Stats for CreatorCard: clips, reels, screenshots, followers, following, totalPoints
+      const [clipRows, reelRows, ssRows, followerRows, followingRows, xpRows] = await Promise.all([
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(clips).where(and(eq(clips.userId, GAMEPOLIO_USER_ID), eq(clips.videoType, 'clip'))),
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(clips).where(and(eq(clips.userId, GAMEPOLIO_USER_ID), eq(clips.videoType, 'reel'))),
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(screenshots).where(eq(screenshots.userId, GAMEPOLIO_USER_ID)),
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(follows).where(eq(follows.followingId, GAMEPOLIO_USER_ID)),
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(follows).where(eq(follows.followerId, GAMEPOLIO_USER_ID)),
+        db.select({ total: sql<number>`CAST(COALESCE(SUM(xp_amount), 0) AS INTEGER)` })
+          .from(userXPHistory).where(eq(userXPHistory.userId, GAMEPOLIO_USER_ID)),
+      ]);
+
+      const clipsCount = clipRows[0]?.count ?? 0;
+      const reelsCount = reelRows[0]?.count ?? 0;
+      const screenshotsCount = ssRows[0]?.count ?? 0;
+      const followersCount = followerRows[0]?.count ?? 0;
+      const followingCount = followingRows[0]?.count ?? 0;
+      const totalPoints = xpRows[0]?.total ?? 0;
 
       const { password: _p, ...publicUser } = user;
       res.json({
@@ -3194,7 +3214,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           { id: 3, name: "Apex Legends" },
         ],
         latestClip,
-        clipCount,
+        clipCount: clipsCount + reelsCount,
+        clipsCount,
+        reelsCount,
+        screenshotsCount,
+        followersCount,
+        followingCount,
+        totalPoints,
       });
     } catch (err) {
       console.error("Error getting featured gamefolio:", err);

@@ -23,6 +23,7 @@ import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
 import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
 import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
+import { CreatorCard, CREATOR_CARD_STYLES, TrendingEntry } from "@/components/home/CreatorCard";
 
 import { Trophy } from "lucide-react";
 import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
@@ -52,10 +53,18 @@ interface FeaturedGamefolioData {
     avatarBorderColor: string | null;
     level: number | null;
     userType: string | null;
+    profileBackgroundGradient?: boolean | null;
+    profileBackgroundImageUrl?: string | null;
   };
   gamesPlayed: { id: number; name: string }[];
   latestClip: { id: number; thumbnailUrl: string | null } | null;
   clipCount: number;
+  clipsCount: number;
+  reelsCount: number;
+  screenshotsCount: number;
+  followersCount: number;
+  followingCount: number;
+  totalPoints: number;
 }
 
 type AnySlide = DbHeroSlide | { type: 'featured'; id: 'featured' };
@@ -423,11 +432,36 @@ const HomePage = () => {
                 {activeSlides.map((slide, idx) => {
                   const isFeaturedSlide = 'type' in slide && slide.type === 'featured';
                   const fg = featuredGamefolio;
-                  const accent = fg?.user.accentColor || "#C1FF00";
-                  const avatarBorder = fg?.user.avatarBorderColor || accent;
+                  const accent = fg?.user.accentColor || "#B7FF1A";
                   const types = (fg?.user.userType || "").split(",").map((t: string) => t.trim()).filter(Boolean);
-                  const games = fg?.gamesPlayed ?? [];
+                  const fgGames = fg?.gamesPlayed ?? [];
                   const isStreamer = types.some((t: string) => t.toLowerCase() === "streamer");
+
+                  const fgEntry: TrendingEntry | null = fg ? {
+                    userId: fg.user.id,
+                    rank: 1,
+                    uploadsCount: fg.clipCount,
+                    totalPoints: fg.totalPoints ?? 0,
+                    clipsCount: fg.clipsCount ?? 0,
+                    reelsCount: fg.reelsCount ?? 0,
+                    screenshotsCount: fg.screenshotsCount ?? 0,
+                    followersCount: fg.followersCount ?? 0,
+                    followingCount: fg.followingCount ?? 0,
+                    user: {
+                      id: fg.user.id,
+                      username: fg.user.username,
+                      displayName: fg.user.displayName,
+                      avatarUrl: fg.user.avatarUrl,
+                      bannerUrl: fg.user.bannerUrl,
+                      avatarBorderColor: fg.user.avatarBorderColor,
+                      accentColor: fg.user.accentColor,
+                      level: fg.user.level,
+                      backgroundColor: fg.user.backgroundColor,
+                      primaryColor: fg.user.primaryColor,
+                      profileBackgroundGradient: fg.user.profileBackgroundGradient,
+                      profileBackgroundImageUrl: fg.user.profileBackgroundImageUrl,
+                    },
+                  } : null;
 
                   return (
                   <div
@@ -439,6 +473,7 @@ const HomePage = () => {
                       /* ── Featured Gamefolio slide ── */
                       <div className="absolute inset-0 overflow-hidden"
                         style={{ background: "linear-gradient(135deg, #02172C 0%, #0B1218 60%, #0a0f1c 100%)" }}>
+                        <style>{CREATOR_CARD_STYLES}</style>
                         {/* Background banner image */}
                         {fg?.user.bannerUrl && (
                           <div className="absolute inset-0">
@@ -448,62 +483,26 @@ const HomePage = () => {
                         )}
                         {/* Grid pattern */}
                         <div className="absolute inset-0 opacity-[0.025] pointer-events-none"
-                          style={{ backgroundImage: "linear-gradient(rgba(193,255,0,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(193,255,0,0.6) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
+                          style={{ backgroundImage: "linear-gradient(rgba(183,255,26,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(183,255,26,0.6) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
                         {/* Glow orb */}
                         <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full pointer-events-none opacity-60"
-                          style={{ background: "radial-gradient(circle, rgba(193,255,0,0.07) 0%, transparent 70%)" }} />
+                          style={{ background: "radial-gradient(circle, rgba(183,255,26,0.07) 0%, transparent 70%)" }} />
 
                         <div className="relative h-full flex items-center">
                           <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-0 h-full">
 
-                            {/* Left: profile card */}
+                            {/* Left: CreatorCard — same design as Trending Gamefolios */}
                             <div className="flex items-center justify-center p-5 sm:p-6 md:p-10">
-                              <div className="w-full max-w-[260px] sm:max-w-[300px] rounded-2xl overflow-hidden relative"
-                                style={{ background: "rgba(255,255,255,0.04)", border: `1.5px solid ${accent}30`, boxShadow: `0 8px 32px rgba(0,0,0,0.4), 0 0 24px ${accent}10` }}>
-                                {/* Mini banner */}
-                                {fg?.user.bannerUrl && (
-                                  <div className="h-14 sm:h-16 overflow-hidden relative">
-                                    <img src={fg.user.bannerUrl} alt="" className="w-full h-full object-cover" />
-                                    <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 30%, rgba(11,18,24,0.95))" }} />
-                                  </div>
-                                )}
-                                <div className="px-4 pb-4 pt-2">
-                                  {/* Avatar */}
-                                  <div className="relative inline-block -mt-7 mb-2">
-                                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden"
-                                      style={{ border: `2.5px solid ${avatarBorder}`, boxShadow: `0 0 10px ${avatarBorder}55` }}>
-                                      {fg?.user.avatarUrl
-                                        ? <img src={fg.user.avatarUrl} alt={fg.user.username} className="w-full h-full object-cover" />
-                                        : <div className="w-full h-full flex items-center justify-center font-black text-lg" style={{ background: accent, color: "#0a0f1c" }}>{fg?.user.username?.[0]?.toUpperCase()}</div>
-                                      }
-                                    </div>
-                                    {fg?.user.level && (
-                                      <div className="absolute -bottom-1 -right-1 text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none" style={{ background: accent, color: "#0a0f1c" }}>
-                                        {fg.user.level}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="font-black text-white text-sm leading-none">{fg?.user.displayName || fg?.user.username}</div>
-                                  <div className="text-[11px] mt-0.5 mb-2" style={{ color: accent }}>@{fg?.user.username}</div>
-                                  <div className="flex gap-1 flex-wrap mb-3">
-                                    {types.map((t: string) => (
-                                      <span key={t} className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full" style={{ background: `${accent}18`, color: accent, border: `1px solid ${accent}33` }}>{t}</span>
-                                    ))}
-                                  </div>
-                                  <div className="h-px mb-2.5" style={{ background: `${accent}22` }} />
-                                  <div className="grid grid-cols-3 gap-1.5 text-center">
-                                    {[{ l: "Uploads", v: fg?.clipCount ?? 0 }, { l: "Level", v: fg?.user.level ?? 1 }, { l: "Games", v: games.length }].map(({ l, v }) => (
-                                      <div key={l} className="rounded-lg py-1.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                                        <div className="font-black text-white text-xs leading-none">{v}</div>
-                                        <div className="text-[8px] text-gray-500 uppercase mt-0.5">{l}</div>
-                                      </div>
-                                    ))}
-                                  </div>
+                              {fgEntry ? (
+                                <CreatorCard entry={fgEntry} period="alltime" />
+                              ) : (
+                                <div className="fire-card" style={{ width: 190, height: 340, borderRadius: 16 }}>
+                                  <div className="absolute inset-[3px] rounded-[13px]" style={{ background: 'rgba(11,19,25,0.95)' }} />
                                 </div>
-                              </div>
+                              )}
                             </div>
 
-                            {/* Right: info */}
+                            {/* Right: info pulled from the actual Gamefolio profile */}
                             <div className="flex flex-col justify-center px-5 sm:px-6 md:px-10 pb-10 sm:pb-0">
                               {/* "Featured" label */}
                               <div className="flex items-center gap-2 mb-3 sm:mb-4">
@@ -522,9 +521,10 @@ const HomePage = () => {
                               )}
                               <div className="space-y-2 sm:space-y-2.5 mb-5">
                                 {[
-                                  games.length > 0 && { icon: "🎮", text: `Plays ${games.slice(0, 3).map((g: { name: string }) => g.name).join(", ")}` },
+                                  fgGames.length > 0 && { icon: "🎮", text: `Plays ${fgGames.slice(0, 3).map((g: { name: string }) => g.name).join(", ")}` },
                                   isStreamer && { icon: "📺", text: "Streamer & content creator" },
-                                  { icon: "⚡", text: "Uploads gaming content regularly" },
+                                  fg && (fg.followersCount ?? 0) > 0 && { icon: "👥", text: `${(fg.followersCount ?? 0).toLocaleString()} followers` },
+                                  fg && (fg.clipsCount ?? 0) + (fg.reelsCount ?? 0) + (fg.screenshotsCount ?? 0) > 0 && { icon: "⚡", text: `${((fg.clipsCount ?? 0) + (fg.reelsCount ?? 0) + (fg.screenshotsCount ?? 0)).toLocaleString()} uploads & counting` },
                                   { icon: "🏆", text: `Level ${fg?.user.level ?? 1} Gamefolio member` },
                                   { icon: "⭐", text: "Official Gamefolio account" },
                                 ].filter(Boolean).map((b: any) => (
@@ -537,7 +537,7 @@ const HomePage = () => {
                               <button
                                 onClick={() => setLocation(`/profile/${fg?.user.username}`)}
                                 className="w-fit inline-flex items-center gap-2 text-sm font-black px-5 py-2.5 rounded-xl transition-all hover:opacity-90 active:scale-95"
-                                style={{ background: accent, color: "#0a0f1c", boxShadow: `0 4px 20px ${accent}40` }}>
+                                style={{ background: accent, color: "#0B1319", boxShadow: `0 4px 20px ${accent}40` }}>
                                 View Profile →
                               </button>
                             </div>
