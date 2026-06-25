@@ -591,30 +591,33 @@ const HomePage = () => {
                         <div className="absolute inset-0 opacity-[0.02] pointer-events-none"
                           style={{ backgroundImage:"linear-gradient(rgba(183,255,26,0.6) 1px,transparent 1px),linear-gradient(90deg,rgba(183,255,26,0.6) 1px,transparent 1px)",backgroundSize:"48px 48px" }} />
 
-                        <div className="relative h-full flex flex-row">
+                        <div className="relative h-full flex flex-col">
 
-                          {/* ── LEFT: header + podium ── */}
-                          <div className="flex flex-col items-center py-3 px-3 sm:px-5" style={{ width:'63%', flexShrink:0 }}>
-                            {/* Header */}
-                            <div className="text-center flex-shrink-0 mb-2">
-                              <div className="flex items-center justify-center gap-2 mb-0.5">
-                                <span className="text-base">🏆</span>
-                                <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.22em]" style={{ color:"#B7FF18" }}>This Week's Leaderboard</span>
-                              </div>
-                              <p className="text-[10px] text-white/35 max-w-[220px] mx-auto hidden sm:block leading-relaxed">
-                                Compete, earn XP, climb the leaderboard and become this week's champion.
-                              </p>
-                              <div className="flex items-center justify-center gap-3 mt-1">
-                                <span className="text-[10px] text-white/40">⏱ Resets in: <span className="font-bold text-white/70">{resetCountdown.days}d {resetCountdown.hours}h</span></span>
-                                <button
-                                  onClick={() => setLocation('/leaderboard')}
-                                  className="inline-flex items-center gap-1 text-[10px] font-black px-3 py-1 rounded-lg transition-all hover:opacity-90 active:scale-95"
-                                  style={{ background:'#B7FF18', color:'#0B1319' }}>
-                                  View All →
-                                </button>
-                              </div>
+                          {/* ── HEADER — centred above both columns ── */}
+                          <div className="text-center flex-shrink-0 pt-3 pb-1">
+                            <div className="flex items-center justify-center gap-2 mb-0.5">
+                              <span className="text-base">🏆</span>
+                              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.22em]" style={{ color:"#B7FF18" }}>This Week's Leaderboard</span>
                             </div>
+                            <p className="text-[10px] text-white/35 mx-auto hidden sm:block leading-relaxed">
+                              Compete, earn XP, climb the leaderboard and become this week's champion.
+                            </p>
+                            <div className="flex items-center justify-center gap-3 mt-1">
+                              <span className="text-[10px] text-white/40">⏱ Resets in: <span className="font-bold text-white/70">{resetCountdown.days}d {resetCountdown.hours}h</span></span>
+                              <button
+                                onClick={() => setLocation('/leaderboard')}
+                                className="inline-flex items-center gap-1 text-[10px] font-black px-3 py-1 rounded-lg transition-all hover:opacity-90 active:scale-95"
+                                style={{ background:'#B7FF18', color:'#0B1319' }}>
+                                View All →
+                              </button>
+                            </div>
+                          </div>
 
+                          {/* ── COLUMNS row ── */}
+                          <div className="flex flex-row flex-1 min-h-0">
+
+                          {/* ── LEFT: podium ── */}
+                          <div className="flex flex-col items-center py-2 px-3 sm:px-5" style={{ width:'63%', flexShrink:0 }}>
                             {/* Podium — 2nd · 1st · 3rd, scaled to fit left column */}
                             <div className="relative w-full flex items-end justify-center" style={{ flex:'1 1 0', minHeight:0 }}>
                               <div style={{ transform:'scale(0.96)', transformOrigin:'bottom center', display:'flex', alignItems:'flex-end', gap:'16px' }}>
@@ -769,7 +772,8 @@ const HomePage = () => {
                             </div>
                           </div>
 
-                        </div>
+                          </div>{/* end columns row */}
+                        </div>{/* end flex-col outer */}
                       </div>
                     ) : isFeaturedSlide ? (
                       /* ── Featured Gamefolio slide ── */
