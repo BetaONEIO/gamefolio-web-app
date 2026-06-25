@@ -81,7 +81,58 @@ interface FeaturedGamefolioData {
   topGame: { id: number; name: string; imageUrl: string | null; uploadCount: number } | null;
 }
 
-type AnySlide = DbHeroSlide | { type: 'featured'; id: 'featured' };
+type AnySlide = DbHeroSlide | { type: 'featured'; id: 'featured' } | { type: 'leaderboard'; id: 'leaderboard' };
+
+interface LeaderboardWinner {
+  userId: number;
+  rank: number;
+  uploadsCount: number;
+  totalPoints: number;
+  user: {
+    id: number;
+    username: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+    bannerUrl: string | null;
+    accentColor: string | null;
+    avatarBorderColor: string | null;
+    level: number | null;
+    emailVerified?: boolean | null;
+  };
+}
+
+const LEADERBOARD_STYLES = `
+@keyframes lb-sparkle {
+  0%, 100% { transform: scale(1) translateY(0); opacity: 0.9; }
+  50% { transform: scale(1.4) translateY(-4px); opacity: 0.4; }
+}
+@keyframes lb-orbit {
+  from { transform: rotate(0deg) translateX(72px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(72px) rotate(-360deg); }
+}
+@keyframes lb-pulse-gold {
+  0%, 100% { box-shadow: 0 0 18px 4px rgba(255,200,50,0.35); }
+  50%       { box-shadow: 0 0 32px 8px rgba(255,200,50,0.6); }
+}
+@keyframes lb-glow-silver {
+  0%, 100% { box-shadow: 0 0 14px 3px rgba(192,192,192,0.3); }
+  50%       { box-shadow: 0 0 24px 6px rgba(192,192,192,0.5); }
+}
+@keyframes lb-glow-bronze {
+  0%, 100% { box-shadow: 0 0 14px 3px rgba(205,127,50,0.3); }
+  50%       { box-shadow: 0 0 24px 6px rgba(205,127,50,0.5); }
+}
+.lb-gold   { animation: lb-pulse-gold   2.4s ease-in-out infinite; }
+.lb-silver { animation: lb-glow-silver  2.8s ease-in-out infinite; }
+.lb-bronze { animation: lb-glow-bronze  3.2s ease-in-out infinite; }
+.lb-spark  { position:absolute; width:5px; height:5px; border-radius:50%; pointer-events:none; }
+.lb-spark:nth-child(1) { animation: lb-orbit 4s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#FFD700; top:50%; left:50%; margin:-2.5px; animation-delay:0s,0s; }
+.lb-spark:nth-child(2) { animation: lb-orbit 4s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#B7FF18; top:50%; left:50%; margin:-2.5px; animation-delay:-0.67s,-0.3s; }
+.lb-spark:nth-child(3) { animation: lb-orbit 4s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#fff; top:50%; left:50%; margin:-2.5px; animation-delay:-1.33s,-0.6s; }
+.lb-spark:nth-child(4) { animation: lb-orbit 4s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#FFD700; top:50%; left:50%; margin:-2.5px; animation-delay:-2s,-0.9s; }
+.lb-spark:nth-child(5) { animation: lb-orbit 4s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#B7FF18; top:50%; left:50%; margin:-2.5px; animation-delay:-2.67s,-1.1s; }
+.lb-spark:nth-child(6) { animation: lb-orbit 6s linear infinite, lb-sparkle 1.8s ease-in-out infinite; background:#fff; top:50%; left:50%; margin:-2.5px; animation-delay:-3.33s,-1.4s; }
+`;
 
 interface TrendingContentCarouselProps {
   clips: ClipWithUser[] | undefined;
@@ -338,12 +389,39 @@ const HomePage = () => {
     staleTime: 60_000,
   });
 
+  const { data: weeklyTop3 } = useQuery<LeaderboardWinner[]>({
+    queryKey: ["/api/leaderboard/weekly/current", 3],
+    queryFn: async () => {
+      const r = await fetch("/api/leaderboard/weekly/current?limit=3");
+      if (!r.ok) throw new Error("Failed to fetch");
+      return r.json();
+    },
+    staleTime: 120_000,
+  });
+
+  // Countdown to next Monday midnight (weekly leaderboard reset)
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const resetCountdown = useMemo(() => {
+    const d = new Date(nowMs);
+    const daysUntilMonday = (8 - d.getDay()) % 7 || 7;
+    const next = new Date(d);
+    next.setDate(d.getDate() + daysUntilMonday);
+    next.setHours(0, 0, 0, 0);
+    const diff = next.getTime() - nowMs;
+    return { days: Math.floor(diff / 86400000), hours: Math.floor((diff % 86400000) / 3600000) };
+  }, [nowMs]);
+
   const slideIntervalMs = (heroSlideSettings?.intervalSeconds || 6) * 1000;
 
   const activeSlides = useMemo<AnySlide[] | null>(() => {
     const base: AnySlide[] = dbHeroSlides && dbHeroSlides.length > 0 ? [...dbHeroSlides] : [];
+    const leaderboardSlide: AnySlide = { type: 'leaderboard', id: 'leaderboard' };
     const featuredSlide: AnySlide = { type: 'featured', id: 'featured' };
-    return base.length > 0 ? [...base, featuredSlide] : [featuredSlide];
+    return [...base, leaderboardSlide, featuredSlide];
   }, [dbHeroSlides]);
 
   const resetSlideTimer = useCallback(() => {
@@ -445,6 +523,7 @@ const HomePage = () => {
               <div className="relative w-full h-full min-h-[300px] sm:min-h-[380px] md:min-h-[450px]">
                 {activeSlides.map((slide, idx) => {
                   const isFeaturedSlide = 'type' in slide && slide.type === 'featured';
+                  const isLeaderboardSlide = 'type' in slide && slide.type === 'leaderboard';
                   const fg = featuredGamefolio;
                   const accent = fg?.user.accentColor || "#B7FF1A";
                   const types = (fg?.user.userType || "").split(",").map((t: string) => t.trim()).filter(Boolean);
@@ -502,7 +581,136 @@ const HomePage = () => {
                     className="absolute inset-0 transition-opacity duration-700 ease-in-out"
                     style={{ opacity: idx === currentSlide ? 1 : 0, zIndex: idx === currentSlide ? 1 : 0 }}
                   >
-                    {isFeaturedSlide ? (
+                    {isLeaderboardSlide ? (
+                      /* ── Leaderboard Winners podium slide ── */
+                      <div className="absolute inset-0 overflow-hidden" style={{ background: "linear-gradient(160deg,#080e18 0%,#0B1319 55%,#080e18 100%)" }}>
+                        <style>{LEADERBOARD_STYLES}</style>
+                        {/* Grid overlay */}
+                        <div className="absolute inset-0 opacity-[0.02] pointer-events-none"
+                          style={{ backgroundImage:"linear-gradient(rgba(183,255,26,0.6) 1px,transparent 1px),linear-gradient(90deg,rgba(183,255,26,0.6) 1px,transparent 1px)",backgroundSize:"48px 48px" }} />
+                        {/* Glow floor */}
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-none"
+                          style={{ width:"60%",height:"160px",background:"radial-gradient(ellipse at 50% 100%,rgba(183,255,26,0.08) 0%,transparent 70%)" }} />
+
+                        <div className="relative h-full flex flex-col items-center justify-center px-4 sm:px-6 py-3 gap-2">
+                          {/* Header */}
+                          <div className="text-center flex-shrink-0">
+                            <div className="flex items-center justify-center gap-2 mb-0.5">
+                              <span className="text-base sm:text-lg">🏆</span>
+                              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.22em]" style={{ color:"#B7FF18" }}>This Week's Leaderboard</span>
+                            </div>
+                            <p className="text-[10px] text-white/35 max-w-xs mx-auto hidden sm:block leading-relaxed">
+                              Compete, earn XP, climb the leaderboard and become this week's champion.
+                            </p>
+                            <div className="flex items-center justify-center gap-1.5 mt-0.5">
+                              <span className="text-[10px] text-white/40">⏱ Resets in:</span>
+                              <span className="text-[10px] font-bold text-white/70">{resetCountdown.days}d {resetCountdown.hours}h</span>
+                            </div>
+                          </div>
+
+                          {/* Podium — order: 2nd · 1st · 3rd */}
+                          <div className="flex items-end justify-center gap-2 sm:gap-3 w-full flex-1">
+                            {(() => {
+                              const top3 = weeklyTop3 ?? [];
+
+                              const renderCard = (winner: LeaderboardWinner | undefined, rank: 1 | 2 | 3) => {
+                                const isFirst = rank === 1;
+                                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
+                                const glowCls = rank === 1 ? 'lb-gold' : rank === 2 ? 'lb-silver' : 'lb-bronze';
+                                const accentClr = rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : '#CD7F32';
+                                const borderClr = rank === 1 ? 'rgba(255,215,0,0.5)' : rank === 2 ? 'rgba(192,192,192,0.4)' : 'rgba(205,127,50,0.4)';
+                                const podH = rank === 1 ? 42 : rank === 2 ? 26 : 16;
+                                const elevate = isFirst ? '-translate-y-4 sm:-translate-y-6' : '';
+                                const avatarSz = isFirst ? 50 : 38;
+                                const xpK = winner ? (winner.totalPoints >= 1000 ? `${(winner.totalPoints/1000).toFixed(1)}K` : String(Math.round(winner.totalPoints))) : '—';
+
+                                return (
+                                  <div key={rank} className={`flex flex-col items-center transform ${elevate}`}>
+                                    <div className="relative">
+                                      {/* Orbiting sparkles for 1st place */}
+                                      {isFirst && (
+                                        <div className="absolute inset-0 pointer-events-none" style={{ zIndex:10 }}>
+                                          {[1,2,3,4,5,6].map(i => <span key={i} className="lb-spark" />)}
+                                        </div>
+                                      )}
+                                      {/* Card */}
+                                      <div className={`${glowCls} rounded-2xl overflow-hidden flex flex-col`}
+                                        style={{ width: isFirst ? 148 : 116, border:`1.5px solid ${borderClr}`, background:'rgba(8,14,24,0.92)' }}>
+                                        {/* Banner */}
+                                        <div className="relative overflow-hidden" style={{ height: isFirst ? 44 : 32 }}>
+                                          {winner?.user.bannerUrl
+                                            ? <img src={winner.user.bannerUrl} alt="" className="w-full h-full object-cover" />
+                                            : <div className="w-full h-full" style={{ background:`linear-gradient(135deg,${accentClr}20,transparent)` }} />
+                                          }
+                                          <div className="absolute inset-0" style={{ background:'linear-gradient(to bottom,transparent 30%,rgba(8,14,24,0.95))' }} />
+                                          <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-black" style={{ background:accentClr, color:'#0B1319' }}>#{rank}</div>
+                                        </div>
+                                        {/* Body */}
+                                        <div className="flex flex-col items-center px-2 pb-2.5" style={{ marginTop: -(avatarSz/2) }}>
+                                          {/* Avatar */}
+                                          <div className="rounded-full overflow-hidden flex-shrink-0"
+                                            style={{ width:avatarSz, height:avatarSz, border:`2px solid ${accentClr}`, boxShadow:`0 0 12px ${accentClr}55` }}>
+                                            {winner?.user.avatarUrl
+                                              ? <img src={winner.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                                              : <div className="w-full h-full flex items-center justify-center font-black text-sm" style={{ background:accentClr,color:'#0B1319' }}>
+                                                  {winner ? winner.user.username[0].toUpperCase() : '?'}
+                                                </div>
+                                            }
+                                          </div>
+                                          {winner ? (
+                                            <>
+                                              <div className="text-center mt-1">
+                                                <div className="font-black text-white leading-tight truncate" style={{ fontSize: isFirst ? 12 : 10, maxWidth: isFirst ? 124 : 96 }}>
+                                                  {winner.user.displayName || winner.user.username}
+                                                </div>
+                                                <div className="text-white/40 truncate" style={{ fontSize:9, maxWidth: isFirst ? 124 : 96 }}>@{winner.user.username}</div>
+                                              </div>
+                                              <div className="mt-1.5 flex flex-col items-center gap-0.5 w-full">
+                                                <div className="px-2 py-0.5 rounded-full font-black" style={{ fontSize:9, background:`${accentClr}22`, color:accentClr, border:`1px solid ${accentClr}44` }}>
+                                                  ⭐ LVL {winner.user.level ?? 1}
+                                                </div>
+                                                <div className="text-white/45 font-medium" style={{ fontSize:9 }}>⚡ {xpK} XP</div>
+                                              </div>
+                                            </>
+                                          ) : (
+                                            <div className="text-center mt-2 px-1">
+                                              <div className="text-2xl mb-1">👾</div>
+                                              <div className="text-white/25 font-medium" style={{ fontSize:9 }}>Could be you!</div>
+                                              <div className="text-white/15" style={{ fontSize:8 }}>Upload clips to compete</div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    {/* Podium slab */}
+                                    <div className="flex items-center justify-center rounded-b-xl"
+                                      style={{ height:podH, width: isFirst ? 148 : 116, background:`linear-gradient(180deg,${accentClr}38 0%,${accentClr}16 100%)`, border:`1px solid ${accentClr}40`, borderTop:'none' }}>
+                                      <span style={{ fontSize: isFirst ? 16 : 12 }}>{medal}</span>
+                                    </div>
+                                  </div>
+                                );
+                              };
+
+                              return (
+                                <>
+                                  {renderCard(top3[1], 2)}
+                                  {renderCard(top3[0], 1)}
+                                  {renderCard(top3[2], 3)}
+                                </>
+                              );
+                            })()}
+                          </div>
+
+                          {/* CTA */}
+                          <button
+                            onClick={() => setLocation('/leaderboard')}
+                            className="flex-shrink-0 inline-flex items-center gap-1.5 text-xs font-black px-5 py-2 rounded-xl transition-all hover:opacity-90 active:scale-95"
+                            style={{ background:'#B7FF18', color:'#0B1319', boxShadow:'0 4px 18px rgba(183,255,26,0.35)' }}>
+                            View Full Leaderboard →
+                          </button>
+                        </div>
+                      </div>
+                    ) : isFeaturedSlide ? (
                       /* ── Featured Gamefolio slide ── */
                       <div className="absolute inset-0 overflow-hidden"
                         style={{ background: "#0B1319" }}>
