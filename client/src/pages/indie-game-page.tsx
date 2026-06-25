@@ -571,6 +571,20 @@ const IndieGamePage = () => {
     enabled: !!game?.id,
   });
 
+  // Batch-fetch the current user's join/progress status for all bounties in this game
+  const { data: myBountyStatuses = {} } = useQuery<Record<number, {
+    bountyId: number; status: string; demoKey: string | null; fullKey: string | null;
+    progressPercent: number; xpEarned: number;
+  }>>({
+    queryKey: ["/api/games", game?.id, "bounties/my-statuses"],
+    queryFn: async () => {
+      const r = await fetch(`/api/games/${game?.id}/bounties/my-statuses`, { credentials: "include" });
+      if (!r.ok) return {};
+      return r.json();
+    },
+    enabled: !!game?.id && !!user,
+  });
+
   const joinMutation = useMutation({
     mutationFn: (bountyId: number) => apiRequest("POST", `/api/games/bounties/${bountyId}/join`, {}),
     onSuccess: (data: any, bountyId) => {
@@ -578,6 +592,7 @@ const IndieGamePage = () => {
       setAcceptingBountyId(null);
       queryClient.invalidateQueries({ queryKey: ["/api/games", game?.id, "bounties"] });
       queryClient.invalidateQueries({ queryKey: ["/api/games", game?.id, "bounty-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/games", game?.id, "bounties/my-statuses"] });
       toast({
         title: "Campaign joined!",
         description: data.demoKey ? "Demo key assigned. Create content and unlock the full game!" : "Welcome to the campaign!",
@@ -1427,31 +1442,48 @@ const IndieGamePage = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                <CampaignCard
-                  campaign={bounties[0] as Campaign}
-                  isFeatured={true}
-                  onJoin={handleJoinCampaign}
-                  onViewDashboard={handleViewDashboard}
-                  onClaimKey={(id) => { setSelectedBountyId(id); setShowCreatorDashboard(true); }}
-                  joining={acceptingBountyId === bounties[0].id}
-                  joined={acceptedBounties.has(bounties[0].id)}
-                />
+                {(() => {
+                  const b0 = bounties[0];
+                  const s0 = myBountyStatuses[b0.id];
+                  const isJoined0 = acceptedBounties.has(b0.id) || !!s0;
+                  return (
+                    <CampaignCard
+                      campaign={b0 as Campaign}
+                      isFeatured={true}
+                      onJoin={handleJoinCampaign}
+                      onViewDashboard={handleViewDashboard}
+                      onClaimKey={(id) => { setSelectedBountyId(id); setShowCreatorDashboard(true); }}
+                      joining={acceptingBountyId === b0.id}
+                      joined={isJoined0}
+                      completed={s0?.status === "completed"}
+                      progressPercent={s0?.progressPercent ?? 0}
+                      fullKey={s0?.fullKey ?? null}
+                    />
+                  );
+                })()}
                 {bounties.length > 1 && (
                   <div>
                     <h3 className="font-black text-white text-sm mb-3 flex items-center gap-2">
                       <Flame className="w-4 h-4" style={{ color: NEON }} />More Campaigns
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {bounties.slice(1).map(bounty => (
-                        <CampaignCard key={bounty.id}
-                          campaign={bounty as Campaign}
-                          onJoin={handleJoinCampaign}
-                          onViewDashboard={handleViewDashboard}
-                          onClaimKey={(id) => { setSelectedBountyId(id); setShowCreatorDashboard(true); }}
-                          joining={acceptingBountyId === bounty.id}
-                          joined={acceptedBounties.has(bounty.id)}
-                        />
-                      ))}
+                      {bounties.slice(1).map(bounty => {
+                        const s = myBountyStatuses[bounty.id];
+                        const isJoined = acceptedBounties.has(bounty.id) || !!s;
+                        return (
+                          <CampaignCard key={bounty.id}
+                            campaign={bounty as Campaign}
+                            onJoin={handleJoinCampaign}
+                            onViewDashboard={handleViewDashboard}
+                            onClaimKey={(id) => { setSelectedBountyId(id); setShowCreatorDashboard(true); }}
+                            joining={acceptingBountyId === bounty.id}
+                            joined={isJoined}
+                            completed={s?.status === "completed"}
+                            progressPercent={s?.progressPercent ?? 0}
+                            fullKey={s?.fullKey ?? null}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1477,7 +1509,10 @@ const IndieGamePage = () => {
       <CreatorDashboard
         bountyId={selectedBountyId ?? 0}
         open={showCreatorDashboard}
-        onClose={() => setShowCreatorDashboard(false)}
+        onClose={() => {
+          setShowCreatorDashboard(false);
+          queryClient.invalidateQueries({ queryKey: ["/api/games", game?.id, "bounties/my-statuses"] });
+        }}
       />
 
       {/* Developer Dashboard */}

@@ -590,6 +590,43 @@ router.post('/bounties/:bountyId/accept', async (req, res) => {
   });
 });
 
+// Batch: current user's statuses for all bounties in a game
+router.get('/:gameId/bounties/my-statuses', async (req, res) => {
+  if (!req.isAuthenticated()) return res.json({});
+  try {
+    const gameId = parseInt(req.params.gameId);
+    if (isNaN(gameId)) return res.json({});
+    const userId = (req.user as any).id;
+
+    const result = await db.execute(sql`
+      SELECT
+        gba.bounty_id AS "bountyId",
+        gba.status,
+        gba.demo_key AS "demoKey",
+        gba.full_key AS "fullKey",
+        gba.clips_uploaded AS "clipsUploaded",
+        gba.reels_uploaded AS "reelsUploaded",
+        gba.screenshots_uploaded AS "screenshotsUploaded",
+        gba.total_views AS "totalViews",
+        gba.xp_earned AS "xpEarned",
+        gba.progress_percent AS "progressPercent"
+      FROM game_bounty_acceptances gba
+      JOIN game_bounties gb ON gb.id = gba.bounty_id
+      WHERE gb.game_id = ${gameId} AND gba.user_id = ${userId}
+    `);
+    const rows = (result as any).rows ?? result;
+    // Return as a map keyed by bountyId
+    const map: Record<number, any> = {};
+    for (const row of rows) {
+      map[row.bountyId] = row;
+    }
+    res.json(map);
+  } catch (err) {
+    console.error('Error fetching my bounty statuses:', err);
+    res.json({});
+  }
+});
+
 // Bounty stats for a game
 router.get('/:gameId/bounty-stats', async (req, res) => {
   try {

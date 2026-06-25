@@ -104,34 +104,35 @@ interface LeaderboardWinner {
 const LEADERBOARD_STYLES = `
 @keyframes lb-sparkle {
   0%, 100% { transform: scale(1) translateY(0); opacity: 0.9; }
-  50% { transform: scale(1.4) translateY(-4px); opacity: 0.4; }
+  50% { transform: scale(1.4) translateY(-5px); opacity: 0.4; }
 }
 @keyframes lb-orbit {
-  from { transform: rotate(0deg) translateX(72px) rotate(0deg); }
-  to   { transform: rotate(360deg) translateX(72px) rotate(-360deg); }
+  from { transform: rotate(0deg) translateX(105px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(105px) rotate(-360deg); }
 }
 @keyframes lb-pulse-gold {
-  0%, 100% { box-shadow: 0 0 18px 4px rgba(255,200,50,0.35); }
-  50%       { box-shadow: 0 0 32px 8px rgba(255,200,50,0.6); }
+  0%, 100% { box-shadow: 0 0 24px 6px rgba(255,200,50,0.4); }
+  50%       { box-shadow: 0 0 40px 12px rgba(255,200,50,0.65); }
 }
 @keyframes lb-glow-silver {
-  0%, 100% { box-shadow: 0 0 14px 3px rgba(192,192,192,0.3); }
-  50%       { box-shadow: 0 0 24px 6px rgba(192,192,192,0.5); }
+  0%, 100% { box-shadow: 0 0 18px 4px rgba(192,192,192,0.3); }
+  50%       { box-shadow: 0 0 30px 8px rgba(192,192,192,0.5); }
 }
 @keyframes lb-glow-bronze {
-  0%, 100% { box-shadow: 0 0 14px 3px rgba(205,127,50,0.3); }
-  50%       { box-shadow: 0 0 24px 6px rgba(205,127,50,0.5); }
+  0%, 100% { box-shadow: 0 0 18px 4px rgba(205,127,50,0.3); }
+  50%       { box-shadow: 0 0 30px 8px rgba(205,127,50,0.5); }
 }
-.lb-gold   { animation: lb-pulse-gold   2.4s ease-in-out infinite; }
-.lb-silver { animation: lb-glow-silver  2.8s ease-in-out infinite; }
-.lb-bronze { animation: lb-glow-bronze  3.2s ease-in-out infinite; }
-.lb-spark  { position:absolute; width:5px; height:5px; border-radius:50%; pointer-events:none; }
-.lb-spark:nth-child(1) { animation: lb-orbit 4s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#FFD700; top:50%; left:50%; margin:-2.5px; animation-delay:0s,0s; }
-.lb-spark:nth-child(2) { animation: lb-orbit 4s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#B7FF18; top:50%; left:50%; margin:-2.5px; animation-delay:-0.67s,-0.3s; }
-.lb-spark:nth-child(3) { animation: lb-orbit 4s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#fff; top:50%; left:50%; margin:-2.5px; animation-delay:-1.33s,-0.6s; }
-.lb-spark:nth-child(4) { animation: lb-orbit 4s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#FFD700; top:50%; left:50%; margin:-2.5px; animation-delay:-2s,-0.9s; }
-.lb-spark:nth-child(5) { animation: lb-orbit 4s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#B7FF18; top:50%; left:50%; margin:-2.5px; animation-delay:-2.67s,-1.1s; }
-.lb-spark:nth-child(6) { animation: lb-orbit 6s linear infinite, lb-sparkle 1.8s ease-in-out infinite; background:#fff; top:50%; left:50%; margin:-2.5px; animation-delay:-3.33s,-1.4s; }
+/* Medal-coloured fire-card borders */
+.lb-card-1 .fire-card { border-color: rgba(255,215,0,0.75) !important; animation: lb-pulse-gold 2.4s ease-in-out infinite; }
+.lb-card-2 .fire-card { border-color: rgba(192,192,192,0.65) !important; animation: lb-glow-silver 2.8s ease-in-out infinite; }
+.lb-card-3 .fire-card { border-color: rgba(205,127,50,0.65) !important; animation: lb-glow-bronze 3.2s ease-in-out infinite; }
+.lb-spark  { position:absolute; width:6px; height:6px; border-radius:50%; pointer-events:none; }
+.lb-spark:nth-child(1) { animation: lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#FFD700; top:50%; left:50%; margin:-3px; animation-delay:0s,0s; }
+.lb-spark:nth-child(2) { animation: lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#B7FF18; top:50%; left:50%; margin:-3px; animation-delay:-0.75s,-0.3s; }
+.lb-spark:nth-child(3) { animation: lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#fff; top:50%; left:50%; margin:-3px; animation-delay:-1.5s,-0.6s; }
+.lb-spark:nth-child(4) { animation: lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#FFD700; top:50%; left:50%; margin:-3px; animation-delay:-2.25s,-0.9s; }
+.lb-spark:nth-child(5) { animation: lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#B7FF18; top:50%; left:50%; margin:-3px; animation-delay:-3s,-1.1s; }
+.lb-spark:nth-child(6) { animation: lb-orbit 6.5s linear infinite, lb-sparkle 1.8s ease-in-out infinite; background:#fff; top:50%; left:50%; margin:-3px; animation-delay:-3.75s,-1.4s; }
 `;
 
 interface TrendingContentCarouselProps {
@@ -609,83 +610,81 @@ const HomePage = () => {
                           </div>
 
                           {/* Podium — order: 2nd · 1st · 3rd */}
-                          <div className="flex items-end justify-center gap-2 sm:gap-3 w-full flex-1">
+                          <div className="flex items-end justify-center gap-4 sm:gap-8 w-full flex-1 pb-1">
                             {(() => {
                               const top3 = weeklyTop3 ?? [];
 
                               const renderCard = (winner: LeaderboardWinner | undefined, rank: 1 | 2 | 3) => {
                                 const isFirst = rank === 1;
                                 const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
-                                const glowCls = rank === 1 ? 'lb-gold' : rank === 2 ? 'lb-silver' : 'lb-bronze';
                                 const accentClr = rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : '#CD7F32';
-                                const borderClr = rank === 1 ? 'rgba(255,215,0,0.5)' : rank === 2 ? 'rgba(192,192,192,0.4)' : 'rgba(205,127,50,0.4)';
-                                const podH = rank === 1 ? 42 : rank === 2 ? 26 : 16;
-                                const elevate = isFirst ? '-translate-y-4 sm:-translate-y-6' : '';
-                                const avatarSz = isFirst ? 50 : 38;
-                                const xpK = winner ? (winner.totalPoints >= 1000 ? `${(winner.totalPoints/1000).toFixed(1)}K` : String(Math.round(winner.totalPoints))) : '—';
+                                const podH = rank === 1 ? 36 : rank === 2 ? 22 : 14;
+                                const cardClass = `lb-card-${rank}`;
+                                const scaleClass = isFirst ? 'scale-[1.0] sm:scale-[1.08]' : 'scale-[0.82] sm:scale-[0.88]';
+                                const elevate = isFirst ? '-translate-y-3 sm:-translate-y-5' : '';
+
+                                if (!winner) {
+                                  return (
+                                    <div key={rank} className={`flex flex-col items-center transform ${elevate} ${scaleClass} origin-bottom`}>
+                                      <div className={`${cardClass}`}>
+                                        <div className="fire-card flex flex-col items-center justify-center"
+                                          style={{ width:190, height:340, borderRadius:16 }}>
+                                          <div className="absolute inset-[3px] rounded-[13px] flex flex-col items-center justify-center gap-2"
+                                            style={{ background:'rgba(11,19,25,0.95)' }}>
+                                            <div className="text-4xl">{medal}</div>
+                                            <div className="text-white/30 text-xs font-bold">Could be you!</div>
+                                            <div className="text-white/20 text-[10px] text-center px-4">Upload clips this week to compete</div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center justify-center rounded-b-xl mt-0"
+                                        style={{ height:podH, width:190, background:`linear-gradient(180deg,${accentClr}30 0%,${accentClr}12 100%)`, borderLeft:`1px solid ${accentClr}35`, borderRight:`1px solid ${accentClr}35`, borderBottom:`1px solid ${accentClr}35` }}>
+                                        <span style={{ fontSize:14 }}>{medal}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+
+                                const entry: TrendingEntry = {
+                                  userId: winner.userId,
+                                  rank: winner.rank,
+                                  uploadsCount: winner.uploadsCount,
+                                  totalPoints: winner.totalPoints,
+                                  clipsCount: winner.uploadsCount,
+                                  reelsCount: 0,
+                                  screenshotsCount: 0,
+                                  followersCount: 0,
+                                  followingCount: 0,
+                                  user: {
+                                    id: winner.user.id,
+                                    username: winner.user.username,
+                                    displayName: winner.user.displayName,
+                                    avatarUrl: winner.user.avatarUrl,
+                                    bannerUrl: winner.user.bannerUrl,
+                                    avatarBorderColor: accentClr,
+                                    accentColor: accentClr,
+                                    level: winner.user.level,
+                                    backgroundColor: winner.user.backgroundColor,
+                                    primaryColor: null,
+                                    profileBackgroundGradient: false,
+                                    profileBackgroundImageUrl: null,
+                                  },
+                                };
 
                                 return (
-                                  <div key={rank} className={`flex flex-col items-center transform ${elevate}`}>
-                                    <div className="relative">
-                                      {/* Orbiting sparkles for 1st place */}
+                                  <div key={rank} className={`flex flex-col items-center transform ${elevate} ${scaleClass} origin-bottom`}>
+                                    <div className={`relative ${cardClass}`}>
                                       {isFirst && (
-                                        <div className="absolute inset-0 pointer-events-none" style={{ zIndex:10 }}>
+                                        <div className="absolute pointer-events-none" style={{ inset: '-10px', zIndex: 10 }}>
                                           {[1,2,3,4,5,6].map(i => <span key={i} className="lb-spark" />)}
                                         </div>
                                       )}
-                                      {/* Card */}
-                                      <div className={`${glowCls} rounded-2xl overflow-hidden flex flex-col`}
-                                        style={{ width: isFirst ? 148 : 116, border:`1.5px solid ${borderClr}`, background:'rgba(8,14,24,0.92)' }}>
-                                        {/* Banner */}
-                                        <div className="relative overflow-hidden" style={{ height: isFirst ? 44 : 32 }}>
-                                          {winner?.user.bannerUrl
-                                            ? <img src={winner.user.bannerUrl} alt="" className="w-full h-full object-cover" />
-                                            : <div className="w-full h-full" style={{ background:`linear-gradient(135deg,${accentClr}20,transparent)` }} />
-                                          }
-                                          <div className="absolute inset-0" style={{ background:'linear-gradient(to bottom,transparent 30%,rgba(8,14,24,0.95))' }} />
-                                          <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-black" style={{ background:accentClr, color:'#0B1319' }}>#{rank}</div>
-                                        </div>
-                                        {/* Body */}
-                                        <div className="flex flex-col items-center px-2 pb-2.5" style={{ marginTop: -(avatarSz/2) }}>
-                                          {/* Avatar */}
-                                          <div className="rounded-full overflow-hidden flex-shrink-0"
-                                            style={{ width:avatarSz, height:avatarSz, border:`2px solid ${accentClr}`, boxShadow:`0 0 12px ${accentClr}55` }}>
-                                            {winner?.user.avatarUrl
-                                              ? <img src={winner.user.avatarUrl} alt="" className="w-full h-full object-cover" />
-                                              : <div className="w-full h-full flex items-center justify-center font-black text-sm" style={{ background:accentClr,color:'#0B1319' }}>
-                                                  {winner ? winner.user.username[0].toUpperCase() : '?'}
-                                                </div>
-                                            }
-                                          </div>
-                                          {winner ? (
-                                            <>
-                                              <div className="text-center mt-1">
-                                                <div className="font-black text-white leading-tight truncate" style={{ fontSize: isFirst ? 12 : 10, maxWidth: isFirst ? 124 : 96 }}>
-                                                  {winner.user.displayName || winner.user.username}
-                                                </div>
-                                                <div className="text-white/40 truncate" style={{ fontSize:9, maxWidth: isFirst ? 124 : 96 }}>@{winner.user.username}</div>
-                                              </div>
-                                              <div className="mt-1.5 flex flex-col items-center gap-0.5 w-full">
-                                                <div className="px-2 py-0.5 rounded-full font-black" style={{ fontSize:9, background:`${accentClr}22`, color:accentClr, border:`1px solid ${accentClr}44` }}>
-                                                  ⭐ LVL {winner.user.level ?? 1}
-                                                </div>
-                                                <div className="text-white/45 font-medium" style={{ fontSize:9 }}>⚡ {xpK} XP</div>
-                                              </div>
-                                            </>
-                                          ) : (
-                                            <div className="text-center mt-2 px-1">
-                                              <div className="text-2xl mb-1">👾</div>
-                                              <div className="text-white/25 font-medium" style={{ fontSize:9 }}>Could be you!</div>
-                                              <div className="text-white/15" style={{ fontSize:8 }}>Upload clips to compete</div>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
+                                      <CreatorCard entry={entry} period="week" />
                                     </div>
                                     {/* Podium slab */}
                                     <div className="flex items-center justify-center rounded-b-xl"
-                                      style={{ height:podH, width: isFirst ? 148 : 116, background:`linear-gradient(180deg,${accentClr}38 0%,${accentClr}16 100%)`, border:`1px solid ${accentClr}40`, borderTop:'none' }}>
-                                      <span style={{ fontSize: isFirst ? 16 : 12 }}>{medal}</span>
+                                      style={{ height:podH, width:190, background:`linear-gradient(180deg,${accentClr}35 0%,${accentClr}14 100%)`, borderLeft:`1px solid ${accentClr}40`, borderRight:`1px solid ${accentClr}40`, borderBottom:`1px solid ${accentClr}40` }}>
+                                      <span style={{ fontSize: isFirst ? 16 : 13 }}>{medal}</span>
                                     </div>
                                   </div>
                                 );
