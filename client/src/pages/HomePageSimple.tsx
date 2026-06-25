@@ -617,7 +617,7 @@ const HomePage = () => {
 
                             {/* Podium — 2nd · 1st · 3rd, scaled to fit left column */}
                             <div className="relative w-full flex items-end justify-center" style={{ flex:'1 1 0', minHeight:0 }}>
-                              <div style={{ transform:'scale(0.76)', transformOrigin:'bottom center', display:'flex', alignItems:'flex-end', gap:'16px' }}>
+                              <div style={{ transform:'scale(0.96)', transformOrigin:'bottom center', display:'flex', alignItems:'flex-end', gap:'16px' }}>
                                 {(() => {
                                   const top3 = weeklyTop3 ?? [];
 
