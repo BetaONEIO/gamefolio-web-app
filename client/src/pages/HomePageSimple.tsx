@@ -23,6 +23,7 @@ import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
 import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
 import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
+import { FeaturedGamefolioSlider } from "@/components/home/FeaturedGamefolioSlider";
 import { Trophy } from "lucide-react";
 import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
 
@@ -490,6 +491,11 @@ const HomePage = () => {
 
       {/* Ecosystem Activity Rail */}
       <EcosystemActivityRail />
+
+      {/* Featured Gamefolio */}
+      <section className="px-4 sm:px-6 md:px-8 mt-6 sm:mt-8">
+        <FeaturedGamefolioSlider />
+      </section>
       
       <div className="space-y-4 sm:space-y-6 md:space-y-8 mt-4 sm:mt-6 md:mt-8">
       {/* Recommended for You Section - only for logged-in users */}
