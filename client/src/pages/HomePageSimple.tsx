@@ -65,6 +65,8 @@ interface FeaturedGamefolioData {
   followersCount: number;
   followingCount: number;
   totalPoints: number;
+  weeklyUploadsCount: number;
+  topGame: { id: number; name: string; imageUrl: string | null; uploadCount: number } | null;
 }
 
 type AnySlide = DbHeroSlide | { type: 'featured'; id: 'featured' };
@@ -440,7 +442,7 @@ const HomePage = () => {
                   const fgEntry: TrendingEntry | null = fg ? {
                     userId: fg.user.id,
                     rank: 1,
-                    uploadsCount: fg.clipCount,
+                    uploadsCount: fg.weeklyUploadsCount ?? fg.clipCount,
                     totalPoints: fg.totalPoints ?? 0,
                     clipsCount: fg.clipsCount ?? 0,
                     reelsCount: fg.reelsCount ?? 0,
@@ -519,14 +521,27 @@ const HomePage = () => {
                                   ))}
                                 </div>
                               )}
+                              {/* Top game highlight */}
+                              {fg?.topGame && (
+                                <div className="flex items-center gap-3 mb-4 px-3 py-2.5 rounded-xl" style={{ background: 'rgba(183,255,26,0.07)', border: '1px solid rgba(183,255,26,0.18)' }}>
+                                  {fg.topGame.imageUrl && (
+                                    <img src={fg.topGame.imageUrl} alt={fg.topGame.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" style={{ border: `1.5px solid ${accent}44` }} />
+                                  )}
+                                  <div className="min-w-0">
+                                    <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: accent }}>Most Uploaded Game</div>
+                                    <div className="text-white font-bold text-sm leading-tight truncate">{fg.topGame.name}</div>
+                                    <div className="text-white/50 text-[11px]">{fg.topGame.uploadCount} clip{fg.topGame.uploadCount !== 1 ? 's' : ''} uploaded</div>
+                                  </div>
+                                </div>
+                              )}
+
                               <div className="space-y-2 sm:space-y-2.5 mb-5">
                                 {[
-                                  fgGames.length > 0 && { icon: "🎮", text: `Plays ${fgGames.slice(0, 3).map((g: { name: string }) => g.name).join(", ")}` },
+                                  fg && (fg.weeklyUploadsCount ?? 0) > 0 && { icon: "🔥", text: `${fg.weeklyUploadsCount} upload${fg.weeklyUploadsCount !== 1 ? 's' : ''} this week` },
                                   isStreamer && { icon: "📺", text: "Streamer & content creator" },
-                                  fg && (fg.followersCount ?? 0) > 0 && { icon: "👥", text: `${(fg.followersCount ?? 0).toLocaleString()} followers` },
-                                  fg && (fg.clipsCount ?? 0) + (fg.reelsCount ?? 0) + (fg.screenshotsCount ?? 0) > 0 && { icon: "⚡", text: `${((fg.clipsCount ?? 0) + (fg.reelsCount ?? 0) + (fg.screenshotsCount ?? 0)).toLocaleString()} uploads & counting` },
+                                  fg && (fg.followersCount ?? 0) > 0 && { icon: "👥", text: `${(fg.followersCount ?? 0).toLocaleString()} follower${(fg.followersCount ?? 0) !== 1 ? 's' : ''}` },
+                                  fgGames.length > 0 && { icon: "🎮", text: `Also plays ${fgGames.slice(0, 2).map((g: { name: string }) => g.name).join(" & ")}` },
                                   { icon: "🏆", text: `Level ${fg?.user.level ?? 1} Gamefolio member` },
-                                  { icon: "⭐", text: "Official Gamefolio account" },
                                 ].filter(Boolean).map((b: any) => (
                                   <div key={b.text} className="flex items-center gap-2.5">
                                     <span className="text-base leading-none">{b.icon}</span>

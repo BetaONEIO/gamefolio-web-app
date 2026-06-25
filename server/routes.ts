@@ -3163,16 +3163,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get featured Gamefolio (official profile) banner data
   app.get("/api/featured/gamefolio", async (req, res) => {
     try {
-      const GAMEPOLIO_USER_ID = 154;
-      const user = await storage.getUser(GAMEPOLIO_USER_ID);
+      // Pick the #1 user from this week's leaderboard dynamically
+      const weeklyTop = await LeaderboardService.getCurrentWeekLeaderboard(1);
+      let featuredUserId: number | null = weeklyTop.length > 0 ? weeklyTop[0].userId : null;
+      let weeklyUploadsCount = weeklyTop.length > 0 ? weeklyTop[0].uploadsCount : 0;
+      let weeklyTotalPoints = weeklyTop.length > 0 ? weeklyTop[0].totalPoints : 0;
+
+      // Fallback: if no weekly leaders, use most-prolific all-time uploader
+      if (!featuredUserId) {
+        const fallbackRows = await db
+          .select({ userId: clips.userId, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(clips)
+          .groupBy(clips.userId)
+          .orderBy(desc(sql`COUNT(*)`))
+          .limit(1);
+        featuredUserId = fallbackRows[0]?.userId ?? null;
+      }
+
+      if (!featuredUserId) return res.status(404).json({ message: "No featured user found" });
+
+      const user = await storage.getUser(featuredUserId);
       if (!user) return res.status(404).json({ message: "Not found" });
 
-      // Get favorite games
-      const favoriteGames = await storage.getUserGameFavorites(GAMEPOLIO_USER_ID);
-      const gamesPlayed = favoriteGames.map(g => ({ id: g.id, name: g.name }));
+      // Batch all stats queries in parallel
+      const [clipRows, reelRows, ssRows, followerRows, followingRows, xpRows, topGameRows, favGames] = await Promise.all([
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(clips).where(and(eq(clips.userId, featuredUserId), eq(clips.videoType, 'clip'))),
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(clips).where(and(eq(clips.userId, featuredUserId), eq(clips.videoType, 'reel'))),
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(screenshots).where(eq(screenshots.userId, featuredUserId)),
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(follows).where(eq(follows.followingId, featuredUserId)),
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(follows).where(eq(follows.followerId, featuredUserId)),
+        db.select({ total: sql<number>`CAST(COALESCE(SUM(xp_amount), 0) AS INTEGER)` })
+          .from(userXPHistory).where(eq(userXPHistory.userId, featuredUserId)),
+        // Most-uploaded game this user has content for
+        db.select({ gameId: clips.gameId, gameName: games.name, gameImageUrl: games.imageUrl, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(clips)
+          .innerJoin(games, eq(clips.gameId, games.id))
+          .where(eq(clips.userId, featuredUserId))
+          .groupBy(clips.gameId, games.name, games.imageUrl)
+          .orderBy(desc(sql`COUNT(*)`))
+          .limit(1),
+        storage.getUserGameFavorites(featuredUserId),
+      ]);
 
-      // Get latest clip
-      const userClips = await storage.getClipsByUserId(GAMEPOLIO_USER_ID);
+      const clipsCount = clipRows[0]?.count ?? 0;
+      const reelsCount = reelRows[0]?.count ?? 0;
+      const screenshotsCount = ssRows[0]?.count ?? 0;
+      const followersCount = followerRows[0]?.count ?? 0;
+      const followingCount = followingRows[0]?.count ?? 0;
+      const totalPoints = xpRows[0]?.total ?? weeklyTotalPoints;
+      const topGame = topGameRows[0] ? {
+        id: topGameRows[0].gameId,
+        name: topGameRows[0].gameName,
+        imageUrl: topGameRows[0].gameImageUrl,
+        uploadCount: topGameRows[0].count,
+      } : null;
+
+      // Favourite games list (excluding topGame to avoid duplication)
+      const gamesPlayed = favGames
+        .filter(g => !topGame || g.id !== topGame.id)
+        .slice(0, 3)
+        .map(g => ({ id: g.id, name: g.name }));
+
+      // Get latest clip for the user
+      const userClips = await storage.getClipsByUserId(featuredUserId);
       const latestClip = userClips.length > 0 ? {
         id: userClips[0].id,
         title: userClips[0].title,
@@ -3182,37 +3240,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: userClips[0].createdAt,
       } : null;
 
-      // Stats for CreatorCard: clips, reels, screenshots, followers, following, totalPoints
-      const [clipRows, reelRows, ssRows, followerRows, followingRows, xpRows] = await Promise.all([
-        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
-          .from(clips).where(and(eq(clips.userId, GAMEPOLIO_USER_ID), eq(clips.videoType, 'clip'))),
-        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
-          .from(clips).where(and(eq(clips.userId, GAMEPOLIO_USER_ID), eq(clips.videoType, 'reel'))),
-        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
-          .from(screenshots).where(eq(screenshots.userId, GAMEPOLIO_USER_ID)),
-        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
-          .from(follows).where(eq(follows.followingId, GAMEPOLIO_USER_ID)),
-        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
-          .from(follows).where(eq(follows.followerId, GAMEPOLIO_USER_ID)),
-        db.select({ total: sql<number>`CAST(COALESCE(SUM(xp_amount), 0) AS INTEGER)` })
-          .from(userXPHistory).where(eq(userXPHistory.userId, GAMEPOLIO_USER_ID)),
-      ]);
-
-      const clipsCount = clipRows[0]?.count ?? 0;
-      const reelsCount = reelRows[0]?.count ?? 0;
-      const screenshotsCount = ssRows[0]?.count ?? 0;
-      const followersCount = followerRows[0]?.count ?? 0;
-      const followingCount = followingRows[0]?.count ?? 0;
-      const totalPoints = xpRows[0]?.total ?? 0;
-
       const { password: _p, ...publicUser } = user;
       res.json({
         user: publicUser,
-        gamesPlayed: gamesPlayed.length > 0 ? gamesPlayed : [
-          { id: 1, name: "Fortnite" },
-          { id: 2, name: "Valorant" },
-          { id: 3, name: "Apex Legends" },
-        ],
+        weeklyUploadsCount,
+        topGame,
+        gamesPlayed,
         latestClip,
         clipCount: clipsCount + reelsCount,
         clipsCount,
