@@ -421,7 +421,7 @@ const HomePage = () => {
     return { days: Math.floor(diff / 86400000), hours: Math.floor((diff % 86400000) / 3600000) };
   }, [nowMs]);
 
-  const slideIntervalMs = (heroSlideSettings?.intervalSeconds || 6) * 1000;
+  const slideIntervalMs = (heroSlideSettings?.intervalSeconds || 15) * 1000;
 
   const activeSlides = useMemo<AnySlide[] | null>(() => {
     const base: AnySlide[] = dbHeroSlides && dbHeroSlides.length > 0 ? [...dbHeroSlides] : [];
@@ -719,8 +719,8 @@ const HomePage = () => {
                                 const isTop3 = rank <= 3;
                                 return (
                                   <div key={winner?.userId ?? idx}
-                                    className="flex items-center gap-2.5 py-[6px] cursor-pointer hover:bg-white/[0.03] rounded-lg px-1 transition-colors"
-                                    style={{ borderBottom:'1px solid rgba(255,255,255,0.04)' }}
+                                    className="flex items-center gap-2.5 py-[6px] cursor-pointer rounded-lg px-2 transition-colors hover:brightness-110"
+                                    style={{ background:'rgba(5,10,16,0.58)', border:'1px solid rgba(255,255,255,0.06)', marginBottom:'3px' }}
                                     onClick={() => winner && setLocation(`/profile/${winner.user.username}`)}>
                                     {/* Rank */}
                                     <div className="flex-shrink-0 w-6 text-center">
