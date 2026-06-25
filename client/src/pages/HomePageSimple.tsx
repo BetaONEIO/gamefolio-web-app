@@ -628,8 +628,8 @@ const HomePage = () => {
                                     2: '/podium-2nd.webp',
                                     3: '/podium-3rd.webp',
                                   };
-                                  const PODIUM_W: Record<1|2|3, number> = { 1: 262, 2: 238, 3: 214 };
-                                  const PODIUM_H: Record<1|2|3, number> = { 1: 82,  2: 70,  3: 60  };
+                                  const PODIUM_W: Record<1|2|3, number> = { 1: 393, 2: 357, 3: 321 };
+                                  const PODIUM_H: Record<1|2|3, number> = { 1: 123, 2: 105, 3: 90  };
                                   const PODIUM_GLOW: Record<1|2|3, string> = {
                                     1: 'drop-shadow(0 0 20px rgba(255,215,0,0.9)) drop-shadow(0 6px 14px rgba(255,190,0,0.55))',
                                     2: 'drop-shadow(0 0 16px rgba(210,210,210,0.85)) drop-shadow(0 5px 10px rgba(192,192,192,0.5))',
@@ -660,7 +660,7 @@ const HomePage = () => {
                                             </div>
                                           </div>
                                           <img src={PODIUM_IMG[rank]} alt={`#${rank} podium`}
-                                            style={{ width: podW, height: podH, objectFit:'contain', marginTop: -22, filter:`brightness(0.7) ${PODIUM_GLOW[rank]}` }} />
+                                            style={{ width: podW, height: podH, objectFit:'contain', marginTop: -22, filter:`brightness(0.7) ${PODIUM_GLOW[rank]}`, position:'relative', zIndex:10 }} />
                                         </div>
                                       );
                                     }
@@ -695,7 +695,7 @@ const HomePage = () => {
                                           <CreatorCard entry={entry} period="week" />
                                         </div>
                                         <img src={PODIUM_IMG[rank]} alt={`#${rank} podium`}
-                                          style={{ width: podW, height: podH, objectFit:'contain', marginTop: -22, filter: PODIUM_GLOW[rank] }} />
+                                          style={{ width: podW, height: podH, objectFit:'contain', marginTop: -22, filter: PODIUM_GLOW[rank], position:'relative', zIndex:10 }} />
                                       </div>
                                     );
                                   };
