@@ -105,10 +105,8 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
   const hasBanner = !!user.bannerUrl && !bannerError;
   const theme = getCardTheme(user);
 
-  const totalUploads = entry.clipsCount + entry.reelsCount + entry.screenshotsCount;
-  const ctaText = entry.uploadsCount > 0
-    ? `${entry.uploadsCount} upload${entry.uploadsCount !== 1 ? 's' : ''} ${period === 'alltime' ? 'total' : period === 'month' ? 'this month' : 'this week'}`
-    : `${totalUploads} total uploads`;
+  const xpLabel = period === 'alltime' ? 'XP total' : period === 'month' ? 'XP this month' : 'XP this week';
+  const ctaText = `${fmt(entry.totalPoints)} ${xpLabel}`;
 
   return (
     <Link href={`/profile/${user.username}`} className={className}>
@@ -187,13 +185,13 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
               style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
             >
               {[
-                { icon: TrendingUp, label: 'UPLOADS', value: totalUploads },
-                { icon: Users,      label: 'FOLLOWERS', value: entry.followersCount },
-                { icon: Upload,     label: 'FOLLOWING', value: entry.followingCount ?? 0 },
+                { icon: Zap,   label: 'XP',        value: entry.totalPoints },
+                { icon: Users, label: 'FOLLOWERS',  value: entry.followersCount },
+                { icon: Upload,label: 'FOLLOWING',  value: entry.followingCount ?? 0 },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex flex-col items-center gap-0.5">
-                  <Icon className="w-2.5 h-2.5" style={{ color: 'rgba(255,255,255,0.5)' }} />
-                  <span className="text-white text-[10px] font-bold leading-tight">{fmt(value)}</span>
+                  <Icon className="w-2.5 h-2.5" style={{ color: label === 'XP' ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }} />
+                  <span className="text-[10px] font-bold leading-tight" style={{ color: label === 'XP' ? '#B7FF1A' : 'white' }}>{fmt(value)}</span>
                   <span className="text-white/30 text-[7px] font-semibold tracking-wide">{label}</span>
                 </div>
               ))}
@@ -206,7 +204,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
                 className="w-full rounded-xl py-2.5 flex items-center justify-center gap-1.5 text-xs font-bold"
                 style={{ background: '#B7FF1A', color: '#0B1319', boxShadow: '0 0 12px rgba(183,255,26,0.4)', letterSpacing: '0.01em' }}
               >
-                <Upload className="w-3 h-3" />
+                <Zap className="w-3 h-3" />
                 {ctaText}
               </div>
             </div>
