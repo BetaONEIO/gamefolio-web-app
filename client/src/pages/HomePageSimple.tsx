@@ -524,9 +524,9 @@ const HomePage = () => {
       {/* Hero Banner Carousel */}
       <section className="mb-0 -mx-0">
         <div className="relative overflow-hidden">
-          <div className="w-full bg-black relative min-h-[390px] sm:min-h-[494px] md:min-h-[585px] border-b-2 border-primary">
+          <div className="w-full bg-black relative min-h-[420px] sm:min-h-[560px] md:min-h-[640px] border-b-2 border-primary">
             {activeSlides && activeSlides.length > 0 ? (
-              <div className="relative w-full h-full min-h-[390px] sm:min-h-[494px] md:min-h-[585px]">
+              <div className="relative w-full h-full min-h-[420px] sm:min-h-[560px] md:min-h-[640px]">
                 {activeSlides.map((slide, idx) => {
                   const isFeaturedSlide = 'type' in slide && slide.type === 'featured';
                   const isLeaderboardSlide = 'type' in slide && slide.type === 'leaderboard';
@@ -619,24 +619,38 @@ const HomePage = () => {
                           <div className="flex flex-col items-center py-2 px-3 sm:px-5" style={{ width:'63%', flexShrink:0 }}>
                             {/* Podium — 2nd · 1st · 3rd, vertically centred in column */}
                             <div className="relative w-full flex items-center justify-center" style={{ flex:'1 1 0', minHeight:0 }}>
-                              <div style={{ transform:'scale(0.96)', transformOrigin:'center center', display:'flex', alignItems:'flex-end', gap:'16px' }}>
+                              <div style={{ display:'flex', alignItems:'flex-end', gap:'8px' }}>
                                 {(() => {
                                   const top3 = weeklyTop3 ?? [];
+
+                                  const PODIUM_IMG: Record<1|2|3, string> = {
+                                    1: '/podium-1st.webp',
+                                    2: '/podium-2nd.webp',
+                                    3: '/podium-3rd.webp',
+                                  };
+                                  const PODIUM_W: Record<1|2|3, number> = { 1: 262, 2: 238, 3: 214 };
+                                  const PODIUM_H: Record<1|2|3, number> = { 1: 82,  2: 70,  3: 60  };
+                                  const PODIUM_GLOW: Record<1|2|3, string> = {
+                                    1: 'drop-shadow(0 0 20px rgba(255,215,0,0.9)) drop-shadow(0 6px 14px rgba(255,190,0,0.55))',
+                                    2: 'drop-shadow(0 0 16px rgba(210,210,210,0.85)) drop-shadow(0 5px 10px rgba(192,192,192,0.5))',
+                                    3: 'drop-shadow(0 0 14px rgba(205,127,50,0.85)) drop-shadow(0 5px 10px rgba(180,100,30,0.5))',
+                                  };
 
                                   const renderCard = (winner: LeaderboardWinner | undefined, rank: 1 | 2 | 3) => {
                                     const isFirst = rank === 1;
                                     const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
                                     const accentClr = rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : '#CD7F32';
-                                    const podH = rank === 1 ? 36 : rank === 2 ? 22 : 14;
                                     const cardClass = `lb-card-${rank}`;
                                     const elevate = isFirst ? -28 : 0;
+                                    const podW = PODIUM_W[rank];
+                                    const podH = PODIUM_H[rank];
 
                                     if (!winner) {
                                       return (
-                                        <div key={rank} style={{ display:'flex', flexDirection:'column', alignItems:'center', marginBottom: elevate < 0 ? 0 : 0, transform:`translateY(${elevate}px)` }}>
-                                          <div className={cardClass}>
+                                        <div key={rank} style={{ display:'flex', flexDirection:'column', alignItems:'center', transform:`translateY(${elevate}px)` }}>
+                                          <div className={cardClass} style={{ zoom: 0.82 }}>
                                             <div className="fire-card flex flex-col items-center justify-center"
-                                              style={{ width:190, height:340, borderRadius:16 }}>
+                                              style={{ width:228, height:408, borderRadius:16 }}>
                                               <div className="absolute inset-[3px] rounded-[13px] flex flex-col items-center justify-center gap-2"
                                                 style={{ background:'rgba(11,19,25,0.95)' }}>
                                                 <div className="text-4xl">{medal}</div>
@@ -645,10 +659,8 @@ const HomePage = () => {
                                               </div>
                                             </div>
                                           </div>
-                                          <div className="flex items-center justify-center rounded-b-xl"
-                                            style={{ height:podH, width:190, background:`linear-gradient(180deg,${accentClr}30 0%,${accentClr}12 100%)`, borderLeft:`1px solid ${accentClr}35`, borderRight:`1px solid ${accentClr}35`, borderBottom:`1px solid ${accentClr}35` }}>
-                                            <span style={{ fontSize:14 }}>{medal}</span>
-                                          </div>
+                                          <img src={PODIUM_IMG[rank]} alt={`#${rank} podium`}
+                                            style={{ width: podW, height: podH, objectFit:'contain', marginTop: -22, filter:`brightness(0.7) ${PODIUM_GLOW[rank]}` }} />
                                         </div>
                                       );
                                     }
@@ -674,7 +686,7 @@ const HomePage = () => {
 
                                     return (
                                       <div key={rank} style={{ display:'flex', flexDirection:'column', alignItems:'center', transform:`translateY(${elevate}px)` }}>
-                                        <div className={`relative ${cardClass}`}>
+                                        <div className={`relative ${cardClass}`} style={{ zoom: 0.82 }}>
                                           {isFirst && (
                                             <div className="absolute pointer-events-none" style={{ inset:'-10px', zIndex:10 }}>
                                               {[1,2,3,4,5,6].map(i => <span key={i} className="lb-spark" />)}
@@ -682,10 +694,8 @@ const HomePage = () => {
                                           )}
                                           <CreatorCard entry={entry} period="week" />
                                         </div>
-                                        <div className="flex items-center justify-center rounded-b-xl"
-                                          style={{ height:podH, width:190, background:`linear-gradient(180deg,${accentClr}35 0%,${accentClr}14 100%)`, borderLeft:`1px solid ${accentClr}40`, borderRight:`1px solid ${accentClr}40`, borderBottom:`1px solid ${accentClr}40` }}>
-                                          <span style={{ fontSize: isFirst ? 16 : 13 }}>{medal}</span>
-                                        </div>
+                                        <img src={PODIUM_IMG[rank]} alt={`#${rank} podium`}
+                                          style={{ width: podW, height: podH, objectFit:'contain', marginTop: -22, filter: PODIUM_GLOW[rank] }} />
                                       </div>
                                     );
                                   };
