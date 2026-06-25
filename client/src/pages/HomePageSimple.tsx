@@ -390,15 +390,16 @@ const HomePage = () => {
     staleTime: 60_000,
   });
 
-  const { data: weeklyTop3 } = useQuery<LeaderboardWinner[]>({
-    queryKey: ["/api/leaderboard/weekly/current", 3],
+  const { data: weeklyTop10 } = useQuery<LeaderboardWinner[]>({
+    queryKey: ["/api/leaderboard/weekly/current", 10],
     queryFn: async () => {
-      const r = await fetch("/api/leaderboard/weekly/current?limit=3");
+      const r = await fetch("/api/leaderboard/weekly/current?limit=10");
       if (!r.ok) throw new Error("Failed to fetch");
       return r.json();
     },
     staleTime: 120_000,
   });
+  const weeklyTop3 = weeklyTop10?.slice(0, 3);
 
   // Countdown to next Monday midnight (weekly leaderboard reset)
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -583,130 +584,191 @@ const HomePage = () => {
                     style={{ opacity: idx === currentSlide ? 1 : 0, zIndex: idx === currentSlide ? 1 : 0 }}
                   >
                     {isLeaderboardSlide ? (
-                      /* ── Leaderboard Winners podium slide ── */
+                      /* ── Leaderboard slide: podium left + top-10 list right ── */
                       <div className="absolute inset-0 overflow-hidden" style={{ background: "linear-gradient(160deg,#080e18 0%,#0B1319 55%,#080e18 100%)" }}>
                         <style>{LEADERBOARD_STYLES}</style>
                         {/* Grid overlay */}
                         <div className="absolute inset-0 opacity-[0.02] pointer-events-none"
                           style={{ backgroundImage:"linear-gradient(rgba(183,255,26,0.6) 1px,transparent 1px),linear-gradient(90deg,rgba(183,255,26,0.6) 1px,transparent 1px)",backgroundSize:"48px 48px" }} />
-                        {/* Glow floor */}
-                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-none"
-                          style={{ width:"60%",height:"160px",background:"radial-gradient(ellipse at 50% 100%,rgba(183,255,26,0.08) 0%,transparent 70%)" }} />
 
-                        <div className="relative h-full flex flex-col items-center justify-center px-4 sm:px-6 py-3 gap-2">
-                          {/* Header */}
-                          <div className="text-center flex-shrink-0">
-                            <div className="flex items-center justify-center gap-2 mb-0.5">
-                              <span className="text-base sm:text-lg">🏆</span>
-                              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.22em]" style={{ color:"#B7FF18" }}>This Week's Leaderboard</span>
+                        <div className="relative h-full flex flex-row">
+
+                          {/* ── LEFT: header + podium ── */}
+                          <div className="flex flex-col items-center py-3 px-3 sm:px-5" style={{ width:'52%', flexShrink:0 }}>
+                            {/* Header */}
+                            <div className="text-center flex-shrink-0 mb-2">
+                              <div className="flex items-center justify-center gap-2 mb-0.5">
+                                <span className="text-base">🏆</span>
+                                <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.22em]" style={{ color:"#B7FF18" }}>This Week's Leaderboard</span>
+                              </div>
+                              <p className="text-[10px] text-white/35 max-w-[220px] mx-auto hidden sm:block leading-relaxed">
+                                Compete, earn XP, climb the leaderboard and become this week's champion.
+                              </p>
+                              <div className="flex items-center justify-center gap-3 mt-1">
+                                <span className="text-[10px] text-white/40">⏱ Resets in: <span className="font-bold text-white/70">{resetCountdown.days}d {resetCountdown.hours}h</span></span>
+                                <button
+                                  onClick={() => setLocation('/leaderboard')}
+                                  className="inline-flex items-center gap-1 text-[10px] font-black px-3 py-1 rounded-lg transition-all hover:opacity-90 active:scale-95"
+                                  style={{ background:'#B7FF18', color:'#0B1319' }}>
+                                  View All →
+                                </button>
+                              </div>
                             </div>
-                            <p className="text-[10px] text-white/35 max-w-xs mx-auto hidden sm:block leading-relaxed">
-                              Compete, earn XP, climb the leaderboard and become this week's champion.
-                            </p>
-                            <div className="flex items-center justify-center gap-1.5 mt-0.5">
-                              <span className="text-[10px] text-white/40">⏱ Resets in:</span>
-                              <span className="text-[10px] font-bold text-white/70">{resetCountdown.days}d {resetCountdown.hours}h</span>
-                            </div>
-                          </div>
 
-                          {/* Podium — order: 2nd · 1st · 3rd */}
-                          <div className="flex items-end justify-center gap-4 sm:gap-8 w-full flex-1 pb-1">
-                            {(() => {
-                              const top3 = weeklyTop3 ?? [];
+                            {/* Podium — 2nd · 1st · 3rd, scaled to fit left column */}
+                            <div className="relative w-full flex items-end justify-center" style={{ flex:'1 1 0', minHeight:0 }}>
+                              <div style={{ transform:'scale(0.54)', transformOrigin:'bottom center', display:'flex', alignItems:'flex-end', gap:'16px' }}>
+                                {(() => {
+                                  const top3 = weeklyTop3 ?? [];
 
-                              const renderCard = (winner: LeaderboardWinner | undefined, rank: 1 | 2 | 3) => {
-                                const isFirst = rank === 1;
-                                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
-                                const accentClr = rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : '#CD7F32';
-                                const podH = rank === 1 ? 36 : rank === 2 ? 22 : 14;
-                                const cardClass = `lb-card-${rank}`;
-                                const scaleClass = isFirst ? 'scale-[1.0] sm:scale-[1.08]' : 'scale-[0.82] sm:scale-[0.88]';
-                                const elevate = isFirst ? '-translate-y-3 sm:-translate-y-5' : '';
+                                  const renderCard = (winner: LeaderboardWinner | undefined, rank: 1 | 2 | 3) => {
+                                    const isFirst = rank === 1;
+                                    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
+                                    const accentClr = rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : '#CD7F32';
+                                    const podH = rank === 1 ? 36 : rank === 2 ? 22 : 14;
+                                    const cardClass = `lb-card-${rank}`;
+                                    const elevate = isFirst ? -28 : 0;
 
-                                if (!winner) {
-                                  return (
-                                    <div key={rank} className={`flex flex-col items-center transform ${elevate} ${scaleClass} origin-bottom`}>
-                                      <div className={`${cardClass}`}>
-                                        <div className="fire-card flex flex-col items-center justify-center"
-                                          style={{ width:190, height:340, borderRadius:16 }}>
-                                          <div className="absolute inset-[3px] rounded-[13px] flex flex-col items-center justify-center gap-2"
-                                            style={{ background:'rgba(11,19,25,0.95)' }}>
-                                            <div className="text-4xl">{medal}</div>
-                                            <div className="text-white/30 text-xs font-bold">Could be you!</div>
-                                            <div className="text-white/20 text-[10px] text-center px-4">Upload clips this week to compete</div>
+                                    if (!winner) {
+                                      return (
+                                        <div key={rank} style={{ display:'flex', flexDirection:'column', alignItems:'center', marginBottom: elevate < 0 ? 0 : 0, transform:`translateY(${elevate}px)` }}>
+                                          <div className={cardClass}>
+                                            <div className="fire-card flex flex-col items-center justify-center"
+                                              style={{ width:190, height:340, borderRadius:16 }}>
+                                              <div className="absolute inset-[3px] rounded-[13px] flex flex-col items-center justify-center gap-2"
+                                                style={{ background:'rgba(11,19,25,0.95)' }}>
+                                                <div className="text-4xl">{medal}</div>
+                                                <div className="text-white/30 text-xs font-bold">Could be you!</div>
+                                                <div className="text-white/20 text-[10px] text-center px-4">Upload clips this week to compete</div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center justify-center rounded-b-xl"
+                                            style={{ height:podH, width:190, background:`linear-gradient(180deg,${accentClr}30 0%,${accentClr}12 100%)`, borderLeft:`1px solid ${accentClr}35`, borderRight:`1px solid ${accentClr}35`, borderBottom:`1px solid ${accentClr}35` }}>
+                                            <span style={{ fontSize:14 }}>{medal}</span>
                                           </div>
                                         </div>
-                                      </div>
-                                      <div className="flex items-center justify-center rounded-b-xl mt-0"
-                                        style={{ height:podH, width:190, background:`linear-gradient(180deg,${accentClr}30 0%,${accentClr}12 100%)`, borderLeft:`1px solid ${accentClr}35`, borderRight:`1px solid ${accentClr}35`, borderBottom:`1px solid ${accentClr}35` }}>
-                                        <span style={{ fontSize:14 }}>{medal}</span>
-                                      </div>
-                                    </div>
-                                  );
-                                }
+                                      );
+                                    }
 
-                                const entry: TrendingEntry = {
-                                  userId: winner.userId,
-                                  rank: winner.rank,
-                                  uploadsCount: winner.uploadsCount,
-                                  totalPoints: winner.totalPoints,
-                                  clipsCount: winner.uploadsCount,
-                                  reelsCount: 0,
-                                  screenshotsCount: 0,
-                                  followersCount: 0,
-                                  followingCount: 0,
-                                  user: {
-                                    id: winner.user.id,
-                                    username: winner.user.username,
-                                    displayName: winner.user.displayName,
-                                    avatarUrl: winner.user.avatarUrl,
-                                    bannerUrl: winner.user.bannerUrl,
-                                    avatarBorderColor: accentClr,
-                                    accentColor: accentClr,
-                                    level: winner.user.level,
-                                    backgroundColor: winner.user.backgroundColor,
-                                    primaryColor: null,
-                                    profileBackgroundGradient: false,
-                                    profileBackgroundImageUrl: null,
-                                  },
-                                };
+                                    const entry: TrendingEntry = {
+                                      userId: winner.userId, rank: winner.rank,
+                                      uploadsCount: winner.uploadsCount, totalPoints: winner.totalPoints,
+                                      clipsCount: winner.uploadsCount, reelsCount: 0, screenshotsCount: 0,
+                                      followersCount: 0, followingCount: 0,
+                                      user: {
+                                        id: winner.user.id, username: winner.user.username,
+                                        displayName: winner.user.displayName, avatarUrl: winner.user.avatarUrl,
+                                        bannerUrl: winner.user.bannerUrl, avatarBorderColor: accentClr,
+                                        accentColor: accentClr, level: winner.user.level,
+                                        backgroundColor: winner.user.backgroundColor, primaryColor: null,
+                                        profileBackgroundGradient: false, profileBackgroundImageUrl: null,
+                                      },
+                                    };
 
-                                return (
-                                  <div key={rank} className={`flex flex-col items-center transform ${elevate} ${scaleClass} origin-bottom`}>
-                                    <div className={`relative ${cardClass}`}>
-                                      {isFirst && (
-                                        <div className="absolute pointer-events-none" style={{ inset: '-10px', zIndex: 10 }}>
-                                          {[1,2,3,4,5,6].map(i => <span key={i} className="lb-spark" />)}
+                                    return (
+                                      <div key={rank} style={{ display:'flex', flexDirection:'column', alignItems:'center', transform:`translateY(${elevate}px)` }}>
+                                        <div className={`relative ${cardClass}`}>
+                                          {isFirst && (
+                                            <div className="absolute pointer-events-none" style={{ inset:'-10px', zIndex:10 }}>
+                                              {[1,2,3,4,5,6].map(i => <span key={i} className="lb-spark" />)}
+                                            </div>
+                                          )}
+                                          <CreatorCard entry={entry} period="week" />
                                         </div>
-                                      )}
-                                      <CreatorCard entry={entry} period="week" />
-                                    </div>
-                                    {/* Podium slab */}
-                                    <div className="flex items-center justify-center rounded-b-xl"
-                                      style={{ height:podH, width:190, background:`linear-gradient(180deg,${accentClr}35 0%,${accentClr}14 100%)`, borderLeft:`1px solid ${accentClr}40`, borderRight:`1px solid ${accentClr}40`, borderBottom:`1px solid ${accentClr}40` }}>
-                                      <span style={{ fontSize: isFirst ? 16 : 13 }}>{medal}</span>
-                                    </div>
-                                  </div>
-                                );
-                              };
+                                        <div className="flex items-center justify-center rounded-b-xl"
+                                          style={{ height:podH, width:190, background:`linear-gradient(180deg,${accentClr}35 0%,${accentClr}14 100%)`, borderLeft:`1px solid ${accentClr}40`, borderRight:`1px solid ${accentClr}40`, borderBottom:`1px solid ${accentClr}40` }}>
+                                          <span style={{ fontSize: isFirst ? 16 : 13 }}>{medal}</span>
+                                        </div>
+                                      </div>
+                                    );
+                                  };
 
-                              return (
-                                <>
-                                  {renderCard(top3[1], 2)}
-                                  {renderCard(top3[0], 1)}
-                                  {renderCard(top3[2], 3)}
-                                </>
-                              );
-                            })()}
+                                  return (
+                                    <>
+                                      {renderCard(top3[1], 2)}
+                                      {renderCard(top3[0], 1)}
+                                      {renderCard(top3[2], 3)}
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            </div>
+
                           </div>
 
-                          {/* CTA */}
-                          <button
-                            onClick={() => setLocation('/leaderboard')}
-                            className="flex-shrink-0 inline-flex items-center gap-1.5 text-xs font-black px-5 py-2 rounded-xl transition-all hover:opacity-90 active:scale-95"
-                            style={{ background:'#B7FF18', color:'#0B1319', boxShadow:'0 4px 18px rgba(183,255,26,0.35)' }}>
-                            View Full Leaderboard →
-                          </button>
+                          {/* ── Divider ── */}
+                          <div className="self-stretch w-px my-6 flex-shrink-0" style={{ background:'rgba(183,255,26,0.08)' }} />
+
+                          {/* ── RIGHT: Top 10 list ── */}
+                          <div className="flex-1 flex flex-col py-4 px-4 sm:px-5 overflow-hidden">
+                            <div className="text-[9px] font-black uppercase tracking-[0.2em] mb-3" style={{ color:'#B7FF18' }}>
+                              Top 10 This Week
+                            </div>
+                            <div className="flex flex-col gap-0 overflow-y-auto flex-1">
+                              {(weeklyTop10 && weeklyTop10.length > 0 ? weeklyTop10 : Array.from({length:10}).map((_,i) => null)).map((winner, idx) => {
+                                const rank = idx + 1;
+                                const medalEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
+                                const accentClr = rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : rank === 3 ? '#CD7F32' : null;
+                                const isTop3 = rank <= 3;
+                                return (
+                                  <div key={winner?.userId ?? idx}
+                                    className="flex items-center gap-2.5 py-[6px] cursor-pointer hover:bg-white/[0.03] rounded-lg px-1 transition-colors"
+                                    style={{ borderBottom:'1px solid rgba(255,255,255,0.04)' }}
+                                    onClick={() => winner && setLocation(`/profile/${winner.user.username}`)}>
+                                    {/* Rank */}
+                                    <div className="flex-shrink-0 w-6 text-center">
+                                      {medalEmoji ? (
+                                        <span className="text-sm leading-none">{medalEmoji}</span>
+                                      ) : (
+                                        <span className="text-[11px] font-black" style={{ color:'rgba(255,255,255,0.25)' }}>#{rank}</span>
+                                      )}
+                                    </div>
+                                    {/* Avatar */}
+                                    {winner ? (
+                                      <div className="flex-shrink-0 w-7 h-7 rounded-full overflow-hidden"
+                                        style={{ border: isTop3 ? `1.5px solid ${accentClr}60` : '1.5px solid rgba(255,255,255,0.1)' }}>
+                                        {winner.user.avatarUrl ? (
+                                          <img src={winner.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                          <div className="w-full h-full flex items-center justify-center text-[10px] font-bold"
+                                            style={{ background:'rgba(183,255,26,0.1)', color:'#B7FF18' }}>
+                                            {(winner.user.displayName || winner.user.username || '?')[0].toUpperCase()}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="flex-shrink-0 w-7 h-7 rounded-full" style={{ background:'rgba(255,255,255,0.05)' }} />
+                                    )}
+                                    {/* Name */}
+                                    <div className="flex-1 min-w-0">
+                                      {winner ? (
+                                        <>
+                                          <div className="text-[11px] font-semibold text-white/90 truncate leading-tight">
+                                            {winner.user.displayName || winner.user.username}
+                                          </div>
+                                          <div className="text-[9px] text-white/35 truncate">@{winner.user.username}</div>
+                                        </>
+                                      ) : (
+                                        <div className="h-3 w-20 rounded" style={{ background:'rgba(255,255,255,0.06)' }} />
+                                      )}
+                                    </div>
+                                    {/* Points */}
+                                    {winner ? (
+                                      <div className="flex-shrink-0 flex items-center gap-1">
+                                        <span className="text-[10px] font-black" style={{ color: isTop3 ? accentClr! : 'rgba(183,255,26,0.7)' }}>
+                                          ⚡ {winner.totalPoints >= 1000 ? `${(winner.totalPoints/1000).toFixed(1)}K` : winner.totalPoints}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div className="h-3 w-10 rounded" style={{ background:'rgba(255,255,255,0.06)' }} />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
                         </div>
                       </div>
                     ) : isFeaturedSlide ? (
