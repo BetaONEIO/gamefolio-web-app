@@ -589,11 +589,12 @@ const HomePage = () => {
                   >
                     {isLeaderboardSlide ? (
                       /* ── Leaderboard slide: podium left + top-10 list right ── */
-                      <div className="absolute inset-0 overflow-hidden" style={{ background: "linear-gradient(160deg,#080e18 0%,#0B1319 55%,#080e18 100%)" }}>
+                      <div className="absolute inset-0 overflow-hidden">
+                        {/* Electrical background */}
+                        <div className="absolute inset-0" style={{ backgroundImage:"url('/electrical-bg.webp')", backgroundSize:"cover", backgroundPosition:"center" }} />
+                        {/* Dark overlay for readability */}
+                        <div className="absolute inset-0" style={{ background:"linear-gradient(160deg,rgba(5,9,13,0.82) 0%,rgba(8,14,24,0.72) 55%,rgba(5,9,13,0.82) 100%)" }} />
                         <style>{LEADERBOARD_STYLES}</style>
-                        {/* Grid overlay */}
-                        <div className="absolute inset-0 opacity-[0.02] pointer-events-none"
-                          style={{ backgroundImage:"linear-gradient(rgba(183,255,26,0.6) 1px,transparent 1px),linear-gradient(90deg,rgba(183,255,26,0.6) 1px,transparent 1px)",backgroundSize:"48px 48px" }} />
 
                         <div className="relative h-full flex flex-col">
 
