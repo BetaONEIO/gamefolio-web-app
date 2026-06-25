@@ -619,7 +619,7 @@ const HomePage = () => {
                           <div className="flex flex-col items-center py-2 px-3 sm:px-5" style={{ width:'63%', flexShrink:0 }}>
                             {/* Podium — 2nd · 1st · 3rd, vertically centred in column */}
                             <div className="relative w-full flex items-center justify-center" style={{ flex:'1 1 0', minHeight:0 }}>
-                              <div style={{ display:'flex', alignItems:'flex-end', gap:'2px' }}>
+                              <div style={{ transform:'scale(0.96)', transformOrigin:'center center', display:'flex', alignItems:'flex-end', gap:'16px' }}>
                                 {(() => {
                                   const top3 = weeklyTop3 ?? [];
 
@@ -648,7 +648,7 @@ const HomePage = () => {
                                     if (!winner) {
                                       return (
                                         <div key={rank} style={{ display:'flex', flexDirection:'column', alignItems:'center', transform:`translateY(${elevate}px)` }}>
-                                          <div className={cardClass} style={{ zoom: 0.82 }}>
+                                          <div className={cardClass}>
                                             <div className="fire-card flex flex-col items-center justify-center"
                                               style={{ width:228, height:408, borderRadius:16 }}>
                                               <div className="absolute inset-[3px] rounded-[13px] flex flex-col items-center justify-center gap-2"
@@ -686,7 +686,7 @@ const HomePage = () => {
 
                                     return (
                                       <div key={rank} style={{ display:'flex', flexDirection:'column', alignItems:'center', transform:`translateY(${elevate}px)` }}>
-                                        <div className={`relative ${cardClass}`} style={{ zoom: 0.82 }}>
+                                        <div className={`relative ${cardClass}`}>
                                           {isFirst && (
                                             <div className="absolute pointer-events-none" style={{ inset:'-10px', zIndex:10 }}>
                                               {[1,2,3,4,5,6].map(i => <span key={i} className="lb-spark" />)}
