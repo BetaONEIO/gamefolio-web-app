@@ -519,9 +519,9 @@ const HomePage = () => {
       {/* Hero Banner Carousel */}
       <section className="mb-0 -mx-0">
         <div className="relative overflow-hidden">
-          <div className="w-full bg-black relative min-h-[300px] sm:min-h-[380px] md:min-h-[450px] border-b-2 border-primary">
+          <div className="w-full bg-black relative min-h-[390px] sm:min-h-[494px] md:min-h-[585px] border-b-2 border-primary">
             {activeSlides && activeSlides.length > 0 ? (
-              <div className="relative w-full h-full min-h-[300px] sm:min-h-[380px] md:min-h-[450px]">
+              <div className="relative w-full h-full min-h-[390px] sm:min-h-[494px] md:min-h-[585px]">
                 {activeSlides.map((slide, idx) => {
                   const isFeaturedSlide = 'type' in slide && slide.type === 'featured';
                   const isLeaderboardSlide = 'type' in slide && slide.type === 'leaderboard';
