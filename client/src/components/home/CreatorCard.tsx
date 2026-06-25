@@ -114,7 +114,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
     <Link href={`/profile/${user.username}`} className={className}>
       <div
         className="flex-shrink-0 cursor-pointer transition-transform duration-200 hover:scale-[1.03] hover:-translate-y-2 fire-card"
-        style={{ width: 190, height: 340, borderRadius: 16 }}
+        style={{ width: 228, height: 408, borderRadius: 16 }}
       >
         <div
           className="absolute inset-[3px] rounded-[13px] overflow-hidden"
