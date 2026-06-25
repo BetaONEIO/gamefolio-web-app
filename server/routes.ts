@@ -3160,6 +3160,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get featured Gamefolio (official profile) banner data
+  app.get("/api/featured/gamefolio", async (req, res) => {
+    try {
+      const GAMEPOLIO_USER_ID = 154;
+      const user = await storage.getUser(GAMEPOLIO_USER_ID);
+      if (!user) return res.status(404).json({ message: "Not found" });
+
+      // Get favorite games
+      const favoriteGames = await storage.getUserGameFavorites(GAMEPOLIO_USER_ID);
+      const gamesPlayed = favoriteGames.map(g => ({ id: g.id, name: g.name }));
+
+      // Get latest clip as "reel"
+      const userClips = await storage.getClipsByUserId(GAMEPOLIO_USER_ID);
+      const latestClip = userClips.length > 0 ? {
+        id: userClips[0].id,
+        title: userClips[0].title,
+        thumbnailUrl: userClips[0].thumbnailUrl,
+        videoUrl: userClips[0].videoUrl,
+        views: userClips[0].views,
+        createdAt: userClips[0].createdAt,
+      } : null;
+
+      // Clip count across all types
+      const clipCount = userClips.length;
+
+      const { password: _p, ...publicUser } = user;
+      res.json({
+        user: publicUser,
+        gamesPlayed: gamesPlayed.length > 0 ? gamesPlayed : [
+          { id: 1, name: "Fortnite" },
+          { id: 2, name: "Valorant" },
+          { id: 3, name: "Apex Legends" },
+        ],
+        latestClip,
+        clipCount,
+      });
+    } catch (err) {
+      console.error("Error getting featured gamefolio:", err);
+      res.status(500).json({ message: "Error getting featured gamefolio" });
+    }
+  });
+
   // Get featured users endpoint
   app.get("/api/users/featured", async (req, res) => {
     try {

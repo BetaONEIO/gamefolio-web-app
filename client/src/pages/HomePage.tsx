@@ -21,6 +21,7 @@ import RecommendedForYou from "@/components/home/RecommendedForYou";
 import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
 import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
 import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
+import FeaturedGamefolioBanner from "@/components/home/FeaturedGamefolioBanner";
 import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
@@ -570,6 +571,11 @@ const HomePage = () => {
             </div>
           )}
         </div>
+      </section>
+
+      {/* Featured Gamefolio — Official Profile */}
+      <section className="px-0">
+        <FeaturedGamefolioBanner />
       </section>
 
       {/* Ecosystem Activity Rail */}

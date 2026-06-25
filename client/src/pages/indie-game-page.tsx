@@ -277,72 +277,176 @@ function CreateBountyDialog({ open, onClose, gameId, onCreated }: {
 }) {
   const { toast } = useToast();
   const [title, setTitle] = useState("");
+  const [campaignTitle, setCampaignTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [rewardType, setRewardType] = useState("game_key");
-  const [rewardValue, setRewardValue] = useState("");
-  const [keyCount, setKeyCount] = useState("1");
   const [creatorSlots, setCreatorSlots] = useState("10");
-  const [difficulty, setDifficulty] = useState("medium");
   const [endDate, setEndDate] = useState("");
+  const [demoKeyPool, setDemoKeyPool] = useState("");
+  const [fullKeyPool, setFullKeyPool] = useState("");
+  const [requiredClips, setRequiredClips] = useState("2");
+  const [requiredReels, setRequiredReels] = useState("1");
+  const [requiredScreenshots, setRequiredScreenshots] = useState("0");
+  const [requiredViews, setRequiredViews] = useState("500");
+  const [xpJoin, setXpJoin] = useState("500");
+  const [xpPerClip, setXpPerClip] = useState("1000");
+  const [xpPerReel, setXpPerReel] = useState("2500");
+  const [xpPerScreenshot, setXpPerScreenshot] = useState("200");
+  const [xpViewMilestone, setXpViewMilestone] = useState("2500");
+  const [xpCompletionBonus, setXpCompletionBonus] = useState("5000");
+  const [completionBadge, setCompletionBadge] = useState("");
+  const [step, setStep] = useState(1);
 
   const mutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", `/api/games/${gameId}/bounties`, data),
     onSuccess: () => {
-      toast({ title: "Bounty created!", description: "Your bounty is now live for creators to accept.", variant: "gamefolioSuccess" });
+      toast({ title: "Campaign created!", description: "Your creator campaign is now live.", variant: "gamefolioSuccess" });
       onCreated();
       onClose();
-      setTitle(""); setDescription(""); setRewardValue(""); setKeyCount("1"); setCreatorSlots("10"); setEndDate("");
+      resetForm();
     },
-    onError: () => toast({ title: "Error", description: "Failed to create bounty.", variant: "gamefolioError" }),
+    onError: () => toast({ title: "Error", description: "Failed to create campaign.", variant: "gamefolioError" }),
   });
+
+  const resetForm = () => {
+    setTitle(""); setCampaignTitle(""); setDescription(""); setCreatorSlots("10"); setEndDate("");
+    setDemoKeyPool(""); setFullKeyPool("");
+    setRequiredClips("2"); setRequiredReels("1"); setRequiredScreenshots("0"); setRequiredViews("500");
+    setXpJoin("500"); setXpPerClip("1000"); setXpPerReel("2500"); setXpPerScreenshot("200");
+    setXpViewMilestone("2500"); setXpCompletionBonus("5000"); setCompletionBadge("");
+    setStep(1);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    mutation.mutate({ title, description, rewardType, rewardValue, keyCount: parseInt(keyCount) || 0, creatorSlots: parseInt(creatorSlots) || 10, difficulty, endDate: endDate || undefined });
+    const payload = {
+      title: title.trim(),
+      campaignTitle: campaignTitle.trim() || null,
+      description: description.trim() || null,
+      maxParticipants: parseInt(creatorSlots) || 10,
+      endDate: endDate || null,
+      demoKeyPool: demoKeyPool.split(/\n|,/).map(k => k.trim()).filter(Boolean),
+      fullKeyPool: fullKeyPool.split(/\n|,/).map(k => k.trim()).filter(Boolean),
+      requiredClips: parseInt(requiredClips) || 0,
+      requiredReels: parseInt(requiredReels) || 0,
+      requiredScreenshots: parseInt(requiredScreenshots) || 0,
+      requiredViews: parseInt(requiredViews) || 0,
+      xpJoin: parseInt(xpJoin) || 0,
+      xpPerClip: parseInt(xpPerClip) || 0,
+      xpPerReel: parseInt(xpPerReel) || 0,
+      xpPerScreenshot: parseInt(xpPerScreenshot) || 0,
+      xpViewMilestone: parseInt(xpViewMilestone) || 0,
+      xpCompletionBonus: parseInt(xpCompletionBonus) || 0,
+      completionBadge: completionBadge.trim() || null,
+    };
+    mutation.mutate(payload);
   };
 
   const inputStyle = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", borderRadius: "10px", padding: "10px 14px", width: "100%", outline: "none", fontSize: "14px" };
   const labelStyle = { fontSize: "11px", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "1px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "6px" };
+  const totalXP = (parseInt(xpJoin) || 0) + (parseInt(xpPerClip) || 0) * (parseInt(requiredClips) || 0) + (parseInt(xpPerReel) || 0) * (parseInt(requiredReels) || 0) + (parseInt(xpPerScreenshot) || 0) * (parseInt(requiredScreenshots) || 0) + (parseInt(xpViewMilestone) || 0) + (parseInt(xpCompletionBonus) || 0);
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0" style={{ background: "#0B1218", border: "1px solid rgba(193,255,0,0.2)" }}>
+    <Dialog open={open} onOpenChange={(v) => !v && (onClose(), resetForm())}>
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto p-0" style={{ background: "#0B1218", border: "1px solid rgba(193,255,0,0.2)" }}>
         <DialogHeader className="px-6 pt-6 pb-0">
           <div className="flex items-center gap-2 mb-1">
             <Sword className="w-5 h-5" style={{ color: NEON }} />
-            <DialogTitle className="text-white font-black text-lg">Create Bounty</DialogTitle>
+            <DialogTitle className="text-white font-black text-lg">Create Creator Campaign</DialogTitle>
           </div>
-          <p className="text-sm text-gray-400">Launch a creator campaign and reward creators who make content for your game.</p>
+          <p className="text-sm text-gray-400">Launch a full bounty campaign with demo keys, content objectives, and XP rewards.</p>
         </DialogHeader>
+
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          <div><label style={labelStyle}>Bounty Title *</label><input style={inputStyle} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Best Gameplay Montage" required /></div>
-          <div><label style={labelStyle}>Description</label><textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical" }} value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe what creators need to do to earn the reward..." /></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><label style={labelStyle}>Reward Type</label>
-              <select style={inputStyle} value={rewardType} onChange={e => setRewardType(e.target.value)}>
-                <option value="game_key">Game Key</option><option value="xp">XP Boost</option><option value="badge">Creator Badge</option><option value="featured">Featured Creator</option><option value="early_access">Early Access</option>
-              </select>
-            </div>
-            <div><label style={labelStyle}>Reward Value</label><input style={inputStyle} value={rewardValue} onChange={e => setRewardValue(e.target.value)} placeholder="e.g. Steam Key, 500 XP" /></div>
+          {/* Step indicator */}
+          <div className="flex items-center gap-2 mb-2">
+            <button type="button" onClick={() => setStep(1)} className="text-xs font-bold px-2.5 py-1 rounded-full"
+              style={{ background: step === 1 ? "rgba(193,255,0,0.2)" : "rgba(255,255,255,0.06)", color: step === 1 ? NEON : "rgba(255,255,255,0.4)" }}>1. Basics</button>
+            <button type="button" onClick={() => setStep(2)} className="text-xs font-bold px-2.5 py-1 rounded-full"
+              style={{ background: step === 2 ? "rgba(193,255,0,0.2)" : "rgba(255,255,255,0.06)", color: step === 2 ? NEON : "rgba(255,255,255,0.4)" }}>2. Keys</button>
+            <button type="button" onClick={() => setStep(3)} className="text-xs font-bold px-2.5 py-1 rounded-full"
+              style={{ background: step === 3 ? "rgba(193,255,0,0.2)" : "rgba(255,255,255,0.06)", color: step === 3 ? NEON : "rgba(255,255,255,0.4)" }}>3. Objectives</button>
+            <button type="button" onClick={() => setStep(4)} className="text-xs font-bold px-2.5 py-1 rounded-full"
+              style={{ background: step === 4 ? "rgba(193,255,0,0.2)" : "rgba(255,255,255,0.06)", color: step === 4 ? NEON : "rgba(255,255,255,0.4)" }}>4. Rewards</button>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div><label style={labelStyle}>Keys Available</label><input style={inputStyle} type="number" min="0" value={keyCount} onChange={e => setKeyCount(e.target.value)} /></div>
-            <div><label style={labelStyle}>Creator Slots</label><input style={inputStyle} type="number" min="1" value={creatorSlots} onChange={e => setCreatorSlots(e.target.value)} /></div>
-            <div><label style={labelStyle}>Difficulty</label>
-              <select style={inputStyle} value={difficulty} onChange={e => setDifficulty(e.target.value)}>
-                <option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option>
-              </select>
+
+          {step === 1 && (
+            <div className="space-y-4">
+              <div><label style={labelStyle}>Campaign Title *</label><input style={inputStyle} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Early Creator Access" required /></div>
+              <div><label style={labelStyle}>Display Name (optional)</label><input style={inputStyle} value={campaignTitle} onChange={e => setCampaignTitle(e.target.value)} placeholder="e.g. Creator Week One Challenge" /></div>
+              <div><label style={labelStyle}>Description</label><textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical" }} value={description} onChange={e => setDescription(e.target.value)} placeholder="What should creators do to earn rewards?" /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label style={labelStyle}>Creator Slots</label><input style={inputStyle} type="number" min="1" value={creatorSlots} onChange={e => setCreatorSlots(e.target.value)} /></div>
+                <div><label style={labelStyle}>End Date (optional)</label><input style={inputStyle} type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
+              </div>
             </div>
-          </div>
-          <div><label style={labelStyle}>End Date (optional)</label><input style={inputStyle} type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="ghost" className="flex-1 text-gray-400" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={mutation.isPending || !title.trim()} className="flex-1 font-black"
-              style={{ background: NEON, color: "#0a0f1c", boxShadow: "0 8px 24px rgba(193,255,0,0.25)" }}>
-              {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-              Create Bounty
-            </Button>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-4">
+              <div><label style={labelStyle}>Demo Keys (one per line)</label>
+                <textarea style={{ ...inputStyle, minHeight: "100px", resize: "vertical" }} value={demoKeyPool} onChange={e => setDemoKeyPool(e.target.value)} placeholder="ABC-123-DEF
+GHI-456-JKL" />
+                <div className="text-xs text-gray-500 mt-1">{demoKeyPool.split(/\n|,/).filter(k => k.trim()).length} demo keys available</div>
+              </div>
+              <div><label style={labelStyle}>Full Keys (one per line)</label>
+                <textarea style={{ ...inputStyle, minHeight: "100px", resize: "vertical" }} value={fullKeyPool} onChange={e => setFullKeyPool(e.target.value)} placeholder="FULL-KEY-001
+FULL-KEY-002" />
+                <div className="text-xs text-gray-500 mt-1">{fullKeyPool.split(/\n|,/).filter(k => k.trim()).length} full keys available</div>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div><label style={labelStyle}>Required Clips</label><input style={inputStyle} type="number" min="0" value={requiredClips} onChange={e => setRequiredClips(e.target.value)} /></div>
+                <div><label style={labelStyle}>Required Reels</label><input style={inputStyle} type="number" min="0" value={requiredReels} onChange={e => setRequiredReels(e.target.value)} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label style={labelStyle}>Required Screenshots</label><input style={inputStyle} type="number" min="0" value={requiredScreenshots} onChange={e => setRequiredScreenshots(e.target.value)} /></div>
+                <div><label style={labelStyle}>Views Milestone</label><input style={inputStyle} type="number" min="0" value={requiredViews} onChange={e => setRequiredViews(e.target.value)} /></div>
+              </div>
+              <div><label style={labelStyle}>Completion Badge Name (optional)</label><input style={inputStyle} value={completionBadge} onChange={e => setCompletionBadge(e.target.value)} placeholder="e.g. Early Supporter" /></div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-2">
+                <div><label style={labelStyle}>Join XP</label><input style={inputStyle} type="number" min="0" value={xpJoin} onChange={e => setXpJoin(e.target.value)} /></div>
+                <div><label style={labelStyle}>Per Clip XP</label><input style={inputStyle} type="number" min="0" value={xpPerClip} onChange={e => setXpPerClip(e.target.value)} /></div>
+                <div><label style={labelStyle}>Per Reel XP</label><input style={inputStyle} type="number" min="0" value={xpPerReel} onChange={e => setXpPerReel(e.target.value)} /></div>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div><label style={labelStyle}>Per Screenshot XP</label><input style={inputStyle} type="number" min="0" value={xpPerScreenshot} onChange={e => setXpPerScreenshot(e.target.value)} /></div>
+                <div><label style={labelStyle}>View Milestone XP</label><input style={inputStyle} type="number" min="0" value={xpViewMilestone} onChange={e => setXpViewMilestone(e.target.value)} /></div>
+                <div><label style={labelStyle}>Completion Bonus</label><input style={inputStyle} type="number" min="0" value={xpCompletionBonus} onChange={e => setXpCompletionBonus(e.target.value)} /></div>
+              </div>
+              <div className="rounded-xl p-3 text-center" style={{ background: "rgba(193,255,0,0.06)", border: "1px solid rgba(193,255,0,0.15)" }}>
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total XP Available</div>
+                <div className="text-xl font-black" style={{ color: NEON }}>{totalXP.toLocaleString()} XP</div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 pt-2">
+            {step > 1 && (
+              <Button type="button" variant="ghost" className="text-gray-400" onClick={() => setStep(s => s - 1)}>Back</Button>
+            )}
+            <div className="flex-1" />
+            {step < 4 ? (
+              <Button type="button" className="font-bold"
+                style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.12)" }}
+                onClick={() => setStep(s => s + 1)}>Next</Button>
+            ) : (
+              <Button type="submit" disabled={mutation.isPending || !title.trim()} className="font-bold"
+                style={{ background: NEON, color: "#0a0f1c", boxShadow: "0 8px 24px rgba(193,255,0,0.25)" }}>
+                {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                Create Campaign
+              </Button>
+            )}
+            <Button type="button" variant="ghost" className="text-gray-400" onClick={() => { onClose(); resetForm(); }}>Cancel</Button>
           </div>
         </form>
       </DialogContent>

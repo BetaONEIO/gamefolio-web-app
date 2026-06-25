@@ -1853,13 +1853,31 @@ export const gameBounties = pgTable("game_bounties", {
   createdByUserId: integer("created_by_user_id").notNull(),
   title: text("title").notNull(),
   description: text("description"),
+  campaignTitle: text("campaign_title"),
   rewardType: text("reward_type").notNull().default("game_key"),
   rewardValue: text("reward_value"),
   keyCount: integer("key_count").default(0),
   creatorSlots: integer("creator_slots").default(10),
+  maxParticipants: integer("max_participants").default(10),
   difficulty: text("difficulty").default("medium"),
   endDate: timestamp("end_date"),
   status: text("status").default("active"),
+  demoKeyPool: text("demo_key_pool"),
+  fullKeyPool: text("full_key_pool"),
+  requiredClips: integer("required_clips").default(0),
+  requiredReels: integer("required_reels").default(0),
+  requiredScreenshots: integer("required_screenshots").default(0),
+  requiredViews: integer("required_views").default(0),
+  xpJoin: integer("xp_join").default(500),
+  xpPerClip: integer("xp_per_clip").default(1000),
+  xpPerReel: integer("xp_per_reel").default(2500),
+  xpPerScreenshot: integer("xp_per_screenshot").default(200),
+  xpViewMilestone: integer("xp_view_milestone").default(2500),
+  xpCompletionBonus: integer("xp_completion_bonus").default(5000),
+  totalXpAvailable: integer("total_xp_available").default(0),
+  demoKeysRemaining: integer("demo_keys_remaining").default(0),
+  fullKeysRemaining: integer("full_keys_remaining").default(0),
+  completionBadge: text("completion_badge"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -1868,13 +1886,26 @@ export const gameBountyAcceptances = pgTable("game_bounty_acceptances", {
   bountyId: integer("bounty_id").notNull(),
   userId: integer("user_id").notNull(),
   status: text("status").default("active"),
+  demoKey: text("demo_key"),
+  fullKey: text("full_key"),
+  clipsUploaded: integer("clips_uploaded").default(0),
+  reelsUploaded: integer("reels_uploaded").default(0),
+  screenshotsUploaded: integer("screenshots_uploaded").default(0),
+  totalViews: integer("total_views").default(0),
+  xpEarned: integer("xp_earned").default(0),
+  progressPercent: integer("progress_percent").default(0),
+  joinedAt: timestamp("joined_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  completedBadgeAwarded: boolean("completed_badge_awarded").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const insertGameBountySchema = createInsertSchema(gameBounties).omit({ id: true, createdAt: true });
+export const insertGameBountyAcceptanceSchema = createInsertSchema(gameBountyAcceptances).omit({ id: true, createdAt: true });
 export type GameBounty = typeof gameBounties.$inferSelect;
 export type InsertGameBounty = z.infer<typeof insertGameBountySchema>;
 export type GameBountyAcceptance = typeof gameBountyAcceptances.$inferSelect;
+export type InsertGameBountyAcceptance = z.infer<typeof insertGameBountyAcceptanceSchema>;
 
 export const usedPaymentHashes = pgTable("used_payment_hashes", {
   id: serial("id").primaryKey(),
