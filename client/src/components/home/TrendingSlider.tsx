@@ -9,6 +9,7 @@ import {
 
 const NEON = "#B7FF18";
 const AUTO_ADVANCE_MS = 7000;
+const THUMB_H = 120;
 
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
@@ -70,8 +71,8 @@ function GameSidebar({
       className="flex-shrink-0 flex flex-col overflow-hidden"
       style={{ width: "clamp(160px, 22%, 240px)" }}
     >
-      {/* Game thumbnail — fixed 120px, never expands */}
-      <div className="relative flex-shrink-0 overflow-hidden" style={{ height: 120 }}>
+      {/* Game thumbnail — fixed height, never expands */}
+      <div className="relative flex-shrink-0 overflow-hidden" style={{ height: THUMB_H }}>
         {clip.game?.imageUrl ? (
           <img
             src={clip.game.imageUrl}
