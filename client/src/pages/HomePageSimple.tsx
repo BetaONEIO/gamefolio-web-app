@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 import VideoClipCard from "@/components/clips/VideoClipCard";
@@ -26,7 +26,6 @@ import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
 import { CreatorCard, CREATOR_CARD_STYLES, TrendingEntry } from "@/components/home/CreatorCard";
 
 import { Trophy } from "lucide-react";
-import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
 import LatestContentSlider from "@/components/home/LatestContentSlider";
 
 interface DbHeroSlide {
@@ -308,7 +307,6 @@ const HomePage = () => {
 
   // Hero carousel state
   const [currentSlide, setCurrentSlide] = useState(0);
-  const slideTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Query latest clips for the homepage section — newest uploaded first
   const { data: trendingClipsData, isLoading: isLoadingTrendingClips } = useQuery<ClipWithUser[]>({
@@ -378,18 +376,6 @@ const HomePage = () => {
     refetchOnWindowFocus: true,
   });
 
-  const { data: heroSlideSettings } = useQuery<{ intervalSeconds: number }>({
-    queryKey: ["/api/hero-slides/settings"],
-    queryFn: async () => {
-      const response = await fetch('/api/hero-slides/settings');
-      if (!response.ok) {
-        throw new Error('Failed to fetch hero slide settings');
-      }
-      return response.json();
-    },
-    staleTime: 30000,
-  });
-
   const { data: featuredGamefolio } = useQuery<FeaturedGamefolioData>({
     queryKey: ["/api/featured/gamefolio"],
     queryFn: async () => {
@@ -427,46 +413,27 @@ const HomePage = () => {
     return { days: Math.floor(diff / 86400000), hours: Math.floor((diff % 86400000) / 3600000) };
   }, [nowMs]);
 
-  const slideIntervalMs = (heroSlideSettings?.intervalSeconds || 15) * 1000;
-
   const activeSlides = useMemo<AnySlide[] | null>(() => {
+    const latestContentSlide: AnySlide = { type: 'latestContent', id: 'latestContent' };
     const base: AnySlide[] = dbHeroSlides && dbHeroSlides.length > 0 ? [...dbHeroSlides] : [];
     const leaderboardSlide: AnySlide = { type: 'leaderboard', id: 'leaderboard' };
     const featuredSlide: AnySlide = { type: 'featured', id: 'featured' };
-    const latestContentSlide: AnySlide = { type: 'latestContent', id: 'latestContent' };
-    return [...base, leaderboardSlide, featuredSlide, latestContentSlide];
+    return [latestContentSlide, ...base, leaderboardSlide, featuredSlide];
   }, [dbHeroSlides]);
-
-  const resetSlideTimer = useCallback(() => {
-    if (slideTimerRef.current) clearInterval(slideTimerRef.current);
-    if (activeSlides && activeSlides.length > 1) {
-      slideTimerRef.current = setInterval(() => {
-        setCurrentSlide((prev) => (prev + 1) % activeSlides.length);
-      }, slideIntervalMs);
-    }
-  }, [activeSlides, slideIntervalMs]);
-
-  useEffect(() => {
-    resetSlideTimer();
-    return () => { if (slideTimerRef.current) clearInterval(slideTimerRef.current); };
-  }, [resetSlideTimer]);
 
   const prevSlide = useCallback(() => {
     if (!activeSlides) return;
     setCurrentSlide((prev) => (prev - 1 + activeSlides.length) % activeSlides.length);
-    resetSlideTimer();
-  }, [activeSlides, resetSlideTimer]);
+  }, [activeSlides]);
 
   const nextSlide = useCallback(() => {
     if (!activeSlides) return;
     setCurrentSlide((prev) => (prev + 1) % activeSlides.length);
-    resetSlideTimer();
-  }, [activeSlides, resetSlideTimer]);
+  }, [activeSlides]);
 
   const goToSlide = useCallback((idx: number) => {
     setCurrentSlide(idx);
-    resetSlideTimer();
-  }, [resetSlideTimer]);
+  }, []);
 
   // Query to get custom hero text
   const { data: experiencedHeroText, isLoading: isLoadingExperiencedText } = useQuery<{ 
@@ -532,7 +499,7 @@ const HomePage = () => {
       <section className="mb-0 -mx-0">
         <div className="relative overflow-hidden">
           <div className="w-full bg-black relative min-h-[420px] sm:min-h-[560px] md:min-h-[640px] border-b-2 border-primary">
-            {activeSlides && activeSlides.length > 0 ? (
+            {activeSlides && (
               <div className="relative w-full h-full min-h-[420px] sm:min-h-[560px] md:min-h-[640px]">
                 {activeSlides.map((slide, idx) => {
                   const isFeaturedSlide = 'type' in slide && slide.type === 'featured';
@@ -994,33 +961,6 @@ const HomePage = () => {
                   </>
                 )}
               </div>
-            ) : (
-              <>
-                <img
-                  src={ForzaGif}
-                  alt="Epic racing gameplay - Build your Gamefolio"
-                  className="w-full h-full object-cover absolute inset-0"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent">
-                  <div className="flex flex-col items-start justify-center h-full max-w-3xl p-6 sm:p-8 md:p-12">
-                    <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-3 md:mb-4 leading-tight drop-shadow-md">
-                      Build Your Gamefolio
-                    </h1>
-                    <h2 className="text-lg sm:text-2xl md:text-3xl font-semibold text-primary mb-4 md:mb-6 leading-tight drop-shadow-lg">
-                      With Your Best Gaming Clips
-                    </h2>
-                    <p className="text-gray-200 mb-6 sm:mb-8 max-w-lg text-sm sm:text-base md:text-lg leading-relaxed">
-                      Showcase your most epic gaming moments, connect with other gamers, and build your personal gaming portfolio.
-                    </p>
-                    <Button
-                      className="w-fit px-6 py-5 h-auto text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-                      onClick={() => setLocation('/upload')}
-                    >
-                      Start Building Now
-                    </Button>
-                  </div>
-                </div>
-              </>
             )}
           </div>
         </div>
