@@ -321,6 +321,11 @@ export default function TrendingSlider() {
                 muted
                 autoPlay
                 playsInline
+                onCanPlay={(e) => {
+                  const v = e.currentTarget;
+                  v.muted = true;
+                  v.play().then(() => setIsPlaying(true)).catch(() => {});
+                }}
                 onEnded={handleVideoEnded}
                 onTimeUpdate={handleTimeUpdate}
               />
