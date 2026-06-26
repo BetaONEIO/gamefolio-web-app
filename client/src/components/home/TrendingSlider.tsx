@@ -70,8 +70,8 @@ function GameSidebar({
       className="flex-shrink-0 flex flex-col bg-[#060D12] border-l border-white/5 overflow-hidden"
       style={{ width: "clamp(160px, 22%, 240px)" }}
     >
-      {/* Game thumbnail */}
-      <div className="relative flex-1 bg-[#0A1117] overflow-hidden" style={{ minHeight: 0 }}>
+      {/* Game thumbnail — fixed height so stats+button always fit below */}
+      <div className="relative bg-[#0A1117] overflow-hidden" style={{ height: "55%" }}>
         {clip.game?.imageUrl ? (
           <img
             src={clip.game.imageUrl}
