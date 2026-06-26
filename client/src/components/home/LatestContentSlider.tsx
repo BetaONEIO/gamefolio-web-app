@@ -347,13 +347,13 @@ export default function LatestContentSlider() {
             <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.12)" }} />
           </div>
 
-          {/* Game thumbnail — 4:3 */}
+          {/* Game thumbnail — full image visible */}
           <div className="w-full rounded-xl overflow-hidden flex-shrink-0"
-            style={{ aspectRatio: "4/3", boxShadow: "0 6px 24px rgba(0,0,0,0.5)" }}>
+            style={{ maxHeight: 220, boxShadow: "0 6px 24px rgba(0,0,0,0.5)" }}>
             {gameImage ? (
-              <img src={gameImage} alt={gameName} className="w-full h-full object-contain" />
+              <img src={gameImage} alt={gameName} className="w-full h-auto object-contain" style={{ maxHeight: 220 }} />
             ) : (
-              <div className="w-full h-full bg-white/10 flex items-center justify-center">
+              <div className="w-full h-28 bg-white/10 flex items-center justify-center">
                 <span className="text-white/20 text-2xl font-black">{gameName?.[0] ?? "?"}</span>
               </div>
             )}
