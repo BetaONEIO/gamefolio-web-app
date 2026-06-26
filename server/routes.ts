@@ -482,18 +482,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // This makes every existing route (authMiddleware, inline req.isAuthenticated()
   // checks, etc.) accept the JWT without per-route changes — needed for native
   // Capacitor builds where the cross-origin session cookie isn't reliable.
+  //
+  // A short-lived in-memory cache (30 s TTL) prevents a DB round-trip on every
+  // request for the same token — the most common pattern for mobile clients.
+  const _bearerUserCache = new Map<string, { user: any; expiresAt: number }>();
+  const BEARER_CACHE_TTL_MS = 30_000;
+
   app.use(async (req, res, next) => {
     if (req.user) return next();
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) return next();
     const token = authHeader.substring(7);
     try {
+      const now = Date.now();
+      const cached = _bearerUserCache.get(token);
+      if (cached && cached.expiresAt > now) {
+        req.user = cached.user;
+        return next();
+      }
       const payload = JWTService.verifyToken(token);
       const userId = Number(payload.userId);
       if (!userId || isNaN(userId)) return next();
       const user = userId === 999 ? getDemoUser() : await storage.getUserById(userId);
       if (user) {
         req.user = user as any;
+        _bearerUserCache.set(token, { user, expiresAt: now + BEARER_CACHE_TTL_MS });
+        // Evict expired entries periodically to prevent unbounded growth
+        if (_bearerUserCache.size > 500) {
+          for (const [k, v] of _bearerUserCache) {
+            if (v.expiresAt <= now) _bearerUserCache.delete(k);
+          }
+        }
       }
     } catch {
       // Invalid/expired token — fall through as unauthenticated; client will
@@ -502,13 +521,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
-  // Temporary session debugging middleware (AFTER session setup)
-  app.use((req, res, next) => {
-    if (req.path.startsWith('/api')) {
-      console.log(`🔍 Session Debug: ${req.method} ${req.path} - SessionID: ${req.sessionID || 'none'}, User: ${(req.user as any)?.id || 'none'}, Username: ${(req.user as any)?.username || 'none'}`);
-    }
-    next();
-  });
 
   // URGENT FIX: Blocked users route override - MUST be first before any conflicting routes
   console.log("🔧 REGISTERING BLOCKED USERS OVERRIDE IMMEDIATELY AFTER SESSION");
@@ -2455,17 +2467,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Track login time for session security
         req.session.loginTime = Date.now();
 
-        // Update user's last login time
-        try {
-          await storage.updateUserLoginTime(user.id, 0);
-        } catch (error) {
-          console.error("Error updating login time:", error);
-        }
-
-        // Update login streak
+        // Run login-time update and streak update in parallel
         let streakInfo;
         try {
-          streakInfo = await StreakService.updateLoginStreak(user.id);
+          const [, info] = await Promise.all([
+            storage.updateUserLoginTime(user.id, 0).catch((e: unknown) => console.error("Error updating login time:", e)),
+            StreakService.updateLoginStreak(user.id).catch((e: unknown) => { console.error("Error updating login streak:", e); return null; }),
+          ]);
+          streakInfo = info ?? undefined;
         } catch (error) {
           console.error("Error updating login streak:", error);
         }
@@ -7187,40 +7196,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the clip
       const clip = await storage.createClip(clipData);
 
-      // Award upload points to the user
-      await LeaderboardService.awardPoints(
-        userId,
-        'upload',
-        `Upload: ${clipData.videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`
-      );
+      // Fire-and-forget: XP awards, bonuses, milestones, and mentions don't block the upload response
+      void (async () => {
+        try {
+          await LeaderboardService.awardPoints(userId, 'upload', `Upload: ${clipData.videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`);
+          await BonusEventsService.awardWeekendUploadBonus(userId, 200);
+          await CreatorMilestoneService.checkFirstUploadOfDay(userId);
+          await CreatorMilestoneService.checkWeeklyUploadMilestones(userId);
+          await BonusEventsService.checkConsecutiveUploadBonus(userId);
+        } catch (e) { console.error('[clip upload] XP/bonus side-effects failed:', e); }
+        try {
+          const titleMentions = await mentionService.parseMentions(title);
+          const descriptionMentions = description ? await mentionService.parseMentions(description) : [];
+          const allMentions = [...titleMentions, ...descriptionMentions];
+          if (allMentions.length > 0) {
+            const mentionedUserIds = Array.from(new Set(allMentions.map(m => m.userId)));
+            await mentionService.createClipMentions(clip.id, mentionedUserIds, userId, title);
+          }
+        } catch (e) { console.error('[clip upload] mentions side-effects failed:', e); }
+      })();
 
-      // Weekend upload bonus (+50% XP on Sat/Sun)
-      await BonusEventsService.awardWeekendUploadBonus(userId, 200);
-
-      // Creator milestones: first upload of the day + weekly milestones
-      await CreatorMilestoneService.checkFirstUploadOfDay(userId);
-      await CreatorMilestoneService.checkWeeklyUploadMilestones(userId);
-
-      // Consecutive upload bonus (uploaded within 24h of last upload)
-      await BonusEventsService.checkConsecutiveUploadBonus(userId);
-      
       // Get updated user data to return current XP and level
       const updatedUser = await storage.getUserById(userId);
-
-      // Parse mentions from clip title and description and create mention records
-      const titleMentions = await mentionService.parseMentions(title);
-      const descriptionMentions = description ? await mentionService.parseMentions(description) : [];
-      const allMentions = [...titleMentions, ...descriptionMentions];
-      
-      if (allMentions.length > 0) {
-        const mentionedUserIds = Array.from(new Set(allMentions.map(mention => mention.userId)));
-        await mentionService.createClipMentions(
-          clip.id,
-          mentionedUserIds,
-          userId,
-          title
-        );
-      }
 
       // Process video with trimming and thumbnail generation
       console.log(`Starting video processing for clip ${clip.id}`);
@@ -7671,40 +7668,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const comment = await storage.createComment(commentData);
       invalidateTrendingByRoute('clips');
 
-      // Award points to the commenter
-      await LeaderboardService.awardPoints(
-        req.user!.id,
-        'comment',
-        `Commented on clip #${clipId}`
-      );
-
-      // Award comment_received XP to the clip owner (if different from commenter)
-      const commentedClip = await storage.getClip(clipId);
-      if (commentedClip && commentedClip.userId !== req.user!.id) {
-        await LeaderboardService.awardCustomPoints(
-          commentedClip.userId,
-          'comment_received',
-          20,
-          `Received a comment on clip #${clipId}`
-        );
-      }
-
-      // Parse mentions from comment content and create mention records
-      const mentions = await mentionService.parseMentions(req.body.content);
-      if (mentions.length > 0) {
-        const mentionedUserIds = mentions.map(mention => mention.userId);
-        await mentionService.createCommentMentions(
-          comment.id,
-          mentionedUserIds,
-          req.user!.id,
-          clipId
-        );
-      }
-
-      // Create notification for the clip owner
-      await NotificationService.createCommentNotification(clipId, req.user!.id, req.body.content, comment.id);
-
+      // Respond immediately — XP, mentions, and notifications happen in background
       res.status(201).json(comment);
+
+      const commenterId = req.user!.id;
+      const commentContent = req.body.content;
+      void (async () => {
+        try {
+          await LeaderboardService.awardPoints(commenterId, 'comment', `Commented on clip #${clipId}`);
+          const commentedClip = await storage.getClip(clipId);
+          if (commentedClip && commentedClip.userId !== commenterId) {
+            await LeaderboardService.awardCustomPoints(commentedClip.userId, 'comment_received', 20, `Received a comment on clip #${clipId}`);
+          }
+        } catch (e) { console.error('[clip comment] XP side-effects failed:', e); }
+        try {
+          const mentions = await mentionService.parseMentions(commentContent);
+          if (mentions.length > 0) {
+            await mentionService.createCommentMentions(comment.id, mentions.map(m => m.userId), commenterId, clipId);
+          }
+        } catch (e) { console.error('[clip comment] mentions side-effects failed:', e); }
+        try {
+          await NotificationService.createCommentNotification(clipId, commenterId, commentContent, comment.id);
+        } catch (e) { console.error('[clip comment] notification side-effects failed:', e); }
+      })();
     } catch (err) {
       return handleValidationError(err, res);
     }
@@ -10723,23 +10709,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const screenshot = await storage.createScreenshot(screenshotData);
 
-      // Award upload points to the user (100 XP for screenshots)
-      await LeaderboardService.awardPoints(
-        userId,
-        'screenshot_upload',
-        `Upload: Screenshot - ${title}`
-      );
+      // Fire-and-forget: XP awards, bonuses, and milestones don't block the upload response
+      void (async () => {
+        try {
+          await LeaderboardService.awardPoints(userId, 'screenshot_upload', `Upload: Screenshot - ${title}`);
+          await BonusEventsService.awardWeekendUploadBonus(userId, 100);
+          await CreatorMilestoneService.checkFirstUploadOfDay(userId);
+          await CreatorMilestoneService.checkWeeklyUploadMilestones(userId);
+          await BonusEventsService.checkConsecutiveUploadBonus(userId);
+        } catch (e) { console.error('[screenshot upload] XP/bonus side-effects failed:', e); }
+      })();
 
-      // Weekend upload bonus (+50% XP on Sat/Sun)
-      await BonusEventsService.awardWeekendUploadBonus(userId, 100);
-
-      // Creator milestones: first upload of the day + weekly milestones
-      await CreatorMilestoneService.checkFirstUploadOfDay(userId);
-      await CreatorMilestoneService.checkWeeklyUploadMilestones(userId);
-
-      // Consecutive upload bonus
-      await BonusEventsService.checkConsecutiveUploadBonus(userId);
-      
       // Get updated user data to return current XP and level
       const updatedUser = await storage.getUserById(userId);
 
@@ -12169,28 +12149,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const comment = await storage.createScreenshotComment(commentData);
 
-      // Process mentions in the comment
-      const mentions = await mentionService.parseMentions(req.body.content);
-      if (mentions.length > 0) {
-        await mentionService.createScreenshotCommentMentions(
-          comment.id,
-          mentions.map(m => m.userId),
-          req.user!.id,
-          screenshotId
-        );
-      }
-
-      // Award points to the user for commenting
-      await LeaderboardService.awardPoints(
-        req.user!.id,
-        'comment',
-        `Commented on screenshot #${screenshotId}`
-      );
-
-      // Create notification for the screenshot owner
-      await NotificationService.createScreenshotCommentNotification(screenshotId, req.user!.id, req.body.content, comment.id);
-
+      // Respond immediately — mentions, XP, and notifications happen in background
       res.status(201).json(comment);
+
+      const scCommenterId = req.user!.id;
+      const scCommentContent = req.body.content;
+      void (async () => {
+        try {
+          const mentions = await mentionService.parseMentions(scCommentContent);
+          if (mentions.length > 0) {
+            await mentionService.createScreenshotCommentMentions(comment.id, mentions.map(m => m.userId), scCommenterId, screenshotId);
+          }
+        } catch (e) { console.error('[screenshot comment] mentions side-effects failed:', e); }
+        try {
+          await LeaderboardService.awardPoints(scCommenterId, 'comment', `Commented on screenshot #${screenshotId}`);
+        } catch (e) { console.error('[screenshot comment] XP side-effects failed:', e); }
+        try {
+          await NotificationService.createScreenshotCommentNotification(screenshotId, scCommenterId, scCommentContent, comment.id);
+        } catch (e) { console.error('[screenshot comment] notification side-effects failed:', e); }
+      })();
     } catch (err) {
       return handleValidationError(err, res);
     }
@@ -12261,24 +12238,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Like the screenshot
         const like = await storage.createScreenshotLike(userId, screenshotId);
 
-        // Award points to the user for liking (only if they haven't earned points for this screenshot before)
-        const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'like', 'screenshot', screenshotId);
-        if (!hasEarnedPoints) {
-          await LeaderboardService.awardPoints(
-            userId,
-            'like',
-            `Liked screenshot #${screenshotId}`
-          );
-        }
-
-        // Create notification for the screenshot owner
-        await NotificationService.createScreenshotLikeNotification(screenshotId, userId);
-
         // Get actual like count after adding
         const likes = await storage.getScreenshotLikes(screenshotId);
         const likeCount = likes.length;
 
+        // Respond immediately — XP and notification happen in background
         res.status(201).json({ message: "Screenshot liked", liked: true, like, count: likeCount });
+
+        void (async () => {
+          try {
+            const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'like', 'screenshot', screenshotId);
+            if (!hasEarnedPoints) {
+              await LeaderboardService.awardPoints(userId, 'like', `Liked screenshot #${screenshotId}`);
+            }
+            await NotificationService.createScreenshotLikeNotification(screenshotId, userId);
+          } catch (e) { console.error('[screenshot like] XP/notification side-effects failed:', e); }
+        })();
       }
     } catch (error) {
       console.error("Error toggling screenshot like:", error);
