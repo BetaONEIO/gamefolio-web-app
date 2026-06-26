@@ -1126,6 +1126,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/discord/init", (req, res) => {
     const state = randomBytes(16).toString('hex');
     (req.session as any).discordOAuthState = state;
+    // Clear any prior exchange cache so a fresh login flow always works.
+    delete (req.session as any).discordExchangeCache;
     req.session.save((err) => {
       if (err) {
         console.error('Failed to persist Discord OAuth state to session:', err);
@@ -1136,6 +1138,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // In-flight Discord token exchange deduplication.
+  // Maps sessionID → pending Promise<DiscordUser> so that concurrent duplicate
+  // requests (e.g. React double-mount) await the same exchange instead of both
+  // hitting Discord and causing the second to get invalid_grant (single-use code).
+  const discordExchangeInFlight = new Map<string, Promise<any>>();
+
   // Discord OAuth token exchange route
   app.post("/api/auth/discord/token", async (req, res) => {
     try {
@@ -1145,18 +1153,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Missing authorization code or redirect URI" });
       }
 
-      // CSRF state verification — must match the value /init stored on the
-      // session. We DON'T clear the state on first read: that would make a
-      // double-fired callback (React re-mount, browser back/forward, etc.)
-      // appear as an "invalid state" failure to the user, even though the
-      // first call already succeeded. Instead the state is naturally
-      // single-use because Discord rejects the code on the second exchange
-      // (invalid_grant), and the session entry expires with the session.
+      // CSRF state verification — must match the value /init stored on the session.
       const sessionState = (req.session as any).discordOAuthState;
       console.log(
         `[discord-auth] /token sid=${req.sessionID} sessionStatePresent=${!!sessionState} bodyStatePresent=${!!state} match=${sessionState === state}`
       );
       if (!sessionState || !state || sessionState !== state) {
+        // Check if a prior successful exchange for this state is cached on the session.
+        // This handles the case where the first call already consumed the state but a
+        // concurrent duplicate arrives just after.
+        const cached = (req.session as any).discordExchangeCache;
+        if (cached && cached.state === state) {
+          return res.status(200).json(cached.userData);
+        }
         console.warn('Discord OAuth state mismatch', {
           sessionStatePresent: !!sessionState,
           bodyStatePresent: !!state,
@@ -1164,52 +1173,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid OAuth state — please try signing in again' });
       }
 
-      // Exchange authorization code for access token
-      const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
-        method: 'POST',
-        body: new URLSearchParams({
-          client_id: process.env.DISCORD_CLIENT_ID!,
-          client_secret: process.env.DISCORD_CLIENT_SECRET!,
-          code,
-          grant_type: 'authorization_code',
-          redirect_uri: redirectUri,
-          scope: 'identify email',
-        }).toString(),
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      });
-
-      if (!tokenResponse.ok) {
-        const errBody = await tokenResponse.json().catch(() => ({}));
-        console.error("Discord token exchange failed:", tokenResponse.status, errBody);
-        const errMsg = (errBody as any)?.error_description || (errBody as any)?.error || 'Unknown Discord error';
-        throw new Error(`Discord token exchange failed (${tokenResponse.status}): ${errMsg}`);
+      // Deduplicate concurrent requests with the same session.
+      // If a code exchange is already in flight for this session, await it instead
+      // of making a second request to Discord (which would fail with invalid_grant).
+      const inFlightKey = req.sessionID;
+      if (discordExchangeInFlight.has(inFlightKey)) {
+        try {
+          const userData = await discordExchangeInFlight.get(inFlightKey)!;
+          return res.status(200).json(userData);
+        } catch {
+          return res.status(500).json({ message: 'Failed to authenticate with Discord' });
+        }
       }
 
-      const tokenData = await tokenResponse.json();
+      const exchangePromise = (async () => {
+        // Exchange authorization code for access token
+        const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+          method: 'POST',
+          body: new URLSearchParams({
+            client_id: process.env.DISCORD_CLIENT_ID!,
+            client_secret: process.env.DISCORD_CLIENT_SECRET!,
+            code,
+            grant_type: 'authorization_code',
+            redirect_uri: redirectUri,
+            scope: 'identify email',
+          }).toString(),
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        });
 
-      // Get user information from Discord
-      const userResponse = await fetch('https://discord.com/api/users/@me', {
-        headers: {
-          Authorization: `${tokenData.token_type} ${tokenData.access_token}`,
-        },
-      });
+        if (!tokenResponse.ok) {
+          const errBody = await tokenResponse.json().catch(() => ({}));
+          console.error("Discord token exchange failed:", tokenResponse.status, errBody);
+          const errMsg = (errBody as any)?.error_description || (errBody as any)?.error || 'Unknown Discord error';
+          throw new Error(`Discord token exchange failed (${tokenResponse.status}): ${errMsg}`);
+        }
 
-      if (!userResponse.ok) {
-        throw new Error('Failed to fetch user information from Discord');
+        const tokenData = await tokenResponse.json();
+
+        // Get user information from Discord
+        const userResponse = await fetch('https://discord.com/api/users/@me', {
+          headers: {
+            Authorization: `${tokenData.token_type} ${tokenData.access_token}`,
+          },
+        });
+
+        if (!userResponse.ok) {
+          throw new Error('Failed to fetch user information from Discord');
+        }
+
+        const discordUser = await userResponse.json();
+        return {
+          id: discordUser.id,
+          username: discordUser.username,
+          discriminator: discordUser.discriminator,
+          email: discordUser.email,
+          avatar: discordUser.avatar,
+          verified: discordUser.verified,
+        };
+      })();
+
+      discordExchangeInFlight.set(inFlightKey, exchangePromise);
+
+      let userData: any;
+      try {
+        userData = await exchangePromise;
+      } finally {
+        discordExchangeInFlight.delete(inFlightKey);
       }
 
-      const discordUser = await userResponse.json();
+      // Mark state as consumed and cache the result on the session so that any
+      // late-arriving duplicate request can still get a successful response.
+      delete (req.session as any).discordOAuthState;
+      (req.session as any).discordExchangeCache = { state, userData, at: Date.now() };
+      req.session.save(() => {/* best-effort */});
 
-      res.status(200).json({
-        id: discordUser.id,
-        username: discordUser.username,
-        discriminator: discordUser.discriminator,
-        email: discordUser.email,
-        avatar: discordUser.avatar,
-        verified: discordUser.verified
-      });
+      return res.status(200).json(userData);
 
     } catch (error) {
       console.error("Discord token exchange error:", error);
