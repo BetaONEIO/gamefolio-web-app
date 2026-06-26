@@ -3461,8 +3461,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const [g] = c.game_id ? await db.select({ name: games.name, imageUrl: games.imageUrl }).from(games).where(eq(games.id, c.game_id)).limit(1) : [null];
         const likeCountResult = await db.execute(sql`SELECT COUNT(*)::int as count FROM likes WHERE clip_id = ${c.id}`);
         trendingClip = {
-          id: c.id, title: c.title, thumbnailUrl: c.thumbnail_url, views: c.views,
-          likes: Number((likeCountResult[0] as any)?.count || 0),
+          id: c.id, title: c.title, thumbnailUrl: c.thumbnail_url, videoUrl: c.video_url || null,
+          views: c.views, likes: Number((likeCountResult[0] as any)?.count || 0),
+          gameId: c.game_id || null,
           creator: u ? { username: u.username, displayName: u.displayName, avatarUrl: u.avatarUrl } : null,
           game: g ? { name: g.name, imageUrl: g.imageUrl } : null,
         };

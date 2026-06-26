@@ -18,6 +18,7 @@ import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
 import { useLocation, Link } from "wouter";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
+import TrendingSlider from "@/components/home/TrendingSlider";
 import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
 import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
 import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
@@ -572,6 +573,9 @@ const HomePage = () => {
           )}
         </div>
       </section>
+
+      {/* Trending Clips / Reels Slider */}
+      <TrendingSlider />
 
       {/* Featured Gamefolio — Official Profile */}
       <section className="px-0">
