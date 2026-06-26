@@ -87,6 +87,20 @@ export function CampaignCard({
         <div className="absolute top-0 right-0 w-48 h-48 rounded-full pointer-events-none"
           style={{ background: "radial-gradient(ellipse, rgba(193,255,0,0.08) 0%, transparent 70%)", transform: "translate(30%, -30%)" }} />
       )}
+
+      {/* Game artwork banner (featured only) */}
+      {isFeatured && campaign.imageUrl && (
+        <div className="relative w-full overflow-hidden" style={{ height: "90px" }}>
+          <img src={campaign.imageUrl} alt="" className="w-full h-full object-cover"
+            style={{ opacity: 0.35, filter: "blur(2px)", transform: "scale(1.05)" }} />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80" />
+          <div className="absolute bottom-2 left-3 flex items-center gap-2">
+            <img src={campaign.imageUrl} alt="" className="w-8 h-8 rounded-lg object-cover border border-white/20 flex-shrink-0" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Creator Campaign</span>
+          </div>
+        </div>
+      )}
+
       <div className="p-4 sm:p-5 relative z-10">
         {/* Badges */}
         <div className="flex flex-wrap gap-1.5 mb-3">
@@ -97,6 +111,13 @@ export function CampaignCard({
             </span>
           ))}
         </div>
+
+        {/* Non-featured: small game art inline */}
+        {!isFeatured && campaign.imageUrl && (
+          <div className="flex items-center gap-2 mb-2">
+            <img src={campaign.imageUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0 border border-white/10" />
+          </div>
+        )}
 
         {/* Title */}
         <h3 className="font-black text-white leading-tight mb-1"

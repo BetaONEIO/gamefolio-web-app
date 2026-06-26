@@ -647,8 +647,20 @@ const IndieGamePage = () => {
 
   const canCreateBounty = !!user && (user.isAdmin || (user as any).userType === "indie" || (user as any).userType === "indie_developer");
 
+  const handleOpenUpload = () => {
+    if (game) {
+      sessionStorage.setItem('uploadGameId', game.id.toString());
+      sessionStorage.setItem('uploadGameName', game.name);
+      sessionStorage.setItem('uploadGameImage', game.imageUrl || '');
+    }
+    setShowUploadDialog(true);
+  };
+
   const handleUploadClose = () => {
     setShowUploadDialog(false);
+    sessionStorage.removeItem('uploadGameId');
+    sessionStorage.removeItem('uploadGameName');
+    sessionStorage.removeItem('uploadGameImage');
     if (game?.id) {
       queryClient.invalidateQueries({ queryKey: ["/api/games", game.id, "clips"] });
       queryClient.invalidateQueries({ queryKey: ["/api/clips/trending", timePeriod, game.id] });
@@ -880,7 +892,7 @@ const IndieGamePage = () => {
               </button>
             )}
             <button
-              onClick={() => setShowUploadDialog(true)}
+              onClick={handleOpenUpload}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/5"
               style={{ background: "rgba(193,255,0,0.1)", border: "1px solid rgba(193,255,0,0.25)", color: NEON }}>
               <Upload className="w-3.5 h-3.5" />
@@ -1283,7 +1295,7 @@ const IndieGamePage = () => {
                 <Play className="w-12 h-12 mx-auto mb-3 text-gray-600" />
                 <h3 className="text-lg font-semibold mb-1">No clips found</h3>
                 <p className="text-gray-400 text-sm mb-4">Be the first to upload a clip for {game.name}</p>
-                <Button onClick={() => setShowUploadDialog(true)} style={{ background: NEON, color: "#0a0f1c", fontWeight: 700 }}>
+                <Button onClick={handleOpenUpload} style={{ background: NEON, color: "#0a0f1c", fontWeight: 700 }}>
                   <Upload className="w-4 h-4 mr-2" />Upload Clip
                 </Button>
               </div>
@@ -1321,7 +1333,7 @@ const IndieGamePage = () => {
                 <Video className="w-12 h-12 mx-auto mb-3 text-gray-600" />
                 <h3 className="text-lg font-semibold mb-1">No reels found</h3>
                 <p className="text-gray-400 text-sm mb-4">Upload vertical reels for {game.name}</p>
-                <Button onClick={() => setShowUploadDialog(true)} style={{ background: NEON, color: "#0a0f1c", fontWeight: 700 }}>
+                <Button onClick={handleOpenUpload} style={{ background: NEON, color: "#0a0f1c", fontWeight: 700 }}>
                   <Upload className="w-4 h-4 mr-2" />Upload Reel
                 </Button>
               </div>
@@ -1396,13 +1408,7 @@ const IndieGamePage = () => {
                     <Plus className="w-3.5 h-3.5 mr-1.5" />Create Campaign
                   </Button>
                 )}
-                {bounties.length > 0 && user && bounties[0].createdByUserId === user?.id && (
-                  <Button size="sm" variant="ghost" onClick={() => handleViewDevDashboard(bounties[0].id)}
-                    className="font-bold text-xs text-gray-400 hover:text-white">
-                    Dashboard
-                  </Button>
-                )}
-              </div>
+                </div>
             </div>
 
             {/* Bounty stats */}
@@ -1446,19 +1452,30 @@ const IndieGamePage = () => {
                   const b0 = bounties[0];
                   const s0 = myBountyStatuses[b0.id];
                   const isJoined0 = acceptedBounties.has(b0.id) || !!s0;
+                  const isOwner0 = user && b0.createdByUserId === user.id;
                   return (
-                    <CampaignCard
-                      campaign={b0 as Campaign}
-                      isFeatured={true}
-                      onJoin={handleJoinCampaign}
-                      onViewDashboard={handleViewDashboard}
-                      onClaimKey={(id) => { setSelectedBountyId(id); setShowCreatorDashboard(true); }}
-                      joining={acceptingBountyId === b0.id}
-                      joined={isJoined0}
-                      completed={s0?.status === "completed"}
-                      progressPercent={s0?.progressPercent ?? 0}
-                      fullKey={s0?.fullKey ?? null}
-                    />
+                    <div>
+                      {isOwner0 && (
+                        <div className="flex justify-end mb-2">
+                          <Button size="sm" variant="ghost" onClick={() => handleViewDevDashboard(b0.id)}
+                            className="font-bold text-xs text-gray-400 hover:text-white">
+                            <BarChart3 className="w-3.5 h-3.5 mr-1.5" />Dev Dashboard
+                          </Button>
+                        </div>
+                      )}
+                      <CampaignCard
+                        campaign={{ ...(b0 as Campaign), imageUrl: game?.imageUrl ?? undefined }}
+                        isFeatured={true}
+                        onJoin={handleJoinCampaign}
+                        onViewDashboard={handleViewDashboard}
+                        onClaimKey={(id) => { setSelectedBountyId(id); setShowCreatorDashboard(true); }}
+                        joining={acceptingBountyId === b0.id}
+                        joined={isJoined0}
+                        completed={s0?.status === "completed"}
+                        progressPercent={s0?.progressPercent ?? 0}
+                        fullKey={s0?.fullKey ?? null}
+                      />
+                    </div>
                   );
                 })()}
                 {bounties.length > 1 && (
@@ -1470,18 +1487,29 @@ const IndieGamePage = () => {
                       {bounties.slice(1).map(bounty => {
                         const s = myBountyStatuses[bounty.id];
                         const isJoined = acceptedBounties.has(bounty.id) || !!s;
+                        const isOwner = user && bounty.createdByUserId === user.id;
                         return (
-                          <CampaignCard key={bounty.id}
-                            campaign={bounty as Campaign}
-                            onJoin={handleJoinCampaign}
-                            onViewDashboard={handleViewDashboard}
-                            onClaimKey={(id) => { setSelectedBountyId(id); setShowCreatorDashboard(true); }}
-                            joining={acceptingBountyId === bounty.id}
-                            joined={isJoined}
-                            completed={s?.status === "completed"}
-                            progressPercent={s?.progressPercent ?? 0}
-                            fullKey={s?.fullKey ?? null}
-                          />
+                          <div key={bounty.id}>
+                            {isOwner && (
+                              <div className="flex justify-end mb-1">
+                                <Button size="sm" variant="ghost" onClick={() => handleViewDevDashboard(bounty.id)}
+                                  className="font-bold text-xs text-gray-400 hover:text-white h-7 px-2">
+                                  <BarChart3 className="w-3 h-3 mr-1" />Dev Dashboard
+                                </Button>
+                              </div>
+                            )}
+                            <CampaignCard
+                              campaign={{ ...(bounty as Campaign), imageUrl: game?.imageUrl ?? undefined }}
+                              onJoin={handleJoinCampaign}
+                              onViewDashboard={handleViewDashboard}
+                              onClaimKey={(id) => { setSelectedBountyId(id); setShowCreatorDashboard(true); }}
+                              joining={acceptingBountyId === bounty.id}
+                              joined={isJoined}
+                              completed={s?.status === "completed"}
+                              progressPercent={s?.progressPercent ?? 0}
+                              fullKey={s?.fullKey ?? null}
+                            />
+                          </div>
                         );
                       })}
                     </div>

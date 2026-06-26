@@ -320,15 +320,23 @@ router.post('/bounties/:bountyId/check-progress', async (req, res) => {
 
     const gameId = b.game_id;
 
-    // Count clips for this game by this user
+    // Count clips for this game by this user (clips = non-reel entries)
     const clipsRes = await db.execute(sql`
       SELECT COUNT(*)::int as count, COALESCE(SUM(views), 0)::int as total_views
       FROM clips WHERE game_id = ${gameId} AND user_id = ${userId}
+        AND (video_type IS NULL OR video_type != 'reel')
     `);
     const c = ((clipsRes as any).rows ?? clipsRes)[0];
     const clipCount = c.count;
-    const reelCount = c.count; // reels are clips too in this schema; distinguish by type
     const clipViews = c.total_views;
+
+    // Count reels separately
+    const reelsRes = await db.execute(sql`
+      SELECT COUNT(*)::int as count
+      FROM clips WHERE game_id = ${gameId} AND user_id = ${userId}
+        AND video_type = 'reel'
+    `);
+    const reelCount = ((reelsRes as any).rows ?? reelsRes)[0].count;
 
     // Count screenshots
     const ssRes = await db.execute(sql`
