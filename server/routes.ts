@@ -6363,6 +6363,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Game content counts (clips, reels, screenshots)
+  app.get("/api/games/:id/content-counts", async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.id);
+      if (isNaN(gameId)) return res.status(400).json({ message: "Invalid game id" });
+      const [clipRows, screenshotRows] = await Promise.all([
+        db.select({ videoType: clips.videoType, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(clips).where(eq(clips.gameId, gameId)).groupBy(clips.videoType),
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(screenshots).where(eq(screenshots.gameId, gameId)),
+      ]);
+      let clipsCount = 0, reelsCount = 0;
+      for (const row of clipRows) {
+        if (row.videoType === "reel") reelsCount = row.count;
+        else clipsCount = row.count;
+      }
+      res.json({ clips: clipsCount, reels: reelsCount, screenshots: screenshotRows[0]?.count ?? 0 });
+    } catch (err) {
+      console.error("Error fetching game content counts:", err);
+      res.status(500).json({ message: "Error fetching counts" });
+    }
+  });
+
   // Search games
   app.get("/api/games/search/:query", async (req, res) => {
     try {
