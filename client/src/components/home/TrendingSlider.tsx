@@ -67,56 +67,52 @@ function GameSidebar({
 
   return (
     <div
-      className="flex-shrink-0 flex flex-col bg-[#060D12] border-l border-white/5 overflow-hidden"
+      className="flex-shrink-0 flex flex-col overflow-hidden"
       style={{ width: "clamp(160px, 22%, 240px)" }}
     >
-      {/* Game thumbnail — ~half height so stats+button have room */}
-      <div className="relative bg-[#0A1117] overflow-hidden" style={{ height: "28%" }}>
+      {/* Game thumbnail — fixed 120px, never expands */}
+      <div className="relative flex-shrink-0 overflow-hidden" style={{ height: 120 }}>
         {clip.game?.imageUrl ? (
           <img
             src={clip.game.imageUrl}
-            alt={clip.game.name}
+            alt={clip.game?.name ?? "Game"}
             className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Gamepad2 className="w-10 h-10 text-white/15" />
+          <div className="absolute inset-0 bg-[#0A1117] flex items-center justify-center">
+            <Gamepad2 className="w-8 h-8 text-white/15" />
           </div>
         )}
-
-        {/* Top gradient + name */}
+        {/* Game name overlay */}
         <div
-          className="absolute top-0 inset-x-0 px-2.5 pt-2 pb-6"
-          style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.78) 0%, transparent 100%)" }}
+          className="absolute bottom-0 inset-x-0 px-2 py-1.5"
+          style={{ background: "linear-gradient(to top, rgba(0,0,0,0.80) 0%, transparent 100%)" }}
         >
           {clip.game?.name && (
-            <p className="text-[10px] font-black uppercase tracking-wide text-white/85 line-clamp-1">
+            <p className="text-[9px] font-black uppercase tracking-wide text-white line-clamp-1">
               {clip.game.name}
             </p>
           )}
         </div>
-
-        {/* Mini prev/next */}
-        <div className="absolute top-2 right-2 flex items-center gap-0.5 z-10">
+        {/* Prev/next arrows */}
+        <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 z-10">
           <button
             onClick={(e) => { e.stopPropagation(); onPrev(); }}
             className="w-5 h-5 rounded-sm bg-black/60 hover:bg-black/85 flex items-center justify-center transition-colors"
-            aria-label="Previous clip"
           >
             <ChevronLeft className="w-3 h-3 text-white" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onNext(); }}
             className="w-5 h-5 rounded-sm bg-black/60 hover:bg-black/85 flex items-center justify-center transition-colors"
-            aria-label="Next clip"
           >
             <ChevronRight className="w-3 h-3 text-white" />
           </button>
         </div>
       </div>
 
-      {/* Stats — vertical list, full colour */}
-      <div className="px-3 py-2 flex flex-col gap-1.5">
+      {/* Stats — vertical, full white, no background */}
+      <div className="flex-1 px-3 pt-3 pb-2 flex flex-col justify-center gap-2">
         {stats.map(({ icon: Icon, label, value }, i) => (
           <div key={i} className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
@@ -130,8 +126,8 @@ function GameSidebar({
         ))}
       </div>
 
-      {/* Upload button */}
-      <div className="px-2.5 pb-3 mt-auto">
+      {/* Upload button — pinned to bottom */}
+      <div className="flex-shrink-0 px-3 pb-3">
         <Link href="/upload">
           <button
             className="w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
