@@ -18,7 +18,7 @@ import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
 import { useLocation, Link } from "wouter";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
-import TrendingSlider from "@/components/home/TrendingSlider";
+import TrendingHeroSlide from "@/components/home/TrendingSlider";
 import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
 import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
 import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
@@ -62,6 +62,7 @@ const HomePage = () => {
   // Hero carousel state
   const [currentSlide, setCurrentSlide] = useState(0);
   const slideTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   
   // Refs for grab scroll behavior
   const trendingGamesRef = useRef<HTMLDivElement>(null);
@@ -93,14 +94,23 @@ const HomePage = () => {
     return heroSlides;
   }, [heroSlides]);
 
+  // Trending slide is always prepended as slide 0
+  const allSlides = useMemo(() => {
+    const heroSlideItems = activeSlides ?? [];
+    return [{ id: '__trending__', type: 'trending' as const }, ...heroSlideItems] as Array<
+      { id: string; type: 'trending' } | (typeof heroSlideItems[number])
+    >;
+  }, [activeSlides]);
+
   const resetSlideTimer = useCallback(() => {
     if (slideTimerRef.current) clearInterval(slideTimerRef.current);
-    if (activeSlides && activeSlides.length > 1) {
+    if (isVideoPlaying) return; // pause while clip is playing
+    if (allSlides.length > 1) {
       slideTimerRef.current = setInterval(() => {
-        setCurrentSlide((prev) => (prev + 1) % activeSlides.length);
+        setCurrentSlide((prev) => (prev + 1) % allSlides.length);
       }, slideIntervalMs);
     }
-  }, [activeSlides, slideIntervalMs]);
+  }, [allSlides, slideIntervalMs, isVideoPlaying]);
 
   useEffect(() => {
     resetSlideTimer();
@@ -108,10 +118,11 @@ const HomePage = () => {
   }, [resetSlideTimer]);
 
   useEffect(() => {
-    if (activeSlides && currentSlide >= activeSlides.length) {
-      setCurrentSlide(0);
-    }
-  }, [activeSlides, currentSlide]);
+    if (currentSlide >= allSlides.length) setCurrentSlide(0);
+  }, [allSlides, currentSlide]);
+
+  // Re-run timer when video playing state changes
+  useEffect(() => { resetSlideTimer(); }, [isVideoPlaying]);
 
   const goToSlide = useCallback((idx: number) => {
     setCurrentSlide(idx);
@@ -119,14 +130,12 @@ const HomePage = () => {
   }, [resetSlideTimer]);
 
   const nextSlide = useCallback(() => {
-    if (!activeSlides) return;
-    goToSlide((currentSlide + 1) % activeSlides.length);
-  }, [activeSlides, currentSlide, goToSlide]);
+    goToSlide((currentSlide + 1) % allSlides.length);
+  }, [allSlides, currentSlide, goToSlide]);
 
   const prevSlide = useCallback(() => {
-    if (!activeSlides) return;
-    goToSlide((currentSlide - 1 + activeSlides.length) % activeSlides.length);
-  }, [activeSlides, currentSlide, goToSlide]);
+    goToSlide((currentSlide - 1 + allSlides.length) % allSlides.length);
+  }, [allSlides, currentSlide, goToSlide]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -466,116 +475,87 @@ const HomePage = () => {
   return (
     <>
     <div className="space-y-16 max-w-none px-4 md:px-6 py-4 md:py-6">
-      {/* Hero Banner Carousel - Full width with negative margin to compensate for parent padding */}
+      {/* Hero Banner Carousel — trending slide is always index 0 */}
       <section className="mb-10 -mx-4 md:-mx-6 -mt-4 md:-mt-6">
-        <div className="relative overflow-hidden">
-          <div className="w-full bg-black relative min-h-[350px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px] border-b-2 border-primary">
-            {activeSlides && activeSlides.length > 0 ? (
-              <div className="relative w-full h-full min-h-[350px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px]">
-                {activeSlides.map((slide, idx) => (
-                  <div
-                    key={slide.id}
-                    className="absolute inset-0 transition-opacity duration-700 ease-in-out"
-                    style={{ opacity: idx === currentSlide ? 1 : 0, zIndex: idx === currentSlide ? 1 : 0 }}
-                  >
-                    <img
-                      src={slide.imageUrl}
-                      alt={slide.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent">
-                      <div className="flex flex-col items-start justify-center h-full max-w-3xl p-8 md:p-12">
-                        <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight drop-shadow-md">
-                          {slide.title}
-                        </h1>
-                        {slide.subtitle && (
-                          <h2 className="text-2xl md:text-3xl font-semibold text-primary mb-6 leading-tight drop-shadow-lg">
-                            {slide.subtitle}
-                          </h2>
-                        )}
-                        {slide.buttonText && (
-                          <Button
-                            className="w-fit px-6 py-5 h-auto text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground mt-4"
-                            onClick={() => {
-                              if (!slide.buttonLink) return;
-                              const link = slide.buttonLink.toLowerCase();
-                              if (link === '#pro' || link === '/pro' || link.includes('pro')) {
-                                window.dispatchEvent(new CustomEvent('open-pro-upgrade'));
-                              } else {
-                                setLocation(slide.buttonLink);
-                              }
-                            }}
-                          >
-                            {slide.buttonText}
-                          </Button>
-                        )}
-                      </div>
+        <div className="relative w-full min-h-[350px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px] bg-black overflow-hidden border-b-2 border-primary">
+          {allSlides.map((slide, idx) => (
+            <div
+              key={slide.id}
+              className="absolute inset-0 transition-opacity duration-700 ease-in-out"
+              style={{ opacity: idx === currentSlide ? 1 : 0, zIndex: idx === currentSlide ? 1 : 0 }}
+            >
+              {'type' in slide && slide.type === 'trending' ? (
+                <TrendingHeroSlide onPlayingChange={setIsVideoPlaying} />
+              ) : (
+                <>
+                  <img
+                    src={(slide as any).imageUrl}
+                    alt={(slide as any).title}
+                    className="w-full h-full object-cover absolute inset-0"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent">
+                    <div className="flex flex-col items-start justify-center h-full max-w-3xl p-8 md:p-12">
+                      <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight drop-shadow-md">
+                        {(slide as any).title}
+                      </h1>
+                      {(slide as any).subtitle && (
+                        <h2 className="text-2xl md:text-3xl font-semibold text-primary mb-6 leading-tight drop-shadow-lg">
+                          {(slide as any).subtitle}
+                        </h2>
+                      )}
+                      {(slide as any).buttonText && (
+                        <Button
+                          className="w-fit px-6 py-5 h-auto text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground mt-4"
+                          onClick={() => {
+                            const link = ((slide as any).buttonLink || '').toLowerCase();
+                            if (link === '#pro' || link === '/pro' || link.includes('pro')) {
+                              window.dispatchEvent(new CustomEvent('open-pro-upgrade'));
+                            } else {
+                              setLocation((slide as any).buttonLink);
+                            }
+                          }}
+                        >
+                          {(slide as any).buttonText}
+                        </Button>
+                      )}
                     </div>
                   </div>
-                ))}
-                {activeSlides.length > 1 && (
-                  <>
-                    <button
-                      onClick={prevSlide}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
-                      aria-label="Previous slide"
-                    >
-                      <ChevronLeft className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={nextSlide}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
-                      aria-label="Next slide"
-                    >
-                      <ChevronRight className="h-5 w-5" />
-                    </button>
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2">
-                      {activeSlides.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => goToSlide(idx)}
-                          className={`w-2.5 h-2.5 rounded-full transition-all ${idx === currentSlide ? 'bg-primary w-6' : 'bg-white/50 hover:bg-white/80'}`}
-                          aria-label={`Go to slide ${idx + 1}`}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            ) : (
-              <img
-                src={ForzaGif}
-                alt="Epic racing gameplay - Build your Gamefolio"
-                className="w-full h-full object-cover"
-              />
-            )}
-          </div>
-          {(!activeSlides || activeSlides.length === 0) && (
-            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent">
-              <div className="flex flex-col items-start justify-center h-full max-w-3xl p-8 md:p-12">
-                <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight drop-shadow-md">
-                  Build Your Gamefolio
-                </h1>
-                <h2 className="text-2xl md:text-3xl font-semibold text-primary mb-6 leading-tight drop-shadow-lg">
-                  With Your Best Gaming Clips
-                </h2>
-                <p className="text-gray-200 mb-8 max-w-lg text-base md:text-lg leading-relaxed">
-                  Showcase your most epic gaming moments, connect with other gamers, and build your personal gaming portfolio.
-                </p>
-                <Button
-                  className="w-fit px-6 py-5 h-auto text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-                  onClick={() => setLocation('/upload')}
-                >
-                  Start Building Now
-                </Button>
-              </div>
+                </>
+              )}
             </div>
+          ))}
+
+          {/* Carousel nav — always shown (trending + hero slides) */}
+          {allSlides.length > 1 && (
+            <>
+              <button
+                onClick={prevSlide}
+                className="absolute left-3 top-1/2 -translate-y-1/2 z-30 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+                aria-label="Previous slide"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                onClick={nextSlide}
+                className="absolute right-3 top-1/2 -translate-y-1/2 z-30 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+                aria-label="Next slide"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-2">
+                {allSlides.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => goToSlide(idx)}
+                    className={`h-2.5 rounded-full transition-all ${idx === currentSlide ? 'bg-primary w-6' : 'w-2.5 bg-white/50 hover:bg-white/80'}`}
+                    aria-label={`Go to slide ${idx + 1}`}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </div>
       </section>
-
-      {/* Trending Clips / Reels Slider */}
-      <TrendingSlider />
 
       {/* Featured Gamefolio — Official Profile */}
       <section className="px-0">
