@@ -1,8 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ClipWithUser } from "@shared/schema";
-import { useClipDialog } from "@/hooks/use-clip-dialog";
-import { Play, ChevronLeft, ChevronRight, Eye, Flame } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Flame, Pause, Volume2, VolumeX } from "lucide-react";
 import { Link } from "wouter";
 
 const NEON = "#B7FF1A";
@@ -10,8 +9,10 @@ const NEON = "#B7FF1A";
 export default function LatestContentSlider() {
   const [mode, setMode] = useState<"clips" | "reels">("clips");
   const [activeIndex, setActiveIndex] = useState(0);
-  const [gameKey, setGameKey] = useState(0);
-  const { openClipDialog } = useClipDialog();
+  const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const touchStartX = useRef<number | null>(null);
 
   const { data: clipsData, isLoading: clipsLoading } = useQuery<ClipWithUser[]>({
     queryKey: ["/api/clips/trending", "slider"],
@@ -40,30 +41,32 @@ export default function LatestContentSlider() {
 
   const isLoading = mode === "clips" ? clipsLoading : reelsLoading;
 
+  const stopVideo = useCallback(() => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.src = "";
+    }
+    setPlaying(false);
+  }, []);
+
   const navigate = useCallback((dir: 1 | -1) => {
-    setActiveIndex(i => {
-      const next = (i + dir + items.length) % items.length;
-      return next;
-    });
-    setGameKey(k => k + 1);
-  }, [items.length]);
+    stopVideo();
+    setActiveIndex(i => (i + dir + items.length) % items.length);
+  }, [items.length, stopVideo]);
+
+  const goTo = useCallback((i: number) => {
+    stopVideo();
+    setActiveIndex(i);
+  }, [stopVideo]);
 
   const goPrev = useCallback(() => navigate(-1), [navigate]);
   const goNext = useCallback(() => navigate(1), [navigate]);
 
-  const goTo = useCallback((i: number) => {
-    setActiveIndex(i);
-    setGameKey(k => k + 1);
-  }, []);
-
-  // Reset index when switching modes
   useEffect(() => {
+    stopVideo();
     setActiveIndex(0);
-    setGameKey(k => k + 1);
   }, [mode]);
 
-  // Touch swipe
-  const touchStartX = useRef<number | null>(null);
   const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current === null) return;
@@ -72,12 +75,37 @@ export default function LatestContentSlider() {
     touchStartX.current = null;
   };
 
+  const handlePlayClick = () => {
+    if (!playing) {
+      setPlaying(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.muted = muted;
+          videoRef.current.play().catch(() => {});
+        }
+      }, 50);
+    } else {
+      if (videoRef.current?.paused) {
+        videoRef.current.play().catch(() => {});
+      } else {
+        videoRef.current?.pause();
+      }
+    }
+  };
+
+  const toggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = !muted;
+    setMuted(next);
+    if (videoRef.current) videoRef.current.muted = next;
+  };
+
   if (isLoading) {
     return (
       <div className="w-full h-full flex items-center justify-center">
-        <div className="flex gap-4 w-full max-w-4xl px-4">
-          <div className="w-2/5 h-64 rounded-2xl bg-white/5 animate-pulse" />
-          <div className="w-3/5 h-64 rounded-2xl bg-white/5 animate-pulse" />
+        <div className="flex gap-4 w-full">
+          <div className="w-2/5 h-full rounded-2xl bg-white/5 animate-pulse" style={{ minHeight: 200 }} />
+          <div className="w-3/5 h-full rounded-2xl bg-white/5 animate-pulse" style={{ minHeight: 200 }} />
         </div>
       </div>
     );
@@ -86,10 +114,8 @@ export default function LatestContentSlider() {
   if (items.length === 0) return null;
 
   const current = items[activeIndex];
-  const gameName = current.game?.name || current.gameName || "Unknown Game";
   const gameImage = current.game?.imageUrl || current.gameImageUrl || null;
-  const tags = current.tags?.filter(Boolean).slice(0, 3) ?? [];
-  const views = current.views ?? 0;
+  const gameName = current.game?.name || current.gameName || "";
   const isReel = current.videoType === "reel";
 
   return (
@@ -98,7 +124,7 @@ export default function LatestContentSlider() {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Header row */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-3 flex-shrink-0">
         <div className="flex items-center gap-2">
           <Flame className="w-4 h-4" style={{ color: NEON }} />
@@ -123,171 +149,146 @@ export default function LatestContentSlider() {
             </button>
           </div>
         </div>
-
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={goPrev}
-            className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
-            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)" }}
-          >
+          <button onClick={goPrev} className="w-7 h-7 rounded-full flex items-center justify-center"
+            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)" }}>
             <ChevronLeft className="w-3.5 h-3.5 text-white" />
           </button>
-          <button
-            onClick={goNext}
-            className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
-            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)" }}
-          >
+          <button onClick={goNext} className="w-7 h-7 rounded-full flex items-center justify-center"
+            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)" }}>
             <ChevronRight className="w-3.5 h-3.5 text-white" />
           </button>
         </div>
       </div>
 
-      {/* Main split layout */}
+      {/* Split layout */}
       <div className="flex gap-4 flex-1 min-h-0">
 
-        {/* LEFT — Game info panel */}
+        {/* LEFT — Game thumbnail only */}
         <div
-          key={`game-${gameKey}`}
-          className="flex-shrink-0 flex flex-col rounded-2xl overflow-hidden relative"
+          key={`game-${activeIndex}-${mode}`}
+          className="flex-shrink-0 rounded-2xl overflow-hidden relative"
           style={{
-            width: "38%",
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.07)",
-            animation: "fadeSlideIn 0.4s ease-out",
+            width: "32%",
+            background: "#0a0f14",
+            animation: "gFadeIn 0.35s ease-out",
           }}
         >
-          {/* Game box art */}
-          <div className="relative flex-1 min-h-0 overflow-hidden">
-            {gameImage ? (
-              <>
-                {/* Blurred bg */}
+          {gameImage ? (
+            <>
+              <img
+                src={gameImage}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ filter: "blur(24px)", opacity: 0.25, transform: "scale(1.12)" }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center p-5">
                 <img
                   src={gameImage}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover"
-                  style={{ filter: "blur(18px)", opacity: 0.3, transform: "scale(1.1)" }}
+                  alt={gameName}
+                  className="rounded-xl w-full h-full object-cover shadow-2xl"
+                  style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07)" }}
                 />
-                {/* Main art - box art style */}
-                <div className="absolute inset-0 flex items-center justify-center p-4">
-                  <img
-                    src={gameImage}
-                    alt={gameName}
-                    className="rounded-xl shadow-2xl object-cover"
-                    style={{
-                      maxHeight: "100%",
-                      maxWidth: "100%",
-                      aspectRatio: "3/4",
-                      objectFit: "cover",
-                      boxShadow: `0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08)`,
-                    }}
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-20 h-28 rounded-xl bg-white/10 flex items-center justify-center">
-                  <span className="text-white/30 text-2xl font-black">{gameName[0]}</span>
-                </div>
               </div>
-            )}
-            {/* Dark gradient at bottom */}
-            <div className="absolute inset-x-0 bottom-0 h-2/3"
-              style={{ background: "linear-gradient(to top, rgba(5,10,15,0.95) 0%, transparent 100%)" }}
-            />
-          </div>
-
-          {/* Game text info */}
-          <div className="flex-shrink-0 p-3 pt-0 relative z-10" style={{ marginTop: "-48px" }}>
-            <div
-              className="text-[10px] font-black uppercase tracking-widest mb-1"
-              style={{ color: NEON }}
-            >
-              Now Playing
-            </div>
-            <h3 className="text-sm font-black text-white leading-tight mb-2 line-clamp-2">
-              {gameName}
-            </h3>
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-2">
-                {tags.map((tag, i) => (
-                  <span
-                    key={i}
-                    className="text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide"
-                    style={{ background: "rgba(183,255,26,0.15)", color: NEON }}
-                  >
-                    {tag}
-                  </span>
-                ))}
+            </>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-20 h-28 rounded-xl bg-white/10 flex items-center justify-center">
+                <span className="text-white/20 text-3xl font-black">{gameName?.[0] ?? "?"}</span>
               </div>
-            )}
-            <div className="flex items-center gap-1 text-[10px] text-white/40">
-              <Eye className="w-2.5 h-2.5" />
-              <span>{fmtViews(views)} views</span>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* RIGHT — Featured clip/reel */}
+        {/* RIGHT — Clip/reel player */}
         <div className="flex-1 min-w-0 flex flex-col">
+          {/* Video/thumbnail area */}
           <div
-            className="relative rounded-2xl overflow-hidden flex-1 cursor-pointer group"
-            style={{
-              background: "#0B1218",
-              aspectRatio: isReel ? "9/16" : undefined,
-            }}
-            onClick={() => openClipDialog(current.id, items, undefined, isReel ? "reel" : "clip")}
+            className="relative rounded-2xl overflow-hidden flex-1 min-h-0 cursor-pointer group"
+            style={{ background: "#0B1218" }}
+            onClick={handlePlayClick}
           >
             {/* Blurred bg */}
-            {current.thumbnailUrl && (
+            {current.thumbnailUrl && !playing && (
               <img
                 src={current.thumbnailUrl}
                 alt=""
                 className="absolute inset-0 w-full h-full object-cover"
-                style={{ filter: "blur(16px)", opacity: 0.25, transform: "scale(1.08)" }}
+                style={{ filter: "blur(18px)", opacity: 0.2, transform: "scale(1.08)" }}
               />
             )}
 
-            {/* Thumbnail */}
-            <img
-              src={current.thumbnailUrl || `/api/clips/${current.id}/thumbnail`}
-              alt={current.title}
-              className="absolute inset-0 w-full h-full object-contain z-10"
-            />
+            {/* Thumbnail (shown until playing) */}
+            {!playing && (
+              <img
+                src={current.thumbnailUrl || `/api/clips/${current.id}/thumbnail`}
+                alt={current.title}
+                className="absolute inset-0 w-full h-full object-contain z-10"
+              />
+            )}
 
-            {/* Play overlay */}
-            <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/25">
-              <div
-                className="w-16 h-16 rounded-full flex items-center justify-center shadow-xl"
-                style={{ background: "rgba(183,255,26,0.95)" }}
-              >
-                <Play className="w-8 h-8 text-[#071013] fill-[#071013] ml-0.5" />
+            {/* Inline video */}
+            {playing && current.videoUrl && (
+              <video
+                ref={videoRef}
+                src={current.videoUrl}
+                className="absolute inset-0 w-full h-full z-10"
+                style={{ objectFit: isReel ? "contain" : "contain", background: "#000" }}
+                autoPlay
+                muted={muted}
+                playsInline
+                loop
+                onEnded={() => setPlaying(false)}
+              />
+            )}
+
+            {/* Play overlay (not playing) */}
+            {!playing && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/20">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center shadow-xl"
+                  style={{ background: "rgba(183,255,26,0.95)" }}>
+                  <Play className="w-8 h-8 text-[#071013] fill-[#071013] ml-0.5" />
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Duration badge */}
-            <div
-              className="absolute bottom-3 right-3 z-30 px-2 py-0.5 rounded text-[10px] font-black text-white"
-              style={{ background: "rgba(0,0,0,0.75)" }}
-            >
-              {formatDuration(current.duration || 0)}
-            </div>
+            {/* Controls overlay (while playing) */}
+            {playing && (
+              <div className="absolute inset-0 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center bg-black/20">
+                <div className="w-14 h-14 rounded-full flex items-center justify-center"
+                  style={{ background: "rgba(0,0,0,0.6)" }}>
+                  <Pause className="w-7 h-7 text-white fill-white" />
+                </div>
+              </div>
+            )}
 
-            {/* Views badge */}
-            <div
-              className="absolute bottom-3 left-3 z-30 flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold text-white"
-              style={{ background: "rgba(0,0,0,0.75)" }}
-            >
-              <Eye className="w-2.5 h-2.5" />
-              {fmtViews(views)}
-            </div>
+            {/* Mute toggle (while playing) */}
+            {playing && (
+              <button
+                onClick={toggleMute}
+                className="absolute bottom-3 right-3 z-40 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                style={{ background: "rgba(0,0,0,0.7)" }}
+              >
+                {muted
+                  ? <VolumeX className="w-3.5 h-3.5 text-white" />
+                  : <Volume2 className="w-3.5 h-3.5 text-white" />
+                }
+              </button>
+            )}
+
+            {/* Duration badge (not playing) */}
+            {!playing && (
+              <div className="absolute bottom-3 right-3 z-30 px-2 py-0.5 rounded text-[10px] font-black text-white"
+                style={{ background: "rgba(0,0,0,0.75)" }}>
+                {formatDuration(current.duration || 0)}
+              </div>
+            )}
           </div>
 
-          {/* Clip info below */}
-          <div className="mt-2.5 flex items-start justify-between gap-2">
+          {/* Info + dots row */}
+          <div className="mt-2.5 flex items-start justify-between gap-2 flex-shrink-0">
             <div className="min-w-0">
-              <h3 className="text-sm font-black text-white leading-tight truncate">
-                {current.title}
-              </h3>
+              <h3 className="text-sm font-black text-white leading-tight truncate">{current.title}</h3>
               <Link
                 href={`/profile/${current.user.username}`}
                 className="text-xs text-white/40 hover:text-white/70 transition-colors"
@@ -296,7 +297,6 @@ export default function LatestContentSlider() {
                 @{current.user.username}
               </Link>
             </div>
-            {/* Dots */}
             <div className="flex items-center gap-1 flex-shrink-0 pt-1">
               {items.slice(0, 8).map((_, i) => (
                 <button
@@ -317,19 +317,13 @@ export default function LatestContentSlider() {
       </div>
 
       <style>{`
-        @keyframes fadeSlideIn {
-          from { opacity: 0; transform: translateX(-8px); }
-          to   { opacity: 1; transform: translateX(0); }
+        @keyframes gFadeIn {
+          from { opacity: 0; transform: scale(0.97); }
+          to   { opacity: 1; transform: scale(1); }
         }
       `}</style>
     </div>
   );
-}
-
-function fmtViews(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
 }
 
 function formatDuration(seconds: number): string {
