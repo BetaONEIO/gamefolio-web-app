@@ -94,9 +94,10 @@ export default function LatestContentSlider() {
   const handleVideoWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     if (scrollCooldown.current) return;
+    if (e.deltaY <= 0) return;
     scrollCooldown.current = true;
     setTimeout(() => { scrollCooldown.current = false; }, 600);
-    if (e.deltaY > 0) goNext(); else goPrev();
+    goNext();
   };
 
   useEffect(() => {
@@ -305,11 +306,10 @@ export default function LatestContentSlider() {
 
             {/* Scroll hint */}
             <div className="absolute top-3 right-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-              <div className="flex flex-col gap-0.5 items-center px-2 py-1 rounded-lg"
+              <div className="flex items-center gap-1 px-2 py-1 rounded-lg"
                 style={{ background: "rgba(0,0,0,0.55)" }}>
-                <ChevronLeft className="w-3 h-3 text-white/50 -rotate-90" />
                 <span className="text-[8px] text-white/40 font-bold">scroll</span>
-                <ChevronLeft className="w-3 h-3 text-white/50 rotate-90" />
+                <ChevronRight className="w-3 h-3 text-white/50" />
               </div>
             </div>
           </div>
@@ -347,9 +347,9 @@ export default function LatestContentSlider() {
             <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.12)" }} />
           </div>
 
-          {/* Game thumbnail — full image visible */}
-          <div className="w-full rounded-xl overflow-hidden flex-shrink-0"
-            style={{ maxHeight: 220, boxShadow: "0 6px 24px rgba(0,0,0,0.5)" }}>
+          {/* Game thumbnail */}
+          <div className="w-full rounded-2xl overflow-hidden flex-shrink-0"
+            style={{ maxHeight: 220 }}>
             {gameImage ? (
               <img src={gameImage} alt={gameName} className="w-full h-auto object-contain" style={{ maxHeight: 220 }} />
             ) : (
@@ -380,11 +380,11 @@ export default function LatestContentSlider() {
             ))}
           </div>
 
-          {/* Bounties button — animated neon glow */}
+          {/* Bounties button */}
           <button
             onClick={handleBounties}
-            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-black bounty-glow-btn"
-            style={{ background: NEON, color: "#071013" }}>
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-black transition-all hover:opacity-90 active:scale-95"
+            style={{ background: "#071013", color: NEON, border: `1px solid ${NEON}40` }}>
             <Sword className="w-3.5 h-3.5" />
             Bounties
           </button>
@@ -393,7 +393,7 @@ export default function LatestContentSlider() {
           <button
             onClick={handleUpload}
             className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-[10px] font-black transition-all hover:opacity-90 active:scale-95"
-            style={{ background: NEON, color: "#071013" }}>
+            style={{ background: "#071013", color: NEON, border: `1px solid ${NEON}40` }}>
             <Upload className="w-3 h-3" />
             Upload Content
           </button>
@@ -406,16 +406,6 @@ export default function LatestContentSlider() {
           from { opacity: 0; transform: scale(0.97); }
           to   { opacity: 1; transform: scale(1); }
         }
-        @keyframes bountyPulse {
-          0%, 100% { box-shadow: 0 0 8px 2px rgba(183,255,26,0.5), 0 0 20px 4px rgba(183,255,26,0.25); }
-          50%       { box-shadow: 0 0 16px 4px rgba(183,255,26,0.8), 0 0 40px 10px rgba(183,255,26,0.4); }
-        }
-        .bounty-glow-btn {
-          animation: bountyPulse 2s ease-in-out infinite;
-          transition: opacity 0.15s, transform 0.1s;
-        }
-        .bounty-glow-btn:hover { opacity: 0.92; }
-        .bounty-glow-btn:active { transform: scale(0.95); }
       `}</style>
     </div>
   );
