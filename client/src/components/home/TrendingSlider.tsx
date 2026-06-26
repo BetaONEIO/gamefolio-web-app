@@ -115,28 +115,26 @@ function GameSidebar({
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="px-2 py-2 border-t border-white/[0.06]">
-        <div className="grid grid-cols-4 gap-0.5">
-          {stats.map(({ icon: Icon, label, value }, i) => (
-            <div key={i} className="flex flex-col items-center py-1">
-              <span className="text-white font-black text-xs leading-none mb-0.5">
-                {typeof value === "number" ? formatNumber(value) : value}
-              </span>
-              <div className="flex items-center gap-0.5 flex-wrap justify-center">
-                {Icon && <Icon className="w-2.5 h-2.5 text-white/35" />}
-                <span className="text-[9px] text-white/35 leading-none">{label}</span>
-              </div>
+      {/* Stats — vertical list, no background */}
+      <div className="px-3 py-2 flex flex-col gap-1">
+        {stats.map(({ icon: Icon, label, value }, i) => (
+          <div key={i} className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              {Icon && <Icon className="w-3 h-3 text-white/40" />}
+              <span className="text-[11px] text-white/40">{label}</span>
             </div>
-          ))}
-        </div>
+            <span className="text-[11px] font-bold text-white">
+              {typeof value === "number" ? formatNumber(value) : value}
+            </span>
+          </div>
+        ))}
       </div>
 
       {/* Upload button */}
-      <div className="px-2.5 pb-3">
+      <div className="px-2.5 pb-3 mt-auto">
         <Link href="/upload">
           <button
-            className="w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all hover:opacity-90 active:scale-[0.97]"
+            className="w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
             style={{ background: NEON, color: "#03080A" }}
           >
             <Upload className="w-3.5 h-3.5" />
@@ -198,15 +196,17 @@ export default function TrendingSlider() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [startTimer, currentIndex]);
 
-  /* ── Reset video when clip changes ── */
+  /* ── Autoplay (muted) when clip changes ── */
   useEffect(() => {
     const vid = videoRef.current;
     if (!vid) return;
     vid.pause();
     vid.load();
-    setIsPlaying(false);
     setProgress(0);
     isInteracting.current = false;
+    vid.muted = true;
+    setIsMuted(true);
+    vid.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
   }, [currentIndex]);
 
   const goTo = useCallback((idx: number) => {
@@ -318,7 +318,8 @@ export default function TrendingSlider() {
                 src={clip.videoUrl}
                 poster={clip.thumbnailUrl || undefined}
                 className="absolute inset-0 w-full h-full object-cover"
-                muted={isMuted}
+                muted
+                autoPlay
                 playsInline
                 onEnded={handleVideoEnded}
                 onTimeUpdate={handleTimeUpdate}
