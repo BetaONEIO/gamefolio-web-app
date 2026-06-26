@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ClipWithUser } from "@shared/schema";
-import { Play, ChevronLeft, ChevronRight, Flame, Pause, Volume2, VolumeX, Upload, ImageIcon, Film, Video } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Pause, Volume2, VolumeX, Upload, ImageIcon, Film, Video } from "lucide-react";
+import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { Link, useLocation } from "wouter";
 
 const NEON = "#B7FF1A";
@@ -160,7 +161,7 @@ export default function LatestContentSlider() {
       {/* Header */}
       <div className="flex items-center justify-between mb-3 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <Flame className="w-4 h-4" style={{ color: NEON }} />
+          <ZapIconSvg active={true} size={16} />
           <span className="text-base font-black text-white">Trending</span>
           <div
             className="flex items-center gap-0.5 p-0.5 rounded-full ml-1"
@@ -302,16 +303,16 @@ export default function LatestContentSlider() {
           </div>
 
           {/* Game thumbnail */}
-          {gameImage ? (
-            <img src={gameImage} alt={gameName}
-              className="rounded-xl object-cover w-full"
-              style={{ aspectRatio: "3/4", maxHeight: "120px", boxShadow: "0 6px 24px rgba(0,0,0,0.5)" }} />
-          ) : (
-            <div className="rounded-xl bg-white/10 flex items-center justify-center w-full"
-              style={{ aspectRatio: "3/4", maxHeight: "120px" }}>
-              <span className="text-white/20 text-2xl font-black">{gameName?.[0] ?? "?"}</span>
-            </div>
-          )}
+          <div className="w-full rounded-xl overflow-hidden flex-shrink-0" style={{ height: "110px", boxShadow: "0 6px 24px rgba(0,0,0,0.5)" }}>
+            {gameImage ? (
+              <img src={gameImage} alt={gameName}
+                className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-white/10 flex items-center justify-center">
+                <span className="text-white/20 text-2xl font-black">{gameName?.[0] ?? "?"}</span>
+              </div>
+            )}
+          </div>
 
           {/* Game name */}
           {gameName && (
@@ -349,8 +350,8 @@ export default function LatestContentSlider() {
           {/* Upload button */}
           <button
             onClick={handleUpload}
-            className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-[10px] font-black transition-all hover:scale-[1.02] active:scale-95"
-            style={{ background: "rgba(183,255,26,0.1)", border: "1px solid rgba(183,255,26,0.25)", color: NEON }}>
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-[10px] font-black transition-all hover:opacity-90 active:scale-95"
+            style={{ background: NEON, color: "#071013" }}>
             <Upload className="w-3 h-3" />
             Upload Content
           </button>
