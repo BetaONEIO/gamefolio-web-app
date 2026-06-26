@@ -477,7 +477,7 @@ const HomePage = () => {
     <div className="space-y-16 max-w-none px-4 md:px-6 py-4 md:py-6">
       {/* Hero Banner Carousel — trending slide is always index 0 */}
       <section className="mb-10 -mx-4 md:-mx-6 -mt-4 md:-mt-6">
-        <div className="relative w-full min-h-[350px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px] bg-black overflow-hidden border-b-2 border-primary">
+        <div className="relative w-full min-h-[280px] md:min-h-[360px] lg:min-h-[400px] xl:min-h-[440px] bg-black overflow-hidden border-b-2 border-primary">
           {allSlides.map((slide, idx) => (
             <div
               key={slide.id}
