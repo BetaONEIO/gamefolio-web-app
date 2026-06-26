@@ -725,7 +725,7 @@ const HomePage = () => {
                           <div className="self-stretch w-px my-6 flex-shrink-0" style={{ background:'rgba(183,255,26,0.08)' }} />
 
                           {/* ── RIGHT: Top 10 list ── */}
-                          <div className="flex-1 flex flex-col py-4 px-4 sm:px-5 overflow-hidden rounded-xl mx-2 my-2" style={{ background:'rgba(11,19,25,0.88)', border:'1px solid rgba(183,255,26,0.10)' }}>
+                          <div className="flex-1 flex flex-col py-4 px-4 sm:px-5 overflow-hidden rounded-xl mx-2 my-2" style={{ background:'rgb(11,19,25)', border:'1px solid rgba(183,255,26,0.10)' }}>
                             <div className="text-[9px] font-black uppercase tracking-[0.2em] mb-3" style={{ color:'#B7FF18' }}>
                               Top 10 This Week
                             </div>
