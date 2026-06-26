@@ -167,35 +167,24 @@ export default function LatestContentSlider() {
         {/* LEFT — Game thumbnail only */}
         <div
           key={`game-${activeIndex}-${mode}`}
-          className="flex-shrink-0 rounded-2xl overflow-hidden relative"
-          style={{
-            width: "32%",
-            background: "#0a0f14",
-            animation: "gFadeIn 0.35s ease-out",
-          }}
+          className="flex-shrink-0 flex items-center justify-center"
+          style={{ width: "28%", animation: "gFadeIn 0.35s ease-out" }}
         >
           {gameImage ? (
-            <>
-              <img
-                src={gameImage}
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover"
-                style={{ filter: "blur(24px)", opacity: 0.25, transform: "scale(1.12)" }}
-              />
-              <div className="absolute inset-0 flex items-center justify-center p-5">
-                <img
-                  src={gameImage}
-                  alt={gameName}
-                  className="rounded-xl w-full h-full object-cover shadow-2xl"
-                  style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07)" }}
-                />
-              </div>
-            </>
+            <img
+              src={gameImage}
+              alt={gameName}
+              className="rounded-xl object-cover"
+              style={{
+                width: "50%",
+                aspectRatio: "3/4",
+                boxShadow: "0 6px 24px rgba(0,0,0,0.5)",
+              }}
+            />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-20 h-28 rounded-xl bg-white/10 flex items-center justify-center">
-                <span className="text-white/20 text-3xl font-black">{gameName?.[0] ?? "?"}</span>
-              </div>
+            <div className="rounded-xl bg-white/10 flex items-center justify-center"
+              style={{ width: "50%", aspectRatio: "3/4" }}>
+              <span className="text-white/20 text-2xl font-black">{gameName?.[0] ?? "?"}</span>
             </div>
           )}
         </div>
