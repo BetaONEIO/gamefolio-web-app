@@ -17,6 +17,7 @@ export default function HelpPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     username: user?.username || "",
+    email: user?.email || "",
     category: "",
     subject: "",
     message: ""
@@ -24,6 +25,14 @@ export default function HelpPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.email || !formData.email.trim()) {
+      toast({
+        title: "Email Required",
+        description: "Please provide an email address so we can contact you with a resolution.",
+        variant: "gamefolioError",
+      });
+      return;
+    }
     if (!formData.category || !formData.subject || !formData.message) {
       toast({
         title: "Missing Information",
@@ -44,6 +53,7 @@ export default function HelpPage() {
         });
         setFormData({
           username: user?.username || "",
+          email: user?.email || "",
           category: "",
           subject: "",
           message: ""
@@ -265,7 +275,25 @@ export default function HelpPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="category">Support Category *</Label>
+                    <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      placeholder="your@email.com"
+                      disabled={!!user?.email}
+                      data-testid="input-email"
+                      className={user?.email ? "bg-muted/50 cursor-default" : ""}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      We ask for an email so you can be contacted with a resolution.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="category">Support Category *</Label>
                     <Select 
                       value={formData.category} 
                       onValueChange={(value) => setFormData({...formData, category: value})}

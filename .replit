@@ -41,7 +41,7 @@ externalPort = 80
 
 [[ports]]
 localPort = 23636
-externalPort = 3000
+externalPort = 3002
 
 [agent]
 integrations = ["stripe:2.0.0"]
