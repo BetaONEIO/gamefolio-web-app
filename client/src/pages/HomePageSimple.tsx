@@ -602,7 +602,7 @@ const HomePage = () => {
                         <div className="absolute inset-0" style={{ backgroundImage:"url('/electrical-bg.webp')", backgroundSize:"cover", backgroundPosition:"center" }} />
                         {/* Dark overlay for readability */}
                         <div className="absolute inset-0" style={{ background:"linear-gradient(160deg,rgba(5,9,13,0.82) 0%,rgba(8,14,24,0.72) 55%,rgba(5,9,13,0.82) 100%)" }} />
-                        <style>{LEADERBOARD_STYLES}</style>
+                        <style>{LEADERBOARD_STYLES}{CREATOR_CARD_STYLES}</style>
 
                         <div className="relative h-full flex flex-col">
 
@@ -737,8 +737,8 @@ const HomePage = () => {
                                 const isTop3 = rank <= 3;
                                 return (
                                   <div key={winner?.userId ?? idx}
-                                    className="flex items-center gap-2.5 py-[6px] cursor-pointer rounded-lg px-2 transition-colors hover:brightness-110"
-                                    style={{ background:'rgba(5,10,16,0.58)', border:'1px solid rgba(255,255,255,0.06)', marginBottom:'3px' }}
+                                    className="flex items-center gap-2.5 py-[6px] cursor-pointer rounded-lg px-2 transition-colors hover:brightness-125"
+                                    style={{ background:'rgba(11,19,25,0.92)', border:'1px solid rgba(183,255,26,0.08)', marginBottom:'3px' }}
                                     onClick={() => winner && setLocation(`/profile/${winner.user.username}`)}>
                                     {/* Rank */}
                                     <div className="flex-shrink-0 w-6 text-center">
