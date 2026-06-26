@@ -25,7 +25,7 @@ const TagInput = ({
   const { data: frequentTags = [] } = useQuery<string[]>({
     queryKey: ["/api/user/top-tags"],
     queryFn: async () => {
-      const res = await fetch("/api/user/top-tags");
+      const res = await fetch("/api/user/top-tags", { credentials: "include" });
       if (!res.ok) return [];
       return res.json();
     },
@@ -86,6 +86,22 @@ const TagInput = ({
     }
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData("text");
+    if (!pasted.includes(",")) return;
+    e.preventDefault();
+    const parts = pasted.split(",").map((p) => p.trim()).filter(Boolean);
+    let updated = [...tags];
+    for (const part of parts) {
+      const clean = part.toLowerCase().replace(/^#/, "");
+      if (clean && !updated.includes(clean) && updated.length < maxTags) {
+        updated = [...updated, clean];
+      }
+    }
+    setTags(updated);
+    setInputValue("");
+  };
+
   const handleBlur = (e: React.FocusEvent) => {
     // Delay so clicks inside the dropdown register first
     setTimeout(() => {
@@ -138,6 +154,7 @@ const TagInput = ({
           onFocus={() => setDropdownOpen(true)}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           placeholder={tags.length < maxTags ? placeholder : `Max ${maxTags} tags`}
           disabled={tags.length >= maxTags}
           className="flex-1 border-0 outline-none bg-transparent text-sm min-w-[120px] placeholder:text-muted-foreground disabled:cursor-not-allowed"

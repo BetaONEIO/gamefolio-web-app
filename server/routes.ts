@@ -11898,17 +11898,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) return res.status(401).json({ message: "Not authenticated" });
 
       const rows = await db.execute(sql`
-        SELECT LOWER(tag) AS tag, COUNT(*) AS use_count
+        SELECT LOWER(t.tag) AS tag, COUNT(*) AS use_count
         FROM (
-          SELECT UNNEST(tags) AS tag FROM clips
-            WHERE user_id = ${userId} AND tags IS NOT NULL
+          SELECT unnest(tags) AS tag FROM clips
+            WHERE user_id = ${userId}
+              AND tags IS NOT NULL
+              AND array_length(tags, 1) > 0
           UNION ALL
-          SELECT UNNEST(tags) AS tag FROM screenshots
-            WHERE user_id = ${userId} AND tags IS NOT NULL
+          SELECT unnest(tags) AS tag FROM screenshots
+            WHERE user_id = ${userId}
+              AND tags IS NOT NULL
+              AND array_length(tags, 1) > 0
         ) t
-        WHERE tag IS NOT NULL AND TRIM(tag) <> ''
-        GROUP BY LOWER(tag)
-        ORDER BY use_count DESC, LOWER(tag)
+        WHERE t.tag IS NOT NULL AND TRIM(t.tag) <> '' AND LENGTH(TRIM(t.tag)) <= 50
+        GROUP BY LOWER(t.tag)
+        ORDER BY use_count DESC, LOWER(t.tag)
         LIMIT 20
       `);
 
