@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ClipWithUser } from "@shared/schema";
-import { Play, ChevronLeft, ChevronRight, Pause, Volume2, VolumeX, Upload, ImageIcon, Film, Video } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Pause, Volume2, VolumeX, Upload, ImageIcon, Film, Video, Maximize2 } from "lucide-react";
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { Link, useLocation } from "wouter";
 
@@ -15,7 +15,9 @@ export default function LatestContentSlider() {
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
+  const scrollCooldown = useRef(false);
   const [, navigate] = useLocation();
 
   const { data: clipsData, isLoading: clipsLoading } = useQuery<ClipWithUser[]>({
@@ -86,6 +88,16 @@ export default function LatestContentSlider() {
     touchStartX.current = null;
   };
 
+  // Scroll wheel on the video area navigates clips
+  const handleVideoWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    if (scrollCooldown.current) return;
+    scrollCooldown.current = true;
+    setTimeout(() => { scrollCooldown.current = false; }, 600);
+    if (e.deltaY > 0) goNext();
+    else goPrev();
+  };
+
   // Autoplay muted whenever the active clip changes
   useEffect(() => {
     if (!current?.videoUrl) return;
@@ -124,6 +136,17 @@ export default function LatestContentSlider() {
     if (videoRef.current) videoRef.current.muted = next;
   };
 
+  const handleFullscreen = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const el = containerRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      el.requestFullscreen().catch(() => {});
+    }
+  };
+
   const handleUpload = () => {
     if (!current) return;
     const gImg = current.game?.imageUrl || current.gameImageUrl || "";
@@ -150,7 +173,8 @@ export default function LatestContentSlider() {
 
   const gameImage = current.game?.imageUrl || current.gameImageUrl || null;
   const gameName = current.game?.name || current.gameName || "";
-  const isReel = current.videoType === "reel";
+  const avatarUrl = current.user?.avatarUrl || null;
+  const username = current.user?.username || "";
 
   return (
     <div
@@ -195,15 +219,17 @@ export default function LatestContentSlider() {
         </div>
       </div>
 
-      {/* Main layout: video (centred) + right game panel */}
+      {/* Main layout: video + right game panel */}
       <div className="flex gap-4 flex-1 min-h-0">
 
-        {/* VIDEO PLAYER — centred, takes main space */}
+        {/* VIDEO PLAYER */}
         <div className="flex-1 min-w-0 flex flex-col">
           <div
+            ref={containerRef}
             className="relative rounded-2xl overflow-hidden flex-1 min-h-0 cursor-pointer group"
             style={{ background: "#0B1218" }}
             onClick={handlePlayClick}
+            onWheel={handleVideoWheel}
           >
             {/* Blurred bg */}
             {current.thumbnailUrl && !playing && (
@@ -252,32 +278,66 @@ export default function LatestContentSlider() {
               </div>
             )}
 
-            {/* Mute toggle */}
-            {playing && (
-              <button onClick={toggleMute}
-                className="absolute bottom-3 right-3 z-40 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-                style={{ background: "rgba(0,0,0,0.7)" }}>
-                {muted ? <VolumeX className="w-3.5 h-3.5 text-white" /> : <Volume2 className="w-3.5 h-3.5 text-white" />}
-              </button>
+            {/* Avatar watermark — bottom-left, always visible */}
+            {avatarUrl && (
+              <Link
+                href={`/profile/${username}`}
+                onClick={e => e.stopPropagation()}
+                className="absolute bottom-3 left-3 z-40 flex items-center gap-1.5 rounded-full px-1.5 py-1 transition-opacity hover:opacity-100"
+                style={{ background: "rgba(0,0,0,0.45)", opacity: 0.55, backdropFilter: "blur(4px)" }}
+              >
+                <img
+                  src={avatarUrl}
+                  alt={username}
+                  className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+                  style={{ border: `1px solid ${NEON}60` }}
+                />
+                <span className="text-[10px] font-black leading-none pr-0.5" style={{ color: NEON }}>@{username}</span>
+              </Link>
             )}
 
-            {/* Duration badge */}
-            {!playing && (
-              <div className="absolute bottom-3 right-3 z-30 px-2 py-0.5 rounded text-[10px] font-black text-white"
-                style={{ background: "rgba(0,0,0,0.75)" }}>
-                {formatDuration(current.duration || 0)}
+            {/* Bottom-right controls: mute + fullscreen */}
+            <div className="absolute bottom-3 right-3 z-40 flex items-center gap-1.5">
+              {playing && (
+                <button onClick={toggleMute}
+                  className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                  style={{ background: "rgba(0,0,0,0.7)" }}>
+                  {muted ? <VolumeX className="w-3 h-3 text-white" /> : <Volume2 className="w-3 h-3 text-white" />}
+                </button>
+              )}
+              {!playing && (
+                <div className="px-2 py-0.5 rounded text-[10px] font-black text-white"
+                  style={{ background: "rgba(0,0,0,0.75)" }}>
+                  {formatDuration(current.duration || 0)}
+                </div>
+              )}
+              <button onClick={handleFullscreen}
+                className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                style={{ background: "rgba(0,0,0,0.7)" }}>
+                <Maximize2 className="w-3 h-3 text-white" />
+              </button>
+            </div>
+
+            {/* Scroll hint */}
+            <div className="absolute top-3 right-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+              <div className="flex flex-col gap-0.5 items-center px-2 py-1 rounded-lg"
+                style={{ background: "rgba(0,0,0,0.55)" }}>
+                <ChevronLeft className="w-3 h-3 text-white/50 -rotate-90" />
+                <span className="text-[8px] text-white/40 font-bold">scroll</span>
+                <ChevronLeft className="w-3 h-3 text-white/50 rotate-90" />
               </div>
-            )}
+            </div>
           </div>
 
           {/* Info + dots */}
           <div className="mt-2.5 flex items-start justify-between gap-2 flex-shrink-0">
             <div className="min-w-0">
               <h3 className="text-sm font-black text-white leading-tight truncate">{current.title}</h3>
-              <Link href={`/profile/${current.user.username}`}
-                className="text-xs text-white/40 hover:text-white/70 transition-colors"
+              <Link href={`/profile/${username}`}
+                className="text-xs font-bold transition-opacity hover:opacity-80"
+                style={{ color: NEON }}
                 onClick={e => e.stopPropagation()}>
-                @{current.user.username}
+                @{username}
               </Link>
             </div>
             <div className="flex items-center gap-1 flex-shrink-0 pt-1">
@@ -305,8 +365,7 @@ export default function LatestContentSlider() {
           {/* Game thumbnail */}
           <div className="w-full rounded-xl overflow-hidden flex-shrink-0" style={{ height: "110px", boxShadow: "0 6px 24px rgba(0,0,0,0.5)" }}>
             {gameImage ? (
-              <img src={gameImage} alt={gameName}
-                className="w-full h-full object-cover" />
+              <img src={gameImage} alt={gameName} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full bg-white/10 flex items-center justify-center">
                 <span className="text-white/20 text-2xl font-black">{gameName?.[0] ?? "?"}</span>
