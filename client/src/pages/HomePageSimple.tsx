@@ -725,7 +725,7 @@ const HomePage = () => {
                           <div className="self-stretch w-px my-6 flex-shrink-0" style={{ background:'rgba(183,255,26,0.08)' }} />
 
                           {/* ── RIGHT: Top 10 list ── */}
-                          <div className="flex-1 flex flex-col py-4 px-4 sm:px-5 overflow-hidden">
+                          <div className="flex-1 flex flex-col py-4 px-4 sm:px-5 overflow-hidden rounded-xl mx-2 my-2" style={{ background:'rgba(11,19,25,0.88)', border:'1px solid rgba(183,255,26,0.10)' }}>
                             <div className="text-[9px] font-black uppercase tracking-[0.2em] mb-3" style={{ color:'#B7FF18' }}>
                               Top 10 This Week
                             </div>
@@ -737,8 +737,8 @@ const HomePage = () => {
                                 const isTop3 = rank <= 3;
                                 return (
                                   <div key={winner?.userId ?? idx}
-                                    className="flex items-center gap-2.5 py-[6px] cursor-pointer rounded-lg px-2 transition-colors hover:brightness-125"
-                                    style={{ background:'rgba(11,19,25,0.92)', border:'1px solid rgba(183,255,26,0.08)', marginBottom:'3px' }}
+                                    className="flex items-center gap-2.5 py-[6px] cursor-pointer rounded-lg px-2 transition-colors hover:bg-white/5"
+                                    style={{ borderBottom:'1px solid rgba(255,255,255,0.05)', marginBottom:'1px' }}
                                     onClick={() => winner && setLocation(`/profile/${winner.user.username}`)}>
                                     {/* Rank */}
                                     <div className="flex-shrink-0 w-6 text-center">
