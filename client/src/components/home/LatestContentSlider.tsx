@@ -85,6 +85,22 @@ export default function LatestContentSlider() {
     touchStartX.current = null;
   };
 
+  // Autoplay muted whenever the active clip changes
+  useEffect(() => {
+    if (!current?.videoUrl) return;
+    const outer = setTimeout(() => {
+      setPlaying(true);
+      const inner = setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.muted = true;
+          videoRef.current.play().catch(() => {});
+        }
+      }, 50);
+      return () => clearTimeout(inner);
+    }, 150);
+    return () => clearTimeout(outer);
+  }, [current?.id]);
+
   const handlePlayClick = () => {
     if (!playing) {
       setPlaying(true);
@@ -289,10 +305,10 @@ export default function LatestContentSlider() {
           {gameImage ? (
             <img src={gameImage} alt={gameName}
               className="rounded-xl object-cover w-full"
-              style={{ aspectRatio: "3/4", boxShadow: "0 6px 24px rgba(0,0,0,0.5)" }} />
+              style={{ aspectRatio: "3/4", maxHeight: "120px", boxShadow: "0 6px 24px rgba(0,0,0,0.5)" }} />
           ) : (
             <div className="rounded-xl bg-white/10 flex items-center justify-center w-full"
-              style={{ aspectRatio: "3/4" }}>
+              style={{ aspectRatio: "3/4", maxHeight: "120px" }}>
               <span className="text-white/20 text-2xl font-black">{gameName?.[0] ?? "?"}</span>
             </div>
           )}
