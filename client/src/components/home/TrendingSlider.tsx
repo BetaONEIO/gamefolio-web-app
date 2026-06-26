@@ -70,8 +70,8 @@ function GameSidebar({
       className="flex-shrink-0 flex flex-col bg-[#060D12] border-l border-white/5 overflow-hidden"
       style={{ width: "clamp(160px, 22%, 240px)" }}
     >
-      {/* Game thumbnail — fixed height so stats+button always fit below */}
-      <div className="relative bg-[#0A1117] overflow-hidden" style={{ height: "55%" }}>
+      {/* Game thumbnail — ~half height so stats+button have room */}
+      <div className="relative bg-[#0A1117] overflow-hidden" style={{ height: "28%" }}>
         {clip.game?.imageUrl ? (
           <img
             src={clip.game.imageUrl}
@@ -115,13 +115,13 @@ function GameSidebar({
         </div>
       </div>
 
-      {/* Stats — vertical list, no background */}
-      <div className="px-3 py-2 flex flex-col gap-1">
+      {/* Stats — vertical list, full colour */}
+      <div className="px-3 py-2 flex flex-col gap-1.5">
         {stats.map(({ icon: Icon, label, value }, i) => (
           <div key={i} className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              {Icon && <Icon className="w-3 h-3 text-white/40" />}
-              <span className="text-[11px] text-white/40">{label}</span>
+              {Icon && <Icon className="w-3 h-3 text-white" />}
+              <span className="text-[11px] text-white">{label}</span>
             </div>
             <span className="text-[11px] font-bold text-white">
               {typeof value === "number" ? formatNumber(value) : value}
