@@ -91,13 +91,15 @@ function GameSidebar({ clip, onPrev, onNext }: {
         </div>
         <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 z-10">
           <button
-            onClick={(e) => { e.stopPropagation(); onPrev(); }}
+            onPointerDown={(e) => { e.stopPropagation(); onPrev(); }}
+            onClick={(e) => e.stopPropagation()}
             className="w-5 h-5 rounded-sm bg-black/60 hover:bg-black/85 flex items-center justify-center transition-colors"
           >
             <ChevronLeft className="w-3 h-3 text-white" />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onNext(); }}
+            onPointerDown={(e) => { e.stopPropagation(); onNext(); }}
+            onClick={(e) => e.stopPropagation()}
             className="w-5 h-5 rounded-sm bg-black/60 hover:bg-black/85 flex items-center justify-center transition-colors"
           >
             <ChevronRight className="w-3 h-3 text-white" />
@@ -236,12 +238,20 @@ export default function TrendingHeroSlide({
     startTimer();
   }, [total, startTimer]);
 
-  const handleWheel = useCallback(() => {
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    // Mark as scrolling regardless of direction — suppress all navigation during scroll
     isScrollingRef.current = true;
     if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
     scrollTimeoutRef.current = setTimeout(() => {
       isScrollingRef.current = false;
-    }, 300);
+    }, 500);
+    // Let vertical scroll pass through to the page naturally
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      // vertical — don't preventDefault so page still scrolls
+      return;
+    }
+    // horizontal — prevent default to stop browser back/forward navigation
+    e.preventDefault();
   }, []);
 
   const handlePlayPause = (e: React.MouseEvent) => {
@@ -404,7 +414,7 @@ export default function TrendingHeroSlide({
 
         {/* Left arrow — centered vertically */}
         <button
-          onClick={(e) => { e.stopPropagation(); goPrev(); }}
+          onClick={(e) => { e.stopPropagation(); if (!isScrollingRef.current) goPrev(); }}
           className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/55 hover:bg-black/80 flex items-center justify-center text-white transition-colors"
         >
           <ChevronLeft className="w-5 h-5" />
@@ -412,7 +422,7 @@ export default function TrendingHeroSlide({
 
         {/* Right arrow — centered vertically */}
         <button
-          onClick={(e) => { e.stopPropagation(); goNext(); }}
+          onClick={(e) => { e.stopPropagation(); if (!isScrollingRef.current) goNext(); }}
           className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/55 hover:bg-black/80 flex items-center justify-center text-white transition-colors"
         >
           <ChevronRight className="w-5 h-5" />

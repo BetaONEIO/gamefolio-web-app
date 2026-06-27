@@ -528,14 +528,14 @@ const HomePage = () => {
 
           {/* Carousel nav */}
           <button
-            onClick={prevSlide}
+            onClick={() => { if (!heroScrollingRef.current) prevSlide(); }}
             className="absolute left-3 top-1/2 -translate-y-1/2 z-30 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
             aria-label="Previous slide"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
           <button
-            onClick={nextSlide}
+            onClick={() => { if (!heroScrollingRef.current) nextSlide(); }}
             className="absolute right-3 top-1/2 -translate-y-1/2 z-30 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
             aria-label="Next slide"
           >
@@ -545,7 +545,7 @@ const HomePage = () => {
             {HERO_SLIDES.map((_, idx) => (
               <button
                 key={idx}
-                onClick={() => goToSlide(idx)}
+                onClick={() => { if (!heroScrollingRef.current) goToSlide(idx); }}
                 className={`h-2.5 rounded-full transition-all ${idx === currentSlide ? 'bg-primary w-6' : 'w-2.5 bg-white/50 hover:bg-white/80'}`}
                 aria-label={`Go to slide ${idx + 1}`}
               />
