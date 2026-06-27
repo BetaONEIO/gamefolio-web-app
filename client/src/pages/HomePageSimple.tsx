@@ -936,28 +936,18 @@ const HomePage = () => {
                   <>
                     <button
                       onClick={prevSlide}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-black/60 hover:bg-black/85 backdrop-blur-sm text-white rounded-full p-2.5 transition-colors shadow-lg"
                       aria-label="Previous slide"
                     >
-                      <ChevronLeft className="h-5 w-5" />
+                      <ChevronLeft className="h-6 w-6" />
                     </button>
                     <button
                       onClick={nextSlide}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-black/60 hover:bg-black/85 backdrop-blur-sm text-white rounded-full p-2.5 transition-colors shadow-lg"
                       aria-label="Next slide"
                     >
-                      <ChevronRight className="h-5 w-5" />
+                      <ChevronRight className="h-6 w-6" />
                     </button>
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2">
-                      {activeSlides.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => goToSlide(idx)}
-                          className={`w-2.5 h-2.5 rounded-full transition-all ${idx === currentSlide ? 'bg-primary w-6' : 'bg-white/50 hover:bg-white/80'}`}
-                          aria-label={`Go to slide ${idx + 1}`}
-                        />
-                      ))}
-                    </div>
                   </>
                 )}
               </div>
