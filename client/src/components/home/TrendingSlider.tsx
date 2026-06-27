@@ -150,13 +150,20 @@ export default function TrendingHeroSlide({
   const videoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isInteracting = useRef(false);
+  // Track recent wheel/scroll events to suppress accidental clicks from trackpad gestures
+  const isScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [, setLocation] = useLocation();
 
   const { data: clips = [] } = useQuery<Clip[]>({
     queryKey: ["/api/clips/trending", contentType],
     queryFn: async () => {
-      const type = contentType === "reels" ? "reel" : "clip";
-      const res = await fetch(`/api/clips/trending?limit=8&videoType=${type}`, { credentials: "include" });
+      if (contentType === "reels") {
+        const res = await fetch(`/api/clips/reels/trending?limit=8`, { credentials: "include" });
+        if (!res.ok) return [];
+        return res.json();
+      }
+      const res = await fetch(`/api/clips/trending?limit=8`, { credentials: "include" });
       if (!res.ok) return [];
       return res.json();
     },
@@ -222,8 +229,18 @@ export default function TrendingHeroSlide({
     startTimer();
   }, [total, startTimer]);
 
+  const handleWheel = useCallback(() => {
+    isScrollingRef.current = true;
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    scrollTimeoutRef.current = setTimeout(() => {
+      isScrollingRef.current = false;
+    }, 300);
+  }, []);
+
   const handlePlayPause = (e: React.MouseEvent) => {
     e.stopPropagation();
+    // Ignore clicks that are actually touchpad scroll gestures
+    if (isScrollingRef.current) return;
     const vid = videoRef.current;
     if (!vid) {
       if (clip) setLocation(`/clips/${clip.id}`);
@@ -270,7 +287,10 @@ export default function TrendingHeroSlide({
 
   /* Fill the full slide area */
   return (
-    <div className="absolute inset-0 flex bg-[#03080A]">
+    <div
+      className="absolute inset-0 flex bg-[#03080A]"
+      onWheel={handleWheel}
+    >
       {/* ── LEFT: Video ── */}
       <div className="relative flex-1 min-w-0 overflow-hidden bg-black">
         {/* Header */}
