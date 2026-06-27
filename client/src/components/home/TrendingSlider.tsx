@@ -158,7 +158,10 @@ export default function TrendingHeroSlide({
   const [, setLocation] = useLocation();
 
   const { data: clips = [] } = useQuery<Clip[]>({
-    queryKey: ["/api/clips/trending", contentType],
+    // Include the full URL path in the key so each endpoint+params has its own cache slot
+    queryKey: contentType === "reels"
+      ? ["/api/clips/reels/trending", "ever"]
+      : ["/api/clips/trending", "all"],
     queryFn: async () => {
       if (contentType === "reels") {
         const res = await fetch(`/api/clips/reels/trending?limit=8&period=ever`, { credentials: "include" });
@@ -169,7 +172,7 @@ export default function TrendingHeroSlide({
       if (!res.ok) return [];
       return res.json();
     },
-    staleTime: 30_000,
+    staleTime: 60_000,
   });
 
   const total = clips.length;
@@ -196,18 +199,38 @@ export default function TrendingHeroSlide({
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [startTimer, currentIndex]);
 
-  /* Reset UI state whenever the displayed clip changes.
-     Playback itself is started by the video's onCanPlay handler — we must NOT
-     call v.load() here because each clip has a unique key so React already
-     creates a fresh <video> element that begins loading automatically. Calling
-     load() again after onCanPlay has fired is what caused the
-     "shows for a split second then goes black" symptom. */
+  /* Trigger playback whenever the displayed clip changes.
+     Key rule: do NOT call v.load() — each clip has a unique key so React
+     already creates a fresh <video> element. Calling load() again AFTER
+     onCanPlay fires causes the "shows briefly then goes black" regression.
+     We just call play() directly; if the video isn't ready yet onCanPlay
+     will also call play() as a belt-and-suspenders. */
   useEffect(() => {
     setProgress(0);
     isInteracting.current = false;
     setIsPlaying(false);
     onPlayingChange?.(false);
     setIsMuted(true);
+
+    const v = videoRef.current;
+    if (!v || !clip?.videoUrl) return;
+
+    v.muted = true;
+
+    const tryPlay = () => {
+      v.muted = true;
+      v.play()
+        .then(() => { setIsPlaying(true); onPlayingChange?.(true); })
+        .catch(() => { /* onCanPlay will retry */ });
+    };
+
+    // If already has data, play immediately; otherwise wait for canplay
+    if (v.readyState >= 2) {
+      tryPlay();
+    } else {
+      v.addEventListener('canplay', tryPlay, { once: true });
+      return () => v.removeEventListener('canplay', tryPlay);
+    }
   }, [clip?.id]);
 
   const goTo = useCallback((idx: number) => {
