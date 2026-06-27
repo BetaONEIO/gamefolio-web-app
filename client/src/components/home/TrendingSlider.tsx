@@ -201,10 +201,7 @@ export default function TrendingHeroSlide({
 
   /* Trigger playback whenever the displayed clip changes.
      Key rule: do NOT call v.load() — each clip has a unique key so React
-     already creates a fresh <video> element. Calling load() again AFTER
-     onCanPlay fires causes the "shows briefly then goes black" regression.
-     We just call play() directly; if the video isn't ready yet onCanPlay
-     will also call play() as a belt-and-suspenders. */
+     already creates a fresh <video> element. */
   useEffect(() => {
     setProgress(0);
     isInteracting.current = false;
@@ -217,20 +214,22 @@ export default function TrendingHeroSlide({
 
     v.muted = true;
 
-    const tryPlay = () => {
-      v.muted = true;
-      v.play()
-        .then(() => { setIsPlaying(true); onPlayingChange?.(true); })
-        .catch(() => { /* onCanPlay will retry */ });
-    };
+    // Attempt 1: play immediately (works when video already has data)
+    v.play()
+      .then(() => { setIsPlaying(true); onPlayingChange?.(true); })
+      .catch(() => { /* video not ready yet — retry below */ });
 
-    // If already has data, play immediately; otherwise wait for canplay
-    if (v.readyState >= 2) {
-      tryPlay();
-    } else {
-      v.addEventListener('canplay', tryPlay, { once: true });
-      return () => v.removeEventListener('canplay', tryPlay);
-    }
+    // Attempt 2: retry after 500 ms (covers freshly-mounted video still buffering)
+    const retry = setTimeout(() => {
+      const vid = videoRef.current;
+      if (!vid || !vid.paused) return;
+      vid.muted = true;
+      vid.play()
+        .then(() => { setIsPlaying(true); onPlayingChange?.(true); })
+        .catch(() => {});
+    }, 500);
+
+    return () => clearTimeout(retry);
   }, [clip?.id]);
 
   const goTo = useCallback((idx: number) => {
@@ -383,7 +382,9 @@ export default function TrendingHeroSlide({
                 }}
                 onEnded={handleVideoEnded}
                 onTimeUpdate={handleTimeUpdate}
-                onError={() => {
+                onError={(e) => {
+                  const el = e.currentTarget as HTMLVideoElement;
+                  console.error('[TrendingSlider] video error', el.error, 'src:', el.src?.slice(0, 120));
                   setIsPlaying(false);
                   onPlayingChange?.(false);
                 }}

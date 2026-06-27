@@ -39,9 +39,9 @@ export default function LatestContentSlider() {
   });
 
   const { data: reelsData, isLoading: reelsLoading } = useQuery<ClipWithUser[]>({
-    queryKey: ["/api/reels/trending", "slider"],
+    queryKey: ["/api/clips/reels/trending", "slider"],
     queryFn: async () => {
-      const r = await fetch("/api/reels/trending?limit=10&period=week", { credentials: "include" });
+      const r = await fetch("/api/clips/reels/trending?limit=10&period=ever", { credentials: "include" });
       if (!r.ok) throw new Error("Failed");
       return r.json();
     },
@@ -325,12 +325,7 @@ export default function LatestContentSlider() {
                 @{username}
               </Link>
             </div>
-            <div className="flex items-center gap-1 flex-shrink-0 pt-1">
-              {items.slice(0, 8).map((_, i) => (
-                <button key={i} onClick={() => goTo(i)} className="rounded-full transition-all duration-300"
-                  style={{ width: i === activeIndex ? 16 : 5, height: 5, background: i === activeIndex ? NEON : "rgba(255,255,255,0.2)" }} />
-              ))}
-            </div>
+            <div className="flex items-center gap-1 flex-shrink-0 pt-1" />
           </div>
         </div>
 
