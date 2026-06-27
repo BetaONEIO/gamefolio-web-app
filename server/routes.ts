@@ -6703,12 +6703,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { period = 'day', limit = 10, gameId } = req.query;
       const currentUserId = (req.user as any)?.id;
       const cacheKey = trendingCacheKey('reels-home', period, limit, gameId, currentUserId);
-      const reels = await getCachedTrending(cacheKey, () => storage.getTrendingReels(
-        period as string,
-        parseInt(limit as string) || 10,
-        gameId ? parseInt(gameId as string) : undefined,
-        currentUserId
-      ));
+      const reels = await getCachedTrending(cacheKey, async () => {
+        const raw = await storage.getTrendingReels(
+          period as string,
+          parseInt(limit as string) || 10,
+          gameId ? parseInt(gameId as string) : undefined,
+          currentUserId
+        );
+        return await signClipUrls(raw);
+      });
       res.json(reels);
     } catch (err) {
       console.error("Error fetching trending reels:", err);
