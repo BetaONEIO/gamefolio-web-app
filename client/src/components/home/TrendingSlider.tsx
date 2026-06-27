@@ -196,30 +196,18 @@ export default function TrendingHeroSlide({
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [startTimer, currentIndex]);
 
-  /* Autoplay muted whenever the actual clip changes (fires on index change AND content-type switch) */
+  /* Reset UI state whenever the displayed clip changes.
+     Playback itself is started by the video's onCanPlay handler — we must NOT
+     call v.load() here because each clip has a unique key so React already
+     creates a fresh <video> element that begins loading automatically. Calling
+     load() again after onCanPlay has fired is what caused the
+     "shows for a split second then goes black" symptom. */
   useEffect(() => {
-    const vid = videoRef.current;
     setProgress(0);
     isInteracting.current = false;
     setIsPlaying(false);
     onPlayingChange?.(false);
-    if (!vid || !clip?.videoUrl) return;
-    vid.muted = true;
     setIsMuted(true);
-    // Small delay lets React replace the <video key> element before we call play
-    const t = setTimeout(() => {
-      const v = videoRef.current;
-      if (!v) return;
-      v.muted = true;
-      v.load();
-      v.play().then(() => {
-        setIsPlaying(true);
-        onPlayingChange?.(true);
-      }).catch(() => {
-        // autoplay blocked or video not ready — onCanPlay will retry
-      });
-    }, 50);
-    return () => clearTimeout(t);
   }, [clip?.id]);
 
   const goTo = useCallback((idx: number) => {
