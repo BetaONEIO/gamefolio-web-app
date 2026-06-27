@@ -201,16 +201,6 @@ export default function LatestContentSlider() {
             </button>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <button onClick={goPrev} className="w-7 h-7 rounded-full flex items-center justify-center"
-            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)" }}>
-            <ChevronLeft className="w-3.5 h-3.5 text-white" />
-          </button>
-          <button onClick={goNext} className="w-7 h-7 rounded-full flex items-center justify-center"
-            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)" }}>
-            <ChevronRight className="w-3.5 h-3.5 text-white" />
-          </button>
-        </div>
       </div>
 
       {/* Main layout */}
@@ -311,6 +301,22 @@ export default function LatestContentSlider() {
                 <span className="text-[8px] text-white/40 font-bold">scroll</span>
                 <ChevronRight className="w-3 h-3 text-white/50" />
               </div>
+            </div>
+
+            {/* Nav arrows — bottom centre */}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); goPrev(); }}
+                className="w-8 h-8 rounded-full flex items-center justify-center transition-opacity hover:opacity-100 opacity-70"
+                style={{ background: "rgba(0,0,0,0.70)", backdropFilter: "blur(4px)" }}>
+                <ChevronLeft className="w-4 h-4 text-white" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); goNext(); }}
+                className="w-8 h-8 rounded-full flex items-center justify-center transition-opacity hover:opacity-100 opacity-70"
+                style={{ background: "rgba(0,0,0,0.70)", backdropFilter: "blur(4px)" }}>
+                <ChevronRight className="w-4 h-4 text-white" />
+              </button>
             </div>
           </div>
 
