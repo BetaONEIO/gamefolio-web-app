@@ -365,11 +365,18 @@ export default function TrendingHeroSlide({
                 ref={videoRef}
                 key={clip.id}
                 src={clip.videoUrl}
+                poster={clip.thumbnailUrl ?? undefined}
+                preload="auto"
                 className="absolute inset-0 w-full h-full object-cover"
                 muted
                 autoPlay
                 playsInline
                 onCanPlay={(e) => {
+                  const v = e.currentTarget;
+                  v.muted = true;
+                  v.play().then(() => { setIsPlaying(true); onPlayingChange?.(true); }).catch(() => {});
+                }}
+                onLoadedData={(e) => {
                   const v = e.currentTarget;
                   v.muted = true;
                   v.play().then(() => { setIsPlaying(true); onPlayingChange?.(true); }).catch(() => {});
@@ -423,20 +430,22 @@ export default function TrendingHeroSlide({
           </div>
         </button>
 
-        {/* Left arrow — centered vertically */}
+        {/* Left arrow — centered on slide */}
         <button
           onClick={(e) => { e.stopPropagation(); if (!isScrollingRef.current) goPrev(); }}
-          className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/55 hover:bg-black/80 flex items-center justify-center text-white transition-colors"
+          className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/60 hover:bg-black/85 backdrop-blur-sm flex items-center justify-center text-white transition-colors shadow-lg"
+          aria-label="Previous clip"
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="w-6 h-6" />
         </button>
 
-        {/* Right arrow — centered vertically */}
+        {/* Right arrow — centered on slide */}
         <button
           onClick={(e) => { e.stopPropagation(); if (!isScrollingRef.current) goNext(); }}
-          className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/55 hover:bg-black/80 flex items-center justify-center text-white transition-colors"
+          className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/60 hover:bg-black/85 backdrop-blur-sm flex items-center justify-center text-white transition-colors shadow-lg"
+          aria-label="Next clip"
         >
-          <ChevronRight className="w-5 h-5" />
+          <ChevronRight className="w-6 h-6" />
         </button>
 
         {/* Bottom controls */}

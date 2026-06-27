@@ -541,16 +541,6 @@ const HomePage = () => {
           >
             <ChevronRight className="h-5 w-5" />
           </button>
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-2">
-            {HERO_SLIDES.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => { if (!heroScrollingRef.current) goToSlide(idx); }}
-                className={`h-2.5 rounded-full transition-all ${idx === currentSlide ? 'bg-primary w-6' : 'w-2.5 bg-white/50 hover:bg-white/80'}`}
-                aria-label={`Go to slide ${idx + 1}`}
-              />
-            ))}
-          </div>
         </div>
       </section>
 
