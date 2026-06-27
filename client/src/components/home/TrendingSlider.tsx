@@ -159,11 +159,11 @@ export default function TrendingHeroSlide({
     queryKey: ["/api/clips/trending", contentType],
     queryFn: async () => {
       if (contentType === "reels") {
-        const res = await fetch(`/api/clips/reels/trending?limit=8`, { credentials: "include" });
+        const res = await fetch(`/api/clips/reels/trending?limit=8&period=ever`, { credentials: "include" });
         if (!res.ok) return [];
         return res.json();
       }
-      const res = await fetch(`/api/clips/trending?limit=8`, { credentials: "include" });
+      const res = await fetch(`/api/clips/trending?limit=8&period=all`, { credentials: "include" });
       if (!res.ok) return [];
       return res.json();
     },
@@ -194,24 +194,31 @@ export default function TrendingHeroSlide({
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [startTimer, currentIndex]);
 
-  /* Autoplay muted when clip changes */
+  /* Autoplay muted whenever the actual clip changes (fires on index change AND content-type switch) */
   useEffect(() => {
     const vid = videoRef.current;
-    if (!vid) return;
-    vid.pause();
-    vid.load();
     setProgress(0);
     isInteracting.current = false;
+    setIsPlaying(false);
+    onPlayingChange?.(false);
+    if (!vid || !clip?.videoUrl) return;
     vid.muted = true;
     setIsMuted(true);
-    vid.play().then(() => {
-      setIsPlaying(true);
-      onPlayingChange?.(true);
-    }).catch(() => {
-      setIsPlaying(false);
-      onPlayingChange?.(false);
-    });
-  }, [currentIndex]);
+    // Small delay lets React replace the <video key> element before we call play
+    const t = setTimeout(() => {
+      const v = videoRef.current;
+      if (!v) return;
+      v.muted = true;
+      v.load();
+      v.play().then(() => {
+        setIsPlaying(true);
+        onPlayingChange?.(true);
+      }).catch(() => {
+        // autoplay blocked or video not ready — onCanPlay will retry
+      });
+    }, 50);
+    return () => clearTimeout(t);
+  }, [clip?.id]);
 
   const goTo = useCallback((idx: number) => {
     setCurrentIndex(idx); startTimer();
@@ -323,23 +330,37 @@ export default function TrendingHeroSlide({
         {/* Media */}
         {clip ? (
           clip.videoUrl ? (
-            <video
-              ref={videoRef}
-              key={clip.id}
-              src={clip.videoUrl}
-              poster={clip.thumbnailUrl || undefined}
-              className="absolute inset-0 w-full h-full object-cover"
-              muted
-              autoPlay
-              playsInline
-              onCanPlay={(e) => {
-                const v = e.currentTarget;
-                v.muted = true;
-                v.play().then(() => { setIsPlaying(true); onPlayingChange?.(true); }).catch(() => {});
-              }}
-              onEnded={handleVideoEnded}
-              onTimeUpdate={handleTimeUpdate}
-            />
+            <div className="absolute inset-0">
+              {/* Thumbnail shown immediately as background while video buffers */}
+              {clip.thumbnailUrl && (
+                <img
+                  src={clip.thumbnailUrl}
+                  alt=""
+                  aria-hidden
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              )}
+              <video
+                ref={videoRef}
+                key={clip.id}
+                src={clip.videoUrl}
+                className="absolute inset-0 w-full h-full object-cover"
+                muted
+                autoPlay
+                playsInline
+                onCanPlay={(e) => {
+                  const v = e.currentTarget;
+                  v.muted = true;
+                  v.play().then(() => { setIsPlaying(true); onPlayingChange?.(true); }).catch(() => {});
+                }}
+                onEnded={handleVideoEnded}
+                onTimeUpdate={handleTimeUpdate}
+                onError={() => {
+                  setIsPlaying(false);
+                  onPlayingChange?.(false);
+                }}
+              />
+            </div>
           ) : clip.thumbnailUrl ? (
             <img
               key={clip.id}
