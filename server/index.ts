@@ -135,6 +135,18 @@ app.use((req, res, next) => {
   next();
 });
 
+// Prevent browsers from caching HTML responses in development so Vite HMR
+// changes are always visible without manual cache clearing.
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/@') && !req.path.includes('.')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+    }
+    next();
+  });
+}
+
 // IMPORTANT: Register webhook routes BEFORE express.json() middleware
 // Webhooks need raw body for signature verification
 app.use(gfWebhookRoutes);
