@@ -381,12 +381,20 @@ export default function TrendingHeroSlide({
           </div>
         </button>
 
-        {/* Left arrow */}
+        {/* Left arrow — centered vertically */}
         <button
           onClick={(e) => { e.stopPropagation(); goPrev(); }}
           className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/55 hover:bg-black/80 flex items-center justify-center text-white transition-colors"
         >
           <ChevronLeft className="w-5 h-5" />
+        </button>
+
+        {/* Right arrow — centered vertically */}
+        <button
+          onClick={(e) => { e.stopPropagation(); goNext(); }}
+          className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/55 hover:bg-black/80 flex items-center justify-center text-white transition-colors"
+        >
+          <ChevronRight className="w-5 h-5" />
         </button>
 
         {/* Bottom controls */}
@@ -414,21 +422,6 @@ export default function TrendingHeroSlide({
             >
               {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
             </button>
-          </div>
-          {/* Dot indicators */}
-          <div className="flex items-center gap-1.5 mb-2">
-            {clips.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={(e) => { e.stopPropagation(); goTo(idx); }}
-                className="rounded-full transition-all duration-300"
-                style={{
-                  height: 5,
-                  width: idx === currentIndex ? 18 : 5,
-                  background: idx === currentIndex ? NEON : "rgba(255,255,255,0.32)",
-                }}
-              />
-            ))}
           </div>
           {/* Progress bar */}
           <div className="h-[2px] w-full rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.15)" }}>
