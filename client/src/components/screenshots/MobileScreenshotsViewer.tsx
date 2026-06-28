@@ -547,7 +547,12 @@ export const MobileScreenshotsViewer: React.FC<{
   screenshots: ScreenshotWithUser[];
   onBack: () => void;
   startId?: number;
-}> = ({ screenshots, onBack, startId }) => {
+}> = ({ screenshots: rawScreenshots, onBack, startId }) => {
+  // Guard against screenshots whose author record is missing (the API LEFT-JOINs
+  // users and returns `user: null` for deleted/orphaned authors). Without this,
+  // ScreenshotFeedCard dereferences `screenshot.user.id` on render and throws,
+  // taking down the whole viewer via the feature error boundary.
+  const screenshots = (rawScreenshots ?? []).filter((s) => s && s.user && s.user.id);
   const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 

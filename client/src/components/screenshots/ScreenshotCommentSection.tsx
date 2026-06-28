@@ -129,7 +129,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
     if (!newComment.trim()) return;
     
     if (!user) {
-      setShowJoinDialog(true);
+      openModal('login');
       return;
     }
 
