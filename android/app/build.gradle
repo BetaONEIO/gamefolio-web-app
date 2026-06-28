@@ -39,6 +39,14 @@ android {
             signingConfig signingConfigs.release
         }
     }
+    // 16 KB page-size support (Android 15+): store native libs uncompressed so
+    // AGP 8.5.1+ zip-aligns them to 16 KB (extractNativeLibs=false). Fixes the
+    // Play Console "Recompile with 16 KB native library alignment" warning.
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
 }
 
 repositories {
