@@ -8,6 +8,47 @@ import { promisify } from 'util';
 
 const scryptAsync = promisify(scrypt);
 
+async function ensureBabyTomlinsonAccount() {
+  try {
+    const username = 'baby_tomlinson';
+    const [existing] = await db.select().from(users).where(eq(users.username, username));
+    if (existing) return;
+
+    const salt = randomBytes(16).toString('hex');
+    const buf = (await scryptAsync('BabyT2026!', salt, 64)) as Buffer;
+    const hashed = `${buf.toString('hex')}.${salt}`;
+
+    await db.insert(users).values({
+      username,
+      displayName: 'Baby Tomlinson 👶🎮',
+      password: hashed,
+      bio: 'Level 1 gamer. Expert at drooling on controllers. Respawn speed: 9 months. Currently mastering the art of not falling asleep mid-match. 👶🍼🎮',
+      email: null,
+      emailVerified: true,
+      role: 'user',
+      status: 'active',
+      isPro: false,
+      isPartner: false,
+      level: 1,
+      totalXP: 0,
+      messagingEnabled: true,
+      isPrivate: false,
+      authProvider: 'local',
+      userType: 'Casual Gamer',
+      showUserType: true,
+      backgroundColor: '#1a0a2e',
+      cardColor: '#2d1b4e',
+      accentColor: '#ff6eb4',
+      primaryColor: '#1a0a2e',
+      avatarBorderColor: '#ff6eb4',
+      layoutStyle: 'grid',
+    } as any);
+    log('baby_tomlinson account created');
+  } catch (err) {
+    console.error('Failed to ensure baby_tomlinson account:', err);
+  }
+}
+
 async function ensureOnboardingTestAccount() {
   try {
     const email = 'onboarding@gamefolio.com';
@@ -193,6 +234,9 @@ app.use((req, res, next) => {
 
     // Load XP settings from DB and sync into POINT_VALUES
     await loadXpSettingsFromDB();
+
+    // Ensure special accounts exist in whichever DB this environment uses
+    await ensureBabyTomlinsonAccount();
 
     // Serve static email assets
     app.use('/static/email-assets', express.static(path.join(__dirname, 'static/email-assets')));
