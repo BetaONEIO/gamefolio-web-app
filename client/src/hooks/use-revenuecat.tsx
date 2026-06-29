@@ -1,44 +1,100 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode, useRef } from "react";
-import { Purchases, CustomerInfo, Offerings, Package, Offering } from "@revenuecat/purchases-js";
+import { Purchases as WebPurchases } from "@revenuecat/purchases-js";
+import type { Package as WebPackage } from "@revenuecat/purchases-js";
+import type { PurchasesPackage as NativePackage } from "@revenuecat/purchases-capacitor";
+import { isNative, platform } from "@/lib/platform";
 import { useAuth } from "./use-auth";
 import { useToast } from "./use-toast";
 import { queryClient } from "@/lib/queryClient";
+
+// Minimal CustomerInfo shape the app actually reads. Both the native
+// StoreKit/Play SDK (@revenuecat/purchases-capacitor) and the web Billing SDK
+// (@revenuecat/purchases-js) return objects that satisfy this.
+export interface RcCustomerInfo {
+  entitlements: { active: Record<string, { expirationDate?: string | null } | undefined> };
+  managementURL: string | null;
+}
+
+// SDK-agnostic package the paywall renders and purchases. `_native` / `_web`
+// hold the raw package needed to actually run the purchase on the right SDK.
+export interface RcPackage {
+  identifier: string;
+  priceFormatted: string;
+  priceAmount: number;
+  currency: string;
+  displayName: string;
+  _native?: NativePackage;
+  _web?: WebPackage;
+}
 
 type RevenueCatContextType = {
   isInitialized: boolean;
   isLoading: boolean;
   isPro: boolean;
-  customerInfo: CustomerInfo | null;
-  offerings: Offerings | null;
+  customerInfo: RcCustomerInfo | null;
   refreshCustomerInfo: () => Promise<void>;
-  purchasePackage: (pkg: Package, containerElement?: HTMLElement) => Promise<boolean>;
-  presentPaywall: (containerElement: HTMLElement) => Promise<boolean>;
-  getCurrentOffering: () => Package[] | null;
-  currentOffering: Offering | null;
+  purchasePackage: (pkg: RcPackage) => Promise<boolean>;
+  getCurrentOffering: () => RcPackage[] | null;
 };
 
 const RevenueCatContext = createContext<RevenueCatContextType | null>(null);
 
 const PRO_ENTITLEMENT_ID = "pro";
 
+function pickKey(v: unknown): string | null {
+  return typeof v === "string" && v.trim() !== "" ? v.trim() : null;
+}
+
+// RevenueCat issues a SEPARATE public API key per store: Apple App Store
+// (appl_…), Google Play (goog_…) and Web Billing (rcb_…). A native purchase
+// only works with the matching store key, so we select by platform. Falls back
+// to the legacy single VITE_REVENUECAT_API_KEY (web Billing) when a
+// platform-specific key isn't set.
 function getRevenueCatApiKey(): string | null {
-  const apiKey = import.meta.env.VITE_REVENUECAT_API_KEY;
-  if (!apiKey || typeof apiKey !== "string" || apiKey.trim() === "") {
-    return null;
+  if (platform === "ios") {
+    return pickKey(import.meta.env.VITE_REVENUECAT_API_KEY_IOS) ?? pickKey(import.meta.env.VITE_REVENUECAT_API_KEY);
   }
-  return apiKey.trim();
+  if (platform === "android") {
+    return pickKey(import.meta.env.VITE_REVENUECAT_API_KEY_ANDROID) ?? pickKey(import.meta.env.VITE_REVENUECAT_API_KEY);
+  }
+  return pickKey(import.meta.env.VITE_REVENUECAT_API_KEY_WEB) ?? pickKey(import.meta.env.VITE_REVENUECAT_API_KEY);
+}
+
+function normalizeNative(pkg: NativePackage): RcPackage {
+  return {
+    identifier: pkg.identifier,
+    priceFormatted: pkg.product.priceString,
+    priceAmount: pkg.product.price,
+    currency: pkg.product.currencyCode,
+    displayName: pkg.product.title,
+    _native: pkg,
+  };
+}
+
+function normalizeWeb(pkg: WebPackage): RcPackage {
+  const price = pkg.rcBillingProduct?.currentPrice;
+  return {
+    identifier: pkg.identifier,
+    priceFormatted: price?.formattedPrice ?? "",
+    priceAmount: (price?.amountMicros ?? 0) / 1_000_000,
+    currency: price?.currency ?? "USD",
+    displayName: pkg.rcBillingProduct?.displayName ?? "Pro",
+    _web: pkg,
+  };
 }
 
 export function RevenueCatProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const purchasesRef = useRef<Purchases | null>(null);
+  const webInstanceRef = useRef<ReturnType<typeof WebPurchases.getSharedInstance> | null>(null);
+  const nativeConfiguredRef = useRef(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
-  const [offerings, setOfferings] = useState<Offerings | null>(null);
+  const [customerInfo, setCustomerInfo] = useState<RcCustomerInfo | null>(null);
+  const [hasProEntitlement, setHasProEntitlement] = useState(false);
+  const [packages, setPackages] = useState<RcPackage[] | null>(null);
 
-  const isPro = customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined || user?.isPro === true;
+  const isPro = hasProEntitlement || user?.isPro === true;
 
   const syncProStatusWithBackend = useCallback(async (proStatus: boolean) => {
     try {
@@ -55,66 +111,91 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const apiKey = getRevenueCatApiKey();
-    
     if (!user?.id) {
-      purchasesRef.current = null;
+      webInstanceRef.current = null;
+      nativeConfiguredRef.current = false;
       setIsInitialized(false);
       setCustomerInfo(null);
-      setOfferings(null);
+      setHasProEntitlement(false);
+      setPackages(null);
       return;
     }
-    
+
+    const apiKey = getRevenueCatApiKey();
     if (!apiKey) {
-      console.warn("RevenueCat API key not configured. Subscription features will be limited.");
+      console.warn(`RevenueCat API key not configured for "${platform}". Subscription purchases are disabled on this platform.`);
       setIsInitialized(true);
       return;
     }
 
-    const initRevenueCat = async () => {
-      try {
-        Purchases.configure({
-          apiKey: apiKey,
-          appUserId: `gamefolio_${user.id}`,
-        });
+    let cancelled = false;
+    const appUserId = `gamefolio_${user.id}`;
 
-        const instance = Purchases.getSharedInstance();
-        purchasesRef.current = instance;
-
-        const [info, offers] = await Promise.all([
-          instance.getCustomerInfo(),
-          instance.getOfferings(),
-        ]);
-
-        setCustomerInfo(info);
-        setOfferings(offers);
-        setIsInitialized(true);
-
-        if (info.entitlements?.active?.[PRO_ENTITLEMENT_ID] && !user.isPro) {
-          await syncProStatusWithBackend(true);
-        }
-      } catch (error) {
-        console.error("Failed to initialize RevenueCat:", error);
-        setIsInitialized(true);
-      }
+    const finish = (info: RcCustomerInfo, pkgs: RcPackage[] | null) => {
+      if (cancelled) return;
+      setCustomerInfo(info);
+      const pro = info.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined;
+      setHasProEntitlement(pro);
+      setPackages(pkgs);
+      setIsInitialized(true);
+      if (pro && !user.isPro) void syncProStatusWithBackend(true);
     };
 
-    initRevenueCat();
-  }, [user?.id, user?.isPro, syncProStatusWithBackend]);
+    // Native (iOS/Android): real StoreKit / Play Billing via the Capacitor
+    // plugin. Dynamically imported so its native bridge is never pulled into
+    // the web bundle.
+    const initNative = async () => {
+      const { Purchases } = await import("@revenuecat/purchases-capacitor");
+      await Purchases.configure({ apiKey, appUserID: appUserId });
+      nativeConfiguredRef.current = true;
+      const [{ customerInfo: info }, offerings] = await Promise.all([
+        Purchases.getCustomerInfo(),
+        Purchases.getOfferings(),
+      ]);
+      const current = offerings.current;
+      finish(info as unknown as RcCustomerInfo, current ? current.availablePackages.map(normalizeNative) : null);
+    };
+
+    // Web: RevenueCat Web Billing SDK. NB the paywall itself purchases via
+    // Stripe Checkout (see ProUpgradeDialog); here the SDK is used for the
+    // entitlement/customer-info read on web.
+    const initWeb = async () => {
+      WebPurchases.configure({ apiKey, appUserId });
+      const instance = WebPurchases.getSharedInstance();
+      webInstanceRef.current = instance;
+      const [info, offers] = await Promise.all([instance.getCustomerInfo(), instance.getOfferings()]);
+      const current = offers.current;
+      finish(info as unknown as RcCustomerInfo, current ? current.availablePackages.map(normalizeWeb) : null);
+    };
+
+    (isNative ? initNative() : initWeb()).catch((error) => {
+      console.error("Failed to initialize RevenueCat:", error);
+      if (!cancelled) setIsInitialized(true);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const refreshCustomerInfo = useCallback(async () => {
-    const purchases = purchasesRef.current;
-    if (!purchases) return;
-    
     setIsLoading(true);
     try {
-      const info = await purchases.getCustomerInfo();
-      setCustomerInfo(info);
-
-      const hasPro = info.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined;
-      if (hasPro !== user?.isPro) {
-        await syncProStatusWithBackend(hasPro);
+      let info: RcCustomerInfo | null = null;
+      if (isNative) {
+        if (!nativeConfiguredRef.current) return;
+        const { Purchases } = await import("@revenuecat/purchases-capacitor");
+        const res = await Purchases.getCustomerInfo();
+        info = res.customerInfo as unknown as RcCustomerInfo;
+      } else {
+        const instance = webInstanceRef.current;
+        if (!instance) return;
+        info = (await instance.getCustomerInfo()) as unknown as RcCustomerInfo;
       }
+      setCustomerInfo(info);
+      const pro = info.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined;
+      setHasProEntitlement(pro);
+      if (pro !== (user?.isPro === true)) await syncProStatusWithBackend(pro);
     } catch (error) {
       console.error("Failed to refresh customer info:", error);
     } finally {
@@ -122,28 +203,39 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.isPro, syncProStatusWithBackend]);
 
-  const purchasePackage = useCallback(async (pkg: Package, containerElement?: HTMLElement): Promise<boolean> => {
-    const purchases = purchasesRef.current;
-    if (!purchases) {
+  const purchasePackage = useCallback(async (pkg: RcPackage): Promise<boolean> => {
+    const notReady = () =>
       toast({
-        title: "Not initialized",
+        title: "Not ready",
         description: "Please wait while we set up the payment system.",
         variant: "destructive",
       });
-      return false;
-    }
 
     setIsLoading(true);
     try {
-      const result = await purchases.purchase({
-        rcPackage: pkg,
-        customerEmail: user?.email || undefined,
-      });
-      
-      setCustomerInfo(result.customerInfo);
+      let info: RcCustomerInfo;
+      if (isNative) {
+        if (!nativeConfiguredRef.current || !pkg._native) {
+          notReady();
+          return false;
+        }
+        const { Purchases } = await import("@revenuecat/purchases-capacitor");
+        const result = await Purchases.purchasePackage({ aPackage: pkg._native });
+        info = result.customerInfo as unknown as RcCustomerInfo;
+      } else {
+        const instance = webInstanceRef.current;
+        if (!instance || !pkg._web) {
+          notReady();
+          return false;
+        }
+        const result = await instance.purchase({ rcPackage: pkg._web, customerEmail: user?.email || undefined });
+        info = result.customerInfo as unknown as RcCustomerInfo;
+      }
 
-      const hasPro = result.customerInfo.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined;
-      if (hasPro) {
+      setCustomerInfo(info);
+      const pro = info.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined;
+      if (pro) {
+        setHasProEntitlement(true);
         await syncProStatusWithBackend(true);
         toast({
           title: "Welcome to Gamefolio Pro!",
@@ -152,10 +244,10 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
         });
         return true;
       }
-
       return false;
     } catch (error: any) {
-      if (error?.errorCode === "UserCancelledError" || error?.message?.includes("cancelled")) {
+      // User dismissed the store sheet — not an error worth surfacing.
+      if (error?.userCancelled || error?.errorCode === "UserCancelledError" || /cancel/i.test(error?.message || "")) {
         return false;
       }
       console.error("Purchase failed:", error);
@@ -170,58 +262,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.email, toast, syncProStatusWithBackend]);
 
-  const getCurrentOffering = useCallback((): Package[] | null => {
-    if (!offerings?.current) return null;
-    return offerings.current.availablePackages;
-  }, [offerings]);
-
-  const presentPaywall = useCallback(async (containerElement: HTMLElement): Promise<boolean> => {
-    const purchases = purchasesRef.current;
-    if (!purchases) {
-      toast({
-        title: "Not initialized",
-        description: "Please wait while we set up the payment system.",
-        variant: "destructive",
-      });
-      return false;
-    }
-
-    setIsLoading(true);
-    try {
-      const result = await purchases.presentPaywall({
-        htmlTarget: containerElement,
-        offering: offerings?.current || undefined,
-      });
-      
-      setCustomerInfo(result.customerInfo);
-
-      const hasPro = result.customerInfo.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined;
-      if (hasPro) {
-        await syncProStatusWithBackend(true);
-        toast({
-          title: "Welcome to Gamefolio Pro!",
-          description: "You now have access to all premium features.",
-          variant: "gamefolioSuccess",
-        });
-        return true;
-      }
-
-      return false;
-    } catch (error: any) {
-      if (error?.errorCode === "UserCancelledError" || error?.message?.includes("cancelled")) {
-        return false;
-      }
-      console.error("Paywall error:", error);
-      toast({
-        title: "Payment failed",
-        description: error?.message || "There was an error processing your payment. Please try again.",
-        variant: "destructive",
-      });
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [offerings, toast, syncProStatusWithBackend]);
+  const getCurrentOffering = useCallback((): RcPackage[] | null => packages, [packages]);
 
   return (
     <RevenueCatContext.Provider
@@ -230,12 +271,9 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
         isLoading,
         isPro,
         customerInfo,
-        offerings,
         refreshCustomerInfo,
         purchasePackage,
-        presentPaywall,
         getCurrentOffering,
-        currentOffering: offerings?.current || null,
       }}
     >
       {children}

@@ -4,7 +4,7 @@ import { Crown, Loader2, X, Check, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useAuth } from "@/hooks/use-auth";
-import { Package } from "@revenuecat/purchases-js";
+import type { RcPackage } from "@/hooks/use-revenuecat";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import {
   EmbeddedCheckoutProvider,
@@ -85,26 +85,26 @@ const premiumBenefits = [
 ];
 
 
-function isYearlyPackage(pkg: Package): boolean {
+function isYearlyPackage(pkg: RcPackage): boolean {
   const id = pkg.identifier.toLowerCase();
   return id.includes("annual") || id.includes("yearly") || id.includes("year");
 }
 
-function isMonthlyPackage(pkg: Package): boolean {
+function isMonthlyPackage(pkg: RcPackage): boolean {
   const id = pkg.identifier.toLowerCase();
   return id.includes("monthly") || id.includes("month");
 }
 
-function formatPrice(pkg: Package): string {
-  return pkg.rcBillingProduct?.currentPrice?.formattedPrice || "";
+function formatPrice(pkg: RcPackage): string {
+  return pkg.priceFormatted || "";
 }
 
-function getPriceAmount(pkg: Package): number {
-  return (pkg.rcBillingProduct?.currentPrice?.amountMicros || 0) / 1000000;
+function getPriceAmount(pkg: RcPackage): number {
+  return pkg.priceAmount || 0;
 }
 
-function getCurrency(pkg: Package): string {
-  return pkg.rcBillingProduct?.currentPrice?.currency || "USD";
+function getCurrency(pkg: RcPackage): string {
+  return pkg.currency || "USD";
 }
 
 function formatCurrency(amount: number, currency: string): string {
@@ -398,13 +398,15 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   const canPurchase = isNative ? !!selectedPackage : !!webPricing;
   const buttonDisabled = !onAuthRequired && (isLoading || purchasing || checkoutLoading || !canPurchase || (isNative && !isInitialized));
 
-  // On native (iOS/Android) we do not present any purchase mechanism. Digital
-  // subscriptions must go through StoreKit / Play Billing, which this build
-  // does not implement, and App Store / Play rules forbid steering users to an
-  // external (web) purchase. So the paywall renders as an informational Pro
-  // sheet — benefits only — with a neutral dismiss action instead of a buy
-  // button. Pro is purchased on the web; the entitlement still syncs to native.
-  const showPurchaseUI = !isNative;
+  // On native (iOS/Android), Pro is sold via real StoreKit / Play Billing IAP
+  // (the RevenueCat Capacitor plugin). We only show the purchase UI once
+  // offerings have actually loaded; if RevenueCat isn't configured yet (no
+  // native store key / offline), we fall back to the benefits-only sheet so the
+  // paywall can never regress to an empty/broken state. App Store / Play rules
+  // forbid steering to an external (web) purchase, so there is no web-purchase
+  // fallback on native — the entitlement still syncs from web purchases.
+  const hasNativePackages = !!packages && packages.length > 0;
+  const showPurchaseUI = isNative ? hasNativePackages : true;
 
   const nativeDismissCta = (
     <button
@@ -501,7 +503,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                   <Check className="w-2.5 h-2.5 text-[#071013]" strokeWidth={3} />
                 </div>
                 <div>
-                  <div className="text-white font-semibold text-sm">{packages[0].rcBillingProduct?.displayName || "Pro"}</div>
+                  <div className="text-white font-semibold text-sm">{packages[0].displayName || "Pro"}</div>
                 </div>
               </div>
               <div className="text-right">
