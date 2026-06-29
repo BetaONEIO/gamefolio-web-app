@@ -398,6 +398,25 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   const canPurchase = isNative ? !!selectedPackage : !!webPricing;
   const buttonDisabled = !onAuthRequired && (isLoading || purchasing || checkoutLoading || !canPurchase || (isNative && !isInitialized));
 
+  // On native (iOS/Android) we do not present any purchase mechanism. Digital
+  // subscriptions must go through StoreKit / Play Billing, which this build
+  // does not implement, and App Store / Play rules forbid steering users to an
+  // external (web) purchase. So the paywall renders as an informational Pro
+  // sheet — benefits only — with a neutral dismiss action instead of a buy
+  // button. Pro is purchased on the web; the entitlement still syncs to native.
+  const showPurchaseUI = !isNative;
+
+  const nativeDismissCta = (
+    <button
+      onClick={() => onOpenChange(false)}
+      className="w-full py-3 bg-[#B7FF1A] hover:bg-[#A2F000] rounded-2xl flex items-center justify-center transition-all mt-1"
+      style={{ boxShadow: "0 0 30px -5px #B7FF1A" }}
+      data-testid="button-pro-dismiss-native"
+    >
+      <span className="text-[#071013] text-base font-bold">Got it</span>
+    </button>
+  );
+
   const planSelector = (compact: boolean = false) => {
     const yearlyPerMonth = yearlyView?.perMonthFormatted ?? null;
     const yearlyTotal = yearlyView?.formatted ?? null;
@@ -579,6 +598,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       </div>
 
       <div className="flex flex-col gap-3 mt-auto">
+        {showPurchaseUI ? (
+        <>
         <div className="mb-0.5">
           <span className="text-[#B8C0AE] text-[10px] font-bold uppercase tracking-[1.2px]">
             Choose your plan
@@ -613,6 +634,10 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         <span className="text-[#B8C0AE] text-[11px] text-center">
           Cancel anytime. Terms and conditions apply.
         </span>
+        </>
+        ) : (
+          nativeDismissCta
+        )}
       </div>
     </div>
   );
@@ -734,6 +759,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                     ))}
                   </div>
 
+                  {showPurchaseUI ? (
+                  <>
                   <div className="mb-2">
                     <span className="text-[#B8C0AE] text-[10px] font-bold uppercase tracking-[1px]">
                       Choose your plan
@@ -764,6 +791,10 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                   <span className="text-[#B8C0AE] text-[11px] text-center block mt-2">
                     Cancel anytime. Terms and conditions apply.
                   </span>
+                  </>
+                  ) : (
+                    <div className="mt-3">{nativeDismissCta}</div>
+                  )}
                 </div>
               </div>
 
