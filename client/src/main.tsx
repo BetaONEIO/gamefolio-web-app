@@ -32,6 +32,10 @@ import { initEmailJS } from "./services/email-service";
 import { installNativeFetchPatch } from "./lib/platform";
 import { initMobileShell } from "./lib/mobile-init";
 import { ensureHydrated as ensureAuthTokensHydrated } from "./lib/auth-token";
+import { initSentry } from "./lib/sentry";
+
+// First thing: start crash/error reporting so even startup failures are caught.
+initSentry();
 
 installNativeFetchPatch();
 void initMobileShell();
