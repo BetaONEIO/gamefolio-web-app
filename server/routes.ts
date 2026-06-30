@@ -62,6 +62,13 @@ import migrationRouter from "./routes/migration";
 import viewRouter from "./routes/view";
 import supportRouter from "./routes/support";
 import { reportsRouter } from "./routes/reports";
+import {
+  fetchRevenueCatSubscriber,
+  isEntitlementActive,
+  parsePlanFromEntitlement,
+  getEndDateFromEntitlement,
+  PRO_ENTITLEMENT_ID,
+} from "./routes/revenuecat";
 import mintNftRouter from "./routes/mint-nft";
 import linkedWalletsRouter from "./routes/linked-wallets";
 import quickSellRouter from "./routes/quick-sell";
@@ -13759,9 +13766,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentUser = await storage.getUserById(userId);
       const wasNotPro = !currentUser?.isPro;
 
+      // When the client claims Pro, verify the entitlement server-side with
+      // RevenueCat before granting — this endpoint otherwise trusts a
+      // client-sent boolean, which a modified client could abuse to self-grant
+      // Pro + lootboxes. appUserId is deterministic (`gamefolio_<userId>`).
+      // If the RC secret key isn't configured we fall back to trusting the
+      // client so a misconfigured server never blocks a legitimate purchase.
+      let verifiedPlan: 'monthly' | 'yearly' | undefined;
+      let verifiedEndDate: Date | undefined;
+      if (isPro && process.env.REVENUECAT_API_KEY) {
+        try {
+          const rcData = await fetchRevenueCatSubscriber(`gamefolio_${userId}`);
+          const entitlement = rcData?.subscriber?.entitlements?.[PRO_ENTITLEMENT_ID];
+          if (!isEntitlementActive(entitlement)) {
+            return res.status(403).json({ message: "No active Pro entitlement found" });
+          }
+          verifiedPlan = parsePlanFromEntitlement(entitlement);
+          verifiedEndDate = getEndDateFromEntitlement(entitlement);
+        } catch (err: any) {
+          console.warn(`[subscription/sync] RevenueCat verification unavailable, trusting client: ${err?.message}`);
+        }
+      }
+
       // Update user's Pro status in database
-      await db.update(users).set({ 
+      await db.update(users).set({
         isPro,
+        ...(isPro ? { revenuecatUserId: `gamefolio_${userId}` } : {}),
+        ...(verifiedPlan ? { proSubscriptionType: verifiedPlan } : {}),
+        ...(verifiedEndDate ? { proSubscriptionEndDate: verifiedEndDate } : {}),
         updatedAt: new Date()
       }).where(eq(users.id, userId));
 
