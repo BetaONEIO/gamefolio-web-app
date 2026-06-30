@@ -134,6 +134,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     password?: string;
     confirmPassword?: string;
     dateOfBirth?: string;
+    terms?: string;
   }>({});
   const { toast } = useToast();
   const { registerMutation } = useAuth();
@@ -357,6 +358,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     }
 
     if (!agreedToTerms) {
+      setFieldErrors({ terms: "Please accept the Terms & Conditions and Privacy Policy to continue" });
       toast({
         title: "Error",
         description: "You must agree to the Terms & Conditions and Privacy Policy to register",
@@ -589,7 +591,10 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           type="checkbox"
           id="agree-terms"
           checked={agreedToTerms}
-          onChange={(e) => setAgreedToTerms(e.target.checked)}
+          onChange={(e) => {
+            setAgreedToTerms(e.target.checked);
+            if (e.target.checked) setFieldErrors((prev) => ({ ...prev, terms: undefined }));
+          }}
           disabled={isLoading}
           className="mt-1 h-4 w-4 rounded border-gray-600 bg-gray-800 text-primary focus:ring-primary accent-primary cursor-pointer"
         />
@@ -604,6 +609,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           </button>
         </label>
       </div>
+      <FieldError error={fieldErrors.terms} />
 
       <Dialog open={showTerms} onOpenChange={setShowTerms}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700">
