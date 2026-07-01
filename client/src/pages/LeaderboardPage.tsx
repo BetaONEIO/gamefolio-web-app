@@ -137,7 +137,7 @@ const LeaderboardPage = () => {
   const getRankStyles = (rank: number) => {
     if (rank === 1) {
       return {
-        cardBg: "bg-[#1a1200]",
+        cardBg: "lb-bg-gold",
         cardBorder: "border-[#f0b100]",
         cardGlow: "lb-glow-gold",
         avatarBorder: "border-[#f0b100]",
@@ -148,7 +148,7 @@ const LeaderboardPage = () => {
     }
     if (rank === 2) {
       return {
-        cardBg: "bg-[#121212]",
+        cardBg: "lb-bg-silver",
         cardBorder: "border-[#c0c0c0]",
         cardGlow: "lb-glow-silver",
         avatarBorder: "border-[#c0c0c0]",
@@ -159,7 +159,7 @@ const LeaderboardPage = () => {
     }
     if (rank === 3) {
       return {
-        cardBg: "bg-[#1a0a00]",
+        cardBg: "lb-bg-bronze",
         cardBorder: "border-[#f54900]",
         cardGlow: "lb-glow-bronze",
         avatarBorder: "border-[#f54900]",
@@ -428,6 +428,23 @@ const LeaderboardPage = () => {
 .lb-glow-gold { animation: lb-card-gold-pulse 2.5s ease-in-out infinite; }
 .lb-glow-silver { animation: lb-card-silver-pulse 2.8s ease-in-out infinite; }
 .lb-glow-bronze { animation: lb-card-bronze-pulse 3.2s ease-in-out infinite; }
+
+/* Gradient mesh backgrounds for leaderboard list cards */
+.lb-bg-gold {
+  background: radial-gradient(ellipse at 20% 0%, rgba(255,215,0,0.18) 0%, transparent 50%),
+              radial-gradient(ellipse at 80% 100%, rgba(240,177,0,0.12) 0%, transparent 50%),
+              linear-gradient(135deg, #1a1200 0%, #0f0a00 100%);
+}
+.lb-bg-silver {
+  background: radial-gradient(ellipse at 20% 0%, rgba(210,210,210,0.15) 0%, transparent 50%),
+              radial-gradient(ellipse at 80% 100%, rgba(160,160,160,0.10) 0%, transparent 50%),
+              linear-gradient(135deg, #161616 0%, #0a0a0a 100%);
+}
+.lb-bg-bronze {
+  background: radial-gradient(ellipse at 20% 0%, rgba(205,127,50,0.15) 0%, transparent 50%),
+              radial-gradient(ellipse at 80% 100%, rgba(180,80,20,0.10) 0%, transparent 50%),
+              linear-gradient(135deg, #1a0a00 0%, #0f0500 100%);
+}
 `;
 
   return (
