@@ -309,6 +309,20 @@ const HomePage = () => {
     };
   }, []);
 
+  // Top 3 leaderboard entries for the hero slide
+  const { data: leaderboardTop3 } = useQuery<Array<{
+    rank: number; totalPoints: number; userId: number;
+    user: { username: string; displayName?: string | null; avatarUrl?: string | null; level?: number | null; };
+  }>>({
+    queryKey: ['/api/leaderboard', 'top3'],
+    queryFn: async () => {
+      const res = await fetch('/api/leaderboard?limit=3', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch leaderboard');
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+
   // Query all clips (used for popular clips section)
   const { data: userClips, isLoading: isLoadingUserClips } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/clips`, Date.now()], // Force new query every time
@@ -472,18 +486,63 @@ const HomePage = () => {
                 alt="Leaderboard"
                 className="absolute inset-0 w-full h-full object-cover opacity-40"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
             </div>
-            <div className="absolute inset-0 flex flex-col items-start justify-center max-w-2xl p-8 md:p-12">
+            <div className="absolute inset-0 flex flex-col items-start justify-center p-8 md:p-12">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full" style={{ background: '#B7FF18', color: '#03080A' }}>Live Rankings</span>
               </div>
-              <h1 className="text-3xl md:text-5xl font-black text-white mb-3 leading-tight drop-shadow-md">
+              <h1 className="text-3xl md:text-5xl font-black text-white mb-4 leading-tight drop-shadow-md">
                 Leaderboard
               </h1>
-              <p className="text-white/70 text-base md:text-lg mb-6 max-w-md">
-                See who's dominating. Climb the ranks by uploading clips, getting likes, and building your following.
-              </p>
+
+              {/* Top 3 players */}
+              {leaderboardTop3 && leaderboardTop3.length > 0 ? (
+                <div className="flex flex-col gap-2 mb-6 w-full max-w-sm">
+                  {leaderboardTop3.map((entry) => {
+                    const medalColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
+                    const medal = ['🥇', '🥈', '🥉'][entry.rank - 1] ?? `#${entry.rank}`;
+                    return (
+                      <div
+                        key={entry.userId}
+                        className="flex items-center gap-3 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2 cursor-pointer hover:bg-black/70 transition-colors"
+                        onClick={() => setLocation(`/gamefolio/${entry.user.username}`)}
+                      >
+                        <span className="text-lg w-6 text-center">{medal}</span>
+                        {entry.user.avatarUrl ? (
+                          <img
+                            src={entry.user.avatarUrl}
+                            alt={entry.user.username}
+                            className="w-8 h-8 rounded-full object-cover border-2"
+                            style={{ borderColor: medalColors[entry.rank - 1] ?? '#555' }}
+                          />
+                        ) : (
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-black text-xs font-bold border-2"
+                            style={{ background: medalColors[entry.rank - 1] ?? '#555', borderColor: medalColors[entry.rank - 1] ?? '#555' }}
+                          >
+                            {entry.user.username?.[0]?.toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-bold text-sm truncate leading-none mb-0.5">
+                            {entry.user.displayName || entry.user.username}
+                          </p>
+                          <p className="text-white/50 text-xs">@{entry.user.username}</p>
+                        </div>
+                        <span className="text-xs font-bold tabular-nums" style={{ color: '#B7FF18' }}>
+                          {formatNumber(entry.totalPoints)} pts
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-white/70 text-base md:text-lg mb-6 max-w-md">
+                  See who's dominating. Climb the ranks by uploading clips, getting likes, and building your following.
+                </p>
+              )}
+
               <Button
                 className="px-6 py-5 h-auto text-base font-bold"
                 style={{ background: '#B7FF18', color: '#03080A' }}
