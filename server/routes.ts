@@ -3752,7 +3752,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/leaderboard/monthly/current", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 100;
-      const leaderboardData = await LeaderboardService.getCurrentMonthLeaderboard(limit);
+      let leaderboardData = await LeaderboardService.getCurrentMonthLeaderboard(limit);
+      // Fall back to previous month if current month has no data yet
+      if (!leaderboardData || leaderboardData.length === 0) {
+        leaderboardData = await LeaderboardService.getPreviousMonthLeaderboard(limit);
+      }
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
       console.error("Error fetching current month leaderboard:", error);
@@ -3775,7 +3779,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/leaderboard/weekly/current", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 100;
-      const leaderboardData = await LeaderboardService.getCurrentWeekLeaderboard(limit);
+      let leaderboardData = await LeaderboardService.getCurrentWeekLeaderboard(limit);
+      // Fall back to previous week if current week has no data yet
+      if (!leaderboardData || leaderboardData.length === 0) {
+        leaderboardData = await LeaderboardService.getPreviousWeekLeaderboard(limit);
+      }
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
       console.error("Error fetching current week leaderboard:", error);
@@ -3803,8 +3811,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let leaderboardData: Array<{ userId: number; uploadsCount: number; totalPoints: number; rank?: number; user: any }>;
       if (period === 'month') {
         leaderboardData = await LeaderboardService.getCurrentMonthLeaderboard(limit);
+        // Fall back to previous month if current month has no data yet
+        if (!leaderboardData || leaderboardData.length === 0) {
+          leaderboardData = await LeaderboardService.getPreviousMonthLeaderboard(limit);
+        }
       } else if (period === 'week') {
         leaderboardData = await LeaderboardService.getCurrentWeekLeaderboard(limit);
+        // Fall back to previous week if current week has no data yet
+        if (!leaderboardData || leaderboardData.length === 0) {
+          leaderboardData = await LeaderboardService.getPreviousWeekLeaderboard(limit);
+        }
       } else {
         leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
       }
