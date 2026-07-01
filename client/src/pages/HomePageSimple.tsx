@@ -758,6 +758,12 @@ const HomePage = () => {
                                 );
                               })}
                             </div>
+                            <button
+                              onClick={() => setLocation('/leaderboard')}
+                              className="mt-3 w-full py-2 rounded-lg text-[11px] font-black tracking-wide transition-all hover:opacity-90 active:scale-95 flex-shrink-0"
+                              style={{ background:'#B7FF18', color:'#0B1319' }}>
+                              View Leaderboard →
+                            </button>
                           </div>
 
                           </div>{/* end columns row */}
