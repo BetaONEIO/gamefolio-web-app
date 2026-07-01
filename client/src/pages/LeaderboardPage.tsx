@@ -447,17 +447,17 @@ const LeaderboardPage = () => {
                 <Skeleton className="w-52 h-80 rounded-2xl bg-slate-700" />
               </div>
             ) : top3.length > 0 ? (
-              <div className="flex items-end gap-5 justify-center flex-wrap" style={{ transform:'scale(0.92)', transformOrigin:'center bottom' }}>
-                {/* 2nd */}
+              <div className="flex items-end gap-4 justify-center flex-wrap" style={{ transform:'scale(0.92)', transformOrigin:'center bottom' }}>
+                {/* 2nd (left) */}
                 {top3[1] && (
-                  <div className="flex flex-col items-center" style={{ transform:'translateY(0)' }}>
+                  <div className="flex flex-col items-center">
                     <div className="lb-card-2">
                       <CreatorCard entry={toTrendingEntry(top3[1])} period={activeTab === 'monthly' ? 'month' : activeTab === 'alltime' ? 'alltime' : 'week'} />
                     </div>
                     <img src={PODIUM_IMG[2]} alt="#2 podium" style={{ width: PODIUM_W[2], height: PODIUM_H[2], objectFit:'contain', marginTop:-22, filter:PODIUM_GLOW[2], position:'relative', zIndex:10 }} />
                   </div>
                 )}
-                {/* 1st */}
+                {/* 1st (center, raised) */}
                 {top3[0] && (
                   <div className="flex flex-col items-center" style={{ transform:'translateY(-28px)' }}>
                     <div className="relative lb-card-1">
@@ -469,9 +469,9 @@ const LeaderboardPage = () => {
                     <img src={PODIUM_IMG[1]} alt="#1 podium" style={{ width: PODIUM_W[1], height: PODIUM_H[1], objectFit:'contain', marginTop:-22, filter:PODIUM_GLOW[1], position:'relative', zIndex:10 }} />
                   </div>
                 )}
-                {/* 3rd */}
+                {/* 3rd (right) */}
                 {top3[2] && (
-                  <div className="flex flex-col items-center" style={{ transform:'translateY(0)' }}>
+                  <div className="flex flex-col items-center">
                     <div className="lb-card-3">
                       <CreatorCard entry={toTrendingEntry(top3[2])} period={activeTab === 'monthly' ? 'month' : activeTab === 'alltime' ? 'alltime' : 'week'} />
                     </div>
