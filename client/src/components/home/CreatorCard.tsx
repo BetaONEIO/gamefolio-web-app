@@ -115,7 +115,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
         style={{ width: 228, height: 408, borderRadius: 16 }}
       >
         <div
-          className="absolute inset-[3px] rounded-[13px] overflow-hidden"
+          className="absolute inset-0 rounded-[inherit] overflow-hidden"
           style={{ zIndex: 2, ...theme.style, backdropFilter: theme.hasCustomBg ? undefined : 'blur(8px)' }}
         >
           {theme.hasCustomBg && (

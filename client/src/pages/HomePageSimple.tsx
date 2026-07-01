@@ -626,7 +626,7 @@ const HomePage = () => {
                                           <div className={cardClass}>
                                             <div className="fire-card flex flex-col items-center justify-center"
                                               style={{ width:228, height:408, borderRadius:16 }}>
-                                              <div className="absolute inset-[3px] rounded-[13px] flex flex-col items-center justify-center gap-2"
+                                              <div className="absolute inset-0 rounded-[inherit] flex flex-col items-center justify-center gap-2"
                                                 style={{ background:'rgba(11,19,25,0.95)' }}>
                                                 <div className="text-4xl">{medal}</div>
                                                 <div className="text-white/30 text-xs font-bold">Could be you!</div>
