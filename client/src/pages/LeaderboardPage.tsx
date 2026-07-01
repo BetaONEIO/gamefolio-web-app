@@ -4,9 +4,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { CreatorCard, CREATOR_CARD_STYLES, TrendingEntry } from "@/components/home/CreatorCard";
 
 interface PointsLeaderboardEntry {
   userId: number;
@@ -356,26 +357,136 @@ const LeaderboardPage = () => {
     </div>
   );
 
+  const [, setLocation] = useLocation();
+
+  /* Build TrendingEntry from PointsLeaderboardEntry so CreatorCard can render it */
+  const toTrendingEntry = (entry: PointsLeaderboardEntry): TrendingEntry => {
+    const u = entry.user as any;
+    return {
+      userId: entry.userId,
+      rank: entry.rank,
+      uploadsCount: entry.uploadsCount,
+      totalPoints: entry.totalPoints,
+      clipsCount: entry.uploadsCount,
+      reelsCount: u?.reelsCount ?? 0,
+      screenshotsCount: u?.screenshotsCount ?? 0,
+      followersCount: u?.followersCount ?? 0,
+      followingCount: u?.followingCount ?? 0,
+      user: {
+        id: u?.id ?? entry.userId,
+        username: u?.username ?? '',
+        displayName: u?.displayName ?? null,
+        avatarUrl: u?.avatarUrl ?? null,
+        bannerUrl: u?.bannerUrl ?? null,
+        avatarBorderColor: entry.rank === 1 ? '#FFD700' : entry.rank === 2 ? '#C0C0C0' : entry.rank === 3 ? '#CD7F32' : null,
+        accentColor: u?.accentColor ?? null,
+        level: u?.level ?? null,
+        backgroundColor: u?.backgroundColor ?? null,
+        primaryColor: u?.primaryColor ?? null,
+        profileBackgroundGradient: u?.profileBackgroundGradient ?? false,
+        profileBackgroundImageUrl: u?.profileBackgroundImageUrl ?? null,
+      },
+    };
+  };
+
+  const top3 = (currentData?.slice(0, 3) ?? []);
+
+  const PODIUM_IMG: Record<number, string> = { 1: '/podium-1st.webp', 2: '/podium-2nd.webp', 3: '/podium-3rd.webp' };
+  const PODIUM_W:  Record<number, number> = { 1: 393, 2: 357, 3: 321 };
+  const PODIUM_H:  Record<number, number> = { 1: 123, 2: 105, 3: 90 };
+  const PODIUM_GLOW: Record<number, string> = {
+    1: 'drop-shadow(0 0 20px rgba(255,215,0,0.9)) drop-shadow(0 6px 14px rgba(255,190,0,0.55))',
+    2: 'drop-shadow(0 0 16px rgba(210,210,210,0.85)) drop-shadow(0 5px 10px rgba(192,192,192,0.5))',
+    3: 'drop-shadow(0 0 14px rgba(205,127,50,0.85)) drop-shadow(0 5px 10px rgba(180,100,30,0.5))',
+  };
+
+  const LB_STYLES = `
+@keyframes lb-sparkle { 0%,100%{transform:scale(1) translateY(0); opacity:.9;} 50%{transform:scale(1.4) translateY(-5px); opacity:.4;} }
+@keyframes lb-orbit { from{transform:rotate(0deg) translateX(105px) rotate(0deg);} to{transform:rotate(360deg) translateX(105px) rotate(-360deg);} }
+@keyframes lb-pulse-gold { 0%,100%{box-shadow:0 0 24px 6px rgba(255,200,50,.4);} 50%{box-shadow:0 0 40px 12px rgba(255,200,50,.65);} }
+@keyframes lb-glow-silver { 0%,100%{box-shadow:0 0 18px 4px rgba(192,192,192,.3);} 50%{box-shadow:0 0 30px 8px rgba(192,192,192,.5);} }
+@keyframes lb-glow-bronze { 0%,100%{box-shadow:0 0 18px 4px rgba(205,127,50,.3);} 50%{box-shadow:0 0 30px 8px rgba(205,127,50,.5);} }
+.lb-card-1 .fire-card { border-color:rgba(255,215,0,.75)!important; animation:lb-pulse-gold 2.4s ease-in-out infinite; }
+.lb-card-2 .fire-card { border-color:rgba(192,192,192,.65)!important; animation:lb-glow-silver 2.8s ease-in-out infinite; }
+.lb-card-3 .fire-card { border-color:rgba(205,127,50,.65)!important; animation:lb-glow-bronze 3.2s ease-in-out infinite; }
+.lb-spark { position:absolute; width:6px; height:6px; border-radius:50%; pointer-events:none; }
+.lb-spark:nth-child(1){animation:lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#FFD700; top:50%; left:50%; margin:-3px; animation-delay:0s,0s;}
+.lb-spark:nth-child(2){animation:lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#B7FF18; top:50%; left:50%; margin:-3px; animation-delay:-0.75s,-0.3s;}
+.lb-spark:nth-child(3){animation:lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#fff; top:50%; left:50%; margin:-3px; animation-delay:-1.5s,-0.6s;}
+.lb-spark:nth-child(4){animation:lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#FFD700; top:50%; left:50%; margin:-3px; animation-delay:-2.25s,-0.9s;}
+.lb-spark:nth-child(5){animation:lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#B7FF18; top:50%; left:50%; margin:-3px; animation-delay:-3s,-1.1s;}
+.lb-spark:nth-child(6){animation:lb-orbit 6.5s linear infinite, lb-sparkle 1.8s ease-in-out infinite; background:#fff; top:50%; left:50%; margin:-3px; animation-delay:-3.75s,-1.4s;}
+`;
+
   return (
     <div className="min-h-screen bg-[#0B1218] overflow-y-auto">
-      <div className="max-w-md lg:max-w-4xl xl:max-w-5xl mx-auto px-6 py-12 pb-32">
-        {/* Hero Section */}
-        <div className="flex flex-col items-center text-center mb-8">
-          {/* Trophy Icon */}
-          <div className="w-20 h-20 rounded-full bg-[#f0b100] flex items-center justify-center mb-4 shadow-[0_4px_6px_-4px_#f0b1004d,0_10px_15px_-3px_#f0b1004d]">
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" clipRule="evenodd" d="M36.6663 13.6034V13.725C36.6663 15.1584 36.6663 15.8767 36.3213 16.4634C35.9763 17.05 35.348 17.3984 34.0947 18.0967L32.773 18.83C33.683 15.75 33.988 12.44 34.0997 9.61003L34.1163 9.2417L34.1197 9.15503C35.2047 9.5317 35.8147 9.81336 36.1947 10.34C36.6663 10.995 36.6663 11.865 36.6663 13.6034Z" fill="white" />
-              <path fillRule="evenodd" clipRule="evenodd" d="M3.33301 13.6034V13.725C3.33301 15.1584 3.33301 15.8767 3.67801 16.4634C4.02301 17.05 4.65134 17.3984 5.90467 18.0967L7.22801 18.83C6.31634 15.75 6.01134 12.44 5.89967 9.61003L5.88301 9.2417L5.88134 9.15503C4.79467 9.5317 4.18467 9.81336 3.80467 10.34C3.33301 10.995 3.33301 11.8667 3.33301 13.6034Z" fill="white" />
-              <path fillRule="evenodd" clipRule="evenodd" d="M27.2523 3.91135C24.8409 3.51634 22.4008 3.32289 19.9573 3.33301C16.9856 3.33301 14.5355 3.59468 12.6622 3.91135C10.7638 4.23135 9.81548 4.39135 9.02214 5.36803C8.23047 6.34471 8.27213 7.39972 8.35547 9.50974C8.64381 16.7565 10.2072 25.8099 18.7073 26.6099V32.5H16.3239C15.5297 32.5005 14.8462 33.0612 14.6905 33.84L14.3739 35.4167H9.95715C9.26679 35.4167 8.70714 35.9763 8.70714 36.6667C8.70714 37.3571 9.26679 37.9167 9.95715 37.9167H29.9574C30.6477 37.9167 31.2074 37.3571 31.2074 36.6667C31.2074 35.9763 30.6477 35.4167 29.9574 35.4167H25.5407L25.224 33.84C25.0683 33.0612 24.3848 32.5005 23.5906 32.5H21.2073V26.6099C29.7074 25.8099 31.2724 16.7582 31.5591 9.50974C31.6424 7.39972 31.6857 6.34304 30.8924 5.36803C30.099 4.39135 29.1507 4.23135 27.2523 3.91135Z" fill="white" />
-            </svg>
+      <div className="max-w-md lg:max-w-4xl xl:max-w-6xl mx-auto px-6 py-12 pb-32">
+        {/* Hero Section — podium with electrical background */}
+        <div className="relative rounded-3xl overflow-hidden mb-10" style={{ minHeight: 520 }}>
+          <div className="absolute inset-0" style={{ backgroundImage:"url('/electrical-bg.webp')", backgroundSize:'cover', backgroundPosition:'center' }} />
+          <div className="absolute inset-0" style={{ background:'linear-gradient(160deg,rgba(5,9,13,0.82) 0%,rgba(8,14,24,0.72) 55%,rgba(5,9,13,0.82) 100%)' }} />
+          <style>{LB_STYLES}{CREATOR_CARD_STYLES}</style>
+
+          <div className="relative flex flex-col items-center py-8 px-4">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-full bg-[#f0b100] flex items-center justify-center shadow-[0_4px_6px_-4px_#f0b1004d,0_10px_15px_-3px_#f0b1004d]">
+                <Trophy className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-slate-50">Community Leaderboard</h1>
+                <p className="text-slate-400 text-xs">Top gamers ranked by engagement and contribution</p>
+              </div>
+            </div>
+
+            {/* Podium row */}
+            {isLoading ? (
+              <div className="flex items-end gap-4 justify-center" style={{ height: 420 }}>
+                <Skeleton className="w-52 h-96 rounded-2xl bg-slate-700" />
+                <Skeleton className="w-52 h-[26rem] rounded-2xl bg-slate-700" />
+                <Skeleton className="w-52 h-80 rounded-2xl bg-slate-700" />
+              </div>
+            ) : top3.length > 0 ? (
+              <div className="flex items-end gap-5 justify-center flex-wrap" style={{ transform:'scale(0.92)', transformOrigin:'center bottom' }}>
+                {/* 2nd */}
+                {top3[1] && (
+                  <div className="flex flex-col items-center" style={{ transform:'translateY(0)' }}>
+                    <div className="lb-card-2">
+                      <CreatorCard entry={toTrendingEntry(top3[1])} period={activeTab === 'monthly' ? 'month' : activeTab === 'alltime' ? 'alltime' : 'week'} />
+                    </div>
+                    <img src={PODIUM_IMG[2]} alt="#2 podium" style={{ width: PODIUM_W[2], height: PODIUM_H[2], objectFit:'contain', marginTop:-22, filter:PODIUM_GLOW[2], position:'relative', zIndex:10 }} />
+                  </div>
+                )}
+                {/* 1st */}
+                {top3[0] && (
+                  <div className="flex flex-col items-center" style={{ transform:'translateY(-28px)' }}>
+                    <div className="relative lb-card-1">
+                      <div className="absolute pointer-events-none" style={{ inset:'-10px', zIndex:10 }}>
+                        {[1,2,3,4,5,6].map(i => <span key={i} className="lb-spark" />)}
+                      </div>
+                      <CreatorCard entry={toTrendingEntry(top3[0])} period={activeTab === 'monthly' ? 'month' : activeTab === 'alltime' ? 'alltime' : 'week'} />
+                    </div>
+                    <img src={PODIUM_IMG[1]} alt="#1 podium" style={{ width: PODIUM_W[1], height: PODIUM_H[1], objectFit:'contain', marginTop:-22, filter:PODIUM_GLOW[1], position:'relative', zIndex:10 }} />
+                  </div>
+                )}
+                {/* 3rd */}
+                {top3[2] && (
+                  <div className="flex flex-col items-center" style={{ transform:'translateY(0)' }}>
+                    <div className="lb-card-3">
+                      <CreatorCard entry={toTrendingEntry(top3[2])} period={activeTab === 'monthly' ? 'month' : activeTab === 'alltime' ? 'alltime' : 'week'} />
+                    </div>
+                    <img src={PODIUM_IMG[3]} alt="#3 podium" style={{ width: PODIUM_W[3], height: PODIUM_H[3], objectFit:'contain', marginTop:-22, filter:PODIUM_GLOW[3], position:'relative', zIndex:10 }} />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-16 text-slate-400">
+                <Trophy className="h-16 w-16 mx-auto mb-4 text-slate-600" />
+                <h3 className="text-lg font-semibold text-slate-50 mb-2">No Rankings Yet</h3>
+                <p className="text-sm">Start uploading clips and engaging with content to appear here!</p>
+              </div>
+            )}
           </div>
-          
-          <h1 className="text-[30px] font-bold text-slate-50 leading-9 mb-2">
-            Community Leaderboard
-          </h1>
-          <p className="text-slate-400 text-sm leading-5 max-w-[342px]">
-            Top gamers ranked by community engagement and content contribution!
-          </p>
         </div>
 
         {/* Tab Pills */}
