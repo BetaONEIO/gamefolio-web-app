@@ -674,7 +674,13 @@ const UploadPage = () => {
               }
             };
             
+            const onAbort = () => {
+              xhr.abort();
+              rejectUpload(new Error('Upload cancelled'));
+            };
+
             xhr.onload = () => {
+              signal.removeEventListener('abort', onAbort);
               if (xhr.status >= 200 && xhr.status < 300) {
                 console.log('Direct Supabase upload complete');
                 setUploadProgress(85);
@@ -684,16 +690,26 @@ const UploadPage = () => {
                 rejectUpload(new Error(`Direct upload to Supabase failed: ${xhr.status}`));
               }
             };
-            
+
+            // Both the request and the upload stream can emit `error` — the
+            // latter fires a raw ProgressEvent that, left unhandled, surfaced in
+            // Sentry as an unhandled "[object ProgressEvent]" rejection. Reject
+            // with a proper Error from every failure path.
             xhr.onerror = () => {
+              signal.removeEventListener('abort', onAbort);
               rejectUpload(new Error('Upload network error'));
             };
-            
-            signal.addEventListener('abort', () => {
-              xhr.abort();
+            xhr.upload.onerror = () => {
+              signal.removeEventListener('abort', onAbort);
+              rejectUpload(new Error('Upload stream error'));
+            };
+            xhr.onabort = () => {
+              signal.removeEventListener('abort', onAbort);
               rejectUpload(new Error('Upload cancelled'));
-            });
-            
+            };
+
+            signal.addEventListener('abort', onAbort, { once: true });
+
             xhr.send(file);
           });
           
@@ -750,7 +766,10 @@ const UploadPage = () => {
             reject(new Error('Upload cancelled'));
           } else {
             console.error('Upload error:', error);
-            reject(error);
+            // Always reject with a real Error. If a raw event (e.g. a
+            // ProgressEvent) ever reaches here it has no `.message`, which is
+            // what produced the "[object ProgressEvent]" noise in Sentry.
+            reject(error instanceof Error ? error : new Error(error?.message || 'Upload failed'));
           }
         }
       });
