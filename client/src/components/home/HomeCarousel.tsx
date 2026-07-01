@@ -619,9 +619,9 @@ export default function HomeCarousel() {
   });
 
   const { data: featuredUsers } = useQuery<FeaturedUser[]>({
-    queryKey: ["/api/featured-users"],
+    queryKey: ["/api/users/featured"],
     queryFn: async () => {
-      const res = await fetch("/api/featured-users", { credentials: "include" });
+      const res = await fetch("/api/users/featured", { credentials: "include" });
       if (!res.ok) return [];
       return res.json();
     },

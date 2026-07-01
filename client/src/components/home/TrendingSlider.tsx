@@ -149,6 +149,7 @@ export default function TrendingHeroSlide({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [videoReady, setVideoReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isInteracting = useRef(false);
@@ -208,6 +209,7 @@ export default function TrendingHeroSlide({
     setIsPlaying(false);
     onPlayingChange?.(false);
     setIsMuted(true);
+    setVideoReady(false);
 
     const v = videoRef.current;
     if (!v || !clip?.videoUrl) return;
@@ -366,18 +368,21 @@ export default function TrendingHeroSlide({
                 src={clip.videoUrl}
                 poster={clip.thumbnailUrl ?? undefined}
                 preload="auto"
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+                style={{ opacity: videoReady ? 1 : 0 }}
                 muted
                 autoPlay
                 playsInline
                 onCanPlay={(e) => {
                   const v = e.currentTarget;
                   v.muted = true;
+                  setVideoReady(true);
                   v.play().then(() => { setIsPlaying(true); onPlayingChange?.(true); }).catch(() => {});
                 }}
                 onLoadedData={(e) => {
                   const v = e.currentTarget;
                   v.muted = true;
+                  setVideoReady(true);
                   v.play().then(() => { setIsPlaying(true); onPlayingChange?.(true); }).catch(() => {});
                 }}
                 onEnded={handleVideoEnded}
@@ -385,6 +390,7 @@ export default function TrendingHeroSlide({
                 onError={(e) => {
                   const el = e.currentTarget as HTMLVideoElement;
                   console.error('[TrendingSlider] video error', el.error, 'src:', el.src?.slice(0, 120));
+                  setVideoReady(false);
                   setIsPlaying(false);
                   onPlayingChange?.(false);
                 }}

@@ -454,7 +454,14 @@ app.use((req, res, next) => {
         const SCHEDULE_INTERVAL_MS = 60 * 1000;
         const tick = () => {
           publishDueScheduledPosts()
-            .catch((err) => console.error('scheduled-posts publish failed:', err));
+            .catch((err: any) => {
+              // Suppress noisy "relation does not exist" error when the
+              // scheduled_posts table hasn't been migrated yet.
+              const msg: string = err?.cause?.message ?? err?.message ?? '';
+              if (!msg.includes('relation "scheduled_posts" does not exist')) {
+                console.error('scheduled-posts publish failed:', err);
+              }
+            });
         };
         setTimeout(tick, 30 * 1000);
         setInterval(tick, SCHEDULE_INTERVAL_MS);

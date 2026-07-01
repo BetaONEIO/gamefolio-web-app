@@ -1043,6 +1043,30 @@ export class DatabaseStorage implements IStorage {
     );
     const clipsWithDetails: ClipWithUser[] = fetched.filter((c): c is ClipWithUser => !!c);
 
+    // Fallback: if engagement query returned nothing (e.g. transient DB startup
+    // issue or no engagement data yet), serve the most-recent clips instead so
+    // the home page hero always has content.
+    if (clipsWithDetails.length === 0) {
+      const fallbackRows = await db
+        .select({ clipId: clips.id })
+        .from(clips)
+        .leftJoin(users, eq(clips.userId, users.id))
+        .where(
+          and(
+            eq(clips.videoType, 'clip'),
+            eq(users.isPrivate, false),
+            sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
+          )
+        )
+        .orderBy(desc(clips.createdAt))
+        .limit(limit);
+
+      const fallbackFetched = await Promise.all(
+        fallbackRows.map(r => this.getClipWithUser(r.clipId))
+      );
+      return fallbackFetched.filter((c): c is ClipWithUser => !!c);
+    }
+
     return clipsWithDetails;
   }
 

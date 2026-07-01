@@ -3622,12 +3622,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const promise = (async () => {
       try {
         const data = await loader();
-        trendingCache.set(key, { expires: Date.now() + TRENDING_CACHE_TTL_MS, data });
-        // Evict oldest entries when over capacity (insertion-order iteration).
-        while (trendingCache.size > TRENDING_CACHE_MAX_ENTRIES) {
-          const oldest = trendingCache.keys().next().value;
-          if (oldest === undefined) break;
-          trendingCache.delete(oldest);
+        // Don't cache empty arrays — they may be transient DB startup issues.
+        // Next request will retry the loader immediately.
+        const isEmpty = Array.isArray(data) && data.length === 0;
+        if (!isEmpty) {
+          trendingCache.set(key, { expires: Date.now() + TRENDING_CACHE_TTL_MS, data });
+          // Evict oldest entries when over capacity (insertion-order iteration).
+          while (trendingCache.size > TRENDING_CACHE_MAX_ENTRIES) {
+            const oldest = trendingCache.keys().next().value;
+            if (oldest === undefined) break;
+            trendingCache.delete(oldest);
+          }
         }
         return data;
       } finally {

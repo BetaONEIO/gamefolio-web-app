@@ -1,1 +1,2 @@
 - [FFmpeg remote URL scale2ref](ffmpeg-remote-url-filtergraph.md) — scale2ref gives 0kB when inputs are remote URLs; probe dims with ffprobe and use explicit scale filter instead.
+- [Trending cache startup race](trending-cache-startup-race.md) — first DB query after server start returns [] due to pool warming; fix is to not cache empty arrays and add a fallback query.
