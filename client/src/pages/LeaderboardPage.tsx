@@ -429,7 +429,7 @@ const LeaderboardPage = () => {
 
         <div className="relative flex flex-col items-center py-8 px-4">
           {/* Header */}
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-10">
             <div className="w-12 h-12 rounded-full bg-[#f0b100] flex items-center justify-center shadow-[0_4px_6px_-4px_#f0b1004d,0_10px_15px_-3px_#f0b1004d]">
               <Trophy className="w-6 h-6 text-white" />
             </div>
