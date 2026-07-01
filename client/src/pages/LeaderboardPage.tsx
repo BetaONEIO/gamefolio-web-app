@@ -420,75 +420,76 @@ const LeaderboardPage = () => {
 
   return (
     <div className="min-h-screen bg-[#0B1218] overflow-y-auto">
-      <div className="max-w-md lg:max-w-4xl xl:max-w-6xl mx-auto px-6 py-12 pb-32">
-        {/* Hero Section — podium with electrical background */}
-        <div className="relative rounded-3xl overflow-hidden mb-10" style={{ minHeight: 520 }}>
-          <div className="absolute inset-0" style={{ backgroundImage:"url('/electrical-bg.webp')", backgroundSize:'cover', backgroundPosition:'center' }} />
-          <div className="absolute inset-0" style={{ background:'linear-gradient(160deg,rgba(5,9,13,0.82) 0%,rgba(8,14,24,0.72) 55%,rgba(5,9,13,0.82) 100%)' }} />
-          <style>{LB_STYLES}{CREATOR_CARD_STYLES}</style>
+      <style>{LB_STYLES}{CREATOR_CARD_STYLES}</style>
 
-          <div className="relative flex flex-col items-center py-8 px-4">
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-full bg-[#f0b100] flex items-center justify-center shadow-[0_4px_6px_-4px_#f0b1004d,0_10px_15px_-3px_#f0b1004d]">
-                <Trophy className="w-6 h-6 text-white" />
-              </div>
-              <div className="text-center">
-                <h1 className="text-2xl font-bold text-slate-50">Community Leaderboard</h1>
-                <p className="text-slate-400 text-xs">Top gamers ranked by engagement and contribution</p>
-              </div>
+      {/* Hero Section — full-width electrical background, no container constraint */}
+      <div className="relative overflow-hidden" style={{ minHeight: 580 }}>
+        <div className="absolute inset-0" style={{ backgroundImage:"url('/electrical-bg.webp')", backgroundSize:'cover', backgroundPosition:'center' }} />
+        <div className="absolute inset-0" style={{ background:'linear-gradient(160deg,rgba(5,9,13,0.82) 0%,rgba(8,14,24,0.72) 55%,rgba(5,9,13,0.82) 100%)' }} />
+
+        <div className="relative flex flex-col items-center py-8 px-4">
+          {/* Header */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-full bg-[#f0b100] flex items-center justify-center shadow-[0_4px_6px_-4px_#f0b1004d,0_10px_15px_-3px_#f0b1004d]">
+              <Trophy className="w-6 h-6 text-white" />
             </div>
-
-            {/* Podium row */}
-            {isLoading ? (
-              <div className="flex items-end gap-4 justify-center" style={{ height: 420 }}>
-                <Skeleton className="w-52 h-96 rounded-2xl bg-slate-700" />
-                <Skeleton className="w-52 h-[26rem] rounded-2xl bg-slate-700" />
-                <Skeleton className="w-52 h-80 rounded-2xl bg-slate-700" />
-              </div>
-            ) : top3.length > 0 ? (
-              <div className="flex items-end gap-4 justify-center flex-wrap" style={{ transform:'scale(0.92)', transformOrigin:'center bottom' }}>
-                {/* 2nd (left) */}
-                {top3[1] && (
-                  <div className="flex flex-col items-center">
-                    <div className="lb-card-2">
-                      <CreatorCard entry={toTrendingEntry(top3[1])} period={activeTab === 'monthly' ? 'month' : activeTab === 'alltime' ? 'alltime' : 'week'} />
-                    </div>
-                    <img src={PODIUM_IMG[2]} alt="#2 podium" style={{ width: PODIUM_W[2], height: PODIUM_H[2], objectFit:'contain', marginTop:-22, filter:PODIUM_GLOW[2], position:'relative', zIndex:10 }} />
-                  </div>
-                )}
-                {/* 1st (center, raised) */}
-                {top3[0] && (
-                  <div className="flex flex-col items-center" style={{ transform:'translateY(-28px)' }}>
-                    <div className="relative lb-card-1">
-                      <div className="absolute pointer-events-none" style={{ inset:'-10px', zIndex:10 }}>
-                        {[1,2,3,4,5,6].map(i => <span key={i} className="lb-spark" />)}
-                      </div>
-                      <CreatorCard entry={toTrendingEntry(top3[0])} period={activeTab === 'monthly' ? 'month' : activeTab === 'alltime' ? 'alltime' : 'week'} />
-                    </div>
-                    <img src={PODIUM_IMG[1]} alt="#1 podium" style={{ width: PODIUM_W[1], height: PODIUM_H[1], objectFit:'contain', marginTop:-22, filter:PODIUM_GLOW[1], position:'relative', zIndex:10 }} />
-                  </div>
-                )}
-                {/* 3rd (right) */}
-                {top3[2] && (
-                  <div className="flex flex-col items-center">
-                    <div className="lb-card-3">
-                      <CreatorCard entry={toTrendingEntry(top3[2])} period={activeTab === 'monthly' ? 'month' : activeTab === 'alltime' ? 'alltime' : 'week'} />
-                    </div>
-                    <img src={PODIUM_IMG[3]} alt="#3 podium" style={{ width: PODIUM_W[3], height: PODIUM_H[3], objectFit:'contain', marginTop:-22, filter:PODIUM_GLOW[3], position:'relative', zIndex:10 }} />
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-16 text-slate-400">
-                <Trophy className="h-16 w-16 mx-auto mb-4 text-slate-600" />
-                <h3 className="text-lg font-semibold text-slate-50 mb-2">No Rankings Yet</h3>
-                <p className="text-sm">Start uploading clips and engaging with content to appear here!</p>
-              </div>
-            )}
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-slate-50">Community Leaderboard</h1>
+              <p className="text-slate-400 text-xs">Top gamers ranked by engagement and contribution</p>
+            </div>
           </div>
-        </div>
 
+          {/* Podium row — exact same layout as home slider */}
+          {isLoading ? (
+            <div style={{ display:'flex', alignItems:'flex-end', gap:'16px', justifyContent:'center', height: 420 }}>
+              <Skeleton className="w-52 h-80 rounded-2xl bg-slate-700" />
+              <Skeleton className="w-52 h-96 rounded-2xl bg-slate-700" />
+              <Skeleton className="w-52 h-72 rounded-2xl bg-slate-700" />
+            </div>
+          ) : top3.length > 0 ? (
+            <div style={{ transform:'scale(0.96)', transformOrigin:'center center', display:'flex', alignItems:'flex-end', gap:'16px' }}>
+              {/* 2nd (left / silver) */}
+              {top3[1] && (
+                <div className="flex flex-col items-center">
+                  <div className="lb-card-2">
+                    <CreatorCard entry={toTrendingEntry(top3[1])} period={activeTab === 'monthly' ? 'month' : activeTab === 'alltime' ? 'alltime' : 'week'} />
+                  </div>
+                  <img src={PODIUM_IMG[2]} alt="#2 podium" style={{ width: PODIUM_W[2], height: PODIUM_H[2], objectFit:'contain', marginTop:-22, filter:PODIUM_GLOW[2], position:'relative', zIndex:10 }} />
+                </div>
+              )}
+              {/* 1st (center / gold, raised) */}
+              {top3[0] && (
+                <div className="flex flex-col items-center" style={{ transform:'translateY(-28px)' }}>
+                  <div className="relative lb-card-1">
+                    <div className="absolute pointer-events-none" style={{ inset:'-10px', zIndex:10 }}>
+                      {[1,2,3,4,5,6].map(i => <span key={i} className="lb-spark" />)}
+                    </div>
+                    <CreatorCard entry={toTrendingEntry(top3[0])} period={activeTab === 'monthly' ? 'month' : activeTab === 'alltime' ? 'alltime' : 'week'} />
+                  </div>
+                  <img src={PODIUM_IMG[1]} alt="#1 podium" style={{ width: PODIUM_W[1], height: PODIUM_H[1], objectFit:'contain', marginTop:-22, filter:PODIUM_GLOW[1], position:'relative', zIndex:10 }} />
+                </div>
+              )}
+              {/* 3rd (right / bronze) */}
+              {top3[2] && (
+                <div className="flex flex-col items-center">
+                  <div className="lb-card-3">
+                    <CreatorCard entry={toTrendingEntry(top3[2])} period={activeTab === 'monthly' ? 'month' : activeTab === 'alltime' ? 'alltime' : 'week'} />
+                  </div>
+                  <img src={PODIUM_IMG[3]} alt="#3 podium" style={{ width: PODIUM_W[3], height: PODIUM_H[3], objectFit:'contain', marginTop:-22, filter:PODIUM_GLOW[3], position:'relative', zIndex:10 }} />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-16 text-slate-400">
+              <Trophy className="h-16 w-16 mx-auto mb-4 text-slate-600" />
+              <h3 className="text-lg font-semibold text-slate-50 mb-2">No Rankings Yet</h3>
+              <p className="text-sm">Start uploading clips and engaging with content to appear here!</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="max-w-md lg:max-w-4xl xl:max-w-6xl mx-auto px-6 py-8 pb-32">
         {/* Tab Pills */}
         <div className="bg-[#0B1218] border border-[#1B2A33] rounded-full p-1.5 flex gap-2 mb-8 lg:max-w-lg lg:mx-auto">
           <button
