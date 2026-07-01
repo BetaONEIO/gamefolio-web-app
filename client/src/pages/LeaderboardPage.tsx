@@ -138,7 +138,7 @@ const LeaderboardPage = () => {
     if (rank === 1) {
       return {
         cardBg: "bg-[#1a1200]",
-        cardBorder: "border-[#f0b100]/40",
+        cardBorder: "border-[#f0b100]",
         cardGlow: "lb-glow-gold",
         avatarBorder: "border-[#f0b100]",
         scoreBg: "bg-gradient-to-b from-[#fdc700] to-[#d08700]",
@@ -149,7 +149,7 @@ const LeaderboardPage = () => {
     if (rank === 2) {
       return {
         cardBg: "bg-[#121212]",
-        cardBorder: "border-[#c0c0c0]/40",
+        cardBorder: "border-[#c0c0c0]",
         cardGlow: "lb-glow-silver",
         avatarBorder: "border-[#c0c0c0]",
         scoreBg: "bg-gradient-to-b from-[#e8e8e8] to-[#a8a8a8]",
@@ -160,7 +160,7 @@ const LeaderboardPage = () => {
     if (rank === 3) {
       return {
         cardBg: "bg-[#1a0a00]",
-        cardBorder: "border-[#f54900]/40",
+        cardBorder: "border-[#f54900]",
         cardGlow: "lb-glow-bronze",
         avatarBorder: "border-[#f54900]",
         scoreBg: "bg-gradient-to-b from-[#ff6900] to-[#ca3500]",
@@ -170,9 +170,9 @@ const LeaderboardPage = () => {
     }
     return {
       cardBg: "bg-[#0B1218]",
-      cardBorder: "border-[#1B2A33]/50",
+      cardBorder: "border-[#1B2A33]",
       cardGlow: "",
-      avatarBorder: "border-[#1B2A33]/50",
+      avatarBorder: "border-[#1B2A33]",
       scoreBg: "bg-gradient-to-b from-[#615fff] to-[#9810fa]",
       scoreText: "text-white",
       scoreShadow: "",
@@ -216,7 +216,7 @@ const LeaderboardPage = () => {
     return (
       <Link href={`/profile/${entry.user.username}`}>
         <div
-          className={`flex items-center gap-4 px-4 py-5 rounded-2xl border ${styles.cardBg} ${styles.cardBorder} ${styles.cardGlow} transition-all hover:scale-[1.02] cursor-pointer`}
+          className={`flex items-center gap-4 px-4 py-5 rounded-2xl border my-3 ${styles.cardBg} ${styles.cardBorder} ${styles.cardGlow} transition-all hover:scale-[1.02] cursor-pointer`}
           data-testid={`leaderboard-entry-${entry.userId}`}
         >
           {/* Rank Icon */}
@@ -551,7 +551,7 @@ const LeaderboardPage = () => {
         </div>
 
         {/* Leaderboard List */}
-        <div className="space-y-8 lg:space-y-4 mb-8">
+        <div className="mb-8">
           {isLoading ? (
             <LoadingSkeleton />
           ) : !currentData || currentData.length === 0 ? (
