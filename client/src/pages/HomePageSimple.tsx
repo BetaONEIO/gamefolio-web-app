@@ -414,7 +414,12 @@ const HomePage = () => {
   }, [nowMs]);
 
   const activeSlides = useMemo<AnySlide[] | null>(() => {
-    const base: AnySlide[] = dbHeroSlides && dbHeroSlides.length > 0 ? [...dbHeroSlides] : [];
+    const base: AnySlide[] = dbHeroSlides && dbHeroSlides.length > 0
+      ? dbHeroSlides.filter((s) => {
+          const t = (s.title || "").toLowerCase();
+          return !t.includes("build your gamefolio") && !t.includes("featured creator");
+        })
+      : [];
     const leaderboardSlide: AnySlide = { type: 'leaderboard', id: 'leaderboard' };
     return [...base, leaderboardSlide];
   }, [dbHeroSlides]);
