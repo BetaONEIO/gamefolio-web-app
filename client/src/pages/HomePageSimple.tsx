@@ -81,7 +81,7 @@ interface FeaturedGamefolioData {
   topGame: { id: number; name: string; imageUrl: string | null; uploadCount: number } | null;
 }
 
-type AnySlide = DbHeroSlide | { type: 'featured'; id: 'featured' } | { type: 'leaderboard'; id: 'leaderboard' } | { type: 'latestContent'; id: 'latestContent' };
+type AnySlide = DbHeroSlide | { type: 'leaderboard'; id: 'leaderboard' };
 
 interface LeaderboardWinner {
   userId: number;
@@ -414,11 +414,9 @@ const HomePage = () => {
   }, [nowMs]);
 
   const activeSlides = useMemo<AnySlide[] | null>(() => {
-    const latestContentSlide: AnySlide = { type: 'latestContent', id: 'latestContent' };
     const base: AnySlide[] = dbHeroSlides && dbHeroSlides.length > 0 ? [...dbHeroSlides] : [];
     const leaderboardSlide: AnySlide = { type: 'leaderboard', id: 'leaderboard' };
-    const featuredSlide: AnySlide = { type: 'featured', id: 'featured' };
-    return [latestContentSlide, ...base, leaderboardSlide, featuredSlide];
+    return [...base, leaderboardSlide];
   }, [dbHeroSlides]);
 
   const prevSlide = useCallback(() => {
@@ -502,9 +500,7 @@ const HomePage = () => {
             {activeSlides && (
               <div className="relative w-full h-full min-h-[420px] sm:min-h-[560px] md:min-h-[640px]">
                 {activeSlides.map((slide, idx) => {
-                  const isFeaturedSlide = 'type' in slide && slide.type === 'featured';
                   const isLeaderboardSlide = 'type' in slide && slide.type === 'leaderboard';
-                  const isLatestContentSlide = 'type' in slide && slide.type === 'latestContent';
                   const fg = featuredGamefolio;
                   const accent = fg?.user.accentColor || "#B7FF1A";
                   const types = (fg?.user.userType || "").split(",").map((t: string) => t.trim()).filter(Boolean);
@@ -768,139 +764,6 @@ const HomePage = () => {
 
                           </div>{/* end columns row */}
                         </div>{/* end flex-col outer */}
-                      </div>
-                    ) : isFeaturedSlide ? (
-                      /* ── Featured Gamefolio slide ── */
-                      <div className="absolute inset-0 overflow-hidden"
-                        style={{ background: "#0B1319" }}>
-                        <style>{CREATOR_CARD_STYLES}</style>
-                        {/* Subtle background banner */}
-                        {fg?.user.bannerUrl && (
-                          <div className="absolute inset-0">
-                            <img src={fg.user.bannerUrl} alt="" className="w-full h-full object-cover opacity-10" />
-                            <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(11,19,25,0.97) 0%, rgba(11,19,25,0.90) 100%)" }} />
-                          </div>
-                        )}
-                        {/* Grid pattern */}
-                        <div className="absolute inset-0 opacity-[0.02] pointer-events-none"
-                          style={{ backgroundImage: "linear-gradient(rgba(183,255,26,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(183,255,26,0.6) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
-
-                        <div className="relative h-full flex items-center px-4 sm:px-6 md:px-8 py-4">
-                          <div className="w-full flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-stretch max-w-6xl mx-auto">
-
-                            {/* ── LEFT: Profile mini-card ── */}
-                            <div className="flex-shrink-0 flex items-center justify-center sm:w-[37%]">
-                              {fgEntry ? (
-                                <CreatorCard entry={fgEntry} period="alltime" />
-                              ) : (
-                                <div className="w-[190px] h-[320px] rounded-2xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} />
-                              )}
-                            </div>
-
-                            {/* ── RIGHT: Content showcase ── */}
-                            <div className="flex-1 flex flex-col justify-center min-w-0 sm:w-[63%]">
-                              {/* Header row */}
-                              <div className="flex items-center gap-3 mb-2">
-                                <div className="flex items-center gap-1.5">
-                                  <div className="w-1 h-3 rounded-full" style={{ background: accent }} />
-                                  <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white/60">Trending Gamefolio</span>
-                                </div>
-                                <div className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide"
-                                  style={{ background: `${accent}18`, color: accent, border: `1px solid ${accent}30` }}>
-                                  🔥 Trending Now
-                                </div>
-                              </div>
-                              <div className="text-white font-black text-lg sm:text-xl md:text-2xl leading-tight mb-3 tracking-tight">
-                                Featured Creator
-                              </div>
-
-                              {/* Media thumbnail */}
-                              {lc?.thumbnailUrl ? (
-                                <div
-                                  className="relative rounded-xl overflow-hidden cursor-pointer group mb-3"
-                                  style={{ aspectRatio: isReel ? '9/5' : '16/7', background: '#0a0f1c', border: '1px solid rgba(255,255,255,0.08)', maxHeight: 180 }}
-                                  onClick={() => setLocation(`/clips/${lc.id}`)}
-                                >
-                                  <img
-                                    src={lc.thumbnailUrl}
-                                    alt={lc.title}
-                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                  />
-                                  {/* Dark overlay */}
-                                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-                                  {/* Play button */}
-                                  <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="w-11 h-11 rounded-full flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
-                                      style={{ background: 'rgba(0,0,0,0.65)', border: `2px solid ${accent}`, boxShadow: `0 0 18px ${accent}50` }}>
-                                      <svg className="w-5 h-5 ml-0.5" fill={accent} viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                                    </div>
-                                  </div>
-                                  {/* Duration badge */}
-                                  {lc.duration > 0 && (
-                                    <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded text-[10px] font-bold text-white"
-                                      style={{ background: 'rgba(0,0,0,0.75)' }}>
-                                      {fmtDuration(lc.duration)}
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="relative rounded-xl mb-3 flex items-center justify-center"
-                                  style={{ aspectRatio: '16/7', maxHeight: 180, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                                  <span className="text-white/20 text-sm">No preview</span>
-                                </div>
-                              )}
-
-                              {/* Content metadata */}
-                              {lc && (
-                                <div className="mb-2">
-                                  <div className="flex items-center gap-1.5 mb-1">
-                                    <span className="text-[9px] font-black uppercase tracking-[0.18em]" style={{ color: accent }}>🎬 {contentLabel}</span>
-                                  </div>
-                                  <div className="text-white font-bold text-sm leading-snug truncate mb-1.5">{lc.title}</div>
-                                  <div className="flex items-center gap-3 text-[11px] text-white/50 flex-wrap">
-                                    <span>👁 {fmtViews(lc.views)} views</span>
-                                    <span>♥ {lc.likesCount} likes</span>
-                                    <span>· {fmtTimeAgo(lc.createdAt)}</span>
-                                    {lc.gameName && <span>🎮 {lc.gameName}</span>}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Trending because chip */}
-                              <div className="flex items-center gap-1.5 mb-3 px-2.5 py-1.5 rounded-lg w-fit"
-                                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                                <span className="text-[11px] text-white/50">📈</span>
-                                <span className="text-[11px] text-white/70"><span className="text-white/40">Trending because:</span> <span className="text-white font-semibold">{trendingReason}</span></span>
-                              </div>
-
-                              {/* Action buttons */}
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {lc && (
-                                  <button
-                                    onClick={() => setLocation(`/clips/${lc.id}`)}
-                                    className="inline-flex items-center gap-1.5 text-xs font-black px-4 py-2 rounded-lg transition-all hover:opacity-90 active:scale-95"
-                                    style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)' }}>
-                                    {watchLabel}
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => setLocation(`/profile/${fg?.user.username}`)}
-                                  className="inline-flex items-center gap-1.5 text-xs font-black px-4 py-2 rounded-lg transition-all hover:opacity-90 active:scale-95"
-                                  style={{ background: accent, color: '#0B1319', boxShadow: `0 4px 16px ${accent}40` }}>
-                                  View Gamefolio →
-                                </button>
-                              </div>
-                            </div>
-
-                          </div>
-                        </div>
-                      </div>
-                    ) : isLatestContentSlide ? (
-                      /* ── Latest Clips & Reels slider slide ── */
-                      <div className="absolute inset-0 overflow-hidden bg-[#040C10] flex flex-col">
-                        <div className="flex-1 min-h-0 overflow-hidden px-4 sm:px-8 py-4">
-                          <LatestContentSlider />
-                        </div>
                       </div>
                     ) : (
                       /* ── Regular image slide ── */
