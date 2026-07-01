@@ -81,7 +81,7 @@ interface FeaturedGamefolioData {
   topGame: { id: number; name: string; imageUrl: string | null; uploadCount: number } | null;
 }
 
-type AnySlide = DbHeroSlide | { type: 'leaderboard'; id: 'leaderboard' };
+type AnySlide = DbHeroSlide | { type: 'leaderboard'; id: 'leaderboard' } | { type: 'latestContent'; id: 'latestContent' };
 
 interface LeaderboardWinner {
   userId: number;
@@ -421,7 +421,8 @@ const HomePage = () => {
         })
       : [];
     const leaderboardSlide: AnySlide = { type: 'leaderboard', id: 'leaderboard' };
-    return [...base, leaderboardSlide];
+    const latestContentSlide: AnySlide = { type: 'latestContent', id: 'latestContent' };
+    return [latestContentSlide, ...base, leaderboardSlide];
   }, [dbHeroSlides]);
 
   const prevSlide = useCallback(() => {
@@ -506,56 +507,7 @@ const HomePage = () => {
               <div className="relative w-full h-full min-h-[420px] sm:min-h-[560px] md:min-h-[640px]">
                 {activeSlides.map((slide, idx) => {
                   const isLeaderboardSlide = 'type' in slide && slide.type === 'leaderboard';
-                  const fg = featuredGamefolio;
-                  const accent = fg?.user.accentColor || "#B7FF1A";
-                  const types = (fg?.user.userType || "").split(",").map((t: string) => t.trim()).filter(Boolean);
-                  const fgGames = fg?.gamesPlayed ?? [];
-                  const isStreamer = types.some((t: string) => t.toLowerCase() === "streamer");
-
-                  const fgEntry: TrendingEntry | null = fg ? {
-                    userId: fg.user.id,
-                    rank: 1,
-                    uploadsCount: fg.weeklyUploadsCount ?? fg.clipCount,
-                    totalPoints: fg.totalPoints ?? 0,
-                    clipsCount: fg.clipsCount ?? 0,
-                    reelsCount: fg.reelsCount ?? 0,
-                    screenshotsCount: fg.screenshotsCount ?? 0,
-                    followersCount: fg.followersCount ?? 0,
-                    followingCount: fg.followingCount ?? 0,
-                    user: {
-                      id: fg.user.id,
-                      username: fg.user.username,
-                      displayName: fg.user.displayName,
-                      avatarUrl: fg.user.avatarUrl,
-                      bannerUrl: fg.user.bannerUrl,
-                      avatarBorderColor: fg.user.avatarBorderColor,
-                      accentColor: fg.user.accentColor,
-                      level: fg.user.level,
-                      backgroundColor: fg.user.backgroundColor,
-                      primaryColor: fg.user.primaryColor,
-                      profileBackgroundGradient: fg.user.profileBackgroundGradient,
-                      profileBackgroundImageUrl: fg.user.profileBackgroundImageUrl,
-                    },
-                  } : null;
-
-                  const lc = fg?.latestClip;
-                  const fmtDuration = (s: number) => s > 0 ? `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}` : null;
-                  const fmtViews = (n: number) => n >= 1000 ? `${(n/1000).toFixed(1)}K` : String(n);
-                  const fmtTimeAgo = (d: string | null) => {
-                    if (!d) return '';
-                    const diff = Date.now() - new Date(d).getTime();
-                    const h = Math.floor(diff / 3600000);
-                    if (h < 1) return 'just now';
-                    if (h < 24) return `${h}h ago`;
-                    const days = Math.floor(h / 24);
-                    return days < 7 ? `${days}d ago` : `${Math.floor(days/7)}w ago`;
-                  };
-                  const isReel = lc?.videoType === 'reel';
-                  const contentLabel = isReel ? 'LATEST REEL' : 'LATEST CLIP';
-                  const watchLabel = isReel ? '📱 Watch Reel' : '▶ Watch Clip';
-                  const trendingReason = (fg?.weeklyUploadsCount ?? 0) > 0
-                    ? `Uploaded ${fg!.weeklyUploadsCount} clip${fg!.weeklyUploadsCount !== 1 ? 's' : ''} this week`
-                    : (fg?.followersCount ?? 0) > 20 ? `${fg!.followersCount} followers` : 'Rising creator';
+                  const isLatestContentSlide = 'type' in slide && slide.type === 'latestContent';
 
                   return (
                   <div
@@ -769,6 +721,13 @@ const HomePage = () => {
 
                           </div>{/* end columns row */}
                         </div>{/* end flex-col outer */}
+                      </div>
+                    ) : isLatestContentSlide ? (
+                      /* ── Latest Clips & Reels slider slide ── */
+                      <div className="absolute inset-0 overflow-hidden bg-[#040C10] flex flex-col">
+                        <div className="flex-1 min-h-0 overflow-hidden px-4 sm:px-8 py-4">
+                          <LatestContentSlider />
+                        </div>
                       </div>
                     ) : (
                       /* ── Regular image slide ── */
