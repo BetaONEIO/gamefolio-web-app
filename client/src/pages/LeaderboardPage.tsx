@@ -137,9 +137,10 @@ const LeaderboardPage = () => {
   const getRankStyles = (rank: number) => {
     if (rank === 1) {
       return {
-        cardBg: "bg-[#f0b100]/5",
-        cardBorder: "border-[#f0b100]/20",
-        avatarBorder: "border-[#f0b100]/30",
+        cardBg: "bg-[#1a1200]",
+        cardBorder: "border-[#f0b100]/40",
+        cardGlow: "lb-glow-gold",
+        avatarBorder: "border-[#f0b100]",
         scoreBg: "bg-gradient-to-b from-[#fdc700] to-[#d08700]",
         scoreText: "text-black",
         scoreShadow: "shadow-[0_4px_6px_-4px_#f0b10033,0_10px_15px_-3px_#f0b10033]",
@@ -147,9 +148,10 @@ const LeaderboardPage = () => {
     }
     if (rank === 2) {
       return {
-        cardBg: "bg-[#c0c0c0]/8",
-        cardBorder: "border-[#c0c0c0]/30",
-        avatarBorder: "border-[#c0c0c0]/40",
+        cardBg: "bg-[#121212]",
+        cardBorder: "border-[#c0c0c0]/40",
+        cardGlow: "lb-glow-silver",
+        avatarBorder: "border-[#c0c0c0]",
         scoreBg: "bg-gradient-to-b from-[#e8e8e8] to-[#a8a8a8]",
         scoreText: "text-slate-800",
         scoreShadow: "shadow-[0_4px_6px_-4px_#c0c0c044,0_10px_15px_-3px_#c0c0c044]",
@@ -157,9 +159,10 @@ const LeaderboardPage = () => {
     }
     if (rank === 3) {
       return {
-        cardBg: "bg-[#f54900]/5",
-        cardBorder: "border-[#f54900]/20",
-        avatarBorder: "border-[#f54900]/30",
+        cardBg: "bg-[#1a0a00]",
+        cardBorder: "border-[#f54900]/40",
+        cardGlow: "lb-glow-bronze",
+        avatarBorder: "border-[#f54900]",
         scoreBg: "bg-gradient-to-b from-[#ff6900] to-[#ca3500]",
         scoreText: "text-white",
         scoreShadow: "shadow-[0_4px_6px_-4px_#ca350033,0_10px_15px_-3px_#ca350033]",
@@ -168,6 +171,7 @@ const LeaderboardPage = () => {
     return {
       cardBg: "bg-[#0B1218]",
       cardBorder: "border-[#1B2A33]/50",
+      cardGlow: "",
       avatarBorder: "border-[#1B2A33]/50",
       scoreBg: "bg-gradient-to-b from-[#615fff] to-[#9810fa]",
       scoreText: "text-white",
@@ -212,7 +216,7 @@ const LeaderboardPage = () => {
     return (
       <Link href={`/profile/${entry.user.username}`}>
         <div
-          className={`flex items-center gap-4 px-4 py-5 rounded-2xl border ${styles.cardBg} ${styles.cardBorder} transition-all hover:scale-[1.02] cursor-pointer`}
+          className={`flex items-center gap-4 px-4 py-5 rounded-2xl border ${styles.cardBg} ${styles.cardBorder} ${styles.cardGlow} transition-all hover:scale-[1.02] cursor-pointer`}
           data-testid={`leaderboard-entry-${entry.userId}`}
         >
           {/* Rank Icon */}
@@ -416,6 +420,14 @@ const LeaderboardPage = () => {
 .lb-spark:nth-child(4){animation:lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#FFD700; top:50%; left:50%; margin:-3px; animation-delay:-2.25s,-0.9s;}
 .lb-spark:nth-child(5){animation:lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#B7FF18; top:50%; left:50%; margin:-3px; animation-delay:-3s,-1.1s;}
 .lb-spark:nth-child(6){animation:lb-orbit 6.5s linear infinite, lb-sparkle 1.8s ease-in-out infinite; background:#fff; top:50%; left:50%; margin:-3px; animation-delay:-3.75s,-1.4s;}
+
+/* Leaderboard list card pulsing glows */
+@keyframes lb-card-gold-pulse { 0%,100%{ box-shadow:0 0 10px 2px rgba(240,177,0,0.35), inset 0 0 8px rgba(240,177,0,0.06); } 50%{ box-shadow:0 0 28px 8px rgba(240,177,0,0.65), inset 0 0 16px rgba(240,177,0,0.12); } }
+@keyframes lb-card-silver-pulse { 0%,100%{ box-shadow:0 0 10px 2px rgba(192,192,192,0.35), inset 0 0 8px rgba(192,192,192,0.06); } 50%{ box-shadow:0 0 28px 8px rgba(192,192,192,0.65), inset 0 0 16px rgba(192,192,192,0.12); } }
+@keyframes lb-card-bronze-pulse { 0%,100%{ box-shadow:0 0 10px 2px rgba(245,73,0,0.35), inset 0 0 8px rgba(245,73,0,0.06); } 50%{ box-shadow:0 0 28px 8px rgba(245,73,0,0.65), inset 0 0 16px rgba(245,73,0,0.12); } }
+.lb-glow-gold { animation: lb-card-gold-pulse 2.5s ease-in-out infinite; }
+.lb-glow-silver { animation: lb-card-silver-pulse 2.8s ease-in-out infinite; }
+.lb-glow-bronze { animation: lb-card-bronze-pulse 3.2s ease-in-out infinite; }
 `;
 
   return (
