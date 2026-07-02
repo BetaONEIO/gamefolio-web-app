@@ -600,8 +600,6 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
   );
 }
 
-const SPARSE_THRESHOLD = 5; // fall back to all-time when period returns fewer than this
-
 function LiveLeaderboard({ userId }: { userId?: number }) {
   const [tab, setTab] = useState<TabType>("alltime");
 
@@ -624,17 +622,18 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
     queryFn: () => fetch("/api/leaderboard?limit=100").then(r => r.json()),
   });
 
-  const rawPeriod =
-    tab === "weekly"  ? weeklyData  :
-    tab === "monthly" ? monthlyData :
-                        alltimeData;
-
   const isLoading =
     tab === "weekly"  ? wl :
     tab === "monthly" ? ml : al;
 
-  const periodSparse = Array.isArray(rawPeriod) && rawPeriod.length < SPARSE_THRESHOLD && !isLoading;
-  const usingFallback = (tab === "weekly" || tab === "monthly") && periodSparse;
+  const rawPeriod: LeaderboardEntry[] | undefined =
+    tab === "weekly"  ? weeklyData  :
+    tab === "monthly" ? monthlyData :
+                        alltimeData;
+
+  // Only fall back to all-time when the period returned zero entries
+  const periodEmpty = !isLoading && Array.isArray(rawPeriod) && rawPeriod.length === 0;
+  const usingFallback = (tab === "weekly" || tab === "monthly") && periodEmpty;
   const entries = usingFallback
     ? (Array.isArray(alltimeData) ? alltimeData : [])
     : (Array.isArray(rawPeriod) ? rawPeriod : []);
