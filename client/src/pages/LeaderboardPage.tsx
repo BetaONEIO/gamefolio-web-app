@@ -872,10 +872,10 @@ const SEASON_ICON_MAP: Record<string, JSX.Element> = {
   flame: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>,
 };
 
-const RANK_TROPHY: Record<number, { icon: string; color: string; bg: string; border: string }> = {
-  1: { icon: "🥇", color: "#FFD700", bg: "bg-[#FFD700]/10", border: "border-[#FFD700]/30" },
-  2: { icon: "🥈", color: "#C0C0C0", bg: "bg-[#C0C0C0]/10", border: "border-[#C0C0C0]/30" },
-  3: { icon: "🥉", color: "#CD7F32", bg: "bg-[#CD7F32]/10", border: "border-[#CD7F32]/30" },
+const RANK_TROPHY: Record<number, { img: string; color: string; bg: string; border: string }> = {
+  1: { img: "/podium-1st.png", color: "#FFD700", bg: "bg-[#FFD700]/10", border: "border-[#FFD700]/30" },
+  2: { img: "/podium-2nd.png", color: "#C0C0C0", bg: "bg-[#C0C0C0]/10", border: "border-[#C0C0C0]/30" },
+  3: { img: "/podium-3rd.png", color: "#CD7F32", bg: "bg-[#CD7F32]/10", border: "border-[#CD7F32]/30" },
 };
 
 function HallOfChampions() {
@@ -940,8 +940,15 @@ function HallOfChampions() {
                       return (
                         <Link key={p.userId} href={`/@${p.user.username}`}>
                           <div className="flex items-center gap-3 cursor-pointer group">
-                            <span className="text-lg leading-none flex-shrink-0">{t.icon}</span>
-                            <UserAvatar user={p.user} size="sm" />
+                            <div className="relative flex-shrink-0">
+                              <UserAvatar user={p.user} size="md" />
+                              <img
+                                src={t.img}
+                                alt={`${p.rank} place`}
+                                className="absolute -bottom-1.5 -right-1.5 h-5 w-auto object-contain select-none"
+                                style={{ filter: `drop-shadow(0 1px 3px rgba(0,0,0,0.8))` }}
+                              />
+                            </div>
                             <span className="text-sm font-semibold text-white/90 truncate group-hover:text-white transition-colors">
                               {p.user.displayName || p.user.username}
                             </span>
