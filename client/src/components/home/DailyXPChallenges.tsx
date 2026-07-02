@@ -234,8 +234,8 @@ function ChallengeCard({ challenge, isAuth, isLoading }: { challenge: Challenge;
         <div
           className="mb-3 select-none"
           style={{
-            width: 44,
-            height: 44,
+            width: 62,
+            height: 62,
             transition: 'filter 200ms ease, transform 200ms ease',
             filter: iconGlow,
             transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
