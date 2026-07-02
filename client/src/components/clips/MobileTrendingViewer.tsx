@@ -21,6 +21,7 @@ import { LazyImage } from "@/components/ui/lazy-image";
 import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { useSignedUrl } from "@/hooks/use-signed-url";
+import { useBlockedUsers } from "@/hooks/use-blocked-users";
 
 interface ScreenshotWithUser {
   id: number;
@@ -100,7 +101,14 @@ function ScreenshotScrollItem({ item }: { item: ScreenshotWithUser }) {
   );
 }
 
-export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideCloseButton = false, embedded = false, onCommentsVisibilityChange }: MobileTrendingViewerProps) {
+export function MobileTrendingViewer({ content: rawContent, initialIndex = 0, onClose, hideCloseButton = false, embedded = false, onCommentsVisibilityChange }: MobileTrendingViewerProps) {
+  const { blockedUserIds } = useBlockedUsers();
+
+  // Drop blocked authors' content from the viewer. Blocking invalidates
+  // /api/users/blocked, so this recomputes instantly — the blocked clip is
+  // removed and the scroll-snap advances to the next one.
+  const content = rawContent.filter((item: any) => !blockedUserIds.has(item.userId));
+
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showComments, setShowComments] = useState(false);
   const [commentsExpanded, setCommentsExpanded] = useState(false);
