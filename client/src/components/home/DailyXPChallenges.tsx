@@ -92,7 +92,7 @@ function buildChallenges(activity: DailyActivity | undefined, canOpenLootbox: bo
       progress: activity ? (activity.commentedToday ? 1 : 0) : 0,
       total: 1,
       href: '/explore',
-      color: '#38bdf8',
+      color: '#B7FF1A',
     },
     {
       id: 'like',
@@ -102,7 +102,7 @@ function buildChallenges(activity: DailyActivity | undefined, canOpenLootbox: bo
       progress: activity ? (activity.likedToday ? 1 : 0) : 0,
       total: 1,
       href: '/explore',
-      color: '#f472b6',
+      color: '#B7FF1A',
     },
     {
       id: 'share',
@@ -112,7 +112,7 @@ function buildChallenges(activity: DailyActivity | undefined, canOpenLootbox: bo
       progress: activity ? (activity.sharedToday ? 1 : 0) : 0,
       total: 1,
       href: '/explore',
-      color: '#2dd4bf',
+      color: '#B7FF1A',
     },
     {
       id: 'upload',
@@ -122,7 +122,7 @@ function buildChallenges(activity: DailyActivity | undefined, canOpenLootbox: bo
       progress: activity ? (activity.firstUploadOfDayDone ? 1 : 0) : 0,
       total: 1,
       href: '/upload',
-      color: '#fbbf24',
+      color: '#B7FF1A',
     },
     {
       id: 'lootbox',
@@ -132,7 +132,7 @@ function buildChallenges(activity: DailyActivity | undefined, canOpenLootbox: bo
       progress: activity ? (activity.lootboxOpenedToday ? 1 : 0) : 0,
       total: 1,
       href: '/level-tracker',
-      color: '#a78bfa',
+      color: '#B7FF1A',
     },
   ];
 }
