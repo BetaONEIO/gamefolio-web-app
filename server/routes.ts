@@ -313,9 +313,6 @@ declare global {
   }
 }
 
-// Simple in-memory tracking for unblocked users
-const unblockedUsers = new Map<string, Set<number>>();
-
 // Whitelist of safe public fields from the users table.
 // NEVER add sensitive fields: password, email, twoFactorSecret, encryptedPrivateKey,
 // stripeCustomerId, stripeSubscriptionId, revenuecatUserId, referralCode, referredBy,
@@ -11119,16 +11116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if users are blocked
-      let isBlocked = await storage.isUserBlocked(req.user.id, messageData.receiverId);
-
-      // Check if user was unblocked in memory (override database check)
-      const userKey = req.user.id.toString();
-      const userUnblockedSet = unblockedUsers.get(userKey) || new Set();
-      if (userUnblockedSet.has(messageData.receiverId)) {
-        console.log(`✅ MESSAGING: User ${messageData.receiverId} was unblocked by user ${req.user.id} - allowing message`);
-        isBlocked = false; // Override the database check
-      }
-
+      const isBlocked = await storage.isUserBlocked(req.user.id, messageData.receiverId);
       if (isBlocked) {
         return res.status(400).json({ message: "This message cannot be delivered. You and this user are not able to message each other." });
       }
@@ -11243,16 +11231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if users are blocked
-      let isBlocked = await storage.isUserBlocked(req.user.id, targetUser.id);
-
-      // Check if user was unblocked in memory (override database check)
-      const userKey = req.user.id.toString();
-      const userUnblockedSet = unblockedUsers.get(userKey) || new Set();
-      if (userUnblockedSet.has(targetUser.id)) {
-        console.log(`✅ MESSAGING: User ${targetUser.id} was unblocked by user ${req.user.id} - allowing message`);
-        isBlocked = false; // Override the database check
-      }
-
+      const isBlocked = await storage.isUserBlocked(req.user.id, targetUser.id);
       if (isBlocked) {
         return res.status(400).json({ message: "This message cannot be delivered. You and this user are not able to message each other." });
       }
@@ -11274,72 +11253,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User Blocking Routes
   // ==========================================
 
-  // Block a user
-  app.post("/api/users/block", authMiddleware, async (req, res) => {
-    try {
-      const { userId } = req.body;
-
-      console.log(`Block request: User ${req.user.id} wants to block user ${userId}`);
-
-      if (!userId || isNaN(userId)) {
-        return res.status(400).json({ message: "Valid user ID is required" });
-      }
-
-      if (userId === req.user.id) {
-        return res.status(400).json({ message: "Cannot block yourself" });
-      }
-
-      // Check if user exists
-      const userToBlock = await storage.getUser(userId);
-      if (!userToBlock) {
-        console.log(`User to block (${userId}) not found`);
-        return res.status(404).json({ message: "Target user not found" });
-      }
-
-      // Check if already blocked
-      const isAlreadyBlocked = await storage.isUserBlocked(req.user.id, userId);
-      console.log(`Is user ${userId} already blocked by ${req.user.id}?`, isAlreadyBlocked);
-
-      if (isAlreadyBlocked) {
-        return res.status(400).json({ message: "User is already blocked" });
-      }
-
-      const blockResult = await storage.blockUser(req.user.id, userId);
-      console.log(`Block operation result:`, blockResult);
-
-      res.json({ message: "User blocked successfully" });
-    } catch (err) {
-      console.error("Error blocking user:", err);
-      res.status(500).json({ message: "Error blocking user" });
-    }
-  });
-
-  // Unblock a user
-  app.post("/api/users/unblock", authMiddleware, async (req, res) => {
-    try {
-      const { userId } = req.body;
-
-      if (!userId || isNaN(userId)) {
-        return res.status(400).json({ message: "Valid user ID is required" });
-      }
-
-      const success = await storage.unblockUser(req.user.id, userId);
-      if (success) {
-        res.json({ message: "User unblocked successfully" });
-      } else {
-        res.status(404).json({ message: "User is not blocked" });
-      }
-    } catch (err) {
-      console.error("Error unblocking user:", err);
-      res.status(500).json({ message: "Error unblocking user" });
-    }
-  });
-
-  // Get blocked users - COMMENTED OUT as we have an override in blocked-users-fix.ts
-  /*
-  // DISABLED - Using direct override instead
-  // app.get("/api/users/blocked", authMiddleware, async (req, res) => {
-  */
+  // NB: the live /api/users/block, /api/users/unblock and /api/users/blocked
+  // handlers are registered earlier (search "app.post(\"/api/users/block\"").
+  // Earlier registration wins in Express, so the real DB-backed versions there
+  // are authoritative; the duplicate handlers that used to sit here were dead.
 
   // Update messaging preferences
   app.post("/api/users/messaging-preferences", authMiddleware, async (req, res) => {
@@ -11737,52 +11654,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
-  // Quick fix for blocked users route - place BEFORE other routes
-  console.log("🔧 ADDING BLOCKED USERS ROUTE OVERRIDE EARLY");
-
-  // Force override the blocked users route immediately
-  app.get("/api/users/blocked", authMiddleware, async (req: any, res: any) => {
-    console.log("🔍 BLOCKED USERS ROUTE HIT - DIRECT OVERRIDE!");
-
-    if (!req.user) {
-      console.log("❌ No user in request - returning 401");
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-
-    const userId = Number(req.user.id);
-    console.log("✅ User authenticated:", userId);
-
-    if (userId === 3) {
-      // User 3 (mod_tom) - show blocked users
-      const blockedUsers = [
-        {
-          id: 999,
-          userId: 999,
-          username: "demo",
-          displayName: "Demo User",
-          avatarUrl: "/attached_assets/demo_avatar_1755254904563.jpg",
-          email: "demo@example.com",
-          emailVerified: true
-        },
-        {
-          id: 15,
-          userId: 15,
-          username: "user15",
-          displayName: "User 15",
-          avatarUrl: "",
-          email: "user15@example.com",
-          emailVerified: true
-        }
-      ];
-      console.log("✅ DIRECT OVERRIDE: User 3 has blocked users:", blockedUsers);
-      return res.json(blockedUsers);
-    } else {
-      console.log("✅ DIRECT OVERRIDE: User", userId, "has no blocked users");
-      return res.json([]);
-    }
-  });
-
-  console.log("✅ Direct blocked users route override loaded!");
+  // NB: the live /api/users/blocked handler is registered earlier and is
+  // DB-backed (storage.getBlockedUsers). A demo-only mock used to sit here but
+  // was shadowed by the earlier registration, so it has been removed.
 
   // Health check endpoint
   app.get("/api/health", async (req, res) => {
