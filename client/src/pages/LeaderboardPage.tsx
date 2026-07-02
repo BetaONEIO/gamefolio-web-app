@@ -537,7 +537,6 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
           const pct    = entry.totalPoints / maxPts;
           const barH   = Math.max(Math.round(pct * MAX_BAR_H), 14);
           const colors = isTop3 ? BAR_RANK_COLORS[rank] : isMe ? BAR_ME_COLOR : BAR_DEF_COLOR;
-          const medals: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
           const rankBanners: Record<number, string> = { 1: goldBannerImg, 2: silverBannerImg, 3: bronzeBannerImg };
 
           return (
@@ -556,12 +555,6 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                     boxShadow: `0 0 16px ${colors.glow}`,
                   }}
                 >
-                  {/* Medal emoji above top-3 */}
-                  {isTop3 && (
-                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xl leading-none select-none">
-                      {medals[rank]}
-                    </div>
-                  )}
                   {/* YOU chip */}
                   {isMe && (
                     <div className={`absolute ${isTop3 ? "-bottom-5" : "-top-5"} left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-black bg-[#B7FF1A] text-black px-1.5 py-0.5 rounded-full`}>
