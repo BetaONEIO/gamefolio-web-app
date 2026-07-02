@@ -618,7 +618,7 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                 {/* Rank */}
                 <span
                   className="text-[9px] font-black leading-none"
-                  style={{ color: isTop3 ? BAR_RANK_COLORS[rank].badge : isMe ? "#B7FF1A" : "#4b5563" }}
+                  style={{ color: isTop3 ? BAR_RANK_COLORS[rank].badge : "#B7FF1A" }}
                 >
                   #{rank}
                 </span>
