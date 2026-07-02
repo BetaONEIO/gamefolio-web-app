@@ -884,34 +884,27 @@ function HallOfChampions() {
     queryFn: () => fetch("/api/leaderboard/season-history").then(r => r.json()),
   });
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-
   return (
-    <section className="mb-8">
+    <section className="mb-8 px-4 sm:px-6 lg:px-10">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-4 px-4 sm:px-6 lg:px-10">
+      <div className="flex items-center gap-2 mb-5">
         <Calendar className="w-5 h-5 text-[#FFD700]" />
         <h2 className="text-xl font-black text-white tracking-wide uppercase">Season History</h2>
       </div>
 
-      {/* Horizontal scroll row */}
       {isLoading ? (
-        <div className="flex gap-3 px-4 sm:px-6 lg:px-10">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex-shrink-0 w-52 h-56 rounded-xl bg-white/5 animate-pulse" />
+            <div key={i} className="h-64 rounded-2xl bg-white/5 animate-pulse" />
           ))}
         </div>
       ) : !seasons || seasons.length === 0 ? (
-        <div className="text-center py-12 text-slate-500 px-4">
+        <div className="text-center py-12 text-slate-500">
           <Trophy className="w-10 h-10 mx-auto mb-3 opacity-30" />
           <p className="text-sm">No season history yet.</p>
         </div>
       ) : (
-        <div
-          ref={scrollRef}
-          className="flex gap-3 overflow-x-auto pb-2 px-4 sm:px-6 lg:px-10 scroll-smooth"
-          style={{ scrollbarWidth: "none" }}
-        >
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {seasons.map(season => {
             const iconEl = SEASON_ICON_MAP[season.icon] ?? SEASON_ICON_MAP.sun;
             const iconColor =
@@ -923,33 +916,33 @@ function HallOfChampions() {
             return (
               <div
                 key={season.num}
-                className="flex-shrink-0 w-52 rounded-xl border border-white/10 bg-[#0d1520] flex flex-col overflow-hidden"
+                className="rounded-2xl border border-white/10 bg-[#0d1520] flex flex-col overflow-hidden hover:border-white/20 transition-colors"
               >
                 {/* Card header */}
-                <div className="px-4 pt-4 pb-3 border-b border-white/8">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span style={{ color: iconColor }}>{iconEl}</span>
-                    <span className="text-[11px] font-black text-white tracking-wide uppercase">
+                <div className="px-5 pt-5 pb-4 border-b border-white/8">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span style={{ color: iconColor }} className="[&>svg]:w-5 [&>svg]:h-5">{iconEl}</span>
+                    <span className="text-xs font-black text-white/50 tracking-widest uppercase">
                       Season {season.num}
                     </span>
                   </div>
-                  <div className="text-[11px] font-bold text-white/80 leading-tight">{season.name}</div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">{season.dateRange}</div>
+                  <div className="text-base font-bold text-white leading-tight">{season.name}</div>
+                  <div className="text-xs text-slate-500 mt-1">{season.dateRange}</div>
                 </div>
 
                 {/* Top 3 list */}
-                <div className="flex-1 px-3 py-2.5 space-y-2">
+                <div className="flex-1 px-4 py-4 space-y-3">
                   {season.top3.length === 0 ? (
-                    <div className="text-[11px] text-slate-600 text-center py-4">No data</div>
+                    <div className="text-xs text-slate-600 text-center py-4">No data</div>
                   ) : (
                     season.top3.map(p => {
                       const t = RANK_TROPHY[p.rank] ?? RANK_TROPHY[3];
                       return (
                         <Link key={p.userId} href={`/@${p.user.username}`}>
-                          <div className="flex items-center gap-2 cursor-pointer group">
-                            <span className="text-base leading-none flex-shrink-0">{t.icon}</span>
+                          <div className="flex items-center gap-3 cursor-pointer group">
+                            <span className="text-lg leading-none flex-shrink-0">{t.icon}</span>
                             <UserAvatar user={p.user} size="sm" />
-                            <span className="text-[11px] font-semibold text-white/90 truncate group-hover:text-white transition-colors">
+                            <span className="text-sm font-semibold text-white/90 truncate group-hover:text-white transition-colors">
                               {p.user.displayName || p.user.username}
                             </span>
                           </div>
@@ -960,8 +953,8 @@ function HallOfChampions() {
                 </div>
 
                 {/* View Season button */}
-                <div className="px-3 pb-3">
-                  <button className="w-full py-1.5 rounded border border-[#B7FF1A]/40 text-[#B7FF1A] text-[11px] font-black tracking-widest uppercase hover:bg-[#B7FF1A]/10 transition-colors">
+                <div className="px-4 pb-4">
+                  <button className="w-full py-2 rounded-lg border border-[#B7FF1A]/40 text-[#B7FF1A] text-xs font-black tracking-widest uppercase hover:bg-[#B7FF1A]/10 transition-colors">
                     View Season
                   </button>
                 </div>
