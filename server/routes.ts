@@ -3808,6 +3808,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const period = (req.query.period as string) || 'week';
       const limit = Math.min(parseInt(req.query.limit as string) || 10, 20);
 
+      const cacheKey = `trending-gamefolios:${period}:${limit}`;
+      const enriched = await getCachedTrending(cacheKey, async () => {
       let leaderboardData: Array<{ userId: number; uploadsCount: number; totalPoints: number; rank?: number; user: any }>;
       if (period === 'month') {
         leaderboardData = await LeaderboardService.getCurrentMonthLeaderboard(limit);
@@ -3826,7 +3828,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (!leaderboardData || leaderboardData.length === 0) {
-        return res.json([]);
+        return [];
       }
 
       const userIds = leaderboardData.map(e => e.userId);
@@ -3872,7 +3874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const followerMap: Record<number, number> = Object.fromEntries(followerRows.map(r => [r.userId, r.count]));
       const followingMap: Record<number, number> = Object.fromEntries(followingRows.map(r => [r.userId, r.count]));
 
-      const enriched = await Promise.all(
+      const entries = await Promise.all(
         leaderboardData.map(async (entry, index) => {
           let userData = { ...entry.user };
           for (const field of SENSITIVE_USER_FIELDS) {
@@ -3907,6 +3909,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         })
       );
+
+      return entries;
+      }); // end getCachedTrending
 
       res.json(enriched);
     } catch (error) {

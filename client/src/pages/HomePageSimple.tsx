@@ -391,9 +391,15 @@ const HomePage = () => {
     queryFn: async () => {
       const r = await fetch("/api/trending-gamefolios?period=week&limit=10");
       if (!r.ok) throw new Error("Failed to fetch");
-      return r.json();
+      const data = await r.json();
+      // Don't accept empty arrays — retry on next render instead of caching blank state
+      if (!Array.isArray(data) || data.length === 0) throw new Error("No leaderboard data yet");
+      return data;
     },
-    staleTime: 120_000,
+    staleTime: 5 * 60_000,       // treat data as fresh for 5 minutes
+    gcTime: 30 * 60_000,         // keep in cache 30 minutes across navigations
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10_000),
   });
   const weeklyTop3 = weeklyTop10?.slice(0, 3);
 
