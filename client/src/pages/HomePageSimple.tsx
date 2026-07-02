@@ -106,6 +106,7 @@ interface LeaderboardWinner {
     backgroundColor: string | null;
     primaryColor: string | null;
     profileBackgroundGradient: boolean | null;
+    profileBackgroundGradientCss: string | null;
     profileBackgroundImageUrl: string | null;
   };
 }
@@ -609,11 +610,12 @@ const HomePage = () => {
                                         displayName: winner.user.displayName, avatarUrl: winner.user.avatarUrl,
                                         bannerUrl: winner.user.bannerUrl,
                                         avatarBorderColor: accentClr,
-                                        accentColor: accentClr,
+                                        accentColor: winner.user.accentColor,
                                         level: winner.user.level,
                                         backgroundColor: winner.user.backgroundColor,
                                         primaryColor: winner.user.primaryColor,
                                         profileBackgroundGradient: winner.user.profileBackgroundGradient ?? false,
+                                        profileBackgroundGradientCss: winner.user.profileBackgroundGradientCss,
                                         profileBackgroundImageUrl: winner.user.profileBackgroundImageUrl,
                                       },
                                     };
