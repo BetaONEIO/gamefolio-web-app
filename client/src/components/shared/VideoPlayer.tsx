@@ -421,6 +421,9 @@ const VideoPlayer = ({
         )}
         style={videoStyle}
         onClick={togglePlay}
+        onContextMenu={(e) => e.preventDefault()}
+        controlsList="nodownload noremoteplayback noplaybackrate"
+        disablePictureInPicture
         autoPlay={autoPlay}
         muted={isMuted}
         playsInline
