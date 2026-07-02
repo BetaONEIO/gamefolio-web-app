@@ -83,6 +83,9 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
           preload="none"
           muted
           loop
+          onContextMenu={(e) => e.preventDefault()}
+          controlsList="nodownload noremoteplayback noplaybackrate"
+          disablePictureInPicture
           className={cn(
             "w-full h-full transition-opacity duration-200 relative z-10",
             isPortrait ? "object-contain" : "object-cover object-center",
