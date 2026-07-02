@@ -145,9 +145,21 @@ function UserAvatar({ user, size = "md" }: { user: LeaderboardEntry["user"] | To
 // ─── Section: Season Hero (banner + top-3 podium) ─────────────────────────
 
 const PODIUM_GLOW: Record<number, string> = {
-  1: "drop-shadow(0 0 20px rgba(255,215,0,0.9)) drop-shadow(0 6px 14px rgba(255,190,0,0.55))",
+  1: "drop-shadow(0 0 22px rgba(255,215,0,0.9)) drop-shadow(0 6px 14px rgba(255,190,0,0.55))",
   2: "drop-shadow(0 0 16px rgba(210,210,210,0.85)) drop-shadow(0 5px 10px rgba(192,192,192,0.5))",
   3: "drop-shadow(0 0 14px rgba(205,127,50,0.85)) drop-shadow(0 5px 10px rgba(180,100,30,0.5))",
+};
+
+const PODIUM_IMG: Record<number, string> = {
+  1: "/podium-1st.png",
+  2: "/podium-2nd.png",
+  3: "/podium-3rd.png",
+};
+
+const PODIUM_IMG_W: Record<number, string> = {
+  1: "w-48",
+  2: "w-36",
+  3: "w-32",
 };
 
 function SeasonHero({ top3 }: { top3: TrendingEntry[] }) {
@@ -159,36 +171,52 @@ function SeasonHero({ top3 }: { top3: TrendingEntry[] }) {
   };
 
   return (
-    <div className="relative overflow-hidden" style={{ minHeight: 420 }}>
+    <div className="relative" style={{ minHeight: 560 }}>
       <div
         className="absolute inset-0"
         style={{ backgroundImage: "url('/electrical-bg.webp')", backgroundSize: "cover", backgroundPosition: "center" }}
       />
-      {/* Gradient overlay — heavier at bottom so cards read cleanly */}
-      <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,rgba(5,9,13,0.55) 0%,rgba(8,14,24,0.60) 50%,rgba(5,9,13,0.92) 100%)" }} />
+      {/* Gradient overlay */}
+      <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,rgba(5,9,13,0.50) 0%,rgba(8,14,24,0.55) 45%,rgba(5,9,13,0.88) 100%)" }} />
 
-      {/* Podium glow orb behind rank-1 */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-80 h-40 blur-3xl opacity-20 pointer-events-none"
+      {/* Gold glow orb behind rank-1 */}
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-96 h-48 blur-3xl opacity-25 pointer-events-none"
         style={{ background: "radial-gradient(ellipse,#FFD700,transparent 70%)" }} />
 
-      <div className="relative flex items-end justify-center gap-3 sm:gap-5 px-4 pt-8 pb-0">
+      {/* Three-column podium */}
+      <div className="relative flex items-end justify-center gap-6 sm:gap-10 lg:gap-16 px-4 pt-10 pb-0">
         {top3.length === 0 ? (
-          /* Loading placeholders */
           Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className={`w-[180px] sm:w-[200px] ${i === 1 ? "mb-6" : "mb-0"}`}>
-              <Skeleton className="h-64 rounded-2xl bg-slate-800" />
+            <div key={i} className="flex flex-col items-center">
+              <div className={`w-[175px] sm:w-[195px] ${i !== 1 ? "mt-10" : ""}`}>
+                <Skeleton className="h-64 rounded-2xl bg-slate-800" />
+              </div>
+              <Skeleton className="mt-1 h-20 w-36 bg-slate-800/60 rounded" />
             </div>
           ))
         ) : (
           ordered.map((entry) => {
             const rank = podiumRank(entry);
+            const isCenter = rank === 1;
             return (
               <div
                 key={entry.userId}
-                className={`flex-shrink-0 w-[170px] sm:w-[195px] ${rank === 1 ? "mb-6 relative z-10" : "mb-0"} lb-card-${rank}`}
-                style={{ filter: PODIUM_GLOW[rank] }}
+                className={`flex flex-col items-center flex-shrink-0 ${isCenter ? "" : "mt-10 sm:mt-14"} lb-card-${rank}`}
               >
-                <CreatorCard entry={entry} period="week" />
+                {/* Creator card */}
+                <div
+                  className={`${isCenter ? "w-[185px] sm:w-[215px]" : "w-[160px] sm:w-[185px]"}`}
+                  style={{ filter: PODIUM_GLOW[rank] }}
+                >
+                  <CreatorCard entry={entry} period="week" />
+                </div>
+                {/* Rank trophy image */}
+                <img
+                  src={PODIUM_IMG[rank]}
+                  alt={`#${rank}`}
+                  className={`${PODIUM_IMG_W[rank]} object-contain -mt-1`}
+                  draggable={false}
+                />
               </div>
             );
           })
