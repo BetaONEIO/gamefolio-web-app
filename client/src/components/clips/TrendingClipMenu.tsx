@@ -16,7 +16,9 @@ import {
   Download,
   Loader2,
   User,
+  Flag,
 } from "lucide-react";
+import { ReportDialog } from "@/components/content/ReportDialog";
 import {
   Popover,
   PopoverContent,
@@ -99,6 +101,7 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
   const [isMobile, setIsMobile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [showEditCaption, setShowEditCaption] = useState(false);
   const [editTitle, setEditTitle] = useState(clip.title);
@@ -330,6 +333,16 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
         label={isDownloading ? "Downloading…" : `Download ${Noun}`}
         disabled={isDownloading}
         onClick={handleDownload}
+      />
+      <MenuDivider />
+      <MenuItem
+        icon={<Flag className="h-4 w-4" />}
+        label={`Report ${Noun}`}
+        destructive
+        onClick={() => {
+          close();
+          setShowReport(true);
+        }}
       />
       <MenuDivider />
       <MenuItem
@@ -586,6 +599,15 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ReportDialog
+        contentType={isScreenshot ? 'screenshot' : 'clip'}
+        contentId={clip.id}
+        contentTitle={clip.title}
+        contentAuthor={clip.user.username}
+        open={showReport}
+        onOpenChange={setShowReport}
+      />
 
       {/* Flashing download indicator — fixed bottom-right, visible on all screen sizes */}
       {isDownloading && createPortal(
