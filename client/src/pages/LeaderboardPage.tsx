@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Trophy, Crown, Gem, Shield, Flame, TrendingUp, TrendingDown, Minus,
   Calendar, Clock, Users, Upload, Heart, MessageCircle, Star, Award,
@@ -493,10 +493,40 @@ const MAX_BAR_H = 320; // px — taller bars
 
 function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?: number }) {
   const maxPts = Math.max(...entries.map(e => e.totalPoints), 1);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const dragging  = useRef(false);
+  const startX    = useRef(0);
+  const scrollLeft = useRef(0);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    dragging.current  = true;
+    startX.current    = e.pageX - (scrollRef.current?.offsetLeft ?? 0);
+    scrollLeft.current = scrollRef.current?.scrollLeft ?? 0;
+    if (scrollRef.current) scrollRef.current.style.cursor = "grabbing";
+  };
+  const onMouseUp = () => {
+    dragging.current = false;
+    if (scrollRef.current) scrollRef.current.style.cursor = "grab";
+  };
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!dragging.current || !scrollRef.current) return;
+    e.preventDefault();
+    const x   = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX.current) * 1.5;
+    scrollRef.current.scrollLeft = scrollLeft.current - walk;
+  };
 
   return (
-    <div className="overflow-x-auto pb-4" style={{ cursor: "grab" }}>
-      <div className="flex items-end gap-3 min-w-max px-2 pb-1" style={{ paddingTop: 32 }}>
+    <div
+      ref={scrollRef}
+      className="overflow-x-auto pb-4 select-none"
+      style={{ cursor: "grab" }}
+      onMouseDown={onMouseDown}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseUp}
+      onMouseMove={onMouseMove}
+    >
+      <div className="flex items-end gap-3 min-w-max px-4 pb-1" style={{ paddingTop: 32 }}>
         {entries.map((entry, i) => {
           const rank   = i + 1;
           const isMe   = entry.userId === userId;
@@ -570,6 +600,8 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
   );
 }
 
+const SPARSE_THRESHOLD = 5; // fall back to all-time when period returns fewer than this
+
 function LiveLeaderboard({ userId }: { userId?: number }) {
   const [tab, setTab] = useState<TabType>("alltime");
 
@@ -580,24 +612,32 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
   ];
 
   const { data: weeklyData,  isLoading: wl } = useQuery<LeaderboardEntry[]>({
-    queryKey: ["/api/leaderboard/weekly/current"],
-    queryFn: () => fetch("/api/leaderboard/weekly/current?limit=50").then(r => r.json()),
+    queryKey: ["/api/leaderboard/weekly/current", "chart"],
+    queryFn: () => fetch("/api/leaderboard/weekly/current?limit=100").then(r => r.json()),
   });
   const { data: monthlyData, isLoading: ml } = useQuery<LeaderboardEntry[]>({
-    queryKey: ["/api/leaderboard/monthly/current"],
-    queryFn: () => fetch("/api/leaderboard/monthly/current?limit=50").then(r => r.json()),
+    queryKey: ["/api/leaderboard/monthly/current", "chart"],
+    queryFn: () => fetch("/api/leaderboard/monthly/current?limit=100").then(r => r.json()),
   });
   const { data: alltimeData, isLoading: al } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard", "lb"],
-    queryFn: () => fetch("/api/leaderboard?limit=50").then(r => r.json()),
+    queryFn: () => fetch("/api/leaderboard?limit=100").then(r => r.json()),
   });
 
-  const { data, isLoading } =
-    tab === "weekly"  ? { data: weeklyData,  isLoading: wl } :
-    tab === "monthly" ? { data: monthlyData, isLoading: ml } :
-                        { data: alltimeData, isLoading: al };
+  const rawPeriod =
+    tab === "weekly"  ? weeklyData  :
+    tab === "monthly" ? monthlyData :
+                        alltimeData;
 
-  const entries = Array.isArray(data) ? data : [];
+  const isLoading =
+    tab === "weekly"  ? wl :
+    tab === "monthly" ? ml : al;
+
+  const periodSparse = Array.isArray(rawPeriod) && rawPeriod.length < SPARSE_THRESHOLD && !isLoading;
+  const usingFallback = (tab === "weekly" || tab === "monthly") && periodSparse;
+  const entries = usingFallback
+    ? (Array.isArray(alltimeData) ? alltimeData : [])
+    : (Array.isArray(rawPeriod) ? rawPeriod : []);
 
   const tabSubtitle: Record<TabType, string> = {
     weekly:  "XP earned this week",
@@ -606,13 +646,18 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
   };
 
   return (
-    <section className="mb-8">
-      {/* Header row */}
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <div className="flex items-center gap-2">
+    <section className="mb-0">
+      {/* Header row — padded */}
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3 px-4 sm:px-6 lg:px-10">
+        <div className="flex items-center gap-2 flex-wrap">
           <TrendingUp className="w-5 h-5 text-[#B7FF1A]" />
           <h2 className="text-xl font-black text-white">Live Leaderboard</h2>
           <span className="text-xs text-slate-500 mt-0.5">{tabSubtitle[tab]}</span>
+          {usingFallback && (
+            <span className="text-[10px] bg-white/8 text-slate-400 border border-white/10 px-2 py-0.5 rounded-full">
+              showing all-time · no {tab === "weekly" ? "week" : "month"} data yet
+            </span>
+          )}
         </div>
 
         {/* Tabs */}
@@ -631,10 +676,10 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
         </div>
       </div>
 
-      {/* Chart area */}
-      {isLoading ? (
-        <div className="overflow-x-auto pb-4">
-          <div className="flex items-end gap-3 min-w-max px-2" style={{ height: MAX_BAR_H + 110, paddingTop: 32 }}>
+      {/* Chart area — full width, no side padding so scroll isn't clipped */}
+      {isLoading && !usingFallback ? (
+        <div className="overflow-x-auto pb-4 px-4">
+          <div className="flex items-end gap-3 min-w-max" style={{ height: MAX_BAR_H + 110, paddingTop: 32 }}>
             {Array.from({ length: 20 }).map((_, i) => {
               const h = Math.max(40, Math.round(MAX_BAR_H * Math.max(0.15, 1 - i * 0.045)));
               return (
@@ -649,17 +694,17 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
           </div>
         </div>
       ) : entries.length === 0 ? (
-        <div className="text-center py-16 rounded-2xl border border-white/5 bg-white/2">
+        <div className="mx-4 text-center py-16 rounded-2xl border border-white/5 bg-white/2">
           <Star className="w-10 h-10 mx-auto mb-3 text-slate-600" />
           <p className="text-sm font-semibold text-slate-400">No activity yet for this period</p>
           <p className="text-xs text-slate-600 mt-1">Earn XP by uploading content to appear here</p>
         </div>
       ) : (
         <>
-          <div className="w-full h-px bg-white/10 mb-1" />
+          <div className="w-full h-px bg-white/8 mb-1" />
           <XPBarChart entries={entries} userId={userId} />
-          <p className="text-[10px] text-slate-600 mt-1 text-center">
-            {entries.length} players · scroll to see all · click a bar to visit their profile
+          <p className="text-[10px] text-slate-600 mt-1 text-center pb-2">
+            {entries.length} players · drag or scroll to explore · click a bar to visit profile
           </p>
         </>
       )}
@@ -971,10 +1016,8 @@ export default function LeaderboardPage() {
       <SeasonInfoBar playerCount={playerCount} />
 
       {/* ── Live Leaderboard — directly under Summer Showdown ── */}
-      <div className="w-full border-b border-white/5 pt-8 pb-6">
-        <div className="px-4 sm:px-6 lg:px-10">
-          <LiveLeaderboard userId={user?.id} />
-        </div>
+      <div className="w-full border-b border-white/5 pt-8 pb-6 bg-[#060c12]">
+        <LiveLeaderboard userId={user?.id} />
       </div>
 
       {/* Narrow sections */}
