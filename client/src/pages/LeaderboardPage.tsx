@@ -609,38 +609,51 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
     { key: "alltime", label: "All Time"   },
   ];
 
-  const { data: weeklyData,  isLoading: wl } = useQuery<LeaderboardEntry[]>({
-    queryKey: ["/api/leaderboard/weekly/current", "chart"],
+  const MIN_PERIOD_ENTRIES = 3; // below this, fall back to previous period
+
+  const { data: weeklyData,    isLoading: wl  } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["/api/leaderboard/weekly/current",  "chart"],
     queryFn: () => fetch("/api/leaderboard/weekly/current?limit=100").then(r => r.json()),
   });
-  const { data: monthlyData, isLoading: ml } = useQuery<LeaderboardEntry[]>({
+  const { data: prevWeekData,  isLoading: pwl } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["/api/leaderboard/weekly/previous", "chart"],
+    queryFn: () => fetch("/api/leaderboard/weekly/previous?limit=100").then(r => r.json()),
+    enabled: !wl && Array.isArray(weeklyData) && weeklyData.length < MIN_PERIOD_ENTRIES,
+  });
+  const { data: monthlyData,   isLoading: ml  } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard/monthly/current", "chart"],
     queryFn: () => fetch("/api/leaderboard/monthly/current?limit=100").then(r => r.json()),
   });
-  const { data: alltimeData, isLoading: al } = useQuery<LeaderboardEntry[]>({
+  const { data: prevMonthData, isLoading: pml } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["/api/leaderboard/monthly/previous", "chart"],
+    queryFn: () => fetch("/api/leaderboard/monthly/previous?limit=100").then(r => r.json()),
+    enabled: !ml && Array.isArray(monthlyData) && monthlyData.length < MIN_PERIOD_ENTRIES,
+  });
+  const { data: alltimeData,   isLoading: al  } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard", "lb"],
     queryFn: () => fetch("/api/leaderboard?limit=100").then(r => r.json()),
   });
 
   const isLoading =
-    tab === "weekly"  ? wl :
-    tab === "monthly" ? ml : al;
+    tab === "weekly"  ? (wl || (Array.isArray(weeklyData)  && weeklyData.length  < MIN_PERIOD_ENTRIES && pwl)) :
+    tab === "monthly" ? (ml || (Array.isArray(monthlyData) && monthlyData.length < MIN_PERIOD_ENTRIES && pml)) :
+                        al;
 
-  const rawPeriod: LeaderboardEntry[] | undefined =
-    tab === "weekly"  ? weeklyData  :
-    tab === "monthly" ? monthlyData :
-                        alltimeData;
+  const weeklySparse  = !wl  && Array.isArray(weeklyData)  && weeklyData.length  < MIN_PERIOD_ENTRIES;
+  const monthlySparse = !ml  && Array.isArray(monthlyData) && monthlyData.length < MIN_PERIOD_ENTRIES;
 
-  // Only fall back to all-time when the period returned zero entries
-  const periodEmpty = !isLoading && Array.isArray(rawPeriod) && rawPeriod.length === 0;
-  const usingFallback = (tab === "weekly" || tab === "monthly") && periodEmpty;
-  const entries = usingFallback
-    ? (Array.isArray(alltimeData) ? alltimeData : [])
-    : (Array.isArray(rawPeriod) ? rawPeriod : []);
+  const usingPrevWeek  = tab === "weekly"  && weeklySparse;
+  const usingPrevMonth = tab === "monthly" && monthlySparse;
+  const usingFallback  = usingPrevWeek || usingPrevMonth;
+
+  const entries: LeaderboardEntry[] =
+    tab === "weekly"  ? (weeklySparse  ? (Array.isArray(prevWeekData)  ? prevWeekData  : []) : (Array.isArray(weeklyData)  ? weeklyData  : [])) :
+    tab === "monthly" ? (monthlySparse ? (Array.isArray(prevMonthData) ? prevMonthData : []) : (Array.isArray(monthlyData) ? monthlyData : [])) :
+                        (Array.isArray(alltimeData) ? alltimeData : []);
 
   const tabSubtitle: Record<TabType, string> = {
-    weekly:  "XP earned this week",
-    monthly: "XP earned this month",
+    weekly:  usingPrevWeek  ? "Showing last week · this week just started" : "XP earned this week",
+    monthly: usingPrevMonth ? "Showing last month · this month just started" : "XP earned this month",
     alltime: "Total season XP",
   };
 
@@ -653,8 +666,8 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
           <h2 className="text-xl font-black text-white">Live Leaderboard</h2>
           <span className="text-xs text-slate-500 mt-0.5">{tabSubtitle[tab]}</span>
           {usingFallback && (
-            <span className="text-[10px] bg-white/8 text-slate-400 border border-white/10 px-2 py-0.5 rounded-full">
-              showing all-time · no {tab === "weekly" ? "week" : "month"} data yet
+            <span className="text-[10px] bg-[#B7FF1A]/10 text-[#B7FF1A]/70 border border-[#B7FF1A]/20 px-2 py-0.5 rounded-full">
+              {usingPrevWeek ? "showing last week" : "showing last month"}
             </span>
           )}
         </div>
