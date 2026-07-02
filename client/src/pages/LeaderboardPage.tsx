@@ -611,28 +611,51 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
 
   const MIN_PERIOD_ENTRIES = 3; // below this, fall back to previous period
 
-  const { data: weeklyData,    isLoading: wl  } = useQuery<LeaderboardEntry[]>({
+  const POLL_MS = 30_000;
+
+  const { data: weeklyData,    isLoading: wl,  dataUpdatedAt: wUpdated  } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard/weekly/current",  "chart"],
     queryFn: () => fetch("/api/leaderboard/weekly/current?limit=100").then(r => r.json()),
+    refetchInterval: POLL_MS,
   });
   const { data: prevWeekData,  isLoading: pwl } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard/weekly/previous", "chart"],
     queryFn: () => fetch("/api/leaderboard/weekly/previous?limit=100").then(r => r.json()),
     enabled: !wl && Array.isArray(weeklyData) && weeklyData.length < MIN_PERIOD_ENTRIES,
+    refetchInterval: POLL_MS,
   });
-  const { data: monthlyData,   isLoading: ml  } = useQuery<LeaderboardEntry[]>({
+  const { data: monthlyData,   isLoading: ml,  dataUpdatedAt: mUpdated  } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard/monthly/current", "chart"],
     queryFn: () => fetch("/api/leaderboard/monthly/current?limit=100").then(r => r.json()),
+    refetchInterval: POLL_MS,
   });
   const { data: prevMonthData, isLoading: pml } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard/monthly/previous", "chart"],
     queryFn: () => fetch("/api/leaderboard/monthly/previous?limit=100").then(r => r.json()),
     enabled: !ml && Array.isArray(monthlyData) && monthlyData.length < MIN_PERIOD_ENTRIES,
+    refetchInterval: POLL_MS,
   });
-  const { data: alltimeData,   isLoading: al  } = useQuery<LeaderboardEntry[]>({
+  const { data: alltimeData,   isLoading: al,  dataUpdatedAt: aUpdated  } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard", "lb"],
     queryFn: () => fetch("/api/leaderboard?limit=100").then(r => r.json()),
+    refetchInterval: POLL_MS,
   });
+
+  const lastUpdated =
+    tab === "weekly"  ? wUpdated :
+    tab === "monthly" ? mUpdated : aUpdated;
+
+  const [lastUpdatedLabel, setLastUpdatedLabel] = useState("just now");
+  useEffect(() => {
+    const update = () => {
+      if (!lastUpdated) return;
+      const secs = Math.floor((Date.now() - lastUpdated) / 1000);
+      setLastUpdatedLabel(secs < 10 ? "just now" : `${secs}s ago`);
+    };
+    update();
+    const id = setInterval(update, 5000);
+    return () => clearInterval(id);
+  }, [lastUpdated]);
 
   const isLoading =
     tab === "weekly"  ? (wl || (Array.isArray(weeklyData)  && weeklyData.length  < MIN_PERIOD_ENTRIES && pwl)) :
@@ -664,6 +687,13 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
         <div className="flex items-center gap-2 flex-wrap">
           <TrendingUp className="w-5 h-5 text-[#B7FF1A]" />
           <h2 className="text-xl font-black text-white">Live Leaderboard</h2>
+          <div className="flex items-center gap-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#B7FF1A' }} />
+              <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: '#B7FF1A' }} />
+            </span>
+            <span className="text-[10px] text-white/30 font-mono">updated {lastUpdatedLabel}</span>
+          </div>
           <span className="text-xs text-slate-500 mt-0.5">{tabSubtitle[tab]}</span>
           {usingFallback && (
             <span className="text-[10px] bg-[#B7FF1A]/10 text-[#B7FF1A]/70 border border-[#B7FF1A]/20 px-2 py-0.5 rounded-full">
