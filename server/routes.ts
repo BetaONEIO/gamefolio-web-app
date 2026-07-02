@@ -9068,7 +9068,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Search query is required" });
       }
       const users = await storage.searchUsers(query);
-      res.json(users);
+      // Never leak credential/secret columns to the client.
+      const safe = users.map(({ password, twoFactorSecret, encryptedPrivateKey, ...u }: any) => u);
+      res.json(safe);
     } catch (err) {
       console.error("Error searching users:", err);
       return res.status(500).json({ message: "Error searching users" });

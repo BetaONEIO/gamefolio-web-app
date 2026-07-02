@@ -16,6 +16,7 @@ import { UserPlus, Check, Search, FileImage, Film, Video, Trophy } from "lucide-
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { resolveApiUrl } from "@/lib/platform";
 
 interface SearchResultsProps {
   query?: string;
@@ -73,7 +74,7 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
   const { data: clipResults, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/search/clips', query],
     queryFn: async () => {
-      const res = await fetch(`/api/search/clips?q=${encodeURIComponent(query)}`, { credentials: 'include' });
+      const res = await fetch(resolveApiUrl(`/api/search/clips?q=${encodeURIComponent(query)}`), { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to search clips');
       return res.json();
     },
@@ -83,7 +84,7 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
   const { data: reelResults, isLoading: isLoadingReels } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/search/reels', query],
     queryFn: async () => {
-      const res = await fetch(`/api/search/reels?q=${encodeURIComponent(query)}`, { credentials: 'include' });
+      const res = await fetch(resolveApiUrl(`/api/search/reels?q=${encodeURIComponent(query)}`), { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to search reels');
       return res.json();
     },
@@ -93,7 +94,7 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
   const { data: screenshotResults, isLoading: isLoadingScreenshots } = useQuery<Screenshot[]>({
     queryKey: ['/api/search/screenshots', query],
     queryFn: async () => {
-      const res = await fetch(`/api/search/screenshots?q=${encodeURIComponent(query)}`, { credentials: 'include' });
+      const res = await fetch(resolveApiUrl(`/api/search/screenshots?q=${encodeURIComponent(query)}`), { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to search screenshots');
       return res.json();
     },
@@ -103,7 +104,7 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
   const { data: userResults, isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: ['/api/search/users', query],
     queryFn: async () => {
-      const res = await fetch(`/api/search/users?q=${encodeURIComponent(query)}`, { credentials: 'include' });
+      const res = await fetch(resolveApiUrl(`/api/search/users?q=${encodeURIComponent(query)}`), { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to search users');
       return res.json();
     },
@@ -113,7 +114,7 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
   const { data: gameResults, isLoading: isLoadingGames } = useQuery<Game[]>({
     queryKey: ['/api/search/games', query],
     queryFn: async () => {
-      const res = await fetch(`/api/search/games?q=${encodeURIComponent(query)}`, { credentials: 'include' });
+      const res = await fetch(resolveApiUrl(`/api/search/games?q=${encodeURIComponent(query)}`), { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to search games');
       return res.json();
     },
