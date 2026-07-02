@@ -486,76 +486,78 @@ const BAR_RANK_COLORS: Record<number, { bar: string; glow: string; badge: string
   2: { bar: "from-slate-200 via-slate-400 to-slate-600",     glow: "rgba(192,192,192,0.35)", badge: "#C0C0C0" },
   3: { bar: "from-amber-500 via-amber-700 to-amber-900",     glow: "rgba(205,127,50,0.35)",  badge: "#CD7F32" },
 };
-const BAR_ME_COLOR  = { bar: "from-[#B7FF1A] via-[#8be800] to-[#5fa800]", glow: "rgba(183,255,26,0.4)" };
-const BAR_DEF_COLOR = { bar: "from-[#1c3a54] via-[#142d42] to-[#0a1f30]", glow: "transparent" };
+const BAR_ME_COLOR  = { bar: "from-[#B7FF1A] via-[#8be800] to-[#5fa800]",       glow: "rgba(183,255,26,0.55)" };
+const BAR_DEF_COLOR = { bar: "from-[#B7FF1A]/80 via-[#B7FF1A]/50 to-[#B7FF1A]/20", glow: "rgba(183,255,26,0.2)" };
 
-const MAX_BAR_H = 220; // px
+const MAX_BAR_H = 320; // px — taller bars
 
 function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?: number }) {
-  const top = entries.slice(0, 25);
-  const maxPts = Math.max(...top.map(e => e.totalPoints), 1);
+  const maxPts = Math.max(...entries.map(e => e.totalPoints), 1);
 
   return (
-    <div className="overflow-x-auto pb-4 -mx-1 px-1">
-      <div className="flex items-end gap-2 min-w-max" style={{ paddingBottom: 4 }}>
-        {top.map((entry, i) => {
-          const rank    = i + 1;
-          const isMe    = entry.userId === userId;
-          const isTop3  = rank <= 3;
-          const pct     = entry.totalPoints / maxPts;
-          const barH    = Math.max(Math.round(pct * MAX_BAR_H), 10);
-          const colors  = isTop3 ? BAR_RANK_COLORS[rank] : isMe ? BAR_ME_COLOR : BAR_DEF_COLOR;
-          const rankLabels: Record<number,string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
+    <div className="overflow-x-auto pb-4" style={{ cursor: "grab" }}>
+      <div className="flex items-end gap-3 min-w-max px-2 pb-1" style={{ paddingTop: 32 }}>
+        {entries.map((entry, i) => {
+          const rank   = i + 1;
+          const isMe   = entry.userId === userId;
+          const isTop3 = rank <= 3;
+          const pct    = entry.totalPoints / maxPts;
+          const barH   = Math.max(Math.round(pct * MAX_BAR_H), 14);
+          const colors = isTop3 ? BAR_RANK_COLORS[rank] : isMe ? BAR_ME_COLOR : BAR_DEF_COLOR;
+          const medals: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
           return (
             <Link key={entry.userId} href={`/profile/${entry.user.username}`}>
-              <div className="flex flex-col items-center gap-1 group cursor-pointer" style={{ width: 52 }}>
-                {/* XP label above bar */}
-                <span className="text-[9px] font-bold text-slate-500 group-hover:text-slate-300 transition-colors leading-none">
+              <div className="flex flex-col items-center gap-1.5 group cursor-pointer select-none" style={{ width: 76 }}>
+                {/* XP label */}
+                <span className="text-[10px] font-bold text-slate-400 group-hover:text-white transition-colors leading-none">
                   {formatPoints(entry.totalPoints)}
                 </span>
 
                 {/* Bar */}
                 <div
-                  className={`w-10 rounded-t-lg bg-gradient-to-t ${colors.bar} border border-white/10 group-hover:brightness-110 transition-all relative`}
+                  className={`w-14 rounded-t-xl bg-gradient-to-t ${colors.bar} border border-white/15 group-hover:brightness-110 transition-all relative`}
                   style={{
                     height: barH,
-                    boxShadow: colors.glow !== "transparent" ? `0 0 12px ${colors.glow}` : undefined,
+                    boxShadow: `0 0 16px ${colors.glow}`,
                   }}
                 >
-                  {/* Top-3 medal overlay */}
+                  {/* Medal emoji above top-3 */}
                   {isTop3 && (
-                    <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-base leading-none select-none">
-                      {rankLabels[rank]}
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xl leading-none select-none">
+                      {medals[rank]}
                     </div>
                   )}
-                  {/* "YOU" chip for current user */}
-                  {isMe && !isTop3 && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-[8px] font-black bg-[#B7FF1A] text-black px-1 py-0.5 rounded-full">
-                      YOU
-                    </div>
-                  )}
-                  {isMe && isTop3 && (
-                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-[8px] font-black bg-[#B7FF1A] text-black px-1 py-0.5 rounded-full">
+                  {/* YOU chip */}
+                  {isMe && (
+                    <div className={`absolute ${isTop3 ? "-bottom-5" : "-top-5"} left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-black bg-[#B7FF1A] text-black px-1.5 py-0.5 rounded-full`}>
                       YOU
                     </div>
                   )}
                 </div>
 
-                {/* Avatar */}
-                <UserAvatar user={entry.user} size="sm" />
+                {/* Avatar — larger */}
+                <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-white/10 group-hover:ring-[#B7FF1A]/50 transition-all flex-shrink-0">
+                  {entry.user.avatarUrl ? (
+                    <img src={entry.user.avatarUrl} alt={entry.user.displayName} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-slate-700 flex items-center justify-center">
+                      <span className="text-base font-black text-white">{entry.user.displayName[0]?.toUpperCase()}</span>
+                    </div>
+                  )}
+                </div>
 
                 {/* Username */}
-                <span className="text-[9px] text-slate-500 group-hover:text-slate-300 transition-colors text-center leading-tight truncate w-full text-center">
-                  {entry.user.displayName.length > 7
-                    ? entry.user.displayName.slice(0, 6) + "…"
+                <span className="text-[10px] font-semibold text-slate-400 group-hover:text-white transition-colors text-center leading-tight w-full truncate">
+                  {entry.user.displayName.length > 8
+                    ? entry.user.displayName.slice(0, 7) + "…"
                     : entry.user.displayName}
                 </span>
 
-                {/* Rank number */}
+                {/* Rank */}
                 <span
-                  className="text-[8px] font-black leading-none"
-                  style={{ color: isTop3 ? BAR_RANK_COLORS[rank].badge : isMe ? "#B7FF1A" : "#374151" }}
+                  className="text-[9px] font-black leading-none"
+                  style={{ color: isTop3 ? BAR_RANK_COLORS[rank].badge : isMe ? "#B7FF1A" : "#4b5563" }}
                 >
                   #{rank}
                 </span>
@@ -631,14 +633,20 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
 
       {/* Chart area */}
       {isLoading ? (
-        <div className="flex items-end gap-2 overflow-hidden" style={{ height: MAX_BAR_H + 90 }}>
-          {Array.from({ length: 18 }).map((_, i) => (
-            <div key={i} className="flex flex-col items-center gap-1" style={{ width: 52 }}>
-              <Skeleton className="w-10 rounded-t-lg bg-slate-800" style={{ height: Math.max(30, Math.round(MAX_BAR_H * (0.3 + Math.random() * 0.7))) }} />
-              <Skeleton className="w-8 h-8 rounded-full bg-slate-800" />
-              <Skeleton className="w-10 h-2 rounded bg-slate-800" />
-            </div>
-          ))}
+        <div className="overflow-x-auto pb-4">
+          <div className="flex items-end gap-3 min-w-max px-2" style={{ height: MAX_BAR_H + 110, paddingTop: 32 }}>
+            {Array.from({ length: 20 }).map((_, i) => {
+              const h = Math.max(40, Math.round(MAX_BAR_H * Math.max(0.15, 1 - i * 0.045)));
+              return (
+                <div key={i} className="flex flex-col items-center gap-1.5" style={{ width: 76 }}>
+                  <Skeleton className="w-10 h-3 rounded bg-slate-800" />
+                  <Skeleton className="w-14 rounded-t-xl bg-slate-800" style={{ height: h }} />
+                  <Skeleton className="w-12 h-12 rounded-full bg-slate-800" />
+                  <Skeleton className="w-14 h-2.5 rounded bg-slate-800" />
+                </div>
+              );
+            })}
+          </div>
         </div>
       ) : entries.length === 0 ? (
         <div className="text-center py-16 rounded-2xl border border-white/5 bg-white/2">
@@ -648,11 +656,10 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
         </div>
       ) : (
         <>
-          {/* Baseline rule */}
           <div className="w-full h-px bg-white/10 mb-1" />
           <XPBarChart entries={entries} userId={userId} />
-          <p className="text-[10px] text-slate-600 mt-2 text-center">
-            Showing top {Math.min(entries.length, 25)} of {entries.length} players · click a bar to visit their profile
+          <p className="text-[10px] text-slate-600 mt-1 text-center">
+            {entries.length} players · scroll to see all · click a bar to visit their profile
           </p>
         </>
       )}
@@ -963,6 +970,13 @@ export default function LeaderboardPage() {
       {/* Season info bar — below the banner image */}
       <SeasonInfoBar playerCount={playerCount} />
 
+      {/* ── Live Leaderboard — directly under Summer Showdown ── */}
+      <div className="w-full border-b border-white/5 pt-8 pb-6">
+        <div className="px-4 sm:px-6 lg:px-10">
+          <LiveLeaderboard userId={user?.id} />
+        </div>
+      </div>
+
       {/* Narrow sections */}
       <div className="max-w-3xl mx-auto pt-6">
 
@@ -983,13 +997,6 @@ export default function LeaderboardPage() {
 
         {/* Ranked Leagues */}
         <RankedLeagues leaderboard={leaderboard} userId={user?.id} />
-      </div>
-
-      {/* ── Full-width Live Leaderboard ── */}
-      <div className="w-full border-t border-white/5 pt-8 pb-4">
-        <div className="px-4 sm:px-6 lg:px-10">
-          <LiveLeaderboard userId={user?.id} />
-        </div>
       </div>
 
       {/* Narrow sections continued */}
