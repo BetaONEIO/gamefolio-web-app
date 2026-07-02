@@ -831,6 +831,17 @@ video:focus {
   display: none !important;
 }
 
+/* Android/Chromium WebView shows a central play overlay on any video that
+   hasn't started (the idle lootbox video is paused on its first frame). These
+   pseudo-elements are that play icon — hide them so it never flashes. */
+.lootbox-dialog-content video::-webkit-media-controls-start-playback-button,
+.lootbox-dialog-content video::-webkit-media-controls-overlay-play-button,
+.lootbox-dialog-content video::-webkit-media-controls-play-button {
+  display: none !important;
+  -webkit-appearance: none !important;
+  opacity: 0 !important;
+}
+
 /* ── Font Animations for Profile Display Name ── */
 
 @keyframes font-bounce {

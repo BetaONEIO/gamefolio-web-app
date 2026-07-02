@@ -1,4 +1,5 @@
 import type { User } from '@shared/schema';
+import { getSignupSource } from './request-context';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const SIGNUP_CHAT_ID = process.env.TELEGRAM_SIGNUP_CHAT_ID;
@@ -81,11 +82,13 @@ export function notifyNewSignup(user: User): void {
   if (!BOT_TOKEN || !SIGNUP_CHAT_ID) return;
 
   const provider = escapeHtml(providerLabel(user.authProvider));
+  const source = escapeHtml(getSignupSource());
 
   const text =
     `🎮 <b>New Gamefolio signup</b>\n` +
     `${userLine(user)}\n` +
-    `via ${provider} · ID ${user.id}`;
+    `via ${provider} · ID ${user.id}\n` +
+    `📍 ${source}`;
 
   void postToTelegram(text).catch((err) => {
     console.error('[Telegram] notifyNewSignup error:', err);

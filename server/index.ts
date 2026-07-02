@@ -44,6 +44,7 @@ import proSubscriptionRoutes from './routes/pro-subscription';
 import gfWebhookRoutes from './routes/gf-webhook';
 import gfStakingRoutes from './routes/gf-staking';
 import { blockCryptoOnNative } from './middleware/block-crypto-on-native';
+import { requestContextMiddleware } from './request-context';
 import storeRoutes from './routes/store';
 import gamefolioPurchaseRoutes from './routes/gamefolio-purchases';
 import revenuecatRoutes from './routes/revenuecat';
@@ -155,6 +156,11 @@ app.use(gfWebhookRoutes);
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ extended: false, limit: '500mb' }));
 
+// Expose the request's platform header + user-agent to deep call sites via
+// AsyncLocalStorage (e.g. signup-source detection in notifyNewSignup). Must run
+// before the route handlers so the context wraps async handlers.
+app.use(requestContextMiddleware);
+
 // Refuse crypto/wallet/NFT/staking endpoints for native (Capacitor) clients —
 // the mobile apps ship without crypto features for App Store / Play financial
 // compliance. Web requests (no X-GF-Platform header) pass through untouched.
@@ -182,27 +188,11 @@ app.get('/.well-known/assetlinks.json', (_req, res) => {
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
 
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
+      log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
     }
   });
 

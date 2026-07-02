@@ -109,7 +109,9 @@ const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
             selectedFilter === 'contrast' && 'filter-contrast'
           )}
           controls
-          controlsList="nodownload"
+          controlsList="nodownload noremoteplayback noplaybackrate"
+          disablePictureInPicture
+          onContextMenu={(e) => e.preventDefault()}
           playsInline
         />
       </div>

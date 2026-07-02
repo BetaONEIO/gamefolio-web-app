@@ -10,19 +10,23 @@ import { notifyProPurchase } from '../telegram-notify';
 const router = Router();
 
 const REVENUECAT_API_BASE = 'https://api.revenuecat.com/v1';
-const PRO_ENTITLEMENT_ID = 'pro';
+export const PRO_ENTITLEMENT_ID = 'pro';
 
-async function fetchRevenueCatSubscriber(appUserId: string): Promise<any> {
+// The GET /subscribers endpoint returns platform-agnostic entitlements, but
+// RevenueCat still expects an X-Platform header. Pass the buyer's real platform
+// so Android purchases aren't recorded against iOS.
+export async function fetchRevenueCatSubscriber(appUserId: string, platform: string = 'ios'): Promise<any> {
   const apiKey = process.env.REVENUECAT_API_KEY;
   if (!apiKey) {
     throw new Error('REVENUECAT_API_KEY is not configured');
   }
 
+  const xPlatform = platform === 'android' ? 'android' : platform === 'web' ? 'web' : 'ios';
   const response = await fetch(`${REVENUECAT_API_BASE}/subscribers/${encodeURIComponent(appUserId)}`, {
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'X-Platform': 'ios',
+      'X-Platform': xPlatform,
     },
   });
 
@@ -34,13 +38,13 @@ async function fetchRevenueCatSubscriber(appUserId: string): Promise<any> {
   return response.json();
 }
 
-function isEntitlementActive(entitlement: any): boolean {
+export function isEntitlementActive(entitlement: any): boolean {
   if (!entitlement) return false;
   if (!entitlement.expires_date) return true;
   return new Date(entitlement.expires_date) > new Date();
 }
 
-function parsePlanFromEntitlement(entitlement: any): 'monthly' | 'yearly' {
+export function parsePlanFromEntitlement(entitlement: any): 'monthly' | 'yearly' {
   const productId: string = entitlement?.product_identifier || '';
   if (productId.includes('annual') || productId.includes('yearly') || productId.includes('year')) {
     return 'yearly';
@@ -48,7 +52,17 @@ function parsePlanFromEntitlement(entitlement: any): 'monthly' | 'yearly' {
   return 'monthly';
 }
 
-function getEndDateFromEntitlement(entitlement: any): Date {
+// Derive plan duration from a webhook product id. NB: RevenueCat's `period_type`
+// is TRIAL/INTRO/NORMAL (not the billing duration), so it must NOT be used here.
+function parsePlanFromProductId(productId: unknown): 'monthly' | 'yearly' {
+  const id = typeof productId === 'string' ? productId.toLowerCase() : '';
+  if (id.includes('annual') || id.includes('yearly') || id.includes('year')) {
+    return 'yearly';
+  }
+  return 'monthly';
+}
+
+export function getEndDateFromEntitlement(entitlement: any): Date {
   if (entitlement?.expires_date) {
     return new Date(entitlement.expires_date);
   }
@@ -62,7 +76,7 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { appUserId } = req.body;
+    const { appUserId, platform } = req.body;
     if (!appUserId || typeof appUserId !== 'string') {
       return res.status(400).json({ error: 'appUserId is required' });
     }
@@ -74,7 +88,7 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
 
     let rcData: any;
     try {
-      rcData = await fetchRevenueCatSubscriber(appUserId);
+      rcData = await fetchRevenueCatSubscriber(appUserId, typeof platform === 'string' ? platform : 'ios');
     } catch (err: any) {
       console.error('[RevenueCat] Failed to fetch subscriber:', err.message);
       return res.status(502).json({ error: 'Failed to verify subscription with RevenueCat', message: err.message });
@@ -145,14 +159,29 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Missing event payload' });
     }
 
-    const { type, app_user_id, expiration_at_ms, period_type } = event;
+    const { type, app_user_id, expiration_at_ms, product_id } = event;
     console.log(`[RevenueCat Webhook] Received event type: ${type}, app_user_id: ${app_user_id}`);
 
     if (!app_user_id) {
       return res.status(200).json({ received: true });
     }
 
-    const [user] = await db.select().from(users).where(eq(users.revenuecatUserId, app_user_id));
+    // Resolve the user. The client configures RevenueCat with a deterministic
+    // appUserID of `gamefolio_<userId>` (users.id is a serial int), so we can
+    // resolve straight from the event — this works even when the client never
+    // hit /api/pro/activate to persist the revenuecatUserId mapping (otherwise
+    // every RENEWAL/CANCELLATION/EXPIRATION would be silently dropped and Pro
+    // would never be revoked). Fall back to the stored mapping for safety.
+    let user;
+    if (typeof app_user_id === 'string' && app_user_id.startsWith('gamefolio_')) {
+      const derivedId = Number(app_user_id.slice('gamefolio_'.length));
+      if (Number.isInteger(derivedId) && derivedId > 0) {
+        [user] = await db.select().from(users).where(eq(users.id, derivedId));
+      }
+    }
+    if (!user) {
+      [user] = await db.select().from(users).where(eq(users.revenuecatUserId, app_user_id));
+    }
     if (!user) {
       console.log(`[RevenueCat Webhook] No user found for app_user_id: ${app_user_id}`);
       return res.status(200).json({ received: true });
@@ -163,13 +192,16 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
 
     if (activatingEvents.includes(type)) {
       const endDate = expiration_at_ms ? new Date(expiration_at_ms) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-      const plan: 'monthly' | 'yearly' = (period_type === 'ANNUAL' || period_type === 'TWO_MONTH' || period_type === 'THREE_MONTH' || period_type === 'SIX_MONTH') ? 'yearly' : 'monthly';
+      const plan: 'monthly' | 'yearly' = parsePlanFromProductId(product_id);
 
       await db.update(users).set({
         isPro: true,
         proSubscriptionType: plan,
         proSubscriptionStartDate: user.proSubscriptionStartDate || new Date(),
         proSubscriptionEndDate: endDate,
+        // Persist the mapping so subsequent REST lookups (and the activate path)
+        // stay consistent for this subscriber.
+        revenuecatUserId: app_user_id,
         updatedAt: new Date(),
       }).where(eq(users.id, user.id));
 

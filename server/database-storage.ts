@@ -3232,7 +3232,10 @@ export class DatabaseStorage implements IStorage {
           dateFilter ? gt(screenshots.createdAt, dateFilter) : undefined,
           gameId ? eq(screenshots.gameId, gameId) : undefined,
           sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${screenshots.gameId} AND g.is_approved = false)`,
-          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${screenshots.userId} AND u.status IN ('suspended', 'banned'))`
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${screenshots.userId} AND u.status IN ('suspended', 'banned'))`,
+          // Exclude screenshots whose author row is missing (deleted/orphaned) —
+          // otherwise the LEFT JOIN yields user: null and crashes the clients.
+          sql`${users.id} IS NOT NULL`
         )
       )
       .orderBy(desc(screenshots.views), desc(screenshots.createdAt), desc(screenshots.id))
@@ -3269,7 +3272,10 @@ export class DatabaseStorage implements IStorage {
         and(
           gameId ? eq(screenshots.gameId, gameId) : undefined,
           sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${screenshots.gameId} AND g.is_approved = false)`,
-          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${screenshots.userId} AND u.status IN ('suspended', 'banned'))`
+          sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${screenshots.userId} AND u.status IN ('suspended', 'banned'))`,
+          // Exclude screenshots whose author row is missing (deleted/orphaned) —
+          // otherwise the LEFT JOIN yields user: null and crashes the clients.
+          sql`${users.id} IS NOT NULL`
         )
       )
       .orderBy(desc(screenshots.createdAt), desc(screenshots.id))

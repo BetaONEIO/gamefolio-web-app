@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { handleDiscordCallback, getDiscordCallbackParams } from '@/lib/discord';
@@ -11,8 +11,12 @@ export function DiscordCallback() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { closeModal } = useAuthModal();
+  const hasProcessed = useRef(false);
 
   useEffect(() => {
+    if (hasProcessed.current) return;
+    hasProcessed.current = true;
+
     const processDiscordCallback = async () => {
       try {
         const { code, state, error } = getDiscordCallbackParams();

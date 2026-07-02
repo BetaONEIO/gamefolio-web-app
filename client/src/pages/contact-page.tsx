@@ -99,7 +99,11 @@ export default function ContactPage() {
       message: string;
       attachmentUrls?: string[];
     }) => {
-      const response = await apiRequest("POST", "/api/support", {
+      if (!data.email || !data.email.trim()) {
+      throw new Error("Email is required so we can contact you with a resolution.");
+    }
+
+    const response = await apiRequest("POST", "/api/support", {
         username: data.username,
         email: data.email,
         category: "Tech Support",
@@ -227,16 +231,19 @@ export default function ContactPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
                   <Input
                     id="email"
                     type="email"
                     value={user?.email || ""}
-                    placeholder="Not provided"
-                    disabled
+                    placeholder={user?.email ? "" : "your@email.com"}
+                    disabled={!!user?.email}
                     className="bg-muted"
                     data-testid="input-email"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    We ask for an email so you can be contacted with a resolution.
+                  </p>
                 </div>
               </div>
 

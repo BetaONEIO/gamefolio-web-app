@@ -31,6 +31,7 @@ import ShareLaunchIcon from "@/components/ui/ShareIcon";
 
 const supportFormSchema = z.object({
   username: z.string().min(1, 'Username is required'),
+  email: z.string().email('Please provide a valid email address so we can contact you with a resolution'),
   category: z.enum(['Tech Support', 'Business Enquiry', 'Partnership Enquiry', 'Other']),
   subject: z.string().min(1, 'Subject is required').max(100, 'Subject must be 100 characters or less'),
   message: z.string().min(10, 'Message must be at least 10 characters').max(1000, 'Message must be 1000 characters or less')
@@ -234,6 +235,7 @@ export default function HelpPage() {
     resolver: zodResolver(supportFormSchema),
     defaultValues: {
       username: user?.username || '',
+      email: user?.email || '',
       category: undefined,
       subject: '',
       message: ''
@@ -244,12 +246,17 @@ export default function HelpPage() {
     form.setValue('username', user.username);
   }
 
+  if (user?.email && form.getValues().email !== user.email) {
+    form.setValue('email', user.email);
+  }
+
   const submitSupportForm = useMutation({
     mutationFn: (data: SupportFormData) => apiRequest("POST", "/api/support", data),
     onSuccess: () => {
       setIsSubmitted(true);
       form.reset({
         username: user?.username || '',
+        email: user?.email || '',
         category: undefined,
         subject: '',
         message: ''
@@ -439,6 +446,29 @@ export default function HelpPage() {
                           data-testid="input-support-username"
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email <span className="text-destructive">*</span></FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          type="email"
+                          placeholder="your@email.com"
+                          disabled={!!user?.email}
+                          data-testid="input-support-email"
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        We ask for an email so you can be contacted with a resolution.
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}
