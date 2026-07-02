@@ -570,16 +570,17 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                   )}
                 </div>
 
-                {/* Avatar — larger, with rank banner behind it for top 3 */}
-                <div className="relative flex items-center justify-center" style={{ marginTop: isTop3 ? -10 : 0 }}>
+                {/* Rank banner + avatar — banner forms a pedestal resting directly at the base of the bar, avatar sits on top of it */}
+                <div className="relative flex items-center justify-center" style={{ marginTop: isTop3 ? 0 : 0, width: 76 }}>
                   {isTop3 && (
                     <img
                       src={rankBanners[rank]}
                       alt=""
-                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-auto pointer-events-none select-none z-0"
+                      className="absolute left-1/2 -translate-x-1/2 w-[104px] h-auto pointer-events-none select-none z-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]"
+                      style={{ top: -22 }}
                     />
                   )}
-                  <div className="relative z-10 w-12 h-12 rounded-full overflow-hidden ring-2 ring-white/10 group-hover:ring-[#B7FF1A]/50 transition-all flex-shrink-0">
+                  <div className="relative z-10 w-12 h-12 rounded-full overflow-hidden ring-2 ring-white/10 group-hover:ring-[#B7FF1A]/50 transition-all flex-shrink-0" style={{ marginTop: isTop3 ? 6 : 0 }}>
                     {entry.user.avatarUrl ? (
                       <img src={entry.user.avatarUrl} alt={entry.user.displayName} className="w-full h-full object-cover" />
                     ) : (
