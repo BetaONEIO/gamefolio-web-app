@@ -3828,12 +3828,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!leaderboardData || leaderboardData.length === 0) {
           leaderboardData = await LeaderboardService.getPreviousWeekLeaderboard(limit);
         }
-        // If still sparse (< 3 participants), top up with all-time leaders so the podium is always full
+        // If still sparse (< 3 participants), fall back entirely to all-time so a
+        // single user with 0.04 XP is never shown as #1 over proper all-time leaders
         if (!leaderboardData || leaderboardData.length < MIN_PODIUM) {
-          const allTime = await LeaderboardService.getAllTimeLeaderboard(limit);
-          const existingIds = new Set((leaderboardData || []).map(e => e.userId));
-          const extras = allTime.filter(e => !existingIds.has(e.userId));
-          leaderboardData = [...(leaderboardData || []), ...extras].slice(0, limit);
+          leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
         }
       } else {
         leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
