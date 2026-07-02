@@ -532,152 +532,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // URGENT FIX: Blocked users route override - MUST be first before any conflicting routes
   console.log("🔧 REGISTERING BLOCKED USERS OVERRIDE IMMEDIATELY AFTER SESSION");
   app.get("/api/users/blocked", async (req: any, res: any) => {
-    console.log("🔍 BLOCKED USERS ROUTE HIT - IMMEDIATE OVERRIDE");
-    console.log("Session:", req.session?.id);
-    console.log("User:", req.user);
-
     if (!req.user) {
-      console.log("❌ No user authenticated - returning 401");
       return res.status(401).json({ message: "Not authenticated" });
     }
 
-    const userId = Number(req.user.id);
-    console.log("✅ User authenticated:", userId);
+    try {
+      const userId = Number(req.user.id);
+      const blocked = await storage.getBlockedUsers(userId);
 
-    if (userId === 3) {
-      // User 3 (mod_tom) - show blocked users minus any unblocked ones
-      const allBlockedUsers = [
-        {
-          id: 999,
-          userId: 999,
-          username: "demo",
-          displayName: "Demo User",
-          avatarUrl: "/attached_assets/demo_avatar_1755254904563.jpg",
-          email: "demo@example.com",
-          emailVerified: true
-        },
-        {
-          id: 15,
-          userId: 15,
-          username: "user15",
-          displayName: "User 15",
-          avatarUrl: "",
-          email: "user15@example.com",
-          emailVerified: true
-        }
-      ];
+      // Strip sensitive fields; shape matches what the client's useBlockedUsers
+      // hook and the settings "Blocked users" list expect. `userId` mirrors `id`
+      // so the feed filter (blockedUserIds) matches a clip/screenshot author id.
+      const safe = blocked.map((u) => ({
+        id: u.id,
+        userId: u.id,
+        username: u.username,
+        displayName: u.displayName ?? u.username,
+        avatarUrl: u.avatarUrl ?? "",
+        email: u.email,
+        emailVerified: u.emailVerified,
+      }));
 
-      // Check for unblocked users and filter them out
-      const userUnblockedSet = unblockedUsers.get(userId.toString()) || new Set();
-      const currentlyBlockedUsers = allBlockedUsers.filter(user => !userUnblockedSet.has(user.id));
-
-      console.log("✅ IMMEDIATE OVERRIDE: User 3 unblocked users:", Array.from(userUnblockedSet));
-      console.log("✅ IMMEDIATE OVERRIDE: User 3 currently blocked users:", currentlyBlockedUsers.length);
-      return res.json(currentlyBlockedUsers);
-    } else {
-      console.log("✅ IMMEDIATE OVERRIDE: User", userId, "has no blocked users");
-      return res.json([]);
+      return res.json(safe);
+    } catch (err) {
+      console.error("Error fetching blocked users:", err);
+      return res.status(500).json({ message: "Error fetching blocked users" });
     }
   });
 
   // UNBLOCK USER ROUTE - Add immediately after blocked users route
   console.log("🔧 REGISTERING UNBLOCK USERS ROUTE");
   app.post("/api/users/unblock", async (req: any, res: any) => {
-    console.log("🔓 UNBLOCK ROUTE HIT - DIRECT OVERRIDE");
-
     if (!req.user) {
-      console.log("❌ No user authenticated for unblock - returning 401");
       return res.status(401).json({ message: "Not authenticated" });
     }
 
-    const { userId } = req.body;
-    if (!userId) {
-      console.log("❌ No userId provided for unblock");
-      return res.status(400).json({ message: "User ID is required" });
-    }
-
     const currentUserId = Number(req.user.id);
-    const userIdToUnblock = Number(userId);
+    const userIdToUnblock = Number(req.body?.userId);
 
-    console.log(`🔓 UNBLOCK REQUEST: User ${currentUserId} wants to unblock user ${userIdToUnblock}`);
-
-    // Add user to unblocked tracking (bidirectional)
-    const userKey = currentUserId.toString();
-    const otherUserKey = userIdToUnblock.toString();
-
-    // Add to current user's unblocked set (allows currentUser → userToUnblock)
-    if (!unblockedUsers.has(userKey)) {
-      unblockedUsers.set(userKey, new Set());
+    if (!userIdToUnblock || isNaN(userIdToUnblock)) {
+      return res.status(400).json({ message: "Valid user ID is required" });
     }
-    unblockedUsers.get(userKey)!.add(userIdToUnblock);
 
-    // Add to other user's unblocked set (allows userToUnblock → currentUser)
-    if (!unblockedUsers.has(otherUserKey)) {
-      unblockedUsers.set(otherUserKey, new Set());
-    }
-    unblockedUsers.get(otherUserKey)!.add(currentUserId);
-
-    console.log(`✅ UNBLOCK SUCCESS: User ${currentUserId} unblocked user ${userIdToUnblock} (bidirectional)`);
-    console.log(`📝 Updated unblocked tracking for user ${currentUserId}:`, Array.from(unblockedUsers.get(userKey)!));
-    console.log(`📝 Updated unblocked tracking for user ${userIdToUnblock}:`, Array.from(unblockedUsers.get(otherUserKey)!));
-
-    return res.json({
-      message: "User unblocked successfully",
-      unblockedUser: {
-        id: userIdToUnblock,
-        username: userIdToUnblock === 999 ? "demo" : userIdToUnblock === 15 ? "user15" : "unknown",
-        displayName: userIdToUnblock === 999 ? "Demo User" : userIdToUnblock === 15 ? "User 15" : "Unknown User"
+    try {
+      const success = await storage.unblockUser(currentUserId, userIdToUnblock);
+      if (!success) {
+        return res.status(404).json({ message: "User is not blocked" });
       }
-    });
+      return res.json({ message: "User unblocked successfully" });
+    } catch (err) {
+      console.error("Error unblocking user:", err);
+      return res.status(500).json({ message: "Error unblocking user" });
+    }
   });
 
   // BLOCK USER ROUTE - Add block functionality
   console.log("🔧 REGISTERING BLOCK USERS ROUTE");
   app.post("/api/users/block", async (req: any, res: any) => {
-    console.log("🚫 BLOCK ROUTE HIT - DIRECT OVERRIDE");
-
     if (!req.user) {
-      console.log("❌ No user authenticated for block - returning 401");
       return res.status(401).json({ message: "Not authenticated" });
     }
 
-    const { userId } = req.body;
-    if (!userId) {
-      console.log("❌ No userId provided for block");
-      return res.status(400).json({ message: "User ID is required" });
-    }
-
     const currentUserId = Number(req.user.id);
-    const userIdToBlock = Number(userId);
+    const userIdToBlock = Number(req.body?.userId);
 
-    console.log(`🚫 BLOCK REQUEST: User ${currentUserId} wants to block user ${userIdToBlock}`);
-
-    // Remove user from unblocked tracking (bidirectional - if they were unblocked)
-    const userKey = currentUserId.toString();
-    const otherUserKey = userIdToBlock.toString();
-
-    // Remove from current user's unblocked set
-    if (unblockedUsers.has(userKey)) {
-      unblockedUsers.get(userKey)!.delete(userIdToBlock);
+    if (!userIdToBlock || isNaN(userIdToBlock)) {
+      return res.status(400).json({ message: "Valid user ID is required" });
     }
 
-    // Remove from other user's unblocked set
-    if (unblockedUsers.has(otherUserKey)) {
-      unblockedUsers.get(otherUserKey)!.delete(currentUserId);
+    if (userIdToBlock === currentUserId) {
+      return res.status(400).json({ message: "Cannot block yourself" });
     }
 
-    console.log(`✅ BLOCK SUCCESS: User ${currentUserId} blocked user ${userIdToBlock} (bidirectional)`);
-    console.log(`📝 Updated unblocked tracking for user ${currentUserId}:`, Array.from(unblockedUsers.get(userKey) || new Set()));
-    console.log(`📝 Updated unblocked tracking for user ${userIdToBlock}:`, Array.from(unblockedUsers.get(otherUserKey) || new Set()));
-
-    return res.json({
-      message: "User blocked successfully",
-      blockedUser: {
-        id: userIdToBlock,
-        username: userIdToBlock === 999 ? "demo" : userIdToBlock === 15 ? "user15" : "unknown",
-        displayName: userIdToBlock === 999 ? "Demo User" : userIdToBlock === 15 ? "User 15" : "Unknown User"
+    try {
+      const userToBlock = await storage.getUser(userIdToBlock);
+      if (!userToBlock) {
+        return res.status(404).json({ message: "Target user not found" });
       }
-    });
+
+      const alreadyBlocked = await storage.isUserBlocked(currentUserId, userIdToBlock);
+      if (alreadyBlocked) {
+        return res.status(400).json({ message: "User is already blocked" });
+      }
+
+      // Persist the block. The client's blocked-user filter (see useBlockedUsers)
+      // then removes this author's content from the feed on the next fetch.
+      await storage.blockUser(currentUserId, userIdToBlock);
+
+      // Notify the moderation team so objectionable content/users get reviewed
+      // within 24h (App Store Review Guideline 1.2). Best-effort — a mail
+      // failure must not fail the block.
+      EmailService.sendUserBlockedEmail({
+        blockerId: currentUserId,
+        blockerUsername: req.user.username,
+        blockedId: userIdToBlock,
+        blockedUsername: userToBlock.username,
+      }).catch((e) => console.error("Failed to send user-blocked notification email:", e));
+
+      return res.json({
+        message: "User blocked successfully",
+        blockedUser: {
+          id: userToBlock.id,
+          username: userToBlock.username,
+          displayName: userToBlock.displayName ?? userToBlock.username,
+        },
+      });
+    } catch (err) {
+      console.error("Error blocking user:", err);
+      return res.status(500).json({ message: "Error blocking user" });
+    }
   });
 
   // Add debugging middleware for production

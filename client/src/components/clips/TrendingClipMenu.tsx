@@ -120,6 +120,9 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
         title: "User blocked",
         description: `You won't see content from @${clip.user.username} anymore.`,
       });
+      // Refresh the blocked-users list so the feed filter (useBlockedUsers)
+      // removes this author's content immediately.
+      queryClient.invalidateQueries({ queryKey: ["/api/users/blocked"] });
       setShowBlockConfirm(false);
       onHide?.();
     },
