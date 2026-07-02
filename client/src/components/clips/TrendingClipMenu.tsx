@@ -127,6 +127,9 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
       // removes this author's content immediately.
       queryClient.invalidateQueries({ queryKey: ["/api/users/blocked"] });
       setShowBlockConfirm(false);
+      // Close the clip viewer if the block happened while watching the blocked
+      // user's clip, so we don't leave the user staring at content they blocked.
+      closeClipDialog();
       onHide?.();
     },
     onError: (err: Error) => {
