@@ -576,8 +576,8 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                     <img
                       src={rankBanners[rank]}
                       alt=""
-                      className="absolute left-1/2 -translate-x-1/2 w-[203px] h-auto pointer-events-none select-none z-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]"
-                      style={{ top: -57 }}
+                      className="absolute left-1/2 -translate-x-1/2 w-[264px] h-auto pointer-events-none select-none z-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]"
+                      style={{ top: -30 }}
                     />
                   )}
                   <div className="relative z-10 w-12 h-12 rounded-full overflow-hidden ring-2 ring-white/10 group-hover:ring-[#B7FF1A]/50 transition-all flex-shrink-0" style={{ marginTop: isTop3 ? 6 : 0 }}>
