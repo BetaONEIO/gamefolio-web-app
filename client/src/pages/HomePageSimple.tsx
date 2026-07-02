@@ -801,6 +801,11 @@ const HomePage = () => {
         </LazySection>
       )}
 
+      {/* Daily XP Challenges Carousel */}
+      <LazySection minHeight="260px" rootMargin="300px">
+        <DailyXPChallenges />
+      </LazySection>
+
       {/* Latest Clips Section */}
       <LazySection minHeight="400px" rootMargin="200px">
         <section className="px-4 sm:px-6 md:px-8">
@@ -939,12 +944,6 @@ const HomePage = () => {
         </section>
       </LazySection>
 
-      {/* Daily XP Challenges */}
-      {/* <LazySection minHeight="280px" rootMargin="200px">
-        <div className="px-4 sm:px-6 md:px-8">
-          <DailyXPChallenges />
-        </div>
-      </LazySection> */}
 
       {/* Live Streams Now */}
       {/* <LazySection minHeight="280px" rootMargin="200px">
