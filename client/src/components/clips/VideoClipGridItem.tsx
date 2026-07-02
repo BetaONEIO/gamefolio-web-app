@@ -87,6 +87,9 @@ const VideoClipGridItem = ({
             preload="none"
             muted
             playsInline
+            onContextMenu={(e) => e.preventDefault()}
+            controlsList="nodownload noremoteplayback noplaybackrate"
+            disablePictureInPicture
           />
         ) : (
           <>

@@ -294,21 +294,20 @@ export default function HelpPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="category">Support Category *</Label>
-                    <Select 
-                      value={formData.category} 
-                      onValueChange={(value) => setFormData({...formData, category: value})}
-                    >
-                      <SelectTrigger data-testid="select-category">
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Tech Support">Tech Support</SelectItem>
-                        <SelectItem value="Business Enquiry">Business Enquiry</SelectItem>
-                        <SelectItem value="Partnership Enquiry">Partnership Enquiry</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) => setFormData({...formData, category: value})}
+                  >
+                    <SelectTrigger data-testid="select-category">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Tech Support">Tech Support</SelectItem>
+                      <SelectItem value="Business Enquiry">Business Enquiry</SelectItem>
+                      <SelectItem value="Partnership Enquiry">Partnership Enquiry</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">

@@ -21,6 +21,9 @@ function LazyReelVideoThumbnail({ src, className }: { src: string | undefined; c
       preload="none"
       muted
       playsInline
+      onContextMenu={(e) => e.preventDefault()}
+      controlsList="nodownload noremoteplayback noplaybackrate"
+      disablePictureInPicture
     />
   );
 }

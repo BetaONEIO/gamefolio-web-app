@@ -110,6 +110,24 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // After a native (StoreKit/Play) purchase, confirm with the server-verified
+  // activate endpoint. Unlike the trust-client /api/subscription/sync path, this
+  // re-checks the entitlement with RevenueCat and persists revenuecatUserId +
+  // the subscription end date. The webhook is the backstop if this call fails.
+  const activateProOnBackend = useCallback(async (appUserId: string) => {
+    try {
+      await fetch("/api/pro/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ appUserId, platform }),
+      });
+      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    } catch (error) {
+      console.error("Failed to activate Pro on backend:", error);
+    }
+  }, []);
+
   useEffect(() => {
     if (!user?.id) {
       webInstanceRef.current = null;
@@ -236,7 +254,13 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       const pro = info.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined;
       if (pro) {
         setHasProEntitlement(true);
-        await syncProStatusWithBackend(true);
+        // Native purchases are server-verified via /api/pro/activate; web
+        // (non-Stripe) purchases fall back to the sync endpoint.
+        if (isNative && user?.id) {
+          await activateProOnBackend(`gamefolio_${user.id}`);
+        } else {
+          await syncProStatusWithBackend(true);
+        }
         toast({
           title: "Welcome to Gamefolio Pro!",
           description: "You now have access to all premium features.",
@@ -260,7 +284,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.email, toast, syncProStatusWithBackend]);
+  }, [user?.id, user?.email, toast, syncProStatusWithBackend, activateProOnBackend]);
 
   const getCurrentOffering = useCallback((): RcPackage[] | null => packages, [packages]);
 

@@ -134,6 +134,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     password?: string;
     confirmPassword?: string;
     dateOfBirth?: string;
+    terms?: string;
   }>({});
   const { toast } = useToast();
   const { registerMutation } = useAuth();
@@ -357,6 +358,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     }
 
     if (!agreedToTerms) {
+      setFieldErrors({ terms: "Please accept the Terms & Conditions and Privacy Policy to continue" });
       toast({
         title: "Error",
         description: "You must agree to the Terms & Conditions and Privacy Policy to register",
@@ -589,7 +591,10 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           type="checkbox"
           id="agree-terms"
           checked={agreedToTerms}
-          onChange={(e) => setAgreedToTerms(e.target.checked)}
+          onChange={(e) => {
+            setAgreedToTerms(e.target.checked);
+            if (e.target.checked) setFieldErrors((prev) => ({ ...prev, terms: undefined }));
+          }}
           disabled={isLoading}
           className="mt-1 h-4 w-4 rounded border-gray-600 bg-gray-800 text-primary focus:ring-primary accent-primary cursor-pointer"
         />
@@ -604,6 +609,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           </button>
         </label>
       </div>
+      <FieldError error={fieldErrors.terms} />
 
       <Dialog open={showTerms} onOpenChange={setShowTerms}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700">
@@ -634,16 +640,18 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
               <li>Notify us immediately of unauthorized use of your account</li>
             </ul>
 
-            <h2 className="text-lg font-semibold text-white">4. Content Guidelines</h2>
-            <p>Users are responsible for the content they upload. You agree not to upload content that:</p>
+            <h2 className="text-lg font-semibold text-white">4. Content Guidelines &amp; Zero Tolerance for Objectionable Content</h2>
+            <p><strong className="text-white">Gamefolio has zero tolerance for objectionable content or abusive users.</strong> Objectionable content and abusive behavior are strictly prohibited, and accounts that post such content or engage in such behavior will be removed.</p>
+            <p>Users are responsible for the content they upload. You agree not to upload content, or engage in behavior, that:</p>
             <ul className="list-disc pl-5 space-y-1">
               <li>Is illegal, harmful, or offensive</li>
               <li>Violates intellectual property rights</li>
               <li>Contains malware or harmful code</li>
-              <li>Promotes harassment or discrimination</li>
-              <li>Is sexually explicit or inappropriate</li>
+              <li>Promotes harassment, bullying, discrimination, or abuse of other users</li>
+              <li>Is sexually explicit, obscene, or otherwise inappropriate</li>
               <li>Violates any applicable laws or regulations</li>
             </ul>
+            <p>Every user can flag/report objectionable content and block abusive users directly within the app. Blocking a user immediately removes their content from your feed. We review all reports and act within 24 hours by removing the offending content and ejecting the user who provided it.</p>
 
             <h2 className="text-lg font-semibold text-white">5. Intellectual Property</h2>
             <p>You retain ownership of content you upload, but grant Gamefolio a non-exclusive, worldwide, royalty-free license to use, display, and distribute your content on the platform. The Gamefolio platform, including its design, features, and code, is protected by copyright and other intellectual property laws.</p>

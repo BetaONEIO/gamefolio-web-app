@@ -39,9 +39,16 @@ export function initSentry(): void {
       dsn,
       release:
         typeof __APP_RELEASE__ !== "undefined" ? __APP_RELEASE__ : undefined,
+      // NB: do NOT use import.meta.env.PROD here. `.env` sets NODE_ENV=development
+      // (needed for local server dev), and Vite leaks that into `vite build`,
+      // forcing PROD=false in the shipped AAB — which mis-tagged every production
+      // crash as "development" and made prod/dev indistinguishable in Sentry.
+      // MODE reflects the actual build command ("production" for `vite build`) and
+      // is not affected by the NODE_ENV leak. Set VITE_SENTRY_ENVIRONMENT to
+      // override (e.g. "staging").
       environment:
         import.meta.env.VITE_SENTRY_ENVIRONMENT?.trim() ||
-        (import.meta.env.PROD ? "production" : "development"),
+        (import.meta.env.MODE === "production" ? "production" : "development"),
       // Crash-capture focus for QA: errors on, performance tracing off (it
       // burns quota fast and isn't what we're after). Raise later if wanted.
       tracesSampleRate: 0,

@@ -12,7 +12,7 @@ import {
 } from "@stripe/react-stripe-js";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { isNative } from "@/lib/platform";
+import { isNative, openExternal } from "@/lib/platform";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 import ProOnboardingScreen from "@/components/pro/ProOnboardingScreen";
 
@@ -634,7 +634,11 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         )}
 
         <span className="text-[#B8C0AE] text-[11px] text-center">
-          Cancel anytime. Terms and conditions apply.
+          Cancel anytime.{" "}
+          <button type="button" onClick={() => openExternal("https://app.gamefolio.com/terms")} className="underline hover:text-white">Terms of Use</button>
+          {" & "}
+          <button type="button" onClick={() => openExternal("https://app.gamefolio.com/privacy")} className="underline hover:text-white">Privacy Policy</button>
+          {" "}apply.
         </span>
         </>
         ) : (
@@ -791,7 +795,11 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                   </button>
 
                   <span className="text-[#B8C0AE] text-[11px] text-center block mt-2">
-                    Cancel anytime. Terms and conditions apply.
+                    Cancel anytime.{" "}
+                    <button type="button" onClick={() => openExternal("https://app.gamefolio.com/terms")} className="underline hover:text-white">Terms of Use</button>
+                    {" & "}
+                    <button type="button" onClick={() => openExternal("https://app.gamefolio.com/privacy")} className="underline hover:text-white">Privacy Policy</button>
+                    {" "}apply.
                   </span>
                   </>
                   ) : (
