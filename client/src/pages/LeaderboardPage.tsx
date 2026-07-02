@@ -555,7 +555,7 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                     boxShadow: `0 0 16px ${colors.glow}`,
                   }}
                 >
-                  {/* Shimmer sweep for top-3 */}
+                  {/* Double diagonal shimmer sweeps for top-3 */}
                   {isTop3 && (
                     <div
                       className="absolute inset-0 overflow-hidden rounded-t-xl pointer-events-none"
@@ -566,6 +566,14 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                         style={{
                           background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 45%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0.35) 55%, transparent 100%)",
                           width: "60%",
+                        }}
+                      />
+                      <div
+                        className="absolute inset-0 animate-bar-shimmer"
+                        style={{
+                          background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 45%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0.25) 55%, transparent 100%)",
+                          width: "60%",
+                          animationDelay: "1.5s",
                         }}
                       />
                     </div>
