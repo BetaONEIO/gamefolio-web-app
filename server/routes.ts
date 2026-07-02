@@ -3810,18 +3810,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const cacheKey = `trending-gamefolios:${period}:${limit}`;
       const enriched = await getCachedTrending(cacheKey, async () => {
+      // Minimum entries needed for a meaningful podium display
+      const MIN_PODIUM = 3;
       let leaderboardData: Array<{ userId: number; uploadsCount: number; totalPoints: number; rank?: number; user: any }>;
       if (period === 'month') {
         leaderboardData = await LeaderboardService.getCurrentMonthLeaderboard(limit);
-        // Fall back to previous month if current month has no data yet
         if (!leaderboardData || leaderboardData.length === 0) {
           leaderboardData = await LeaderboardService.getPreviousMonthLeaderboard(limit);
         }
+        // Fall back to all-time if monthly is still sparse
+        if (!leaderboardData || leaderboardData.length < MIN_PODIUM) {
+          leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
+        }
       } else if (period === 'week') {
         leaderboardData = await LeaderboardService.getCurrentWeekLeaderboard(limit);
-        // Fall back to previous week if current week has no data yet
+        // Fall back to previous week if current week has no data
         if (!leaderboardData || leaderboardData.length === 0) {
           leaderboardData = await LeaderboardService.getPreviousWeekLeaderboard(limit);
+        }
+        // If still sparse (< 3 participants), top up with all-time leaders so the podium is always full
+        if (!leaderboardData || leaderboardData.length < MIN_PODIUM) {
+          const allTime = await LeaderboardService.getAllTimeLeaderboard(limit);
+          const existingIds = new Set((leaderboardData || []).map(e => e.userId));
+          const extras = allTime.filter(e => !existingIds.has(e.userId));
+          leaderboardData = [...(leaderboardData || []), ...extras].slice(0, limit);
         }
       } else {
         leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
@@ -3897,7 +3909,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           return {
             userId: entry.userId,
-            rank: (entry.rank ?? index + 1),
+            rank: index + 1,  // Always use position in results array, not stale stored rank
             uploadsCount: entry.uploadsCount,
             totalPoints: entry.totalPoints,
             user: userData,
