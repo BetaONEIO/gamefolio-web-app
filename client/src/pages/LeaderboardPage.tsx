@@ -13,6 +13,9 @@ import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { CreatorCard, TrendingEntry, CREATOR_CARD_STYLES } from "@/components/home/CreatorCard";
+import goldBannerImg from "@assets/goldr-flat-banner-_1783016208886.png";
+import silverBannerImg from "@assets/silver-flat-banne-_1783016206432.png";
+import bronzeBannerImg from "@assets/bronze-flat-banner_(1)_1783016211069.png";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -535,6 +538,7 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
           const barH   = Math.max(Math.round(pct * MAX_BAR_H), 14);
           const colors = isTop3 ? BAR_RANK_COLORS[rank] : isMe ? BAR_ME_COLOR : BAR_DEF_COLOR;
           const medals: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
+          const rankBanners: Record<number, string> = { 1: goldBannerImg, 2: silverBannerImg, 3: bronzeBannerImg };
 
           return (
             <Link key={entry.userId} href={`/profile/${entry.user.username}`}>
@@ -566,15 +570,24 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                   )}
                 </div>
 
-                {/* Avatar — larger */}
-                <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-white/10 group-hover:ring-[#B7FF1A]/50 transition-all flex-shrink-0">
-                  {entry.user.avatarUrl ? (
-                    <img src={entry.user.avatarUrl} alt={entry.user.displayName} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-slate-700 flex items-center justify-center">
-                      <span className="text-base font-black text-white">{entry.user.displayName[0]?.toUpperCase()}</span>
-                    </div>
+                {/* Avatar — larger, with rank banner behind it for top 3 */}
+                <div className="relative flex items-center justify-center" style={{ marginTop: isTop3 ? -10 : 0 }}>
+                  {isTop3 && (
+                    <img
+                      src={rankBanners[rank]}
+                      alt=""
+                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-auto pointer-events-none select-none z-0"
+                    />
                   )}
+                  <div className="relative z-10 w-12 h-12 rounded-full overflow-hidden ring-2 ring-white/10 group-hover:ring-[#B7FF1A]/50 transition-all flex-shrink-0">
+                    {entry.user.avatarUrl ? (
+                      <img src={entry.user.avatarUrl} alt={entry.user.displayName} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-slate-700 flex items-center justify-center">
+                        <span className="text-base font-black text-white">{entry.user.displayName[0]?.toUpperCase()}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Username */}
