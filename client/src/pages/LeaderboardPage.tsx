@@ -555,6 +555,22 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                     boxShadow: `0 0 16px ${colors.glow}`,
                   }}
                 >
+                  {/* Shimmer sweep for top-3 */}
+                  {isTop3 && (
+                    <div
+                      className="absolute inset-0 overflow-hidden rounded-t-xl pointer-events-none"
+                      style={{ mixBlendMode: "overlay" }}
+                    >
+                      <div
+                        className="absolute inset-0 animate-bar-shimmer"
+                        style={{
+                          background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 45%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0.35) 55%, transparent 100%)",
+                          width: "60%",
+                        }}
+                      />
+                    </div>
+                  )}
+
                   {/* YOU chip */}
                   {isMe && (
                     <div className={`absolute ${isTop3 ? "-bottom-5" : "-top-5"} left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-black bg-[#B7FF1A] text-black px-1.5 py-0.5 rounded-full`}>

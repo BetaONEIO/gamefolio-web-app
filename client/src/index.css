@@ -793,6 +793,18 @@ video:focus {
   }
 }
 
+/* ── Leaderboard bar shimmer for top-3 ─────────────────────── */
+@keyframes bar-shimmer {
+  0%   { transform: translateX(-120%) skewX(-20deg); opacity: 0; }
+  10%  { opacity: 0.6; }
+  90%  { opacity: 0.6; }
+  100% { transform: translateX(120%) skewX(-20deg); opacity: 0; }
+}
+
+.animate-bar-shimmer {
+  animation: bar-shimmer 3s ease-in-out infinite;
+}
+
 /* lootbox-blur-bg kept for legacy compatibility but no longer applies a filter
    (blur is now handled by backdrop-filter on the dialog overlay itself) */
 #root.lootbox-blur-bg {}
