@@ -6,6 +6,17 @@ import { CheckCircle2, Circle, ChevronLeft, ChevronRight, Zap, Clock } from "luc
 import { getQueryFn } from "@/lib/queryClient";
 import { Skeleton } from "@/components/ui/skeleton";
 
+const ICONS = {
+  login:   "/attached_assets/challenge-icons/daily-login.png",
+  watch5:  "/attached_assets/challenge-icons/watch-5-clips.png",
+  watch20: "/attached_assets/challenge-icons/watch-20-clips.png",
+  comment: "/attached_assets/challenge-icons/comment-clip.png",
+  like:    "/attached_assets/challenge-icons/like-clip.png",
+  share:   "/attached_assets/challenge-icons/share-clip.png",
+  upload:  "/attached_assets/challenge-icons/upload-today.png",
+  lootbox: "/attached_assets/challenge-icons/open-lootbox.png",
+} as const;
+
 interface DailyActivity {
   clipsWatchedToday: number;
   watch5Done: boolean;
@@ -32,7 +43,7 @@ interface LevelProgress {
 
 interface Challenge {
   id: string;
-  emoji: string;
+  icon: string;
   title: string;
   xp: number;
   progress: number;
@@ -45,7 +56,7 @@ function buildChallenges(activity: DailyActivity | undefined, canOpenLootbox: bo
   return [
     {
       id: 'login',
-      emoji: '🎮',
+      icon: ICONS.login,
       title: 'Daily Login',
       xp: 25,
       progress: activity ? (activity.loginXPToday > 0 ? 1 : 0) : 0,
@@ -55,7 +66,7 @@ function buildChallenges(activity: DailyActivity | undefined, canOpenLootbox: bo
     },
     {
       id: 'watch5',
-      emoji: '👁️',
+      icon: ICONS.watch5,
       title: 'Watch 5 Clips',
       xp: 10,
       progress: activity ? Math.min(activity.clipsWatchedToday, 5) : 0,
@@ -65,7 +76,7 @@ function buildChallenges(activity: DailyActivity | undefined, canOpenLootbox: bo
     },
     {
       id: 'watch20',
-      emoji: '🎬',
+      icon: ICONS.watch20,
       title: 'Watch 20 Clips',
       xp: 30,
       progress: activity ? Math.min(activity.clipsWatchedToday, 20) : 0,
@@ -75,7 +86,7 @@ function buildChallenges(activity: DailyActivity | undefined, canOpenLootbox: bo
     },
     {
       id: 'comment',
-      emoji: '💬',
+      icon: ICONS.comment,
       title: 'Comment on a Clip',
       xp: 15,
       progress: activity ? (activity.commentedToday ? 1 : 0) : 0,
@@ -85,7 +96,7 @@ function buildChallenges(activity: DailyActivity | undefined, canOpenLootbox: bo
     },
     {
       id: 'like',
-      emoji: '❤️',
+      icon: ICONS.like,
       title: 'Like a Clip',
       xp: 5,
       progress: activity ? (activity.likedToday ? 1 : 0) : 0,
@@ -95,7 +106,7 @@ function buildChallenges(activity: DailyActivity | undefined, canOpenLootbox: bo
     },
     {
       id: 'share',
-      emoji: '🔗',
+      icon: ICONS.share,
       title: 'Share a Clip',
       xp: 20,
       progress: activity ? (activity.sharedToday ? 1 : 0) : 0,
@@ -105,7 +116,7 @@ function buildChallenges(activity: DailyActivity | undefined, canOpenLootbox: bo
     },
     {
       id: 'upload',
-      emoji: '📹',
+      icon: ICONS.upload,
       title: 'Upload Today',
       xp: 200,
       progress: activity ? (activity.firstUploadOfDayDone ? 1 : 0) : 0,
@@ -115,7 +126,7 @@ function buildChallenges(activity: DailyActivity | undefined, canOpenLootbox: bo
     },
     {
       id: 'lootbox',
-      emoji: '🎁',
+      icon: ICONS.lootbox,
       title: 'Open Lootbox',
       xp: 50,
       progress: activity ? (activity.lootboxOpenedToday ? 1 : 0) : 0,
@@ -151,13 +162,14 @@ function CountdownBadge() {
 }
 
 function ChallengeCard({ challenge, isAuth, isLoading }: { challenge: Challenge; isAuth: boolean; isLoading: boolean }) {
+  const [hovered, setHovered] = useState(false);
   const pct = challenge.total > 0 ? Math.min((challenge.progress / challenge.total) * 100, 100) : 0;
   const done = challenge.progress >= challenge.total;
 
   if (isLoading) {
     return (
       <div className="flex-shrink-0 rounded-2xl p-4" style={{ width: 188, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-        <Skeleton className="w-8 h-8 rounded-full mb-3" />
+        <Skeleton className="w-10 h-10 rounded-xl mb-3" />
         <Skeleton className="h-4 w-3/4 mb-2" />
         <Skeleton className="h-2 w-full mb-3" />
         <Skeleton className="h-3 w-1/2" />
@@ -165,19 +177,40 @@ function ChallengeCard({ challenge, isAuth, isLoading }: { challenge: Challenge;
     );
   }
 
+  const borderColor = hovered
+    ? done ? `${challenge.color}70` : `${challenge.color}35`
+    : done ? `${challenge.color}40` : 'rgba(255,255,255,0.08)';
+
+  const bgColor = done
+    ? `linear-gradient(135deg, ${challenge.color}18 0%, ${challenge.color}06 100%)`
+    : hovered
+      ? 'rgba(255,255,255,0.07)'
+      : 'rgba(255,255,255,0.04)';
+
+  const iconGlow = hovered
+    ? `drop-shadow(0 0 10px ${challenge.color}90) drop-shadow(0 4px 12px ${challenge.color}50)`
+    : done
+      ? `drop-shadow(0 0 6px ${challenge.color}60)`
+      : `drop-shadow(0 0 4px ${challenge.color}30)`;
+
   return (
     <Link href={isAuth ? challenge.href : '/auth'}>
       <div
-        className="flex-shrink-0 relative rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] overflow-hidden"
+        className="flex-shrink-0 relative rounded-2xl p-4 cursor-pointer overflow-hidden"
         style={{
           width: 188,
-          background: done
-            ? `linear-gradient(135deg, ${challenge.color}18 0%, ${challenge.color}06 100%)`
-            : 'rgba(255,255,255,0.04)',
-          border: done
-            ? `1px solid ${challenge.color}40`
-            : '1px solid rgba(255,255,255,0.08)',
+          background: bgColor,
+          border: `1px solid ${borderColor}`,
+          transition: 'transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease, background 200ms ease',
+          transform: hovered ? 'translateY(-3px) scale(1.015)' : 'translateY(0) scale(1)',
+          boxShadow: hovered
+            ? `0 8px 24px ${challenge.color}18, 0 0 0 1px ${challenge.color}20`
+            : done
+              ? `0 0 16px ${challenge.color}10`
+              : 'none',
         }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
       >
         {/* Done checkmark */}
         {done && (
@@ -191,13 +224,31 @@ function ChallengeCard({ challenge, isAuth, isLoading }: { challenge: Challenge;
           </div>
         )}
 
-        {/* Subtle glow when done */}
+        {/* Subtle inner glow when done */}
         {done && (
           <div className="absolute inset-0 rounded-2xl pointer-events-none"
             style={{ boxShadow: `inset 0 0 20px ${challenge.color}08` }} />
         )}
 
-        <div className="text-2xl mb-2.5 select-none">{challenge.emoji}</div>
+        {/* Branded icon */}
+        <div
+          className="mb-3 select-none"
+          style={{
+            width: 44,
+            height: 44,
+            transition: 'filter 200ms ease, transform 200ms ease',
+            filter: iconGlow,
+            transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
+            opacity: done ? 0.7 : 1,
+          }}
+        >
+          <img
+            src={challenge.icon}
+            alt={challenge.title}
+            className="w-full h-full object-contain"
+            draggable={false}
+          />
+        </div>
 
         <h4 className={`text-[13px] font-semibold mb-2.5 pr-5 leading-snug ${done ? 'line-through' : ''}`}
           style={{ color: done ? 'rgba(255,255,255,0.4)' : '#F5F7F2' }}>
@@ -334,7 +385,6 @@ export function DailyXPChallenges() {
 
       {/* Carousel */}
       <div className="relative">
-        {/* Left scroll button */}
         {canScrollLeft && (
           <button
             onClick={() => scroll('left')}
@@ -344,7 +394,6 @@ export function DailyXPChallenges() {
             <ChevronLeft className="w-4 h-4 text-white" />
           </button>
         )}
-        {/* Right scroll button */}
         {canScrollRight && (
           <button
             onClick={() => scroll('right')}

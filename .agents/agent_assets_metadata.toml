@@ -30,6 +30,54 @@ uri = "file://attached_assets/generated_images/3rd_place_icon.png"
 type = "image"
 title = "3rd place icon"
 
+[[generated]]
+id = "TiJV7kQv_3Rk9opxYL3-l"
+uri = "file://client/src/assets/challenge-icons/daily-login.png"
+type = "image"
+title = "daily login controller icon"
+
+[[generated]]
+id = "y0B_ygg4g0jlwO4P7Opgk"
+uri = "file://client/src/assets/challenge-icons/watch-5-clips.png"
+type = "image"
+title = "watch clips eye icon"
+
+[[generated]]
+id = "srvDCCP0RFym35QjYNnR_"
+uri = "file://client/src/assets/challenge-icons/watch-20-clips.png"
+type = "image"
+title = "watch 20 clips stacked cards icon"
+
+[[generated]]
+id = "HF7SIA2r-3T2cy8H28Rdm"
+uri = "file://client/src/assets/challenge-icons/comment-clip.png"
+type = "image"
+title = "comment speech bubble icon"
+
+[[generated]]
+id = "TDnhyNZS_ze3fGnu-KGXM"
+uri = "file://client/src/assets/challenge-icons/like-clip.png"
+type = "image"
+title = "dark metallic heart like icon"
+
+[[generated]]
+id = "Vf6V_4XHtnLu54vDlwBbc"
+uri = "file://client/src/assets/challenge-icons/share-clip.png"
+type = "image"
+title = "share connected nodes icon"
+
+[[generated]]
+id = "JAUiEDGMFpNAfdJRbJAOh"
+uri = "file://client/src/assets/challenge-icons/upload-today.png"
+type = "image"
+title = "neon upload arrow icon"
+
+[[generated]]
+id = "7uUiNPz4VPkbQX4LJ7f8t"
+uri = "file://client/src/assets/challenge-icons/open-lootbox.png"
+type = "image"
+title = "futuristic lootbox crate icon"
+
 [[outputs]]
 id = "uRHLdEQZY0LBFpOcTQuXt"
 uri = "file://attached_assets/angular_heart_icon_nobg.png"
