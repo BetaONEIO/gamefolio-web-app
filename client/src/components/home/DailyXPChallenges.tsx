@@ -342,7 +342,7 @@ export function DailyXPChallenges() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <img
-              src="/attached_assets/Xp_text_1779960327029.png"
+              src="/attached_assets/XP-text_1779960376768.png"
               alt="XP"
               className="h-7 w-auto object-contain select-none"
               style={{ filter: 'drop-shadow(0 0 6px rgba(183,255,26,0.5))' }}
