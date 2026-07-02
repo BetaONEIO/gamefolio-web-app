@@ -384,6 +384,22 @@ function toPublicUser(user: any): Record<string, unknown> {
   };
 }
 
+// Removes credential/token/billing/PII columns that must never reach the
+// client. Blacklist (vs toPublicUser's whitelist) so callers that also need
+// stats or display fields — e.g. the profile endpoint — keep those intact.
+// Use this on any endpoint that returns a full user row.
+function stripUserSecrets<T extends Record<string, any>>(user: T): Partial<T> {
+  const {
+    password, twoFactorSecret, encryptedPrivateKey,
+    stripeCustomerId, stripeSubscriptionId, revenuecatUserId,
+    twitchAccessToken, kickAccessToken,
+    walletAddress, dateOfBirth, birthday, externalId,
+    referralCode, referredBy, bannedReason,
+    ...safe
+  } = user;
+  return safe as Partial<T>;
+}
+
 // Checks whether the requesting user is allowed to access media owned by `ownerId`.
 // Enforces suspended/banned account hiding and private-profile follower gating.
 // Returns true if access is allowed; writes the appropriate HTTP response and returns false otherwise.
@@ -4402,9 +4418,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User stats not found" });
       }
 
-      // Remove password from response
-      const { password, ...userWithoutPassword } = userWithStats;
-      res.json(userWithoutPassword);
+      // Strip password + all other secret columns (2FA secret, tokens, PII…)
+      // while keeping the profile stats/display fields the page needs.
+      res.json(stripUserSecrets(userWithStats));
     } catch (err) {
       console.error("Error fetching user:", err);
       return res.status(500).json({ message: "Error fetching user" });
@@ -8602,7 +8618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userId = parseInt(req.params.id);
       const followers = await storage.getFollowersByUserId(userId);
-      res.json(followers);
+      res.json(followers.map(stripUserSecrets));
     } catch (err) {
       console.error("Error fetching followers:", err);
       return res.status(500).json({ message: "Error fetching followers" });
@@ -8619,7 +8635,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userId = parseInt(req.params.id);
       const following = await storage.getFollowingByUserId(userId);
-      res.json(following);
+      res.json(following.map(stripUserSecrets));
     } catch (err) {
       console.error("Error fetching following:", err);
       return res.status(500).json({ message: "Error fetching following" });
@@ -9068,9 +9084,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Search query is required" });
       }
       const users = await storage.searchUsers(query);
-      // Never leak credential/secret columns to the client.
-      const safe = users.map(({ password, twoFactorSecret, encryptedPrivateKey, ...u }: any) => u);
-      res.json(safe);
+      res.json(users.map(stripUserSecrets));
     } catch (err) {
       console.error("Error searching users:", err);
       return res.status(500).json({ message: "Error searching users" });
@@ -9128,7 +9142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/search/users/:query", async (req, res) => {
     try {
       const users = await storage.searchUsers(req.params.query);
-      res.json(users);
+      res.json(users.map(stripUserSecrets));
     } catch (err) {
       console.error("Error searching users:", err);
       return res.status(500).json({ message: "Error searching users" });
