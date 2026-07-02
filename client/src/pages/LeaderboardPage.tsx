@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { CREATOR_CARD_STYLES } from "@/components/home/CreatorCard";
+import { CreatorCard, TrendingEntry, CREATOR_CARD_STYLES } from "@/components/home/CreatorCard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -142,73 +142,115 @@ function UserAvatar({ user, size = "md" }: { user: LeaderboardEntry["user"] | To
   );
 }
 
-// ─── Section: Season Hero ──────────────────────────────────────────────────
+// ─── Section: Season Hero (banner + top-3 podium) ─────────────────────────
 
-function SeasonHero({ playerCount }: { playerCount: number }) {
+const PODIUM_GLOW: Record<number, string> = {
+  1: "drop-shadow(0 0 20px rgba(255,215,0,0.9)) drop-shadow(0 6px 14px rgba(255,190,0,0.55))",
+  2: "drop-shadow(0 0 16px rgba(210,210,210,0.85)) drop-shadow(0 5px 10px rgba(192,192,192,0.5))",
+  3: "drop-shadow(0 0 14px rgba(205,127,50,0.85)) drop-shadow(0 5px 10px rgba(180,100,30,0.5))",
+};
+
+function SeasonHero({ top3 }: { top3: TrendingEntry[] }) {
+  // Podium order: 2nd left · 1st centre · 3rd right
+  const ordered = [top3[1], top3[0], top3[2]].filter(Boolean) as TrendingEntry[];
+  const podiumRank = (entry: TrendingEntry) => {
+    const idx = [top3[1], top3[0], top3[2]].findIndex(e => e?.userId === entry.userId);
+    return idx === 0 ? 2 : idx === 1 ? 1 : 3;
+  };
+
+  return (
+    <div className="relative overflow-hidden" style={{ minHeight: 420 }}>
+      <div
+        className="absolute inset-0"
+        style={{ backgroundImage: "url('/electrical-bg.webp')", backgroundSize: "cover", backgroundPosition: "center" }}
+      />
+      {/* Gradient overlay — heavier at bottom so cards read cleanly */}
+      <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,rgba(5,9,13,0.55) 0%,rgba(8,14,24,0.60) 50%,rgba(5,9,13,0.92) 100%)" }} />
+
+      {/* Podium glow orb behind rank-1 */}
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-80 h-40 blur-3xl opacity-20 pointer-events-none"
+        style={{ background: "radial-gradient(ellipse,#FFD700,transparent 70%)" }} />
+
+      <div className="relative flex items-end justify-center gap-3 sm:gap-5 px-4 pt-8 pb-0">
+        {top3.length === 0 ? (
+          /* Loading placeholders */
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className={`w-[180px] sm:w-[200px] ${i === 1 ? "mb-6" : "mb-0"}`}>
+              <Skeleton className="h-64 rounded-2xl bg-slate-800" />
+            </div>
+          ))
+        ) : (
+          ordered.map((entry) => {
+            const rank = podiumRank(entry);
+            return (
+              <div
+                key={entry.userId}
+                className={`flex-shrink-0 w-[170px] sm:w-[195px] ${rank === 1 ? "mb-6 relative z-10" : "mb-0"} lb-card-${rank}`}
+                style={{ filter: PODIUM_GLOW[rank] }}
+              >
+                <CreatorCard entry={entry} period="week" />
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Section: Season Info Bar (below banner) ───────────────────────────────
+
+function SeasonInfoBar({ playerCount }: { playerCount: number }) {
   const season = useMemo(() => getSeasonInfo(), []);
   const seasonEnd = useMemo(() => getSeasonEndDate(), []);
   const { days, hours, minutes, seconds } = useCountdown(seasonEnd);
 
   return (
-    <div className="relative overflow-hidden" style={{ minHeight: 480 }}>
-      <div
-        className="absolute inset-0"
-        style={{ backgroundImage: "url('/electrical-bg.webp')", backgroundSize: "cover", backgroundPosition: "center" }}
-      />
-      <div className="absolute inset-0" style={{ background: "linear-gradient(160deg,rgba(5,9,13,0.88) 0%,rgba(8,14,24,0.75) 55%,rgba(5,9,13,0.88) 100%)" }} />
+    <div className="bg-[#0a141e] border-b border-white/6 py-8 px-4 text-center">
+      {/* Season badge */}
+      <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#B7FF1A]/30 bg-[#B7FF1A]/10 mb-4">
+        <Trophy className="w-4 h-4 text-[#B7FF1A]" />
+        <span className="text-xs font-bold text-[#B7FF1A] tracking-widest uppercase">Ranked Season {season.number}</span>
+      </div>
 
-      {/* floating orbs */}
-      <div className="absolute top-12 left-[10%] w-64 h-64 rounded-full opacity-10 blur-3xl" style={{ background: "radial-gradient(circle,#B7FF1A,transparent 70%)" }} />
-      <div className="absolute bottom-8 right-[8%] w-48 h-48 rounded-full opacity-8 blur-3xl"  style={{ background: "radial-gradient(circle,#615fff,transparent 70%)" }} />
+      {/* Title */}
+      <h1 className="text-3xl sm:text-4xl font-black text-white mb-1 tracking-tight">
+        {season.name}
+      </h1>
+      <p className="text-slate-500 text-sm mb-6">Week {season.weekInSeason} of Season {season.number}</p>
 
-      <div className="relative flex flex-col items-center pt-10 pb-12 px-4 text-center">
-        {/* Season badge */}
-        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#B7FF1A]/30 bg-[#B7FF1A]/10 mb-5">
-          <Trophy className="w-4 h-4 text-[#B7FF1A]" />
-          <span className="text-xs font-bold text-[#B7FF1A] tracking-widest uppercase">Ranked Season {season.number}</span>
-        </div>
-
-        {/* Title */}
-        <h1 className="text-4xl sm:text-5xl font-black text-white mb-2 tracking-tight" style={{ textShadow: "0 0 40px rgba(183,255,26,0.3)" }}>
-          {season.name}
-        </h1>
-        <p className="text-slate-400 text-sm font-medium mb-8">
-          Week {season.weekInSeason} of Season {season.number}
-        </p>
-
-        {/* Countdown */}
-        <div className="mb-8">
-          <p className="text-slate-500 text-xs uppercase tracking-widest mb-3">Season Ends In</p>
-          <div className="flex items-center gap-2 sm:gap-4">
-            {[
-              { v: days,    l: "Days" },
-              { v: hours,   l: "Hours" },
-              { v: minutes, l: "Mins" },
-              { v: seconds, l: "Secs" },
-            ].map(({ v, l }, i) => (
-              <div key={l} className="flex items-center gap-2 sm:gap-4">
-                {i > 0 && <span className="text-slate-600 text-xl font-thin">•</span>}
-                <div className="flex flex-col items-center">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm flex items-center justify-center">
-                    <span className="text-2xl sm:text-3xl font-black text-white tabular-nums">{String(v).padStart(2, "0")}</span>
-                  </div>
-                  <span className="text-[10px] text-slate-500 mt-1 uppercase tracking-widest">{l}</span>
+      {/* Countdown */}
+      <div className="mb-6">
+        <p className="text-slate-600 text-[11px] uppercase tracking-widest mb-3">Season Ends In</p>
+        <div className="flex items-center justify-center gap-2 sm:gap-4">
+          {[
+            { v: days,    l: "Days" },
+            { v: hours,   l: "Hours" },
+            { v: minutes, l: "Mins" },
+            { v: seconds, l: "Secs" },
+          ].map(({ v, l }, i) => (
+            <div key={l} className="flex items-center gap-2 sm:gap-4">
+              {i > 0 && <span className="text-slate-700 text-lg">•</span>}
+              <div className="flex flex-col items-center">
+                <div className="w-13 h-13 sm:w-15 sm:h-15 w-14 h-14 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center">
+                  <span className="text-xl sm:text-2xl font-black text-white tabular-nums">{String(v).padStart(2, "0")}</span>
                 </div>
+                <span className="text-[10px] text-slate-600 mt-1 uppercase tracking-widest">{l}</span>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
+      </div>
 
-        {/* Stats row */}
-        <div className="flex items-center gap-6 text-sm">
-          <div className="flex items-center gap-2 text-slate-400">
-            <Users className="w-4 h-4 text-[#B7FF1A]" />
-            <span><strong className="text-white">{playerCount.toLocaleString()}</strong> Players Competing</span>
-          </div>
-          <div className="flex items-center gap-2 text-slate-400">
-            <Trophy className="w-4 h-4 text-[#FFD700]" />
-            <span><strong className="text-white">5,000</strong> GFT Prize Pool</span>
-          </div>
+      {/* Stats */}
+      <div className="flex items-center justify-center gap-6 text-sm">
+        <div className="flex items-center gap-2 text-slate-400">
+          <Users className="w-4 h-4 text-[#B7FF1A]" />
+          <span><strong className="text-white">{playerCount.toLocaleString()}</strong> Players Competing</span>
+        </div>
+        <div className="flex items-center gap-2 text-slate-400">
+          <Trophy className="w-4 h-4 text-[#FFD700]" />
+          <span><strong className="text-white">5,000</strong> GFT Prize Pool</span>
         </div>
       </div>
     </div>
@@ -752,30 +794,40 @@ const RS_STYLES = `
 export default function LeaderboardPage() {
   const { user } = useAuth();
 
-  // Fetch weekly with a large limit for rival + overview calculations
+  // Top 3 enriched entries for the banner podium
+  const { data: top3Data } = useQuery<TrendingEntry[]>({
+    queryKey: ["/api/trending-gamefolios/banner"],
+    queryFn: () => fetch("/api/trending-gamefolios?period=week&limit=3").then(r => r.json()),
+  });
+
+  // Weekly leaderboard (large limit) for rival + competitive overview
   const { data: weeklyData } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard/weekly/current/full"],
     queryFn: () => fetch("/api/leaderboard/weekly/current?limit=200").then(r => r.json()),
   });
 
-  // All-time count = total platform competitors (more meaningful for "Players Competing")
+  // All-time player count for the hero
   const { data: alltimeData } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard"],
     queryFn: () => fetch("/api/leaderboard?limit=200").then(r => r.json()),
   });
 
+  const top3 = top3Data ?? [];
   const leaderboard = weeklyData ?? [];
-  const playerCount = (alltimeData?.length ?? weeklyData?.length ?? 0);
+  const playerCount = alltimeData?.length ?? weeklyData?.length ?? 0;
 
   return (
     <div className="min-h-screen bg-[#0B1218] overflow-y-auto">
       <style>{RS_STYLES}{CREATOR_CARD_STYLES}</style>
 
-      {/* Season Hero */}
-      <SeasonHero playerCount={playerCount} />
+      {/* Banner — electrical bg + top 3 creator cards */}
+      <SeasonHero top3={top3} />
 
-      {/* Sections */}
-      <div className="max-w-3xl mx-auto pt-6 pb-20">
+      {/* Season info bar — below the banner image */}
+      <SeasonInfoBar playerCount={playerCount} />
+
+      {/* Narrow sections */}
+      <div className="max-w-3xl mx-auto pt-6">
 
         {/* Competitive Overview — logged-in only */}
         {user && leaderboard.length > 0 && (
@@ -794,11 +846,18 @@ export default function LeaderboardPage() {
 
         {/* Ranked Leagues */}
         <RankedLeagues leaderboard={leaderboard} userId={user?.id} />
-        <div className="rs-section-divider" />
+      </div>
 
-        {/* Live Leaderboard */}
-        <LiveLeaderboard userId={user?.id} />
-        <div className="rs-section-divider" />
+      {/* ── Full-width Live Leaderboard ── */}
+      <div className="w-full border-t border-white/5 pt-8 pb-4">
+        <div className="px-4 sm:px-6 lg:px-10">
+          <LiveLeaderboard userId={user?.id} />
+        </div>
+      </div>
+
+      {/* Narrow sections continued */}
+      <div className="max-w-3xl mx-auto pb-20">
+        <div className="rs-section-divider mt-4" />
 
         {/* Rival Section — logged-in only */}
         {user && leaderboard.length > 0 && (
