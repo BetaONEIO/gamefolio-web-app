@@ -1106,7 +1106,7 @@ export default function LeaderboardPage() {
       </div>
 
       {/* Narrow sections continued */}
-      <div className="max-w-3xl mx-auto pb-20">
+      <div className="max-w-3xl mx-auto">
         <div className="rs-section-divider mt-4" />
 
         {/* Rival Section — logged-in only */}
@@ -1116,9 +1116,15 @@ export default function LeaderboardPage() {
             <div className="rs-section-divider" />
           </>
         )}
+      </div>
 
-        {/* Hall of Champions */}
+      {/* Hall of Champions — full width */}
+      <div className="w-full py-2">
         <HallOfChampions />
+      </div>
+
+      {/* Remaining narrow sections */}
+      <div className="max-w-3xl mx-auto pb-20">
         <div className="rs-section-divider" />
 
         {/* Season Categories */}
