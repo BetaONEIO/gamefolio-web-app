@@ -549,7 +549,7 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
 
                 {/* Bar */}
                 <div
-                  className={`w-14 rounded-t-xl bg-gradient-to-t ${colors.bar} border border-white/15 group-hover:brightness-110 transition-all relative`}
+                  className={`w-14 rounded-t-xl bg-gradient-to-t ${colors.bar} group-hover:brightness-110 transition-all relative`}
                   style={{
                     height: barH,
                     boxShadow: `0 0 16px ${colors.glow}`,
@@ -633,6 +633,10 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
 
 function LiveLeaderboard({ userId }: { userId?: number }) {
   const [tab, setTab] = useState<TabType>("alltime");
+  const __debugRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    __debugRef.current?.scrollIntoView({ block: "start" });
+  }, []);
 
   const tabs: { key: TabType; label: string }[] = [
     { key: "weekly",  label: "This Week"  },
@@ -712,7 +716,7 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
   };
 
   return (
-    <section className="mb-0">
+    <section className="mb-0" ref={__debugRef}>
       {/* Header row — padded */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3 px-4 sm:px-6 lg:px-10">
         <div className="flex items-center gap-2 flex-wrap">
