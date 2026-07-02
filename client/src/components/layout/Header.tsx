@@ -45,6 +45,7 @@ import { useLevelTracker } from "@/hooks/use-level-tracker";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import ManageProDialog from "@/components/ManageProDialog";
 import { useAuthModal } from "@/hooks/use-auth-modal";
+import { resolveApiUrl } from "@/lib/platform";
 
 const RECENT_SEARCHES_KEY = "gamefolio_recent_searches";
 const MAX_RECENT = 8;
@@ -191,7 +192,7 @@ const Header = () => {
   const { data: userResults } = useQuery<User[]>({
     queryKey: ['/api/search/users', debouncedQuery],
     queryFn: async () => {
-      const response = await fetch(`/api/search/users?q=${encodeURIComponent(debouncedQuery)}`);
+      const response = await fetch(resolveApiUrl(`/api/search/users?q=${encodeURIComponent(debouncedQuery)}`));
       if (!response.ok) throw new Error("Failed to search users");
       return await response.json();
     },
@@ -202,7 +203,7 @@ const Header = () => {
   const { data: gameResults } = useQuery<TwitchGame[]>({
     queryKey: ['/api/twitch/games/search', debouncedQuery],
     queryFn: async () => {
-      const response = await fetch(`/api/twitch/games/search?q=${encodeURIComponent(debouncedQuery)}`);
+      const response = await fetch(resolveApiUrl(`/api/twitch/games/search?q=${encodeURIComponent(debouncedQuery)}`));
       if (!response.ok) throw new Error("Failed to search games");
       return await response.json();
     },

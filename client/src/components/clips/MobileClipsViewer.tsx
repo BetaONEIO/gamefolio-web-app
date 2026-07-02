@@ -19,6 +19,7 @@ import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { PartnerBadge } from "@/components/ui/partner-badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowLeft, BadgeCheck, Bookmark, BarChart2, MessageCircle, Gamepad2, Play, ChevronDown } from "lucide-react";
+import { useBlockedUsers } from "@/hooks/use-blocked-users";
 
 export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesktop?: boolean }> = ({ clip, clips, isDesktop }) => {
   const { openClipDialog } = useClipDialog();
@@ -353,8 +354,14 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
   );
 };
 
-export const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void; viewAllHref?: string }> = ({ clips, onBack }) => {
+export const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => void; viewAllHref?: string }> = ({ clips: rawClips, onBack }) => {
   const isMobile = useMobile();
+  const { blockedUserIds } = useBlockedUsers();
+
+  // Hide blocked authors' clips from the viewer. Because blocking invalidates
+  // /api/users/blocked, this recomputes instantly after a block — so the clip
+  // you just blocked disappears from the feed without leaving the viewer.
+  const clips = rawClips.filter((c) => !blockedUserIds.has(c.userId));
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
