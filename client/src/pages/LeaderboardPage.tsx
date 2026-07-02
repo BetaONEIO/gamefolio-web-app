@@ -479,73 +479,182 @@ function LeaderboardRow({ entry, isCurrentUser }: { entry: LeaderboardEntry; isC
   );
 }
 
+// ─── Bar Chart ─────────────────────────────────────────────────────────────
+
+const BAR_RANK_COLORS: Record<number, { bar: string; glow: string; badge: string }> = {
+  1: { bar: "from-yellow-300 via-yellow-500 to-amber-600",   glow: "rgba(255,215,0,0.45)",  badge: "#FFD700" },
+  2: { bar: "from-slate-200 via-slate-400 to-slate-600",     glow: "rgba(192,192,192,0.35)", badge: "#C0C0C0" },
+  3: { bar: "from-amber-500 via-amber-700 to-amber-900",     glow: "rgba(205,127,50,0.35)",  badge: "#CD7F32" },
+};
+const BAR_ME_COLOR  = { bar: "from-[#B7FF1A] via-[#8be800] to-[#5fa800]", glow: "rgba(183,255,26,0.4)" };
+const BAR_DEF_COLOR = { bar: "from-[#1c3a54] via-[#142d42] to-[#0a1f30]", glow: "transparent" };
+
+const MAX_BAR_H = 220; // px
+
+function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?: number }) {
+  const top = entries.slice(0, 25);
+  const maxPts = Math.max(...top.map(e => e.totalPoints), 1);
+
+  return (
+    <div className="overflow-x-auto pb-4 -mx-1 px-1">
+      <div className="flex items-end gap-2 min-w-max" style={{ paddingBottom: 4 }}>
+        {top.map((entry, i) => {
+          const rank    = i + 1;
+          const isMe    = entry.userId === userId;
+          const isTop3  = rank <= 3;
+          const pct     = entry.totalPoints / maxPts;
+          const barH    = Math.max(Math.round(pct * MAX_BAR_H), 10);
+          const colors  = isTop3 ? BAR_RANK_COLORS[rank] : isMe ? BAR_ME_COLOR : BAR_DEF_COLOR;
+          const rankLabels: Record<number,string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
+
+          return (
+            <Link key={entry.userId} href={`/profile/${entry.user.username}`}>
+              <div className="flex flex-col items-center gap-1 group cursor-pointer" style={{ width: 52 }}>
+                {/* XP label above bar */}
+                <span className="text-[9px] font-bold text-slate-500 group-hover:text-slate-300 transition-colors leading-none">
+                  {formatPoints(entry.totalPoints)}
+                </span>
+
+                {/* Bar */}
+                <div
+                  className={`w-10 rounded-t-lg bg-gradient-to-t ${colors.bar} border border-white/10 group-hover:brightness-110 transition-all relative`}
+                  style={{
+                    height: barH,
+                    boxShadow: colors.glow !== "transparent" ? `0 0 12px ${colors.glow}` : undefined,
+                  }}
+                >
+                  {/* Top-3 medal overlay */}
+                  {isTop3 && (
+                    <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-base leading-none select-none">
+                      {rankLabels[rank]}
+                    </div>
+                  )}
+                  {/* "YOU" chip for current user */}
+                  {isMe && !isTop3 && (
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-[8px] font-black bg-[#B7FF1A] text-black px-1 py-0.5 rounded-full">
+                      YOU
+                    </div>
+                  )}
+                  {isMe && isTop3 && (
+                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-[8px] font-black bg-[#B7FF1A] text-black px-1 py-0.5 rounded-full">
+                      YOU
+                    </div>
+                  )}
+                </div>
+
+                {/* Avatar */}
+                <UserAvatar user={entry.user} size="sm" />
+
+                {/* Username */}
+                <span className="text-[9px] text-slate-500 group-hover:text-slate-300 transition-colors text-center leading-tight truncate w-full text-center">
+                  {entry.user.displayName.length > 7
+                    ? entry.user.displayName.slice(0, 6) + "…"
+                    : entry.user.displayName}
+                </span>
+
+                {/* Rank number */}
+                <span
+                  className="text-[8px] font-black leading-none"
+                  style={{ color: isTop3 ? BAR_RANK_COLORS[rank].badge : isMe ? "#B7FF1A" : "#374151" }}
+                >
+                  #{rank}
+                </span>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function LiveLeaderboard({ userId }: { userId?: number }) {
-  const [tab, setTab] = useState<TabType>("weekly");
+  const [tab, setTab] = useState<TabType>("alltime");
 
   const tabs: { key: TabType; label: string }[] = [
-    { key: "weekly",  label: "This Week" },
+    { key: "weekly",  label: "This Week"  },
     { key: "monthly", label: "This Month" },
-    { key: "alltime", label: "All Time" },
+    { key: "alltime", label: "All Time"   },
   ];
 
-  const { data: weeklyData,  isLoading: wl } = useQuery<LeaderboardEntry[]>({ queryKey: ["/api/leaderboard/weekly/current"],  queryFn: () => fetch("/api/leaderboard/weekly/current?limit=50").then(r => r.json())  });
-  const { data: monthlyData, isLoading: ml } = useQuery<LeaderboardEntry[]>({ queryKey: ["/api/leaderboard/monthly/current"], queryFn: () => fetch("/api/leaderboard/monthly/current?limit=50").then(r => r.json()) });
-  const { data: alltimeData, isLoading: al } = useQuery<LeaderboardEntry[]>({ queryKey: ["/api/leaderboard"],                  queryFn: () => fetch("/api/leaderboard?limit=50").then(r => r.json())               });
+  const { data: weeklyData,  isLoading: wl } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["/api/leaderboard/weekly/current"],
+    queryFn: () => fetch("/api/leaderboard/weekly/current?limit=50").then(r => r.json()),
+  });
+  const { data: monthlyData, isLoading: ml } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["/api/leaderboard/monthly/current"],
+    queryFn: () => fetch("/api/leaderboard/monthly/current?limit=50").then(r => r.json()),
+  });
+  const { data: alltimeData, isLoading: al } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["/api/leaderboard", "lb"],
+    queryFn: () => fetch("/api/leaderboard?limit=50").then(r => r.json()),
+  });
 
   const { data, isLoading } =
     tab === "weekly"  ? { data: weeklyData,  isLoading: wl } :
     tab === "monthly" ? { data: monthlyData, isLoading: ml } :
                         { data: alltimeData, isLoading: al };
 
-  const entries = data ?? [];
+  const entries = Array.isArray(data) ? data : [];
+
+  const tabSubtitle: Record<TabType, string> = {
+    weekly:  "XP earned this week",
+    monthly: "XP earned this month",
+    alltime: "Total season XP",
+  };
 
   return (
-    <section className="px-4 mb-8">
-      <div className="flex items-center gap-2 mb-4">
-        <TrendingUp className="w-5 h-5 text-[#B7FF1A]" />
-        <h2 className="text-xl font-black text-white">Live Leaderboard</h2>
+    <section className="mb-8">
+      {/* Header row */}
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-[#B7FF1A]" />
+          <h2 className="text-xl font-black text-white">Live Leaderboard</h2>
+          <span className="text-xs text-slate-500 mt-0.5">{tabSubtitle[tab]}</span>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 p-1 rounded-xl bg-white/5 border border-white/8">
+          {tabs.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                tab === t.key ? "bg-[#B7FF1A] text-black" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl bg-white/5 border border-white/8 mb-4 w-fit">
-        {tabs.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              tab === t.key ? "bg-[#B7FF1A] text-black" : "text-slate-400 hover:text-white"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
+      {/* Chart area */}
       {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 px-4 py-3.5 rounded-xl border border-white/5 bg-[#0a1520]/60">
-              <Skeleton className="w-8 h-8 rounded-lg bg-slate-700" />
-              <Skeleton className="w-8 h-8 rounded-lg bg-slate-700" />
-              <div className="flex-1 space-y-1.5">
-                <Skeleton className="h-3.5 w-28 bg-slate-700" />
-                <Skeleton className="h-2.5 w-20 bg-slate-700" />
-              </div>
-              <Skeleton className="w-10 h-6 bg-slate-700" />
+        <div className="flex items-end gap-2 overflow-hidden" style={{ height: MAX_BAR_H + 90 }}>
+          {Array.from({ length: 18 }).map((_, i) => (
+            <div key={i} className="flex flex-col items-center gap-1" style={{ width: 52 }}>
+              <Skeleton className="w-10 rounded-t-lg bg-slate-800" style={{ height: Math.max(30, Math.round(MAX_BAR_H * (0.3 + Math.random() * 0.7))) }} />
+              <Skeleton className="w-8 h-8 rounded-full bg-slate-800" />
+              <Skeleton className="w-10 h-2 rounded bg-slate-800" />
             </div>
           ))}
         </div>
       ) : entries.length === 0 ? (
-        <div className="text-center py-12 text-slate-500">
-          <Trophy className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">No data yet for this period.</p>
+        <div className="text-center py-16 rounded-2xl border border-white/5 bg-white/2">
+          <Star className="w-10 h-10 mx-auto mb-3 text-slate-600" />
+          <p className="text-sm font-semibold text-slate-400">No activity yet for this period</p>
+          <p className="text-xs text-slate-600 mt-1">Earn XP by uploading content to appear here</p>
         </div>
       ) : (
-        <div>
-          {entries.map(e => (
-            <LeaderboardRow key={e.userId} entry={e} isCurrentUser={e.userId === userId} />
-          ))}
-        </div>
+        <>
+          {/* Baseline rule */}
+          <div className="w-full h-px bg-white/10 mb-1" />
+          <XPBarChart entries={entries} userId={userId} />
+          <p className="text-[10px] text-slate-600 mt-2 text-center">
+            Showing top {Math.min(entries.length, 25)} of {entries.length} players · click a bar to visit their profile
+          </p>
+        </>
       )}
     </section>
   );
