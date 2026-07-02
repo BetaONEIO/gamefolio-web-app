@@ -3752,10 +3752,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/leaderboard/monthly/current", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 100;
+      const MIN_PODIUM = 3;
       let leaderboardData = await LeaderboardService.getCurrentMonthLeaderboard(limit);
-      // Fall back to previous month if current month has no data yet
       if (!leaderboardData || leaderboardData.length === 0) {
         leaderboardData = await LeaderboardService.getPreviousMonthLeaderboard(limit);
+      }
+      // If still too sparse, fall back entirely to all-time so the leaderboard is always meaningful
+      if (!leaderboardData || leaderboardData.length < MIN_PODIUM) {
+        leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
       }
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
@@ -3779,10 +3783,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/leaderboard/weekly/current", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 100;
+      const MIN_PODIUM = 3;
       let leaderboardData = await LeaderboardService.getCurrentWeekLeaderboard(limit);
-      // Fall back to previous week if current week has no data yet
       if (!leaderboardData || leaderboardData.length === 0) {
         leaderboardData = await LeaderboardService.getPreviousWeekLeaderboard(limit);
+      }
+      // If still too sparse, fall back entirely to all-time so the leaderboard is always meaningful
+      if (!leaderboardData || leaderboardData.length < MIN_PODIUM) {
+        leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
       }
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
