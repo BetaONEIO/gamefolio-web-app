@@ -201,13 +201,14 @@ function ChallengeCard({ challenge, isAuth, isLoading }: { challenge: Challenge;
           width: 188,
           background: bgColor,
           border: `1px solid ${borderColor}`,
-          transition: 'transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease, background 200ms ease',
+          transition: 'transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease, background 200ms ease, opacity 400ms ease',
           transform: hovered ? 'translateY(-3px) scale(1.015)' : 'translateY(0) scale(1)',
           boxShadow: hovered
             ? `0 8px 24px ${challenge.color}18, 0 0 0 1px ${challenge.color}20`
             : done
               ? `0 0 16px ${challenge.color}10`
               : 'none',
+          opacity: done ? 0.38 : 1,
         }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -310,10 +311,17 @@ export function DailyXPChallenges() {
     enabled: !!user?.id,
   });
 
+  const BONUS_XP = 1000;
   const challenges = buildChallenges(dailyActivity, lootboxStatus?.canOpen ?? true);
   const completedCount = challenges.filter(c => c.progress >= c.total).length;
-  const totalXPAvailable = challenges.reduce((sum, c) => sum + c.xp, 0);
-  const earnedXP = challenges.filter(c => c.progress >= c.total).reduce((sum, c) => sum + c.xp, 0);
+  const allDone = completedCount === challenges.length;
+  const totalXPAvailable = challenges.reduce((sum, c) => sum + c.xp, 0) + BONUS_XP;
+  const earnedXP = challenges.filter(c => c.progress >= c.total).reduce((sum, c) => sum + c.xp, 0) + (allDone ? BONUS_XP : 0);
+  const sortedChallenges = [...challenges].sort((a, b) => {
+    const aDone = a.progress >= a.total ? 1 : 0;
+    const bDone = b.progress >= b.total ? 1 : 0;
+    return aDone - bDone;
+  });
 
   const updateScrollButtons = () => {
     const el = scrollRef.current;
@@ -419,9 +427,42 @@ export function DailyXPChallenges() {
                   isLoading={true}
                 />
               ))
-            : challenges.map(c => (
-                <ChallengeCard key={c.id} challenge={c} isAuth={!!user} isLoading={false} />
-              ))}
+            : (<>
+                {sortedChallenges.map(c => (
+                  <ChallengeCard key={c.id} challenge={c} isAuth={!!user} isLoading={false} />
+                ))}
+                {user && (
+                  <div
+                    className="flex-shrink-0 relative rounded-2xl p-4 overflow-hidden flex flex-col items-center justify-center text-center"
+                    style={{
+                      width: 188,
+                      background: allDone
+                        ? 'linear-gradient(135deg, rgba(183,255,26,0.18) 0%, rgba(183,255,26,0.06) 100%)'
+                        : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${allDone ? 'rgba(183,255,26,0.45)' : 'rgba(255,255,255,0.08)'}`,
+                      boxShadow: allDone ? '0 0 24px rgba(183,255,26,0.15)' : 'none',
+                      transition: 'all 400ms ease',
+                      opacity: allDone ? 1 : 0.55,
+                    }}
+                  >
+                    {allDone && (
+                      <div className="absolute inset-0 rounded-2xl pointer-events-none"
+                        style={{ boxShadow: 'inset 0 0 30px rgba(183,255,26,0.08)' }} />
+                    )}
+                    <div className="text-3xl mb-2" style={{ filter: allDone ? 'drop-shadow(0 0 12px rgba(183,255,26,0.8))' : 'none' }}>
+                      🏆
+                    </div>
+                    <p className="text-[11px] font-semibold text-white/60 mb-1">All Challenges</p>
+                    <div className="flex items-center gap-1">
+                      <Zap className="w-3.5 h-3.5" style={{ color: '#B7FF1A' }} />
+                      <span className="text-base font-extrabold" style={{ color: '#B7FF1A' }}>+1,000 XP</span>
+                    </div>
+                    <p className="text-[10px] text-white/35 mt-1.5">
+                      {allDone ? 'Bonus claimed! 🎉' : `${completedCount}/${challenges.length} done`}
+                    </p>
+                  </div>
+                )}
+              </>)}
         </div>
       </div>
     </section>
