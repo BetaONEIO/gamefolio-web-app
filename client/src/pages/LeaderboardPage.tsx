@@ -489,8 +489,8 @@ const BAR_RANK_COLORS: Record<number, { bar: string; glow: string; badge: string
   2: { bar: "from-slate-200 via-slate-400 to-slate-600",     glow: "rgba(192,192,192,0.35)", badge: "#C0C0C0" },
   3: { bar: "from-amber-500 via-amber-700 to-amber-900",     glow: "rgba(205,127,50,0.35)",  badge: "#CD7F32" },
 };
-const BAR_ME_COLOR  = { bar: "from-[#B7FF1A] via-[#8be800] to-[#5fa800]",       glow: "rgba(183,255,26,0.55)" };
-const BAR_DEF_COLOR = { bar: "from-[#B7FF1A]/80 via-[#B7FF1A]/50 to-[#B7FF1A]/20", glow: "rgba(183,255,26,0.2)" };
+const BAR_ME_COLOR  = { bar: "from-[#B7FF1A] to-[#B7FF1A]",       glow: "rgba(183,255,26,0.55)" };
+const BAR_DEF_COLOR = { bar: "from-[#B7FF1A]/60 to-[#B7FF1A]/60", glow: "rgba(183,255,26,0.2)" };
 
 const MAX_BAR_H = 320; // px — taller bars
 
@@ -633,10 +633,6 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
 
 function LiveLeaderboard({ userId }: { userId?: number }) {
   const [tab, setTab] = useState<TabType>("alltime");
-  const __debugRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    __debugRef.current?.scrollIntoView({ block: "start" });
-  }, []);
 
   const tabs: { key: TabType; label: string }[] = [
     { key: "weekly",  label: "This Week"  },
@@ -716,7 +712,7 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
   };
 
   return (
-    <section className="mb-0" ref={__debugRef}>
+    <section className="mb-0">
       {/* Header row — padded */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3 px-4 sm:px-6 lg:px-10">
         <div className="flex items-center gap-2 flex-wrap">
