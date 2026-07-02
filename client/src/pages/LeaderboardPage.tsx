@@ -842,72 +842,132 @@ function SeasonRewards() {
   );
 }
 
-// ─── Section: Hall of Champions ────────────────────────────────────────────
+// ─── Section: Hall of Champions (Season History) ───────────────────────────
+
+interface SeasonEntry {
+  num: number;
+  name: string;
+  icon: string;
+  dateRange: string;
+  months: string[];
+  top3: {
+    rank: number;
+    userId: number;
+    seasonPoints: number;
+    user: {
+      username: string;
+      displayName: string;
+      avatarUrl?: string | null;
+      nftProfileTokenId?: string | null;
+      nftProfileImageUrl?: string | null;
+      activeProfilePicType?: string | null;
+    };
+  }[];
+}
+
+const SEASON_ICON_MAP: Record<string, JSX.Element> = {
+  sun:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+  leaf:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>,
+  snow:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/><path d="m20 16-4-4 4-4"/><path d="m4 8 4 4-4 4"/><path d="m16 4-4 4-4-4"/><path d="m8 20 4-4 4 4"/></svg>,
+  flame: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>,
+};
+
+const RANK_TROPHY: Record<number, { icon: string; color: string; bg: string; border: string }> = {
+  1: { icon: "🥇", color: "#FFD700", bg: "bg-[#FFD700]/10", border: "border-[#FFD700]/30" },
+  2: { icon: "🥈", color: "#C0C0C0", bg: "bg-[#C0C0C0]/10", border: "border-[#C0C0C0]/30" },
+  3: { icon: "🥉", color: "#CD7F32", bg: "bg-[#CD7F32]/10", border: "border-[#CD7F32]/30" },
+};
 
 function HallOfChampions() {
-  const { data: weeklyData }  = useQuery<TopContributor[]>({ queryKey: ["/api/leaderboard/top-contributors/weekly"],  queryFn: () => fetch("/api/leaderboard/top-contributors/weekly?limit=30").then(r => r.json())  });
-  const { data: monthlyData } = useQuery<TopContributor[]>({ queryKey: ["/api/leaderboard/top-contributors/monthly"], queryFn: () => fetch("/api/leaderboard/top-contributors/monthly?limit=12").then(r => r.json()) });
-  const [champTab, setChampTab] = useState<"weekly" | "monthly">("weekly");
+  const { data: seasons, isLoading } = useQuery<SeasonEntry[]>({
+    queryKey: ["/api/leaderboard/season-history"],
+    queryFn: () => fetch("/api/leaderboard/season-history").then(r => r.json()),
+  });
 
-  const list = champTab === "weekly" ? (weeklyData ?? []) : (monthlyData ?? []);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   return (
-    <section className="px-4 mb-8">
-      <div className="flex items-center gap-2 mb-2">
-        <Crown className="w-5 h-5 text-[#FFD700]" />
-        <h2 className="text-xl font-black text-white">Hall of Champions</h2>
-      </div>
-      <p className="text-slate-500 text-xs mb-4 ml-7">Every season result is permanently recorded.</p>
-
-      {/* Tab toggle */}
-      <div className="flex gap-1 p-1 rounded-xl bg-white/5 border border-white/8 mb-4 w-fit">
-        {(["weekly", "monthly"] as const).map(t => (
-          <button
-            key={t}
-            onClick={() => setChampTab(t)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              champTab === t ? "bg-[#FFD700] text-black" : "text-slate-400 hover:text-white"
-            }`}
-          >
-            {t === "weekly" ? "Weekly" : "Monthly"}
-          </button>
-        ))}
+    <section className="mb-8">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-4 px-4 sm:px-6 lg:px-10">
+        <Calendar className="w-5 h-5 text-[#FFD700]" />
+        <h2 className="text-xl font-black text-white tracking-wide uppercase">Season History</h2>
       </div>
 
-      {list.length === 0 ? (
-        <div className="text-center py-12 text-slate-500">
+      {/* Horizontal scroll row */}
+      {isLoading ? (
+        <div className="flex gap-3 px-4 sm:px-6 lg:px-10">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex-shrink-0 w-52 h-56 rounded-xl bg-white/5 animate-pulse" />
+          ))}
+        </div>
+      ) : !seasons || seasons.length === 0 ? (
+        <div className="text-center py-12 text-slate-500 px-4">
           <Trophy className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">No champions recorded yet.</p>
+          <p className="text-sm">No season history yet.</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {list.map(c => (
-            <Link key={`${c.userId}-${c.period}`} href={`/profile/${c.user.username}`}>
-              <div className="flex items-center gap-4 px-4 py-4 rounded-xl border border-[#FFD700]/15 bg-[#FFD700]/5 hover:border-[#FFD700]/30 transition-all cursor-pointer">
-                {/* Period label */}
-                <div className="w-20 flex-shrink-0">
-                  <div className="text-[10px] text-slate-500 uppercase tracking-wider">Champion</div>
-                  <div className="text-xs font-bold text-[#FFD700]">{periodLabel(c)}</div>
+        <div
+          ref={scrollRef}
+          className="flex gap-3 overflow-x-auto pb-2 px-4 sm:px-6 lg:px-10 scroll-smooth"
+          style={{ scrollbarWidth: "none" }}
+        >
+          {seasons.map(season => {
+            const iconEl = SEASON_ICON_MAP[season.icon] ?? SEASON_ICON_MAP.sun;
+            const iconColor =
+              season.icon === "sun"   ? "#FFD700" :
+              season.icon === "leaf"  ? "#4ADE80" :
+              season.icon === "snow"  ? "#93C5FD" :
+              season.icon === "flame" ? "#F97316" : "#FFD700";
+
+            return (
+              <div
+                key={season.num}
+                className="flex-shrink-0 w-52 rounded-xl border border-white/10 bg-[#0d1520] flex flex-col overflow-hidden"
+              >
+                {/* Card header */}
+                <div className="px-4 pt-4 pb-3 border-b border-white/8">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span style={{ color: iconColor }}>{iconEl}</span>
+                    <span className="text-[11px] font-black text-white tracking-wide uppercase">
+                      Season {season.num}
+                    </span>
+                  </div>
+                  <div className="text-[11px] font-bold text-white/80 leading-tight">{season.name}</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">{season.dateRange}</div>
                 </div>
 
-                {/* Trophy */}
-                <div className="w-7 h-7 rounded-full bg-[#FFD700]/20 border border-[#FFD700]/30 flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm">🥇</span>
+                {/* Top 3 list */}
+                <div className="flex-1 px-3 py-2.5 space-y-2">
+                  {season.top3.length === 0 ? (
+                    <div className="text-[11px] text-slate-600 text-center py-4">No data</div>
+                  ) : (
+                    season.top3.map(p => {
+                      const t = RANK_TROPHY[p.rank] ?? RANK_TROPHY[3];
+                      return (
+                        <Link key={p.userId} href={`/@${p.user.username}`}>
+                          <div className="flex items-center gap-2 cursor-pointer group">
+                            <span className="text-base leading-none flex-shrink-0">{t.icon}</span>
+                            <UserAvatar user={p.user} size="sm" />
+                            <span className="text-[11px] font-semibold text-white/90 truncate group-hover:text-white transition-colors">
+                              {p.user.displayName || p.user.username}
+                            </span>
+                          </div>
+                        </Link>
+                      );
+                    })
+                  )}
                 </div>
 
-                <UserAvatar user={c.user} size="sm" />
-
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-white text-sm truncate">{c.user.displayName}</div>
-                  <div className="text-[10px] text-slate-500">@{c.user.username}</div>
-                </div>
-
-                <div className="flex-shrink-0 px-2.5 py-1 rounded-lg bg-gradient-to-b from-[#fdc700] to-[#d08700]">
-                  <span className="text-xs font-black text-black">{formatPoints(c.totalPoints)} pts</span>
+                {/* View Season button */}
+                <div className="px-3 pb-3">
+                  <button className="w-full py-1.5 rounded border border-[#B7FF1A]/40 text-[#B7FF1A] text-[11px] font-black tracking-widest uppercase hover:bg-[#B7FF1A]/10 transition-colors">
+                    View Season
+                  </button>
                 </div>
               </div>
-            </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>
@@ -1050,8 +1110,6 @@ export default function LeaderboardPage() {
           </div>
         )}
 
-        {/* Ranked Leagues */}
-        <RankedLeagues leaderboard={leaderboard} userId={user?.id} />
       </div>
 
       {/* Narrow sections continued */}
@@ -1065,10 +1123,6 @@ export default function LeaderboardPage() {
             <div className="rs-section-divider" />
           </>
         )}
-
-        {/* Season Rewards */}
-        <SeasonRewards />
-        <div className="rs-section-divider" />
 
         {/* Hall of Champions */}
         <HallOfChampions />

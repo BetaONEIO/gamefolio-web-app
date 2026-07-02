@@ -3994,6 +3994,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Season history — top 3 per season, aggregated from monthly_leaderboard
+  const SEASON_DEFS = [
+    { num: 8, name: "Summer Showdown", icon: "sun",    dateRange: "Jun – Aug 2026",      months: ["2026-06","2026-07","2026-08"] },
+    { num: 7, name: "Spring Clash",    icon: "leaf",   dateRange: "Mar – May 2026",      months: ["2026-03","2026-04","2026-05"] },
+    { num: 6, name: "Winter Warzone",  icon: "snow",   dateRange: "Dec 2025 – Feb 2026", months: ["2025-12","2026-01","2026-02"] },
+    { num: 5, name: "Autumn Assault",  icon: "flame",  dateRange: "Sep – Nov 2025",      months: ["2025-09","2025-10","2025-11"] },
+    { num: 4, name: "Summer Heat",     icon: "sun",    dateRange: "Jun – Aug 2025",      months: ["2025-06","2025-07","2025-08"] },
+    { num: 3, name: "Spring Surge",    icon: "leaf",   dateRange: "Mar – May 2025",      months: ["2025-03","2025-04","2025-05"] },
+  ];
+
+  app.get("/api/leaderboard/season-history", async (req, res) => {
+    try {
+      const seasons = await Promise.all(
+        SEASON_DEFS.map(async (s) => {
+          const rows = await db.execute(sql`
+            SELECT
+              ml.user_id                         AS "userId",
+              SUM(ml.total_points)               AS "seasonPoints",
+              u.username,
+              u.display_name                     AS "displayName",
+              u.avatar_url                       AS "avatarUrl",
+              u.nft_profile_token_id             AS "nftProfileTokenId",
+              u.nft_profile_image_url            AS "nftProfileImageUrl",
+              u.active_profile_pic_type          AS "activeProfilePicType"
+            FROM monthly_leaderboard ml
+            JOIN users u ON u.id = ml.user_id
+            WHERE ml.month = ANY(ARRAY[${sql.join(s.months.map(m => sql`${m}`), sql`, `)}])
+              AND u.role NOT IN ('admin', 'moderator', 'system')
+              AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+              AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+            GROUP BY ml.user_id, u.username, u.display_name, u.avatar_url,
+                     u.nft_profile_token_id, u.nft_profile_image_url, u.active_profile_pic_type
+            ORDER BY "seasonPoints" DESC
+            LIMIT 3
+          `);
+          const top3 = (rows as any[]).map((r, idx) => ({
+            rank: idx + 1,
+            userId: Number(r.userId),
+            seasonPoints: Number(r.seasonPoints),
+            user: {
+              username: r.username,
+              displayName: r.displayName,
+              avatarUrl: r.avatarUrl || null,
+              nftProfileTokenId: r.nftProfileTokenId || null,
+              nftProfileImageUrl: r.nftProfileImageUrl || null,
+              activeProfilePicType: r.activeProfilePicType || null,
+            },
+          }));
+          return { ...s, top3 };
+        })
+      );
+      res.json(seasons);
+    } catch (error) {
+      console.error("Error fetching season history:", error);
+      res.status(500).json({ message: "Error fetching season history" });
+    }
+  });
+
   // Points leaderboard (kept as /api/xp/leaderboard for backward compatibility)
   // Note: totalXP field now stores total Points
   app.get("/api/xp/leaderboard", async (req, res) => {
