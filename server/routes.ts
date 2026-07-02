@@ -4029,18 +4029,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ORDER BY "seasonPoints" DESC
             LIMIT 3
           `);
-          const top3 = (rows as any[]).map((r, idx) => ({
-            rank: idx + 1,
-            userId: Number(r.userId),
-            seasonPoints: Number(r.seasonPoints),
-            user: {
-              username: r.username,
-              displayName: r.displayName,
-              avatarUrl: r.avatarUrl || null,
-              nftProfileTokenId: r.nftProfileTokenId || null,
-              nftProfileImageUrl: r.nftProfileImageUrl || null,
-              activeProfilePicType: r.activeProfilePicType || null,
-            },
+          const top3 = await Promise.all((rows as any[]).map(async (r, idx) => {
+            let avatarUrl = r.avatarUrl || null;
+            let nftProfileImageUrl = r.nftProfileImageUrl || null;
+            if (avatarUrl?.includes('supabase.co/storage')) {
+              const signed = await supabaseStorage.convertToSignedUrl(avatarUrl, 3600);
+              if (signed) avatarUrl = signed;
+            }
+            if (nftProfileImageUrl?.includes('supabase.co/storage')) {
+              const signed = await supabaseStorage.convertToSignedUrl(nftProfileImageUrl, 3600);
+              if (signed) nftProfileImageUrl = signed;
+            }
+            return {
+              rank: idx + 1,
+              userId: Number(r.userId),
+              seasonPoints: Number(r.seasonPoints),
+              user: {
+                username: r.username,
+                displayName: r.displayName,
+                avatarUrl,
+                nftProfileTokenId: r.nftProfileTokenId || null,
+                nftProfileImageUrl,
+                activeProfilePicType: r.activeProfilePicType || null,
+              },
+            };
           }));
           return { ...s, top3 };
         })
