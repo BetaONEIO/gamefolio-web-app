@@ -81,12 +81,33 @@ function resolveBoxArtUrl(url: string | null | undefined, w = 600, h = 800): str
   return url.replace(/-\d+x\d+(\.\w+)$/, `-${w}x${h}$1`);
 }
 
+// Log Twitch/axios failures with the response status + body so the real
+// cause (401 bad token, 429 rate limit, 5xx upstream) shows up in the server
+// logs instead of an opaque "[object Object]".
+function logTwitchError(context: string, error: unknown): void {
+  if (axios.isAxiosError(error)) {
+    console.error(
+      `${context}: ${error.response?.status ?? 'no-status'} ${error.code ?? ''}`,
+      JSON.stringify(error.response?.data ?? error.message)
+    );
+  } else {
+    console.error(`${context}:`, error);
+  }
+}
+
 // Twitch API service
 class TwitchApiService {
   private accessToken: string | null = null;
   private tokenExpiresAt: number = 0;
   private readonly clientId: string;
   private readonly clientSecret: string;
+
+  // Cache the full filtered top-games list so we can (a) paginate without
+  // re-hitting Twitch and (b) serve stale data if Twitch briefly fails,
+  // rather than surfacing a 500 to the app. Twitch rate-limits the
+  // client-credentials app token, so caching also reduces failure pressure.
+  private topGamesCache: { games: TwitchGame[]; fetchedAt: number } | null = null;
+  private readonly TOP_GAMES_TTL_MS = 5 * 60 * 1000;
   
   constructor() {
     this.clientId = process.env.TWITCH_CLIENT_ID || '';
@@ -133,7 +154,7 @@ class TwitchApiService {
       
       return this.accessToken;
     } catch (error) {
-      console.error('Error getting Twitch access token:', error);
+      logTwitchError('Error getting Twitch access token', error);
       throw new Error('Failed to authenticate with Twitch API');
     }
   }
@@ -145,10 +166,15 @@ class TwitchApiService {
     if (!this.isConfigured()) {
       throw new Error('Twitch API credentials not configured');
     }
-    
+
+    // Serve fresh cache without touching Twitch.
+    if (this.topGamesCache && Date.now() - this.topGamesCache.fetchedAt < this.TOP_GAMES_TTL_MS) {
+      return this.topGamesCache.games.slice(offset, offset + limit);
+    }
+
     try {
       const token = await this.getAccessToken();
-      
+
       // Fetch a large number of games to support pagination
       const response = await axios.get('https://api.twitch.tv/helix/games/top', {
         headers: {
@@ -184,18 +210,26 @@ class TwitchApiService {
         !excludedCategories.includes(game.name)
       );
 
-      // Apply offset and limit for pagination
-      const paginatedGames = allGames.slice(offset, offset + limit);
-
-      // Return the paginated games with properly formatted URLs
-      return paginatedGames.map((game: any) => ({
+      // Map the full filtered list once, then cache it so pagination and
+      // subsequent requests don't re-hit Twitch.
+      const mapped: TwitchGame[] = allGames.map((game: any) => ({
         id: game.id,
         name: game.name,
         box_art_url: resolveBoxArtUrl(game.box_art_url),
         igdb_id: game.igdb_id
       }));
+      this.topGamesCache = { games: mapped, fetchedAt: Date.now() };
+
+      // Apply offset and limit for pagination
+      return mapped.slice(offset, offset + limit);
     } catch (error) {
-      console.error('Error fetching top games from Twitch:', error);
+      logTwitchError('Error fetching top games from Twitch', error);
+      // Graceful degradation: if Twitch is flaky but we fetched successfully
+      // before, serve the stale list instead of 500ing the app.
+      if (this.topGamesCache) {
+        console.warn('Serving stale Twitch top-games cache after fetch failure');
+        return this.topGamesCache.games.slice(offset, offset + limit);
+      }
       throw new Error('Failed to fetch top games from Twitch API');
     }
   }
