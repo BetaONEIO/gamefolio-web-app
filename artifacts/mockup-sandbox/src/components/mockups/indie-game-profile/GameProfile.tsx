@@ -1,19 +1,20 @@
-import React from 'react';
-import { 
-  CheckCircle2, 
-  Play, 
-  Monitor, 
-  Globe, 
-  Users, 
-  Video, 
-  Eye, 
+import {
+  CheckCircle2,
+  Play,
+  Monitor,
+  Globe,
+  Users,
+  Video,
+  Eye,
   Heart,
   Terminal,
   Activity,
   ChevronDown,
-  Gamepad2
+  Gamepad2,
+  Gamepad,
+  Store,
+  ShoppingBag,
 } from 'lucide-react';
-import { SiSteam, SiEpicgames, SiPlaystation } from 'react-icons/si';
 
 export default function GameProfile() {
   const brand = {
@@ -209,7 +210,7 @@ export default function GameProfile() {
                 <Gamepad2 size={32} className="text-white/80" />
               </div>
               <div className="p-4 rounded-lg flex items-center justify-center" style={cardStyle}>
-                <SiPlaystation size={32} className="text-white/80" />
+                <Gamepad size={32} className="text-white/80" />
               </div>
             </div>
           </div>
@@ -247,7 +248,7 @@ export default function GameProfile() {
             
             <button className="w-full flex items-center justify-between p-3 rounded-md bg-[#171a21] hover:bg-[#2a303c] transition-colors border border-white/5 group">
               <div className="flex items-center gap-3">
-                <SiSteam size={24} className="text-[#66c0f4]" />
+                <Store size={24} className="text-[#66c0f4]" />
                 <span className="font-semibold text-[#c7d5e0]">Steam</span>
               </div>
               <Globe size={16} className="text-white/30 group-hover:text-white/80" />
@@ -255,7 +256,7 @@ export default function GameProfile() {
             
             <button className="w-full flex items-center justify-between p-3 rounded-md bg-[#121212] hover:bg-[#2a2a2a] transition-colors border border-white/5 group">
               <div className="flex items-center gap-3">
-                <SiEpicgames size={24} className="text-white" />
+                <ShoppingBag size={24} className="text-white" />
                 <span className="font-semibold text-white">Epic Games</span>
               </div>
               <Globe size={16} className="text-white/30 group-hover:text-white/80" />
