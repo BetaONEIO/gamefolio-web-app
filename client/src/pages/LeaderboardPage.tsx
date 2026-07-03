@@ -714,18 +714,23 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
   return (
     <section
       className="mb-0 relative rounded-2xl pt-5 pb-2 overflow-hidden"
-      style={{
-        backgroundColor: "#05090d",
-        backgroundImage: [
-          "repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(255,255,255,0.05) 12px, rgba(255,255,255,0.05) 13px)",
-          "repeating-linear-gradient(-45deg, transparent, transparent 12px, rgba(255,255,255,0.05) 12px, rgba(255,255,255,0.05) 13px)",
-          "radial-gradient(ellipse 70% 60% at 8% 0%, rgba(183,255,26,0.32), transparent 60%)",
-          "radial-gradient(ellipse 65% 55% at 95% 10%, rgba(59,130,246,0.26), transparent 65%)",
-          "radial-gradient(ellipse 60% 55% at 50% 110%, rgba(183,255,26,0.22), transparent 70%)",
-          "linear-gradient(160deg, rgba(183,255,26,0.14), transparent 55%)",
-        ].join(", "),
-      }}
+      style={{ backgroundColor: "#05090d" }}
     >
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: [
+            "repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(255,255,255,0.05) 12px, rgba(255,255,255,0.05) 13px)",
+            "repeating-linear-gradient(-45deg, transparent, transparent 12px, rgba(255,255,255,0.05) 12px, rgba(255,255,255,0.05) 13px)",
+            "radial-gradient(ellipse 70% 60% at 8% 0%, rgba(183,255,26,0.32), transparent 60%)",
+            "radial-gradient(ellipse 65% 55% at 95% 10%, rgba(59,130,246,0.26), transparent 65%)",
+            "radial-gradient(ellipse 60% 55% at 50% 110%, rgba(183,255,26,0.22), transparent 70%)",
+            "linear-gradient(160deg, rgba(183,255,26,0.14), transparent 55%)",
+          ].join(", "),
+          maskImage: "radial-gradient(ellipse 65% 55% at 30% 15%, black 0%, transparent 75%)",
+          WebkitMaskImage: "radial-gradient(ellipse 65% 55% at 30% 15%, black 0%, transparent 75%)",
+        }}
+      />
       {/* Header row — padded */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3 px-4 sm:px-6 lg:px-10">
         <div className="flex items-center gap-2 flex-wrap">
