@@ -4286,12 +4286,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ─── Dashboard Aggregate Endpoint ─────────────────────────────────────────
+  // League order: Bronze -> Silver -> Gold -> Platinum -> Onyx (XP-based),
+  // then Diamond (top 100 rank) -> Champion (top 10 rank), both rank-gated.
   const SEASON_LEAGUE_TIERS = [
     { name: "Bronze", icon: "🥉", color: "#CD7F32", min: 0, max: 999 },
     { name: "Silver", icon: "🥈", color: "#C0C0C0", min: 1000, max: 2999 },
     { name: "Gold", icon: "🥇", color: "#FFD700", min: 3000, max: 5999 },
     { name: "Platinum", icon: "💎", color: "#4FC3F7", min: 6000, max: 9999 },
-    { name: "Diamond", icon: "💠", color: "#9B7CFC", min: 10000, max: 14999 },
+    { name: "Onyx", icon: "🖤", color: "#8B5CF6", min: 10000, max: Infinity },
   ];
 
   function buildSeasonLeague(
@@ -4300,19 +4302,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     championCutoffXP: number | null,
     totalSeasonPlayers: number
   ) {
-    // Master/Champion are rank-gated, but only once a player has actually
-    // climbed to Diamond-level Season XP — otherwise a small season player
-    // pool would let low-XP players skip straight to Master/Champion.
-    const hasReachedDiamond = seasonXP >= 10000;
-    const isChampion = hasReachedDiamond && seasonRank !== null && seasonRank <= 10;
-    const isMaster = hasReachedDiamond && !isChampion && seasonRank !== null && seasonRank <= 100;
+    // Diamond/Champion are rank-gated, but only once a player has actually
+    // climbed to Onyx-level Season XP — otherwise a small season player
+    // pool would let low-XP players skip straight to Diamond/Champion.
+    const hasReachedOnyx = seasonXP >= 10000;
+    const isChampion = hasReachedOnyx && seasonRank !== null && seasonRank <= 10;
+    const isDiamond = hasReachedOnyx && !isChampion && seasonRank !== null && seasonRank <= 100;
 
     if (isChampion) {
       return {
         tier: "Champion",
         league: "Champion",
         leagueIcon: "🏆",
-        leagueColor: "#FFD700",
+        leagueColor: "#B7FF1A",
         seasonXP,
         seasonRank,
         totalSeasonPlayers,
@@ -4321,13 +4323,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
     }
 
-    if (isMaster) {
+    if (isDiamond) {
       const needed = championCutoffXP !== null ? Math.max(0, championCutoffXP - seasonXP) : null;
       return {
-        tier: "Master",
-        league: "Master",
-        leagueIcon: "👑",
-        leagueColor: "#B7FF1A",
+        tier: "Diamond",
+        league: "Diamond",
+        leagueIcon: "💠",
+        leagueColor: "#E0E7FF",
         seasonXP,
         seasonRank,
         totalSeasonPlayers,
@@ -4337,27 +4339,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
     }
 
-    // Bronze -> Diamond, determined by season XP thresholds
+    // Bronze -> Onyx, determined by season XP thresholds
     let current = SEASON_LEAGUE_TIERS[0];
     for (const tier of SEASON_LEAGUE_TIERS) {
       if (seasonXP >= tier.min) current = tier;
     }
     const currentIndex = SEASON_LEAGUE_TIERS.findIndex((t) => t.name === current.name);
-    const isDiamond = current.name === "Diamond";
+    const isOnyx = current.name === "Onyx";
 
-    if (isDiamond) {
-      const rankToMaster = seasonRank !== null ? Math.max(0, seasonRank - 100) : null;
+    if (isOnyx) {
+      const rankToDiamond = seasonRank !== null ? Math.max(0, seasonRank - 100) : null;
       return {
-        tier: "Diamond",
-        league: "Diamond",
+        tier: "Onyx",
+        league: "Onyx",
         leagueIcon: current.icon,
         leagueColor: current.color,
         seasonXP,
         seasonRank,
         totalSeasonPlayers,
-        nextLeague: "Master",
-        nextLeagueIcon: "👑",
-        rankToNext: rankToMaster,
+        nextLeague: "Diamond",
+        nextLeagueIcon: "💠",
+        rankToNext: rankToDiamond,
       };
     }
 
@@ -4374,8 +4376,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       seasonXP,
       seasonRank,
       totalSeasonPlayers,
-      nextLeague: nextTier ? nextTier.name : "Diamond",
-      nextLeagueIcon: nextTier ? nextTier.icon : "💠",
+      nextLeague: nextTier ? nextTier.name : "Onyx",
+      nextLeagueIcon: nextTier ? nextTier.icon : "🖤",
       nextThreshold,
       xpToNext,
       progressPercent,

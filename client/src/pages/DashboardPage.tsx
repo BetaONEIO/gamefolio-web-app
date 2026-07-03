@@ -14,6 +14,13 @@ import {
   Eye, Heart, MessageCircle, LogIn, Award, Star, ArrowUpRight,
   TrendingUp, Users, Swords, Circle, CheckCircle2,
 } from "lucide-react";
+import bronzeMedal from "@assets/Bronze-league-medal_1783092079649.png";
+import silverMedal from "@assets/Silver-league-medal_1783092079651.png";
+import goldMedal from "@assets/Gold-league-medal_1783092079650.png";
+import platinumMedal from "@assets/Platinum-league-medal_1783092079650.png";
+import onyxMedal from "@assets/Onyx-league-medal_1783092079650.png";
+import diamondMedal from "@assets/Rainbow-league-medal_1783093739515.png";
+import championMedal from "@assets/Gg-league-medal_1783092079650.png";
 
 /* ─── Types ─── */
 
@@ -97,7 +104,7 @@ interface DashboardData {
     available?: boolean;
   }>;
   seasonLeague: {
-    tier: "Bronze" | "Silver" | "Gold" | "Platinum" | "Diamond" | "Master" | "Champion";
+    tier: "Bronze" | "Silver" | "Gold" | "Platinum" | "Onyx" | "Diamond" | "Champion";
     league: string;
     leagueIcon: string;
     leagueColor: string;
@@ -368,15 +375,37 @@ function ActiveBounties({ bounties, isLoading }: { bounties: DashboardData["boun
 
 /* ─── Section 4: Ranked Season ─── */
 
+const LEAGUE_MEDALS: Record<string, string> = {
+  Bronze: bronzeMedal,
+  Silver: silverMedal,
+  Gold: goldMedal,
+  Platinum: platinumMedal,
+  Onyx: onyxMedal,
+  Diamond: diamondMedal,
+  Champion: championMedal,
+};
+
 const LEAGUE_STRUCTURE = [
-  { name: "Bronze", icon: "🥉", range: "0 – 999 Season XP" },
-  { name: "Silver", icon: "🥈", range: "1,000 – 2,999 Season XP" },
-  { name: "Gold", icon: "🥇", range: "3,000 – 5,999 Season XP" },
-  { name: "Platinum", icon: "💎", range: "6,000 – 9,999 Season XP" },
-  { name: "Diamond", icon: "💠", range: "10,000 – 14,999 Season XP" },
-  { name: "Master", icon: "👑", range: "Top 100 Players" },
-  { name: "Champion", icon: "🏆", range: "Top 10 Players" },
+  { name: "Bronze", range: "0 – 999 Season XP" },
+  { name: "Silver", range: "1,000 – 2,999 Season XP" },
+  { name: "Gold", range: "3,000 – 5,999 Season XP" },
+  { name: "Platinum", range: "6,000 – 9,999 Season XP" },
+  { name: "Onyx", range: "10,000+ Season XP" },
+  { name: "Diamond", range: "Top 100 Players" },
+  { name: "Champion", range: "Top 10 Players" },
 ];
+
+function LeagueMedal({ tier, size = 64 }: { tier: string; size?: number }) {
+  const src = LEAGUE_MEDALS[tier] ?? bronzeMedal;
+  return (
+    <img
+      src={src}
+      alt={`${tier} League medal`}
+      style={{ width: size, height: size, objectFit: "contain" }}
+      className="flex-shrink-0 drop-shadow-[0_0_12px_rgba(0,0,0,0.4)]"
+    />
+  );
+}
 
 function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"] | undefined; isLoading: boolean }) {
   if (isLoading || !data) {
@@ -391,9 +420,9 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
   }
 
   const isChampion = data.tier === "Champion";
-  const isMaster = data.tier === "Master";
   const isDiamond = data.tier === "Diamond";
-  const isBelowDiamond = !isChampion && !isMaster && !isDiamond;
+  const isOnyx = data.tier === "Onyx";
+  const isBelowOnyx = !isChampion && !isDiamond && !isOnyx;
 
   return (
     <SectionCard>
@@ -410,17 +439,12 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
       />
       <div className="px-5 pb-5">
         {/* Current league badge */}
-        <div className="flex items-center gap-4 mb-5">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 text-3xl"
-            style={{ background: `${data.leagueColor}15`, border: `1px solid ${data.leagueColor}40` }}
-          >
-            {data.leagueIcon}
-          </div>
+        <div className="flex items-center gap-4 mb-6">
+          <LeagueMedal tier={data.league} size={64} />
           <div>
             <p className="text-xs font-medium mb-0.5" style={{ color: TEXT_MUTED }}>Current League</p>
             <h4 className="text-xl font-black" style={{ color: data.leagueColor }}>
-              {data.leagueIcon} {data.league} League
+              {data.league} League
             </h4>
             {data.seasonRank && (
               <p className="text-xs" style={{ color: TEXT_MUTED }}>Rank #{data.seasonRank.toLocaleString()}</p>
@@ -428,52 +452,95 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
           </div>
         </div>
 
-        {/* Bronze -> Diamond-eligible: XP progress bar */}
-        {isBelowDiamond && (
+        {/* Bronze -> Onyx: medal-to-medal XP progress bar */}
+        {isBelowOnyx && (
           <>
-            <div className="mb-2">
-              <XPBar percent={data.progressPercent ?? 0} height={12} />
+            <div className="flex items-center justify-center gap-3 sm:gap-5 mb-3">
+              <div className="flex flex-col items-center gap-2 w-20 flex-shrink-0">
+                <LeagueMedal tier={data.league} size={72} />
+                <span className="text-[11px] font-bold text-center leading-tight" style={{ color: TEXT_PRIMARY }}>
+                  {data.league} League
+                </span>
+              </div>
+              <div className="flex-1">
+                <div className="w-full rounded-full overflow-hidden h-3" style={{ background: "#FFFFFF" }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-700 ease-out"
+                    style={{ width: `${Math.min(data.progressPercent ?? 0, 100)}%`, background: ACCENT }}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col items-center gap-2 w-20 flex-shrink-0">
+                <LeagueMedal tier={data.nextLeague ?? "Onyx"} size={72} />
+                <span className="text-[11px] font-bold text-center leading-tight" style={{ color: TEXT_PRIMARY }}>
+                  {data.nextLeague} League
+                </span>
+              </div>
             </div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-center mb-3">
               <span className="text-xs font-bold" style={{ color: TEXT_PRIMARY }}>
                 {data.seasonXP.toLocaleString()} / {(data.nextThreshold ?? 0).toLocaleString()} Season XP
               </span>
             </div>
-            <div className="flex items-center justify-between rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
+            <div className="flex items-center justify-center rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
               <span className="text-xs font-semibold" style={{ color: ACCENT }}>
-                {(data.xpToNext ?? 0).toLocaleString()} XP until {data.nextLeague}
+                {(data.xpToNext ?? 0).toLocaleString()} XP until {data.nextLeague} League
               </span>
-              <div className="flex items-center gap-2 text-lg">
-                <span>{data.leagueIcon}</span>
-                <ArrowUpRight className="w-4 h-4" style={{ color: TEXT_MUTED }} />
-                <span>{data.nextLeagueIcon}</span>
-              </div>
             </div>
           </>
         )}
 
-        {/* Diamond: rank-based progress toward Master */}
-        {isDiamond && (
+        {/* Onyx: rank-based progress toward Diamond */}
+        {isOnyx && (
           <div className="space-y-3">
+            <div className="flex items-center justify-center gap-3 sm:gap-5 mb-1">
+              <div className="flex flex-col items-center gap-2 w-20 flex-shrink-0">
+                <LeagueMedal tier="Onyx" size={72} />
+                <span className="text-[11px] font-bold text-center leading-tight" style={{ color: TEXT_PRIMARY }}>
+                  Onyx League
+                </span>
+              </div>
+              <ArrowUpRight className="w-5 h-5 flex-shrink-0" style={{ color: TEXT_MUTED }} />
+              <div className="flex flex-col items-center gap-2 w-20 flex-shrink-0">
+                <LeagueMedal tier="Diamond" size={72} />
+                <span className="text-[11px] font-bold text-center leading-tight" style={{ color: TEXT_PRIMARY }}>
+                  Diamond League
+                </span>
+              </div>
+            </div>
             <div className="p-4 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
               <p className="text-[10px] font-medium mb-1 uppercase tracking-wide" style={{ color: TEXT_MUTED }}>Current Rank</p>
               <p className="text-3xl font-black" style={{ color: ACCENT }}>#{data.seasonRank?.toLocaleString()}</p>
             </div>
-            <div className="flex items-center justify-between rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
+            <div className="flex items-center justify-center rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
               <span className="text-xs font-semibold" style={{ color: ACCENT }}>
-                Only {(data.rankToNext ?? 0).toLocaleString()} place{data.rankToNext === 1 ? "" : "s"} until Master
+                Only {(data.rankToNext ?? 0).toLocaleString()} place{data.rankToNext === 1 ? "" : "s"} until Diamond
               </span>
-              <span className="text-lg">👑</span>
             </div>
             <p className="text-[11px] text-center" style={{ color: TEXT_MUTED }}>
-              Master League — Top 100 Players
+              Diamond League — Top 100 Players
             </p>
           </div>
         )}
 
-        {/* Master: rank + XP cutoff to Champion */}
-        {isMaster && (
+        {/* Diamond: rank + XP cutoff to Champion */}
+        {isDiamond && (
           <div className="space-y-3">
+            <div className="flex items-center justify-center gap-3 sm:gap-5 mb-1">
+              <div className="flex flex-col items-center gap-2 w-20 flex-shrink-0">
+                <LeagueMedal tier="Diamond" size={72} />
+                <span className="text-[11px] font-bold text-center leading-tight" style={{ color: TEXT_PRIMARY }}>
+                  Diamond League
+                </span>
+              </div>
+              <ArrowUpRight className="w-5 h-5 flex-shrink-0" style={{ color: TEXT_MUTED }} />
+              <div className="flex flex-col items-center gap-2 w-20 flex-shrink-0">
+                <LeagueMedal tier="Champion" size={72} />
+                <span className="text-[11px] font-bold text-center leading-tight" style={{ color: TEXT_PRIMARY }}>
+                  Champion League
+                </span>
+              </div>
+            </div>
             <div className="p-4 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
               <p className="text-[10px] font-medium mb-1 uppercase tracking-wide" style={{ color: TEXT_MUTED }}>Current Rank</p>
               <p className="text-3xl font-black" style={{ color: ACCENT }}>#{data.seasonRank?.toLocaleString()}</p>
@@ -491,11 +558,10 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
                 <p className="text-sm font-bold" style={{ color: TEXT_PRIMARY }}>{data.seasonXP.toLocaleString()} XP</p>
               </div>
             </div>
-            <div className="flex items-center justify-between rounded-xl p-3" style={{ background: `${ACCENT}0D`, border: `1px solid ${ACCENT}30` }}>
+            <div className="flex items-center justify-center rounded-xl p-3" style={{ background: `${ACCENT}0D`, border: `1px solid ${ACCENT}30` }}>
               <span className="text-xs font-semibold" style={{ color: ACCENT }}>
                 {(data.xpToChampion ?? 0).toLocaleString()} XP Needed
               </span>
-              <span className="text-lg">🏆</span>
             </div>
           </div>
         )}
@@ -503,14 +569,22 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
         {/* Champion: top of the ladder */}
         {isChampion && (
           <div className="space-y-3">
+            <div className="flex justify-center mb-1">
+              <div className="flex flex-col items-center gap-2 w-24">
+                <LeagueMedal tier="Champion" size={88} />
+                <span className="text-xs font-bold text-center leading-tight" style={{ color: TEXT_PRIMARY }}>
+                  Champion League
+                </span>
+              </div>
+            </div>
             <div
               className="p-4 rounded-xl text-center"
-              style={{ background: "rgba(255,215,0,0.08)", border: `1px solid rgba(255,215,0,0.35)` }}
+              style={{ background: `${ACCENT}14`, border: `1px solid ${ACCENT}50` }}
             >
               <p className="text-[10px] font-medium mb-1 uppercase tracking-wide" style={{ color: TEXT_MUTED }}>Current Rank</p>
-              <p className="text-3xl font-black" style={{ color: "#FFD700" }}>#{data.seasonRank?.toLocaleString()}</p>
+              <p className="text-3xl font-black" style={{ color: ACCENT }}>#{data.seasonRank?.toLocaleString()}</p>
               <p className="text-[11px] mt-1" style={{ color: TEXT_MUTED }}>
-                {data.isTopRank ? "You're #1 this season! 👑" : "You're in the Top 10 — pushing for #1"}
+                {data.isTopRank ? "You're #1 this season!" : "You're in the Top 10 — pushing for #1"}
               </p>
             </div>
             <div className="flex items-center justify-between rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
@@ -529,14 +603,14 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
                 <div
                   key={tier.name}
                   title={tier.range}
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-semibold"
                   style={{
                     background: active ? `${ACCENT}15` : "rgba(255,255,255,0.03)",
                     border: `1px solid ${active ? `${ACCENT}50` : BORDER}`,
                     color: active ? ACCENT : TEXT_MUTED,
                   }}
                 >
-                  <span>{tier.icon}</span>
+                  <img src={LEAGUE_MEDALS[tier.name]} alt="" className="w-4 h-4 object-contain" />
                   <span>{tier.name}</span>
                 </div>
               );
