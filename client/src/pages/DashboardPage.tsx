@@ -135,11 +135,11 @@ const ACCENT_DARK = "#071013";
 
 /* ─── Reusable Components ─── */
 
-function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+function SectionCard({ children, className = "", style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
   return (
     <div
       className={`rounded-2xl overflow-hidden ${className}`}
-      style={{ background: DARK_BG, border: `1px solid ${BORDER}` }}
+      style={{ background: DARK_BG, border: `1px solid ${BORDER}`, ...style }}
     >
       {children}
     </div>
@@ -408,6 +408,80 @@ function getLeagueGradient(league: string) {
   }
 }
 
+const LEAGUE_MESH_COLORS: Record<string, [string, string, string]> = {
+  Bronze:   ["#CD7F32", "#8B4513", "#D2691E"],
+  Silver:   ["#E8E8E8", "#A0A0A0", "#FFFFFF"],
+  Gold:     ["#FFD700", "#B8860B", "#FFA500"],
+  Platinum: ["#4FC3F7", "#0288D1", "#E1F5FE"],
+  Onyx:     ["#8B5CF6", "#2E1065", "#C4B5FD"],
+  Diamond:  ["#E0E7FF", "#6366F1", "#FFFFFF"],
+  Champion: ["#B7FF1A", "#3F6212", "#FEF08A"],
+};
+
+function getLeagueMeshBackground(league: string): React.CSSProperties {
+  const [a, b, c] = LEAGUE_MESH_COLORS[league] ?? [ACCENT, "#3F6212", "#D9FF80"];
+  return {
+    backgroundColor: DARK_BG,
+    backgroundImage: [
+      `radial-gradient(ellipse 80% 60% at 12% 0%, ${a}33, transparent 60%)`,
+      `radial-gradient(ellipse 70% 55% at 95% 15%, ${b}2E, transparent 65%)`,
+      `radial-gradient(ellipse 65% 60% at 50% 110%, ${c}26, transparent 70%)`,
+      `linear-gradient(160deg, ${a}14, transparent 55%)`,
+    ].join(", "),
+  };
+}
+
+const SUMMER_SHOWDOWN_END = new Date(2026, 7, 31, 23, 59, 59);
+
+function useCountdownTo(target: Date) {
+  const [diff, setDiff] = useState(Math.max(0, target.getTime() - Date.now()));
+  useEffect(() => {
+    const id = setInterval(() => setDiff(Math.max(0, target.getTime() - Date.now())), 1000);
+    return () => clearInterval(id);
+  }, [target]);
+  const days    = Math.floor(diff / 86_400_000);
+  const hours   = Math.floor((diff % 86_400_000) / 3_600_000);
+  const minutes = Math.floor((diff % 3_600_000) / 60_000);
+  const seconds = Math.floor((diff % 60_000) / 1000);
+  return { days, hours, minutes, seconds };
+}
+
+function ShowdownCountdown() {
+  const { days, hours, minutes, seconds } = useCountdownTo(SUMMER_SHOWDOWN_END);
+  const units = [
+    { label: "Days", value: days },
+    { label: "Hrs", value: hours },
+    { label: "Min", value: minutes },
+    { label: "Sec", value: seconds },
+  ];
+  return (
+    <div
+      className="flex items-center justify-between rounded-xl p-3 mb-5"
+      style={{ background: "rgba(0,0,0,0.22)", border: `1px solid ${BORDER}` }}
+    >
+      <div className="flex items-center gap-1.5">
+        <Clock className="w-3.5 h-3.5" style={{ color: ACCENT }} />
+        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: TEXT_MUTED }}>
+          Summer Showdown ends in
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        {units.map((u, i) => (
+          <div key={u.label} className="flex items-center gap-1.5">
+            <div className="flex flex-col items-center min-w-[30px]">
+              <span className="text-sm font-black tabular-nums" style={{ color: TEXT_PRIMARY }}>
+                {String(u.value).padStart(2, "0")}
+              </span>
+              <span className="text-[8px] uppercase tracking-wide" style={{ color: TEXT_MUTED }}>{u.label}</span>
+            </div>
+            {i < units.length - 1 && <span className="text-xs font-bold" style={{ color: TEXT_MUTED }}>:</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function LeagueMedal({ tier, size = 64 }: { tier: string; size?: number }) {
   const src = LEAGUE_MEDALS[tier] ?? bronzeMedal;
   return (
@@ -438,7 +512,7 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
   const isBelowOnyx = !isChampion && !isDiamond && !isOnyx;
 
   return (
-    <SectionCard>
+    <SectionCard style={getLeagueMeshBackground(data.league)}>
       <SectionHeader
         icon={Trophy}
         title="League Progress"
@@ -451,6 +525,7 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
         }
       />
       <div className="px-5 pb-5">
+        <ShowdownCountdown />
         {/* Current league badge */}
         <div className="flex items-center gap-4 mb-6">
           <LeagueMedal tier={data.league} size={64} />
