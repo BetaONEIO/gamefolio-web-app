@@ -970,7 +970,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Content area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
         {isMobile ? (
           /* Mobile: stacked single column */
           <div className="space-y-5 pb-24">
