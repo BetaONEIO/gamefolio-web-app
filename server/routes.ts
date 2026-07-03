@@ -4429,24 +4429,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rankIndex = allTimeBoard.findIndex((e: any) => e.userId === userId);
       const rank = rankIndex >= 0 ? rankIndex + 1 : null;
 
-      // League based on level
-      const getLeague = (lvl: number) => {
-        if (lvl >= 40) return { name: "Legend", color: "#FF6B35" };
-        if (lvl >= 30) return { name: "Diamond", color: "#3B82F6" };
-        if (lvl >= 20) return { name: "Gold", color: "#FFD700" };
-        if (lvl >= 10) return { name: "Silver", color: "#C0C0C0" };
-        return { name: "Bronze", color: "#CD7F32" };
-      };
-      const league = getLeague(user.level);
-
-      // Recent XP activity (last 20)
-      const recentActivity = xpHistory.slice(0, 20).map((h) => ({
-        id: h.id,
-        xpAmount: h.xpAmount,
-        source: h.source,
-        description: h.description,
-        createdAt: h.createdAt,
-      }));
+      // Recent XP activity (last 20) — only entries that actually granted XP
+      const recentActivity = xpHistory
+        .filter((h) => h.xpAmount > 0)
+        .slice(0, 20)
+        .map((h) => ({
+          id: h.id,
+          xpAmount: h.xpAmount,
+          source: h.source,
+          description: h.description,
+          createdAt: h.createdAt,
+        }));
 
       // XP earned today
       const xpEarnedToday = todayXP.reduce((s, h) => s + h.xpAmount, 0);
@@ -4540,8 +4533,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsForNextLevel: progress.pointsForNextLevel,
           pointsRemaining: progress.pointsRemaining,
           progressPercent: progress.progressPercent,
-          league: league.name,
-          leagueColor: league.color,
+          league: seasonLeague.league,
+          leagueColor: seasonLeague.leagueColor,
           rank: rank,
           currentStreak: streakInfo.currentStreak,
           longestStreak: streakInfo.longestStreak,
