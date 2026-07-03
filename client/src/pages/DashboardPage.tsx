@@ -203,7 +203,7 @@ function SimpleAvatar({ url, name, size = "md" }: { url: string | null; name: st
 function PlayerOverview({ data, isLoading }: { data: DashboardData["player"] | undefined; isLoading: boolean }) {
   if (isLoading || !data) {
     return (
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-4 mb-6">
           <Skeleton className="w-20 h-20 rounded-2xl bg-white/20" />
           <div className="flex-1 space-y-3">
@@ -223,7 +223,7 @@ function PlayerOverview({ data, isLoading }: { data: DashboardData["player"] | u
   }
 
   return (
-    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="relative max-w-7xl px-4 sm:px-6 lg:px-8">
       {/* Top row: avatar + welcome + level */}
       <div className="flex items-center gap-4 mb-6">
         <div className="relative">
@@ -970,7 +970,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Content area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
         {isMobile ? (
           /* Mobile: stacked single column */
           <div className="space-y-5 pb-24">
