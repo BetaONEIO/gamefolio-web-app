@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useMobile } from "@/hooks/use-mobile";
+import { useSignedUrl } from "@/hooks/use-signed-url";
+import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
 import {
-  Zap, Trophy, Flame, Gift, Clock, ChevronRight, Upload, Video, Camera, Target,
-  Eye, Heart, MessageCircle, LogIn, Award, Star, ArrowUpRight, Gamepad2,
-  TrendingUp, Users, Swords, Layers, Circle, CheckCircle2,
+  Zap, Trophy, Flame, Gift, Clock, ChevronRight, Upload,
+  Eye, Heart, MessageCircle, LogIn, Award, Star, ArrowUpRight,
+  TrendingUp, Users, Swords, Circle, CheckCircle2,
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -132,31 +134,6 @@ function SectionHeader({ icon: Icon, title, action }: { icon: typeof Zap; title:
   );
 }
 
-function CountdownClock() {
-  const [timeLeft, setTimeLeft] = useState("");
-  useEffect(() => {
-    const update = () => {
-      const now = new Date();
-      const midnight = new Date(now);
-      midnight.setHours(24, 0, 0, 0);
-      const diff = midnight.getTime() - now.getTime();
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      setTimeLeft(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
-    };
-    update();
-    const id = setInterval(update, 1000);
-    return () => clearInterval(id);
-  }, []);
-  return (
-    <div className="flex items-center gap-1.5 text-xs" style={{ color: TEXT_MUTED }}>
-      <Clock className="w-3 h-3" />
-      <span>Resets in <span className="font-mono font-semibold" style={{ color: TEXT_PRIMARY }}>{timeLeft}</span></span>
-    </div>
-  );
-}
-
 function XPBar({ percent, height = 8, animated = true }: { percent: number; height?: number; animated?: boolean }) {
   return (
     <div className="w-full rounded-full overflow-hidden" style={{ height, background: BORDER }}>
@@ -184,10 +161,11 @@ function StatPill({ label, value, color = ACCENT, icon: Icon }: { label: string;
 
 function SimpleAvatar({ url, name, size = "md" }: { url: string | null; name: string | null; size?: "sm" | "md" | "lg" | "xl" }) {
   const dim = size === "xl" ? "w-20 h-20" : size === "lg" ? "w-14 h-14" : size === "sm" ? "w-8 h-8" : "w-10 h-10";
+  const { signedUrl } = useSignedUrl(url);
   return (
     <div className={`${dim} rounded-2xl border border-white/10 bg-[#0d1a24] overflow-hidden flex-shrink-0`}>
       <Avatar className="w-full h-full rounded-none">
-        <AvatarImage src={url || undefined} className="object-cover" />
+        <AvatarImage src={signedUrl || undefined} className="object-cover" />
         <AvatarFallback className="bg-[#0d1a24] text-slate-400 rounded-none text-xs font-bold">
           {name?.charAt(0) ?? "?"}
         </AvatarFallback>
@@ -273,113 +251,6 @@ function PlayerOverview({ data, isLoading }: { data: DashboardData["player"] | u
         />
       </div>
     </div>
-  );
-}
-
-/* ─── Section 2: Today's Progress ─── */
-
-const CHALLENGE_DEFS = [
-  { id: "login", title: "Daily Login", xp: 25, icon: LogIn, total: 1, check: (t: DashboardData["today"]) => t.loginXPToday > 0 },
-  { id: "watch5", title: "Watch 5 Clips", xp: 10, icon: Eye, total: 5, check: (t: DashboardData["today"]) => t.watch5Done, progress: (t: DashboardData["today"]) => t.clipsWatchedToday },
-  { id: "watch20", title: "Watch 20 Clips", xp: 30, icon: Eye, total: 20, check: (t: DashboardData["today"]) => t.watch20Done, progress: (t: DashboardData["today"]) => t.clipsWatchedToday },
-  { id: "comment", title: "Comment", xp: 15, icon: MessageCircle, total: 1, check: (t: DashboardData["today"]) => t.commentedToday },
-  { id: "like", title: "Like a Clip", xp: 5, icon: Heart, total: 1, check: (t: DashboardData["today"]) => t.likedToday },
-  { id: "share", title: "Share a Clip", xp: 20, icon: ArrowUpRight, total: 1, check: (t: DashboardData["today"]) => t.sharedToday },
-  { id: "upload", title: "Upload Today", xp: 200, icon: Upload, total: 1, check: (t: DashboardData["today"]) => t.firstUploadOfDayDone },
-  { id: "lootbox", title: "Open Lootbox", xp: 50, icon: Gift, total: 1, check: (t: DashboardData["today"]) => t.lootboxOpenedToday },
-];
-
-function TodaysProgress({ today, isLoading }: { today: DashboardData["today"] | undefined; isLoading: boolean }) {
-  if (isLoading || !today) {
-    return (
-      <SectionCard>
-        <SectionHeader icon={Target} title="Today's Progress" />
-        <div className="px-5 pb-5 space-y-3">
-          <Skeleton className="h-12 rounded-xl w-full" />
-          <Skeleton className="h-12 rounded-xl w-full" />
-          <Skeleton className="h-12 rounded-xl w-full" />
-        </div>
-      </SectionCard>
-    );
-  }
-
-  const completed = CHALLENGE_DEFS.filter((c) => c.check(today)).length;
-  const total = CHALLENGE_DEFS.length;
-  const pct = Math.round((completed / total) * 100);
-
-  return (
-    <SectionCard>
-      <SectionHeader
-        icon={Target}
-        title="Today's Progress"
-        action={
-          <Link href="/level-tracker">
-            <span className="text-xs font-semibold flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity" style={{ color: ACCENT }}>
-              View All <ChevronRight className="w-3 h-3" />
-            </span>
-          </Link>
-        }
-      />
-
-      <div className="px-5 pb-2">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <span className="text-2xl font-black" style={{ color: TEXT_PRIMARY }}>
-              {completed}<span className="text-sm font-medium" style={{ color: TEXT_MUTED }}> / {total}</span>
-            </span>
-            <p className="text-xs mt-0.5" style={{ color: TEXT_MUTED }}>Completed</p>
-          </div>
-          <div className="text-right">
-            <span className="text-lg font-bold" style={{ color: ACCENT }}>+{today.xpEarnedToday} XP</span>
-            <p className="text-xs mt-0.5" style={{ color: TEXT_MUTED }}>Earned today</p>
-          </div>
-        </div>
-        <XPBar percent={pct} height={6} />
-        <div className="mt-2 mb-4">
-          <CountdownClock />
-        </div>
-      </div>
-
-      {/* Challenge mini-list */}
-      <div className="px-5 pb-5 space-y-2">
-        {CHALLENGE_DEFS.map((c) => {
-          const done = c.check(today);
-          const prog = c.progress ? Math.min(c.progress(today), c.total) : done ? 1 : 0;
-          const Icon = c.icon;
-          return (
-            <div
-              key={c.id}
-              className="flex items-center gap-3 p-3 rounded-xl transition-colors"
-              style={{
-                background: done ? `${ACCENT}08` : "rgba(255,255,255,0.03)",
-                border: `1px solid ${done ? `${ACCENT}15` : BORDER}`,
-                opacity: done ? 0.55 : 1,
-              }}
-            >
-              {done ? (
-                <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: ACCENT }} />
-              ) : (
-                <Icon className="w-5 h-5 shrink-0" style={{ color: TEXT_MUTED, opacity: 0.5 }} />
-              )}
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-medium ${done ? "line-through" : ""}`} style={{ color: done ? TEXT_MUTED : TEXT_PRIMARY }}>
-                  {c.title}
-                </p>
-                {c.progress && c.total > 1 && !done && (
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: BORDER }}>
-                      <div className="h-full rounded-full" style={{ width: `${(prog / c.total) * 100}%`, background: ACCENT }} />
-                    </div>
-                    <span className="text-[10px]" style={{ color: TEXT_MUTED }}>{prog}/{c.total}</span>
-                  </div>
-                )}
-              </div>
-              <span className="text-sm font-bold shrink-0" style={{ color: done ? TEXT_MUTED : ACCENT }}>+{c.xp} XP</span>
-            </div>
-          );
-        })}
-      </div>
-    </SectionCard>
   );
 }
 
@@ -757,47 +628,6 @@ function FriendsRivals({ data, isLoading }: { data: DashboardData["social"] | un
   );
 }
 
-/* ─── Section 8: Quick Actions ─── */
-
-const QUICK_ACTIONS = [
-  { label: "Upload Clip", icon: Video, href: "/upload?type=clips", color: "#B7FF1A" },
-  { label: "Create Reel", icon: Layers, href: "/upload?type=reels", color: "#3B82F6" },
-  { label: "Screenshot", icon: Camera, href: "/upload?type=screenshots", color: "#8B5CF6" },
-  { label: "Challenges", icon: Target, href: "/level-tracker", color: "#F59E0B" },
-  { label: "Bounties", icon: Swords, href: "/explore", color: "#EF4444" },
-  { label: "Leaderboard", icon: Trophy, href: "/leaderboard", color: "#10B981" },
-];
-
-function QuickActions() {
-  const isMobile = useMobile();
-  return (
-    <SectionCard>
-      <SectionHeader icon={Gamepad2} title="Quick Actions" />
-      <div className={`px-5 pb-5 ${isMobile ? "grid grid-cols-2 gap-2" : "grid grid-cols-3 gap-3"}`}>
-        {QUICK_ACTIONS.map((action) => {
-          const Icon = action.icon;
-          return (
-            <Link key={action.label} href={action.href}>
-              <Button
-                className="w-full h-auto py-3 px-3 flex flex-col items-center gap-2 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
-                style={{
-                  background: "rgba(255,255,255,0.03)",
-                  border: `1px solid ${BORDER}`,
-                  color: TEXT_PRIMARY,
-                }}
-                variant="ghost"
-              >
-                <Icon className="w-5 h-5" style={{ color: action.color }} />
-                <span className="text-xs font-semibold">{action.label}</span>
-              </Button>
-            </Link>
-          );
-        })}
-      </div>
-    </SectionCard>
-  );
-}
-
 /* ─── Main Page ─── */
 
 export default function DashboardPage() {
@@ -843,36 +673,39 @@ export default function DashboardPage() {
         {isMobile ? (
           /* Mobile: stacked single column */
           <div className="space-y-5 pb-24">
-            <TodaysProgress today={data?.today} isLoading={isLoading} />
+            <div className="-mx-4 sm:-mx-6">
+              <DailyXPChallenges />
+            </div>
             <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
             <RankedSeason data={data?.player} isLoading={isLoading} />
             <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
             <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
             <FriendsRivals data={data?.social} isLoading={isLoading} />
-            <QuickActions />
           </div>
         ) : (
           /* Desktop: two-column layout */
-          <div className="grid grid-cols-12 gap-5 pb-8">
-            {/* Left column (wider) */}
-            <div className="col-span-8 space-y-5">
-              <div className="grid grid-cols-2 gap-5">
-                <TodaysProgress today={data?.today} isLoading={isLoading} />
-                <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
-              </div>
-
-              <div className="grid grid-cols-2 gap-5">
-                <RankedSeason data={data?.player} isLoading={isLoading} />
-                <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
-              </div>
-
-              <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
+          <div className="space-y-5 pb-8">
+            <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+              <DailyXPChallenges />
             </div>
 
-            {/* Right column (narrower) */}
-            <div className="col-span-4 space-y-5">
-              <QuickActions />
-              <FriendsRivals data={data?.social} isLoading={isLoading} />
+            <RankedSeason data={data?.player} isLoading={isLoading} />
+
+            <div className="grid grid-cols-12 gap-5">
+              {/* Left column (wider) */}
+              <div className="col-span-8 space-y-5">
+                <div className="grid grid-cols-2 gap-5">
+                  <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
+                  <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
+                </div>
+
+                <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
+              </div>
+
+              {/* Right column (narrower) */}
+              <div className="col-span-4 space-y-5">
+                <FriendsRivals data={data?.social} isLoading={isLoading} />
+              </div>
             </div>
           </div>
         )}
