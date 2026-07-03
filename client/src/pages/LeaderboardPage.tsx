@@ -959,7 +959,7 @@ function HallOfChampions() {
             <div key={i} className="h-64 rounded-2xl bg-white/5 animate-pulse" />
           ))}
         </div>
-      ) : !seasons || seasons.length === 0 ? (
+      ) : !Array.isArray(seasons) || seasons.length === 0 ? (
         <div className="text-center py-12 text-slate-500">
           <Trophy className="w-10 h-10 mx-auto mb-3 opacity-30" />
           <p className="text-sm">No season history yet.</p>
@@ -993,7 +993,7 @@ function HallOfChampions() {
 
                 {/* Top 3 list */}
                 <div className="flex-1 px-4 py-4 space-y-3">
-                  {season.top3.length === 0 ? (
+                  {!season.top3 || season.top3.length === 0 ? (
                     <div className="text-xs text-slate-600 text-center py-4">No data</div>
                   ) : (
                     season.top3.map(p => {
