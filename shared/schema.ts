@@ -73,15 +73,12 @@ export const users = pgTable("users", {
   // Onboarding data for analytics and personalization
   userType: text("user_type"), // User type selection
   showUserType: boolean("show_user_type").default(true), // Whether to show user type badge on profile
-  // Streamer settings
-  streamPlatform: text("stream_platform"), // "twitch", "kick", or "rumble"
+  // Streamer settings — additional fields only.
+  // stream_platform, twitch/kick channel names, and twitch/kick verified flags
+  // are declared once above; only the genuinely-new columns live here.
   streamChannelName: text("stream_channel_name"), // Channel username on the platform (legacy, may be overwritten)
-  twitchChannelName: text("twitch_channel_name"), // Twitch login/channel name (separate from streamChannelName)
-  kickChannelName: text("kick_channel_name"),     // Kick slug/channel name (separate from streamChannelName)
   kickId: text("kick_id"),                  // Kick user ID (set when OAuth-connected)
-  kickVerified: boolean("kick_verified").default(false), // Connected via OAuth
   twitchUserId: text("twitch_user_id"),     // Twitch user ID (set when OAuth-connected)
-  twitchVerified: boolean("twitch_verified").default(false), // Connected via OAuth
   rumbleChannelName: text("rumble_channel_name"), // Rumble channel slug/username
   rumbleId: text("rumble_id"),              // Rumble user ID (set when OAuth-connected)
   rumbleVerified: boolean("rumble_verified").default(false), // Connected via OAuth
