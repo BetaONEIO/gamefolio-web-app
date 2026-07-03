@@ -223,58 +223,70 @@ function PlayerOverview({ data, isLoading }: { data: DashboardData["player"] | u
   }
 
   return (
-    <div className="relative max-w-7xl mr-auto ml-[8%] px-4 sm:px-6 lg:px-8">
-      {/* Top row: avatar + welcome + level */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="relative">
-          <SimpleAvatar url={data.avatarUrl} name={data.displayName || data.username} size="xl" />
-          <div
-            className="absolute -bottom-1 -right-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider"
-            style={{ background: data.leagueColor, color: ACCENT_DARK }}
-          >
-            {data.league}
+    <div className="relative max-w-7xl mr-auto ml-[8%] px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-6 flex-wrap">
+      <div className="flex-1 min-w-0">
+        {/* Top row: avatar + welcome + level */}
+        <div className="flex items-center gap-4 mb-6">
+          <div className="relative">
+            <SimpleAvatar url={data.avatarUrl} name={data.displayName || data.username} size="xl" />
+            <div
+              className="absolute -bottom-1 -right-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider"
+              style={{ background: data.leagueColor, color: ACCENT_DARK }}
+            >
+              {data.league}
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium mb-0.5 text-white/60">Welcome back</p>
+            <h2 className="text-xl sm:text-2xl font-black truncate text-white">
+              {data.displayName || data.username}
+            </h2>
+            <div className="flex items-center gap-2 mt-1.5">
+              <span className="text-xs font-bold" style={{ color: ACCENT }}>Level {data.level}</span>
+              {data.rank && (
+                <span className="text-xs font-medium text-white/50">
+                  #{data.rank} Ranked
+                </span>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium mb-0.5 text-white/60">Welcome back</p>
-          <h2 className="text-xl sm:text-2xl font-black truncate text-white">
-            {data.displayName || data.username}
-          </h2>
-          <div className="flex items-center gap-2 mt-1.5">
-            <span className="text-xs font-bold" style={{ color: ACCENT }}>Level {data.level}</span>
-            {data.rank && (
-              <span className="text-xs font-medium text-white/50">
-                #{data.rank} Ranked
-              </span>
-            )}
+
+        {/* XP Progress */}
+        <div className="mb-5 max-w-xl">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-white/50">
+              {Math.round(data.currentPoints).toLocaleString()} / {Math.round(data.pointsForNextLevel).toLocaleString()} XP
+            </span>
+            <span className="text-xs font-bold" style={{ color: ACCENT }}>
+              {Math.round(data.pointsRemaining).toLocaleString()} until next
+            </span>
           </div>
+          <XPBar percent={data.progressPercent} height={10} />
+        </div>
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-w-xl">
+          <StatPill label="Streak" value={`${data.currentStreak} Day${data.currentStreak !== 1 ? "s" : ""}`} color="#FF6B35" icon={Flame} />
+          <StatPill label="League" value={data.league} color={data.leagueColor} icon={Trophy} />
+          {data.rank && <StatPill label="Rank" value={`#${data.rank}`} color={ACCENT} icon={TrendingUp} />}
+          <StatPill
+            label="Lootbox"
+            value={data.lootboxReady ? "Ready!" : "Locked"}
+            color={data.lootboxReady ? ACCENT : TEXT_MUTED}
+            icon={Gift}
+          />
         </div>
       </div>
 
-      {/* XP Progress */}
-      <div className="mb-5 max-w-xl">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-white/50">
-            {Math.round(data.currentPoints).toLocaleString()} / {Math.round(data.pointsForNextLevel).toLocaleString()} XP
-          </span>
-          <span className="text-xs font-bold" style={{ color: ACCENT }}>
-            {Math.round(data.pointsRemaining).toLocaleString()} until next
-          </span>
-        </div>
-        <XPBar percent={data.progressPercent} height={10} />
-      </div>
-
-      {/* Stats grid */}
-      <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-w-xl">
-        <StatPill label="Streak" value={`${data.currentStreak} Day${data.currentStreak !== 1 ? "s" : ""}`} color="#FF6B35" icon={Flame} />
-        <StatPill label="League" value={data.league} color={data.leagueColor} icon={Trophy} />
-        {data.rank && <StatPill label="Rank" value={`#${data.rank}`} color={ACCENT} icon={TrendingUp} />}
-        <StatPill
-          label="Lootbox"
-          value={data.lootboxReady ? "Ready!" : "Locked"}
-          color={data.lootboxReady ? ACCENT : TEXT_MUTED}
-          icon={Gift}
-        />
+      {/* Current League panel */}
+      <div
+        className="hidden md:flex flex-col items-center justify-center gap-2 px-8 py-6 rounded-2xl flex-shrink-0"
+        style={{ border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.03)" }}
+      >
+        <p className="text-xs font-medium text-white/60">Current League</p>
+        <LeagueMedal tier={data.league} size={72} />
+        <p className="text-sm font-black" style={{ color: data.leagueColor }}>{data.league}</p>
       </div>
     </div>
   );
