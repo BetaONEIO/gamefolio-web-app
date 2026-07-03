@@ -223,8 +223,8 @@ function PlayerOverview({ data, isLoading }: { data: DashboardData["player"] | u
   }
 
   return (
-    <div className="relative max-w-7xl mr-auto ml-[8%] px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-6 flex-wrap">
-      <div className="flex-1 min-w-0">
+    <>
+      <div className="relative max-w-7xl mr-auto ml-[8%] px-4 sm:px-6 lg:px-8">
         {/* Top row: avatar + welcome + level */}
         <div className="flex items-center gap-4 mb-6">
           <div className="relative">
@@ -279,16 +279,16 @@ function PlayerOverview({ data, isLoading }: { data: DashboardData["player"] | u
         </div>
       </div>
 
-      {/* Current League panel */}
+      {/* Current League panel — anchored to far right edge of banner */}
       <div
-        className="hidden md:flex flex-col items-center justify-center gap-2 px-8 py-6 rounded-2xl flex-shrink-0"
+        className="hidden lg:flex absolute top-1/2 right-[6%] -translate-y-1/2 flex-col items-center justify-center gap-2 px-8 py-6 rounded-2xl flex-shrink-0"
         style={{ border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.03)" }}
       >
         <p className="text-xs font-medium text-white/60">Current League</p>
         <LeagueMedal tier={data.league} size={72} />
         <p className="text-sm font-black" style={{ color: data.leagueColor }}>{data.league}</p>
       </div>
-    </div>
+    </>
   );
 }
 
