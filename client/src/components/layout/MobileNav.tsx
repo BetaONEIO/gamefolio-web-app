@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
+import { GamefolioDashboardIcon } from "@/components/icons/GamefolioDashboardIcon";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useIsKeyboardOpen } from "@/hooks/use-keyboard-height";
 import AuthModal from "@/components/auth/auth-modal";
@@ -54,6 +55,7 @@ const MobileNav = () => {
 
   const navItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
+    ...(user ? [{ icon: GamefolioDashboardIcon, label: "Dash", href: "/dashboard" }] : []),
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: GamefolioUploadIcon, label: "", href: "/upload", isUpload: true },
     { label: "Trending", href: "/trending", isTrending: true },
