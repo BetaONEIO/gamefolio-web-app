@@ -10,9 +10,10 @@ import {
   Heart,
   Terminal,
   Activity,
-  ChevronDown
+  ChevronDown,
+  Gamepad2
 } from 'lucide-react';
-import { SiSteam, SiEpicgames, SiXbox, SiPlaystation } from 'react-icons/si';
+import { SiSteam, SiEpicgames, SiPlaystation } from 'react-icons/si';
 
 export default function GameProfile() {
   const brand = {
@@ -205,7 +206,7 @@ export default function GameProfile() {
                 <Monitor size={32} className="text-white/80" />
               </div>
               <div className="p-4 rounded-lg flex items-center justify-center" style={cardStyle}>
-                <SiXbox size={32} className="text-white/80" />
+                <Gamepad2 size={32} className="text-white/80" />
               </div>
               <div className="p-4 rounded-lg flex items-center justify-center" style={cardStyle}>
                 <SiPlaystation size={32} className="text-white/80" />
