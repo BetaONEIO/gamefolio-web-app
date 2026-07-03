@@ -3,7 +3,6 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import fs from "fs";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
-import { sentryVitePlugin } from "@sentry/vite-plugin";
 
 // Derive the Sentry "release" from the Android build version so every captured
 // error maps to the exact build QA installed, e.g. "gamefolio@1.3.3+39".
@@ -35,13 +34,15 @@ export default defineConfig({
     runtimeErrorOverlay(),
     ...(sentryEnabled
       ? [
-          sentryVitePlugin({
-            org: process.env.SENTRY_ORG,
-            project: process.env.SENTRY_PROJECT,
-            authToken: process.env.SENTRY_AUTH_TOKEN,
-            release: { name: APP_RELEASE },
-            sourcemaps: { filesToDeleteAfterUpload: ["dist/public/**/*.map"] },
-          }),
+          await import("@sentry/vite-plugin").then((m) =>
+            m.sentryVitePlugin({
+              org: process.env.SENTRY_ORG,
+              project: process.env.SENTRY_PROJECT,
+              authToken: process.env.SENTRY_AUTH_TOKEN,
+              release: { name: APP_RELEASE },
+              sourcemaps: { filesToDeleteAfterUpload: ["dist/public/**/*.map"] },
+            }),
+          ),
         ]
       : []),
     ...(process.env.NODE_ENV !== "production" &&

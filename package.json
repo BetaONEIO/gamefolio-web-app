@@ -17,7 +17,6 @@
     "cap:sync": "cap sync"
   },
   "dependencies": {
-    "0xsequence": "^2.3.39",
     "@0xsequence/connect": "^5.4.8",
     "@0xsequence/hooks": "^5.4.8",
     "@0xsequence/waas": "^2.3.39",
@@ -87,6 +86,7 @@
     "@types/memoizee": "^0.4.12",
     "@types/multer": "^1.4.12",
     "@types/qrcode": "^1.5.6",
+    "0xsequence": "^2.3.39",
     "axios": "^1.15.2",
     "bad-words": "^4.0.0",
     "class-variance-authority": "^0.7.1",
