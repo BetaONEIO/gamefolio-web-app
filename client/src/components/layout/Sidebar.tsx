@@ -19,6 +19,7 @@ import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
 import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
+import { GamefolioDashboardIcon } from "@/components/icons/GamefolioDashboardIcon";
 import { GamefolioMessagesIcon } from "@/components/icons/GamefolioMessagesIcon";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
@@ -255,6 +256,7 @@ const Sidebar = () => {
 
   const menuItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
+    ...(user ? [{ icon: GamefolioDashboardIcon, label: "Dashboard", href: "/dashboard" }] : []),
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: TrendingNavIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },

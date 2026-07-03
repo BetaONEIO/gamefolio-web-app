@@ -4261,6 +4261,290 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ─── Dashboard Aggregate Endpoint ─────────────────────────────────────────
+  // League order: Bronze -> Silver -> Gold -> Platinum -> Onyx (XP-based),
+  // then Diamond (top 100 rank) -> Champion (top 10 rank), both rank-gated.
+  const SEASON_LEAGUE_TIERS = [
+    { name: "Bronze", icon: "🥉", color: "#CD7F32", min: 0, max: 999 },
+    { name: "Silver", icon: "🥈", color: "#C0C0C0", min: 1000, max: 2999 },
+    { name: "Gold", icon: "🥇", color: "#FFD700", min: 3000, max: 5999 },
+    { name: "Platinum", icon: "💎", color: "#4FC3F7", min: 6000, max: 9999 },
+    { name: "Onyx", icon: "🖤", color: "#8B5CF6", min: 10000, max: Infinity },
+  ];
+
+  function buildSeasonLeague(
+    seasonXP: number,
+    seasonRank: number | null,
+    championCutoffXP: number | null,
+    totalSeasonPlayers: number
+  ) {
+    // Diamond/Champion are rank-gated, but only once a player has actually
+    // climbed to Onyx-level Season XP — otherwise a small season player
+    // pool would let low-XP players skip straight to Diamond/Champion.
+    const hasReachedOnyx = seasonXP >= 10000;
+    const isChampion = hasReachedOnyx && seasonRank !== null && seasonRank <= 10;
+    const isDiamond = hasReachedOnyx && !isChampion && seasonRank !== null && seasonRank <= 100;
+
+    if (isChampion) {
+      return {
+        tier: "Champion",
+        league: "Champion",
+        leagueIcon: "🏆",
+        leagueColor: "#B7FF1A",
+        seasonXP,
+        seasonRank,
+        totalSeasonPlayers,
+        championCutoffXP,
+        isTopRank: seasonRank === 1,
+      };
+    }
+
+    if (isDiamond) {
+      const needed = championCutoffXP !== null ? Math.max(0, championCutoffXP - seasonXP) : null;
+      return {
+        tier: "Diamond",
+        league: "Diamond",
+        leagueIcon: "💠",
+        leagueColor: "#E0E7FF",
+        seasonXP,
+        seasonRank,
+        totalSeasonPlayers,
+        championCutoffXP,
+        xpToChampion: needed,
+        rankToChampion: seasonRank !== null ? Math.max(0, seasonRank - 10) : null,
+      };
+    }
+
+    // Bronze -> Onyx, determined by season XP thresholds
+    let current = SEASON_LEAGUE_TIERS[0];
+    for (const tier of SEASON_LEAGUE_TIERS) {
+      if (seasonXP >= tier.min) current = tier;
+    }
+    const currentIndex = SEASON_LEAGUE_TIERS.findIndex((t) => t.name === current.name);
+    const isOnyx = current.name === "Onyx";
+
+    if (isOnyx) {
+      const rankToDiamond = seasonRank !== null ? Math.max(0, seasonRank - 100) : null;
+      return {
+        tier: "Onyx",
+        league: "Onyx",
+        leagueIcon: current.icon,
+        leagueColor: current.color,
+        seasonXP,
+        seasonRank,
+        totalSeasonPlayers,
+        nextLeague: "Diamond",
+        nextLeagueIcon: "💠",
+        rankToNext: rankToDiamond,
+      };
+    }
+
+    const nextTier = SEASON_LEAGUE_TIERS[currentIndex + 1];
+    const nextThreshold = nextTier ? nextTier.min : current.max + 1;
+    const xpToNext = Math.max(0, nextThreshold - seasonXP);
+    const progressPercent = Math.min(100, (seasonXP / nextThreshold) * 100);
+
+    return {
+      tier: current.name,
+      league: current.name,
+      leagueIcon: current.icon,
+      leagueColor: current.color,
+      seasonXP,
+      seasonRank,
+      totalSeasonPlayers,
+      nextLeague: nextTier ? nextTier.name : "Onyx",
+      nextLeagueIcon: nextTier ? nextTier.icon : "🖤",
+      nextThreshold,
+      xpToNext,
+      progressPercent,
+    };
+  }
+
+  app.get("/api/dashboard", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const { getLevelProgress } = await import("./level-system");
+      const progress = getLevelProgress(user.totalXP, user.level);
+
+      // Daily activity
+      const [xpHistory, pointsHistory] = await Promise.all([
+        storage.getUserXPHistory(userId, 500),
+        storage.getUserPointsHistory(userId, 500),
+      ]);
+      const today = new Date();
+      const isSameDay = (d1: Date, d2: Date) =>
+        d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate();
+      const todayXP = xpHistory.filter((h) => isSameDay(new Date(h.createdAt), today));
+      const todayPts = pointsHistory.filter((h) => isSameDay(new Date(h.createdAt), today));
+
+      const clipsWatchedToday = todayXP.filter((h) => h.source === "watch_clip_counted").length;
+      const watch5Done = todayPts.some((h) => h.action === "watch_5_clips");
+      const watch20Done = todayPts.some((h) => h.action === "watch_20_clips");
+      const commentedToday = todayPts.some((h) => h.action === "comment");
+      const likedToday = todayPts.some((h) => h.action === "like");
+      const sharedToday = todayPts.some((h) => h.action === "share_given");
+      const loginXPToday = todayPts.filter((h) => h.action === "daily_login").reduce((s, h) => s + h.points, 0);
+      const streakBonusToday = todayPts.filter((h) => h.action === "streak_milestone").reduce((s, h) => s + h.points, 0);
+      const lootboxOpenedToday = todayPts.some((h) => h.action === "lootbox_bonus");
+      const firstUploadOfDayDone = todayPts.some((h) => h.action === "first_upload_of_day");
+
+      // Streak
+      const { StreakService: SS } = await import("./streak-service");
+      const streakInfo = await SS.getUserStreak(userId);
+
+      // Lootbox
+      const lootboxStatus = await storage.getDailyLootboxStatus(userId);
+
+      // Leaderboard position
+      const allTimeBoard = await LeaderboardService.getAllTimeLeaderboard(9999);
+      const rankIndex = allTimeBoard.findIndex((e: any) => e.userId === userId);
+      const rank = rankIndex >= 0 ? rankIndex + 1 : null;
+
+      // Recent XP activity (last 20) — only entries that actually granted XP
+      const recentActivity = xpHistory
+        .filter((h) => h.xpAmount > 0)
+        .slice(0, 20)
+        .map((h) => ({
+          id: h.id,
+          xpAmount: h.xpAmount,
+          source: h.source,
+          description: h.description,
+          createdAt: h.createdAt,
+        }));
+
+      // XP earned today
+      const xpEarnedToday = todayXP.reduce((s, h) => s + h.xpAmount, 0);
+
+      // Joined bounties
+      const joinedBountiesResult = await db.execute(sql`
+        SELECT
+          gb.id, gb.title, gb.campaign_title AS "campaignTitle",
+          gb.description, gb.end_date AS "endDate", gb.status,
+          gb.required_clips AS "requiredClips", gb.required_reels AS "requiredReels",
+          gb.required_screenshots AS "requiredScreenshots", gb.required_views AS "requiredViews",
+          gba.clips_uploaded AS "clipsUploaded", gba.reels_uploaded AS "reelsUploaded",
+          gba.screenshots_uploaded AS "screenshotsUploaded", gba.total_views AS "totalViews",
+          gba.xp_earned AS "xpEarned", gba.progress_percent AS "progressPercent",
+          gba.status AS "joinStatus",
+          g.name AS "gameName", g.image_url AS "gameImage"
+        FROM game_bounty_acceptances gba
+        JOIN game_bounties gb ON gb.id = gba.bounty_id
+        LEFT JOIN games g ON g.id = gb.game_id
+        WHERE gba.user_id = ${userId} AND gba.status = 'active' AND gb.status = 'active'
+        ORDER BY gb.end_date ASC NULLS LAST
+        LIMIT 5
+      `);
+      const joinedBounties = (joinedBountiesResult as any).rows ?? joinedBountiesResult;
+
+      // Followers / following counts
+      const [followerRows, followingRows] = await Promise.all([
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` }).from(follows).where(eq(follows.followingId, userId)),
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` }).from(follows).where(eq(follows.followerId, userId)),
+      ]);
+      const followersCount = followerRows[0]?.count ?? 0;
+      const followingCount = followingRows[0]?.count ?? 0;
+
+      // Nearby leaderboard entries (rivals)
+      const nearbyRivals = rankIndex >= 0
+        ? allTimeBoard.slice(Math.max(0, rankIndex - 2), rankIndex + 3)
+            .map((e: any, idx: number) => ({
+              rank: Math.max(0, rankIndex - 2) + idx + 1,
+              userId: e.userId,
+              username: e.user?.username,
+              displayName: e.user?.displayName,
+              avatarUrl: e.user?.avatarUrl,
+              totalXP: e.totalPoints || e.totalXP || 0,
+              isMe: e.userId === userId,
+            }))
+        : [];
+
+      // Next rewards preview
+      const nextLevel = user.level + 1;
+      const nextLevelXP = getLevelProgress(user.totalXP, user.level).pointsForNextLevel;
+      const nextRewards = [
+        { type: "level", name: `Level ${nextLevel}`, description: "New level unlock", xpNeeded: nextLevelXP - user.totalXP },
+        { type: "lootbox", name: "Daily Lootbox", description: lootboxStatus.canOpen ? "Ready to open!" : "Available tomorrow", available: lootboxStatus.canOpen },
+      ];
+
+      // Season League progress (Bronze -> Silver -> Gold -> Platinum -> Diamond -> Master -> Champion)
+      const nowKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+      const currentSeasonDef = SEASON_DEFS.find((s) => s.months.includes(nowKey)) || SEASON_DEFS[0];
+      const seasonRankRows = await db.execute(sql`
+        WITH season_totals AS (
+          SELECT ml.user_id AS "userId", SUM(ml.total_points) AS "seasonXP"
+          FROM monthly_leaderboard ml
+          JOIN users u ON u.id = ml.user_id
+          WHERE ml.month = ANY(ARRAY[${sql.join(currentSeasonDef.months.map((m) => sql`${m}`), sql`, `)}])
+            AND u.role NOT IN ('admin', 'moderator', 'system')
+            AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+            AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+          GROUP BY ml.user_id
+        )
+        SELECT "userId", "seasonXP", RANK() OVER (ORDER BY "seasonXP" DESC) AS "seasonRank"
+        FROM season_totals
+        ORDER BY "seasonRank" ASC
+      `);
+      const seasonRankList = ((seasonRankRows as any).rows ?? seasonRankRows) as any[];
+      const totalSeasonPlayers = seasonRankList.length;
+      const myRow = seasonRankList.find((r) => Number(r.userId) === userId);
+      const seasonXP = myRow ? Math.round(Number(myRow.seasonXP)) : 0;
+      const seasonRank = myRow ? Number(myRow.seasonRank) : null;
+      const championCutoffXP = seasonRankList[9] ? Math.round(Number(seasonRankList[9].seasonXP)) : null;
+
+      const seasonLeague = buildSeasonLeague(seasonXP, seasonRank, championCutoffXP, totalSeasonPlayers);
+
+      res.json({
+        player: {
+          username: user.username,
+          displayName: user.displayName,
+          avatarUrl: user.avatarUrl,
+          level: user.level,
+          totalXP: user.totalXP,
+          currentPoints: progress.currentPoints,
+          pointsForNextLevel: progress.pointsForNextLevel,
+          pointsRemaining: progress.pointsRemaining,
+          progressPercent: progress.progressPercent,
+          league: seasonLeague.league,
+          leagueColor: seasonLeague.leagueColor,
+          rank: rank,
+          currentStreak: streakInfo.currentStreak,
+          longestStreak: streakInfo.longestStreak,
+          lootboxReady: lootboxStatus.canOpen,
+        },
+        seasonLeague,
+        today: {
+          clipsWatchedToday,
+          watch5Done,
+          watch20Done,
+          commentedToday,
+          likedToday,
+          sharedToday,
+          loginXPToday,
+          streakBonusToday,
+          lootboxOpenedToday,
+          firstUploadOfDayDone,
+          xpEarnedToday,
+        },
+        bounties: joinedBounties,
+        recentActivity,
+        social: {
+          followersCount,
+          followingCount,
+          nearbyRivals,
+        },
+        nextRewards,
+      });
+    } catch (error) {
+      console.error("Error fetching dashboard:", error);
+      res.status(500).json({ message: "Error fetching dashboard" });
+    }
+  });
+
   // Admin: Export every clip / reel / screenshot to a CSV the admin can
   // download. Three columns: title, page URL, username. URLs are hard-coded
   // to the prod host so the export is useful even when run from a dev/preview

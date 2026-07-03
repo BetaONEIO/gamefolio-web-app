@@ -99,6 +99,7 @@ function lazyWithRecovery<T extends React.ComponentType<object>>(
 }
 
 const HomePage = lazyWithRecovery(() => import("./pages/HomePageSimple"));
+const DashboardPage = lazyWithRecovery(() => import("./pages/DashboardPage"));
 const ProfilePage = lazyWithRecovery(() => import("./pages/ProfilePage"));
 const ExplorePage = lazyWithRecovery(() => import("./pages/explore-page"));
 const TrendingPage = lazyWithRecovery(() => import("./pages/TrendingPage"));
@@ -456,6 +457,7 @@ function Router() {
           <Switch>
           {/* Public routes accessible to guests */}
           <Route path="/" component={HomePage} />
+          <Route path="/dashboard" component={DashboardPage} />
           <Route path="/trending" component={TrendingPage} />
           <Route path="/clip/:id" component={ClipRedirectPage} />
           <Route path="/clips/:id" component={ClipRedirectPage} />

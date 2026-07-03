@@ -1,2 +1,3 @@
 - [FFmpeg remote URL scale2ref](ffmpeg-remote-url-filtergraph.md) — scale2ref gives 0kB when inputs are remote URLs; probe dims with ffprobe and use explicit scale filter instead.
 - [Trending cache startup race](trending-cache-startup-race.md) — first DB query after server start returns [] due to pool warming; fix is to not cache empty arrays and add a fallback query.
+- [@assets alias requires public copy](assets-alias-public-copy.md) — `@assets` resolves to `client/public/attached_assets`; files attached to chat may land only in root `attached_assets/` and need manual copy before imports work.

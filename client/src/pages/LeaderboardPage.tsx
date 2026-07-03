@@ -712,7 +712,25 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
   };
 
   return (
-    <section className="mb-0">
+    <section
+      className="mb-0 relative rounded-2xl pt-5 pb-2 overflow-hidden"
+      style={{ backgroundColor: "#05090d" }}
+    >
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: [
+            "repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(255,255,255,0.05) 12px, rgba(255,255,255,0.05) 13px)",
+            "repeating-linear-gradient(-45deg, transparent, transparent 12px, rgba(255,255,255,0.05) 12px, rgba(255,255,255,0.05) 13px)",
+            "radial-gradient(ellipse 70% 60% at 8% 0%, rgba(183,255,26,0.32), transparent 60%)",
+            "radial-gradient(ellipse 65% 55% at 95% 10%, rgba(59,130,246,0.26), transparent 65%)",
+            "radial-gradient(ellipse 60% 55% at 50% 110%, rgba(183,255,26,0.22), transparent 70%)",
+            "linear-gradient(160deg, rgba(183,255,26,0.14), transparent 55%)",
+          ].join(", "),
+          maskImage: "radial-gradient(ellipse 65% 55% at 30% 15%, black 0%, transparent 75%)",
+          WebkitMaskImage: "radial-gradient(ellipse 65% 55% at 30% 15%, black 0%, transparent 75%)",
+        }}
+      />
       {/* Header row — padded */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3 px-4 sm:px-6 lg:px-10">
         <div className="flex items-center gap-2 flex-wrap">
@@ -959,7 +977,7 @@ function HallOfChampions() {
             <div key={i} className="h-64 rounded-2xl bg-white/5 animate-pulse" />
           ))}
         </div>
-      ) : !seasons || seasons.length === 0 ? (
+      ) : !Array.isArray(seasons) || seasons.length === 0 ? (
         <div className="text-center py-12 text-slate-500">
           <Trophy className="w-10 h-10 mx-auto mb-3 opacity-30" />
           <p className="text-sm">No season history yet.</p>
@@ -993,7 +1011,7 @@ function HallOfChampions() {
 
                 {/* Top 3 list */}
                 <div className="flex-1 px-4 py-4 space-y-3">
-                  {season.top3.length === 0 ? (
+                  {!season.top3 || season.top3.length === 0 ? (
                     <div className="text-xs text-slate-600 text-center py-4">No data</div>
                   ) : (
                     season.top3.map(p => {
