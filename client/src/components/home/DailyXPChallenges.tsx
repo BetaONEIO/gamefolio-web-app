@@ -387,6 +387,26 @@ export function DailyXPChallenges() {
                 }}
               />
             </div>
+            <div
+              className="flex items-center justify-between mt-3 pt-3"
+              style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm" style={{ filter: allDone ? 'drop-shadow(0 0 6px rgba(183,255,26,0.7))' : 'none' }}>🏆</span>
+                <span className="text-[11px] font-semibold text-white/60">All Challenges Bonus</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <Zap className="w-3.5 h-3.5" style={{ color: allDone ? '#B7FF1A' : 'rgba(183,255,26,0.5)' }} />
+                  <span className="text-xs font-extrabold" style={{ color: allDone ? '#B7FF1A' : 'rgba(183,255,26,0.5)' }}>
+                    +1,000 XP
+                  </span>
+                </div>
+                <span className="text-[10px] text-white/35">
+                  {allDone ? 'Claimed! 🎉' : `${completedCount}/${challenges.length} done`}
+                </span>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -431,37 +451,6 @@ export function DailyXPChallenges() {
                 {sortedChallenges.map(c => (
                   <ChallengeCard key={c.id} challenge={c} isAuth={!!user} isLoading={false} />
                 ))}
-                {user && (
-                  <div
-                    className="flex-shrink-0 relative rounded-2xl p-4 overflow-hidden flex flex-col items-center justify-center text-center"
-                    style={{
-                      width: 188,
-                      background: allDone
-                        ? 'linear-gradient(135deg, rgba(183,255,26,0.18) 0%, rgba(183,255,26,0.06) 100%)'
-                        : 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${allDone ? 'rgba(183,255,26,0.45)' : 'rgba(255,255,255,0.08)'}`,
-                      boxShadow: allDone ? '0 0 24px rgba(183,255,26,0.15)' : 'none',
-                      transition: 'all 400ms ease',
-                      opacity: allDone ? 1 : 0.55,
-                    }}
-                  >
-                    {allDone && (
-                      <div className="absolute inset-0 rounded-2xl pointer-events-none"
-                        style={{ boxShadow: 'inset 0 0 30px rgba(183,255,26,0.08)' }} />
-                    )}
-                    <div className="text-3xl mb-2" style={{ filter: allDone ? 'drop-shadow(0 0 12px rgba(183,255,26,0.8))' : 'none' }}>
-                      🏆
-                    </div>
-                    <p className="text-[11px] font-semibold text-white/60 mb-1">All Challenges</p>
-                    <div className="flex items-center gap-1">
-                      <Zap className="w-3.5 h-3.5" style={{ color: '#B7FF1A' }} />
-                      <span className="text-base font-extrabold" style={{ color: '#B7FF1A' }}>+1,000 XP</span>
-                    </div>
-                    <p className="text-[10px] text-white/35 mt-1.5">
-                      {allDone ? 'Bonus claimed! 🎉' : `${completedCount}/${challenges.length} done`}
-                    </p>
-                  </div>
-                )}
               </>)}
         </div>
       </div>
