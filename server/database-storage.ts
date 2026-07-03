@@ -123,7 +123,6 @@ import { eq, and, desc, like, ilike, asc, or, lt, lte, gt, sql, arrayContains, n
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { IStorage } from "./storage";
-import { calculateLevel } from "./level-system";
 import { notifyNewSignup } from "./telegram-notify";
 import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -5193,13 +5192,14 @@ export class DatabaseStorage implements IStorage {
       const rewardValue = selectedReward.rewardValue || 0;
       
       if (selectedReward.assetType === 'xp_reward' && rewardValue > 0) {
-        const currentUser = await this.getUser(userId);
-        const newXP = (currentUser?.totalXP || 0) + rewardValue;
-        const newLevel = calculateLevel(newXP);
-        await db.update(users)
-          .set({ totalXP: newXP, level: newLevel })
-          .where(eq(users.id, userId));
-        
+        const { LeaderboardService } = await import("./leaderboard-service");
+        await LeaderboardService.awardCustomPoints(
+          userId,
+          'lootbox_xp_reward',
+          rewardValue,
+          `Earned ${rewardValue} XP from Daily Lootbox (${selectedReward.rarity} reward)`
+        );
+
         await db.insert(userXPHistory).values({
           userId,
           xpAmount: rewardValue,
