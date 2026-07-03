@@ -528,7 +528,7 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
         <ShowdownCountdown />
         {/* Current league badge */}
         <div className="flex items-center gap-4 mb-6">
-          <LeagueMedal tier={data.league} size={80} />
+          <LeagueMedal tier={data.league} size={120} />
           <div>
             <p className="text-xs font-medium mb-0.5" style={{ color: TEXT_MUTED }}>Current League</p>
             <h4 className="text-xl font-black" style={{ color: data.leagueColor }}>
@@ -544,13 +544,13 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
         {isBelowOnyx && (
           <>
             <div className="flex items-center justify-center gap-3 sm:gap-5 mb-3">
-              <div className="flex flex-col items-center gap-2 w-20 flex-shrink-0">
-                <LeagueMedal tier={data.league} size={96} />
+              <div className="flex flex-col items-center gap-2 w-28 flex-shrink-0">
+                <LeagueMedal tier={data.league} size={144} />
                 <span className="text-[11px] font-bold text-center leading-tight" style={{ color: TEXT_PRIMARY }}>
                   {data.league} League
                 </span>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 max-w-[140px] sm:max-w-[180px]">
                 <div className="w-full rounded-full overflow-hidden h-2" style={{ background: "#FFFFFF" }}>
                   <div
                     className="h-full rounded-full transition-all duration-700 ease-out"
@@ -558,8 +558,8 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
                   />
                 </div>
               </div>
-              <div className="flex flex-col items-center gap-2 w-20 flex-shrink-0">
-                <LeagueMedal tier={data.nextLeague ?? "Onyx"} size={96} />
+              <div className="flex flex-col items-center gap-2 w-28 flex-shrink-0">
+                <LeagueMedal tier={data.nextLeague ?? "Onyx"} size={144} />
                 <span className="text-[11px] font-bold text-center leading-tight" style={{ color: TEXT_PRIMARY }}>
                   {data.nextLeague} League
                 </span>
@@ -582,15 +582,15 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
         {isOnyx && (
           <div className="space-y-3">
             <div className="flex items-center justify-center gap-3 sm:gap-5 mb-1">
-              <div className="flex flex-col items-center gap-2 w-20 flex-shrink-0">
-                <LeagueMedal tier="Onyx" size={96} />
+              <div className="flex flex-col items-center gap-2 w-28 flex-shrink-0">
+                <LeagueMedal tier="Onyx" size={144} />
                 <span className="text-[11px] font-bold text-center leading-tight" style={{ color: TEXT_PRIMARY }}>
                   Onyx League
                 </span>
               </div>
               <ArrowUpRight className="w-5 h-5 flex-shrink-0" style={{ color: TEXT_MUTED }} />
-              <div className="flex flex-col items-center gap-2 w-20 flex-shrink-0">
-                <LeagueMedal tier="Diamond" size={96} />
+              <div className="flex flex-col items-center gap-2 w-28 flex-shrink-0">
+                <LeagueMedal tier="Diamond" size={144} />
                 <span className="text-[11px] font-bold text-center leading-tight" style={{ color: TEXT_PRIMARY }}>
                   Diamond League
                 </span>
@@ -615,15 +615,15 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
         {isDiamond && (
           <div className="space-y-3">
             <div className="flex items-center justify-center gap-3 sm:gap-5 mb-1">
-              <div className="flex flex-col items-center gap-2 w-20 flex-shrink-0">
-                <LeagueMedal tier="Diamond" size={96} />
+              <div className="flex flex-col items-center gap-2 w-28 flex-shrink-0">
+                <LeagueMedal tier="Diamond" size={144} />
                 <span className="text-[11px] font-bold text-center leading-tight" style={{ color: TEXT_PRIMARY }}>
                   Diamond League
                 </span>
               </div>
               <ArrowUpRight className="w-5 h-5 flex-shrink-0" style={{ color: TEXT_MUTED }} />
-              <div className="flex flex-col items-center gap-2 w-20 flex-shrink-0">
-                <LeagueMedal tier="Champion" size={96} />
+              <div className="flex flex-col items-center gap-2 w-28 flex-shrink-0">
+                <LeagueMedal tier="Champion" size={144} />
                 <span className="text-[11px] font-bold text-center leading-tight" style={{ color: TEXT_PRIMARY }}>
                   Champion League
                 </span>
@@ -658,8 +658,8 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
         {isChampion && (
           <div className="space-y-3">
             <div className="flex justify-center mb-1">
-              <div className="flex flex-col items-center gap-2 w-24">
-                <LeagueMedal tier="Champion" size={112} />
+              <div className="flex flex-col items-center gap-2 w-32">
+                <LeagueMedal tier="Champion" size={168} />
                 <span className="text-xs font-bold text-center leading-tight" style={{ color: TEXT_PRIMARY }}>
                   Champion League
                 </span>
