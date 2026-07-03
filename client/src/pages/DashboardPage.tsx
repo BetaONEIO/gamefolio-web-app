@@ -96,6 +96,25 @@ interface DashboardData {
     xpNeeded?: number;
     available?: boolean;
   }>;
+  seasonLeague: {
+    tier: "Bronze" | "Silver" | "Gold" | "Platinum" | "Diamond" | "Master" | "Champion";
+    league: string;
+    leagueIcon: string;
+    leagueColor: string;
+    seasonXP: number;
+    seasonRank: number | null;
+    totalSeasonPlayers: number;
+    nextLeague?: string;
+    nextLeagueIcon?: string;
+    nextThreshold?: number;
+    xpToNext?: number;
+    progressPercent?: number;
+    rankToNext?: number | null;
+    championCutoffXP?: number | null;
+    xpToChampion?: number | null;
+    rankToChampion?: number | null;
+    isTopRank?: boolean;
+  };
 }
 
 /* ─── Design Tokens ─── */
@@ -349,23 +368,38 @@ function ActiveBounties({ bounties, isLoading }: { bounties: DashboardData["boun
 
 /* ─── Section 4: Ranked Season ─── */
 
-function RankedSeason({ data, isLoading }: { data: DashboardData["player"] | undefined; isLoading: boolean }) {
+const LEAGUE_STRUCTURE = [
+  { name: "Bronze", icon: "🥉", range: "0 – 999 Season XP" },
+  { name: "Silver", icon: "🥈", range: "1,000 – 2,999 Season XP" },
+  { name: "Gold", icon: "🥇", range: "3,000 – 5,999 Season XP" },
+  { name: "Platinum", icon: "💎", range: "6,000 – 9,999 Season XP" },
+  { name: "Diamond", icon: "💠", range: "10,000 – 14,999 Season XP" },
+  { name: "Master", icon: "👑", range: "Top 100 Players" },
+  { name: "Champion", icon: "🏆", range: "Top 10 Players" },
+];
+
+function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"] | undefined; isLoading: boolean }) {
   if (isLoading || !data) {
     return (
       <SectionCard>
-        <SectionHeader icon={Trophy} title="Ranked Season" />
+        <SectionHeader icon={Trophy} title="League Progress" />
         <div className="px-5 pb-5 space-y-3">
-          <Skeleton className="h-24 rounded-xl w-full" />
+          <Skeleton className="h-32 rounded-xl w-full" />
         </div>
       </SectionCard>
     );
   }
 
+  const isChampion = data.tier === "Champion";
+  const isMaster = data.tier === "Master";
+  const isDiamond = data.tier === "Diamond";
+  const isBelowDiamond = !isChampion && !isMaster && !isDiamond;
+
   return (
     <SectionCard>
       <SectionHeader
         icon={Trophy}
-        title="Ranked Season"
+        title="League Progress"
         action={
           <Link href="/leaderboard">
             <span className="text-xs font-semibold flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity" style={{ color: ACCENT }}>
@@ -375,41 +409,143 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["player"] | und
         }
       />
       <div className="px-5 pb-5">
-        <div className="flex items-center gap-4 mb-4">
+        {/* Current league badge */}
+        <div className="flex items-center gap-4 mb-5">
           <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
-            style={{ background: `${data.leagueColor}15`, border: `1px solid ${data.leagueColor}30` }}
+            className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 text-3xl"
+            style={{ background: `${data.leagueColor}15`, border: `1px solid ${data.leagueColor}40` }}
           >
-            <Trophy className="w-8 h-8" style={{ color: data.leagueColor }} />
+            {data.leagueIcon}
           </div>
           <div>
             <p className="text-xs font-medium mb-0.5" style={{ color: TEXT_MUTED }}>Current League</p>
-            <h4 className="text-xl font-black" style={{ color: data.leagueColor }}>{data.league}</h4>
-            <p className="text-xs" style={{ color: TEXT_MUTED }}>Level {data.level}</p>
+            <h4 className="text-xl font-black" style={{ color: data.leagueColor }}>
+              {data.leagueIcon} {data.league} League
+            </h4>
+            {data.seasonRank && (
+              <p className="text-xs" style={{ color: TEXT_MUTED }}>Rank #{data.seasonRank.toLocaleString()}</p>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
-            <p className="text-[10px] font-medium mb-1" style={{ color: TEXT_MUTED }}>Next Player</p>
-            <p className="text-sm font-bold" style={{ color: ACCENT }}>
-              {Math.round(data.pointsRemaining).toLocaleString()} XP
-            </p>
-          </div>
-          <div className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
-            <p className="text-[10px] font-medium mb-1" style={{ color: TEXT_MUTED }}>Next League</p>
-            <p className="text-sm font-bold" style={{ color: data.leagueColor }}>
-              {data.level >= 40 ? "Maxed" : data.level >= 30 ? "Legend" : data.level >= 20 ? "Diamond" : data.level >= 10 ? "Gold" : "Silver"}
-            </p>
-          </div>
-        </div>
+        {/* Bronze -> Diamond-eligible: XP progress bar */}
+        {isBelowDiamond && (
+          <>
+            <div className="mb-2">
+              <XPBar percent={data.progressPercent ?? 0} height={12} />
+            </div>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold" style={{ color: TEXT_PRIMARY }}>
+                {data.seasonXP.toLocaleString()} / {(data.nextThreshold ?? 0).toLocaleString()} Season XP
+              </span>
+            </div>
+            <div className="flex items-center justify-between rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
+              <span className="text-xs font-semibold" style={{ color: ACCENT }}>
+                {(data.xpToNext ?? 0).toLocaleString()} XP until {data.nextLeague}
+              </span>
+              <div className="flex items-center gap-2 text-lg">
+                <span>{data.leagueIcon}</span>
+                <ArrowUpRight className="w-4 h-4" style={{ color: TEXT_MUTED }} />
+                <span>{data.nextLeagueIcon}</span>
+              </div>
+            </div>
+          </>
+        )}
 
-        {data.rank && (
-          <div className="mt-3 p-3 rounded-xl flex items-center justify-between" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
-            <span className="text-xs font-medium" style={{ color: TEXT_MUTED }}>Global Rank</span>
-            <span className="text-lg font-black" style={{ color: ACCENT }}>#{data.rank}</span>
+        {/* Diamond: rank-based progress toward Master */}
+        {isDiamond && (
+          <div className="space-y-3">
+            <div className="p-4 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
+              <p className="text-[10px] font-medium mb-1 uppercase tracking-wide" style={{ color: TEXT_MUTED }}>Current Rank</p>
+              <p className="text-3xl font-black" style={{ color: ACCENT }}>#{data.seasonRank?.toLocaleString()}</p>
+            </div>
+            <div className="flex items-center justify-between rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
+              <span className="text-xs font-semibold" style={{ color: ACCENT }}>
+                Only {(data.rankToNext ?? 0).toLocaleString()} place{data.rankToNext === 1 ? "" : "s"} until Master
+              </span>
+              <span className="text-lg">👑</span>
+            </div>
+            <p className="text-[11px] text-center" style={{ color: TEXT_MUTED }}>
+              Master League — Top 100 Players
+            </p>
           </div>
         )}
+
+        {/* Master: rank + XP cutoff to Champion */}
+        {isMaster && (
+          <div className="space-y-3">
+            <div className="p-4 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
+              <p className="text-[10px] font-medium mb-1 uppercase tracking-wide" style={{ color: TEXT_MUTED }}>Current Rank</p>
+              <p className="text-3xl font-black" style={{ color: ACCENT }}>#{data.seasonRank?.toLocaleString()}</p>
+              <p className="text-[11px] mt-1" style={{ color: TEXT_MUTED }}>Champion requires Top 10</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
+                <p className="text-[10px] font-medium mb-1" style={{ color: TEXT_MUTED }}>Champion Cutoff</p>
+                <p className="text-sm font-bold" style={{ color: TEXT_PRIMARY }}>
+                  {(data.championCutoffXP ?? 0).toLocaleString()} XP
+                </p>
+              </div>
+              <div className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
+                <p className="text-[10px] font-medium mb-1" style={{ color: TEXT_MUTED }}>Your XP</p>
+                <p className="text-sm font-bold" style={{ color: TEXT_PRIMARY }}>{data.seasonXP.toLocaleString()} XP</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between rounded-xl p-3" style={{ background: `${ACCENT}0D`, border: `1px solid ${ACCENT}30` }}>
+              <span className="text-xs font-semibold" style={{ color: ACCENT }}>
+                {(data.xpToChampion ?? 0).toLocaleString()} XP Needed
+              </span>
+              <span className="text-lg">🏆</span>
+            </div>
+          </div>
+        )}
+
+        {/* Champion: top of the ladder */}
+        {isChampion && (
+          <div className="space-y-3">
+            <div
+              className="p-4 rounded-xl text-center"
+              style={{ background: "rgba(255,215,0,0.08)", border: `1px solid rgba(255,215,0,0.35)` }}
+            >
+              <p className="text-[10px] font-medium mb-1 uppercase tracking-wide" style={{ color: TEXT_MUTED }}>Current Rank</p>
+              <p className="text-3xl font-black" style={{ color: "#FFD700" }}>#{data.seasonRank?.toLocaleString()}</p>
+              <p className="text-[11px] mt-1" style={{ color: TEXT_MUTED }}>
+                {data.isTopRank ? "You're #1 this season! 👑" : "You're in the Top 10 — pushing for #1"}
+              </p>
+            </div>
+            <div className="flex items-center justify-between rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
+              <span className="text-xs font-semibold" style={{ color: TEXT_MUTED }}>Season XP</span>
+              <span className="text-sm font-bold" style={{ color: TEXT_PRIMARY }}>{data.seasonXP.toLocaleString()} XP</span>
+            </div>
+          </div>
+        )}
+
+        {/* League structure legend */}
+        <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
+          <div className="flex flex-wrap gap-1.5">
+            {LEAGUE_STRUCTURE.map((tier) => {
+              const active = tier.name === data.league;
+              return (
+                <div
+                  key={tier.name}
+                  title={tier.range}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold"
+                  style={{
+                    background: active ? `${ACCENT}15` : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${active ? `${ACCENT}50` : BORDER}`,
+                    color: active ? ACCENT : TEXT_MUTED,
+                  }}
+                >
+                  <span>{tier.icon}</span>
+                  <span>{tier.name}</span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[10px] mt-2" style={{ color: TEXT_MUTED }}>
+            Season XP and League reset each season. Lifetime XP, Level, and achievements are permanent.
+          </p>
+        </div>
       </div>
     </SectionCard>
   );
@@ -677,7 +813,7 @@ export default function DashboardPage() {
               <DailyXPChallenges />
             </div>
             <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
-            <RankedSeason data={data?.player} isLoading={isLoading} />
+            <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
             <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
             <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
             <FriendsRivals data={data?.social} isLoading={isLoading} />
@@ -689,7 +825,7 @@ export default function DashboardPage() {
               <DailyXPChallenges />
             </div>
 
-            <RankedSeason data={data?.player} isLoading={isLoading} />
+            <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
 
             <div className="grid grid-cols-12 gap-5">
               {/* Left column (wider) */}

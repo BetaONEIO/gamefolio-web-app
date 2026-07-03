@@ -4286,6 +4286,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ─── Dashboard Aggregate Endpoint ─────────────────────────────────────────
+  const SEASON_LEAGUE_TIERS = [
+    { name: "Bronze", icon: "🥉", color: "#CD7F32", min: 0, max: 999 },
+    { name: "Silver", icon: "🥈", color: "#C0C0C0", min: 1000, max: 2999 },
+    { name: "Gold", icon: "🥇", color: "#FFD700", min: 3000, max: 5999 },
+    { name: "Platinum", icon: "💎", color: "#4FC3F7", min: 6000, max: 9999 },
+    { name: "Diamond", icon: "💠", color: "#9B7CFC", min: 10000, max: 14999 },
+  ];
+
+  function buildSeasonLeague(
+    seasonXP: number,
+    seasonRank: number | null,
+    championCutoffXP: number | null,
+    totalSeasonPlayers: number
+  ) {
+    // Master/Champion are rank-gated, but only once a player has actually
+    // climbed to Diamond-level Season XP — otherwise a small season player
+    // pool would let low-XP players skip straight to Master/Champion.
+    const hasReachedDiamond = seasonXP >= 10000;
+    const isChampion = hasReachedDiamond && seasonRank !== null && seasonRank <= 10;
+    const isMaster = hasReachedDiamond && !isChampion && seasonRank !== null && seasonRank <= 100;
+
+    if (isChampion) {
+      return {
+        tier: "Champion",
+        league: "Champion",
+        leagueIcon: "🏆",
+        leagueColor: "#FFD700",
+        seasonXP,
+        seasonRank,
+        totalSeasonPlayers,
+        championCutoffXP,
+        isTopRank: seasonRank === 1,
+      };
+    }
+
+    if (isMaster) {
+      const needed = championCutoffXP !== null ? Math.max(0, championCutoffXP - seasonXP) : null;
+      return {
+        tier: "Master",
+        league: "Master",
+        leagueIcon: "👑",
+        leagueColor: "#B7FF1A",
+        seasonXP,
+        seasonRank,
+        totalSeasonPlayers,
+        championCutoffXP,
+        xpToChampion: needed,
+        rankToChampion: seasonRank !== null ? Math.max(0, seasonRank - 10) : null,
+      };
+    }
+
+    // Bronze -> Diamond, determined by season XP thresholds
+    let current = SEASON_LEAGUE_TIERS[0];
+    for (const tier of SEASON_LEAGUE_TIERS) {
+      if (seasonXP >= tier.min) current = tier;
+    }
+    const currentIndex = SEASON_LEAGUE_TIERS.findIndex((t) => t.name === current.name);
+    const isDiamond = current.name === "Diamond";
+
+    if (isDiamond) {
+      const rankToMaster = seasonRank !== null ? Math.max(0, seasonRank - 100) : null;
+      return {
+        tier: "Diamond",
+        league: "Diamond",
+        leagueIcon: current.icon,
+        leagueColor: current.color,
+        seasonXP,
+        seasonRank,
+        totalSeasonPlayers,
+        nextLeague: "Master",
+        nextLeagueIcon: "👑",
+        rankToNext: rankToMaster,
+      };
+    }
+
+    const nextTier = SEASON_LEAGUE_TIERS[currentIndex + 1];
+    const nextThreshold = nextTier ? nextTier.min : current.max + 1;
+    const xpToNext = Math.max(0, nextThreshold - seasonXP);
+    const progressPercent = Math.min(100, (seasonXP / nextThreshold) * 100);
+
+    return {
+      tier: current.name,
+      league: current.name,
+      leagueIcon: current.icon,
+      leagueColor: current.color,
+      seasonXP,
+      seasonRank,
+      totalSeasonPlayers,
+      nextLeague: nextTier ? nextTier.name : "Diamond",
+      nextLeagueIcon: nextTier ? nextTier.icon : "💠",
+      nextThreshold,
+      xpToNext,
+      progressPercent,
+    };
+  }
+
   app.get("/api/dashboard", authMiddleware, async (req, res) => {
     try {
       const userId = (req.user as any).id;
@@ -4404,6 +4500,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { type: "lootbox", name: "Daily Lootbox", description: lootboxStatus.canOpen ? "Ready to open!" : "Available tomorrow", available: lootboxStatus.canOpen },
       ];
 
+      // Season League progress (Bronze -> Silver -> Gold -> Platinum -> Diamond -> Master -> Champion)
+      const nowKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+      const currentSeasonDef = SEASON_DEFS.find((s) => s.months.includes(nowKey)) || SEASON_DEFS[0];
+      const seasonRankRows = await db.execute(sql`
+        WITH season_totals AS (
+          SELECT ml.user_id AS "userId", SUM(ml.total_points) AS "seasonXP"
+          FROM monthly_leaderboard ml
+          JOIN users u ON u.id = ml.user_id
+          WHERE ml.month = ANY(ARRAY[${sql.join(currentSeasonDef.months.map((m) => sql`${m}`), sql`, `)}])
+            AND u.role NOT IN ('admin', 'moderator', 'system')
+            AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+            AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+          GROUP BY ml.user_id
+        )
+        SELECT "userId", "seasonXP", RANK() OVER (ORDER BY "seasonXP" DESC) AS "seasonRank"
+        FROM season_totals
+        ORDER BY "seasonRank" ASC
+      `);
+      const seasonRankList = ((seasonRankRows as any).rows ?? seasonRankRows) as any[];
+      const totalSeasonPlayers = seasonRankList.length;
+      const myRow = seasonRankList.find((r) => Number(r.userId) === userId);
+      const seasonXP = myRow ? Math.round(Number(myRow.seasonXP)) : 0;
+      const seasonRank = myRow ? Number(myRow.seasonRank) : null;
+      const championCutoffXP = seasonRankList[9] ? Math.round(Number(seasonRankList[9].seasonXP)) : null;
+
+      const seasonLeague = buildSeasonLeague(seasonXP, seasonRank, championCutoffXP, totalSeasonPlayers);
+
       res.json({
         player: {
           username: user.username,
@@ -4422,6 +4545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           longestStreak: streakInfo.longestStreak,
           lootboxReady: lootboxStatus.canOpen,
         },
+        seasonLeague,
         today: {
           clipsWatchedToday,
           watch5Done,
