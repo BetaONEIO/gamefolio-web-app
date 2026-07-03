@@ -203,7 +203,7 @@ function SimpleAvatar({ url, name, size = "md" }: { url: string | null; name: st
 function PlayerOverview({ data, isLoading }: { data: DashboardData["player"] | undefined; isLoading: boolean }) {
   if (isLoading || !data) {
     return (
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-4 mb-6">
           <Skeleton className="w-20 h-20 rounded-2xl bg-white/20" />
           <div className="flex-1 space-y-3">
@@ -223,7 +223,7 @@ function PlayerOverview({ data, isLoading }: { data: DashboardData["player"] | u
   }
 
   return (
-    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Top row: avatar + welcome + level */}
       <div className="flex items-center gap-4 mb-6">
         <div className="relative">
@@ -952,7 +952,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen" style={{ background: ACCENT_DARK }}>
       {/* Full-width hero banner */}
-      <div className="relative" style={{ minHeight: isMobile ? 340 : 380 }}>
+      <div className="relative flex flex-col" style={{ minHeight: isMobile ? 340 : 380 }}>
         <div
           className="absolute inset-0"
           style={{ backgroundImage: "url('/attached_assets/Flame_1783087368020.png')", backgroundSize: "cover", backgroundPosition: "center" }}
@@ -964,7 +964,9 @@ export default function DashboardPage() {
         <div className="absolute bottom-0 left-20 w-64 h-48 blur-3xl opacity-20 pointer-events-none"
           style={{ background: "radial-gradient(ellipse,#FF6B35,transparent 70%)" }} />
 
-        <PlayerOverview data={data?.player} isLoading={isLoading} />
+        <div className="relative w-full flex-1 flex flex-col justify-center">
+          <PlayerOverview data={data?.player} isLoading={isLoading} />
+        </div>
       </div>
 
       {/* Content area */}
