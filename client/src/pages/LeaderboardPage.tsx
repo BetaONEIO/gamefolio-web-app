@@ -717,10 +717,12 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
       style={{
         backgroundColor: "#05090d",
         backgroundImage: [
-          "radial-gradient(ellipse 70% 60% at 8% 0%, rgba(183,255,26,0.16), transparent 60%)",
-          "radial-gradient(ellipse 65% 55% at 95% 10%, rgba(59,130,246,0.12), transparent 65%)",
-          "radial-gradient(ellipse 60% 55% at 50% 110%, rgba(183,255,26,0.10), transparent 70%)",
-          "linear-gradient(160deg, rgba(183,255,26,0.08), transparent 55%)",
+          "repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(255,255,255,0.05) 12px, rgba(255,255,255,0.05) 13px)",
+          "repeating-linear-gradient(-45deg, transparent, transparent 12px, rgba(255,255,255,0.05) 12px, rgba(255,255,255,0.05) 13px)",
+          "radial-gradient(ellipse 70% 60% at 8% 0%, rgba(183,255,26,0.32), transparent 60%)",
+          "radial-gradient(ellipse 65% 55% at 95% 10%, rgba(59,130,246,0.26), transparent 65%)",
+          "radial-gradient(ellipse 60% 55% at 50% 110%, rgba(183,255,26,0.22), transparent 70%)",
+          "linear-gradient(160deg, rgba(183,255,26,0.14), transparent 55%)",
         ].join(", "),
       }}
     >
