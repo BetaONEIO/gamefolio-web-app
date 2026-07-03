@@ -229,12 +229,6 @@ function PlayerOverview({ data, isLoading }: { data: DashboardData["player"] | u
         <div className="flex items-center gap-4 mb-6">
           <div className="relative">
             <SimpleAvatar url={data.avatarUrl} name={data.displayName || data.username} size="xl" />
-            <div
-              className="absolute -bottom-1 -right-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider"
-              style={{ background: data.leagueColor, color: ACCENT_DARK }}
-            >
-              {data.league}
-            </div>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium mb-0.5 text-white/60">Welcome back</p>
@@ -268,7 +262,6 @@ function PlayerOverview({ data, isLoading }: { data: DashboardData["player"] | u
         {/* Stats grid */}
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-w-xl">
           <StatPill label="Streak" value={`${data.currentStreak} Day${data.currentStreak !== 1 ? "s" : ""}`} color="#FF6B35" icon={Flame} />
-          <StatPill label="League" value={data.league} color={data.leagueColor} icon={Trophy} />
           {data.rank && <StatPill label="Rank" value={`#${data.rank}`} color={ACCENT} icon={TrendingUp} />}
           <StatPill
             label="Lootbox"
