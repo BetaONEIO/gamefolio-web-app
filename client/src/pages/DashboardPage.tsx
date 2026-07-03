@@ -395,6 +395,19 @@ const LEAGUE_STRUCTURE = [
   { name: "Champion", range: "Top 10 Players" },
 ];
 
+function getLeagueGradient(league: string) {
+  switch (league) {
+    case "Bronze":   return "linear-gradient(90deg, #8B4513, #CD7F32, #D2691E)";
+    case "Silver":   return "linear-gradient(90deg, #A0A0A0, #E8E8E8, #FFFFFF)";
+    case "Gold":     return "linear-gradient(90deg, #B8860B, #FFD700, #FFA500)";
+    case "Platinum": return "linear-gradient(90deg, #0288D1, #4FC3F7, #E1F5FE)";
+    case "Onyx":     return "linear-gradient(90deg, #2E1065, #8B5CF6, #C4B5FD)";
+    case "Diamond":  return "linear-gradient(90deg, #6366F1, #E0E7FF, #FFFFFF)";
+    case "Champion": return "linear-gradient(90deg, #3F6212, #B7FF1A, #FEF08A)";
+    default:         return "linear-gradient(90deg, #B7FF1A, #D9FF80)";
+  }
+}
+
 function LeagueMedal({ tier, size = 64 }: { tier: string; size?: number }) {
   const src = LEAGUE_MEDALS[tier] ?? bronzeMedal;
   return (
@@ -466,7 +479,7 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
                 <div className="w-full rounded-full overflow-hidden h-3" style={{ background: "#FFFFFF" }}>
                   <div
                     className="h-full rounded-full transition-all duration-700 ease-out"
-                    style={{ width: `${Math.min(data.progressPercent ?? 0, 100)}%`, background: ACCENT }}
+                    style={{ width: `${Math.min(data.progressPercent ?? 0, 100)}%`, background: getLeagueGradient(data.league) }}
                   />
                 </div>
               </div>
