@@ -712,7 +712,18 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
   };
 
   return (
-    <section className="mb-0">
+    <section
+      className="mb-0 relative rounded-2xl pt-5 pb-2 overflow-hidden"
+      style={{
+        backgroundColor: "#05090d",
+        backgroundImage: [
+          "radial-gradient(ellipse 70% 60% at 8% 0%, rgba(183,255,26,0.16), transparent 60%)",
+          "radial-gradient(ellipse 65% 55% at 95% 10%, rgba(59,130,246,0.12), transparent 65%)",
+          "radial-gradient(ellipse 60% 55% at 50% 110%, rgba(183,255,26,0.10), transparent 70%)",
+          "linear-gradient(160deg, rgba(183,255,26,0.08), transparent 55%)",
+        ].join(", "),
+      }}
+    >
       {/* Header row — padded */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3 px-4 sm:px-6 lg:px-10">
         <div className="flex items-center gap-2 flex-wrap">
