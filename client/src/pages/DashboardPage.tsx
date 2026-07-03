@@ -687,15 +687,16 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
           <div className="flex flex-wrap gap-1.5">
             {LEAGUE_STRUCTURE.map((tier) => {
               const active = tier.name === data.league;
+              const [leagueColor] = LEAGUE_MESH_COLORS[tier.name] ?? [ACCENT];
               return (
                 <div
                   key={tier.name}
                   title={tier.range}
                   className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-semibold"
                   style={{
-                    background: active ? `${ACCENT}15` : "rgba(255,255,255,0.03)",
-                    border: `1px solid ${active ? `${ACCENT}50` : BORDER}`,
-                    color: active ? ACCENT : TEXT_MUTED,
+                    background: active ? `${leagueColor}26` : `${leagueColor}14`,
+                    border: `1px solid ${active ? leagueColor : `${leagueColor}55`}`,
+                    color: leagueColor,
                   }}
                 >
                   <img src={LEAGUE_MEDALS[tier.name]} alt="" className="w-4 h-4 object-contain" />
