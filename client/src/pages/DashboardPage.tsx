@@ -199,81 +199,80 @@ function SimpleAvatar({ url, name, size = "md" }: { url: string | null; name: st
 function PlayerOverview({ data, isLoading }: { data: DashboardData["player"] | undefined; isLoading: boolean }) {
   if (isLoading || !data) {
     return (
-      <SectionCard className="p-6">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex items-center gap-4 mb-6">
-          <Skeleton className="w-20 h-20 rounded-2xl" />
+          <Skeleton className="w-20 h-20 rounded-2xl bg-white/20" />
           <div className="flex-1 space-y-3">
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-6 w-48 bg-white/20" />
+            <Skeleton className="h-4 w-32 bg-white/20" />
+            <Skeleton className="h-3 w-full bg-white/20" />
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-3">
-          <Skeleton className="h-16 rounded-xl" />
-          <Skeleton className="h-16 rounded-xl" />
-          <Skeleton className="h-16 rounded-xl" />
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+          <Skeleton className="h-16 rounded-xl bg-white/20" />
+          <Skeleton className="h-16 rounded-xl bg-white/20" />
+          <Skeleton className="h-16 rounded-xl bg-white/20" />
+          <Skeleton className="h-16 rounded-xl bg-white/20" />
         </div>
-      </SectionCard>
+      </div>
     );
   }
 
   return (
-    <SectionCard>
-      <div className="p-6">
-        {/* Top row: avatar + welcome + level */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="relative">
-            <SimpleAvatar url={data.avatarUrl} name={data.displayName || data.username} size="xl" />
-            <div
-              className="absolute -bottom-1 -right-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider"
-              style={{ background: data.leagueColor, color: ACCENT_DARK }}
-            >
-              {data.league}
-            </div>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium mb-0.5" style={{ color: TEXT_MUTED }}>Welcome back</p>
-            <h2 className="text-xl font-black truncate" style={{ color: TEXT_PRIMARY }}>
-              {data.displayName || data.username}
-            </h2>
-            <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-xs font-bold" style={{ color: ACCENT }}>Level {data.level}</span>
-              {data.rank && (
-                <span className="text-xs font-medium" style={{ color: TEXT_MUTED }}>
-                  #{data.rank} Ranked
-                </span>
-              )}
-            </div>
+    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      {/* Top row: avatar + welcome + level */}
+      <div className="flex items-center gap-4 mb-6">
+        <div className="relative">
+          <SimpleAvatar url={data.avatarUrl} name={data.displayName || data.username} size="xl" />
+          <div
+            className="absolute -bottom-1 -right-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider"
+            style={{ background: data.leagueColor, color: ACCENT_DARK }}
+          >
+            {data.league}
           </div>
         </div>
-
-        {/* XP Progress */}
-        <div className="mb-5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium" style={{ color: TEXT_MUTED }}>
-              {Math.round(data.currentPoints).toLocaleString()} / {Math.round(data.pointsForNextLevel).toLocaleString()} XP
-            </span>
-            <span className="text-xs font-bold" style={{ color: ACCENT }}>
-              {Math.round(data.pointsRemaining).toLocaleString()} until next
-            </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium mb-0.5 text-white/60">Welcome back</p>
+          <h2 className="text-xl sm:text-2xl font-black truncate text-white">
+            {data.displayName || data.username}
+          </h2>
+          <div className="flex items-center gap-2 mt-1.5">
+            <span className="text-xs font-bold" style={{ color: ACCENT }}>Level {data.level}</span>
+            {data.rank && (
+              <span className="text-xs font-medium text-white/50">
+                #{data.rank} Ranked
+              </span>
+            )}
           </div>
-          <XPBar percent={data.progressPercent} height={10} />
-        </div>
-
-        {/* Stats grid */}
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-          <StatPill label="Streak" value={`${data.currentStreak} Day${data.currentStreak !== 1 ? "s" : ""}`} color="#FF6B35" icon={Flame} />
-          <StatPill label="League" value={data.league} color={data.leagueColor} icon={Trophy} />
-          {data.rank && <StatPill label="Rank" value={`#${data.rank}`} color={ACCENT} icon={TrendingUp} />}
-          <StatPill
-            label="Lootbox"
-            value={data.lootboxReady ? "Ready!" : "Locked"}
-            color={data.lootboxReady ? ACCENT : TEXT_MUTED}
-            icon={Gift}
-          />
         </div>
       </div>
-    </SectionCard>
+
+      {/* XP Progress */}
+      <div className="mb-5 max-w-xl">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-medium text-white/50">
+            {Math.round(data.currentPoints).toLocaleString()} / {Math.round(data.pointsForNextLevel).toLocaleString()} XP
+          </span>
+          <span className="text-xs font-bold" style={{ color: ACCENT }}>
+            {Math.round(data.pointsRemaining).toLocaleString()} until next
+          </span>
+        </div>
+        <XPBar percent={data.progressPercent} height={10} />
+      </div>
+
+      {/* Stats grid */}
+      <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-w-xl">
+        <StatPill label="Streak" value={`${data.currentStreak} Day${data.currentStreak !== 1 ? "s" : ""}`} color="#FF6B35" icon={Flame} />
+        <StatPill label="League" value={data.league} color={data.leagueColor} icon={Trophy} />
+        {data.rank && <StatPill label="Rank" value={`#${data.rank}`} color={ACCENT} icon={TrendingUp} />}
+        <StatPill
+          label="Lootbox"
+          value={data.lootboxReady ? "Ready!" : "Locked"}
+          color={data.lootboxReady ? ACCENT : TEXT_MUTED}
+          icon={Gift}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -823,19 +822,27 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen" style={{ background: ACCENT_DARK }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Page Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <Gamepad2 className="w-6 h-6" style={{ color: ACCENT }} />
-          <h1 className="text-2xl font-black tracking-tight" style={{ color: TEXT_PRIMARY }}>
-            Dashboard
-          </h1>
-        </div>
+      {/* Full-width hero banner */}
+      <div className="relative" style={{ minHeight: isMobile ? 340 : 380 }}>
+        <div
+          className="absolute inset-0"
+          style={{ backgroundImage: "url('/attached_assets/Flame_1783087368020.png')", backgroundSize: "cover", backgroundPosition: "center" }}
+        />
+        {/* Gradient overlay */}
+        <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,rgba(5,9,13,0.60) 0%,rgba(8,14,24,0.65) 45%,rgba(5,9,13,0.92) 100%)" }} />
 
+        {/* Warm glow orb behind avatar */}
+        <div className="absolute bottom-0 left-20 w-64 h-48 blur-3xl opacity-20 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse,#FF6B35,transparent 70%)" }} />
+
+        <PlayerOverview data={data?.player} isLoading={isLoading} />
+      </div>
+
+      {/* Content area */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {isMobile ? (
           /* Mobile: stacked single column */
           <div className="space-y-5 pb-24">
-            <PlayerOverview data={data?.player} isLoading={isLoading} />
             <TodaysProgress today={data?.today} isLoading={isLoading} />
             <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
             <RankedSeason data={data?.player} isLoading={isLoading} />
@@ -849,8 +856,6 @@ export default function DashboardPage() {
           <div className="grid grid-cols-12 gap-5 pb-8">
             {/* Left column (wider) */}
             <div className="col-span-8 space-y-5">
-              <PlayerOverview data={data?.player} isLoading={isLoading} />
-
               <div className="grid grid-cols-2 gap-5">
                 <TodaysProgress today={data?.today} isLoading={isLoading} />
                 <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
