@@ -282,7 +282,7 @@ function PlayerOverview({ data, isLoading }: { data: DashboardData["player"] | u
       {/* Current League panel — anchored to far right edge of banner */}
       <div
         className="hidden lg:flex absolute top-1/2 right-[18%] -translate-y-1/2 flex-col items-center justify-center gap-2 px-8 py-6 rounded-2xl flex-shrink-0"
-        style={{ border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.03)" }}
+        style={{ border: `1px solid ${BORDER}`, background: "#0d1a24" }}
       >
         <p className="text-xs font-medium text-white/60">Current League</p>
         <LeagueMedal tier={data.league} size={108} />
