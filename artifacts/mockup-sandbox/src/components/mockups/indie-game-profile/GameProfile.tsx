@@ -285,7 +285,7 @@ export default function GameProfile() {
             </svg>
 
             {['Indie Developer', 'Gamefolio', 'Creators', 'Streamers', 'Players'].map((node, i) => (
-              <React.Fragment key={node}>
+              <div key={node} className="contents">
                 <div className="relative z-10 flex flex-col items-center">
                   <div className="w-32 h-32 rounded-xl flex items-center justify-center p-4 text-center font-bold text-sm"
                        style={{...cardStyle, ...(node === 'Gamefolio' ? { background: 'rgba(183,255,24,0.1)', ...glowStyle } : {})}}>
@@ -297,7 +297,7 @@ export default function GameProfile() {
                     <ChevronDown size={24} className="text-white/30" />
                   </div>
                 )}
-              </React.Fragment>
+              </div>
             ))}
           </div>
         </div>
