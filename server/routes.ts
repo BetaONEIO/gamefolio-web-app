@@ -6312,6 +6312,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/users/:username/bounties", async (req, res) => {
+    try {
+      const username = req.params.username.startsWith('@') ? req.params.username.slice(1) : req.params.username;
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const result = await db.execute(sql`
+        SELECT
+          gb.id, gb.game_id AS "gameId", gb.created_by_user_id AS "createdByUserId",
+          gb.title, gb.campaign_title AS "campaignTitle", gb.description,
+          gb.reward_type AS "rewardType", gb.reward_value AS "rewardValue",
+          gb.difficulty, gb.end_date AS "endDate", gb.status,
+          gb.max_participants AS "maxParticipants",
+          gb.required_clips AS "requiredClips", gb.required_reels AS "requiredReels",
+          gb.required_screenshots AS "requiredScreenshots", gb.required_views AS "requiredViews",
+          gb.total_xp_available AS "totalXpAvailable",
+          gb.demo_keys_remaining AS "demoKeysRemaining", gb.full_keys_remaining AS "fullKeysRemaining",
+          gb.completion_badge AS "completionBadge", gb.created_at AS "createdAt",
+          COUNT(DISTINCT gba.user_id)::int AS "participantCount",
+          g.name AS "gameName", g.image_url AS "gameImageUrl"
+        FROM game_bounties gb
+        LEFT JOIN game_bounty_acceptances gba ON gba.bounty_id = gb.id AND gba.status = 'active'
+        LEFT JOIN games g ON g.id = gb.game_id
+        WHERE gb.created_by_user_id = ${user.id} AND gb.status != 'cancelled'
+        GROUP BY gb.id, g.name, g.image_url
+        ORDER BY gb.created_at DESC
+      `);
+      res.json((result as any).rows ?? result);
+    } catch (err) {
+      console.error("Error fetching user bounties:", err);
+      res.json([]);
+    }
+  });
+
   // ==========================================
   // Game Routes
   // ==========================================

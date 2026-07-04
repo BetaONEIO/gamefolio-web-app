@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useLocation } from 'wouter';
-import { UserWithStats, ClipWithUser, Screenshot } from '@shared/schema';
+import { useLocation, Link } from 'wouter';
+import { UserWithStats, ClipWithUser, Screenshot, GameBounty } from '@shared/schema';
 import { queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -21,13 +21,18 @@ import {
   Award,
   CheckCircle2,
   Terminal,
+  Sword,
+  Key,
+  Clock,
 } from 'lucide-react';
 
 const MessageDialog = React.lazy(() =>
   import('@/components/messages/MessageDialog').then((m) => ({ default: m.MessageDialog }))
 );
 
-const TABS = ['OVERVIEW', 'CLIPS', 'REELS', 'SCREENSHOTS'];
+const TABS = ['OVERVIEW', 'CLIPS', 'REELS', 'SCREENSHOTS', 'BOUNTIES'];
+
+type BountyWithMeta = GameBounty & { participantCount?: number; gameName?: string; gameImageUrl?: string };
 
 interface IndieGameProfileLayoutProps {
   profile: UserWithStats;
@@ -72,6 +77,10 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
 
   const { data: screenshots } = useQuery<Screenshot[]>({
     queryKey: [`/api/users/${profile.id}/screenshots`],
+  });
+
+  const { data: bounties } = useQuery<BountyWithMeta[]>({
+    queryKey: [`/api/users/${profile.username}/bounties`],
   });
 
   const isFollowing = followStatus?.status === 'following';
@@ -386,6 +395,81 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
                   )}
                 </div>
               ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {activeTab === 'BOUNTIES' && (
+        <section className="py-16 px-6 max-w-6xl mx-auto">
+          <h2 className="text-2xl font-bold mb-6">Bounty Campaigns</h2>
+          {(bounties || []).length === 0 ? (
+            <p style={{ color: brand.textMuted }}>
+              {isOwnProfile
+                ? "You haven't launched any bounty campaigns yet."
+                : `${profile.displayName} hasn't launched any bounty campaigns yet.`}
+            </p>
+          ) : (
+            <div className="grid sm:grid-cols-2 gap-5">
+              {(bounties || []).map((bounty) => {
+                const isActive = bounty.status === 'active';
+                return (
+                  <Link
+                    key={bounty.id}
+                    href={`/games/${bounty.gameId}?tab=bounties`}
+                    className="block p-6 rounded-lg transition-transform hover:scale-[1.02]"
+                    style={cardStyle}
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-2">
+                        <Sword size={18} color={brand.accent} />
+                        <span
+                          className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-full"
+                          style={{
+                            background: isActive ? 'rgba(183, 255, 24, 0.15)' : 'rgba(255,255,255,0.08)',
+                            color: isActive ? brand.accent : brand.textMuted,
+                          }}
+                        >
+                          {bounty.status}
+                        </span>
+                      </div>
+                      {bounty.gameName && (
+                        <span className="text-xs font-semibold text-white/50 truncate max-w-[45%]">{bounty.gameName}</span>
+                      )}
+                    </div>
+
+                    <h3 className="text-lg font-bold text-white mb-1">{bounty.campaignTitle || bounty.title}</h3>
+                    {bounty.description && (
+                      <p className="text-sm mb-4 line-clamp-2" style={{ color: brand.textMuted }}>
+                        {bounty.description}
+                      </p>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-4 text-xs" style={{ color: brand.textMuted }}>
+                      <div className="flex items-center gap-1.5">
+                        <Users size={14} />
+                        {bounty.participantCount ?? 0}/{bounty.maxParticipants ?? 10} joined
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Award size={14} />
+                        {(bounty.totalXpAvailable ?? 0).toLocaleString()} XP
+                      </div>
+                      {(bounty.fullKeysRemaining ?? 0) > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <Key size={14} />
+                          {bounty.fullKeysRemaining} keys left
+                        </div>
+                      )}
+                      {bounty.endDate && (
+                        <div className="flex items-center gap-1.5">
+                          <Clock size={14} />
+                          {new Date(bounty.endDate).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </section>
