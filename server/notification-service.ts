@@ -446,4 +446,54 @@ export class NotificationService {
       console.error("Error creating view milestone notification:", error);
     }
   }
+
+  // Notify a bounty owner when a creator submits content for review
+  static async createBountySubmissionNotification(
+    ownerId: number,
+    submitterId: number,
+    bountyId: number,
+    bountyTitle: string
+  ) {
+    try {
+      const submitter = await storage.getUser(submitterId);
+      if (!submitter) return;
+      const notification: InsertNotification = {
+        userId: ownerId,
+        type: "bounty_submission",
+        title: "New Bounty Submission",
+        message: `${submitter.username} submitted content for "${bountyTitle}"`,
+        fromUserId: submitterId,
+        actionUrl: `/indie/dashboard?tab=review&bounty=${bountyId}`,
+        metadata: { bountyId },
+      };
+      await createAndPush(notification);
+    } catch (error) {
+      console.error("Error creating bounty submission notification:", error);
+    }
+  }
+
+  // Notify a creator when their bounty submission is approved or rejected
+  static async createBountySubmissionReviewedNotification(
+    submitterId: number,
+    bountyId: number,
+    bountyTitle: string,
+    approved: boolean,
+    reason?: string
+  ) {
+    try {
+      const notification: InsertNotification = {
+        userId: submitterId,
+        type: "bounty_review",
+        title: approved ? "Submission Approved" : "Submission Rejected",
+        message: approved
+          ? `Your submission for "${bountyTitle}" was approved! Rewards have been credited.`
+          : `Your submission for "${bountyTitle}" was rejected.${reason ? ` Reason: ${reason}` : ""}`,
+        actionUrl: `/indie/dashboard?tab=bounties&bounty=${bountyId}`,
+        metadata: { bountyId, approved },
+      };
+      await createAndPush(notification);
+    } catch (error) {
+      console.error("Error creating bounty review notification:", error);
+    }
+  }
 }

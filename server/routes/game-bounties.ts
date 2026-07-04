@@ -2,6 +2,7 @@ import express from 'express';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import { XPService } from '../xp-service';
+import { NotificationService } from '../notification-service';
 
 const router = express.Router();
 
@@ -79,6 +80,38 @@ async function ensureBountyTables() {
         END IF;
       END $$;
     `);
+    // Migration: dashboard wizard fields on game_bounties
+    await db.execute(sql`
+      ALTER TABLE game_bounties
+      ADD COLUMN IF NOT EXISTS bounty_type TEXT DEFAULT 'upload_clips',
+      ADD COLUMN IF NOT EXISTS hashtags TEXT[],
+      ADD COLUMN IF NOT EXISTS region_restriction TEXT,
+      ADD COLUMN IF NOT EXISTS start_date TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS reward_mode TEXT DEFAULT 'per_submission',
+      ADD COLUMN IF NOT EXISTS reward_tiers JSON,
+      ADD COLUMN IF NOT EXISTS min_clip_length INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS required_tag TEXT,
+      ADD COLUMN IF NOT EXISTS required_keywords TEXT,
+      ADD COLUMN IF NOT EXISTS max_submissions_per_user INTEGER DEFAULT 1,
+      ADD COLUMN IF NOT EXISTS manual_approval_required BOOLEAN DEFAULT true,
+      ADD COLUMN IF NOT EXISTS must_be_public BOOLEAN DEFAULT true,
+      ADD COLUMN IF NOT EXISTS block_duplicates BOOLEAN DEFAULT true
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS bounty_submissions (
+        id SERIAL PRIMARY KEY,
+        bounty_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        content_type TEXT NOT NULL,
+        content_id INTEGER NOT NULL,
+        status TEXT DEFAULT 'pending',
+        rejection_reason TEXT,
+        reviewed_at TIMESTAMP,
+        reviewed_by_user_id INTEGER,
+        reward_summary JSON,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
   } catch (err) {
     console.error('Failed to create bounty tables:', err);
   }
@@ -106,6 +139,12 @@ router.get('/:gameId/bounties', async (req, res) => {
         gb.xp_completion_bonus AS "xpCompletionBonus", gb.total_xp_available AS "totalXpAvailable",
         gb.demo_keys_remaining AS "demoKeysRemaining", gb.full_keys_remaining AS "fullKeysRemaining",
         gb.completion_badge AS "completionBadge",
+        gb.bounty_type AS "bountyType", gb.hashtags, gb.region_restriction AS "regionRestriction",
+        gb.start_date AS "startDate", gb.reward_mode AS "rewardMode", gb.reward_tiers AS "rewardTiers",
+        gb.min_clip_length AS "minClipLength", gb.required_tag AS "requiredTag",
+        gb.required_keywords AS "requiredKeywords", gb.max_submissions_per_user AS "maxSubmissionsPerUser",
+        gb.manual_approval_required AS "manualApprovalRequired", gb.must_be_public AS "mustBePublic",
+        gb.block_duplicates AS "blockDuplicates",
         COUNT(DISTINCT gba.user_id)::int AS "participantCount",
         u.username AS "creatorUsername"
       FROM game_bounties gb
@@ -132,15 +171,21 @@ router.post('/:gameId/bounties', async (req, res) => {
     const {
       title, description, campaignTitle,
       demoKeyPool, fullKeyPool,
-      maxParticipants, endDate,
+      maxParticipants, endDate, startDate,
       requiredClips, requiredReels, requiredScreenshots, requiredViews,
       xpJoin, xpPerClip, xpPerReel, xpPerScreenshot, xpViewMilestone, xpCompletionBonus,
       completionBadge,
+      bountyType, hashtags, regionRestriction,
+      rewardMode, rewardTiers,
+      minClipLength, requiredTag, requiredKeywords, maxSubmissionsPerUser,
+      manualApprovalRequired, mustBePublic, blockDuplicates,
+      status,
     } = req.body;
     if (!title?.trim()) return res.status(400).json({ message: 'Title is required' });
 
     const demoKeys = Array.isArray(demoKeyPool) ? demoKeyPool : [];
     const fullKeys = Array.isArray(fullKeyPool) ? fullKeyPool : [];
+    const tagsArray = Array.isArray(hashtags) ? hashtags : [];
 
     const totalXp = (xpJoin || 500) + (demoKeys.length * (xpPerClip || 1000)) + (fullKeys.length * (xpPerReel || 2500)) + ((xpPerScreenshot || 200) * (requiredScreenshots || 0)) + (xpViewMilestone || 2500) + (xpCompletionBonus || 5000);
 
@@ -150,14 +195,23 @@ router.post('/:gameId/bounties', async (req, res) => {
          reward_type, reward_value, key_count, creator_slots, difficulty, end_date,
          max_participants, required_clips, required_reels, required_screenshots, required_views,
          xp_join, xp_per_clip, xp_per_reel, xp_per_screenshot, xp_view_milestone, xp_completion_bonus,
-         total_xp_available, demo_keys_remaining, full_keys_remaining, completion_badge)
+         total_xp_available, demo_keys_remaining, full_keys_remaining, completion_badge,
+         bounty_type, hashtags, region_restriction, start_date, reward_mode, reward_tiers,
+         min_clip_length, required_tag, required_keywords, max_submissions_per_user,
+         manual_approval_required, must_be_public, block_duplicates, status)
       VALUES
         (${gameId}, ${userId}, ${title.trim()}, ${campaignTitle || null}, ${description || null},
          'game_key', ${fullKeys.length > 0 ? fullKeys[0] : null}, ${fullKeys.length}, ${maxParticipants || 10},
          'medium', ${endDate ? new Date(endDate) : null},
          ${maxParticipants || 10}, ${requiredClips || 0}, ${requiredReels || 0}, ${requiredScreenshots || 0}, ${requiredViews || 0},
          ${xpJoin || 500}, ${xpPerClip || 1000}, ${xpPerReel || 2500}, ${xpPerScreenshot || 200}, ${xpViewMilestone || 2500}, ${xpCompletionBonus || 5000},
-         ${totalXp}, ${demoKeys.length}, ${fullKeys.length}, ${completionBadge || null})
+         ${totalXp}, ${demoKeys.length}, ${fullKeys.length}, ${completionBadge || null},
+         ${bountyType || 'upload_clips'}, ${tagsArray}, ${regionRestriction || null},
+         ${startDate ? new Date(startDate) : null}, ${rewardMode || 'per_submission'},
+         ${rewardTiers ? JSON.stringify(rewardTiers) : null},
+         ${minClipLength || 0}, ${requiredTag || null}, ${requiredKeywords || null},
+         ${maxSubmissionsPerUser || 1}, ${manualApprovalRequired !== false}, ${mustBePublic !== false},
+         ${blockDuplicates !== false}, ${status === 'draft' ? 'draft' : 'active'})
       RETURNING
         id, game_id AS "gameId", created_by_user_id AS "createdByUserId",
         title, campaign_title AS "campaignTitle", description,
@@ -168,7 +222,9 @@ router.post('/:gameId/bounties', async (req, res) => {
         xp_per_screenshot AS "xpPerScreenshot", xp_view_milestone AS "xpViewMilestone",
         xp_completion_bonus AS "xpCompletionBonus", total_xp_available AS "totalXpAvailable",
         demo_keys_remaining AS "demoKeysRemaining", full_keys_remaining AS "fullKeysRemaining",
-        completion_badge AS "completionBadge", end_date AS "endDate", status, created_at AS "createdAt"
+        completion_badge AS "completionBadge", end_date AS "endDate", status, created_at AS "createdAt",
+        bounty_type AS "bountyType", hashtags, region_restriction AS "regionRestriction",
+        start_date AS "startDate", reward_mode AS "rewardMode", reward_tiers AS "rewardTiers"
     `);
     const row = ((result as any).rows ?? result)[0];
     // Store demo keys in a separate key pool (serialized in description or as JSON)
@@ -655,6 +711,487 @@ router.get('/:gameId/bounty-stats', async (req, res) => {
   } catch (err) {
     console.error('Error fetching bounty stats:', err);
     res.json({ activeBounties: 0, creatorsJoined: 0, demoKeysAvailable: 0, fullKeysAvailable: 0 });
+  }
+});
+
+// ===== Indie Dashboard: cross-game bounty management =====
+
+// Overview: aggregate stats across all bounties owned by the current user
+router.get('/indie/overview', async (req, res) => {
+  if (!req.isAuthenticated()) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const userId = (req.user as any).id;
+    const stats = await db.execute(sql`
+      SELECT
+        COUNT(*)::int AS "totalBounties",
+        COUNT(CASE WHEN gb.status = 'active' THEN 1 END)::int AS "activeBounties",
+        COUNT(CASE WHEN gb.status = 'draft' THEN 1 END)::int AS "draftBounties",
+        COUNT(CASE WHEN gb.status = 'ended' THEN 1 END)::int AS "endedBounties",
+        COALESCE(SUM(gb.demo_keys_remaining), 0)::int AS "demoKeysRemaining",
+        COALESCE(SUM(gb.full_keys_remaining), 0)::int AS "fullKeysRemaining"
+      FROM game_bounties gb WHERE gb.created_by_user_id = ${userId}
+    `);
+    const s = ((stats as any).rows ?? stats)[0];
+
+    const participation = await db.execute(sql`
+      SELECT
+        COUNT(DISTINCT gba.user_id)::int AS "totalCreators",
+        COALESCE(SUM(gba.total_views), 0)::int AS "totalViews",
+        COALESCE(SUM(gba.xp_earned), 0)::int AS "totalXpAwarded"
+      FROM game_bounty_acceptances gba
+      JOIN game_bounties gb ON gb.id = gba.bounty_id
+      WHERE gb.created_by_user_id = ${userId}
+    `);
+    const p = ((participation as any).rows ?? participation)[0];
+
+    const pendingSubmissions = await db.execute(sql`
+      SELECT COUNT(*)::int AS count FROM bounty_submissions bs
+      JOIN game_bounties gb ON gb.id = bs.bounty_id
+      WHERE gb.created_by_user_id = ${userId} AND bs.status = 'pending'
+    `);
+    const pending = ((pendingSubmissions as any).rows ?? pendingSubmissions)[0];
+
+    const recent = await db.execute(sql`
+      SELECT gb.id, gb.title, gb.status, gb.created_at AS "createdAt",
+             g.name AS "gameName", g.image_url AS "gameImageUrl"
+      FROM game_bounties gb
+      LEFT JOIN games g ON g.id = gb.game_id
+      WHERE gb.created_by_user_id = ${userId}
+      ORDER BY gb.created_at DESC LIMIT 5
+    `);
+
+    res.json({
+      ...s,
+      ...p,
+      pendingSubmissions: pending.count,
+      recentBounties: (recent as any).rows ?? recent,
+    });
+  } catch (err) {
+    console.error('Error fetching indie overview:', err);
+    res.status(500).json({ message: 'Failed to fetch overview' });
+  }
+});
+
+// List all bounties owned by the current user, across games
+router.get('/indie/bounties', async (req, res) => {
+  if (!req.isAuthenticated()) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const userId = (req.user as any).id;
+    const statusFilter = typeof req.query.status === 'string' ? req.query.status : null;
+    const result = await db.execute(sql`
+      SELECT
+        gb.id, gb.game_id AS "gameId", gb.title, gb.campaign_title AS "campaignTitle",
+        gb.description, gb.status, gb.bounty_type AS "bountyType",
+        gb.end_date AS "endDate", gb.start_date AS "startDate", gb.created_at AS "createdAt",
+        gb.max_participants AS "maxParticipants", gb.demo_keys_remaining AS "demoKeysRemaining",
+        gb.full_keys_remaining AS "fullKeysRemaining", gb.total_xp_available AS "totalXpAvailable",
+        gb.reward_mode AS "rewardMode",
+        g.name AS "gameName", g.image_url AS "gameImageUrl",
+        COUNT(DISTINCT gba.user_id)::int AS "participantCount",
+        COUNT(DISTINCT CASE WHEN bs.status = 'pending' THEN bs.id END)::int AS "pendingSubmissions"
+      FROM game_bounties gb
+      LEFT JOIN games g ON g.id = gb.game_id
+      LEFT JOIN game_bounty_acceptances gba ON gba.bounty_id = gb.id AND gba.status = 'active'
+      LEFT JOIN bounty_submissions bs ON bs.bounty_id = gb.id
+      WHERE gb.created_by_user_id = ${userId}
+        AND (${statusFilter}::text IS NULL OR gb.status = ${statusFilter})
+      GROUP BY gb.id, g.name, g.image_url
+      ORDER BY gb.created_at DESC
+    `);
+    res.json((result as any).rows ?? result);
+  } catch (err) {
+    console.error('Error fetching indie bounties:', err);
+    res.status(500).json({ message: 'Failed to fetch bounties' });
+  }
+});
+
+async function requireBountyOwner(req: any, res: any, bountyId: number) {
+  const userId = req.user.id;
+  const ownership = await db.execute(sql`SELECT created_by_user_id, title FROM game_bounties WHERE id = ${bountyId}`);
+  const owner = ((ownership as any).rows ?? ownership)[0];
+  if (!owner) { res.status(404).json({ message: 'Bounty not found' }); return null; }
+  if (owner.created_by_user_id !== userId) { res.status(403).json({ message: 'Forbidden' }); return null; }
+  return owner;
+}
+
+// Edit a bounty (only fields safe to change post-creation)
+router.patch('/bounties/:bountyId', async (req, res) => {
+  if (!req.isAuthenticated()) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const bountyId = parseInt(req.params.bountyId);
+    if (isNaN(bountyId)) return res.status(400).json({ message: 'Invalid bounty ID' });
+    const owner = await requireBountyOwner(req, res, bountyId);
+    if (!owner) return;
+
+    const { title, description, campaignTitle, endDate, maxParticipants, hashtags, requiredTag, requiredKeywords } = req.body;
+    await db.execute(sql`
+      UPDATE game_bounties SET
+        title = COALESCE(${title ?? null}, title),
+        description = COALESCE(${description ?? null}, description),
+        campaign_title = COALESCE(${campaignTitle ?? null}, campaign_title),
+        end_date = COALESCE(${endDate ? new Date(endDate) : null}, end_date),
+        max_participants = COALESCE(${maxParticipants ?? null}, max_participants),
+        hashtags = COALESCE(${Array.isArray(hashtags) ? hashtags : null}, hashtags),
+        required_tag = COALESCE(${requiredTag ?? null}, required_tag),
+        required_keywords = COALESCE(${requiredKeywords ?? null}, required_keywords)
+      WHERE id = ${bountyId}
+    `);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error editing bounty:', err);
+    res.status(500).json({ message: 'Failed to edit bounty' });
+  }
+});
+
+// Pause / resume a bounty
+router.post('/bounties/:bountyId/pause', async (req, res) => {
+  if (!req.isAuthenticated()) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const bountyId = parseInt(req.params.bountyId);
+    const owner = await requireBountyOwner(req, res, bountyId);
+    if (!owner) return;
+    const { paused } = req.body;
+    await db.execute(sql`
+      UPDATE game_bounties SET status = ${paused ? 'paused' : 'active'} WHERE id = ${bountyId}
+    `);
+    res.json({ success: true, status: paused ? 'paused' : 'active' });
+  } catch (err) {
+    console.error('Error pausing bounty:', err);
+    res.status(500).json({ message: 'Failed to update bounty status' });
+  }
+});
+
+// End a bounty early
+router.post('/bounties/:bountyId/end', async (req, res) => {
+  if (!req.isAuthenticated()) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const bountyId = parseInt(req.params.bountyId);
+    const owner = await requireBountyOwner(req, res, bountyId);
+    if (!owner) return;
+    await db.execute(sql`UPDATE game_bounties SET status = 'ended' WHERE id = ${bountyId}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error ending bounty:', err);
+    res.status(500).json({ message: 'Failed to end bounty' });
+  }
+});
+
+// Duplicate a bounty as a new draft
+router.post('/bounties/:bountyId/duplicate', async (req, res) => {
+  if (!req.isAuthenticated()) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const bountyId = parseInt(req.params.bountyId);
+    const userId = (req.user as any).id;
+    const owner = await requireBountyOwner(req, res, bountyId);
+    if (!owner) return;
+
+    const result = await db.execute(sql`
+      INSERT INTO game_bounties
+        (game_id, created_by_user_id, title, campaign_title, description,
+         reward_type, creator_slots, difficulty, max_participants,
+         required_clips, required_reels, required_screenshots, required_views,
+         xp_join, xp_per_clip, xp_per_reel, xp_per_screenshot, xp_view_milestone, xp_completion_bonus,
+         bounty_type, hashtags, region_restriction, reward_mode, reward_tiers,
+         min_clip_length, required_tag, required_keywords, max_submissions_per_user,
+         manual_approval_required, must_be_public, block_duplicates, status)
+      SELECT
+        game_id, ${userId}, title || ' (Copy)', campaign_title, description,
+        reward_type, creator_slots, difficulty, max_participants,
+        required_clips, required_reels, required_screenshots, required_views,
+        xp_join, xp_per_clip, xp_per_reel, xp_per_screenshot, xp_view_milestone, xp_completion_bonus,
+        bounty_type, hashtags, region_restriction, reward_mode, reward_tiers,
+        min_clip_length, required_tag, required_keywords, max_submissions_per_user,
+        manual_approval_required, must_be_public, block_duplicates, 'draft'
+      FROM game_bounties WHERE id = ${bountyId}
+      RETURNING id
+    `);
+    const row = ((result as any).rows ?? result)[0];
+    res.status(201).json({ success: true, id: row.id });
+  } catch (err) {
+    console.error('Error duplicating bounty:', err);
+    res.status(500).json({ message: 'Failed to duplicate bounty' });
+  }
+});
+
+// Add more keys to an existing bounty's key pool
+router.post('/bounties/:bountyId/keys', async (req, res) => {
+  if (!req.isAuthenticated()) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const bountyId = parseInt(req.params.bountyId);
+    const owner = await requireBountyOwner(req, res, bountyId);
+    if (!owner) return;
+    const { demoKeys, fullKeys } = req.body;
+    const newDemo = Array.isArray(demoKeys) ? demoKeys.filter((k: any) => typeof k === 'string' && k.trim()) : [];
+    const newFull = Array.isArray(fullKeys) ? fullKeys.filter((k: any) => typeof k === 'string' && k.trim()) : [];
+    if (newDemo.length === 0 && newFull.length === 0) {
+      return res.status(400).json({ message: 'No keys provided' });
+    }
+
+    const bounty = await db.execute(sql`
+      SELECT demo_key_pool, full_key_pool FROM game_bounties WHERE id = ${bountyId}
+    `);
+    const b = ((bounty as any).rows ?? bounty)[0];
+    const existingDemo = b.demo_key_pool ? JSON.parse(b.demo_key_pool) : [];
+    const existingFull = b.full_key_pool ? JSON.parse(b.full_key_pool) : [];
+    const mergedDemo = [...existingDemo, ...newDemo];
+    const mergedFull = [...existingFull, ...newFull];
+
+    await db.execute(sql`
+      UPDATE game_bounties SET
+        demo_key_pool = ${JSON.stringify(mergedDemo)},
+        full_key_pool = ${JSON.stringify(mergedFull)},
+        demo_keys_remaining = demo_keys_remaining + ${newDemo.length},
+        full_keys_remaining = full_keys_remaining + ${newFull.length}
+      WHERE id = ${bountyId}
+    `);
+    res.json({ success: true, demoKeysAdded: newDemo.length, fullKeysAdded: newFull.length });
+  } catch (err) {
+    console.error('Error adding keys:', err);
+    res.status(500).json({ message: 'Failed to add keys' });
+  }
+});
+
+// Key pool status for a bounty (owner only)
+router.get('/bounties/:bountyId/keys', async (req, res) => {
+  if (!req.isAuthenticated()) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const bountyId = parseInt(req.params.bountyId);
+    const owner = await requireBountyOwner(req, res, bountyId);
+    if (!owner) return;
+    const bounty = await db.execute(sql`
+      SELECT demo_keys_remaining AS "demoKeysRemaining", full_keys_remaining AS "fullKeysRemaining"
+      FROM game_bounties WHERE id = ${bountyId}
+    `);
+    const b = ((bounty as any).rows ?? bounty)[0];
+    const distributed = await db.execute(sql`
+      SELECT
+        COUNT(demo_key)::int AS "demoKeysDistributed",
+        COUNT(full_key)::int AS "fullKeysDistributed"
+      FROM game_bounty_acceptances WHERE bounty_id = ${bountyId}
+    `);
+    const d = ((distributed as any).rows ?? distributed)[0];
+    res.json({ ...b, ...d });
+  } catch (err) {
+    console.error('Error fetching key status:', err);
+    res.status(500).json({ message: 'Failed to fetch key status' });
+  }
+});
+
+// Submit content to a bounty for review
+router.post('/bounties/:bountyId/submissions', async (req, res) => {
+  if (!req.isAuthenticated()) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const bountyId = parseInt(req.params.bountyId);
+    const userId = (req.user as any).id;
+    const { contentType, contentId } = req.body;
+    if (!['clip', 'reel', 'screenshot'].includes(contentType) || !contentId) {
+      return res.status(400).json({ message: 'Invalid content reference' });
+    }
+
+    const bounty = await db.execute(sql`
+      SELECT title, status, created_by_user_id, max_submissions_per_user, block_duplicates
+      FROM game_bounties WHERE id = ${bountyId}
+    `);
+    const b = ((bounty as any).rows ?? bounty)[0];
+    if (!b) return res.status(404).json({ message: 'Bounty not found' });
+    if (b.status !== 'active') return res.status(400).json({ message: 'Bounty is not active' });
+
+    if (b.block_duplicates) {
+      const dupe = await db.execute(sql`
+        SELECT id FROM bounty_submissions
+        WHERE bounty_id = ${bountyId} AND content_type = ${contentType} AND content_id = ${contentId}
+      `);
+      if (((dupe as any).rows ?? dupe).length > 0) {
+        return res.status(400).json({ message: 'This content was already submitted' });
+      }
+    }
+
+    const existingCount = await db.execute(sql`
+      SELECT COUNT(*)::int as count FROM bounty_submissions
+      WHERE bounty_id = ${bountyId} AND user_id = ${userId} AND status != 'rejected'
+    `);
+    const count = ((existingCount as any).rows ?? existingCount)[0].count;
+    if (count >= (b.max_submissions_per_user || 1)) {
+      return res.status(400).json({ message: 'Submission limit reached for this bounty' });
+    }
+
+    const result = await db.execute(sql`
+      INSERT INTO bounty_submissions (bounty_id, user_id, content_type, content_id, status)
+      VALUES (${bountyId}, ${userId}, ${contentType}, ${contentId}, 'pending')
+      RETURNING id, bounty_id AS "bountyId", user_id AS "userId", content_type AS "contentType",
+                content_id AS "contentId", status, created_at AS "createdAt"
+    `);
+    const row = ((result as any).rows ?? result)[0];
+
+    NotificationService.createBountySubmissionNotification(b.created_by_user_id, userId, bountyId, b.title).catch(() => {});
+
+    res.status(201).json(row);
+  } catch (err) {
+    console.error('Error creating submission:', err);
+    res.status(500).json({ message: 'Failed to submit content' });
+  }
+});
+
+// List submissions for a bounty (owner only)
+router.get('/bounties/:bountyId/submissions', async (req, res) => {
+  if (!req.isAuthenticated()) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const bountyId = parseInt(req.params.bountyId);
+    const owner = await requireBountyOwner(req, res, bountyId);
+    if (!owner) return;
+    const statusFilter = typeof req.query.status === 'string' ? req.query.status : null;
+
+    const result = await db.execute(sql`
+      SELECT
+        bs.id, bs.bounty_id AS "bountyId", bs.user_id AS "userId", bs.content_type AS "contentType",
+        bs.content_id AS "contentId", bs.status, bs.rejection_reason AS "rejectionReason",
+        bs.reviewed_at AS "reviewedAt", bs.reward_summary AS "rewardSummary", bs.created_at AS "createdAt",
+        u.username, u.display_name AS "displayName", u.avatar_url AS "avatarUrl"
+      FROM bounty_submissions bs
+      JOIN users u ON u.id = bs.user_id
+      WHERE bs.bounty_id = ${bountyId}
+        AND (${statusFilter}::text IS NULL OR bs.status = ${statusFilter})
+      ORDER BY bs.created_at DESC
+    `);
+    res.json((result as any).rows ?? result);
+  } catch (err) {
+    console.error('Error fetching submissions:', err);
+    res.status(500).json({ message: 'Failed to fetch submissions' });
+  }
+});
+
+// Approve or reject a submission
+router.post('/submissions/:submissionId/review', async (req, res) => {
+  if (!req.isAuthenticated()) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const submissionId = parseInt(req.params.submissionId);
+    const userId = (req.user as any).id;
+    const { action, rejectionReason } = req.body;
+    if (!['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ message: 'Invalid action' });
+    }
+
+    const sub = await db.execute(sql`
+      SELECT bs.id, bs.bounty_id AS "bountyId", bs.user_id AS "userId", bs.status,
+             gb.created_by_user_id AS "ownerId", gb.title, gb.reward_type AS "rewardType",
+             gb.reward_value AS "rewardValue", gb.reward_mode AS "rewardMode",
+             gb.xp_per_clip AS "xpPerClip", gb.demo_keys_remaining AS "demoKeysRemaining",
+             gb.full_key_pool AS "fullKeyPool", gb.full_keys_remaining AS "fullKeysRemaining"
+      FROM bounty_submissions bs
+      JOIN game_bounties gb ON gb.id = bs.bounty_id
+      WHERE bs.id = ${submissionId}
+    `);
+    const s = ((sub as any).rows ?? sub)[0];
+    if (!s) return res.status(404).json({ message: 'Submission not found' });
+    if (s.ownerId !== userId) return res.status(403).json({ message: 'Forbidden' });
+    if (s.status !== 'pending') return res.status(400).json({ message: 'Submission already reviewed' });
+
+    let rewardSummary: any = null;
+
+    if (action === 'approve') {
+      const xpAward = s.xpPerClip || 1000;
+      await XPService.awardXP(s.userId, xpAward, 'other', `Bounty submission approved: "${s.title}"`);
+      rewardSummary = { xp: xpAward, rewardType: s.rewardType };
+
+      if (s.rewardType === 'game_key' && s.fullKeysRemaining > 0 && s.fullKeyPool) {
+        try {
+          const pool = JSON.parse(s.fullKeyPool);
+          if (Array.isArray(pool) && pool.length > 0) {
+            const key = pool[0];
+            const remaining = pool.slice(1);
+            await db.execute(sql`
+              UPDATE game_bounties SET full_key_pool = ${JSON.stringify(remaining)}, full_keys_remaining = ${remaining.length}
+              WHERE id = ${s.bountyId}
+            `);
+            rewardSummary.gameKey = key;
+          }
+        } catch (e) {
+          console.error('Failed to assign key on approval:', e);
+        }
+      }
+
+      await db.execute(sql`
+        UPDATE bounty_submissions SET status = 'approved', reviewed_at = NOW(),
+          reviewed_by_user_id = ${userId}, reward_summary = ${JSON.stringify(rewardSummary)}
+        WHERE id = ${submissionId}
+      `);
+    } else {
+      await db.execute(sql`
+        UPDATE bounty_submissions SET status = 'rejected', reviewed_at = NOW(),
+          reviewed_by_user_id = ${userId}, rejection_reason = ${rejectionReason || null}
+        WHERE id = ${submissionId}
+      `);
+    }
+
+    NotificationService.createBountySubmissionReviewedNotification(
+      s.userId, s.bountyId, s.title, action === 'approve', rejectionReason
+    ).catch(() => {});
+
+    res.json({ success: true, rewardSummary });
+  } catch (err) {
+    console.error('Error reviewing submission:', err);
+    res.status(500).json({ message: 'Failed to review submission' });
+  }
+});
+
+// Analytics across all bounties owned by the current user
+router.get('/indie/analytics', async (req, res) => {
+  if (!req.isAuthenticated()) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const userId = (req.user as any).id;
+
+    const timeSeries = await db.execute(sql`
+      SELECT DATE(gba.joined_at) AS date, COUNT(*)::int AS joins
+      FROM game_bounty_acceptances gba
+      JOIN game_bounties gb ON gb.id = gba.bounty_id
+      WHERE gb.created_by_user_id = ${userId} AND gba.joined_at > NOW() - INTERVAL '30 days'
+      GROUP BY DATE(gba.joined_at)
+      ORDER BY date ASC
+    `);
+
+    const topBounties = await db.execute(sql`
+      SELECT gb.id, gb.title, COUNT(DISTINCT gba.user_id)::int AS "participantCount",
+             COALESCE(SUM(gba.total_views), 0)::int AS "totalViews",
+             COALESCE(SUM(gba.xp_earned), 0)::int AS "totalXpAwarded"
+      FROM game_bounties gb
+      LEFT JOIN game_bounty_acceptances gba ON gba.bounty_id = gb.id
+      WHERE gb.created_by_user_id = ${userId}
+      GROUP BY gb.id
+      ORDER BY "totalViews" DESC LIMIT 5
+    `);
+
+    const submissionStats = await db.execute(sql`
+      SELECT
+        COUNT(*)::int AS total,
+        COUNT(CASE WHEN bs.status = 'approved' THEN 1 END)::int AS approved,
+        COUNT(CASE WHEN bs.status = 'rejected' THEN 1 END)::int AS rejected,
+        COUNT(CASE WHEN bs.status = 'pending' THEN 1 END)::int AS pending
+      FROM bounty_submissions bs
+      JOIN game_bounties gb ON gb.id = bs.bounty_id
+      WHERE gb.created_by_user_id = ${userId}
+    `);
+
+    const topCreators = await db.execute(sql`
+      SELECT u.id, u.username, u.avatar_url AS "avatarUrl",
+             COALESCE(SUM(gba.xp_earned), 0)::int AS "xpEarned",
+             COALESCE(SUM(gba.total_views), 0)::int AS "totalViews"
+      FROM game_bounty_acceptances gba
+      JOIN game_bounties gb ON gb.id = gba.bounty_id
+      JOIN users u ON u.id = gba.user_id
+      WHERE gb.created_by_user_id = ${userId}
+      GROUP BY u.id
+      ORDER BY "totalViews" DESC LIMIT 5
+    `);
+
+    res.json({
+      joinsOverTime: (timeSeries as any).rows ?? timeSeries,
+      topBounties: (topBounties as any).rows ?? topBounties,
+      submissionStats: ((submissionStats as any).rows ?? submissionStats)[0],
+      topCreators: (topCreators as any).rows ?? topCreators,
+    });
+  } catch (err) {
+    console.error('Error fetching indie analytics:', err);
+    res.status(500).json({ message: 'Failed to fetch analytics' });
   }
 });
 

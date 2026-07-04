@@ -1887,6 +1887,33 @@ export const gameBounties = pgTable("game_bounties", {
   demoKeysRemaining: integer("demo_keys_remaining").default(0),
   fullKeysRemaining: integer("full_keys_remaining").default(0),
   completionBadge: text("completion_badge"),
+  bountyType: text("bounty_type").default("upload_clips"), // upload_clips | upload_reels | upload_screenshots | stream | review | tutorial | first_impressions | bug_report
+  hashtags: text("hashtags").array(),
+  regionRestriction: text("region_restriction"),
+  startDate: timestamp("start_date"),
+  rewardMode: text("reward_mode").default("per_submission"), // per_submission | top_winners | completion | all_approved
+  rewardTiers: json("reward_tiers"), // e.g. [{ place: 1, xp: 2000, gft: 500, key: 'full' }, ...]
+  minClipLength: integer("min_clip_length").default(0),
+  requiredTag: text("required_tag"),
+  requiredKeywords: text("required_keywords"),
+  maxSubmissionsPerUser: integer("max_submissions_per_user").default(1),
+  manualApprovalRequired: boolean("manual_approval_required").default(true),
+  mustBePublic: boolean("must_be_public").default(true),
+  blockDuplicates: boolean("block_duplicates").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const bountySubmissions = pgTable("bounty_submissions", {
+  id: serial("id").primaryKey(),
+  bountyId: integer("bounty_id").notNull(),
+  userId: integer("user_id").notNull(),
+  contentType: text("content_type").notNull(), // clip | reel | screenshot
+  contentId: integer("content_id").notNull(),
+  status: text("status").default("pending"), // pending | approved | rejected
+  rejectionReason: text("rejection_reason"),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedByUserId: integer("reviewed_by_user_id"),
+  rewardSummary: json("reward_summary"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -1911,10 +1938,13 @@ export const gameBountyAcceptances = pgTable("game_bounty_acceptances", {
 
 export const insertGameBountySchema = createInsertSchema(gameBounties).omit({ id: true, createdAt: true });
 export const insertGameBountyAcceptanceSchema = createInsertSchema(gameBountyAcceptances).omit({ id: true, createdAt: true });
+export const insertBountySubmissionSchema = createInsertSchema(bountySubmissions).omit({ id: true, createdAt: true });
 export type GameBounty = typeof gameBounties.$inferSelect;
 export type InsertGameBounty = z.infer<typeof insertGameBountySchema>;
 export type GameBountyAcceptance = typeof gameBountyAcceptances.$inferSelect;
 export type InsertGameBountyAcceptance = z.infer<typeof insertGameBountyAcceptanceSchema>;
+export type BountySubmission = typeof bountySubmissions.$inferSelect;
+export type InsertBountySubmission = z.infer<typeof insertBountySubmissionSchema>;
 
 export const usedPaymentHashes = pgTable("used_payment_hashes", {
   id: serial("id").primaryKey(),
