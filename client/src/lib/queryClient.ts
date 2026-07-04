@@ -57,7 +57,7 @@ async function refreshAccessToken(): Promise<string | null> {
   return inflightRefresh;
 }
 
-async function authedFetch(
+export async function authedFetch(
   url: string,
   init: RequestInit,
 ): Promise<Response> {

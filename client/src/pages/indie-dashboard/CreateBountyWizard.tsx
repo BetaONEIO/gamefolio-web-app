@@ -1,13 +1,27 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, authedFetch } from "@/lib/queryClient";
 import type { Game } from "@shared/schema";
 import {
   Loader2, Plus, Check, Gamepad2, Search, X,
-  Upload, Video, Camera, Radio, Sparkles,
+  Upload, Video, Camera, Radio, Sparkles, Film, ImagePlus,
 } from "lucide-react";
 import { NEON, CARD_BG, CARD_BORDER } from "../IndieDashboardPage";
+
+async function uploadBountyMedia(file: File): Promise<{ url: string; type: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await authedFetch("/api/games/bounties/upload-media", {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Upload failed");
+  }
+  return res.json();
+}
 
 const inputStyle = {
   background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)",
@@ -67,6 +81,8 @@ interface WizardState {
   endDate: string;
   regionRestriction: string;
   hashtags: string;
+  trailerUrl: string;
+  screenshotUrls: string[];
 }
 
 const initialState: WizardState = {
@@ -79,7 +95,10 @@ const initialState: WizardState = {
   xpJoin: "500", xpPerClip: "1000", xpPerReel: "2500", xpPerScreenshot: "200",
   xpViewMilestone: "2500", xpCompletionBonus: "5000", completionBadge: "",
   maxParticipants: "10", startDate: "", endDate: "", regionRestriction: "", hashtags: "",
+  trailerUrl: "", screenshotUrls: [],
 };
+
+const MAX_SCREENSHOTS = 6;
 
 function GamePicker({ value, onSelect }: { value: WizardState; onSelect: (id: number, name: string) => void }) {
   const [query, setQuery] = useState(value.gameName);
@@ -141,6 +160,148 @@ function GamePicker({ value, onSelect }: { value: WizardState; onSelect: (id: nu
   );
 }
 
+function TrailerUpload({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const { toast } = useToast();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = async (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("video/")) {
+      toast({ title: "Invalid file", description: "Please select a video file.", variant: "gamefolioError" as any });
+      return;
+    }
+    setUploading(true);
+    try {
+      const { url } = await uploadBountyMedia(file);
+      onChange(url);
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err?.message || "Could not upload trailer video.", variant: "gamefolioError" as any });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div>
+      <label style={labelStyle}>Trailer Video (optional)</label>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="video/*"
+        className="hidden"
+        onChange={(e) => handleFile(e.target.files?.[0])}
+      />
+      {value ? (
+        <div className="relative rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.12)" }}>
+          <video src={value} controls className="w-full max-h-56 bg-black" />
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center"
+            style={{ background: "rgba(0,0,0,0.65)" }}
+          >
+            <X className="w-3.5 h-3.5 text-white" />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="w-full rounded-xl p-6 flex flex-col items-center justify-center gap-2 transition-colors"
+          style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.18)" }}
+        >
+          {uploading ? (
+            <Loader2 className="w-5 h-5 animate-spin" style={{ color: NEON }} />
+          ) : (
+            <Film className="w-5 h-5" style={{ color: "rgba(255,255,255,0.4)" }} />
+          )}
+          <span className="text-xs text-gray-400">{uploading ? "Uploading..." : "Click to upload a trailer video"}</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ScreenshotsUpload({ values, onChange }: { values: string[]; onChange: (urls: string[]) => void }) {
+  const { toast } = useToast();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const remaining = MAX_SCREENSHOTS - values.length;
+    if (remaining <= 0) {
+      toast({ title: "Limit reached", description: `You can add up to ${MAX_SCREENSHOTS} screenshots.`, variant: "gamefolioError" as any });
+      return;
+    }
+    const toUpload = Array.from(files).slice(0, remaining);
+    setUploading(true);
+    try {
+      const uploaded = await Promise.all(
+        toUpload.map(async (file) => {
+          if (!file.type.startsWith("image/")) return null;
+          const { url } = await uploadBountyMedia(file);
+          return url;
+        })
+      );
+      const urls = uploaded.filter((u): u is string => !!u);
+      if (urls.length > 0) onChange([...values, ...urls]);
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err?.message || "Could not upload screenshot.", variant: "gamefolioError" as any });
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div>
+      <label style={labelStyle}>Screenshots (optional, up to {MAX_SCREENSHOTS})</label>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => handleFiles(e.target.files)}
+      />
+      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+        {values.map((url, i) => (
+          <div key={url + i} className="relative rounded-lg overflow-hidden aspect-video" style={{ border: "1px solid rgba(255,255,255,0.12)" }}>
+            <img src={url} alt={`Screenshot ${i + 1}`} className="w-full h-full object-cover" />
+            <button
+              type="button"
+              onClick={() => onChange(values.filter((_, idx) => idx !== i))}
+              className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center"
+              style={{ background: "rgba(0,0,0,0.65)" }}
+            >
+              <X className="w-3 h-3 text-white" />
+            </button>
+          </div>
+        ))}
+        {values.length < MAX_SCREENSHOTS && (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="rounded-lg aspect-video flex flex-col items-center justify-center gap-1"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.18)" }}
+          >
+            {uploading ? (
+              <Loader2 className="w-4 h-4 animate-spin" style={{ color: NEON }} />
+            ) : (
+              <ImagePlus className="w-4 h-4" style={{ color: "rgba(255,255,255,0.4)" }} />
+            )}
+            <span className="text-[10px] text-gray-500">{uploading ? "Uploading" : "Add"}</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function CreateBountyWizard({ onCreated }: { onCreated: () => void }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -194,6 +355,8 @@ export default function CreateBountyWizard({ onCreated }: { onCreated: () => voi
         completionBadge: w.completionBadge.trim() || null,
         regionRestriction: w.regionRestriction.trim() || null,
         hashtags: w.hashtags.split(/[\s,]+/).map((h) => h.replace(/^#/, "").trim()).filter(Boolean),
+        trailerUrl: w.trailerUrl.trim() || null,
+        screenshotUrls: w.screenshotUrls.filter(Boolean),
         status,
       };
       const res = await apiRequest("POST", `/api/games/${w.gameId}/bounties`, payload);
@@ -271,6 +434,8 @@ export default function CreateBountyWizard({ onCreated }: { onCreated: () => voi
               ))}
             </div>
           </div>
+          <TrailerUpload value={w.trailerUrl} onChange={(url) => set("trailerUrl", url)} />
+          <ScreenshotsUpload values={w.screenshotUrls} onChange={(urls) => set("screenshotUrls", urls)} />
         </div>
       )}
 

@@ -1,10 +1,24 @@
 import express from 'express';
+import multer from 'multer';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import { XPService } from '../xp-service';
 import { NotificationService } from '../notification-service';
+import { supabaseStorage } from '../supabase-storage';
 
 const router = express.Router();
+
+const bountyMediaUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 250 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image or video files are allowed'));
+    }
+  }
+});
 
 async function ensureBountyTables() {
   try {
@@ -95,7 +109,9 @@ async function ensureBountyTables() {
       ADD COLUMN IF NOT EXISTS max_submissions_per_user INTEGER DEFAULT 1,
       ADD COLUMN IF NOT EXISTS manual_approval_required BOOLEAN DEFAULT true,
       ADD COLUMN IF NOT EXISTS must_be_public BOOLEAN DEFAULT true,
-      ADD COLUMN IF NOT EXISTS block_duplicates BOOLEAN DEFAULT true
+      ADD COLUMN IF NOT EXISTS block_duplicates BOOLEAN DEFAULT true,
+      ADD COLUMN IF NOT EXISTS trailer_url TEXT,
+      ADD COLUMN IF NOT EXISTS screenshot_urls TEXT[]
     `);
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS bounty_submissions (
@@ -118,6 +134,29 @@ async function ensureBountyTables() {
 }
 
 ensureBountyTables();
+
+// Upload trailer video or screenshot image for a bounty
+router.post('/bounties/upload-media', bountyMediaUpload.single('file'), async (req, res) => {
+  if (!req.isAuthenticated()) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+    const userId = (req.user as any).id;
+    const isVideo = req.file.mimetype.startsWith('video/');
+    const ext = (req.file.originalname.split('.').pop() || (isVideo ? 'mp4' : 'jpg')).toLowerCase();
+    const fileName = `bounty-${isVideo ? 'trailer' : 'screenshot'}-${userId}-${Date.now()}.${ext}`;
+    const { url } = await supabaseStorage.uploadBuffer(
+      req.file.buffer,
+      fileName,
+      req.file.mimetype,
+      isVideo ? 'video' : 'image',
+      userId
+    );
+    res.json({ url, type: isVideo ? 'video' : 'image' });
+  } catch (err) {
+    console.error('Error uploading bounty media:', err);
+    res.status(500).json({ message: 'Failed to upload media' });
+  }
+});
 
 // List bounties for a game
 router.get('/:gameId/bounties', async (req, res) => {
@@ -145,6 +184,7 @@ router.get('/:gameId/bounties', async (req, res) => {
         gb.required_keywords AS "requiredKeywords", gb.max_submissions_per_user AS "maxSubmissionsPerUser",
         gb.manual_approval_required AS "manualApprovalRequired", gb.must_be_public AS "mustBePublic",
         gb.block_duplicates AS "blockDuplicates",
+        gb.trailer_url AS "trailerUrl", gb.screenshot_urls AS "screenshotUrls",
         COUNT(DISTINCT gba.user_id)::int AS "participantCount",
         u.username AS "creatorUsername"
       FROM game_bounties gb
@@ -179,13 +219,14 @@ router.post('/:gameId/bounties', async (req, res) => {
       rewardMode, rewardTiers,
       minClipLength, requiredTag, requiredKeywords, maxSubmissionsPerUser,
       manualApprovalRequired, mustBePublic, blockDuplicates,
-      status,
+      status, trailerUrl, screenshotUrls,
     } = req.body;
     if (!title?.trim()) return res.status(400).json({ message: 'Title is required' });
 
     const demoKeys = Array.isArray(demoKeyPool) ? demoKeyPool : [];
     const fullKeys = Array.isArray(fullKeyPool) ? fullKeyPool : [];
     const tagsArray = Array.isArray(hashtags) ? hashtags : [];
+    const screenshotsArray = Array.isArray(screenshotUrls) ? screenshotUrls.filter(Boolean) : [];
 
     const totalXp = (xpJoin || 500) + (demoKeys.length * (xpPerClip || 1000)) + (fullKeys.length * (xpPerReel || 2500)) + ((xpPerScreenshot || 200) * (requiredScreenshots || 0)) + (xpViewMilestone || 2500) + (xpCompletionBonus || 5000);
 
@@ -198,7 +239,8 @@ router.post('/:gameId/bounties', async (req, res) => {
          total_xp_available, demo_keys_remaining, full_keys_remaining, completion_badge,
          bounty_type, hashtags, region_restriction, start_date, reward_mode, reward_tiers,
          min_clip_length, required_tag, required_keywords, max_submissions_per_user,
-         manual_approval_required, must_be_public, block_duplicates, status)
+         manual_approval_required, must_be_public, block_duplicates, status,
+         trailer_url, screenshot_urls)
       VALUES
         (${gameId}, ${userId}, ${title.trim()}, ${campaignTitle || null}, ${description || null},
          'game_key', ${fullKeys.length > 0 ? fullKeys[0] : null}, ${fullKeys.length}, ${maxParticipants || 10},
@@ -211,7 +253,8 @@ router.post('/:gameId/bounties', async (req, res) => {
          ${rewardTiers ? JSON.stringify(rewardTiers) : null},
          ${minClipLength || 0}, ${requiredTag || null}, ${requiredKeywords || null},
          ${maxSubmissionsPerUser || 1}, ${manualApprovalRequired !== false}, ${mustBePublic !== false},
-         ${blockDuplicates !== false}, ${status === 'draft' ? 'draft' : 'active'})
+         ${blockDuplicates !== false}, ${status === 'draft' ? 'draft' : 'active'},
+         ${trailerUrl || null}, ${screenshotsArray})
       RETURNING
         id, game_id AS "gameId", created_by_user_id AS "createdByUserId",
         title, campaign_title AS "campaignTitle", description,
@@ -224,7 +267,8 @@ router.post('/:gameId/bounties', async (req, res) => {
         demo_keys_remaining AS "demoKeysRemaining", full_keys_remaining AS "fullKeysRemaining",
         completion_badge AS "completionBadge", end_date AS "endDate", status, created_at AS "createdAt",
         bounty_type AS "bountyType", hashtags, region_restriction AS "regionRestriction",
-        start_date AS "startDate", reward_mode AS "rewardMode", reward_tiers AS "rewardTiers"
+        start_date AS "startDate", reward_mode AS "rewardMode", reward_tiers AS "rewardTiers",
+        trailer_url AS "trailerUrl", screenshot_urls AS "screenshotUrls"
     `);
     const row = ((result as any).rows ?? result)[0];
     // Store demo keys in a separate key pool (serialized in description or as JSON)

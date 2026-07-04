@@ -1900,6 +1900,8 @@ export const gameBounties = pgTable("game_bounties", {
   manualApprovalRequired: boolean("manual_approval_required").default(true),
   mustBePublic: boolean("must_be_public").default(true),
   blockDuplicates: boolean("block_duplicates").default(true),
+  trailerUrl: text("trailer_url"),
+  screenshotUrls: text("screenshot_urls").array(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
