@@ -2032,7 +2032,8 @@ const ProfilePage = () => {
     );
   })() : null;
 
-  if (profile.layoutStyle === 'indie-game') {
+  const isIndieDeveloperProfile = !!(profile.userType?.split(',').map((t: string) => t.trim()).includes('indie_developer'));
+  if (profile.layoutStyle === 'indie-game' || isIndieDeveloperProfile) {
     return <IndieGameProfileLayout profile={profile} isOwnProfile={isOwnProfile} />;
   }
 
