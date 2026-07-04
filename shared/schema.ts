@@ -164,6 +164,14 @@ export const users = pgTable("users", {
   // Outro videos — auto-appended on download; separate files for landscape (16:9) and portrait (9:16)
   outroVideoPath: text("outro_video_path"),          // landscape 1920×1080 — "outros/42.mp4"
   outroVideoPathPortrait: text("outro_video_path_portrait"), // portrait 1080×1920 — "outros/42_portrait.mp4"
+  // Indie game profile info (used by the "indie-game" layoutStyle to describe the developer's game)
+  gameDescription: text("game_description"), // Longer "about the game" blurb shown on the Overview tab
+  gameKeyFeatures: text("game_key_features").array(), // Bulleted feature list
+  studioFoundedYear: text("studio_founded_year"),
+  studioTeamSize: text("studio_team_size"),
+  gameReleaseDate: text("game_release_date"),
+  gameSteamUrl: text("game_steam_url"),
+  gameEpicUrl: text("game_epic_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

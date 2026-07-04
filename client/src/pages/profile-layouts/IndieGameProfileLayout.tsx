@@ -6,6 +6,7 @@ import { queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import PlatformConnections from '@/components/profile/PlatformConnections';
+import { SiSteam, SiEpicgames } from 'react-icons/si';
 import {
   Users,
   Eye,
@@ -18,6 +19,8 @@ import {
   Camera,
   Star,
   Award,
+  CheckCircle2,
+  Terminal,
 } from 'lucide-react';
 
 const MessageDialog = React.lazy(() =>
@@ -215,27 +218,109 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
       </nav>
 
       {activeTab === 'OVERVIEW' && (
-        <section className="py-16 px-6 max-w-4xl mx-auto space-y-10">
-          <div>
-            <h2 className="text-2xl font-bold mb-4">Overview</h2>
-            <p className="text-lg leading-relaxed" style={{ color: brand.textMuted }}>
-              {profile.bio || `${profile.displayName} hasn't added a bio yet.`}
-            </p>
+        <section className="py-16 px-6 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-10">
+          <div className="lg:col-span-2 space-y-10">
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Overview</h2>
+              <p className="text-lg leading-relaxed" style={{ color: brand.textMuted }}>
+                {profile.gameDescription || profile.bio || `${profile.displayName} hasn't added a game description yet.`}
+              </p>
+            </div>
+
+            {profile.gameKeyFeatures && profile.gameKeyFeatures.length > 0 && (
+              <div>
+                <h2 className="text-2xl font-bold mb-4">Key Features</h2>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {profile.gameKeyFeatures.map((feature, i) => (
+                    <div key={i} className="flex items-start gap-3 p-4 rounded-lg" style={cardStyle}>
+                      <CheckCircle2 color={brand.accent} size={20} className="shrink-0 mt-0.5" />
+                      <span className="text-sm font-medium">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { label: 'Level', value: profile.level ?? 1, icon: Star },
+                { label: 'Total XP', value: (profile.totalXP ?? 0).toLocaleString(), icon: Award },
+                { label: 'Streak', value: `${profile.currentStreak ?? 0}d`, icon: Flame },
+                { label: 'Clips', value: profile._count?.clips ?? 0, icon: Video },
+              ].map((stat, i) => (
+                <div key={i} className="p-4 rounded-lg flex flex-col items-center gap-2 text-center" style={cardStyle}>
+                  <stat.icon size={20} color={brand.accent} />
+                  <div className="text-lg font-bold">{stat.value}</div>
+                  <div className="text-[10px] uppercase tracking-wider" style={{ color: brand.textMuted }}>{stat.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {[
-              { label: 'Level', value: profile.level ?? 1, icon: Star },
-              { label: 'Total XP', value: (profile.totalXp ?? 0).toLocaleString(), icon: Award },
-              { label: 'Streak', value: `${profile.currentStreak ?? 0}d`, icon: Flame },
-              { label: 'Clips', value: profile._count?.clips ?? 0, icon: Video },
-            ].map((stat, i) => (
-              <div key={i} className="p-4 rounded-lg flex flex-col items-center gap-2 text-center" style={cardStyle}>
-                <stat.icon size={20} color={brand.accent} />
-                <div className="text-lg font-bold">{stat.value}</div>
-                <div className="text-[10px] uppercase tracking-wider" style={{ color: brand.textMuted }}>{stat.label}</div>
+          <div className="space-y-6">
+            <div className="p-6 space-y-6" style={{ ...cardStyle, boxShadow: `0 0 20px rgba(183, 255, 24, 0.15)` }}>
+              <div>
+                <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Developer</div>
+                <div className="text-xl font-bold text-white flex items-center gap-2">
+                  <Terminal size={18} color={brand.accent} />
+                  {profile.displayName}
+                </div>
               </div>
-            ))}
+
+              {(profile.studioFoundedYear || profile.studioTeamSize) && (
+                <div className="grid grid-cols-2 gap-4">
+                  {profile.studioFoundedYear && (
+                    <div>
+                      <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Founded</div>
+                      <div className="font-medium">{profile.studioFoundedYear}</div>
+                    </div>
+                  )}
+                  {profile.studioTeamSize && (
+                    <div>
+                      <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Team Size</div>
+                      <div className="font-medium">{profile.studioTeamSize}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {profile.gameReleaseDate && (
+                <div className="pt-4 border-t border-white/10">
+                  <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Release Date</div>
+                  <div className="text-lg font-bold text-white">{profile.gameReleaseDate}</div>
+                </div>
+              )}
+            </div>
+
+            {(profile.gameSteamUrl || profile.gameEpicUrl) && (
+              <div className="p-6 space-y-4" style={cardStyle}>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-white/50 mb-2">Store Links</h3>
+
+                {profile.gameSteamUrl && (
+                  <a
+                    href={profile.gameSteamUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center gap-3 p-3 rounded-md bg-[#171a21] hover:bg-[#2a303c] transition-colors border border-white/5 group"
+                  >
+                    <SiSteam size={24} className="text-[#66c0f4]" />
+                    <span className="font-semibold text-[#c7d5e0]">Steam</span>
+                  </a>
+                )}
+
+                {profile.gameEpicUrl && (
+                  <a
+                    href={profile.gameEpicUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center gap-3 p-3 rounded-md bg-[#121212] hover:bg-[#2a2a2a] transition-colors border border-white/5 group"
+                  >
+                    <SiEpicgames size={24} className="text-white" />
+                    <span className="font-semibold text-white">Epic Games</span>
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         </section>
       )}
