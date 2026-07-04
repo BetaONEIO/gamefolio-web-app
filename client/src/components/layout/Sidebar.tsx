@@ -9,7 +9,10 @@ import {
   ChevronDown,
   Gift,
   Users,
+  Rocket,
+  Radio,
 } from "lucide-react";
+import { isPartnerType } from "@shared/partner-access";
 import { GamefolioStoreIcon } from "@/components/icons/GamefolioStoreIcon";
 import { GamefolioCollectionIcon } from "@/components/icons/GamefolioCollectionIcon";
 import { GamefolioHelpIcon } from "@/components/icons/GamefolioHelpIcon";
@@ -277,6 +280,11 @@ const Sidebar = () => {
     ...(user && user.messagingEnabled !== false ? [{ icon: GamefolioMessagesIcon, label: "Messages", href: "/messages" }] : []),
 
     { icon: GamefolioProfileIcon, label: "My Gamefolio", href: user ? `/profile/${user.username}` : "/auth", themed: true, gamefolioIcon: true },
+
+    // Partner dashboards — visible only to the matching paid partner (admins see both).
+    ...(isPartnerType(user, "indie") || user?.role === "admin" ? [{ icon: Rocket, label: "Indie Dashboard", href: "/indie/dashboard" }] : []),
+    ...(isPartnerType(user, "streamer") || user?.role === "admin" ? [{ icon: Radio, label: "Streamer Dashboard", href: "/streamer/dashboard" }] : []),
+
     { icon: GamefolioHelpIcon, label: "Help & Support", href: "/help" },
 
     // Only show admin panel link for users with admin role
