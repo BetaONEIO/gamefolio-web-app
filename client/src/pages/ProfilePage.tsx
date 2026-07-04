@@ -76,6 +76,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import IndieGameProfileLayout from "@/pages/profile-layouts/IndieGameProfileLayout";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
 import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreenshotsViewer";
@@ -2030,6 +2031,10 @@ const ProfilePage = () => {
       </div>
     );
   })() : null;
+
+  if (profile.layoutStyle === 'indie-game') {
+    return <IndieGameProfileLayout profile={profile} isOwnProfile={isOwnProfile} />;
+  }
 
   return (
     <>

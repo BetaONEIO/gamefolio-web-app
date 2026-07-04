@@ -1,3 +1,5 @@
 - [FFmpeg remote URL scale2ref](ffmpeg-remote-url-filtergraph.md) — scale2ref gives 0kB when inputs are remote URLs; probe dims with ffprobe and use explicit scale filter instead.
 - [Trending cache startup race](trending-cache-startup-race.md) — first DB query after server start returns [] due to pool warming; fix is to not cache empty arrays and add a fallback query.
 - [@assets alias requires public copy](assets-alias-public-copy.md) — `@assets` resolves to `client/public/attached_assets`; files attached to chat may land only in root `attached_assets/` and need manual copy before imports work.
+- [Gamefolio dev DB schema drift](gamefolio-dev-db-schema-drift.md) — dev Supabase DB can silently lag `shared/schema.ts` (missing columns); diagnose with an information_schema diff before assuming a feature bug.
+- [Profile layoutStyle branch pattern](gamefolio-profile-layout-style.md) — alternate profile designs are graduated as early-return components keyed on `users.layoutStyle`, inserted in ProfilePage.tsx right before the main return (after all hooks).
