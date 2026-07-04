@@ -1,19 +1,16 @@
 import {
   CheckCircle2,
-  Play,
   Monitor,
   Globe,
   Users,
-  Video,
   Eye,
-  Heart,
   Terminal,
   Activity,
-  ChevronDown,
   Gamepad2,
   Gamepad,
   Store,
   ShoppingBag,
+  Award,
 } from 'lucide-react';
 
 export default function GameProfile() {
@@ -112,43 +109,21 @@ export default function GameProfile() {
             <span className="text-sm font-bold tracking-widest text-white/90">EARLY ACCESS</span>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-            <button className="flex items-center justify-center gap-2 px-8 py-4 rounded-lg font-bold text-black transition-all hover:scale-105"
-                    style={{ background: brand.accent, ...glowStyle }}>
-              <Heart size={20} className="fill-black" />
-              Add to Wishlist
-            </button>
-            <button className="flex items-center justify-center gap-2 px-8 py-4 rounded-lg font-bold text-white transition-all hover:bg-white/5"
-                    style={{ border: `1px solid ${brand.accent}`, color: brand.accent }}>
-              Follow Game
-            </button>
-            <button className="flex items-center justify-center gap-2 px-8 py-4 rounded-lg font-bold text-white transition-all hover:bg-white/5 border border-white/20">
-              <Globe size={20} />
-              Official Website
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* STATS STRIP */}
-      <section className="border-b border-white/5 py-6 px-6 relative z-30" style={{ background: 'rgba(0,0,0,0.4)' }}>
-        <div className="max-w-6xl mx-auto flex flex-wrap justify-center gap-4 md:gap-8">
-          {[
-            { label: 'Followers', value: '4.2K', icon: Users },
-            { label: 'Clips', value: '832', icon: Video },
-            { label: 'Reels', value: '241', icon: Play },
-            { label: 'Streamers Playing', value: '17', icon: Monitor },
-            { label: 'Total Views', value: '2.1M', icon: Eye },
-            { label: 'Community', value: '5.8K', icon: Heart },
-          ].map((stat, i) => (
-            <div key={i} className="flex items-center gap-3 px-5 py-3 rounded-lg" style={cardStyle}>
-              <stat.icon size={20} color={brand.accent} className="opacity-80" />
-              <div>
-                <div className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: brand.textMuted }}>{stat.label}</div>
-                <div className="text-xl font-bold">{stat.value}</div>
+          <div className="flex flex-wrap items-center justify-center gap-4 w-full sm:w-auto">
+            {[
+              { label: 'Followers', value: '4.2K', icon: Users },
+              { label: 'Total Views', value: '2.1M', icon: Eye },
+              { label: 'Bounties', value: '12', icon: Award },
+            ].map((stat, i) => (
+              <div key={i} className="flex items-center gap-3 px-6 py-4 rounded-lg" style={cardStyle}>
+                <stat.icon size={22} color={brand.accent} className="opacity-90" />
+                <div className="text-left">
+                  <div className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: brand.textMuted }}>{stat.label}</div>
+                  <div className="text-xl font-bold">{stat.value}</div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
@@ -262,61 +237,6 @@ export default function GameProfile() {
               <Globe size={16} className="text-white/30 group-hover:text-white/80" />
             </button>
           </div>
-        </div>
-      </section>
-
-      {/* WHY GAMEFOLIO */}
-      <section className="py-24 relative overflow-hidden" style={{ background: 'rgba(183,255,24,0.02)' }}>
-        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[rgba(183,255,24,0.3)] to-transparent"></div>
-        <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[rgba(183,255,24,0.3)] to-transparent"></div>
-        
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-black mb-6" style={{ color: brand.accent, textShadow: '0 0 15px rgba(183,255,24,0.3)' }}>
-            WHY GAMEFOLIO?
-          </h2>
-          <p className="text-lg mb-16 max-w-2xl mx-auto" style={{ color: brand.textMuted }}>
-            Gamefolio helps indie games get discovered by connecting developers, creators, streamers, and players in one living ecosystem.
-          </p>
-
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 relative">
-            {/* SVG Connecting Lines (Visible on md+) */}
-            <svg className="absolute hidden md:block w-full h-24 top-1/2 -translate-y-1/2 z-0" style={{ pointerEvents: 'none' }}>
-              <line x1="10%" y1="50%" x2="90%" y2="50%" className="flow-line" />
-            </svg>
-
-            {['Indie Developer', 'Gamefolio', 'Creators', 'Streamers', 'Players'].map((node, i) => (
-              <div key={node} className="contents">
-                <div className="relative z-10 flex flex-col items-center">
-                  <div className="w-32 h-32 rounded-xl flex items-center justify-center p-4 text-center font-bold text-sm"
-                       style={{...cardStyle, ...(node === 'Gamefolio' ? { background: 'rgba(183,255,24,0.1)', ...glowStyle } : {})}}>
-                    {node}
-                  </div>
-                </div>
-                {i < 4 && (
-                  <div className="md:hidden py-2">
-                    <ChevronDown size={24} className="text-white/30" />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FOOTER CTA */}
-      <section className="py-24 px-6 text-center">
-        <div className="max-w-3xl mx-auto p-12 rounded-2xl relative overflow-hidden" style={cardStyle}>
-          <div className="absolute inset-0 bg-gradient-to-br from-[rgba(183,255,24,0.1)] to-transparent pointer-events-none"></div>
-          
-          <h2 className="text-4xl font-black mb-4 relative z-10 text-white">Get Your Game on Gamefolio</h2>
-          <p className="text-xl mb-8 relative z-10" style={{ color: brand.textMuted }}>
-            Join hundreds of indie developers building real communities and reaching new players every day.
-          </p>
-          
-          <button className="relative z-10 px-10 py-5 rounded-lg font-black text-black text-lg transition-transform hover:scale-105"
-                  style={{ background: brand.accent, ...glowStyle }}>
-            Claim Your Developer Profile
-          </button>
         </div>
       </section>
     </div>
